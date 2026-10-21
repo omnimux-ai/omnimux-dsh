@@ -1,7 +1,7 @@
 /**
  * Media Viewer Store.
- * Manages media items (images & videos), timeline grouping, active selection,
- * view sub-modes (grid timeline vs single detail), and layout modes (3col vs 2col).
+ * Manages media items (images & videos), active selection, and layout modes
+ * (3col vs 2col).
  */
 
 export const MEDIA_VIEWER_TAB_ID = 'omnimux:media-viewer';
@@ -62,7 +62,6 @@ function persistState(s) {
       mediaList: safeMediaList,
       annotationsByMediaId: s.annotationsByMediaId || {},
       activeId: s.activeId,
-      subViewMode: s.subViewMode,
       layoutMode: s.layoutMode,
     };
     storage.setItem(MEDIA_VIEWER_STORAGE_KEY, JSON.stringify(payload));
@@ -91,21 +90,6 @@ export function clearPersistedMediaViewerStore() {
  * @property {string} [groupId]
  */
 
-/**
- * Format timestamp into standard Chinese date string: e.g. "2026年9月13日 20:29"
- * @param {number} ts
- * @returns {string}
- */
-export function formatTimelineDate(ts) {
-  const date = new Date(ts);
-  const y = date.getFullYear();
-  const m = date.getMonth() + 1;
-  const d = date.getDate();
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  return `${y}年${m}月${d}日 ${hh}:${mm}`;
-}
-
 export function createMediaViewerStore(initialState = {}) {
   const persisted = loadPersistedState();
   const initialMediaList = initialState.mediaList && initialState.mediaList.length > 0
@@ -118,7 +102,6 @@ export function createMediaViewerStore(initialState = {}) {
   let state = {
     mediaList: initialMediaList,
     activeId: initialState.activeId || persisted?.activeId || initialMediaList[0]?.id || null,
-    subViewMode: initialState.subViewMode || persisted?.subViewMode || 'single', // 'single' (大图浏览/画布模式) | 'grid' (时间线模式)
     layoutMode: initialState.layoutMode || persisted?.layoutMode || '3col',   // '3col' (三栏模式) | '2col' (两栏模式)
     zoom: initialState.zoom || 100,                  // 50, 70, 100, 150
     isGenerating: Boolean(initialState.isGenerating),
@@ -210,12 +193,6 @@ export function createMediaViewerStore(initialState = {}) {
     setActiveId(id) {
       if (state.activeId === id) return;
       state = { ...state, activeId: id };
-      notify();
-    },
-
-    setSubViewMode(mode) {
-      if (state.subViewMode === mode) return;
-      state = { ...state, subViewMode: mode };
       notify();
     },
 
@@ -409,29 +386,6 @@ export function createMediaViewerStore(initialState = {}) {
       return lines.join('\n');
     },
 
-    /**
-     * Group items into timeline buckets sorted by timestamp ascending.
-     * Items in the same group or minute bucket are grouped together for multi-card row rendering.
-     * @param {string} [targetSessionId] - Optional session filter
-     */
-    getTimelineGroups(targetSessionId) {
-      const groups = new Map();
-      const list = targetSessionId ? state.mediaList.filter((m) => m.sessionId === targetSessionId) : state.mediaList;
-      for (const item of list) {
-        const timeKey = formatTimelineDate(item.timestamp);
-        const key = item.groupId ? `${timeKey}#${item.groupId}` : timeKey;
-        if (!groups.has(key)) {
-          groups.set(key, {
-            timeKey,
-            timestamp: item.timestamp,
-            items: [],
-          });
-        }
-        groups.get(key).items.push(item);
-      }
-
-      return Array.from(groups.values()).sort((a, b) => a.timestamp - b.timestamp);
-    },
   };
 }
 

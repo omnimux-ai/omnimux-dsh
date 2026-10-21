@@ -18,7 +18,7 @@ export async function consumerJourney(options) {
   fs.writeFileSync(join(evidenceDir, 'viewer-tab-menu.txt'), await page.snapshot());
   await page.click('text="图像生成"');
   await page.waitForSelector('.omx-media-viewer', { state: 'visible', timeout: 15000 });
-  await page.click('[aria-label="大图浏览模式"]');
+  await page.waitForSelector('.omx-mv-single-stage', { state: 'visible', timeout: 15000 });
   await page.waitForSelector('.omx-mv-composer-root', { state: 'visible', timeout: 15000 });
   fs.writeFileSync(join(evidenceDir, 'viewer-real-page.txt'), await page.snapshot());
   const prompt = '保留角色描述和已有参考素材';

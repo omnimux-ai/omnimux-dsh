@@ -7,7 +7,7 @@
  *
  * 本模块把「媒体查看器正在展示单张画布」这一业务事实投影成 DOM 可见标识，
  * 由 hub 侧的投射规则消费：只有画布身份 + 右侧栏全屏同时成立，输入框才悬浮
- * 到画布底端；时间线、其他插件页、以及画布不在前台时一律不投射。
+ * 到画布底端；其他插件页、以及画布不在前台时一律不投射。
  */
 
 /** 画布身份标识：存在即表示媒体查看器当前展示的是单张大图。 */
@@ -17,11 +17,11 @@ export const IMAGE_CANVAS_ATTR = 'data-omnimux-image-canvas';
 export const IMAGE_CANVAS_VISIBLE_ATTR = 'data-visible';
 
 /**
- * @param {{ subViewMode?: string, hasActiveMedia?: boolean }} [state]
- * @returns {boolean} 是否处于图像画布（单图）态
+ * @param {{ hasActiveMedia?: boolean }} [state]
+ * @returns {boolean} 是否处于图像画布态
  */
 export function isImageCanvasActive(state = {}) {
-  return state?.subViewMode === 'single' && Boolean(state?.hasActiveMedia);
+  return Boolean(state?.hasActiveMedia);
 }
 
 /** 元素是否在视口内参与布局（被隐藏的标签页其 offsetParent 为空）。 */
@@ -42,7 +42,7 @@ function isVisibleNode(root) {
  * 免得标签前后切换时反复拆装属性。
  *
  * @param {Element | null | undefined} root 媒体查看器根节点
- * @param {{ subViewMode?: string, hasActiveMedia?: boolean, visible?: boolean }} [state]
+ * @param {{ hasActiveMedia?: boolean, visible?: boolean }} [state]
  */
 export function syncImageCanvasStage(root, state = {}) {
   if (!root || typeof root.setAttribute !== 'function' || typeof root.removeAttribute !== 'function') return;

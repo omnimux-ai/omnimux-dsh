@@ -157,7 +157,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
   const store = getGlobalMediaViewerStore();
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
 
-  const { mediaList, activeId, subViewMode, layoutMode, zoom, isGenerating, isAnnotating } = state;
+  const { mediaList, activeId, layoutMode, zoom, isAnnotating } = state;
 
   const sessionMediaList = React.useMemo(() => {
     if (!sessionId) return mediaList;
@@ -181,7 +181,6 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
   const activeItem = sessionMediaList.find((m) => m.id === activeId) || thumbnailsList[0] || sessionMediaList[0];
   const toolbarRef = useRef(null);
   const historyToggleRef = useRef(null);
-  const timelineGroups = store.getTimelineGroups(sessionId);
 
   // 生成历史：数据全部来自既有 mediaList 的提交快照，不新增 store。
   // 有会话时按会话过滤；无会话时保持空态，避免把其他会话的提示词聚合进来。
@@ -215,8 +214,8 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
 
   // 会话切换、退出单图或切到宽档时，历史抽屉都必须收起。
   useEffect(() => {
-    if (subViewMode !== 'single' || wideLayout) setHistoryOpen(false);
-  }, [sessionId, subViewMode, wideLayout]);
+    if (wideLayout) setHistoryOpen(false);
+  }, [sessionId, wideLayout]);
 
   // The drawer marks itself aria-modal, so the toolbar outside the scrim must
   // stop being focusable/clickable while it is open.
@@ -393,7 +392,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
     };
     stage.addEventListener('wheel', handleWheel, { passive: false });
     return () => stage.removeEventListener('wheel', handleWheel);
-  }, [subViewMode]);
+  }, []);
 
   // 全局鼠标拖拽释放兜底
   useEffect(() => {
@@ -409,7 +408,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
     if (!root) return undefined;
     let alive = true;
     const sync = () => {
-      if (alive) syncImageCanvasStage(root, { subViewMode, hasActiveMedia: Boolean(activeItem?.id) });
+      if (alive) syncImageCanvasStage(root, { hasActiveMedia: Boolean(activeItem?.id) });
     };
     sync();
     // 标签页前后切换会改变舞台可见性：同步前台标识，避免后台标签仍声明画布在前台。
@@ -424,7 +423,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
     return () => {
       alive = false;
     };
-  }, [subViewMode, activeItem?.id]);
+  }, [activeItem?.id]);
 
   // Register workbench Agent UI context for canvas and active annotations
   useEffect(() => {
@@ -465,7 +464,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
       const tagName = target?.tagName;
       if (tagName === 'INPUT' || tagName === 'TEXTAREA' || target?.isContentEditable) return;
       if (target?.closest?.('button, a, select, [role="button"], [role="dialog"], [role="menu"]')) return;
-      if (subViewMode !== 'single' || thumbnailsList.length === 0) return;
+      if (thumbnailsList.length === 0) return;
       const currentIndex = thumbnailsList.findIndex((item) => item.id === activeItem?.id);
       const delta = e.key === 'ArrowDown' ? 1 : -1;
       const nextIndex = currentIndex < 0
@@ -477,12 +476,11 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [historyOpen, isAnnotating, activeItem?.id, thumbnailsList, subViewMode, store]);
+  }, [historyOpen, isAnnotating, activeItem?.id, thumbnailsList, store]);
 
   // 切换图片：严格保持当前缩放比例不变（跨图锁定）
   const handleSelectMedia = (item) => {
     store.setActiveId(item.id);
-    store.setSubViewMode('single');
   };
 
   const handleResetZoom = () => {
@@ -585,48 +583,8 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
     >
       {/* 顶部工具栏 */}
       <div className="omx-mv-toolbar" ref={toolbarRef}>
-        <div className="omx-mv-toolbar__left">
-          <div className="omx-mv-capsule">
-            <button // exempt-ui01: 视图切换大图模式按钮
-              type="button"
-              className={`omx-mv-capsule__btn ${subViewMode === 'single' ? 'active' : ''}`}
-              title="大图浏览模式"
-              aria-label="大图浏览模式"
-              onClick={() => store.setSubViewMode('single')}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect width="18" height="13" x="3" y="7" rx="2" />
-                <line x1="8" y1="3" x2="16" y2="3" />
-              </svg>
-            </button>
-            <button // exempt-ui01: 视图切换时间线模式按钮
-              type="button"
-              className={`omx-mv-capsule__btn ${subViewMode === 'grid' ? 'active' : ''}`}
-              title="四宫格时间线模式"
-              aria-label="四宫格时间线模式"
-              onClick={() => store.setSubViewMode('grid')}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect width="6" height="6" x="4" y="4" rx="1.5" />
-                <rect width="6" height="6" x="14" y="4" rx="1.5" />
-                <rect width="6" height="6" x="14" y="14" rx="1.5" />
-                <rect width="6" height="6" x="4" y="14" rx="1.5" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
         <div className="omx-mv-toolbar__center">
-          {subViewMode === 'grid' ? (
-            <button // exempt-ui01: 时间线多选按钮
-              type="button"
-              className="omx-mv-btn"
-              title="多选"
-            >
-              多选
-            </button>
-          ) : (
-            savedAnnotations.length > 0 ? (
+          {savedAnnotations.length > 0 ? (
               <div className="omx-mv-toolbar-comments-bar">
                 <span className="omx-mv-toolbar-comments-bar__count">已标记 {savedAnnotations.length} 处</span>
                 <button // exempt-ui01: 评论清空按钮
@@ -656,13 +614,11 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
                 </svg>
                 <span>添加评论</span>
               </button>
-            )
-          )}
+            )}
         </div>
 
         <div className="omx-mv-toolbar__right">
-          {subViewMode === 'single' ? (
-            <button // exempt-ui01: 历史抽屉触发器（窄容器显示，宽容器由 CSS 隐藏）
+          <button // exempt-ui01: 历史抽屉触发器（窄容器显示，宽容器由 CSS 隐藏）
               type="button"
               className="omx-mv-btn omx-mv-history-toggle"
               ref={historyToggleRef}
@@ -682,10 +638,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
               </svg>
               <span>{flowAlignmentText(t, 'mediaViewer.history.toggle')}</span>
             </button>
-          ) : null}
-          {subViewMode === 'single' ? (
-            <>
-              <button // exempt-ui01: 变焦缩放按钮
+          <button // exempt-ui01: 变焦缩放按钮
                 type="button"
                 className="omx-mv-btn"
                 onClick={() => {
@@ -735,8 +688,6 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
               </button>
-            </>
-          ) : null}
           <button // exempt-ui01: 分栏折叠切换按钮
             type="button"
             className="omx-chat-media-tail__btn"
@@ -753,81 +704,14 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
       </div>
 
       {/* 主舞台区 */}
-      <div className="omx-mv-stage-wrapper" data-subview={subViewMode}>
+      <div className="omx-mv-stage-wrapper">
         {/* 视口展示区 */}
         <div
           className="omx-mv-viewport"
           data-has-generation={state.generationTasks.some((task) => task.sessionId === sessionId && task.media?.length > 0) || undefined}
         >
           <GenerationTasks tasks={state.generationTasks.filter((task) => task.sessionId === sessionId)} imageUrl={imageUrl} readFile={readFile} />
-          {subViewMode === 'grid' ? (
-            /* 时间线瀑布流：同一时间线下多图横排 */
-            <div className="omx-mv-timeline">
-              {timelineGroups.map((group) => (
-                <div key={group.timeKey} className="omx-mv-timeline__group">
-                  <div className="omx-mv-timeline__date">{group.timeKey}</div>
-                  {group.items.length === 1 ? (
-                    <div
-                      className={`omx-mv-timeline__card-single ${group.items[0].id === activeItem?.id ? 'selected' : ''}`}
-                      onClick={() => handleSelectMedia(group.items[0])}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      {group.items[0].status === 'failed' ? (
-                        <FailureCard item={group.items[0]} retryingIds={retryingIds} onRetry={handleRetryFailure} />
-                      ) : group.items[0].status === 'generating' ? (
-                        <GeneratingStateCard />
-                      ) : group.items[0].type === 'video' ? (
-                        <video
-                          src={group.items[0].url ? `${group.items[0].url}#t=0.001` : ''}
-                          muted
-                          playsInline
-                          preload="metadata"
-                        />
-                      ) : (
-                        <img src={group.items[0].url} alt={group.items[0].title || '图片'} />
-                      )}
-                    </div>
-                  ) : (
-                    <div className="omx-mv-timeline__row">
-                      {group.items.map((it) => (
-                        <div
-                          key={it.id}
-                          className={`omx-mv-timeline__card-multi ${it.id === activeItem?.id ? 'selected' : ''}`}
-                          onClick={() => handleSelectMedia(it)}
-                          role="button"
-                          tabIndex={0}
-                        >
-                          {it.status === 'failed' ? (
-                            <FailureCard item={it} retryingIds={retryingIds} onRetry={handleRetryFailure} />
-                          ) : it.status === 'generating' ? (
-                            <GeneratingStateCard />
-                          ) : it.type === 'video' ? (
-                            <video
-                              src={it.url ? `${it.url}#t=0.001` : ''}
-                              muted
-                              playsInline
-                              preload="metadata"
-                            />
-                          ) : (
-                            <img src={it.url} alt={it.title || '图片'} />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-              {isGenerating ? (
-                <div className="omx-mv-timeline__group">
-                  <div className="omx-mv-timeline__card-single">
-                    <GeneratingStateCard />
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            /* 单图大画布展示区与左上角 1:1 居中微型缩略图悬浮栏 */
+          {/* 单图大画布展示区与左上角 1:1 居中微型缩略图悬浮栏 */}
             <div
               className="omx-mv-single-stage"
               ref={stageRef}
@@ -1043,31 +927,24 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
                 })}
               </div>
             </div>
-          )}
-          {subViewMode === 'single' ? (
-            <MediaViewerComposer onDirectSubmit={handleDirectSubmit} disabled={false} t={t} />
-          ) : null}
+          <MediaViewerComposer onDirectSubmit={handleDirectSubmit} disabled={false} t={t} />
         </div>
-        {subViewMode === 'single' ? (
-          <>
-            <div
-              className="omx-mv-history-scrim"
-              aria-hidden="true"
-              onClick={() => setHistoryOpen(false)}
-            />
-            <HistoryPanel
-              id={historyId}
-              entries={historyEntries}
-              activeId={activeItem?.id}
-              open={historyOpen}
-              onSelect={handleSelectHistory}
-              onReusePrompt={handleReuseHistoryPrompt}
-              onDownload={downloadMediaItem}
-              onClose={() => setHistoryOpen(false)}
-              t={t}
-            />
-          </>
-        ) : null}
+        <div
+          className="omx-mv-history-scrim"
+          aria-hidden="true"
+          onClick={() => setHistoryOpen(false)}
+        />
+        <HistoryPanel
+          id={historyId}
+          entries={historyEntries}
+          activeId={activeItem?.id}
+          open={historyOpen}
+          onSelect={handleSelectHistory}
+          onReusePrompt={handleReuseHistoryPrompt}
+          onDownload={downloadMediaItem}
+          onClose={() => setHistoryOpen(false)}
+          t={t}
+        />
       </div>
 
     </div>

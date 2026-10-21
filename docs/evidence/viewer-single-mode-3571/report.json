@@ -1,0 +1,86 @@
+{
+  "pass": true,
+  "issue": 3571,
+  "capturedAt": "2026-10-21T08:28:01.713Z",
+  "browser": "ego-lite",
+  "assertions": [
+    {
+      "name": "no mode switch buttons",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "name": "no capsule / timeline DOM",
+      "pass": true,
+      "detail": {
+        "capsule": 0,
+        "timeline": 0
+      }
+    },
+    {
+      "name": "single stage is the default and visible",
+      "pass": true,
+      "detail": true
+    },
+    {
+      "name": "single-mode toolbar controls remain",
+      "pass": true,
+      "detail": [
+        "添加评论",
+        "历史",
+        "100%",
+        "打开",
+        "下载原图",
+        "切换两栏/三栏"
+      ]
+    },
+    {
+      "name": "composer and history remain",
+      "pass": true,
+      "detail": {
+        "composer": true,
+        "historyToggle": true
+      }
+    },
+    {
+      "name": "zoom interaction still works",
+      "pass": true,
+      "detail": {
+        "zoomBefore": "100%",
+        "zoomAfter": "150%"
+      }
+    }
+  ],
+  "before": {
+    "modeButtons": [],
+    "capsule": 0,
+    "timeline": 0,
+    "singleStage": true,
+    "singleStageVisible": true,
+    "toolbarButtons": [
+      "添加评论",
+      "历史",
+      "100%",
+      "打开",
+      "下载原图",
+      "切换两栏/三栏"
+    ],
+    "hasComposer": true,
+    "historyToggle": true,
+    "text": " 添加评论历史100%打开图像视频Synthetic Image标准版参数16:9·1K·1预估消耗 ≈0.13 积分历史图片失败的尝试：夜景霓虹16:58 · 图片生成失败复用提示词下载×2产品图，极简白底，四张批量16:57 · 图片复用提示词下载沙漠里的柴犬，手机拍摄质感16:56 · 图片复用提示词下载窗边人像"
+  },
+  "zoomBefore": "100%",
+  "zoomAfter": "150%",
+  "screenshots": [
+    "wide-single.png",
+    "wide-single-zoomed.png"
+  ],
+  "sources": {
+    "tab": "4523ac73da417983c5bfc0791be85a7a605a11d163f926ada8671b52d18c7666",
+    "styles": "454158820ccdf92aba3625de2a0198a0a394e79feda903a7c71fcb6f7b1b8255",
+    "store": "b00b45d1b0da9332d13c51fa7722d37b42b02cf66c1210294f18cbe607515459",
+    "stage": "df477e9668c66101daff1ec955b9d241495e0be18526113ac74fbde4a6269a28"
+  },
+  "sourceCommit": "396b59a58f5f0fc0ec7aa054bd86dcf86a7a93f5",
+  "sourceDirty": true
+}
