@@ -5,7 +5,7 @@ import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test, { afterEach } from 'node:test'
-import { withDefaults } from '../config-store.js'
+import { dshHome, withDefaults } from '../config-store.js'
 import {
   clearHomeOrderState,
   handleApi,
@@ -248,6 +248,6 @@ test('catalog 缺失：GET 返回空默认，自定义排序仍可写入（互�
 
 test('默认状态路径位于 DSH_HOME，而不是包内 catalog', () => {
   const statePath = homeOrderStatePath()
-  assert.equal(statePath.endsWith('omnimux-market-home-order.json'), true)
+  assert.equal(statePath, join(dshHome(), 'omnimux-market-home-order.json'))
   assert.equal(statePath.includes('skill-recommendations.json'), false)
 })

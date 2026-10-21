@@ -20,7 +20,8 @@
 |---|---|
 | `plugins/omnimux-market/src/local-api.ts` | 新增 `homeOrderStatePath` / `writeHomeOrderState` / `clearHomeOrderState` / `setHomeOrderPathsForTests`；POST 校验 order 数组 + 同源；GET 返回生效排序与 `source`；错误文案固定描述 + 错误码 |
 | `plugins/omnimux-market/lib/local-api.js` | 构建产物 |
-| `plugins/omnimux-market/src/tests/home-order-write.test.ts` | 10 个真实 HTTP 用例（见下） |
+| `plugins/omnimux-market/dsh.manifest.json` | `storageDomains` 登记 `$DSH_HOME/omnimux-market-home-order.json` |
+| `plugins/omnimux-market/src/tests/home-order-write.test.ts` | 9 个真实 HTTP 用例 + 1 个默认路径单测（见下） |
 
 ## 可观察行为（临时 catalog + 临时 state 路径 + 真实 port:0 HTTP）
 
@@ -54,7 +55,7 @@
 ## 安全/行为变化说明
 
 - 同源校验复用其它 mutating 方法的 `trustedRestartRequest`：浏览器同源 POST 携带 Origin 正常通过；缺少 Origin 的非浏览器调用（如裸 curl）会被 403，属预期收紧。
-- 用户状态从包内 catalog 迁到 `$DSH_HOME`：只读安装目录不再导致「排序成功但实际丢失」；重置会真实删除覆盖并恢复默认。
+- 用户状态从包内 catalog 迁到 `$DSH_HOME`：只读安装目录不再导致「排序成功但实际丢失」；重置会真实删除覆盖并恢复默认。写入前会 `mkdirSync(dirname, {recursive:true})`，DSH_HOME 不存在时自动创建父目录。
 - 旧版本曾写进 catalog 的自定义排序不会被自动迁移（无法区分旧自定义与打包默认），打包默认以仓库文件为准；GET 无客户端消费者，无用户可见影响。
 - 错误体不再包含安装路径（固定描述 + `err.code`）。
 

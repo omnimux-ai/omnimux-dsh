@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { clamp, fetchSkillCard, parseSlug } from './api.js'
 import { parseCategory } from './categories.js'
 import { assignConfig, dshHome, publicConfig, sanitizePatch, sanitizeSortBy, writeOverlay } from './config-store.js'
@@ -528,6 +528,8 @@ function readCatalogHomeOrder(catalogPath: string): string[] {
 export function writeHomeOrderState(statePath: string, order: string[]): void {
   const tmpPath = `${statePath}.tmp-${process.pid}-${Date.now()}`
   try {
+    // A brand-new DSH_HOME may not exist yet; create only the parent directory.
+    mkdirSync(dirname(statePath), { recursive: true })
     writeFileSync(tmpPath, `${JSON.stringify({ version: 1, order, updatedAt: new Date().toISOString() }, null, 2)}\n`)
     renameSync(tmpPath, statePath)
   } catch (err) {

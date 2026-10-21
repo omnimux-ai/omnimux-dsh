@@ -18,7 +18,7 @@
 |---|---|
 | `plugins/omnimux-market/src/local-api.ts` | 自定义排序拆为「用户覆盖文件 + catalog 默认」；新增 `homeOrderStatePath` / `writeHomeOrderState` / `clearHomeOrderState` / `setHomeOrderPathsForTests`；POST 同源 + order 数组校验；错误文案去路径 |
 | `plugins/omnimux-market/lib/local-api.js` | 构建产物（仓库跟踪） |
-| `plugins/omnimux-market/src/tests/home-order-write.test.ts` | 10 个真实 HTTP 用例：自定义写入不动 catalog / 重置删覆盖并回退默认 / GET source / 非法 order 400 / 损坏覆盖容错 / 写失败 500 / 清除失败 500 / 非同源 403 / catalog 缺失仍可写 / 默认路径在 DSH_HOME |
+| `plugins/omnimux-market/src/tests/home-order-write.test.ts` | 9 个真实 HTTP 用例 + 1 个默认路径单测：自定义写入不动 catalog / 重置删覆盖并回退默认 / GET source / 非法 order 400 / 损坏覆盖容错 / 写失败 500 / 清除失败 500 / 非同源 403 / catalog 缺失仍可写 / 默认路径在 DSH_HOME |
 | `docs/evidence/home-order-reset-3509/` | 实测命令/结果/证据 |
 | `specs/home-custom-order-reset-3509.spec.md` | 本规格 |
 
