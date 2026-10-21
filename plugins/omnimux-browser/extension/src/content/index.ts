@@ -14,6 +14,7 @@ import { DEFAULT_SNAPSHOT_MAX_CHARS } from 'omnimux-browser/src/protocol.ts'
 import { runAction, ActionError } from './actions.ts'
 import { capturePost } from './capture/index.ts'
 import type { CapturedPost } from './capture/index.ts'
+import { planRelayChunks } from '../shared/media-relay.ts'
 import { ElementIds } from './ids.ts'
 import { SelectionWatcher } from './selection.ts'
 import { detectPageType, detectPlatform } from './page-sensor.ts'
@@ -45,7 +46,67 @@ export interface CapturePostResponse {
   post?: CapturedPost
 }
 
-type ContentResponse = ToolResult | CapturePostResponse
+/** One media file relayed in chunks; `bytes` is the full file length. */
+export interface RelayMediaResponse {
+  ok: boolean
+  bytes?: number
+  error?: string
+}
+
+type ContentResponse = ToolResult | CapturePostResponse | RelayMediaResponse
+
+/** Read one media URL with the page session; the host cannot download these CDNs. */
+function readMediaBytes(url: string): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('GET', url, true)
+    xhr.withCredentials = true
+    xhr.responseType = 'arraybuffer'
+    xhr.timeout = 120_000
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve(new Uint8Array(xhr.response || new ArrayBuffer(0)))
+      else reject(new Error(`media-http-${xhr.status}`))
+    }
+    xhr.onerror = () => reject(new Error('media-network-error'))
+    xhr.ontimeout = () => reject(new Error('media-timeout'))
+    xhr.send()
+  })
+}
+
+/** Base64 for a binary chunk, built in slices so a 1MB chunk cannot overflow the stack. */
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = ''
+  const step = 0x8000
+  for (let offset = 0; offset < bytes.length; offset += step) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + step))
+  }
+  return btoa(binary)
+}
+
+/**
+ * Read one media URL and stream it to the host through the background in chunks.
+ *
+ * Each chunk is acknowledged by the background only after the host accepted it,
+ * which keeps the upload ordered and bounded. A rejected read throws; the caller
+ * answers with the explicit failure instead of pretending the save succeeded.
+ */
+async function relayMediaBytes(sessionId: string, index: number, url: string): Promise<RelayMediaResponse> {
+  const bytes = await readMediaBytes(url)
+  const ranges = planRelayChunks(bytes.length)
+  for (const range of ranges) {
+    const data = bytesToBase64(bytes.subarray(range.start, range.end))
+    const ack = await chrome.runtime.sendMessage({
+      type: 'CAPTURE_MEDIA_CHUNK',
+      sessionId,
+      index,
+      seq: range.seq,
+      data,
+      final: range.final,
+    }) as { ok?: boolean, error?: string } | undefined
+    if (!ack || ack.ok !== true) return { ok: false, error: (ack && ack.error) || 'chunk-rejected' }
+  }
+  return { ok: true, bytes: bytes.length }
+}
 
 function onMessage(message: unknown, _sender: chrome.runtime.MessageSender, sendResponse: (response: ContentResponse) => void): true | undefined {
   if (typeof message !== 'object' || message === null) return
@@ -63,6 +124,23 @@ function onMessage(message: unknown, _sender: chrome.runtime.MessageSender, send
       sendResponse({ ok: false })
     }
     return
+  }
+  if (msg.action === 'RELAY_CAPTURE_MEDIA') {
+    // 只有顶层 frame 代表作品页；iframe 不能替用户保存。
+    if (window.top !== window) {
+      sendResponse({ ok: false, error: 'not-top-frame' })
+      return
+    }
+    const request = message as { sessionId?: unknown, index?: unknown, url?: unknown }
+    if (typeof request.sessionId !== 'string' || typeof request.index !== 'number' || typeof request.url !== 'string') {
+      sendResponse({ ok: false, error: 'bad-relay-request' })
+      return
+    }
+    void relayMediaBytes(request.sessionId, request.index, request.url).then(
+      (response) => sendResponse(response),
+      (error) => sendResponse({ ok: false, error: String(error instanceof Error ? error.message : error) }),
+    )
+    return true
   }
   if (msg.type === 'DSH_BUDGET') {
     const incoming = (message as { budget?: Partial<SnapshotBudget> }).budget
