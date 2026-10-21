@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const packages = ['omnimux-workflow', 'omnimux-automation', 'omnimux'];
+export const sceneJourneyRun = { evidence: null };
 const expected = ['normal-project-entry', 'seven-primitives', 'scene-search', 'shift-group-member-flags', 'stage-axes-sky', 'aspects-directions', 'render-mode-gates', 'save-reopen-reload-identity'];
 const browserEnv = () => ({ HOME: process.env.HOME, PATH: process.env.PATH });
 const redact = value => String(value).replace(/([?&]token=)[^&\s"'<>]+/gi, '$1REDACTED');
@@ -230,16 +231,14 @@ function runBrowser(executable, input, timeoutMs) {
 }
 
 test('installed normal UI preserves scene controls through close and normal-project reload', { timeout: 900000 }, async t => {
-  if (process.env.DIRECTOR_SCENE_REAL_UI !== '1') {
-    t.skip('PRECONDITION_MISSING: DIRECTOR_SCENE_REAL_UI=1 required; real UI not run, no complete acceptance PASS'); return;
-  }
+  assert.equal(process.env.DIRECTOR_SCENE_REAL_UI, '1', 'PRECONDITION_MISSING: DIRECTOR_SCENE_REAL_UI=1 required; real UI not run, no complete acceptance PASS');
   const { startTestEnvironment, diagnoseWorktreeRoot } = await import('./test-env-bootstrap.mjs');
   assert.equal(diagnoseWorktreeRoot(root, fs, dirname(dirname(root))).ok, true, 'task worktree required');
   const executable = process.env.DIRECTOR_EGO_BROWSER || 'ego-browser';
   const preflight = spawnSync(executable, ['--version'], { env: browserEnv(), encoding: 'utf8', timeout: 10000 });
   assert.ok(!preflight.error && preflight.status === 0, 'PRECONDITION_MISSING: Ego executable unavailable');
   const directory = join(root, '.agent-reports/beeftv-director'); fs.mkdirSync(directory, { recursive: true });
-  const evidence = fs.mkdtempSync(join(directory, 'formal-scene-controls-')); t.diagnostic(`Evidence: ${evidence}`);
+  const evidence = fs.mkdtempSync(join(directory, 'formal-scene-controls-')); sceneJourneyRun.evidence = evidence; t.diagnostic(`Evidence: ${evidence}`);
   const projectTitle = `Scene Controls QA ${Date.now()} ${randomUUID().slice(0, 8)}`;
   let app, failure;
   try {

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { closeSync, constants, existsSync, fsyncSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, statSync, unlinkSync, writeFileSync, type Stats } from 'node:fs';
+import { closeSync, constants, existsSync, fsyncSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, readSync, fstatSync, readdirSync, realpathSync, statSync, unlinkSync, writeFileSync, type Stats } from 'node:fs';
 import { isAbsolute, join, relative, sep } from 'node:path';
 import { z } from 'zod';
 import { assertProjectWriteSafe, resolveProjectPaths, resolveProjectRelPath } from '../../projects/paths.ts';
@@ -67,11 +67,22 @@ export function createDirectorOperations({ host, store, assetsStore }: {
       assertQueuePathSafe(file, location.root);
       if (!existsSync(file)) break;
       try {
-        const descriptor = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+        const descriptor = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
         let text: string;
-        try { text = readFileSync(descriptor, 'utf8'); }
-        finally { closeSync(descriptor); }
-        if (Buffer.byteLength(text) > 32768) reject('director-operation-invalid-record');
+        try {
+          const before = fstatSync(descriptor);
+          if (!before.isFile() || before.size > 32768) reject('director-operation-invalid-record');
+          const bytes = Buffer.alloc(before.size);
+          let offset = 0;
+          while (offset < bytes.length) {
+            const count = readSync(descriptor, bytes, offset, bytes.length - offset, offset);
+            if (!count) reject('director-operation-invalid-record');
+            offset += count;
+          }
+          const after = fstatSync(descriptor);
+          if (!after.isFile() || after.dev !== before.dev || after.ino !== before.ino || after.size !== before.size || after.mtimeMs !== before.mtimeMs) reject('director-operation-invalid-record');
+          text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+        } finally { closeSync(descriptor); }
         const value: unknown = JSON.parse(text);
         if (value && typeof value === 'object' && !Object.hasOwn(value, 'validationVersion')) reject('director-operation-legacy-unverified');
         const parsed = recordSchema.safeParse(value);
