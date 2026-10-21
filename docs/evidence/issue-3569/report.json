@@ -1,0 +1,14 @@
+{
+  "startedAt": "2026-10-21T08:14:12.267Z",
+  "ok": true,
+  "extensionId": "beodofafnnoiijijgojmccajhljkbkie",
+  "result": {
+    "response": {
+      "ok": true,
+      "text": "正常"
+    },
+    "lastError": null
+  },
+  "finishedAt": "2026-10-21T08:14:24.771Z",
+  "singleSpawn": true
+}

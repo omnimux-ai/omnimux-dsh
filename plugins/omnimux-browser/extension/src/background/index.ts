@@ -1615,6 +1615,36 @@ async function completeTextWithSession(system: string, user: string): Promise<st
   }
 }
 
+/** Wait for settings + an already configured bridge, starting it on demand. */
+async function ensureBridgeForGeneration(timeoutMs = 5000): Promise<void> {
+  await Promise.all([settingsReady, bridgeClaimReady])
+  if (rpc !== null && bridge !== null && bridge.connected) return
+  if (settings.token.trim() === '') {
+    const zh = getUiLocale() === 'zh'
+    throw new Error(zh
+      ? '未连接 dsh：还没有配对令牌，请在插件设置里粘贴本机应用的配对令牌'
+      : 'dsh is not connected: no pairing token yet — paste it in the extension settings')
+  }
+  if (bridge !== null && bridge.evicted === true) {
+    bridge.stop()
+    bridge = null
+    rpc = null
+  }
+  if (bridge === null || bridge.state === 'stopped' || bridge.state === 'reconnecting') {
+    armBridgeKeepalive()
+    await startBridge()
+  }
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (rpc !== null && bridge !== null && bridge.connected) return
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  const zh = getUiLocale() === 'zh'
+  throw new Error(zh
+    ? '连接 dsh 超时，请确认 OmniMux 已启动后重试'
+    : 'Timed out connecting to dsh — make sure OmniMux is running and retry')
+}
+
 async function gatewayRpc(method: string, payload: unknown): Promise<unknown> {
   if (rpc === null || bridge === null || !bridge.connected) {
     const zh = getUiLocale() === 'zh'
@@ -2960,6 +2990,12 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
     const userMessage = payload.userMessage || ''
 
     void (async () => {
+      try {
+        await ensureBridgeForGeneration()
+      } catch (error) {
+        sendResponse({ ok: false, message: error instanceof Error ? error.message : String(error) })
+        return
+      }
       let sessionError: unknown = null
       try {
         const text = await completeTextWithSession(systemPrompt, userMessage)
