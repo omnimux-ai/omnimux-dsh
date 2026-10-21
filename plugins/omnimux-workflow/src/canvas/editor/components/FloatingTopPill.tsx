@@ -34,6 +34,7 @@ export interface FloatingPillAction {
 export interface FloatingTopPillProps {
   actions?: FloatingPillAction[];
   visible?: boolean;
+  /** 折叠预算（不是视觉夹取宽度）：超出预算的次区/尾部主区动作折进「更多」。 */
   maxWidth?: number;
   children?: React.ReactNode;
   inverseScale?: number;

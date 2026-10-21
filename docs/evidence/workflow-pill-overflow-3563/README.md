@@ -21,9 +21,11 @@
 cd plugins/omnimux-workflow && node scripts/canvas-harness.mjs --port 4932
 
 # 真实浏览器（ego-browser）读取胶囊容器与每个按钮的 getBoundingClientRect
-# 单测
+# 单测（包内默认 glob 覆盖 src 与 tests/*.test.mjs）
 node --test src/canvas/editor/utils/nodeToolbarLogic.test.mjs
 node --test "src/**/*.test.mjs" "src/**/*.test.js" "tests/*.test.mjs"
+# 端到端契约文件在 tests/e2e/，不在包内默认 glob，需要显式执行
+node --test tests/e2e/pill-overflow.e2e.test.mjs
 ```
 
 ## 边界与限制

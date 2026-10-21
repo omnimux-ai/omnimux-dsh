@@ -8,7 +8,6 @@ import {
   EMPTY_AUDIO_PILL_ACTION_ID,
   EMPTY_IMAGE_PILL_ACTION_ID,
   EMPTY_VIDEO_PILL_ACTION_ID,
-  PILL_NODE_GUTTER,
   PILL_NODE_OVERHANG,
   buildConversationPayloadFromNode,
   buildEmptyImagePillActionSpec,
@@ -141,13 +140,13 @@ test('partitionToolbarActions：仅主区时不计入 divider / more', () => {
   assert.deepEqual(result.overflow, []);
 });
 
-test('partitionToolbarActions：视频节点 4 主胶囊 + 更多 全部落在预算内', () => {
+test('partitionToolbarActions：350px 视频节点 4 主胶囊 + 聊天图标全部可见', () => {
   const actions = [
     spec('deconstruct-video', 'primary', 82),
     spec('storyboard-video', 'primary', 70),
     spec('extract-audio', 'primary', 82),
     spec('depth-video', 'primary', 82),
-    spec('chat', 'secondary', 70),
+    spec('chat', 'secondary', 29),
   ];
   const result = partitionToolbarActions(actions, {
     maxWidth: pillMaxWidthForNode(350),
@@ -160,8 +159,9 @@ test('partitionToolbarActions：视频节点 4 主胶囊 + 更多 全部落在�
     'storyboard-video',
     'extract-audio',
     'depth-video',
+    'chat',
   ]);
-  assert.deepEqual(result.overflow.map((item) => item.id), ['chat']);
+  assert.deepEqual(result.overflow.map((item) => item.id), []);
 });
 
 test('partitionToolbarActions：窄节点主区自身超宽时折叠尾部，不再撑破容器', () => {
@@ -195,7 +195,7 @@ test('partitionToolbarActions：200px 窄视频节点只保留放得下的主胶
   assert.equal(result.visible.filter((item) => item.section === 'primary').length, 2);
 });
 
-test('partitionToolbarActions：只有次区动作时按次区排布，不整体折进更多', () => {
+test('partitionToolbarActions：只有次区动作时先按次区排布，预算不足才整体进更多', () => {
   const only = [spec('chat', 'secondary', 40)];
   const single = partitionToolbarActions(only, OPTS);
   assert.deepEqual(single.visible.map((item) => item.id), ['chat']);
@@ -210,6 +210,14 @@ test('partitionToolbarActions：只有次区动作时按次区排布，不整体
   const overflowed = partitionToolbarActions(many, { ...OPTS, maxWidth: 200 });
   assert.ok(overflowed.visible.length >= 1);
   assert.ok(overflowed.overflow.length >= 1);
+
+  // 预算紧到放不下「次区 + 更多」时，整体折入更多（入口仍是「更多」按钮）。
+  const cramped = partitionToolbarActions(
+    [spec('a', 'secondary', 80), spec('b', 'secondary', 80)],
+    { maxWidth: 100, moreWidth: 58, dividerWidth: 1, gap: 0 },
+  );
+  assert.deepEqual(cramped.visible, []);
+  assert.deepEqual(cramped.overflow.map((item) => item.id), ['a', 'b']);
 });
 
 test('partitionToolbarActions：visible + overflow 恰好覆盖全部动作，不丢不重', () => {
