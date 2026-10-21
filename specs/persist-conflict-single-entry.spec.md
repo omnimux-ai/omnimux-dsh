@@ -9,7 +9,9 @@
 - 删除 `planRemoteReconcile` 的 `workspaceId?: string` 可选入参（漏传会让签名与 hook 不一致的真实陷阱）；
 - `useWorkspacePersistence` 无需改动（它本来就用唯一入口 + 自算签名）。
 
-可观察标准：全仓 `git grep` 只剩 1 个判定入口；`pnpm --filter omnimux-workflow test` 与 `typecheck` 全绿，**用例数与断言一字不改**（2861 / 0 fail）。
+可观察标准：**生产导出面**只剩 1 个判定入口（被删掉的名字仅以测试内本地适配器形式存在，`git grep` 会命中它们，这是预期）；`pnpm --filter omnimux-workflow test` 与 `typecheck` 全绿，**用例数与断言文本一字不改**（2861 / 0 fail）。
+
+注意边界：本次只把「接受 workspaceId 的判定入口」从 `persistConflict` 移除；签名计算仍在 `persistSanitize.signatureOf`，其 `workspaceId?: string` 依然可选，漏传会改变导入素材节点的签名。真正的收口需要在 `persistSanitize` 侧把 `workspaceId` 改为必填，不在本任务范围。
 
 ## 命名取舍
 
@@ -38,17 +40,19 @@
 
 ## 测试策略
 
-纯重构：既有用例全部保留，断言文本与期待值一字不改；只把两个测试文件里对已删除导出的调用，换成文件内的等价适配器（映射到唯一入口）。等价性由「同一批用例全绿 + 用例数不变」证明，不新增只复述改名的用例。测试标准零变更，因此不需要 test-change-review 清单。
+纯重构：既有用例全部保留，断言文本与期待值一字不改；只把两个测试文件里对已删除导出的调用，换成文件内的等价适配器（映射到唯一入口）。等价性由「同一批用例全绿 + 用例数不变」证明，不新增只复述改名的用例。
+
+关于清单：`scripts/test-change-review.mjs` 对任何被修改的 `*.test.mjs` 路径都会产出 `existing-evaluation-changed` 条目（不判断断言是否真的变了），所以本任务仍会附该清单，并逐条说明「断言文本与期待值零变更、无 skip/only/todo」；不声称「不需要清单」。
 
 ## 假设
 
 1. `persistConflict` 是插件内部模块，仓库内除 `useWorkspacePersistence` 与三个 bridge 测试外无其它消费者（已用 ripgrep 确认，含 `plugins/*`、`packages/*`、`presets/*`），删除导出无外部迁移成本。
-2. 两个本地适配器与原导出的返回值完全等价：都只是把同样的三个签名字符串转交给同一个四态判定，不做额外分支，因此断言文本可以保持不变。
+2. 两个本地适配器对**当前用例的调用形状**与原导出等价：`persistConflict.test.mjs` 的适配器只做 `currentSignature` → `localSignature` 的字段改名；`workspaceSelfSaveRace.test.mjs` 的 helper 额外用公开的 `signatureOf` 算两个签名，并加了一条 `workspaceId` 必填守卫（6 处调用都传了 `WS`，守卫不可达）。等价性的对象是这些调用点，而不是任意入参。
 
 ## 证伪方式
 
 1. 若存在漏网消费者，删除导出后 `typecheck` 或 `pnpm --filter omnimux-workflow test` 会立即报未定义导入；另用 `git grep -n "persistConflict" -- ':!docs'` 复核引用清单。
-2. 若适配器与原实现不等价，`persistConflict.test.mjs` 与 `workspaceSelfSaveRace.test.mjs` 的既有断言会出现值变化（而不是通过）；`submissionSaveBarrier.test.mjs` 的 409 栅栏断言可独立证伪「提交路径被放松」。
+2. 若适配器与原实现不等价，`persistConflict.test.mjs` 与 `workspaceSelfSaveRace.test.mjs` 的既有断言会出现值变化（而不是通过）。注意证伪范围：这条无法覆盖「守卫分支」这类只在非法入参下出现的差异，因此守卫的语义由用例入参本身（全部传 `WS`）保证，而不是由断言证明。
 
 ## 边界与文档影响
 
