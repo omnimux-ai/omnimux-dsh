@@ -871,7 +871,7 @@ export const INSPIRATION_CSS = `
   right: 0;
   bottom: 0;
   z-index: 5;
-  padding: 8px 12px 44px;
+  padding: 8px 12px 52px 36px;
   background: linear-gradient(180deg, transparent 0%, var(--dsw-alias-bg-mask-2, rgba(0,0,0,.72)) 34%, var(--dsw-alias-bg-mask-2, rgba(0,0,0,.72)) 100%);
   opacity: 0;
   pointer-events: none;

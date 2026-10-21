@@ -54,6 +54,29 @@ function fixtureHtml() {
     <button class="omnimux-inspiration-card-check" aria-label="选择"></button>
   </article>
 
+  <article class="probe-card probe-short omnimux-rival-card t-image omnimux-inspiration-card-pure is-library" style="--rival-card-w:${CARD_WIDTH}px">
+    <div class="omnimux-inspiration-cover-wrap">
+      <div class="omnimux-rival-card-media" style="--rival-media-ratio:1.91"></div>
+    </div>
+    <div class="omnimux-rival-card-body">
+      <div class="omnimux-rival-card-title clamp-2">短封面上的两行标题也不能被裁掉</div>
+      <div class="omnimux-inspiration-card-meta">
+        <span class="omnimux-inspiration-card-meta-source">Instagram</span>
+        <span class="omnimux-inspiration-card-meta-sep" aria-hidden="true">·</span>
+        <span class="omnimux-inspiration-card-meta-time">3 天前</span>
+      </div>
+    </div>
+    <span class="omnimux-inspiration-card-failure is-failed" role="img" title="${LONG_REASON}" aria-label="${LONG_REASON}"><svg width="14" height="14"></svg></span>
+    <div class="omnimux-inspiration-card-menu probe-menu"><button aria-label="更多操作">…</button></div>
+    <div class="omnimux-inspiration-card-overlay is-cover">
+      <div class="omnimux-inspiration-overlay-cta">
+        <button class="omnimux-inspiration-overlay-cta-btn secondary"><span class="omnimux-inspiration-overlay-cta-label">详情</span></button>
+        <button class="omnimux-inspiration-overlay-cta-btn primary"><span class="omnimux-inspiration-overlay-cta-label">立即复刻</span></button>
+      </div>
+    </div>
+    <button class="omnimux-inspiration-card-check" aria-label="选择"></button>
+  </article>
+
   <article class="probe-card probe-textmedia omnimux-rival-card t-text-media omnimux-inspiration-card-pure is-library" style="--rival-card-w:${CARD_WIDTH}px">
     <div class="omnimux-inspiration-cover-wrap">
       <div class="omnimux-rival-card-media" style="--rival-media-ratio:${16 / 9}"></div>
@@ -140,6 +163,12 @@ function measure() {
   const failedIcon = failedPost.querySelector('.omnimux-inspiration-card-failure')
   const failedCheck = failedPost.querySelector('.omnimux-inspiration-card-check')
   const failedMenu = failedPost.querySelector('.omnimux-inspiration-card-menu')
+  const shortCard = document.querySelector('.probe-short')
+  const shortMedia = shortCard.querySelector('.omnimux-rival-card-media')
+  const shortTitle = shortCard.querySelector('.omnimux-rival-card-title')
+  const shortMeta = shortCard.querySelector('.omnimux-inspiration-card-meta')
+  const shortCheck = shortCard.querySelector('.omnimux-inspiration-card-check')
+  const shortCta = shortCard.querySelector('.omnimux-inspiration-overlay-cta')
   const mediaBox = media.getBoundingClientRect()
   return {
     mediaCard: rect(mediaCard),
@@ -165,6 +194,13 @@ function measure() {
     failedIcon: rect(failedIcon),
     failedCheck: rect(failedCheck),
     failedMenu: rect(failedMenu),
+    shortCard: rect(shortCard),
+    shortMedia: rect(shortMedia),
+    shortTitle: rect(shortTitle),
+    shortMeta: rect(shortMeta),
+    shortCheck: rect(shortCheck),
+    shortCta: rect(shortCta),
+    shortTitlePaddingLeft: parseInt(getComputedStyle(shortTitle).paddingLeft, 10) || 0,
   }
 }
 
@@ -177,6 +213,17 @@ function probe() {
     viewportHeight: 900,
   })
 }
+
+test('根层短封面：悬停层不裁标题，也不和复选框/CTA 重叠', () => {
+  const geometry = probe()
+  assert.ok(
+    Math.abs(geometry.shortCard.h - (geometry.shortMedia.h + 2)) <= 2,
+    `short cover card height must stay cover + 2 (${geometry.shortCard.h} vs ${geometry.shortMedia.h})`,
+  )
+  assert.ok(geometry.shortTitle.y >= geometry.shortCard.y, 'the title starts inside the card')
+  assert.ok(geometry.shortTitle.x + geometry.shortTitlePaddingLeft > geometry.shortCheck.right, 'the title clears the checkbox')
+  assert.ok(geometry.shortMeta.bottom <= geometry.shortCta.y + 1, 'the meta row sits above the CTA pills')
+})
 
 test('根层媒体卡：封面就是默认卡面，高度 = 封面 + 描边', () => {
   const geometry = probe()
