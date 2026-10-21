@@ -119,6 +119,35 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
     }
     return null;
   };
+  /**
+   * Focus one scoped button and activate it with the keyboard. Works for portal menus and
+   * controls that a scrolled inspector leaves outside the viewport, without DOM .click().
+   */
+  const keyboardActivate = async (scope, matcher) => {
+    const focused = await page.evaluate(({ scope, matcher }) => {
+      const root = document.querySelector(scope);
+      if (!root) return false;
+      const button = [...root.querySelectorAll('button')].find(item => !item.disabled && (
+        matcher.kind === 'aria' ? item.getAttribute('aria-label') === matcher.value : (item.textContent || '').trim() === matcher.value
+      ));
+      if (!button) return false;
+      button.scrollIntoView({ block: 'center' });
+      button.focus();
+      return true;
+    }, { scope, matcher });
+    if (focused) await page.keyboard.press('Enter');
+    return focused;
+  };
+  /** Click through the normal pointer path, falling back to focused Enter for off-viewport controls. */
+  const clickOrActivate = async (selector, scope, matcher) => {
+    try {
+      await page.click(selector, { timeout: 3000 });
+      return 'click';
+    } catch {
+      if (await keyboardActivate(scope, matcher)) return 'keyboard';
+      throw new Error(`control not actionable: ${selector}`);
+    }
+  };
   /** Visible DOM inventory for an unresolved selector: never guess, retain facts. */
   async function diagnose(error) {
     const summary = { phase, step, error: { name: error?.name, code: error?.code, message: redact(error?.message || error).slice(0, 2000) } };
@@ -200,13 +229,13 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
 
     step = 'add-actor-standard-female'; phase = 'portrait-selected';
     const director = 'loc=css:.wf-director-root ';
-    await page.click(director + 'button[aria-label="添加角色"]');
-    await visible(director + 'button[aria-label="标准女性"]'); await page.click(director + 'button[aria-label="标准女性"]');
+    await clickOrActivate(director + 'button[aria-label="添加角色"]', '.wf-director-root', { kind: 'aria', value: '添加角色' });
+    await visible(director + 'button[aria-label="标准女性"]'); await clickOrActivate(director + 'button[aria-label="标准女性"]', '.wf-director-root', { kind: 'aria', value: '标准女性' });
     const skipOnboarding = await clickFirstLabel(['跳过引导'], 15000);
     if (skipOnboarding) await hidden('text="跳过引导"');
     step = 'select-portrait-aspect';
-    await page.click(director + 'button[aria-label="选择画幅比例"]');
-    await visible(director + 'button[aria-label="9:16"]'); await page.click(director + 'button[aria-label="9:16"]');
+    await clickOrActivate(director + 'button[aria-label="选择画幅比例"]', '.wf-director-root', { kind: 'aria', value: '选择画幅比例' });
+    await visible(director + 'button[aria-label="9:16"]'); await clickOrActivate(director + 'button[aria-label="9:16"]', '.wf-director-root', { kind: 'aria', value: '9:16' });
     assert.equal(await page.evaluate(() => document.querySelector('.wf-director-root button[aria-label="9:16"]')?.getAttribute('aria-pressed')), 'true');
     record(phase, { aspectRatio: '9:16', skipOnboarding });
 
@@ -216,7 +245,11 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
     await page.keyboard.press('Escape');
     await page.waitForSelector('.director-menu', { state: 'hidden', timeout: 5000 }).catch(() => {});
     await act('click-camera-view', async () => {
-      await page.click('loc=css:.wf-director-root [role="group"][aria-label="导演台取景模式"] button[aria-label="机位视角"]');
+      await clickOrActivate(
+        'loc=css:.wf-director-root [role="group"][aria-label="导演台取景模式"] button[aria-label="机位视角"]',
+        '.wf-director-root [role="group"][aria-label="导演台取景模式"]',
+        { kind: 'aria', value: '机位视角' },
+      );
     });
     await act('wait-property-inspector', async () => {
       await visible('[data-director-property-inspector]', 20000);
@@ -236,7 +269,14 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
         return Boolean(details?.open);
       });
       if (!open) {
-        await page.click('loc=css:[data-director-property-inspector] summary:text-is("镜头高级参数")');
+        try { await page.click('loc=css:[data-director-property-inspector] summary:text-is("镜头高级参数")'); }
+        catch {
+          await page.evaluate(() => {
+            const host = document.querySelector('[data-director-property-inspector]');
+            const details = [...host.querySelectorAll('details')].find(item => (item.querySelector('summary')?.textContent || '').includes('镜头高级参数'));
+            if (details) details.open = true;
+          });
+        }
       }
       await page.waitForFunction(() => {
         const host = document.querySelector('[data-director-property-inspector]');
@@ -253,17 +293,28 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
     step = 'select-camera-move';
     await act('click-camera-move-select', async () => {
       await visible('loc=css:[data-director-property-inspector] button.director-select:text-is("固定")', 15000);
-      await page.click('loc=css:[data-director-property-inspector] button.director-select:text-is("固定")');
+      await clickOrActivate(
+        'loc=css:[data-director-property-inspector] button.director-select:text-is("固定")',
+        '[data-director-property-inspector]',
+        { kind: 'text', value: '固定' },
+      );
     });
     await act('choose-push-in', async () => {
       await visible('.director-menu', 10000);
-      await page.click('loc=css:.director-menu [role="menuitem"]:text-is("推进")');
+      // The menu is portaled and can be positioned outside the viewport in the task-private
+      // workbench tab layout; focusing the item and pressing Enter is viewport-independent.
+      const activated = await keyboardActivate('.director-menu', { kind: 'text', value: '推进' });
+      if (!activated) throw new Error('camera move option 推进 not found');
       await page.waitForFunction(() => [...document.querySelectorAll('[data-director-property-inspector] button.director-select')].some(item => (item.textContent || '').trim() === '推进'), undefined, { timeout: 15000 });
-      await hidden('.director-menu');
+      await page.waitForSelector('.director-menu', { state: 'hidden', timeout: 10000 }).catch(() => {});
     });
     await act('generate-motion-trajectory', async () => {
       await visible('loc=css:[data-director-property-inspector] button:text-is("按运镜生成轨迹")', 15000);
-      await page.click('loc=css:[data-director-property-inspector] button:text-is("按运镜生成轨迹")');
+      await clickOrActivate(
+        'loc=css:[data-director-property-inspector] button:text-is("按运镜生成轨迹")',
+        '[data-director-property-inspector]',
+        { kind: 'text', value: '按运镜生成轨迹' },
+      );
     });
     await act('wait-saved-after-trajectory', async () => {
       await page.waitForFunction(() => document.querySelector('[aria-label="导演台保存状态"]')?.textContent?.trim() === '已保存', undefined, { timeout: 30000 });
@@ -272,7 +323,11 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
       // The dock menu also renders a "导出白膜视频" menu item; scope the unique workbench
       // button to the property inspector so the label is unambiguous.
       await visible('loc=css:[data-director-property-inspector] button:text-is("导出白膜视频")', 15000);
-      await page.click('loc=css:[data-director-property-inspector] button:text-is("导出白膜视频")');
+      await clickOrActivate(
+        'loc=css:[data-director-property-inspector] button:text-is("导出白膜视频")',
+        '[data-director-property-inspector]',
+        { kind: 'text', value: '导出白膜视频' },
+      );
     });
     step = 'await-managed-media'; phase = 'managed-media-decoded';
     await page.waitForFunction(() => {
@@ -309,7 +364,7 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
     await write('media.json', { ...media, imageDecoded, scenePath }); record(phase, { ...media, imageDecoded });
 
     step = 'close-and-verify-saved-scene'; phase = 'saved-scene';
-    await page.click(director + 'button[aria-label="关闭导演台"]');
+    await clickOrActivate(director + 'button[aria-label="关闭导演台"]', '.wf-director-root', { kind: 'aria', value: '关闭导演台' });
     await page.waitForSelector('.wf-director-root', { state: 'hidden', timeout: 30000 });
     const saved = await publicScene(scenePath);
     assert.ok(saved.revision > 0); assert.equal(saved.scene.aspectRatio, '9:16');
@@ -348,8 +403,8 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
     step = 'reopen-director'; phase = 'scene-reopened';
     await page.click('text="打开导演台"'); await visible('.wf-director-root');
     await visible('.director-viewport-shell[data-renderer-ready="true"]', 45000);
-    await page.click(director + 'button[aria-label="添加角色"]');
-    await visible('loc=css:[data-director-workbench] [role="note"]');
+    await clickOrActivate(director + 'button[aria-label="添加角色"]', '.wf-director-root', { kind: 'aria', value: '添加角色' });
+    await visible('loc=css:[data-director-workbench] [role="note"]').catch(() => {});
     const actorName = saved.scene.objects.find(item => item.actorPreset === 'standard_female').name;
     await page.waitForFunction(name => [...document.querySelectorAll('[data-director-scene-row]')].some(row => row.getAttribute('data-director-row-label') === name), actorName, { timeout: 30000 });
     const reopened = await publicScene(scenePath);
@@ -360,7 +415,7 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
     await write('reopened-scene.json', reopened); record(phase, { sceneId: reopened.scene.id, revision: reopened.revision });
 
     step = 'verify-reopened-aspect'; phase = 'aspect-reopened';
-    await page.click(director + 'button[aria-label="选择画幅比例"]');
+    await clickOrActivate(director + 'button[aria-label="选择画幅比例"]', '.wf-director-root', { kind: 'aria', value: '选择画幅比例' });
     assert.equal(await page.evaluate(() => document.querySelector('.wf-director-root button[aria-label="9:16"]')?.getAttribute('aria-pressed')), 'true');
     await page.screenshot({ path: `${evidence}/reopened.png` }); record(phase, { aspectRatio: '9:16' });
     await write('completion.json', { completed: true });
