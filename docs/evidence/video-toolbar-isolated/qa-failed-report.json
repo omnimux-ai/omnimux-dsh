@@ -1,0 +1,92 @@
+{
+  "runId": "7406bc54-98bb-48cf-8c20-29bd3006f1f4",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-video-toolbar-isolated",
+  "origin": null,
+  "appPort": null,
+  "cdpPort": null,
+  "startedAt": "2026-10-21T07:02:11.588Z",
+  "completedAt": "2026-10-21T07:02:39.469Z",
+  "pass": false,
+  "scope": "smoke",
+  "producer": "controlled-runner",
+  "contract": "none",
+  "taskBinding": "unknown",
+  "userFresh": "unknown",
+  "inputClosure": "unknown",
+  "summary": null,
+  "assertions": [],
+  "screenshot": null,
+  "errors": [
+    "TEST_ENV_RUNTIME_EXIT"
+  ],
+  "cleanup": {
+    "cleaned": true,
+    "resources": [
+      {
+        "name": "app-child",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "mock-server",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "app-private-directory",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "browser-child",
+        "owner": "app-browser",
+        "status": "not-applicable",
+        "reason": "not-created"
+      },
+      {
+        "name": "cdp-transport",
+        "owner": "app-browser",
+        "status": "not-applicable",
+        "reason": "not-created"
+      },
+      {
+        "name": "browser-private-directory",
+        "owner": "app-browser",
+        "status": "not-applicable",
+        "reason": "not-created"
+      }
+    ]
+  },
+  "observations": {
+    "rawOutputRetained": false,
+    "appEvents": [
+      {
+        "event": "spawn",
+        "code": null,
+        "signal": null,
+        "pid": 14720,
+        "parentPid": 14050
+      },
+      {
+        "event": "exit",
+        "code": 1,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      },
+      {
+        "event": "close",
+        "code": 1,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      }
+    ],
+    "browserEvents": []
+  },
+  "beforeCaptureMs": 0
+}

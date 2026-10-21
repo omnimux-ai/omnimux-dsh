@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, basename } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { WorkspaceStore } from '../workspace/WorkspaceStore.ts';
-import type { DeconstructVideoRequest, DeconstructVideoResult } from './schema.ts';
+import type { DeconstructVideoResult, ParsedDeconstructVideoRequest } from './schema.ts';
 import { VideoDeconstructError } from './errors.ts';
 import { describeVideoAnalyzeFailure } from '../videoAnalyzeFailure.ts';
 import {
@@ -261,13 +261,72 @@ export function resolveVideoAbsolutePath(
 
 const logger = createWorkflowLogger('video-deconstruct');
 
+const DECONSTRUCT_ORIGIN = 'video_deconstruct';
+
+/** targetNodeId 可省略；trim 后为空视为未提供，只有非空值才参与后续复用/校验。 */
+export function readTargetNodeId(input: { targetNodeId?: string }): string | undefined {
+  const raw = input.targetNodeId;
+  if (typeof raw !== 'string') return undefined;
+  const trimmed = raw.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+/**
+ * targetNodeId 只能复用本操作的可写下游表格节点。
+ * 返回占用冲突原因；无冲突返回 undefined。服务层据此各自抛 invalid-request(400)。
+ */
+export type TargetNodeReuseBlock = 'non-table' | 'foreign-origin' | 'foreign-source';
+
+export function findTargetNodeReuseBlock(
+  nodes: CanvasNode[],
+  targetNodeId: string,
+  sourceVideoNodeId: string,
+  ownOrigin: string,
+): TargetNodeReuseBlock | undefined {
+  const occupant = nodes.find((node) => {
+    const d = node.data as Record<string, unknown> | undefined;
+    return node.id === targetNodeId || d?.tableId === targetNodeId;
+  });
+  if (!occupant) return undefined;
+  if (occupant.type !== 'table') return 'non-table';
+  const d = occupant.data as Record<string, unknown> | undefined;
+  const origin = typeof d?.origin === 'string' ? d.origin : undefined;
+  if (origin && origin !== ownOrigin) return 'foreign-origin';
+  if (origin === ownOrigin && typeof d?.sourceVideoNodeId === 'string'
+    && d.sourceVideoNodeId !== sourceVideoNodeId) {
+    return 'foreign-source';
+  }
+  return undefined;
+}
+
+const TARGET_NODE_REUSE_MESSAGES: Record<TargetNodeReuseBlock, string> = {
+  'non-table': 'targetNodeId 已被非表格节点占用',
+  'foreign-origin': 'targetNodeId 已被其它来源的节点占用',
+  'foreign-source': 'targetNodeId 已被其它视频节点的下游表格占用',
+};
+
 export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps) {
   return async (
     workspaceId: string,
-    input: Required<DeconstructVideoRequest>,
+    input: ParsedDeconstructVideoRequest,
   ): Promise<DeconstructVideoResult> => {
     // 1. 校验工作区存在性
     deps.store.get(workspaceId);
+
+    // 1.1 targetNodeId 占用校验前置：避免先花大代价做视频理解再拒绝非法复用
+    const targetNodeId = readTargetNodeId(input);
+    if (targetNodeId) {
+      const earlySnapshot = deps.store.get(workspaceId);
+      const block = findTargetNodeReuseBlock(
+        (earlySnapshot.nodes || []) as CanvasNode[],
+        targetNodeId,
+        input.nodeId,
+        DECONSTRUCT_ORIGIN,
+      );
+      if (block) {
+        throw new VideoDeconstructError('invalid-request', TARGET_NODE_REUSE_MESSAGES[block], 400);
+      }
+    }
 
     // 2. 解析视频绝对路径；远程 URL 或超上限本地文件先转码压缩成理解模型可接受的样片
     const absVideoPath = resolveVideoAbsolutePath(deps, workspaceId, input.videoPath);
@@ -304,16 +363,24 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
           return false;
         }
         // 3. 仅对完全没有 origin 标识的遗留通用表格做连线容错
-        return !d?.origin && connectedTableNodeIds.has(node.id);
+        if (!d?.origin && connectedTableNodeIds.has(node.id)) {
+          return true;
+        }
+        // 4. 客户端预建的 targetNodeId 下游节点（node.id 或 data.tableId 对齐即视为同一节点）
+        if (targetNodeId && (node.id === targetNodeId || d?.tableId === targetNodeId)) {
+          return true;
+        }
+        return false;
       });
     } catch {
       // ignore
     }
 
     const existingTableId = (existingNode?.data as Record<string, unknown> | undefined)?.tableId;
+    // tableId 优先级：服务端已有同源下游 tableId > 客户端预建 targetNodeId > 已有节点 id > 随机 id
     const tableId = typeof existingTableId === 'string' && existingTableId.trim()
       ? existingTableId.trim()
-      : (existingNode?.id || `tbl_${randomUUID().slice(0, 8)}`);
+      : (targetNodeId || existingNode?.id || `tbl_${randomUUID().slice(0, 8)}`);
     const targetTableId = tableId;
 
     const tablePath = resolveTableRelativePath(tableId);

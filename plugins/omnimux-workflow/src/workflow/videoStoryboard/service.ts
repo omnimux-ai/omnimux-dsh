@@ -3,7 +3,7 @@ import { isAbsolute, join, basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import type { WorkspaceStore } from '../workspace/WorkspaceStore.ts';
-import type { StoryboardVideoRequest, StoryboardVideoResult } from './schema.ts';
+import type { ParsedStoryboardVideoRequest, StoryboardVideoResult } from './schema.ts';
 import { VideoStoryboardError } from './errors.ts';
 import { describeVideoAnalyzeFailure } from '../videoAnalyzeFailure.ts';
 import {
@@ -22,7 +22,13 @@ import { mutateWorkspaceGraph } from '../graph/GraphMutator.ts';
 import { createWorkflowLogger } from '../execution/logger.ts';
 import type { CanvasInputMutation, CanvasNode } from '../../shared/graph/canvasInputMutationGateway.ts';
 import type { CanvasWorkspaceSnapshot, SerializedCanvasEdge } from '../../shared/canvasTypes.ts';
-import { resolveVideoAbsolutePath, extractMarkdownTables } from '../videoDeconstruct/service.ts';
+import {
+  resolveVideoAbsolutePath,
+  extractMarkdownTables,
+  readTargetNodeId,
+  findTargetNodeReuseBlock,
+  type TargetNodeReuseBlock,
+} from '../videoDeconstruct/service.ts';
 import { prepareVideoForAnalyze } from '../prepareAnalyzeVideo.ts';
 
 export interface VideoStoryboardServiceDeps {
@@ -138,13 +144,36 @@ export async function extractVideoFrame(
 
 const logger = createWorkflowLogger('video-storyboard');
 
+const STORYBOARD_ORIGIN = 'video_storyboard';
+
+const TARGET_NODE_REUSE_MESSAGES: Record<TargetNodeReuseBlock, string> = {
+  'non-table': 'targetNodeId 已被非表格节点占用',
+  'foreign-origin': 'targetNodeId 已被其它来源的节点占用',
+  'foreign-source': 'targetNodeId 已被其它视频节点的下游表格占用',
+};
+
 export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
   return async (
     workspaceId: string,
-    input: Required<StoryboardVideoRequest>,
+    input: ParsedStoryboardVideoRequest,
   ): Promise<StoryboardVideoResult> => {
     // 1. 校验工作区存在性
     deps.store.get(workspaceId);
+
+    // 1.1 targetNodeId 占用校验前置：避免先花大代价做视频理解再拒绝非法复用
+    const targetNodeId = readTargetNodeId(input);
+    if (targetNodeId) {
+      const earlySnapshot = deps.store.get(workspaceId);
+      const block = findTargetNodeReuseBlock(
+        (earlySnapshot.nodes || []) as CanvasNode[],
+        targetNodeId,
+        input.nodeId,
+        STORYBOARD_ORIGIN,
+      );
+      if (block) {
+        throw new VideoStoryboardError('invalid-request', TARGET_NODE_REUSE_MESSAGES[block], 400);
+      }
+    }
 
     // 2. 解析视频绝对路径；远程 URL 或超上限本地文件先转码压缩成理解模型可接受的样片
     const absVideoPath = resolveVideoAbsolutePath(deps, workspaceId, input.videoPath);
@@ -163,16 +192,24 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
       existingNode = currentNodes.find((node) => {
         if (node.type !== 'table') return false;
         const d = node.data as Record<string, unknown> | undefined;
-        return d?.origin === 'video_storyboard' && d?.sourceVideoNodeId === input.nodeId;
+        if (d?.origin === 'video_storyboard' && d?.sourceVideoNodeId === input.nodeId) {
+          return true;
+        }
+        // 客户端预建的 targetNodeId 下游节点（node.id 或 data.tableId 对齐即视为同一节点）
+        if (targetNodeId && (node.id === targetNodeId || d?.tableId === targetNodeId)) {
+          return true;
+        }
+        return false;
       });
     } catch {
       // ignore
     }
 
     const existingTableId = (existingNode?.data as Record<string, unknown> | undefined)?.tableId;
+    // tableId 优先级：服务端已有同源下游 tableId > 客户端预建 targetNodeId > 已有节点 id > 随机 id
     const tableId = typeof existingTableId === 'string' && existingTableId.trim()
       ? existingTableId.trim()
-      : (existingNode?.id || `tbl_${randomUUID().slice(0, 8)}`);
+      : (targetNodeId || existingNode?.id || `tbl_${randomUUID().slice(0, 8)}`);
     const tablePath = resolveTableRelativePath(tableId);
     const tableAbsPath = resolveTableAbsPath(deps.store, workspaceId, tableId);
     const title = input.title?.trim() || '视频分镜表';

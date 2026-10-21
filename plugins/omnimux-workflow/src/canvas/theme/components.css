@@ -587,6 +587,20 @@
   flex: 1;
 }
 
+/* 视频工具栏派生表格节点：生成中/失败态占满卡片主体（与素材节点同一状态机） */
+.wf-table-node__state {
+  width: 100%;
+  height: 100%;
+}
+
+.wf-table-node__state > .wf-gsc {
+  height: 100%;
+}
+
+.wf-table-node__state > .wf-gsc > .wf-gsc__box--auto {
+  height: 100%;
+}
+
 /* 空素材占位（虚线框，非生成态） */
 .wf-material-node__media-empty {
   width: 100%;

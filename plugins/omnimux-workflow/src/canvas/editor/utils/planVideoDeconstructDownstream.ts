@@ -8,6 +8,11 @@
  *   type: 'table' 节点并创建 out→in 连线。
  *
  * Handle id 必须沿用 CanvasNodeHandle 的 `in` / `out`，使 React Flow 正确渲染连线。
+ *
+ * 「先建节点、隔离执行」两阶段（对齐 planAudioExtractDownstream）：
+ * - `planVideoDeconstructProvisioning`：点击瞬间预建/激活下游拆解表节点（running + generating），
+ *   源视频节点零侵入；已在下游节点中执行时 noop 防抖；
+ * - `planVideoDeconstructSettlement`：后端返回后就地收敛目标节点（成功回填表格产物，失败落错误态）。
  */
 
 export const VIDEO_DECONSTRUCT_ORIGIN = 'video_deconstruct';
@@ -113,6 +118,217 @@ function hasDrawableEdge(
         edge.targetHandle === null ||
         edge.targetHandle === VIDEO_DECONSTRUCT_TARGET_HANDLE),
   );
+}
+
+/* -------------------------------------------------------------------------- */
+/* 先建下游节点、隔离执行（provisioning / settlement）                           */
+/* -------------------------------------------------------------------------- */
+
+export interface PlanVideoDeconstructProvisioningInput {
+  videoNodeId: string;
+  videoPosition: { x: number; y: number };
+  videoNodeWidth: number;
+  /** 新节点标题（调用方传 i18n 文案），缺省「视频拆解表」。 */
+  label?: string;
+  currentNodes: VideoDeconstructGraphNode[];
+  currentEdges: VideoDeconstructGraphEdge[];
+  createNodeId?: () => string;
+}
+
+export interface VideoDeconstructProvisionPlan {
+  mode: 'create' | 'update' | 'noop';
+  targetNodeId: string;
+  addNodes: VideoDeconstructCreatedNode[];
+  addEdges: VideoDeconstructGraphEdge[];
+  nodePatches: VideoDeconstructNodePatch[];
+}
+
+export interface PlanVideoDeconstructSettlementInput {
+  targetNodeId: string;
+  label?: string;
+  tableResult?: DeconstructedTableOutputData;
+  error?: string;
+  /** 失败时的上游来源描述（渠道/接口名），原样写入 executionUpstream。 */
+  upstream?: string;
+  /** 由调用方传入并原样写入，用于在结算后仍保留节点来源标记。 */
+  origin?: string;
+  /** 由调用方传入并原样写入，用于在结算后仍保留源视频归属。 */
+  sourceVideoNodeId?: string;
+}
+
+export interface VideoDeconstructSettlementPlan {
+  targetNodeId: string;
+  nodePatches: VideoDeconstructNodePatch[];
+}
+
+/**
+ * 阶段一：乐观预建占位规划（点击「内容拆解」立即调用）
+ * 在源视频右侧创建或激活下游拆解表节点（running + generating），源视频本身不做任何状态修改。
+ *
+ * - 已有同源下游 table（origin === 'video_deconstruct' 且 sourceVideoNodeId 匹配）→ update；
+ *   已处于 running/generating 时返回 noop 防抖；
+ * - 未标记 origin 但已与该视频连线的遗留通用表格 → 沿用单一下游约束，就地 update；
+ * - origin === 'video_storyboard' 等其它来源的表格节点严格隔离，绝不跨类型匹配。
+ */
+export function planVideoDeconstructProvisioning(
+  input: PlanVideoDeconstructProvisioningInput,
+): VideoDeconstructProvisionPlan {
+  const connectedTableNodeIds = new Set(
+    input.currentEdges
+      .filter((edge) => edge.source === input.videoNodeId)
+      .map((edge) => edge.target),
+  );
+
+  const existingNode = input.currentNodes.find((node) => {
+    if (node.type !== 'table') return false;
+    if (isVideoDeconstructDownstreamNode(node, input.videoNodeId)) return true;
+    // 其它来源（含 video_storyboard）严格隔离，不参与拆解表单一下游匹配
+    if (node.data?.origin) return false;
+    return connectedTableNodeIds.has(node.id);
+  });
+
+  const nodeLabel = input.label || '视频拆解表';
+
+  if (existingNode) {
+    // 已在下游节点中执行时，重复点击只防抖，不重复创建/重置
+    if (
+      existingNode.data?.executionStatus === 'running' ||
+      existingNode.data?.status === 'generating'
+    ) {
+      return {
+        mode: 'noop',
+        targetNodeId: existingNode.id,
+        addNodes: [],
+        addEdges: [],
+        nodePatches: [],
+      };
+    }
+
+    return {
+      mode: 'update',
+      targetNodeId: existingNode.id,
+      addNodes: [],
+      addEdges: hasDrawableEdge(input.currentEdges, input.videoNodeId, existingNode.id)
+        ? []
+        : [edgeBetween(input.videoNodeId, existingNode.id)],
+      nodePatches: [
+        {
+          nodeId: existingNode.id,
+          // 只写运行态字段；不写 tableId/tablePath 等结果字段，重试期间保留旧产物可用
+          data: {
+            label: nodeLabel,
+            title: nodeLabel,
+            materialType: 'table',
+            status: 'generating',
+            executionStatus: 'running',
+            executionError: undefined,
+            origin: VIDEO_DECONSTRUCT_ORIGIN,
+            sourceVideoNodeId: input.videoNodeId,
+          },
+        },
+      ],
+    };
+  }
+
+  const newNodeId =
+    input.createNodeId?.() ??
+    `node_table_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const width =
+    Number.isFinite(input.videoNodeWidth) && input.videoNodeWidth > 0
+      ? input.videoNodeWidth
+      : 350;
+
+  // 分镜表与拆解表共用视频右侧列；分镜表与视频同 y 时拆解表上移 320 避让
+  const isStoryboardAtY = input.currentNodes.some((node) => {
+    const data = node.data as Record<string, unknown> | undefined;
+    if (data?.origin !== 'video_storyboard') return false;
+    if (data?.sourceVideoNodeId !== input.videoNodeId) return false;
+    if (!node.position) return false;
+    return Math.abs(node.position.y - input.videoPosition.y) < 50;
+  });
+
+  const newNode: VideoDeconstructCreatedNode = {
+    id: newNodeId,
+    type: 'table',
+    position: {
+      x: input.videoPosition.x + width + VIDEO_DECONSTRUCT_DOWNSTREAM_GAP,
+      y: isStoryboardAtY ? input.videoPosition.y - 320 : input.videoPosition.y,
+    },
+    selected: true,
+    data: {
+      label: nodeLabel,
+      title: nodeLabel,
+      materialType: 'table',
+      status: 'generating',
+      executionStatus: 'running',
+      tableId: '',
+      tablePath: '',
+      columnCount: 0,
+      rowCount: 0,
+      previewRows: [],
+      origin: VIDEO_DECONSTRUCT_ORIGIN,
+      sourceVideoNodeId: input.videoNodeId,
+    },
+  };
+
+  return {
+    mode: 'create',
+    targetNodeId: newNodeId,
+    addNodes: [newNode],
+    addEdges: [edgeBetween(input.videoNodeId, newNodeId)],
+    nodePatches: [],
+  };
+}
+
+/**
+ * 阶段二：结果结算规划（后端返回成功/失败时调用）
+ * 仅 patch 下游拆解表节点自身，源视频不受影响；失败不伪造 tableId。
+ */
+export function planVideoDeconstructSettlement(
+  input: PlanVideoDeconstructSettlementInput,
+): VideoDeconstructSettlementPlan {
+  const tableResult = input.tableResult;
+  if (input.error || !tableResult?.tableId || !tableResult.tablePath) {
+    return {
+      targetNodeId: input.targetNodeId,
+      nodePatches: [
+        {
+          nodeId: input.targetNodeId,
+          data: {
+            status: 'failed',
+            executionStatus: 'error',
+            executionError: input.error || '视频拆解失败',
+            executionUpstream: input.upstream,
+          },
+        },
+      ],
+    };
+  }
+
+  const label = tableResult.title || input.label || '视频拆解表';
+  const data: Record<string, unknown> = {
+    label,
+    title: label,
+    tableId: tableResult.tableId,
+    tablePath: tableResult.tablePath,
+    rowCount: tableResult.rowCount,
+    columnCount: tableResult.columnCount,
+    previewRows: tableResult.previewRows ?? [],
+    status: 'ready',
+    executionStatus: 'completed',
+    executionError: undefined,
+    executionUpstream: undefined,
+  };
+  // origin / sourceVideoNodeId 由调用方传入并原样写入；缺省不落键，避免清空既有归属
+  if (input.origin !== undefined) data.origin = input.origin;
+  if (input.sourceVideoNodeId !== undefined) {
+    data.sourceVideoNodeId = input.sourceVideoNodeId;
+  }
+
+  return {
+    targetNodeId: input.targetNodeId,
+    nodePatches: [{ nodeId: input.targetNodeId, data }],
+  };
 }
 
 export function planVideoDeconstructDownstream(
