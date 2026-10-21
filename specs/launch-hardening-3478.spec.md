@@ -8,7 +8,7 @@
 
 ## 计划与项目结构
 - `plugins/omnimux-workflow/scripts/deploy.mjs`：删除；`plugins/omnimux-workflow/package.json` 移除 `deploy`、`deploy:restart`。
-- `scripts/app-restart.mjs`：导出 `restartDesktopApp({ target, deps })`；内部用精确 bundle 路径列主进程（pgrep+ps）、osascript quit、轮询退出、launchApp；结果对象 `{ restarted, status, reason, detail }`。
+- `scripts/app-restart.mjs`：导出 `restartDesktopApp(target, deps)`；内部用精确 bundle 路径严格检查主进程（pgrep 退出码 1 = 未运行，其它失败 → `inspect-failed`；ps 失败同样显式失败）、osascript quit（带超时与 stderr 诊断）、有界轮询退出、launchApp 拉起并回读新 PID；结果对象 `{ ok, status, detail?, pid? }`。
 - `scripts/omnimux.mjs`：`restartApp` 调用该模块并按结果 `process.exit(1)`；保留 Agent 封印。
 - `scripts/app-restart.test.mjs`：注入 runner 覆盖分支；quality-gate 回归行接入；governance ciRequired 登记。
 
