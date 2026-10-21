@@ -17,6 +17,7 @@ import { spawnSync } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
 
 import { captureCandidate, validateEvidence } from './evidence-contract.mjs'
+import { newSilentCatchHits } from './lib/silent-catch-delta.mjs'
 
 const EVIDENCE_WINDOW_MS = 4 * 60 * 60 * 1000
 const MAX_SCAN_ENTRIES = 4000
@@ -107,6 +108,73 @@ export function taskSpecs(root) {
     } catch {}
   }
   return out
+}
+
+/** 规格必须写明的两节；只验「存在且非空」，不判断语义（人类评审信号，不是自动判据）。 */
+export const SPEC_CONTRACT_SECTIONS = ['假设', '证伪方式']
+export const SPEC_SECTION_MIN_CHARS = 20
+
+/** 解析 markdown 的二级标题 → 正文（到下一个一/二级标题为止）。 */
+export function readSpecSections(text) {
+  const sections = new Map()
+  let current = null
+  let buffer = []
+  const flush = () => {
+    if (current !== null) sections.set(current, buffer.join('\n'))
+  }
+  for (const line of String(text).split(/\r?\n/)) {
+    const heading = /^##\s+(.+?)\s*$/.exec(line)
+    if (heading) {
+      flush()
+      current = heading[1].replace(/[:：]\s*$/, '').trim()
+      buffer = []
+      continue
+    }
+    if (/^#\s+/.test(line)) {
+      flush()
+      current = null
+      buffer = []
+      continue
+    }
+    if (current !== null) buffer.push(line)
+  }
+  flush()
+  return sections
+}
+
+/**
+ * 校验任务规格的「假设 / 证伪方式」两节。
+ * @param {{path: string}[]} specs
+ * @returns {{ok: boolean, missing: {path: string, section: string}[], checked: string[]}}
+ */
+export function inspectSpecContract(specs) {
+  const missing = []
+  const checked = []
+  for (const spec of specs) {
+    let text
+    try {
+      text = readFileSync(spec.path, 'utf8')
+    } catch {
+      missing.push({ path: spec.path, section: 'read' })
+      continue
+    }
+    checked.push(spec.path)
+    const sections = readSpecSections(text)
+    for (const section of SPEC_CONTRACT_SECTIONS) {
+      const body = sections.get(section)
+      if (typeof body !== 'string' || body.replace(/\s+/g, '').length < SPEC_SECTION_MIN_CHARS) {
+        missing.push({ path: spec.path, section })
+      }
+    }
+  }
+  return { ok: missing.length === 0, missing, checked }
+}
+
+/** 规格契约的拒绝原因（缺哪一节就报哪一节）。 */
+export function specContractReason(missing) {
+  const sections = new Set((missing || []).map((item) => item.section))
+  if (sections.has('假设')) return 'spec-missing-assumption'
+  return 'spec-missing-falsifier'
 }
 
 /** 通用首页冒烟黑名单：禁止以首页通用图冒充功能验收证据。 */
@@ -208,6 +276,8 @@ function collectEvidenceFiles(dir, depth, acc) {
   }
   for (const entry of entries) {
     if (acc.length >= MAX_SCAN_ENTRIES) return
+    // 阻断记录不是验收证据：它只证明「卡住了」，不证明「做成了」。
+    if (entry.isDirectory() && entry.name === 'blockers') continue
     const abs = join(dir, entry.name)
     if (entry.isDirectory()) {
       collectEvidenceFiles(abs, depth + 1, acc)
@@ -361,6 +431,34 @@ export function effectiveRepoRoot(command, cwd) {
   return findRepoRoot(target)
 }
 
+/**
+ * 交付前的治理检查：业务源码改动要求规格两节齐全，且不得新增静默 catch。
+ * 扫描器故障 fail-open（打印告警并放行）——基础设施缺陷不得阻断全部交付。
+ * @param {string} root
+ * @param {string[]} changed 改动集（仓库相对路径）
+ */
+export function inspectDeliveryGovernance(root, changed = taskChangeSet(root)) {
+  const business = changed.filter((rel) => isBusinessSourceFile(resolve(root, rel), root))
+  if (business.length === 0) return { ok: true, business }
+
+  const specs = taskSpecs(root)
+  if (specs.length === 0) return { ok: false, reason: 'missing-spec-for-source-code', business }
+  const contract = inspectSpecContract(specs)
+  if (!contract.ok) {
+    return { ok: false, reason: specContractReason(contract.missing), missing: contract.missing, business }
+  }
+
+  const delta = newSilentCatchHits(root, { changedFiles: changed })
+  if (delta.error) {
+    console.error(`[guard-quality-loop] silent-catch 增量扫描不可用（fail-open）：${delta.error}`)
+    return { ok: true, business, silentCatchError: delta.error }
+  }
+  if (delta.hits.length > 0) {
+    return { ok: false, reason: 'new-silent-catch', hits: delta.hits.slice(0, 20), business }
+  }
+  return { ok: true, business }
+}
+
 export function decideQualityGate({ toolName, toolInput, cwd }) {
   const rawTool = String(toolName || '').toLowerCase()
   const name = rawTool.replace(/^.*:/, '')
@@ -391,6 +489,16 @@ export function decideQualityGate({ toolName, toolInput, cwd }) {
           sample: ui.slice(0, 3).join(', '),
         }
       }
+      const governance = inspectDeliveryGovernance(root, changed)
+      if (!governance.ok) {
+        return {
+          decision: 'deny',
+          reason: governance.reason,
+          hits: governance.hits,
+          missing: governance.missing,
+          businessCount: governance.business.length,
+        }
+      }
       return { decision: 'allow' }
     }
     if (bashWritesSource(command) && taskSpecs(root).length === 0) {
@@ -410,8 +518,13 @@ export function decideQualityGate({ toolName, toolInput, cwd }) {
   const root = findRepoRoot(dirname(fullPath))
 
   if (isBusinessSourceFile(fullPath, root)) {
-    if (taskSpecs(root).length === 0) {
+    const specs = taskSpecs(root)
+    if (specs.length === 0) {
       return { decision: 'deny', reason: 'missing-spec-for-source-code' }
+    }
+    const contract = inspectSpecContract(specs)
+    if (!contract.ok) {
+      return { decision: 'deny', reason: specContractReason(contract.missing), missing: contract.missing }
     }
   }
 
@@ -466,6 +579,23 @@ const REASONS = {
     `📌 判定规则：改动集合含界面源码（本次 ${extra.uiCount || 0} 个，如 ${extra.sample || '-'}）时，必须同时提交受控证据目录下的专属实测截图/证据文件。`,
     '⛔ 严禁使用通配首页冒烟图或临时截图充数：证据必须具备任务专属特征并持久化入库！',
     '👉 强制流程：先在真实浏览器完成改动功能路径的专属交互验收并留存证据，再重新执行交付。',
+  ],
+  'spec-missing-assumption': (extra) => [
+    '🚫【质量五步闭环硬门禁：规格假设缺失】本任务改动了业务源码，但规格里没有可评审的「## 假设」！',
+    `📌 判定依据：${(extra.missing || []).map((item) => item.path).filter(Boolean).slice(0, 3).join('、') || '当前任务规格'}`,
+    '📌 要求：规格中必须有二级标题「## 假设」，正文 ≥20 字。bugfix 写根因假设，feature 写设计假设。',
+    '👉 这是给人类评审的信号，不是自动正确性判据；门禁只保证它存在且非空。',
+  ],
+  'spec-missing-falsifier': (extra) => [
+    '🚫【质量五步闭环硬门禁：规格证伪方式缺失】本任务改动了业务源码，但规格里没有「## 证伪方式」！',
+    `📌 判定依据：${(extra.missing || []).map((item) => item.path).filter(Boolean).slice(0, 3).join('、') || '当前任务规格'}`,
+    '📌 要求：规格中必须有二级标题「## 证伪方式」，正文 ≥20 字，写清「什么可观测结果会证明上述假设是错的」以及可执行的验证命令。',
+  ],
+  'new-silent-catch': (extra) => [
+    '🚫【质量五步闭环硬门禁：新增静默兜底拦截】本次改动新增了空 catch / 仅注释 catch（SC1/SC2），禁止交付！',
+    ...(extra.hits || []).map((hit) => `   · ${hit.path}:${hit.line} [${hit.rule}] ${hit.detail || ''}`),
+    '📌 只拦增量：存量代码不动不报；行号漂移不会误报。',
+    '👉 两条正确路径：① 让 catch 留痕（记日志、上报或向上抛）；② 确属刻意吞错时写入 scripts/silent-catch-allowlist.json（行号绑定 + reason ≥8 字）。',
   ],
 }
 

@@ -83,6 +83,8 @@ jobs:
           bash -n scripts/materialize-with-rollback.sh
           node --check scripts/verify-skill-bilingual.mjs
           node --check scripts/generate-featured-skills.mjs
+          node --check scripts/report-blocker.mjs
+          node --check scripts/lib/silent-catch-delta.mjs
           node scripts/verify-plugin-agent-tools.mjs
 
       # 三分栏收起布局契约门禁：列宽胜负取决于 CSS 层叠（重要性→特异性→顺序），
@@ -101,6 +103,7 @@ jobs:
           node scripts/verify-bilingual-docs.mjs
           node scripts/verify-silent-catch.mjs
           node --test scripts/verify-silent-catch.test.mjs
+          node --test scripts/lib/silent-catch-delta.test.mjs scripts/report-blocker.test.mjs
           node --test scripts/verify-agents-md.test.mjs
           node --test scripts/verify-governance-registry.test.mjs scripts/lib/governance-registry.test.mjs
           node --test scripts/guard-anti-cheat.test.mjs
