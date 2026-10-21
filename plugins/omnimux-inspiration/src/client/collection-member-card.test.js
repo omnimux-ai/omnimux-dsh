@@ -15,7 +15,6 @@ import {
   rivalCardHeightPx,
   rivalMediaRatioOf,
 } from './rival-masonry.js'
-import { formatDuration } from './rival-format.js'
 import { zh } from './locales.js'
 
 /**
@@ -184,7 +183,7 @@ describe('collection member geometry', () => {
     assert.equal(RIVAL_MEDIA_FIRST_RATIO, 4 / 5)
     assert.equal(rivalMediaRatioOf(card), 4 / 5)
     for (const width of [220, 240, 300]) {
-      const expected = (width - 2) / (4 / 5) + 82 + 2
+      const expected = (width - 2) / (4 / 5) + 2
       const shortCard = { card_type: 'short-video', has_media: true, layout: COLLECTION_MEMBER_LAYOUT, title: '短标题' }
       const longCard = { card_type: 'short-video', has_media: true, layout: COLLECTION_MEMBER_LAYOUT, title: '长标题'.repeat(20) }
       assert.equal(rivalCardHeightPx(shortCard, width), expected)
@@ -195,7 +194,7 @@ describe('collection member geometry', () => {
   it('covers text-media members (X/Twitter) with the same cover geometry', () => {
     const xCard = { card_type: 'text-media', media_kind: 'video', has_media: true, layout: COLLECTION_MEMBER_LAYOUT, title: 'x' }
     assert.equal(rivalMediaRatioOf(xCard), 4 / 5)
-    assert.equal(rivalCardHeightPx(xCard, 240), 238 / (4 / 5) + 82 + 2)
+    assert.equal(rivalCardHeightPx(xCard, 240), 238 / (4 / 5) + 2)
   })
 
   it('gives text members the shared post formula and keeps plain cards old geometry', () => {
@@ -220,22 +219,19 @@ describe('collection member card', () => {
       assert.ok(article.classList.contains('is-media-first'), 'the collection layout marker must reach the card')
       const wrap = mounted.container.querySelector('.omnimux-inspiration-cover-wrap')
       const body = mounted.container.querySelector('.omnimux-rival-card-body')
-      assert.ok(wrap, 'the cover must be wrapped so chips and the hover toolbar can live on it')
-      assert.ok(body, 'the body carries the title and meta row')
-      assert.ok(
-        (wrap.compareDocumentPosition(body) & mounted.window.Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
-        'the cover must come before the body',
-      )
+      assert.ok(wrap, 'the cover is the default face')
+      assert.ok(body, 'the title/meta hover layer exists in the DOM')
       assert.equal(mounted.container.querySelector('.omnimux-rival-card-title-zone'), null, 'no title above the cover')
       const title = body.querySelector('.omnimux-rival-card-title')
       assert.ok(title.className.includes('clamp-2'), 'the title is clamped to two lines')
       assert.equal(title.getAttribute('title'), VIDEO_ROW.title)
 
-      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-type').textContent, zhTable.get('type.video'))
-      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-duration').textContent, formatDuration(32))
+      assert.ok(mounted.container.querySelector('.omnimux-inspiration-card-overlay.is-cover'), 'the CTA hover layer')
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-type'), null, 'no corner chips on the card face')
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-duration'), null)
 
       const meta = metaRow(mounted.container)
-      assert.ok(meta, 'one meta row under the title')
+      assert.ok(meta, 'one meta row in the hover layer')
       assert.match(meta.textContent, /YouTube/)
       const metaTime = meta.querySelector('.omnimux-inspiration-card-meta-time')
       assert.ok(metaTime && metaTime.textContent, 'the join time is present when the row carries it')
@@ -256,10 +252,12 @@ describe('collection member card', () => {
       assert.ok(article.classList.contains('t-text-media'))
       assert.ok(mounted.container.querySelector('.omnimux-rival-card-body'), 'the body must render for text-media members')
       assert.ok(metaRow(mounted.container), 'the meta row must render for text-media members')
+      assert.ok(mounted.container.querySelector('.omnimux-inspiration-card-overlay.is-cover'), 'the CTA hover layer')
       assert.equal(mounted.container.querySelector('.omnimux-rival-card-title-zone'), null)
-      const chip = statusChip(mounted.container)
-      assert.ok(chip, 'a failed text-media member still needs its status chip')
-      assert.equal(chip.textContent, zhTable.get('add.status.failed'))
+      const icon = mounted.container.querySelector('.omnimux-inspiration-card-failure')
+      assert.ok(icon, 'a failed text-media member still says so on the card')
+      assert.equal(icon.className.includes('is-failed'), true)
+      assert.ok(icon.getAttribute('title').includes(DETAIL))
       assert.equal(mounted.container.querySelector('.omnimux-inspiration-card-error'), null)
     } finally {
       await mounted.unmount()
@@ -270,12 +268,9 @@ describe('collection member card', () => {
   it('puts the type on the left corner and the count on the right corner', async () => {
     const mounted = await mountCoverCard({ card: cardProps(GALLERY_ROW), descriptor: member(GALLERY_ROW) })
     try {
-      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-type').textContent, zhTable.get('type.image'))
-      assert.equal(
-        mounted.container.querySelector('.omnimux-inspiration-badge-duration').textContent,
-        `4 ${zhTable.get('type.image')}`,
-        'the multi-image count belongs to the duration corner',
-      )
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-type'), null, 'corner chips are gone')
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-duration'), null)
+      assert.ok(mounted.container.querySelector('.omnimux-inspiration-cover-img'), 'the gallery cover still renders')
     } finally {
       await mounted.unmount()
       mounted.close()
@@ -285,11 +280,12 @@ describe('collection member card', () => {
   it('moves a failed import reason into the status chip', async () => {
     const mounted = await mountCoverCard({ card: cardProps(FAILED_ROW), descriptor: member(FAILED_ROW) })
     try {
-      const chip = statusChip(mounted.container)
-      assert.ok(chip, 'a failed media card must say so on the card')
-      assert.equal(chip.textContent, zhTable.get('add.status.failed'))
-      assert.ok(chip.getAttribute('title').includes(DETAIL), 'the reason must stay reachable from the card')
-      assert.ok(chip.getAttribute('aria-label').includes(DETAIL), 'assistive tech must get the reason too')
+      const icon = mounted.container.querySelector('.omnimux-inspiration-card-failure')
+      assert.ok(icon, 'a failed media card must say so on the card')
+      assert.equal(icon.getAttribute('role'), 'img')
+      assert.equal(icon.className.includes('is-failed'), true)
+      assert.ok(icon.getAttribute('title').includes(DETAIL), 'hovering the icon reveals the reason')
+      assert.ok(icon.getAttribute('aria-label').includes(DETAIL), 'assistive tech must get the reason too')
       assert.equal(mounted.container.querySelector('.omnimux-inspiration-card-error'), null, 'no absolute block over the cover or title')
       assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-status'), null, 'no duplicate centred pill')
     } finally {
@@ -301,11 +297,11 @@ describe('collection member card', () => {
   it('labels a settled row whose AI breakdown failed without calling it an import failure', async () => {
     const mounted = await mountCoverCard({ card: cardProps(ANALYSIS_FAILED_ROW), descriptor: member(ANALYSIS_FAILED_ROW) })
     try {
-      const chip = statusChip(mounted.container)
-      assert.ok(chip)
-      assert.equal(chip.textContent, zhTable.get('card.status.analysisFailed'))
-      assert.ok(chip.getAttribute('title').includes('AI 视频拆解失败'))
-      assert.equal(chip.classList.contains('is-failed'), false, 'the import itself succeeded')
+      const icon = mounted.container.querySelector('.omnimux-inspiration-card-failure')
+      assert.ok(icon)
+      assert.equal(icon.className.includes('is-settled'), true)
+      assert.equal(icon.className.includes('is-failed'), false, 'the import itself succeeded')
+      assert.ok(icon.getAttribute('title').includes('AI 视频拆解失败'))
       assert.equal(mounted.container.querySelector('.omnimux-inspiration-card-error'), null)
     } finally {
       await mounted.unmount()
@@ -317,10 +313,13 @@ describe('collection member card', () => {
     const mounted = await mountCoverCard({ card: cardProps(TEXT_ROW), descriptor: member(TEXT_ROW) })
     try {
       assert.ok(!mounted.container.querySelector('.omnimux-inspiration-cover-wrap'), 'a text member has no cover')
-      assert.ok(metaRow(mounted.container), 'it still carries the shared meta row')
+      assert.ok(metaRow(mounted.container), 'it still carries the shared meta row in the hover layer')
       const notice = mounted.container.querySelector('.omnimux-inspiration-card-error.is-inline')
-      assert.ok(notice, 'a text member keeps its body as the reason')
-      assert.ok(notice.textContent.includes(DETAIL))
+      assert.ok(notice, 'a text member keeps its short state body')
+      assert.equal(notice.textContent, zhTable.get('add.status.failed'))
+      const icon = mounted.container.querySelector('.omnimux-inspiration-card-failure')
+      assert.ok(icon, 'the failure icon keeps the full reason reachable')
+      assert.ok(icon.getAttribute('title').includes(DETAIL))
     } finally {
       await mounted.unmount()
       mounted.close()
@@ -332,9 +331,9 @@ describe('collection member card', () => {
     try {
       const article = mounted.container.querySelector('article')
       assert.ok(article.classList.contains('is-library'), 'the mapping marks the root feed as a library card')
-      assert.ok(mounted.container.querySelector('.omnimux-rival-card-body'), 'the root feed renders the shared body')
+      assert.ok(mounted.container.querySelector('.omnimux-rival-card-body'), 'the root feed renders the shared hover body')
       assert.ok(metaRow(mounted.container), 'the root feed renders the shared meta row')
-      assert.ok(mounted.container.querySelector('.omnimux-inspiration-cover-wrap'), 'the cover is wrapped for the corner chips')
+      assert.ok(mounted.container.querySelector('.omnimux-inspiration-cover-wrap'), 'the cover is the default face')
       assert.ok(!mounted.container.querySelector('.omnimux-rival-card-title-zone'), 'no title above the cover')
       assert.equal(mounted.container.querySelector('article').getAttribute('data-card-type'), 'long-video')
     } finally {

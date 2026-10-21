@@ -6,7 +6,7 @@ import { importErrorText, importPillLabel, importSettledNotice, isFailedRow, isI
 import { OrganicShimmerOverlay } from './OrganicShimmer.jsx'
 import { RivalPostCard } from './RivalPostCard.jsx'
 import { toInspirationCardRow } from './inspiration-card.js'
-import { formatCount, formatDuration, formatRelativeTime, rivalLocaleOf } from './rival-format.js'
+import { formatCount, formatRelativeTime, rivalLocaleOf } from './rival-format.js'
 import { COLLECTION_MEMBER_LAYOUT, FEED_LAYOUT, rivalMediaRatioOf } from './rival-masonry.js'
 
 const ICON_EYE = (
@@ -114,7 +114,6 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
   const libraryLayout = contentCard.layout === FEED_LAYOUT || contentCard.layout === COLLECTION_MEMBER_LAYOUT
   const coverFirst = libraryLayout && hasMedia
   const locale = rivalLocaleOf(t)
-  const durationText = coverFirst ? formatDuration(contentCard.duration) : ''
   // 本地行有 created_at，云端/对标行只有 posted_at：两者都接受，缺了就不显示。
   const createdRaw = libraryLayout ? formatRelativeTime(row.created_at || row.posted_at, Date.now(), locale) : ''
   const createdText = createdRaw === '--' ? '' : createdRaw
@@ -123,30 +122,9 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
   const viewsText = libraryLayout && Number.isFinite(rawViews) && rawViews >= 0
     ? t('card.meta.views').replace('{views}', formatCount(rawViews, locale))
     : ''
-  // 封面左下只写类型，右下写时长/图数（规格：类型左下、时长/图数右下）。
-  const typeLabel = coverFirst
-    ? contentCard.media_kind === 'video'
-      ? t('type.video')
-      : t('type.image')
-    : ''
-  const cornerMetric = coverFirst
-    ? contentCard.media_kind === 'video'
-      ? durationText
-      : contentCard.image_count > 1
-        ? `${contentCard.image_count} ${t('type.image')}`
-        : ''
-    : ''
-  // 胶囊只说状态，完整原因走 title 与详情弹窗（详情里已有 role="alert" 的原因块）。
-  // 帖子卡没有封面，失败原因就是正文本身，不再重复加胶囊。
-  const statusChip = coverFirst
-    ? failed
-      ? { text: t('add.status.failed'), tone: 'is-failed' }
-      : errorDetail
-        ? { text: t('card.status.analysisFailed'), tone: 'is-settled' }
-        : importing && statusPill
-          ? { text: statusPill, tone: '' }
-          : null
-    : null
+  // 失败信息收敛为一个常显小图标，悬停图标看完整原因（Issue 3502）。
+  // 导入中的卡片没有「失败」可看，继续用 shimmer/阶段正文表达。
+  const failureReason = failed || errorDetail ? (errorDetail || statusPill || t('add.status.failed')) : ''
   const metaNode = libraryLayout ? (
     <div className="omnimux-inspiration-card-meta">
       <span className="omnimux-inspiration-card-meta-source">{platform}</span>
@@ -161,16 +139,6 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
           <span className="omnimux-inspiration-card-meta-sep" aria-hidden="true">·</span>
           <span className="omnimux-inspiration-card-meta-time">{createdText}</span>
         </>
-      ) : null}
-      {statusChip ? (
-        <span
-          className={`omnimux-inspiration-card-status ${statusChip.tone}`.trim()}
-          role="status"
-          title={errorDetail || undefined}
-          aria-label={errorDetail || statusChip.text}
-        >
-          {statusChip.text}
-        </span>
       ) : null}
     </div>
   ) : null
@@ -223,6 +191,27 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
             </svg>
           ) : <span />}
         </IconButton>
+      ) : null}
+
+      {/* 导入中：内容还没到，保留一个常显的小阶段标签（默认卡面仍然没有其他 chrome）。 */}
+      {coverFirst && importing && statusPill ? (
+        <span className="omnimux-inspiration-card-progress" role="status">{statusPill}</span>
+      ) : null}
+
+      {/* 失败收敛图标（Issue 3502）：常显一个小图标，悬停/读屏取完整原因。 */}
+      {failureReason ? (
+        <span
+          className={`omnimux-inspiration-card-failure ${failed ? 'is-failed' : 'is-settled'}`}
+          role="img"
+          title={failureReason}
+          aria-label={failureReason}
+        >
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+          </svg>
+        </span>
       ) : null}
 
       {/* 内嵌卡片骨架扫光层：素材未完全就绪或未揭幕时置顶展示。
@@ -330,21 +319,20 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
       )
   ) : null
 
-  // 封面优先：角标与悬停工具条都住在封面里，正文区只放标题与元信息。
+  // 媒体卡默认只有封面：标题/元信息在悬停层里（CSS 绝对定位），CTA 也走悬停层。
   const mediaNode = mediaCore ? (
-    coverFirst ? (
-      <div className="omnimux-inspiration-cover-wrap">
-        {mediaCore}
-        {typeLabel ? <span className="omnimux-inspiration-badge-type">{typeLabel}</span> : null}
-        {cornerMetric ? <span className="omnimux-inspiration-badge-duration">{cornerMetric}</span> : null}
-        <div className="omnimux-inspiration-cover-tools">{ctaRow}</div>
-      </div>
-    ) : mediaCore
+    coverFirst ? <div className="omnimux-inspiration-cover-wrap">{mediaCore}</div> : mediaCore
   ) : null
 
-  // 帖子卡没有封面：CTA 放在整卡底部悬停层，不再有播放钮与 footer。
-  const overlayNode = coverFirst ? null : (
-    <div className="omnimux-inspiration-card-overlay">
+  // 媒体卡：封面上的悬停层只有居中 CTA；标题/元信息由正文层叠在封面底部。
+  // 帖子卡：正文常显，元信息 + CTA 一起放进悬停层。
+  const overlayNode = coverFirst ? (
+    <div className="omnimux-inspiration-card-overlay is-cover">
+      {ctaRow}
+    </div>
+  ) : (
+    <div className="omnimux-inspiration-card-overlay is-post">
+      {metaNode}
       {ctaRow}
     </div>
   )
@@ -356,10 +344,11 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
       className={`omnimux-inspiration-card-pure ${importing ? 'is-importing' : ''}`}
       selected={Boolean(selected)}
       bodyClassName={inlineNotice ? (contentCard.notice_kind === 'error' ? `omnimux-inspiration-card-error is-inline ${failed ? 'is-failed' : ''}` : 'omnimux-inspiration-card-state-text') : ''}
+      bodyLabel={!coverFirst && failed ? t('add.status.failed') : ''}
       bodyRole={inlineNotice ? 'status' : undefined}
       onDetail={handleClick}
       mediaNode={mediaNode}
-      metaNode={metaNode}
+      metaNode={coverFirst ? metaNode : null}
       overlayNode={overlayNode}
       style={style}
       column={column}

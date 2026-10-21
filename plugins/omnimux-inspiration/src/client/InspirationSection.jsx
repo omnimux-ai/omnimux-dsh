@@ -4,6 +4,9 @@ import { CollectionHeader } from './CollectionHeader.jsx'
 import { InspirationCollectionCard, toCollectionCardRow } from './InspirationCollectionCard.jsx'
 import { InspirationCollectionDialog } from './InspirationCollectionDialog.jsx'
 import { InspirationCollectionMenu } from './InspirationCollectionMenu.jsx'
+import { InspirationCardMenu } from './InspirationCardMenu.jsx'
+import { buildCardMenuItems } from './card-actions.js'
+import { addCardToSession } from './card-to-chat.js'
 import { addCollectionToSession } from './collection-to-chat.js'
 import { injectCollectionStyles } from './collection-styles.js'
 import { useCollectionDrag, useInspirationCollections } from './use-inspiration-collections.js'
@@ -273,6 +276,39 @@ export function InspirationSection({ t, active }) {
     } finally {
       addingCollectionRef.current = ''
       setAddingCollectionId('')
+    }
+  }, [showToast, t])
+
+  /**
+   * 单卡「添加到对话」：与合集「加入会话」同一条 composer 附件通道，只把
+   * 一张卡写成一个 Markdown 附件；成功不叠 toast（附件卡就是回执），
+   * 重复与失败走既有气泡。
+   */
+  const addingCardRef = useRef('')
+  const handleAddCardToSession = useCallback(async (descriptor) => {
+    const row = descriptor?.source_row
+    if (!row) return
+    if (addingCardRef.current) {
+      showToast(t('card.sessionBusy'))
+      return
+    }
+    addingCardRef.current = String(row.id ?? 'pending')
+    try {
+      const result = await addCardToSession(row, {
+        t,
+        onError: failure => console.error('[omnimux-inspiration] card to session failed', failure),
+      })
+      if (result?.duplicate) showToast(t('card.sessionExists'))
+      else if (result?.ok) showToast(t('card.sessionAdded'))
+      else if (!result?.ok) {
+        const detail = typeof result?.detail === 'string' ? result.detail.trim() : ''
+        showToast(detail || t(result?.errorKey || 'card.sessionFailed'))
+      }
+    } catch (failure) {
+      console.error('[omnimux-inspiration] add card to session failed', failure)
+      showToast(t('card.sessionFailed'))
+    } finally {
+      addingCardRef.current = ''
     }
   }, [showToast, t])
 
@@ -673,10 +709,21 @@ export function InspirationSection({ t, active }) {
                     descriptor={descriptor}
                     style={style}
                     column={column}
-                    actionsNode={tab === 'local' ? <InspirationCollectionMenu t={t} disabled={libraryCollections.busy}
-                      onMerge={!collectionId ? () => libraryCollections.selectSource(descriptor.source_row) : undefined}
-                      onRemove={collectionId ? () => libraryCollections.remove(descriptor.source_row) : undefined}
-                    /> : null}
+                    actionsNode={(
+                      <InspirationCardMenu
+                        t={t}
+                        disabled={libraryCollections.busy}
+                        items={buildCardMenuItems({
+                          t,
+                          local: tab === 'local',
+                          inCollection: Boolean(collectionId),
+                          onAddToConversation: () => handleAddCardToSession(descriptor),
+                          onMerge: () => libraryCollections.selectSource(descriptor.source_row),
+                          onRemove: () => libraryCollections.remove(descriptor.source_row),
+                          onDelete: () => setPendingRemove({ ids: [descriptor.source_row.id], count: 1 }),
+                        })}
+                      />
+                    )}
                     card={{
                       row: descriptor.source_row,
                       t,

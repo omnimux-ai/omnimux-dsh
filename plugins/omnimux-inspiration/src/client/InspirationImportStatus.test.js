@@ -517,8 +517,11 @@ describe('InspirationCoverCard render gate — running status', () => {
       const pill = mounted.container.querySelector('.omnimux-inspiration-badge-status')
       assert.equal(pill, null, 'the failed text body already labels the failure without a covering badge')
       const notice = mounted.container.querySelector('.omnimux-inspiration-card-error.is-inline')
-      assert.equal(notice?.textContent, zh['add.failedDetail'].replace('{error}', '导入中断或超时，请重试'))
+      assert.equal(notice?.textContent, zh['add.status.failed'], 'the body collapses to the short state label')
       assert.equal(notice?.getAttribute('role'), 'status')
+      const icon = mounted.container.querySelector('.omnimux-inspiration-card-failure')
+      assert.ok(icon, 'the failure icon carries the full reason')
+      assert.ok(icon.getAttribute('title').includes('导入中断或超时，请重试'))
 
       await React.act(async () => {
         mounted.container.querySelector('.omnimux-inspiration-card-pure')?.dispatchEvent(
@@ -545,16 +548,14 @@ describe('InspirationCoverCard render gate — running status', () => {
       import_error: detail,
     }), 'InspirationCoverCard')
     try {
+      const icon = mounted.container.querySelector('.omnimux-inspiration-card-failure')
+      assert.ok(icon, 'a failed card must keep its reason within reach')
+      assert.ok(icon.getAttribute('title').includes(detail), 'the reason is revealed by hovering the icon')
+      assert.ok(icon.getAttribute('aria-label').includes(detail), 'assistive tech gets the reason too')
+      // The default face stays short: the state label, not the whole reason.
       const detailNode = mounted.container.querySelector('.omnimux-inspiration-card-error')
-      assert.ok(detailNode, 'a failed card must render its reason')
-      assert.equal(
-        detailNode.textContent,
-        zh['add.failedDetail'].replace('{error}', detail),
-        'the reason must reach the card as rendered text',
-      )
-      // The card text as a whole carries both the state and the reason.
-      assert.ok(mounted.container.textContent.includes(detail))
-      assert.ok(mounted.container.textContent.includes(zh['add.status.failed']))
+      assert.equal(detailNode.textContent, zh['add.status.failed'])
+      assert.ok(!mounted.container.textContent.includes(detail), 'the long reason is not printed on the card face')
     } finally {
       await mounted.unmount()
       mounted.close()
@@ -577,11 +578,13 @@ describe('InspirationCoverCard render gate — running status', () => {
       import_error: detail,
     }), 'InspirationCoverCard')
     try {
-      const chip = mounted.container.querySelector('.omnimux-inspiration-card-status')
-      assert.ok(chip, 'a settled row with a missing breakdown must say so')
-      assert.equal(chip.textContent, zh['card.status.analysisFailed'])
-      assert.ok(chip.getAttribute('title').includes(detail), 'the reason must stay reachable')
-      assert.equal(chip.className.includes('is-failed'), false, 'this row did not fail')
+      const icon = mounted.container.querySelector('.omnimux-inspiration-card-failure')
+      assert.ok(icon, 'a settled row with a missing breakdown must say so')
+      assert.equal(icon.getAttribute('role'), 'img')
+      assert.equal(icon.className.includes('is-failed'), false, 'this row did not fail')
+      assert.equal(icon.className.includes('is-settled'), true)
+      assert.ok(icon.getAttribute('title').includes(detail), 'the reason must stay reachable on hover')
+      assert.ok(icon.getAttribute('aria-label').includes(detail), 'the reason must be readable by assistive tech')
       assert.equal(mounted.container.querySelector('.omnimux-inspiration-card-error'), null, 'the reason is not an overlay block')
       // No failure pill: the import itself succeeded.
       assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-status'), null)
@@ -986,8 +989,9 @@ describe('InspirationCoverCard — shared content cards', () => {
       assert.equal(title?.textContent, row.content)
       assert.ok(title.className.includes('clamp-2'), 'the unified card clamps the title to two lines')
       assert.equal(mounted.container.querySelector('.omnimux-inspiration-cover-img')?.getAttribute('src'), row.media_items[0].url)
-      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-type')?.textContent, zh['type.image'])
-      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-duration')?.textContent, `2 ${zh['type.image']}`)
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-type'), null, 'corner badges are hover-only content chrome')
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-duration'), null)
+      assert.ok(mounted.container.querySelector('.omnimux-inspiration-card-overlay.is-cover'), 'the hover layer carries the CTA')
       assert.equal(mounted.container.querySelector('video'), null)
     } finally {
       await mounted.unmount()
@@ -1002,9 +1006,10 @@ describe('InspirationCoverCard — shared content cards', () => {
     }), 'InspirationCoverCard')
     try {
       assert.equal(mounted.container.querySelector('[data-card-type]')?.getAttribute('data-card-type'), 'text-media')
-      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-type')?.textContent, zh['type.video'])
       assert.ok(mounted.container.querySelector('.omnimux-inspiration-cover-video'))
-      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-media'), null, 'the cover corner chips replace the old badge')
+      assert.ok(mounted.container.querySelector('.omnimux-inspiration-card-overlay.is-cover'), 'the hover layer carries the CTA')
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-type'), null, 'corner badges are hover-only content chrome')
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-media'), null)
     } finally {
       await mounted.unmount()
       mounted.close()
