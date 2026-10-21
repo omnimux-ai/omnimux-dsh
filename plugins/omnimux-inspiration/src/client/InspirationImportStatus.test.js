@@ -494,8 +494,9 @@ describe('InspirationCoverCard render gate — running status', () => {
       // 3. 复用创作画布同款 Organic Shimmer 有机微光生成动效
       assert.ok(mounted.container.querySelector('.wf-organic-shimmer'), 'must render organic shimmer')
       assert.ok(mounted.container.querySelector('.wf-organic-shimmer__distortion'), 'must render svg distortion wave layer')
-      // 4. 右上角来源平台标识正常保留
-      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-platform')?.textContent?.trim(), '本地')
+      // 4. 来源平台移到元信息行，卡面不再有右上角标
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-platform'), null)
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-card-meta-source')?.textContent?.trim(), zh['platform.x'])
     } finally {
       await mounted.unmount()
       mounted.close()
@@ -576,10 +577,12 @@ describe('InspirationCoverCard render gate — running status', () => {
       import_error: detail,
     }), 'InspirationCoverCard')
     try {
-      const detailNode = mounted.container.querySelector('.omnimux-inspiration-card-error')
-      assert.ok(detailNode, 'a settled row with a missing breakdown must say so')
-      assert.equal(detailNode.textContent, zh['add.analysisFailed'].replace('{error}', detail))
-      assert.equal(detailNode.className.includes('is-failed'), false, 'this row did not fail')
+      const chip = mounted.container.querySelector('.omnimux-inspiration-card-status')
+      assert.ok(chip, 'a settled row with a missing breakdown must say so')
+      assert.equal(chip.textContent, zh['card.status.analysisFailed'])
+      assert.ok(chip.getAttribute('title').includes(detail), 'the reason must stay reachable')
+      assert.equal(chip.className.includes('is-failed'), false, 'this row did not fail')
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-card-error'), null, 'the reason is not an overlay block')
       // No failure pill: the import itself succeeded.
       assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-status'), null)
     } finally {
@@ -979,9 +982,12 @@ describe('InspirationCoverCard — shared content cards', () => {
     const mounted = await mount('InspirationCoverCard.jsx', props(row), 'InspirationCoverCard')
     try {
       assert.equal(mounted.container.querySelector('[data-card-type]')?.getAttribute('data-card-type'), 'text-media')
-      assert.equal(mounted.container.querySelector('.omnimux-rival-card-text')?.textContent, row.content)
+      const title = mounted.container.querySelector('.omnimux-rival-card-title')
+      assert.equal(title?.textContent, row.content)
+      assert.ok(title.className.includes('clamp-2'), 'the unified card clamps the title to two lines')
       assert.equal(mounted.container.querySelector('.omnimux-inspiration-cover-img')?.getAttribute('src'), row.media_items[0].url)
-      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-media')?.textContent, '2 图片')
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-type')?.textContent, zh['type.image'])
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-duration')?.textContent, `2 ${zh['type.image']}`)
       assert.equal(mounted.container.querySelector('video'), null)
     } finally {
       await mounted.unmount()
@@ -996,8 +1002,9 @@ describe('InspirationCoverCard — shared content cards', () => {
     }), 'InspirationCoverCard')
     try {
       assert.equal(mounted.container.querySelector('[data-card-type]')?.getAttribute('data-card-type'), 'text-media')
-      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-media')?.textContent, '视频')
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-type')?.textContent, zh['type.video'])
       assert.ok(mounted.container.querySelector('.omnimux-inspiration-cover-video'))
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-media'), null, 'the cover corner chips replace the old badge')
     } finally {
       await mounted.unmount()
       mounted.close()

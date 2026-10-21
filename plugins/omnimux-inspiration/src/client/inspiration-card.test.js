@@ -63,7 +63,8 @@ describe('inspiration cards — shared account-feed mapping', () => {
     assert.equal(failedVideo.card_type, 'text', 'a failed import with no saved media needs its readable error body')
     assert.equal(failedVideo.title, failed.title)
     assert.equal(failed.source_row.title, '原始标题')
-    assert.ok(rivalCardHeightPx(failed, 250) > rivalCardHeightPx({ ...failed, title: '原始标题' }, 250))
+    // 帖子卡正文最多 3 行：再长的失败原因也只占 3 行，高度按 3 行记。
+    assert.equal(rivalCardHeightPx(failed, 250), Math.max(144, 24 + 3 * 20 + 24 + 2))
     const importing = toInspirationCardRow({ ...row, import_status: 'importing', import_stage: 'downloading' }, t)
     assert.equal(importing.title, zh['add.status.downloading'])
     assert.equal(importing.notice_kind, 'importing')

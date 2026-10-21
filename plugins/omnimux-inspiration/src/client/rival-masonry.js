@@ -54,8 +54,18 @@ export const RIVAL_MEDIA_FIRST_RATIO = 4 / 5
 /** 合集详情成员卡的布局标记：卡片渲染与高度估算共用，避免两处写字面量。 */
 export const COLLECTION_MEMBER_LAYOUT = 'media-first'
 
+/**
+ * 根层信息流的布局标记（Issue 3477）：与合集共用「封面 → 标题 → 元信息」
+ * 结构，唯一差异是媒体比例仍取数据比例（合集固定 4:5）。
+ */
+export const FEED_LAYOUT = 'feed'
+
 /** 合集详情成员卡正文区：上 10 + 标题两行 36 + 间距 6 + 元信息行 18 + 下 12。 */
 const MEDIA_FIRST_BODY_H = 82
+
+/** 帖子卡（无媒体）：正文最多 3 行，元信息行 18 + 间距 6。 */
+const POST_MAX_LINES = 3
+const POST_META_H = 18 + 6
 
 /** 卡片 1px 描边（上 + 下）：估算按渲染的 border-box 高度计，含这 2px。 */
 const CARD_BORDER = 2
@@ -665,9 +675,16 @@ export function rivalCardHeightPx(card, columnWidth) {
   const w = Number(columnWidth) > 0 ? Number(columnWidth) : RIVAL_MIN_COL_WIDTH
   const inner = Math.max(0, w - CARD_BORDER)
   const type = rivalCardTypeOf(card)
-  if (type !== 'text' && card?.layout === COLLECTION_MEMBER_LAYOUT) {
-    // 合集详情成员卡：封面 4:5 + 固定正文区（标题两行 + 元信息行）。
-    return Math.max(RIVAL_MIN_CARD_HEIGHT, inner / RIVAL_MEDIA_FIRST_RATIO + MEDIA_FIRST_BODY_H + CARD_BORDER)
+  const layout = card?.layout
+  if (type !== 'text' && (layout === COLLECTION_MEMBER_LAYOUT || layout === FEED_LAYOUT)) {
+    // 库卡片（合集成员 / 根层信息流）：封面 + 固定正文区（标题两行 + 元信息行）。
+    // 两者的唯一差异是比例：合集固定 4:5，根层取数据比例。
+    return Math.max(RIVAL_MIN_CARD_HEIGHT, inner / rivalMediaRatioOf(card) + MEDIA_FIRST_BODY_H + CARD_BORDER)
+  }
+  if (type === 'text' && layout === FEED_LAYOUT) {
+    // 根层帖子卡：正文最多 3 行 + 元信息行，没有封面。
+    const lines = Math.min(POST_MAX_LINES, textBodyLines(card, w))
+    return Math.max(RIVAL_MIN_CARD_HEIGHT, TEXT_PAD_V + lines * BODY_LINE + POST_META_H + CARD_BORDER)
   }
   if (type === 'collection') {
     return inner / RIVAL_COLLECTION_MEDIA_RATIO + RIVAL_COLLECTION_TITLE_HEIGHT + CARD_BORDER

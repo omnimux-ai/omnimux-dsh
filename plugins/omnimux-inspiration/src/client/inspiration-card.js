@@ -1,7 +1,7 @@
 import { pickCoverSrc, pickImageSources, pickVideoSrc } from './api.js'
 import { toRivalCardRow } from './rival-filter.js'
 import { importErrorText, importPillLabel, importSettledNotice, isImportingRow } from './import-status.js'
-import { COLLECTION_MEMBER_LAYOUT } from './rival-masonry.js'
+import { COLLECTION_MEMBER_LAYOUT, FEED_LAYOUT } from './rival-masonry.js'
 
 /** Adapt a saved/public item to the shared feed card without changing its source row. */
 export function toInspirationCardRow(row, translate) {
@@ -33,16 +33,23 @@ export function toInspirationCardRow(row, translate) {
       platform: row?.source_platform || '',
     },
   })
-  return { ...normalized, source_row: row, image_count: images.length, notice_kind: notice ? (isImportingRow(row) ? 'importing' : 'error') : '' }
+  return {
+    ...normalized,
+    source_row: row,
+    image_count: images.length,
+    notice_kind: notice ? (isImportingRow(row) ? 'importing' : 'error') : '',
+    // 根层与合集共用同一套卡壳（Issue 3477）；合集在外面覆盖成 media-first。
+    layout: FEED_LAYOUT,
+  }
 }
 
 /**
  * 合集详情成员卡的布局标记（#3459）。
  *
  * 合集是收藏夹/素材架心智：成员卡固定「封面 → 标题 → 元信息」形态，封面
- * 框比例也固定，不再按数据比例起起伏伏。根层信息流继续用
- * `toInspirationCardRow`，两套形态互不影响。布局标记本身住在
- * `rival-masonry.js`（媒体比例的唯一真源），这里只做转发。
+ * 框比例也固定，不再按数据比例起起伏伏。根层信息流用 `layout: 'feed'`，
+ * 与它共用卡壳、只保留比例差异。布局标记本身住在 `rival-masonry.js`
+ * （媒体比例的唯一真源），这里只做转发。
  */
 export { COLLECTION_MEMBER_LAYOUT }
 

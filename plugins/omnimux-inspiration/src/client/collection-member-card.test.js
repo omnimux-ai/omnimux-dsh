@@ -10,6 +10,7 @@ import {
 import { toCollectionMemberCard, toInspirationCardRow } from './inspiration-card.js'
 import {
   COLLECTION_MEMBER_LAYOUT,
+  FEED_LAYOUT,
   RIVAL_MEDIA_FIRST_RATIO,
   rivalCardHeightPx,
   rivalMediaRatioOf,
@@ -167,7 +168,7 @@ describe('collection member descriptor', () => {
     assert.equal(memberCard.layout, COLLECTION_MEMBER_LAYOUT)
     assert.equal(memberCard.source_row, VIDEO_ROW, 'the source row must stay attached for the detail dialog')
     assert.equal(memberCard.cover_key, toInspirationCardRow(VIDEO_ROW, t).cover_key)
-    assert.equal(toInspirationCardRow(VIDEO_ROW, t).layout, undefined, 'the root feed must not become cover-first')
+    assert.equal(toInspirationCardRow(VIDEO_ROW, t).layout, FEED_LAYOUT, 'the root feed shares the card shell, only the ratio differs')
   })
 
   it('does not mutate the input row', () => {
@@ -315,8 +316,8 @@ describe('collection member card', () => {
   it('keeps a text-only member on the in-flow notice', async () => {
     const mounted = await mountCoverCard({ card: cardProps(TEXT_ROW), descriptor: member(TEXT_ROW) })
     try {
-      assert.equal(mounted.container.querySelector('.omnimux-inspiration-cover-wrap'), null)
-      assert.equal(metaRow(mounted.container), null)
+      assert.ok(!mounted.container.querySelector('.omnimux-inspiration-cover-wrap'), 'a text member has no cover')
+      assert.ok(metaRow(mounted.container), 'it still carries the shared meta row')
       const notice = mounted.container.querySelector('.omnimux-inspiration-card-error.is-inline')
       assert.ok(notice, 'a text member keeps its body as the reason')
       assert.ok(notice.textContent.includes(DETAIL))
@@ -326,14 +327,16 @@ describe('collection member card', () => {
     }
   })
 
-  it('keeps the root library card unchanged when no layout marker is passed', async () => {
+  it('gives the root feed the shared shell even without a descriptor', async () => {
     const mounted = await mountCoverCard({ card: cardProps(VIDEO_ROW) })
     try {
       const article = mounted.container.querySelector('article')
-      assert.equal(article.classList.contains('is-media-first'), false)
-      assert.ok(mounted.container.querySelector('.omnimux-rival-card-title-zone'), 'the root feed keeps its title zone')
-      assert.equal(metaRow(mounted.container), null)
-      assert.equal(mounted.container.querySelector('.omnimux-inspiration-cover-wrap'), null)
+      assert.ok(article.classList.contains('is-library'), 'the mapping marks the root feed as a library card')
+      assert.ok(mounted.container.querySelector('.omnimux-rival-card-body'), 'the root feed renders the shared body')
+      assert.ok(metaRow(mounted.container), 'the root feed renders the shared meta row')
+      assert.ok(mounted.container.querySelector('.omnimux-inspiration-cover-wrap'), 'the cover is wrapped for the corner chips')
+      assert.ok(!mounted.container.querySelector('.omnimux-rival-card-title-zone'), 'no title above the cover')
+      assert.equal(mounted.container.querySelector('article').getAttribute('data-card-type'), 'long-video')
     } finally {
       await mounted.unmount()
       mounted.close()
