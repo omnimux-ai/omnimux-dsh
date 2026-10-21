@@ -35,10 +35,34 @@ import {
 /** Inline assignment markers the page has shipped. */
 const STATE_MARKERS = ['_ROUTER_DATA', '_SSR_HYDRATED_DATA']
 
+/**
+ * `<script type="application/json">` the MAIN-world bridge fills with the page's
+ * aweme detail response / SSR state. 抖音 loads the detail via XHR, so this DOM
+ * node is the only channel from the main world into this isolated extractor.
+ */
+const MAIN_WORLD_TAG = 'omnimux-douyin-capture'
+
 /** Whether a JSON object looks like one 抖音 work. */
 function isAweme(record: Record<string, unknown>): boolean {
   const hasId = record['aweme_id'] !== undefined || record['awemeId'] !== undefined
   return hasId && (record['desc'] !== undefined || record['video'] !== undefined || record['images'] !== undefined)
+}
+
+/** Parsed payload published by the MAIN-world bridge, when it captured one. */
+function bridgedAwemes(doc: Document): unknown[] {
+  const raw = doc.querySelector<HTMLScriptElement>(`script#${MAIN_WORLD_TAG}`)?.textContent ?? ''
+  if (raw.trim() === '') return []
+  const parsed = parseJson(raw)
+  if (parsed === null) return []
+  const candidates: unknown[] = [parsed]
+  const record = recordOf(parsed)
+  if (record !== null) {
+    for (const key of ['aweme_detail', 'aweme_details']) {
+      const value = record[key]
+      if (value !== undefined) candidates.push(value)
+    }
+  }
+  return candidates
 }
 
 /** Every parsed inline state candidate, best-first. */
@@ -141,6 +165,13 @@ function postFromAweme(doc: Document, href: string, item: Record<string, unknown
  * @returns the capture, or `null` when neither inline state nor the DOM yields a work
  */
 export function extractDouyin(doc: Document, href: string): CapturedPost | null {
+  // 先读主世界桥接的结果：真实页面详情走 XHR，DOM 里没有 aweme 数据。
+  for (const candidate of bridgedAwemes(doc)) {
+    const item = findDeepObject(candidate, isAweme)
+    if (item === null) continue
+    const post = postFromAweme(doc, href, item)
+    if (post !== null) return post
+  }
   for (const candidate of stateCandidates(doc)) {
     const item = findDeepObject(candidate, isAweme)
     if (item === null) continue

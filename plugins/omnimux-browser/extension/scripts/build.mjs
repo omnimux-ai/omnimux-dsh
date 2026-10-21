@@ -19,6 +19,8 @@ if (process.argv.includes('--firefox')) {
 const configs = [
   'vite.background.config.ts',
   'vite.content.config.ts',
+  // 抖音主世界采集桥：document_start 注入，manifest 的第二个 content_scripts 条目。
+  'vite.capture-main.config.ts',
   'vite.panel.config.ts',
 ]
 

@@ -1,0 +1,49 @@
+[
+  {
+    "name": "instagram",
+    "status": 201,
+    "import_status": "degraded",
+    "fileOk": false,
+    "fileSize": 0,
+    "type": "image",
+    "import_error": "[ETIMEDOUT] Download timed out after 60000ms: The operation was aborted",
+    "media_urls": [],
+    "media_item": null
+  },
+  {
+    "name": "xiaohongshu",
+    "status": 201,
+    "import_status": "ready",
+    "fileOk": true,
+    "fileSize": 93382,
+    "type": "image",
+    "import_error": null,
+    "media_urls": [],
+    "media_item": "/omnimux/inspiration/local/media/images/image_4eae4f84.webp"
+  },
+  {
+    "name": "x",
+    "status": 201,
+    "import_status": "ready",
+    "fileOk": true,
+    "fileSize": 126287,
+    "type": "image",
+    "import_error": null,
+    "media_urls": [],
+    "media_item": "/omnimux/inspiration/local/media/images/image_3aad1672.jpg"
+  },
+  {
+    "name": "douyin",
+    "status": 201,
+    "import_status": "ready",
+    "fileOk": true,
+    "fileSize": 236377548,
+    "type": "video",
+    "import_error": null,
+    "media_urls": [
+      "/omnimux/inspiration/local/media/videos/video_4a4c7c4b.mp4"
+    ],
+    "media_item": "/omnimux/inspiration/local/media/videos/video_4a4c7c4b.mp4"
+  }
+]
+HOST_RESULT FAIL 1 failed of 4

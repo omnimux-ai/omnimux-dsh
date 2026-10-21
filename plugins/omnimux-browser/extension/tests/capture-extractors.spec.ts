@@ -182,7 +182,9 @@ describe('TikTok 提取（__UNIVERSAL_DATA_FOR_REHYDRATION__）', () => {
 })
 
 describe('X 提取（复用 twitter-capture）', () => {
-  function mountTweet() {
+  function mountTweet(options = {}) {
+    const videoSrc = options.videoSrc === undefined ? '' : ` src="${options.videoSrc}"`
+    const poster = options.poster === undefined ? 'https://pbs.twimg.com/poster.jpg' : options.poster
     mountPage({
       body: `<article data-testid="tweet" tabindex="-1">
         <div data-testid="User-Name">
@@ -191,7 +193,7 @@ describe('X 提取（复用 twitter-capture）', () => {
         </div>
         <div data-testid="tweetText">X 帖子第一行
 第二行</div>
-        <div data-testid="videoComponent"><video poster="https://pbs.twimg.com/poster.jpg"></video></div>
+        <div data-testid="videoComponent"><video${videoSrc} poster="${poster}"></video></div>
         <div role="group" aria-label="1.2万 次查看">
           <button data-testid="like" aria-label="1.2万 喜欢"></button>
           <button data-testid="reply" aria-label="34 回复"></button>
@@ -201,7 +203,7 @@ describe('X 提取（复用 twitter-capture）', () => {
     })
   }
 
-  it('将 TweetCapture 映射为 CapturedPost', () => {
+  it('直播回放只有缩略图时按图片处理，不把 .jpg 标成视频', () => {
     mountTweet()
     const post = requirePost(capture('https://x.com/kai/status/1234567890'))
     assert.equal(post.platform, 'x')
@@ -209,14 +211,21 @@ describe('X 提取（复用 twitter-capture）', () => {
     assert.equal(post.title, 'X 帖子第一行')
     assert.equal(post.content, 'X 帖子第一行\n第二行')
     assert.deepEqual(post.author, { name: 'Kai', handle: 'kai' })
-    assert.equal(post.content_shape, 'video')
-    assert.deepEqual(post.media, [{ type: 'video', url: 'https://pbs.twimg.com/poster.jpg' }])
+    assert.equal(post.content_shape, 'photo')
+    assert.deepEqual(post.media, [{ type: 'image', url: 'https://pbs.twimg.com/poster.jpg' }])
     assert.equal(post.cover_url, 'https://pbs.twimg.com/poster.jpg')
     assert.equal(post.stats?.likes, 12000)
     assert.equal(post.stats?.comments, 34)
     assert.equal(post.stats?.shares, 56)
     assert.equal(post.stats?.views, 12000)
     assert.equal(post.posted_at, '2026-10-05T10:00:00.000Z')
+  })
+
+  it('媒体类型按地址判定：图片扩展名优先，不把回放缩略图当视频', () => {
+    mountTweet({ poster: 'https://prod-fastly-us-east-1.video.pscp.tv/Transcoding/thumbnail/a.jpg?token=1' })
+    const post = requirePost(capture('https://x.com/kai/status/1234567890'))
+    assert.equal(post.media[0].type, 'image')
+    assert.equal(post.media[0].url, 'https://prod-fastly-us-east-1.video.pscp.tv/Transcoding/thumbnail/a.jpg?token=1')
   })
 
   it('没有可保存帖子的页面返回 null', () => {
@@ -486,5 +495,116 @@ describe('通用兜底（og / JSON-LD / DOM）', () => {
     })
     const post = requirePost(capture('https://notx.com/kai/status/1'))
     assert.equal(post.platform, 'web')
+  })
+})
+
+// 以下用例的数据结构来自 2026-10-21 ego-browser 注入真实页面后的实测结果
+// （Issue #3485）：Instagram 的 Relay 包装（items 深度 15）、抖音 MAIN world
+// 桥接节点、小红书带 xsec_token 的详情地址。
+describe('真实页面结构（ego 注入验证，Issue #3485）', () => {
+  /** 把 items 包进 Instagram 页面的 Relay 形状，深度确保超过旧 14 层上限。 */
+  function relayWrapped(items) {
+    const payload = {
+      require: [
+        ['ScheduledServerJS', 'handle', null, [
+          ['__bbox', { result: { data: { xdt_api__v1__media__shortcode__web_info: { items } } } }],
+        ]],
+      ],
+    }
+    return { a: { b: { c: payload } } }
+  }
+
+  it('Instagram: 真实 Relay 形状的 items[0]（视频 + 作者 + 统计）', () => {
+    const item = {
+      pk: '4011477195854994819',
+      code: 'DeroUGDhF2D',
+      taken_at: 1792425706,
+      media_type: 2,
+      video_versions: [{ url: 'https://scontent.cdninstagram.com/o1/v/t2/reel.mp4', width: 720, height: 1280 }],
+      image_versions2: { candidates: [{ url: 'https://scontent.cdninstagram.com/v/t51/cover.jpg' }] },
+      user: { username: 'instagram', full_name: 'Instagram' },
+      caption: { text: 'new NBA season prep with @jordanclarksons' },
+      like_count: 132587,
+      comment_count: 9539,
+      play_count: 98765,
+    }
+    mountPage({ body: '<script type="application/json">' + JSON.stringify(relayWrapped([item])) + '</script>' })
+    const post = requirePost(capture('https://www.instagram.com/instagram/reel/DeroUGDhF2D/'))
+    assert.equal(post.platform, 'instagram')
+    assert.equal(post.content_shape, 'video')
+    assert.deepEqual(post.media, [{ type: 'video', url: 'https://scontent.cdninstagram.com/o1/v/t2/reel.mp4' }])
+    assert.deepEqual(post.author, { name: 'Instagram', handle: 'instagram' })
+    assert.equal(post.title, 'new NBA season prep with @jordanclarksons')
+    assert.deepEqual(post.stats, { likes: 132587, comments: 9539, views: 98765 })
+    assert.equal(post.cover_url, 'https://scontent.cdninstagram.com/v/t51/cover.jpg')
+  })
+
+  it('Instagram: 真实 carousel 多图按 gallery', () => {
+    const item = {
+      pk: 'carousel-1',
+      code: 'ABC123',
+      taken_at: 1792425706,
+      media_type: 8,
+      carousel_media: [
+        { image_versions2: { candidates: [{ url: 'https://scontent.cdninstagram.com/p1.jpg' }] } },
+        { image_versions2: { candidates: [{ url: 'https://scontent.cdninstagram.com/p2.jpg' }] } },
+      ],
+      user: { username: 'gallery_owner', full_name: 'Gallery Owner' },
+      caption: { text: 'two photos' },
+    }
+    mountPage({ body: '<script type="application/json">' + JSON.stringify(relayWrapped([item])) + '</script>' })
+    const post = requirePost(capture('https://www.instagram.com/p/ABC123/'))
+    assert.equal(post.content_shape, 'gallery')
+    assert.deepEqual(post.media.map((entry) => entry.url), [
+      'https://scontent.cdninstagram.com/p1.jpg',
+      'https://scontent.cdninstagram.com/p2.jpg',
+    ])
+    assert.deepEqual(post.author, { name: 'Gallery Owner', handle: 'gallery_owner' })
+  })
+
+  it('抖音: MAIN world 桥接的 aweme_detail 提供作者与 play_addr', () => {
+    const bridge = {
+      aweme_detail: {
+        aweme_id: '7680138095160806708',
+        desc: '终于有一天，我走进了现实版的《动物世界》',
+        author: { nickname: '马玉晗Martin', unique_id: 'Martin998' },
+        video: {
+          play_addr: { url_list: ['https://v26-web.douyinvod.com/802f9a117264d5d/video.mp4'] },
+          cover: { url_list: ['https://p3-pc-sign.douyinpic.com/image-cut-tos-priv/cover.jpg'] },
+        },
+        statistics: { digg_count: 795, comment_count: 66, share_count: 149, collect_count: 104 },
+        create_time: 1760000000,
+      },
+    }
+    mountPage({
+      body: '<script type="application/json" id="omnimux-douyin-capture">' + JSON.stringify(bridge) + '</script>',
+    })
+    const post = requirePost(capture('https://www.douyin.com/video/7680138095160806708'))
+    assert.equal(post.platform, 'douyin')
+    assert.equal(post.content_shape, 'video')
+    assert.deepEqual(post.author, { name: '马玉晗Martin', handle: 'Martin998' })
+    assert.deepEqual(post.media, [{ type: 'video', url: 'https://v26-web.douyinvod.com/802f9a117264d5d/video.mp4' }])
+    assert.deepEqual(post.stats, { likes: 795, comments: 66, shares: 149, collects: 104 })
+    assert.equal(post.cover_url, 'https://p3-pc-sign.douyinpic.com/image-cut-tos-priv/cover.jpg')
+  })
+
+  it('小红书: 带 xsec_token 的详情地址被完整保留', () => {
+    const note = {
+      noteId: '6ad05a55000000001802a9fc',
+      title: '海外创意钩子分享',
+      desc: '笔记正文',
+      time: 1728000000000,
+      user: { nickname: 'Miss圆滚滚', userId: '5b5e7e4ee8ac2b449a5f7a00' },
+      imageList: [{ urlDefault: 'https://sns-webpic-qc.xhscdn.com/note.jpg' }],
+      interactInfo: { likedCount: 12, commentCount: 3 },
+    }
+    mountPage({
+      body: '<script>window.__INITIAL_STATE__ = ' + JSON.stringify({ note: { noteDetailMap: { id1: { note } } } }) + ';</script>',
+    })
+    const href = 'https://www.xiaohongshu.com/explore/6ad05a55000000001802a9fc?xsec_token=TOKEN123&xsec_source=pc_feed'
+    const post = requirePost(capture(href))
+    assert.equal(post.source_url, href)
+    assert.equal(post.cover_url, 'https://sns-webpic-qc.xhscdn.com/note.jpg')
+    assert.deepEqual(post.author, { name: 'Miss圆滚滚', handle: '5b5e7e4ee8ac2b449a5f7a00' })
   })
 })
