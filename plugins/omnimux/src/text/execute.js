@@ -179,7 +179,24 @@ export async function executeOmnimuxText(input) {
       // case falls through to the configured default route; real model errors
       // stay visible to the caller.
       if (!isProviderAdapterUnavailable(error)) throw error
-      console.warn(`[omnimux:text] tool model ${toolModel.provider}:${toolModel.model} has no adapter; trying the live catalog default`)
+      console.warn(`[omnimux:text] tool model ${toolModel.provider}:${toolModel.model} has no adapter; trying the verified local agent`)
+      const runtime = readScenarioSettings(input.settings)
+      const agentId = typeof runtime?.runtimeAgentId === 'string' ? runtime.runtimeAgentId.trim() : ''
+      const agentModel = typeof runtime?.runtimeAgentModel === 'string' ? runtime.runtimeAgentModel.trim() : ''
+      if (agentId !== '' && runtime?.runtimeAgentVerified === true) {
+        try {
+          const agentRun = typeof input.agentRun === 'function' ? input.agentRun : runAgentText
+          const agentText = await agentRun({ id: agentId, prompt, model: agentModel || undefined })
+          const textValue = typeof agentText === 'string' ? agentText.trim() : ''
+          if (textValue !== '') {
+            return { mode: 'live', model: agentId, text: textValue, ...(agentModel ? { agentModel } : {}) }
+          }
+        } catch (agentError) {
+          const message = agentError instanceof Error ? agentError.message : String(agentError)
+          console.warn(`[omnimux:text] local agent ${agentId} failed: ${message}`)
+        }
+      }
+      console.warn('[omnimux:text] local agent unavailable; trying the live catalog default')
       const catalogDefault = readCatalogDefault(input.modelCatalog)
       if (catalogDefault !== null) {
         try {
