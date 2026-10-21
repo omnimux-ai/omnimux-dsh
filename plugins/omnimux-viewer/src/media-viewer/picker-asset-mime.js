@@ -56,7 +56,8 @@ export function mapLocalAsset(a) {
   const variants = coverFile?.id ? [coverFile, ...files] : files;
   for (const file of variants) {
     const kind = file?.kind;
-    if (!file?.id || !kind || !['image', 'video', 'audio'].includes(kind)) continue;
+    // Preview route serves image/video only; audio files cannot be referenced here.
+    if (!file?.id || !kind || !['image', 'video'].includes(kind)) continue;
     if (!mediaByKind[kind]) {
       mediaByKind[kind] = {
         url: localPreviewUrl(a.id, file.id),

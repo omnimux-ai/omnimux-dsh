@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { assetForSlot, mapArtifactAsset, mapCloudAsset, mapLocalAsset, mapProductAsset, pickerKindOf, pickerMimeOf } from './picker-asset-mime.js';
+import { rejectionOf } from './media-slot.js';
 
 describe('picker asset MIME projection', () => {
   it('reads the real cover filename instead of the extension-less preview URL', () => {
@@ -110,8 +111,23 @@ describe('media URL vs thumbnail separation', () => {
     assert.equal(video.type, 'video');
     assert.equal(video.mime, 'video/mp4');
     assert.equal(video.url, '/omnimux/assets/library/preview?id=v&file=media');
-    // No audio variant: fail-closed, caller rejects with the slot's type error.
-    assert.equal(assetForSlot(item, 'audio').type, 'image');
+    // No audio variant: fail-closed through the submit layer's slot check.
+    const audio = assetForSlot(item, 'audio');
+    assert.equal(audio.type, 'image');
+    const rejection = rejectionOf({ type: audio.mime }, { type: 'audio' }, null, { existing: [] });
+    assert.match(rejection, /请上传音频/);
+
+    const audioOnly = mapLocalAsset({
+      id: 'a',
+      name: '本地音频',
+      type: 'custom',
+      cover: { id: 'cover', kind: 'image', original_name: 'cover.png' },
+      files: [
+        { id: 'cover', kind: 'image', original_name: 'cover.png' },
+        { id: 'voice', kind: 'audio', original_name: 'voice.mp3' },
+      ],
+    });
+    assert.equal(audioOnly.mediaByKind.audio, undefined, 'preview route cannot serve audio');
   });
 
   it('reads mime_type and meta.source_media_url', () => {

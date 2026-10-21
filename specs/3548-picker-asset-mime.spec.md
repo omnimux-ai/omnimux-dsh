@@ -53,4 +53,8 @@ cover 文件本身带有 `original_name`、`kind`，但映射层丢弃了。`inf
 
 ## 回滚
 
-单 PR、仅 `ReferencePickerPopover.jsx` + 测试；revert 即恢复。
+单 PR、仅 `ReferencePickerPopover.jsx` + `picker-asset-mime.js` + 测试；revert 即恢复。
+
+## 音频说明
+
+本地资产预览路由只服务图片/视频，音频文件不生成 picker 变体；音频槽仍由提交层按类型拒绝（fail-closed），避免把封面图当音频提交。
