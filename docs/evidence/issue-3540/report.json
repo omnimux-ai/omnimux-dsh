@@ -1,0 +1,79 @@
+{
+  "task": "browser-x-poster-issue-3460",
+  "checks": {
+    "triggerMounted": true,
+    "entryInActionBar": true,
+    "entryBeforeBookmark": true,
+    "entryText": "",
+    "entryColor": "rgb(184, 183, 255)",
+    "entryStyleRules": [
+      ".omnimux-poster-action-button { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0px; border: 0px; border-radius: 50%; background: transparent; filter: drop-shadow(rgba(0, 0, 0, 0.45) 0px 0px 1px); cursor: pointer; box-sizing: border-box; transition: background 0.15s, color 0.15s; color: var(--omnimux-poster-brand, currentColor) !important; }",
+      ".omnimux-poster-action-button:hover { background: color-mix(in srgb,var(--omnimux-poster-brand, currentColor) 16%,transparent); color: var(--omnimux-poster-brand, currentColor) !important; }",
+      ".omnimux-poster-action-button:focus-visible { outline: 2px solid var(--omnimux-poster-brand, currentColor); outline-offset: 2px; }"
+    ],
+    "brandToken": "",
+    "modalOpened": true,
+    "themeCount": 2,
+    "darkSelected": true,
+    "navigated": true,
+    "composerFound": true,
+    "attached": true,
+    "editorText": "",
+    "posterPreview": true,
+    "cleanup": true,
+    "seeded": true,
+    "prefillText": "我的个人观点",
+    "prefilled": true
+  },
+  "screenshots": [
+    "01-trigger.png",
+    "02-modal.png",
+    "03-modal-dark.png",
+    "04-compose.png",
+    "05-prefill.png"
+  ],
+  "notes": [],
+  "bodyText": "Alice 示例\n@alice · 2小时\n今天把发布链路拆成了三段，最难的从来不是模型。\n\n真正的瓶颈是每一步之间的等待，以及没人愿意承认的反复修改。\n\n把等待砍掉一半，产出就翻倍。\n查看浏览数据\n回复 12\n转帖 3\n喜欢 48\n6,248\n书签\n分享\n0/h",
+  "contexts": [
+    {
+      "id": 1,
+      "origin": "https://x.com",
+      "name": ""
+    },
+    {
+      "id": 2,
+      "origin": "https://x.com",
+      "name": ""
+    },
+    {
+      "id": 3,
+      "origin": "chrome-extension://bbcenolopbbaagocedpnlkjbkpglgbbn",
+      "name": "OmniMux-精灵助手"
+    },
+    {
+      "id": 4,
+      "origin": "https://x.com",
+      "name": ""
+    },
+    {
+      "id": 5,
+      "origin": "chrome-extension://bbcenolopbbaagocedpnlkjbkpglgbbn",
+      "name": "OmniMux-精灵助手"
+    }
+  ],
+  "markers": {
+    "url": "https://x.com/home",
+    "host": "x.com",
+    "fab": true,
+    "copilot": 0,
+    "velocity": 1,
+    "triggers": 1,
+    "modal": false
+  },
+  "attachment": {
+    "name": "omnimux-poster.png",
+    "size": 109325,
+    "type": "image/png"
+  },
+  "posterBytes": 109325
+}
