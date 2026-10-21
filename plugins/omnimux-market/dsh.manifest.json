@@ -31,7 +31,7 @@
       { "target": "sidebar.extra", "componentPath": "src/client/portal.js" },
       { "target": "shell.overlay", "componentPath": "src/client/plaza-shell.js" }
     ],
-    "storageDomains": ["$DSH_HOME/skills/", "$DSH_HOME/omnimux-market/sessions/"]
+    "storageDomains": ["$DSH_HOME/skills/", "$DSH_HOME/omnimux-market/sessions/", "$DSH_HOME/omnimux-market-home-order.json"]
   },
   "dependencies": {
     "requiredPlugins": ["omnimux"],
