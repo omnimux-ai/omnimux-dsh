@@ -7,10 +7,33 @@
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { planRemoteReconcile } from './persistConflict.ts';
+import { decideRemoteVersionAdvance } from './persistConflict.ts';
 import { signatureOf } from './persistSanitize.ts';
 
 const WS = 'ws_race00000001';
+
+/**
+ * 本地适配：只有节点/边时先按同一套 sanitize+签名算两边签名，再走唯一判定入口。
+ * `workspaceId` 必填——漏传会让签名与 hook 不一致（Issue #3601 删掉的正是这个陷阱）。
+ */
+function planRemoteReconcile(input) {
+  if (!input.workspaceId) throw new Error('workspaceId is required for reconcile signatures');
+  const currentSignature = signatureOf(input.currentNodes, input.currentEdges, {
+    workspaceId: input.workspaceId,
+  });
+  const remoteSignature = signatureOf(input.remoteNodes, input.remoteEdges, {
+    workspaceId: input.workspaceId,
+  });
+  return {
+    decision: decideRemoteVersionAdvance({
+      localSignature: currentSignature,
+      lastSavedSignature: input.lastSavedSignature,
+      remoteSignature,
+    }),
+    currentSignature,
+    remoteSignature,
+  };
+}
 
 function materialNode(id, extra) {
   return {

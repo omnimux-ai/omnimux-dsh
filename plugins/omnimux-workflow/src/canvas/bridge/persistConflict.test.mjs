@@ -3,7 +3,14 @@
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { decideGraphReconcile, decideRemoteVersionAdvance } from './persistConflict.ts';
+import { decideRemoteVersionAdvance } from './persistConflict.ts';
+
+/** 本地适配：新增用例用 currentSignature 语义；判定实现只有 persistConflict 一份。 */
+const decideGraphReconcile = input => decideRemoteVersionAdvance({
+  localSignature: input.currentSignature,
+  lastSavedSignature: input.lastSavedSignature,
+  remoteSignature: input.remoteSignature,
+});
 
 test('本地签名 == 远端签名 → adopt（打开自撞 / flush 409）', () => {
   assert.equal(

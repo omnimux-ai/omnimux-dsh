@@ -18,7 +18,7 @@
 
 ## 计划与项目结构
 
-- `plugins/omnimux-workflow/src/canvas/bridge/persistConflict.ts`：把三态判定改为四态 `decideGraphReconcile`（`adopt | resave | reload | conflict`），保留纯函数形态与现有注释风格。
+- `plugins/omnimux-workflow/src/canvas/bridge/persistConflict.ts`：把三态判定改为四态（`adopt | resave | reload | conflict`），保留纯函数形态与现有注释风格。函数名沿用既有的 `decideRemoteVersionAdvance`（`persistSanitize.test.mjs` 的源码契约把该名字钉在 hook 源码上）；Issue #3601 随后收敛掉了此处的重复入口与 `workspaceId?` 可选陷阱，改名若要发生应作为独立的测试标准变更单独评审。
 - `plugins/omnimux-workflow/src/canvas/bridge/useWorkspacePersistence.ts`：`resolveRemoteAdvance` 去掉"调用方旧快照"参数语义，改为 await 后重读 store 计算签名；`resave` 时对齐版本并重新排一次保存；409 分支命中 `resave` 时带新版本重试一次 PUT。
 - 测试：`persistConflict.test.mjs` 覆盖四态；新增 `workspaceSelfSaveRace.test.mjs` 覆盖"远端 == lastSaved + 本地新增节点"的端到端判定链（纯函数 + 真实 `signatureOf`/`sanitizeNodes`，不启 React）。
 
