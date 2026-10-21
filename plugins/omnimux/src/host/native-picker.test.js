@@ -3,6 +3,7 @@
  * The runner and platform are injected so no test ever runs real osascript.
  */
 import assert from 'node:assert/strict'
+import { homedir } from 'node:os'
 import { describe, it } from 'node:test'
 import {
   PICKER_DEFAULT_PROMPTS,
@@ -304,6 +305,33 @@ describe('picker failure diagnostics', () => {
     })
     assert.deepEqual(cancelled, { path: null, paths: [] })
     assert.deepEqual(logs, [])
+  })
+
+  it('keeps picker-failed when the injected logger throws', async () => {
+    await assert.rejects(
+      () => pickNativePath('file', {
+        platform: 'darwin',
+        run: runOk('not a json payload'),
+        log: () => { throw new Error('logger down') },
+      }),
+      (error) => error instanceof PickerError && error.code === 'picker-failed',
+    )
+  })
+
+  it('collapses the home directory in the logged sample', async () => {
+    const logs = []
+    const secret = `${homedir()}/secret.png`
+    await assert.rejects(
+      () => pickNativePath('file', {
+        platform: 'darwin',
+        run: runOk(JSON.stringify([secret, 123])),
+        log: (message) => logs.push(message),
+      }),
+      (error) => error instanceof PickerError && error.code === 'picker-failed',
+    )
+    assert.equal(logs.length, 1)
+    assert.match(logs[0], /~\/secret\.png/)
+    assert.ok(!logs[0].includes(homedir()), '日志不得包含完整主目录路径')
   })
 })
 

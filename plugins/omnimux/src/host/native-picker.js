@@ -13,6 +13,7 @@
  * `picker-unsupported` (no silent path-typing fallback).
  */
 import { spawn } from 'node:child_process'
+import { homedir } from 'node:os'
 
 export const PICKER_DEFAULT_PROMPTS = Object.freeze({
   file: '选择要导入的素材',
@@ -174,15 +175,21 @@ const DIAGNOSTIC_SAMPLE_LIMIT = 200;
 
 /**
  * One-line failure diagnosis for the host log. The raw stdout is already
- * truncated on the error; this only reports its length plus a short sample and
- * is never written into the HTTP body or the client toast.
+ * truncated on the error; this only reports its length plus a short sample
+ * (home directory collapsed to `~`) and is never written into the HTTP body or
+ * the client toast.
  * @param {string} code
  * @param {string} stdout
  * @returns {string}
  */
 function describeFailure(code, stdout) {
   const raw = typeof stdout === 'string' ? stdout : '';
-  const sample = raw.slice(0, DIAGNOSTIC_SAMPLE_LIMIT).replace(/\s+/g, ' ');
+  const home = homedir();
+  const sample = raw
+    .slice(0, DIAGNOSTIC_SAMPLE_LIMIT)
+    .replace(/\s+/g, ' ')
+    .split(home)
+    .join('~');
   const fragment = sample === '' ? '' : ` sample=${JSON.stringify(sample)}`;
   return `${PICKER_DIAGNOSTIC_PREFIX} ${code} stdout=${raw.length}chars${fragment}`;
 }
@@ -222,7 +229,8 @@ export async function pickNativePath(kind, deps = {}) {
     try {
       log(describeFailure(failure.code, typeof raw === 'string' ? raw : ''))
     } catch {
-      // A logger must never mask the picker failure itself.
+      // A logger must never mask the picker failure itself; rethrow below.
+      throw failure
     }
     throw failure
   }
