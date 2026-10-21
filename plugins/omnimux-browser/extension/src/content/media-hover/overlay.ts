@@ -107,6 +107,15 @@ export class MediaOverlay {
   private idleTimer: number | null = null
   private frame: number | null = null
   private activeIcon: MediaActionKind | null = null
+  /**
+   * The outcome line currently owning the tooltip, if any.
+   *
+   * `applyOutcome` paints a receipt ("Download started") and this member keeps
+   * it alive for its dismiss window: a reposition frame (scroll, resize, the
+   * capsule's own width animation) repaints this text instead of the hover hint,
+   * so a success line is never erased in the frame that produced it.
+   */
+  private outcome: { action: MediaActionKind; message: string } | null = null
 
   private readonly onScroll = (): void => { this.scheduleReposition() }
   private readonly onWindowResize = (): void => { this.scheduleReposition(true) }
@@ -604,9 +613,9 @@ export class MediaOverlay {
    *
    * The primary slot is intent-aware: an image advertises the asset-library
    * action across its idle/busy/done states, a video keeps the baseline
-   * inspiration hint, and download/chat never change. An outcome message is never
-   * re-derived here — `applyOutcome` paints it once and `repositionNow`
-   * repaints this same resolver so a scroll cannot resurrect stale words.
+   * inspiration hint, and download/chat never change. Receipts are not derived
+   * here — {@link messageFor} layers the live outcome over this resolver, so a
+   * reposition repaints the same words the press produced.
    */
   private resolveHint(action: MediaActionKind): string {
     if (action === 'inspiration' && this.payload !== null) {
@@ -621,9 +630,19 @@ export class MediaOverlay {
     return this.copy.hint[action]
   }
 
+  /** The text the tooltip shows for one slot right now: a live outcome wins. */
+  private messageFor(action: MediaActionKind): string {
+    if (this.outcome !== null && this.outcome.action === action) return this.outcome.message
+    return this.resolveHint(action)
+  }
+
   private showHint(action: MediaActionKind): void {
+    // Pointing at a different icon retires the previous receipt: the hint under
+    // the pointer is what the tooltip must say, and a later reposition may not
+    // resurrect the older message. The receipt's own icon keeps its words.
+    if (this.outcome !== null && this.outcome.action !== action) this.outcome = null
     this.activeIcon = action
-    this.showMessage(this.resolveHint(action), action)
+    this.showMessage(this.messageFor(action), action)
   }
 
   private clearHint(action: MediaActionKind): void {
@@ -721,12 +740,16 @@ export class MediaOverlay {
     }
 
     // An outcome message always replaces the hover hint for both the success and
-    // the failure path, then fades on its own so the capsule settles.
+    // the failure path, then fades on its own so the capsule settles. It is kept
+    // in `this.outcome` for that window so a reposition repaints these same words
+    // instead of the hint they replaced.
     this.activeIcon = action
+    this.outcome = { action, message: outcome.message }
     this.showMessage(outcome.message, action)
     this.clearDismissTimer()
     this.dismissTimer = this.setTimer(() => {
       this.dismissTimer = null
+      this.outcome = null
       this.activeIcon = null
       this.tooltip?.hide()
     }, TIMING.errorDismiss)
@@ -837,7 +860,7 @@ export class MediaOverlay {
     capsule.element.style.top = `${Math.round(geometry.top)}px`
 
     const icon = this.activeIcon
-    if (icon !== null) this.showMessage(this.resolveHint(icon), icon)
+    if (icon !== null) this.showMessage(this.messageFor(icon), icon)
     return geometry
   }
 
