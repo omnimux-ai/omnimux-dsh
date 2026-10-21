@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from 'react'
 import { loopbackFetch } from '../../shared/loopback-fetch.ts'
+import type { PanelApi } from '../api.ts'
 
 export interface EffortOption {
   id: string
@@ -156,6 +157,46 @@ export const REAL_LOCAL_SUBSCRIPTION_GROUPS: ModelGroup[] = [
   },
 ]
 
+/**
+ * `session.modelCatalog` 载荷 → ModelSelector 分组。
+ *
+ * 实时目录是当前实例真正可路由的模型（含 DeepSeek / 订阅组等），
+ * 分组 id 用作 provider 回退，reasoning 原样透传。
+ */
+export function catalogToModelGroups(payload: unknown): ModelGroup[] {
+  if (typeof payload !== 'object' || payload === null) return []
+  const groups = (payload as { groups?: unknown }).groups
+  if (!Array.isArray(groups)) return []
+  const result: ModelGroup[] = []
+  for (const raw of groups) {
+    if (typeof raw !== 'object' || raw === null) continue
+    const group = raw as { id?: unknown; group?: unknown; name?: unknown; provider?: unknown; models?: unknown }
+    if (!Array.isArray(group.models)) continue
+    const label = typeof group.group === 'string' && group.group !== ''
+      ? group.group
+      : typeof group.name === 'string' && group.name !== ''
+        ? group.name
+        : typeof group.id === 'string' ? group.id : ''
+    if (label === '') continue
+    const models: ModelItem[] = []
+    for (const rawModel of group.models) {
+      if (typeof rawModel !== 'object' || rawModel === null) continue
+      const model = rawModel as { id?: unknown; name?: unknown; reasoning?: unknown }
+      if (typeof model.id !== 'string' || model.id === '') continue
+      const item: ModelItem = {
+        id: model.id,
+        name: typeof model.name === 'string' && model.name !== '' ? model.name : model.id,
+      }
+      if (typeof model.reasoning === 'object' && model.reasoning !== null) {
+        item.reasoning = model.reasoning as ModelItem['reasoning']
+      }
+      models.push(item)
+    }
+    if (models.length > 0) result.push({ group: label, models })
+  }
+  return result
+}
+
 export function getDefaultModelForInstance(port: number): string {
   return 'gpt-6-astra'
 }
@@ -168,6 +209,7 @@ export const ModelSelector = memo(function ModelSelector({
   dynamicModels = [],
   onSelectModel,
   onSelectEffort,
+  api,
 }: {
   locale?: 'zh' | 'en'
   activePort?: number
@@ -176,6 +218,8 @@ export const ModelSelector = memo(function ModelSelector({
   dynamicModels?: Array<{ id: string; name?: string }>
   onSelectModel?: (modelId: string, effort?: string, provider?: string) => void
   onSelectEffort?: (effort: string) => void
+  /** Host RPC client; when present the live `session.modelCatalog` wins. */
+  api?: PanelApi
 }) {
   const isEn = locale === 'en'
   const [modelGroups, setModelGroups] = useState<ModelGroup[]>(REAL_LOCAL_SUBSCRIPTION_GROUPS)
@@ -217,25 +261,40 @@ export const ModelSelector = memo(function ModelSelector({
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [customModelInput, setCustomModelInput] = useState('')
 
-  // 动态向本地真实服务探查最新模型列表
+  // 列表真源顺序：当前实例实时目录 → /ext/bridge-config 订阅目录 → 硬编码兜底。
+  // 硬编码快照只用于宿主不可达时的离线展示，不能覆盖实时配置。
   useEffect(() => {
     let active = true
-    void loopbackFetch(`http://127.0.0.1:${activePort}/ext/bridge-config`, {
-      signal: AbortSignal.timeout(1200),
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!active || !data) return
-        if (Array.isArray(data.modelGroups) && data.modelGroups.length > 0) {
-          setModelGroups(data.modelGroups)
+    const load = async (): Promise<void> => {
+      if (api !== undefined) {
+        try {
+          const catalog = await api.rpc<unknown>('session.modelCatalog', {})
+          const groups = catalogToModelGroups(catalog)
+          if (active && groups.length > 0) {
+            setModelGroups(groups)
+            return
+          }
+        } catch {
+          // Bridge down: fall through to the unauthenticated discovery snapshot.
         }
-      })
-      .catch(() => {})
-
+      }
+      try {
+        const res = await loopbackFetch(`http://127.0.0.1:${activePort}/ext/bridge-config`, {
+          signal: AbortSignal.timeout(1200),
+        })
+        if (!res.ok) return
+        const data = (await res.json()) as { modelGroups?: unknown }
+        if (!active || !Array.isArray(data.modelGroups) || data.modelGroups.length === 0) return
+        setModelGroups(data.modelGroups as ModelGroup[])
+      } catch {
+        // Keep the initial fallback groups.
+      }
+    }
+    void load()
     return () => {
       active = false
     }
-  }, [activePort])
+  }, [activePort, api])
 
   // 当外部实例端口切换时，同步更新默认模型与推理等级
   useEffect(() => {

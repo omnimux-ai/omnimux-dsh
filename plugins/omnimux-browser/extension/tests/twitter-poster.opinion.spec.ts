@@ -10,6 +10,7 @@ import {
   OPINION_MAX_CHARS,
   buildOpinionPrompt,
   generateOpinion,
+  generateOpinionResult,
   limitOpinionLength,
 } from '../src/content/twitter-poster/opinion.ts'
 
@@ -88,4 +89,31 @@ describe('generateOpinion', () => {
     assert.equal(text, '')
     assert.equal(called, false)
   })
+
+describe('generateOpinionResult', () => {
+  it('passes the host failure message through instead of an empty generic result', async () => {
+    globalThis.chrome = {
+      runtime: {
+        lastError: undefined,
+        sendMessage: (_message, callback) => callback({ ok: false, message: 'no adapter registered for provider "cpa"' }),
+      },
+    }
+    const result = await generateOpinionResult({ text: '正文', author: 'alice', locale: 'zh' }, 50)
+    assert.equal(result.text, '')
+    assert.ok(result.error.includes('no adapter registered for provider'))
+  })
+
+  it('reports a timeout reason when the host never answers', async () => {
+    globalThis.chrome = {
+      runtime: {
+        lastError: undefined,
+        sendMessage: () => {},
+      },
+    }
+    const result = await generateOpinionResult({ text: '正文', author: 'alice', locale: 'zh' }, 20)
+    assert.equal(result.text, '')
+    assert.ok(result.error.startsWith('生成超时'))
+  })
+})
+
 })

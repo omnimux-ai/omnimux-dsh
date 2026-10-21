@@ -73,9 +73,16 @@ export function limitOpinionLength(text: string, locale: PosterLocale): string {
 interface GenerateResponse {
   ok?: unknown
   text?: unknown
+  message?: unknown
 }
 
-function requestCompletion(prompt: OpinionPrompt): Promise<string> {
+export interface OpinionResult {
+  text: string
+  /** Human-readable reason when the text is empty; `''` on success. */
+  error: string
+}
+
+function requestCompletion(prompt: OpinionPrompt): Promise<OpinionResult> {
   return new Promise((resolve) => {
     try {
       chrome.runtime.sendMessage(
@@ -86,39 +93,53 @@ function requestCompletion(prompt: OpinionPrompt): Promise<string> {
         },
         (response: GenerateResponse | undefined) => {
           if (chrome.runtime.lastError) {
-            resolve('')
+            resolve({ text: '', error: chrome.runtime.lastError.message || '插件后台不可用' })
             return
           }
-          resolve(typeof response?.text === 'string' ? response.text : '')
+          if (response?.ok === false) {
+            const message = typeof response.message === 'string' && response.message.trim() !== ''
+              ? response.message.trim()
+              : '文本补全服务返回失败'
+            resolve({ text: '', error: message })
+            return
+          }
+          const text = typeof response?.text === 'string' ? response.text : ''
+          resolve({ text, error: text === '' ? '模型没有返回正文' : '' })
         },
       )
-    } catch {
-      resolve('')
+    } catch (error) {
+      resolve({ text: '', error: error instanceof Error ? error.message : String(error) })
     }
   })
 }
 
 /**
- * Generates the opinion, returning `''` when the host is unavailable or slow.
+ * Generates the opinion together with a reason when it fails.
  *
  * @param timeoutMs - Generation deadline; the caller proceeds with the poster
  *   alone rather than holding the navigation hostage.
  */
-export async function generateOpinion(
+export async function generateOpinionResult(
   input: OpinionInput,
   timeoutMs = 20_000,
-): Promise<string> {
-  if (String(input.text || '').trim() === '') return ''
+): Promise<OpinionResult> {
+  if (String(input.text || '').trim() === '') return { text: '', error: '原帖没有正文' }
 
   let timer: ReturnType<typeof setTimeout> | null = null
-  const raw = await Promise.race([
+  const result = await Promise.race([
     requestCompletion(buildOpinionPrompt(input)),
-    new Promise<string>((resolve) => {
-      timer = setTimeout(() => resolve(''), timeoutMs)
+    new Promise<OpinionResult>((resolve) => {
+      timer = setTimeout(() => resolve({ text: '', error: `生成超时（${Math.round(timeoutMs / 1000)}s）` }), timeoutMs)
     }),
   ])
   if (timer !== null) clearTimeout(timer)
 
-  const cleaned = sanitizeTweetText(raw, input.locale).trim()
-  return cleaned === '' ? '' : limitOpinionLength(cleaned, input.locale)
+  const cleaned = sanitizeTweetText(result.text, input.locale).trim()
+  if (cleaned === '') return { text: '', error: result.error || '模型没有返回正文' }
+  return { text: limitOpinionLength(cleaned, input.locale), error: '' }
+}
+
+/** Backwards-compatible wrapper: text only. */
+export async function generateOpinion(input: OpinionInput, timeoutMs = 20_000): Promise<string> {
+  return (await generateOpinionResult(input, timeoutMs)).text
 }

@@ -60,6 +60,12 @@ const REASONING_PREAMBLE_RE = /^(?:i['’]?m\s+thinking\s+through|let\s+me\s+thi
  * @param {unknown} value
  * @returns {{ provider: string, model: string } | null}
  */
+/** True when the runtime has no adapter registered for the pinned provider. */
+function isProviderAdapterUnavailable(error) {
+  const message = error instanceof Error ? error.message : String(error?.message ?? error)
+  return /no adapter registered for provider|unknown provider|provider .*(?:not registered|not found)/i.test(message)
+}
+
 function parseToolModel(value) {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
@@ -137,19 +143,32 @@ export async function executeOmnimuxText(input) {
       const attachment = await saveProbedTextImage(media, input.attachments)
       toolContent.push({ type: 'image', attachment })
     }
-    const toolResult = await streamTextReply(input.llm, {
-      provider: toolModel.provider,
-      model: toolModel.model,
-      prompt,
-      system: typeof input.system === 'string' ? input.system.trim() : '',
-      maxTokens: typeof input.maxTokens === 'number' && Number.isFinite(input.maxTokens) && input.maxTokens > 0
-        ? input.maxTokens : text.maxTokens,
-      content: toolContent,
-      signal: input.signal,
-      sessionId: input.sessionId,
-    })
-    // Report the stored composite so callers can see which provider ran it.
-    return { ...toolResult, model: `${toolModel.provider}:${toolModel.model}` }
+    let toolResult
+    try {
+      toolResult = await streamTextReply(input.llm, {
+        provider: toolModel.provider,
+        model: toolModel.model,
+        prompt,
+        system: typeof input.system === 'string' ? input.system.trim() : '',
+        maxTokens: typeof input.maxTokens === 'number' && Number.isFinite(input.maxTokens) && input.maxTokens > 0
+          ? input.maxTokens : text.maxTokens,
+        content: toolContent,
+        signal: input.signal,
+        sessionId: input.sessionId,
+      })
+    } catch (error) {
+      // A stale toolModel (e.g. a provider removed from the runtime) would
+      // otherwise fail every one-shot completion. Only the missing-adapter
+      // case falls through to the configured default route; real model errors
+      // stay visible to the caller.
+      if (!isProviderAdapterUnavailable(error)) throw error
+      console.warn(`[omnimux:text] tool model ${toolModel.provider}:${toolModel.model} has no adapter; falling back to the default text route`)
+      toolResult = null
+    }
+    if (toolResult !== null) {
+      // Report the stored composite so callers can see which provider ran it.
+      return { ...toolResult, model: `${toolModel.provider}:${toolModel.model}` }
+    }
   }
 
   const runtimeSettings = readScenarioSettings(input.settings)
