@@ -1,0 +1,27 @@
+# ship 物化范围改用 PR mergeCommit（Issue #3494）
+
+## 目标与成功标准
+`worktree.sh ship` 不再假定「本次 PR 的合并提交就是当前 HEAD」，而是用 `gh pr view` 返回的 `mergeCommit.oid` 精确计算该 PR 的改动范围并物化。成功标准：同批多个 PR 合并后，后 ship 较早的 PR 仍能覆盖它自己的插件改动（包括删除文件），不会被 `HEAD~1..HEAD` 漏掉；单测在旧实现上失败、修复后通过；既有 ship/remove 用例全绿。
+
+## 新用户基线
+仅开发交付脚本；不进入产品运行时。mergeCommit 缺失或本地不可达时明确失败（die），不静默用错误范围继续物化。
+
+## 计划与项目结构
+- `scripts/worktree.sh`：`cmd_ship` 的 `gh pr view` 增加 `mergeCommit` 字段并解析 `mergeCommit.oid`；pull 后校验该 commit 存在；squash 提交用 `mergeCommit^1..mergeCommit`，双父 merge 提交用 `merge-base(^1,^2)..mergeCommit`；替换 `auto_materialize_and_reload "HEAD~1" "HEAD"`。
+- `scripts/worktree-delivery.test.mjs`：更新 4 处 ship gh stub 为 5 字段；新增「同批两 PR，先 ship 较早 PR」用例（workflow 删除/修改 + 后一个 PR 改 assets），断言物化 workflow、不物化 assets。
+- 不改 `remove` 收尾逻辑（同类假设另开跟进）。
+
+## 命令
+`node --test scripts/worktree-delivery.test.mjs`；`node --test scripts/dev-launch-env.test.mjs`（静态守卫不回归）；`git diff --check`。
+
+## 代码风格
+沿用 shell 局部变量、die 失败语义与现有 fixture 测试风格；不引入依赖；失败信息说明「无法确定 mergeCommit / 本地不可达」。
+
+## 测试策略
+新增回归用例复刻真实时序：main 先合入 A（改 workflow），再合入 B（改 assets），本地停在 A 之前；ship A 的 PR 时 gh 返回 mergeCommit=A，断言 sync-to-app 收到 `omnimux-workflow` 且不含 assets。另验证 merge 提交双父时使用 merge-base 范围（用 `git merge --no-ff` fixture + stub，若实现分支被覆盖）。
+
+## 浏览器与 Electron 边界
+不涉及 Client/Stage；ship 后仅脚本变更、不物化应用，Dev 不受影响。
+
+## 边界与文档影响
+始终：保持 PR 校验、ff-only 同步、失败 die、worktree 清理语义。先问：改 Merge Queue、改 remove 收尾、改物化器。绝不：静默回退到 HEAD~1 范围、强推 main。文档影响：仅任务 spec 与脚本注释。

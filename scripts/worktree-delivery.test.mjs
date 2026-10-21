@@ -39,7 +39,7 @@ for (const scenario of ['missing-pr', 'open-pr', 'wrong-head', 'merged-pr']) {
       const head = git('-C', worktree, 'rev-parse', 'HEAD')
       if (scenario === 'merged-pr') git('push', 'origin', 'agent/common-feature:main')
       const state = scenario === 'open-pr' ? 'OPEN' : 'MERGED'
-      writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *'--json state -q .state'*) echo '${state}' ;;\n  *) printf '%s\\t%s\\t%s\\t%s\\n' '${state}' 'agent/common-feature' '${scenario === 'wrong-head' ? before : head}' 'main' ;;\nesac\n`, { mode: 0o755 })
+      writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *'--json state -q .state'*) echo '${state}' ;;\n  *) printf '%s\\t%s\\t%s\\t%s\\t%s\\n' '${state}' 'agent/common-feature' '${scenario === 'wrong-head' ? before : head}' 'main' '${scenario === 'merged-pr' ? head : ''}' ;;\nesac\n`, { mode: 0o755 })
       const args = ['scripts/worktree.sh', 'ship', 'common-feature']
       if (scenario !== 'missing-pr') args.push('--pr', '864')
       const result = spawnSync('bash', args, { cwd: repo, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } })
@@ -83,7 +83,7 @@ test('worktree ship --keep-worktree: retain worktree when explicitly requested',
     git('-C', worktree, 'commit', '-m', 'feature')
     const head = git('-C', worktree, 'rev-parse', 'HEAD')
     git('push', 'origin', 'agent/keep-feature:main')
-    writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *'--json state -q .state'*) echo 'MERGED' ;;\n  *) printf 'MERGED\\tagent/keep-feature\\t${head}\\tmain\\n' ;;\nesac\n`, { mode: 0o755 })
+    writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *'--json state -q .state'*) echo 'MERGED' ;;\n  *) printf 'MERGED\\tagent/keep-feature\\t${head}\\tmain\\t${head}\\n' ;;\nesac\n`, { mode: 0o755 })
     const result = spawnSync('bash', ['scripts/worktree.sh', 'ship', 'keep-feature', '--pr', '865', '--keep-worktree'], {
       cwd: repo,
       encoding: 'utf8',
@@ -127,7 +127,7 @@ test('worktree ship auto-triggers materialization when plugins are modified', ()
     const head = git('-C', worktree, 'rev-parse', 'HEAD')
     git('push', 'origin', 'agent/plugin-feature:main')
 
-    writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *'--json state -q .state'*) echo 'MERGED' ;;\n  *) printf 'MERGED\\tagent/plugin-feature\\t${head}\\tmain\\n' ;;\nesac\n`, { mode: 0o755 })
+    writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *'--json state -q .state'*) echo 'MERGED' ;;\n  *) printf 'MERGED\\tagent/plugin-feature\\t${head}\\tmain\\t${head}\\n' ;;\nesac\n`, { mode: 0o755 })
 
     const result = spawnSync('bash', ['scripts/worktree.sh', 'ship', 'plugin-feature', '--pr', '999'], {
       cwd: repo,
@@ -137,6 +137,50 @@ test('worktree ship auto-triggers materialization when plugins are modified', ()
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.match(result.stdout, /自动物化.*omnimux-workflow/)
     assert.ok(existsSync(join(repo, 'sync_receipt.txt')), 'sync-to-app.sh must be automatically executed')
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
+
+test('ship 物化范围跟随 PR mergeCommit：同批两个 PR 合入后补 ship 较早的仍覆盖自己的插件', () => {
+  const { fixture, repo, bin, git } = mergedRepo('ship-earlier-pr')
+  try {
+    const worktree = join(repo, '.worktrees/plugin-feature')
+    git('worktree', 'add', '-b', 'agent/plugin-feature', worktree)
+    mkdirSync(join(worktree, 'plugins/omnimux-workflow/src'), { recursive: true })
+    writeFileSync(join(worktree, 'plugins/omnimux-workflow/src/index.ts'), 'export const workflow = 1\n')
+    git('-C', worktree, 'add', '.')
+    git('-C', worktree, 'commit', '-m', 'feat(workflow): earlier PR')
+    const mergedEarlier = git('-C', worktree, 'rev-parse', 'HEAD')
+    git('push', 'origin', 'agent/plugin-feature:main')
+
+    // 后一个 PR 在 A 之后合入并修改另一个插件；本地 main 仍停在种子提交。
+    const unrelated = join(repo, '.worktrees/unrelated-pr')
+    git('fetch', 'origin')
+    git('worktree', 'add', '-b', 'agent/unrelated-pr', unrelated, 'origin/main')
+    mkdirSync(join(unrelated, 'plugins/omnimux-assets/src'), { recursive: true })
+    writeFileSync(join(unrelated, 'plugins/omnimux-assets/src/index.ts'), 'export const assets = 2\n')
+    git('-C', unrelated, 'add', '.')
+    git('-C', unrelated, 'commit', '-m', 'feat(assets): later PR')
+    git('-C', unrelated, 'push', 'origin', 'HEAD:main')
+    const currentMain = git('-C', unrelated, 'rev-parse', 'HEAD')
+
+    writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *'--json state -q .state'*) echo 'MERGED' ;;\n  *) printf 'MERGED\\tagent/plugin-feature\\t${mergedEarlier}\\tmain\\t${mergedEarlier}\\n' ;;\nesac\n`, { mode: 0o755 })
+
+    const result = spawnSync('bash', ['scripts/worktree.sh', 'ship', 'plugin-feature', '--pr', '3001'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: Object.assign({}, process.env, {
+        PATH: `${bin}:${process.env.PATH}`,
+        OMNIMUX_DEV_SNAPSHOT: join(fixture, 'absent-dev'),
+      }),
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(git('rev-parse', 'HEAD'), currentMain, 'ship 必须 ff-only 到最新 main')
+    assert.equal(
+      readFileSync(join(repo, 'sync_receipt.txt'), 'utf8').trim(),
+      'omnimux-workflow',
+      '只物化本 PR 的插件，而不是 HEAD~1..HEAD 的后一个 PR',
+    )
+    assert.equal(existsSync(worktree), false)
   } finally { rmSync(fixture, { recursive: true, force: true }) }
 })
 
@@ -357,7 +401,7 @@ for (const [label, changedFile, expectRestart] of [
       const head = git('-C', worktree, 'rev-parse', 'HEAD')
       git('push', 'origin', 'agent/plugin-feature:main')
 
-      writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *'--json state -q .state'*) echo 'MERGED' ;;\n  *) printf 'MERGED\\tagent/plugin-feature\\t${head}\\tmain\\n' ;;\nesac\n`, { mode: 0o755 })
+      writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *'--json state -q .state'*) echo 'MERGED' ;;\n  *) printf 'MERGED\\tagent/plugin-feature\\t${head}\\tmain\\t${head}\\n' ;;\nesac\n`, { mode: 0o755 })
 
       const result = spawnSync('bash', ['scripts/worktree.sh', 'ship', 'plugin-feature', '--pr', '1001'], {
         cwd: repo,

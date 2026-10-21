@@ -506,17 +506,29 @@ cmd_ship() {
   fi
 
   say "verifying GitHub PR #${pr_number} merge state and task revision..."
-  local pr_info pr_state pr_branch pr_head pr_base
-  pr_info=$(gh pr view "${pr_number}" --json state,headRefName,headRefOid,baseRefName \
-    -q '[.state, .headRefName, .headRefOid, .baseRefName] | @tsv') || die "cannot read PR #${pr_number}"
-  IFS=$'\t' read -r pr_state pr_branch pr_head pr_base <<< "${pr_info}"
+  local pr_info pr_state pr_branch pr_head pr_base pr_merge
+  pr_info=$(gh pr view "${pr_number}" --json state,headRefName,headRefOid,baseRefName,mergeCommit \
+    -q '[.state, .headRefName, .headRefOid, .baseRefName, (.mergeCommit.oid // "")] | @tsv') || die "cannot read PR #${pr_number}"
+  IFS=$'\t' read -r pr_state pr_branch pr_head pr_base pr_merge <<< "${pr_info}"
   [ "${pr_state}" = "MERGED" ] || die "PR #${pr_number} is [${pr_state}], not MERGED"
   [ "${pr_branch}" = "${branch}" ] && [ "${pr_head}" = "$(git -C "${wt}" rev-parse HEAD)" ] \
     && [ "${pr_base}" = "${DEFAULT_BRANCH}" ] || die "PR #${pr_number} does not match this task branch, HEAD and base"
+  [ -n "${pr_merge}" ] || die "PR #${pr_number} has no merge commit; cannot determine the materialization range"
   git -C "${ROOT}" pull --ff-only "${REMOTE}" "${DEFAULT_BRANCH}"
+  git -C "${ROOT}" cat-file -e "${pr_merge}^{commit}" 2>/dev/null \
+    || die "merge commit ${pr_merge} of PR #${pr_number} is not available after sync"
 
-  # 自动物化与桌面 Dev 应用热重载闭环
-  auto_materialize_and_reload "HEAD~1" "HEAD"
+  # 物化范围必须跟随本 PR 的合并提交。同一次 Merge Queue 批次可能合入多个 PR，
+  # 后 ship 较早的 PR 时 HEAD~1..HEAD 只剩最后一个 PR，会漏掉本次的插件改动/删除。
+  local materialize_base
+  if git -C "${ROOT}" rev-parse --verify --quiet "${pr_merge}^2" >/dev/null; then
+    # 双父合并提交：用两条父线的 merge-base，范围只含本 PR 的改动。
+    materialize_base="$(git -C "${ROOT}" merge-base "${pr_merge}^1" "${pr_merge}^2")" \
+      || die "cannot compute merge base for ${pr_merge}"
+  else
+    materialize_base="${pr_merge}^1"
+  fi
+  auto_materialize_and_reload "${materialize_base}" "${pr_merge}"
 
   if [ "${keep_worktree}" -eq 1 ]; then
     say "PR MERGED; applicable Dev materialization auto-completed. Worktree retained (--keep-worktree): ${wt}"
