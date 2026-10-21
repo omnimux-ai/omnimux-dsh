@@ -3,6 +3,7 @@
  * The runner and platform are injected so no test ever runs real osascript.
  */
 import assert from 'node:assert/strict'
+import { homedir } from 'node:os'
 import { describe, it } from 'node:test'
 import {
   PICKER_DEFAULT_PROMPTS,
@@ -238,6 +239,99 @@ describe('pickNativePath macOS JXA script', () => {
         && error.code === 'picker-failed'
         && /syntax error/.test(error.message),
     )
+  })
+})
+
+describe('picker failure diagnostics', () => {
+  it('logs one line with code, stdout length and a sample on picker-failed', async () => {
+    const logs = []
+    await assert.rejects(
+      () => pickNativePath('file', {
+        platform: 'darwin',
+        run: runOk('not a json payload'),
+        log: (message) => logs.push(message),
+      }),
+      (error) => error instanceof PickerError && error.code === 'picker-failed',
+    )
+    assert.equal(logs.length, 1)
+    assert.match(logs[0], /\[nativeFilePicker\] picker-failed stdout=18chars/)
+    assert.match(logs[0], /sample="not a json payload"/)
+  })
+
+  it('truncates the logged sample to 200 characters while keeping the full length', async () => {
+    const logs = []
+    const long = 'x'.repeat(600)
+    await assert.rejects(
+      () => pickNativePath('file', {
+        platform: 'darwin',
+        run: runOk(long),
+        log: (message) => logs.push(message),
+      }),
+      (error) => error instanceof PickerError && error.code === 'picker-failed',
+    )
+    assert.equal(logs.length, 1)
+    assert.match(logs[0], /stdout=600chars/)
+    const sample = /sample=(.+)$/.exec(logs[0])
+    assert.ok(sample)
+    assert.equal(JSON.parse(sample[1]).length, 200)
+  })
+
+  it('logs a zero-length stdout for a non-string helper payload', async () => {
+    const logs = []
+    await assert.rejects(
+      () => pickNativePath('file', {
+        platform: 'darwin',
+        run: async () => ({ stdout: undefined, stderr: '' }),
+        log: (message) => logs.push(message),
+      }),
+      (error) => error instanceof PickerError && error.code === 'picker-failed',
+    )
+    assert.equal(logs.length, 1)
+    assert.match(logs[0], /stdout=0chars/)
+  })
+
+  it('stays silent on success and cancellation', async () => {
+    const logs = []
+    const picked = await pickNativePath('file', {
+      platform: 'darwin',
+      run: runOk(JSON.stringify(['/tmp/a.png'])),
+      log: (message) => logs.push(message),
+    })
+    assert.deepEqual(picked, { path: '/tmp/a.png', paths: ['/tmp/a.png'] })
+    const cancelled = await pickNativePath('file', {
+      platform: 'darwin',
+      run: runOk(''),
+      log: (message) => logs.push(message),
+    })
+    assert.deepEqual(cancelled, { path: null, paths: [] })
+    assert.deepEqual(logs, [])
+  })
+
+  it('keeps picker-failed when the injected logger throws', async () => {
+    await assert.rejects(
+      () => pickNativePath('file', {
+        platform: 'darwin',
+        run: runOk('not a json payload'),
+        log: () => { throw new Error('logger down') },
+      }),
+      (error) => error instanceof PickerError && error.code === 'picker-failed',
+    )
+  })
+
+  it('collapses the home directory in the logged sample', async () => {
+    const logs = []
+    const secret = `${homedir()}/secret.png`
+    await assert.rejects(
+      () => pickNativePath('file', {
+        platform: 'darwin',
+        run: runOk(JSON.stringify([secret, 123])),
+        log: (message) => logs.push(message),
+      }),
+      (error) => error instanceof PickerError && error.code === 'picker-failed',
+    )
+    assert.equal(logs.length, 1)
+    assert.match(logs[0], /~\/secret\.png/)
+    assert.ok(!logs[0].includes(homedir()), '日志不得包含完整主目录路径')
   })
 })
 
