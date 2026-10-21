@@ -1,0 +1,60 @@
+{
+  "capturedAt": "2026-10-21T07:07:09.239Z",
+  "harness": "http://127.0.0.1:4931/",
+  "pillState": {
+    "count": 2,
+    "labels": [
+      {
+        "title": "深度视频",
+        "disabled": false
+      },
+      {
+        "title": "深度视频",
+        "disabled": false
+      }
+    ],
+    "workspace": "ws_harness"
+  },
+  "provisioned": {
+    "id": "node_depth_1792566425466_1wlu",
+    "status": "running",
+    "label": "成片视频 深度视频",
+    "materialType": "video",
+    "active": true
+  },
+  "result": {
+    "sourceStatus": "completed",
+    "derived": {
+      "id": "node_depth_1792566425466_1wlu",
+      "label": "成片视频 深度视频",
+      "materialType": "video",
+      "executionStatus": "completed",
+      "realPath": "/tmp/omnimux-depth/depth_demo.mp4",
+      "mediaUrl": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+      "previewUrl": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+      "position": {
+        "x": 550,
+        "y": 60
+      }
+    },
+    "edge": {
+      "id": "edge_n-video_node_depth_1792566425466_1wlu",
+      "source": "n-video",
+      "target": "node_depth_1792566425466_1wlu"
+    },
+    "calls": [
+      {
+        "url": "/omnimux-workflow/api/workspaces/ws_harness/video-depth",
+        "body": {
+          "nodeId": "n-video",
+          "videoPath": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+          "title": "成片视频 深度视频"
+        }
+      }
+    ],
+    "nodeCount": 6,
+    "videoTagSrc": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    "pillButtons": 2
+  },
+  "note": "video-depth API response stubbed in-page; real capability verified separately by ffmpeg.live.test.js"
+}

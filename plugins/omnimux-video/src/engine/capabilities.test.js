@@ -572,8 +572,93 @@ test('depth: buildAudioExtractArgs and buildMuxArgs', () => {
   assert.ok(mux.includes('/o.mp4'))
 })
 
+test('depth: runtime probe imports the three engine dependencies', () => {
+  assert.deepEqual(depth.DEPTH_PYTHON_MODULES, ['numpy', 'cv2', 'onnxruntime'])
+  assert.equal(
+    depth.buildDepthRuntimeCheckCode(),
+    'import numpy; import cv2; import onnxruntime',
+  )
+  assert.equal(depth.buildDepthRuntimeCheckCode(['onnxruntime']), 'import onnxruntime')
+})
+
+test('depth: missingDepthModules reads names from a Python traceback tail', () => {
+  assert.deepEqual(
+    depth.missingDepthModules(
+      "ModuleNotFoundError: No module named 'onnxruntime'\nModuleNotFoundError: No module named 'cv2'",
+    ),
+    ['onnxruntime', 'cv2'],
+  )
+  assert.deepEqual(depth.missingDepthModules(''), [])
+})
+
+test('depth: ensureDepthPython passes when the probe resolves', async () => {
+  const calls = []
+  await depth.ensureDepthPython({
+    pythonBin: '/opt/py',
+    runProbe: async (args) => { calls.push(args) },
+  })
+  assert.equal(calls.length, 1)
+  assert.deepEqual(calls[0], ['-c', 'import numpy; import cv2; import onnxruntime'])
+})
+
+test('depth: ensureDepthPython maps missing deps to video-depth-deps-missing', async () => {
+  const err = await invalid(
+    depth.ensureDepthPython({
+      pythonBin: '/opt/py',
+      runProbe: async () => {
+        throw Object.assign(new Error('ModuleNotFoundError'), {
+          stderrTail: "ModuleNotFoundError: No module named 'onnxruntime'",
+        })
+      },
+    }),
+  )
+  assert.ok(err instanceof VideoError)
+  assert.equal(err.code, 'video-depth-deps-missing')
+  assert.match(err.message, /onnxruntime/)
+  assert.match(err.hint, /pip install onnxruntime opencv-python/)
+  assert.match(err.hint, /OMNIMUX_VIDEO_PYTHON_PATH/)
+})
+
+test('depth: ensureDepthPython reports an unusable interpreter', async () => {
+  const err = await invalid(
+    depth.ensureDepthPython({
+      pythonBin: '/no/such/python',
+      runProbe: async () => {
+        throw Object.assign(new Error("spawn /no/such/python ENOENT"), { stderrTail: 'ENOENT' })
+      },
+    }),
+  )
+  assert.equal(err.code, 'video-depth-deps-missing')
+  assert.match(err.message, /cannot start Python interpreter/)
+})
+
+test('depth: execute gates on the runtime probe before any ffmpeg work', async () => {
+  let materialized = false
+  const err = await invalid(
+    depth.execute(
+      { videoUrl: '/src.mp4' },
+      {
+        dest: '/out.mp4',
+        tmpDir: '/tmp/x',
+        addFile() {},
+        materialize: async () => { materialized = true; return '/src.local.mp4' },
+        runFprobe: async () => '{}',
+        runFfmpeg: async () => {},
+        runDepthRuntimeProbe: async () => {
+          throw Object.assign(new Error('missing'), {
+            stderrTail: "ModuleNotFoundError: No module named 'numpy'",
+          })
+        },
+        videoConfig: { video: { pythonPath: '/opt/py' } },
+      },
+    ),
+  )
+  assert.equal(err.code, 'video-depth-deps-missing')
+  assert.equal(materialized, false)
+})
+
 test('depth: execute runs probe, audio extract, python depth and muxing', async () => {
-  const calls = { ffmpeg: [], python: [] }
+  const calls = { ffmpeg: [], python: [], probe: 0 }
   const out = await depth.execute(
     { videoUrl: '/src.mp4', maxEdge: 518, keepAudio: true },
     {
@@ -584,11 +669,13 @@ test('depth: execute runs probe, audio extract, python depth and muxing', async 
       runFprobe: async () => JSON.stringify({ streams: [{ codec_type: 'video' }, { codec_type: 'audio' }] }),
       runFfmpeg: async (a) => { calls.ffmpeg.push(a) },
       runPython: async (a) => { calls.python.push(a) },
+      runDepthRuntimeProbe: async () => { calls.probe += 1 },
       videoConfig: { video: { pythonPath: 'python3', modelsDir: '/models' } },
     },
   )
   assert.equal(out.files[0].path, '/out.mp4')
   assert.equal(out.result.model, 'depth-anything-v2-small')
+  assert.equal(calls.probe, 1)
   assert.equal(calls.python.length, 1)
   assert.ok(calls.ffmpeg.length >= 1)
 })

@@ -2,7 +2,8 @@
  * Dev harness (W1 T1.3) — 视觉验收唯一事实源。
  *
  * 独立 esbuild entry（不进生产 bundle）：挂画布 + mock catalog + mock
- * execution 注入 + locale/暗色开关。用法见 scripts/canvas-harness.mjs。
+ * execution 注入 + locale/暗色开关 + 固定 mock workspaceId（视频/音频派生
+ * 操作需要 `__workspaceId`）。用法见 scripts/canvas-harness.mjs。
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -349,7 +350,7 @@ const Harness: React.FC = () => {
         </button>
       </div>
       <main className="wf-canvas-main">
-        <CanvasEditor catalog={MOCK_CATALOG} />
+        <CanvasEditor catalog={MOCK_CATALOG} workspaceId="ws_harness" />
       </main>
     </div>
   );
