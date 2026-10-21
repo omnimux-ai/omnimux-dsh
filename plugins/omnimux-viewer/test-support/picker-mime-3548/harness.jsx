@@ -45,7 +45,8 @@ window.fetch = async (url) => {
     }), { status: 200, headers: { 'content-type': 'application/json' } });
   }
   if (path.startsWith('/omnimux/assets/library/preview')) {
-    return new Response('', { status: 404 });
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="#2f9e44"/><text x="50%" y="54%" fill="#fff" font-family="system-ui" font-size="28" text-anchor="middle">hero.png</text></svg>`;
+    return new Response(svg, { status: 200, headers: { 'content-type': 'image/svg+xml' } });
   }
   throw new Error(`Unplanned request ${path}`);
 };
