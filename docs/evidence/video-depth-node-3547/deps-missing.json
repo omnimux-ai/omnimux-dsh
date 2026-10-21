@@ -1,0 +1,8 @@
+{
+  "scenario": "default python3 (3.15) missing numpy/cv2/onnxruntime",
+  "code": "video-depth-deps-missing",
+  "message": "video_depth requires Python packages that 'python3' cannot import: numpy. Install them with `pip install onnxruntime opencv-python`, or point Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH at an interpreter that already has them.",
+  "hint": "Install them with `pip install onnxruntime opencv-python`, or point Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH at an interpreter that already has them.",
+  "stderrTail": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import numpy; import cv2; import onnxruntime\n    ^^^^^^^^^^^^\nModuleNotFoundError: No module named 'numpy'. Did you mean: 'runpy'?\n",
+  "outputWritten": false
+}

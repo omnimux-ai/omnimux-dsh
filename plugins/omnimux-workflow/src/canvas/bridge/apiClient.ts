@@ -350,6 +350,17 @@ export function extractAudioFromVideo(
   );
 }
 
+/** 视频节点：转成本地 Depth Anything 黑白深度图视频并派生下游视频节点 */
+export function convertVideoToDepth(
+  workspaceId: string,
+  payload: { nodeId: string; videoPath: string; title?: string },
+): Promise<ApiResult<import('../../workflow/videoDepth/schema.ts').VideoDepthResponse>> {
+  return request<import('../../workflow/videoDepth/schema.ts').VideoDepthResponse>(
+    WORKFLOW_API_ROUTES.videoDepth(encodeURIComponent(workspaceId)),
+    { method: 'POST', body: payload },
+  );
+}
+
 export interface ProjectPageDto {
   id: string;
   title: string;
