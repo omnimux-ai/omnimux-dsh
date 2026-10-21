@@ -37,7 +37,7 @@ export {
  *   theme?: 'dark'|'light',
  *   lang?: 'zh'|'en',
  *   title?: string,
- *   onState?: (state: 'ready'|'failed') => void,
+ *   onState?: (state: 'loading'|'ready'|'failed') => void,
  * }} props
  */
 export function RivalTimelineEmbed(props) {
@@ -56,6 +56,10 @@ export function RivalTimelineEmbed(props) {
     // append-only host would stack a second official card under `is-loading`
     // while the row already hides its own content.
     host.replaceChildren()
+    // Tell the row it is loading again: during a rebuild it must show its own
+    // card instead of an empty slot, and only hand the body back when ready.
+    setState('loading')
+    onStateRef.current?.('loading')
     let cancelled = false
     let timer = null
     const timeout = new Promise((resolve, reject) => {
