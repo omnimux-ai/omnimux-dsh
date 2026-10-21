@@ -301,6 +301,23 @@ export function resolveProjectDir(sessions, workspaces) {
   }
 }
 
+/**
+ * 首页自定义排序写失败的诊断留痕（Issue #3528）。
+ * 本地顺序已乐观更新，持久化失败不能静默消失；本函数不抛错、不影响后续交互。
+ * @param {'move-to-top' | 'reset'} action
+ * @param {unknown} error
+ */
+export function reportHomeOrderWriteFailure(action, error) {
+  try {
+    const detail = error && typeof error.message === 'string' ? error.message : String(error);
+    console.warn(`[omnimux-market] home custom order write failed (${action}): ${detail}`);
+  } catch (reportError) {
+    // 诊断留痕绝不能反向打断调用链（宿主/扩展可能替换 console.warn）；
+    // 丢掉一条 warn 可接受，这里保留被吞值以避免空 catch。
+    void reportError;
+  }
+}
+
 export function handleMoveToTop(targetId, featuredItems, state, apiFn) {
   const rest = featuredItems.map((it) => it.id).filter((id) => id !== targetId);
   const newOrder = [targetId, ...rest];
@@ -309,7 +326,7 @@ export function handleMoveToTop(targetId, featuredItems, state, apiFn) {
     SkillShelf.saveHomeCustomOrder(newOrder);
   }
   const runApi = apiFn || (typeof api === 'function' ? api : null);
-  if (runApi) runApi('homeCustomOrder', { order: newOrder }).catch(() => {});
+  if (runApi) runApi('homeCustomOrder', { order: newOrder }).catch((error) => reportHomeOrderWriteFailure('move-to-top', error));
 }
 
 export function handleResetOrder(state, apiFn) {
@@ -318,7 +335,7 @@ export function handleResetOrder(state, apiFn) {
     SkillShelf.saveHomeCustomOrder(null);
   }
   const runApi = apiFn || (typeof api === 'function' ? api : null);
-  if (runApi) runApi('homeCustomOrder', { order: [] }).catch(() => {});
+  if (runApi) runApi('homeCustomOrder', { order: [] }).catch((error) => reportHomeOrderWriteFailure('reset', error));
 }
 
 export function setSingleExpertStatus(setItems, id, status) {
