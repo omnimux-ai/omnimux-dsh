@@ -44,15 +44,15 @@
 
 1. 用 reject 的 `apiFn` 调 `handleResetOrder`/`handleMoveToTop`：若 `console.warn` 未被调用、或出现 `unhandledrejection`、或 state 不再乐观更新，假设 1 被证伪。命令：`pnpm --filter omnimux-market test`（含新增单测与 e2e）。
 2. 真实浏览器 harness：若捕获的 warn 数 ≠ 2、`unhandledrejection` 非空、页面状态文本不含预期计数、或截图字节 < 阈值，假设 2/3 被证伪。命令：`node scripts/evidence-home-order-feedback-3528.mjs`。
-3. 若 harness 只加载了手写副本而非 worktree 源码，报告中的 bundle 源文件 sha256 与 `git hash-object` 不一致即证伪；脚本会把源文件哈希与 bundle 哈希写入报告。
+3. 若 harness 只加载了手写副本而非 worktree 源码，报告中的 `source.sha256` 与 `shasum -a 256` 源文件结果不一致即证伪；脚本会把源文件哈希、bundle 哈希、esbuild 版本与 `headCommitAtRun`/`loadedUrl`/`cleanup` 写入报告。
 
 ## 验收
 
-- [x] `reportHomeOrderWriteFailure` 对 Error/字符串都能输出含动作与原因的 warn，且不抛错（单测 4/4）。
+- [x] `reportHomeOrderWriteFailure` 对 Error/字符串都能输出含动作与原因的 warn，且不抛错（单测 5/5，含 console.warn 抛错场景）。
 - [x] `handleMoveToTop` / `handleResetOrder` reject 时 warn 一次、无 unhandled rejection、state 乐观更新保持。
-- [x] e2e：真实 local-api 只读目录 500 → warn 含 `home order state not writable`；可写目录成功 → 无 warn 且 GET 返回自定义排序。
+- [x] e2e：真实 local-api 只读目录 500 → warn 含 `home order state not writable`；可写目录成功 → 等客户端请求 settled 后断言无 warn 且 GET 返回自定义排序。
 - [x] 真实浏览器证据：ego TaskSpace 唯一命名并 `keep: []` 清理；PNG 可解码（1920×1280, 100898B）、报告记录 warnings=2、unhandled=0、源文件/bundle 哈希；证据入库。
-- [x] `pnpm --filter omnimux-market test` 全绿（999 pass）；`pnpm verify:stages` + anti-slop + `pnpm check:boundaries` + governance registry 测试通过；`git diff --check`；改动源码无新增 SC1/SC2。
+- [x] `pnpm --filter omnimux-market test` 全绿（1000 pass）；`pnpm verify:stages` + anti-slop + `pnpm check:boundaries` + governance registry 测试通过；`git diff --check`；改动源码无新增 SC1/SC2。
 
 ## 风险复核
 

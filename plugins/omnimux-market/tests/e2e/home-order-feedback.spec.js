@@ -1,6 +1,6 @@
 // @ts-nocheck — 纯 JS 测试语法（写前测试门禁口径）。
 import assert from 'node:assert/strict'
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -16,17 +16,21 @@ import { handleMoveToTop, handleResetOrder } from '../../src/client/plaza/plazaU
 
 const cfg = withDefaults({})
 
-function makeApi(port) {
+function makeApi(port, tracker) {
   return async (method, payload) => {
     const body = Object.assign({ method }, payload)
-    const response = await fetch(`http://127.0.0.1:${port}/omnimux-market`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: `http://127.0.0.1:${port}` },
-      body: JSON.stringify(body),
-    })
-    const json = await response.json()
-    if (!response.ok || json.ok === false) throw new Error(json.error || `HTTP ${response.status}`)
-    return json
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/omnimux-market`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: `http://127.0.0.1:${port}` },
+        body: JSON.stringify(body),
+      })
+      const json = await response.json()
+      if (!response.ok || json.ok === false) throw new Error(json.error || `HTTP ${response.status}`)
+      return json
+    } finally {
+      if (tracker) tracker.settled = true
+    }
   }
 }
 
@@ -117,15 +121,15 @@ test('真实 local-api 写成功：无 warn，覆盖文件落盘且 GET 返回�
   const warnings = captureWarnings(t)
 
   const seen = []
+  const tracker = { settled: false }
   const state = {
     setCustomOrder(value) {
       seen.push(value)
     },
   }
-  handleMoveToTop('b', [{ id: 'a' }, { id: 'b' }], state, makeApi(port))
-  await waitFor(() => {
-    try { return existsSync(paths.statePath) } catch { return false }
-  }, 'home order state file')
+  handleMoveToTop('b', [{ id: 'a' }, { id: 'b' }], state, makeApi(port, tracker))
+  await waitFor(() => tracker.settled, 'client api request settled')
+  await new Promise((resolve) => setImmediate(resolve))
 
   assert.deepEqual(seen, [['b', 'a']])
   assert.deepEqual(warnings, [])

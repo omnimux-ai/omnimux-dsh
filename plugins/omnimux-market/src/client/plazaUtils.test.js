@@ -94,3 +94,23 @@ test('无 apiFn 时不发请求也不产生 warn', async () => {
   assert.deepEqual(seen, [null])
   assert.equal(warnings.length, 0)
 })
+
+test('console.warn 被替换为抛错实现时仍不产生 unhandled rejection', async () => {
+  const activeWarn = console.warn
+  console.warn = () => {
+    throw new Error('warn exploded')
+  }
+  const unhandled = []
+  const onUnhandled = (reason) => unhandled.push(reason)
+  process.on('unhandledRejection', onUnhandled)
+  try {
+    const seen = []
+    handleResetOrder({ setCustomOrder(value) { seen.push(value) } }, failingApi())
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    assert.deepEqual(seen, [null])
+    assert.deepEqual(unhandled, [])
+  } finally {
+    process.off('unhandledRejection', onUnhandled)
+    console.warn = activeWarn
+  }
+})

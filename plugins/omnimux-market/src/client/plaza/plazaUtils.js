@@ -308,8 +308,14 @@ export function resolveProjectDir(sessions, workspaces) {
  * @param {unknown} error
  */
 export function reportHomeOrderWriteFailure(action, error) {
-  const detail = error && typeof error.message === 'string' ? error.message : String(error);
-  console.warn(`[omnimux-market] home custom order write failed (${action}): ${detail}`);
+  try {
+    const detail = error && typeof error.message === 'string' ? error.message : String(error);
+    console.warn(`[omnimux-market] home custom order write failed (${action}): ${detail}`);
+  } catch (reportError) {
+    // 诊断留痕绝不能反向打断调用链（宿主/扩展可能替换 console.warn）；
+    // 丢掉一条 warn 可接受，这里保留被吞值以避免空 catch。
+    void reportError;
+  }
 }
 
 export function handleMoveToTop(targetId, featuredItems, state, apiFn) {

@@ -14,6 +14,7 @@
  *
  * 源码/bundle 哈希写入报告，证明页面加载的是 worktree 源码而非手写副本。
  */
+import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -32,6 +33,7 @@ const REPORT = join(EVIDENCE_DIR, 'report.json')
 
 const marketRequire = createRequire(join(ROOT, 'plugins', 'omnimux-market', 'package.json'))
 const { build } = marketRequire('esbuild')
+const esbuildVersion = marketRequire('esbuild/package.json').version
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex')
@@ -52,7 +54,7 @@ async function bundleSource() {
   })
   const code = result.outputFiles && result.outputFiles[0] ? result.outputFiles[0].text : ''
   if (!code) throw new Error('esbuild produced no plazaUtils bundle')
-  return { sourceSha256: sha256(sourceBytes), bundleSha256: sha256(code), code }
+  return { sourceSha256: sha256(sourceBytes), bundleSha256: sha256(code), bytes: Buffer.byteLength(code), code }
 }
 
 function renderHarness(code) {
@@ -140,6 +142,7 @@ async function main() {
           unhandled: window.__evidence.unhandled,
           lastOrder: window.__evidence.state.lastOrder,
           history: window.__evidence.state.history,
+          viewport: { width: window.innerWidth, height: window.innerHeight, devicePixelRatio: window.devicePixelRatio },
           statusText: document.getElementById('status').textContent,
           logText: document.getElementById('log').textContent,
         }))()`,
@@ -175,12 +178,18 @@ async function main() {
     script: 'scripts/evidence-home-order-feedback-3528.mjs',
     source: { path: 'plugins/omnimux-market/src/client/plaza/plazaUtils.js', sha256: bundled.sourceSha256 },
     bundleSha256: bundled.bundleSha256,
-    engine: { userAgent: run.userAgent, taskSpaceId: run.spaceId, viewport: { width: 960, height: 640, deviceScaleFactor: 2 } },
+    headCommitAtRun: execFileSync('git', ['-C', ROOT, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+    loadedUrl: `file://${HARNESS}`,
+    esbuild: { version: esbuildVersion, absWorkingDir: ROOT, entry: 'plugins/omnimux-market/src/client/plaza/plazaUtils.js' },
+    bundle: { bytes: bundled.bytes, sha256: bundled.bundleSha256, harness: '.workbuddy/evidence/home-order-feedback-3528/harness.html' },
+    engine: { userAgent: run.userAgent, taskSpaceId: run.spaceId, viewport: values.viewport || null, requestedViewport: { width: 960, height: 640, deviceScaleFactor: 2 } },
+    cleanup: { driverFinally: true, note: 'ego-browser-steps driver awaits task.finish({ keep: [] }) before writing its result' },
     observed: {
       warnings,
       unhandled,
       lastOrder: values.lastOrder,
       history: values.history,
+      viewport: values.viewport || null,
       statusText: values.statusText,
       logText: values.logText,
     },
