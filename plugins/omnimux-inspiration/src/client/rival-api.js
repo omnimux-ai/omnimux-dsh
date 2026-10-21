@@ -200,6 +200,20 @@ export function retryRivalAccount(id) {
 }
 
 /**
+ * Ask the host for a one-time browser-refresh token (#3556).
+ *
+ * The client opens the returned URL in the default browser; the extension does
+ * the capture there, so this request itself never consumes cloud budget.
+ * @param {string} id
+ */
+export function requestRivalPluginRefresh(id) {
+  return guarded(
+    () => request(`/${encodeURIComponent(id)}/plugin-refresh-request`, { method: 'POST' }),
+    'inspiration-rival',
+  )()
+}
+
+/**
  * Scheduler snapshot (E9): running jobs, the daily budget ledger and paused
  * reasons. The pool status bar reads「今日剩余刷新额度」from here — the one
  * place the used side of the ledger is already on the wire.

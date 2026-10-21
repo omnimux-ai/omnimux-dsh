@@ -1,0 +1,4 @@
+HOST http://127.0.0.1:61258
+tiktok {"requestStatus":201,"claimStatus":200,"completeStatus":200,"newPosts":31,"postsStored":31,"updatedNickname":"TikTok","followers":96400000,"lastChecked":"2026-10-21T07:36:12.936Z","pluginRefresh":null,"nextAuto":"2026-10-22T07:36:12.936Z","extractor":"tiktok-profile"}
+x {"requestStatus":201,"claimStatus":200,"completeStatus":200,"newPosts":20,"postsStored":20,"updatedNickname":"NASA","followers":92312000,"lastChecked":"2026-10-21T07:36:12.942Z","pluginRefresh":null,"nextAuto":"2026-10-22T07:36:12.942Z","extractor":"x-profile"}
+MERGE_RESULT PASS

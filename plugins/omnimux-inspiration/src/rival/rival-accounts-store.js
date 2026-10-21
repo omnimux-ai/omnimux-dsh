@@ -100,6 +100,29 @@ function nullableText(value) {
 }
 
 /**
+ * The one-time browser-plugin refresh token of an account, kept to the fields
+ * the claim/complete endpoints reason about.
+ *
+ * It is persisted on the account row (not in memory) because the token has to
+ * survive a host restart inside its 2-minute TTL: the extension may claim the
+ * page after the process that opened it was relaunched. `claimed_at` is what
+ * makes the token one-time — a second claim is refused by this field alone.
+ * @param {unknown} value
+ * @returns {{ token: string, created_at: string | null, expires_at: string | null, claimed_at: string | null } | null}
+ */
+function buildPluginRefresh(value) {
+  if (!isPlainObject(value)) return null
+  const token = typeof value.token === 'string' ? value.token.trim() : ''
+  if (!token) return null
+  return {
+    token,
+    created_at: nullableText(value.created_at),
+    expires_at: nullableText(value.expires_at),
+    claimed_at: nullableText(value.claimed_at),
+  }
+}
+
+/**
  * Persisted account row. Every field the module can write is named here.
  * @param {Record<string, any>} record
  * @param {{ id?: string, created_at?: string, now: string }} identity
@@ -131,11 +154,17 @@ export function buildAccountRow(record, identity) {
     posts_count: nullableNumber(source.posts_count),
     refresh_interval_hours: interval,
     last_refresh_at: nullableText(source.last_refresh_at),
+    // Set by the plugin refresh path only: the last time *any* local capture
+    // confirmed this account, which is a different fact from a cloud refresh.
+    last_checked_at: nullableText(source.last_checked_at),
     next_auto_refresh_at: nullableText(source.next_auto_refresh_at),
     last_success_at: nullableText(source.last_success_at),
     refresh_state: state,
     error_code: nullableText(source.error_code),
     error_message: nullableText(source.error_message),
+    // One-time browser-plugin refresh token (Issue #3556); `null` when no
+    // refresh is pending. Named here so a handler write is not dropped.
+    plugin_refresh: buildPluginRefresh(source.plugin_refresh),
     consecutive_failures: finiteNumber(source.consecutive_failures, 0),
     refresh_count: finiteNumber(source.refresh_count, 0),
     cloud_calls_today: finiteNumber(source.cloud_calls_today, 0),
@@ -249,6 +278,45 @@ export function buildPostRow(record, ctx) {
     first_seen_at: firstSeen,
     last_seen_at: ctx.now,
   }
+}
+
+/**
+ * Newest-first cache order, shared by every path that rewrites the posts file.
+ *
+ * A row without a parseable `posted_at` sorts last; two such rows fall back to
+ * the id so the order stays deterministic across writes (a re-run of the same
+ * merge must not reshuffle the cache file).
+ * @param {Record<string, any>} a
+ * @param {Record<string, any>} b
+ * @returns {number}
+ */
+function comparePostRows(a, b) {
+  const left = Date.parse(String(a.posted_at || ''))
+  const right = Date.parse(String(b.posted_at || ''))
+  if (Number.isNaN(left) && Number.isNaN(right)) return String(b.id).localeCompare(String(a.id))
+  if (Number.isNaN(left)) return 1
+  if (Number.isNaN(right)) return -1
+  return right - left
+}
+
+/**
+ * The numeric stats a capture actually measured.
+ *
+ * A browser capture reports only the counters it could read; a missing one is
+ * "not measured", never "zero". Dropping the absent keys before the merge is
+ * what keeps an existing post's unmeasured counter from being nulled out — the
+ * spec's own falsification test is "旧统计被清空".
+ * @param {unknown} value
+ * @returns {Record<string, number>}
+ */
+function measuredStats(value) {
+  const source = isPlainObject(value) ? value : {}
+  /** @type {Record<string, number>} */
+  const stats = {}
+  for (const key of ['views', 'likes', 'comments', 'shares', 'saves']) {
+    if (typeof source[key] === 'number' && Number.isFinite(source[key])) stats[key] = source[key]
+  }
+  return stats
 }
 
 /**
@@ -458,6 +526,118 @@ export function createRivalAccountsStore(opts = {}) {
   function readPostFile(accountId) {
     const raw = readJson(rivalPostsFile(paths, accountId))
     return isPlainObject(raw) ? raw : {}
+  }
+
+  /**
+   * Pure merge of plugin-captured rows into the existing cache.
+   *
+   * Deliberately not `writePosts`: that path treats its input as a *full*
+   * refresh answer (it also counts carried-over rows and lets the cloud's
+   * `field_probe` win), while a browser capture is a bounded first-screen
+   * sample. The two shared rules are kept by reusing `buildPostRow` and the
+   * newest-first comparator — one row builder, one order, no parallel store.
+   *
+   * An existing post keeps everything the capture does not measure (media
+   * paths, ratio, inspiration link, original copy, and any counter the page
+   * did not render): only the stats it actually reported are merged in, so a
+   * re-capture can add a new views sample without erasing old ones. A new row
+   * is the only one marked `source: 'plugin'`, so re-merging the same capture
+   * cannot relabel a cloud row.
+   * @param {string} accountId
+   * @param {Record<string, any>[]} rows
+   * @param {{ platform?: string, externalId?: string }} meta
+   * @param {string} iso
+   * @returns {{ payload: Record<string, any>, new_posts: number, updated_posts: number }}
+   */
+  function mergeCapturedPosts(accountId, rows, meta, iso) {
+    const previous = readPostFile(accountId)
+    const previousItems = Array.isArray(previous.items) ? previous.items : []
+    const previousById = new Map(previousItems.map((row) => [String(row.id), row]))
+    const incoming = Array.isArray(rows) ? rows : []
+    const seen = new Set()
+    let newPosts = 0
+    let updatedPosts = 0
+    /** @type {Record<string, any>[]} */
+    const merged = []
+    for (const row of incoming) {
+      const id = String(row?.id ?? '')
+      // A capture can repeat a post (a page re-render); the first row wins and
+      // the repeat is neither new nor an update.
+      if (!id || seen.has(id)) continue
+      seen.add(id)
+      const existing = previousById.get(id) || null
+      if (existing) updatedPosts += 1
+      else newPosts += 1
+      const stats = measuredStats(row.stats)
+      const record = existing
+        ? { ...existing, stats: { ...(isPlainObject(existing.stats) ? existing.stats : {}), ...stats } }
+        : { ...row, stats }
+      const built = buildPostRow(
+        { ...record, platform: meta.platform ?? previous.platform ?? record.platform },
+        { now: iso, accountId, platform: meta.platform ?? previous.platform, existing },
+      )
+      merged.push(existing ? { ...built, ...(existing.source ? { source: existing.source } : {}) } : { ...built, source: 'plugin' })
+    }
+    const kept = previousItems.filter((row) => !seen.has(String(row?.id ?? '')))
+    const items = merged.concat(kept).sort(comparePostRows).slice(0, POSTS_CACHE_MAX_ROWS)
+    return {
+      new_posts: newPosts,
+      updated_posts: updatedPosts,
+      payload: {
+        version: 1,
+        account_id: accountId,
+        platform: meta.platform ?? previous.platform ?? '',
+        external_id: meta.externalId ?? previous.external_id ?? '',
+        last_refresh_at: iso,
+        carry_over: finiteNumber(previous.carry_over, 0),
+        field_probe: isPlainObject(previous.field_probe) ? previous.field_probe : {},
+        items,
+      },
+    }
+  }
+
+  /**
+   * Persist one plugin capture: posts cache first, account row second, with the
+   * cache file restored if the account write fails.
+   *
+   * Two files cannot be renamed together, so this is the strongest guarantee
+   * available without a journal: the account row — the one the UI dates a
+   * refresh from and the one carrying `plugin_refresh` — is written last and
+   * only after the posts merge is on disk. A failure on the posts write leaves
+   * nothing behind; a failure on the account write rolls the cache back to the
+   * exact bytes that were there before, so a retry starts from the same state
+   * instead of reporting the same posts twice.
+   * @param {string} accountId
+   * @param {{ rows?: Record<string, any>[], accountPatch?: Record<string, any>, platform?: string, externalId?: string }} capture
+   * @returns {{ account: Record<string, any>, new_posts: number, updated_posts: number }}
+   */
+  function commitPluginRefresh(accountId, capture = {}) {
+    const iso = nowIso()
+    const items = readAccountRows()
+    const index = items.findIndex((row) => row.id === accountId)
+    if (index === -1) throw new RivalStoreError('account-not-found', `对标账号不存在 (account not found): ${accountId}`, 404)
+    const current = items[index]
+    const file = rivalPostsFile(paths, accountId)
+    const hadPostsFile = existsSync(file)
+    const previousRaw = hadPostsFile ? readJson(file) : {}
+    const posts = mergeCapturedPosts(accountId, capture.rows, {
+      platform: capture.platform,
+      externalId: capture.externalId,
+    }, iso)
+    const merged = { ...current, ...(isPlainObject(capture.accountPatch) ? capture.accountPatch : {}) }
+    const row = buildAccountRow(merged, { id: current.id, created_at: current.created_at, now: iso })
+    writeJson(file, posts.payload)
+    try {
+      items[index] = row
+      writeAccountRows(items)
+    } catch (err) {
+      try {
+        if (hadPostsFile) writeJson(file, previousRaw)
+        else if (existsSync(file)) unlinkSync(file)
+      } catch { /* best effort: the original error is the one to report */ }
+      throw err
+    }
+    return { account: row, new_posts: posts.new_posts, updated_posts: posts.updated_posts }
   }
 
   /**
@@ -707,7 +887,10 @@ export function createRivalAccountsStore(opts = {}) {
       try {
         const file = rivalPostsFile(paths, id)
         if (existsSync(file)) rmSync(file)
-      } catch { /* the row is gone; a stale cache file is not fatal */ }
+      } catch (error) {
+        // 账号行已删除；残留 posts 缓存清理失败不阻塞删除，但要留痕。
+        console.warn('[rival] stale posts cache cleanup failed:', error)
+      }
       return { removed: true, account: removed }
     },
 
@@ -770,14 +953,7 @@ export function createRivalAccountsStore(opts = {}) {
         }
       }
 
-      const sorted = merged.slice().sort((a, b) => {
-        const left = Date.parse(String(a.posted_at || ''))
-        const right = Date.parse(String(b.posted_at || ''))
-        if (Number.isNaN(left) && Number.isNaN(right)) return String(b.id).localeCompare(String(a.id))
-        if (Number.isNaN(left)) return 1
-        if (Number.isNaN(right)) return -1
-        return right - left
-      })
+      const sorted = merged.slice().sort(comparePostRows)
       const items = sorted.slice(0, POSTS_CACHE_MAX_ROWS)
 
       let carryOver = 0
@@ -830,6 +1006,17 @@ export function createRivalAccountsStore(opts = {}) {
       if (!Array.isArray(items)) return null
       return items.find((row) => String(row.id) === String(postId)) || null
     },
+
+    /**
+     * Merge a browser-plugin capture into the store (Issue #3556).
+     *
+     * New surface, not a change to `writePosts`: the cloud refresh path keeps
+     * its own semantics (carry-over accounting, field probe, replace flag),
+     * while this writes the posts cache and the account row as one guarded
+     * unit. `accountPatch` is built by the plugin-refresh module, which owns
+     * the "non-empty wins" profile rules; this method only persists it.
+     */
+    commitPluginRefresh,
 
     // ── budget ────────────────────────────────────────────────────────────
     readBudget,

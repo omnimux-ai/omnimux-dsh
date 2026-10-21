@@ -24,7 +24,8 @@ import { revealLandedCard, withLandedItem } from './import-landing.js'
 import { injectInspirationStyles } from './styles.js'
 import { useInspirationFeed } from './use-inspiration-feed.js'
 import { useRivalFeed } from './use-rival-feed.js'
-import { removeRivalAccount } from './rival-api.js'
+import { removeRivalAccount, requestRivalPluginRefresh } from './rival-api.js'
+import { openExternalUrl } from './open-url.js'
 import {
   accountHealth,
   poolQuota,
@@ -645,6 +646,24 @@ export function InspirationSection({ t, active }) {
             }}
             onRefresh={rivalFeed.retryAccount}
             onRetry={rivalFeed.retryAccount}
+            onPluginRefresh={async (id) => {
+              let result
+              try {
+                result = await requestRivalPluginRefresh(id)
+              } catch {
+                result = null
+              }
+              const url = result?.body?.data?.url
+              if (!result || result.ok === false || typeof url !== 'string' || url === '') {
+                showToast(t('rivalAccounts.refresh.pluginFailed'))
+                return
+              }
+              if (!openExternalUrl(url)) {
+                showToast(t('rivalAccounts.refresh.pluginFailed'))
+                return
+              }
+              showToast(t('rivalAccounts.refresh.pluginOpened'))
+            }}
             quotaLeft={rivalQuota?.left}
             refreshBusy={rivalFeed.refreshBusy}
             active={active !== false}

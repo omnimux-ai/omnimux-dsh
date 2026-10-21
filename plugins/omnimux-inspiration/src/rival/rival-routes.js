@@ -22,6 +22,11 @@ import { join } from 'node:path'
 import { RivalServiceError } from './rival-accounts-service.js'
 import { readBudgetOverrun, RivalStoreError } from './rival-accounts-store.js'
 import { RIVAL_ERROR_CODES, DEFAULT_COVER_EXT } from './constants.js'
+import {
+  handlePluginRefreshClaim,
+  handlePluginRefreshComplete,
+  handlePluginRefreshRequest,
+} from './rival-plugin-refresh.js'
 import { downloadMedia } from '../downloader.js'
 
 /**
@@ -142,6 +147,13 @@ export function matchRivalRoute(pathname) {
     return { kind: 'account', id: parts[0] }
   }
   if (parts.length === 2) {
+    // The plugin-refresh pair is checked before the generic `:id/:action`
+    // table: its two segments look like an account id plus an action, but
+    // `plugin-refresh` is the collection-level namespace of the one-time token
+    // endpoints (Issue #3556), not an account.
+    if (parts[0] === 'plugin-refresh' && parts[1] === 'claim') return { kind: 'plugin-refresh-claim' }
+    if (parts[0] === 'plugin-refresh' && parts[1] === 'complete') return { kind: 'plugin-refresh-complete' }
+    if (parts[1] === 'plugin-refresh-request') return { kind: 'plugin-refresh-request', id: parts[0] }
     if (parts[1] === 'refresh') return { kind: 'account-refresh', id: parts[0] }
     if (parts[1] === 'monitor') return { kind: 'monitor', id: parts[0] }
     if (parts[1] === 'analyze') return { kind: 'analyze', id: parts[0] }
@@ -174,6 +186,19 @@ export function createRivalDispatcher(deps) {
   const formatErrorMessage = typeof deps.formatErrorMessage === 'function'
     ? deps.formatErrorMessage
     : (err) => (err instanceof Error ? err.message : String(err))
+
+  /**
+   * Run one plugin-refresh handler against the service's store.
+   *
+   * A service without a store is a wiring bug, not a user error: answer 503 so
+   * the extension gets a readable failure instead of a thrown stack.
+   * @param {(store: any) => { status: number, body: Record<string, any> }} work
+   */
+  function pluginRefresh(work) {
+    const store = service?.store
+    if (!store) return fail(503, 'rival-store-unavailable', '账号存储不可用')
+    return work(store)
+  }
 
   /**
    * @param {{ method: string, url: string, body?: Record<string, any> }} req
@@ -236,6 +261,21 @@ export function createRivalDispatcher(deps) {
       case 'status':
         if (method !== 'GET') return fail(405, 'method-not-allowed', 'method not allowed')
         return ok(service.scheduler.snapshot())
+
+      // One-time browser-refresh token endpoints (Issue #3556). The handlers
+      // are pure over the store — no scheduler, no remote — which is what makes
+      // "zero cloud calls on this path" a property of the route itself.
+      case 'plugin-refresh-request':
+        if (method !== 'POST') return fail(405, 'method-not-allowed', 'method not allowed')
+        return pluginRefresh((store) => handlePluginRefreshRequest({ store, accountId: String(route.id) }))
+
+      case 'plugin-refresh-claim':
+        if (method !== 'POST') return fail(405, 'method-not-allowed', 'method not allowed')
+        return pluginRefresh((store) => handlePluginRefreshClaim({ store, body }))
+
+      case 'plugin-refresh-complete':
+        if (method !== 'POST') return fail(405, 'method-not-allowed', 'method not allowed')
+        return pluginRefresh((store) => handlePluginRefreshComplete({ store, body }))
 
       case 'account':
         if (method === 'GET') return ok(service.detail(String(route.id)))
