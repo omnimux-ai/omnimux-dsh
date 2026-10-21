@@ -48,7 +48,7 @@ import type { AnchorRect } from '../content/media-hover/types.ts'
  * are one layout for placement purposes. Everything else is `unknown`, which is
  * a legal answer and has an answer of its own.
  */
-export type AnchorLayout = 'side-rail' | 'unknown'
+export type AnchorLayout = 'side-rail' | 'browse-modal' | 'unknown'
 
 /**
  * Furthest a rail's near edge may sit from the viewport's matching edge, as a
@@ -180,6 +180,15 @@ export interface AnchorFacts {
   readonly viewport: ViewportSize
   /** Which layout the page was read as. */
   readonly layout: AnchorLayout
+  /**
+   * The browse overlay's video box, when the post is open on top of its own page.
+   *
+   * The modal layout is the one TikTok shape whose rail sits beside a video the
+   * page renders outside the feed card, and whose only stable landmark is the
+   * comment panel's left edge; a rule for it needs that box. Optional so an
+   * `AnchorFacts` literal written before this layout existed still typechecks.
+   */
+  readonly modal?: AnchorRect | null
   /** The side rail's box, when a container passed the rail predicate. */
   readonly rail: AnchorRect | null
   /** The signed-in avatar's box, when one could be found. */
@@ -187,7 +196,7 @@ export interface AnchorFacts {
 }
 
 /** The measurable half of {@link AnchorFacts}: everything layout detection reads. */
-export type AnchorMeasurements = Pick<AnchorFacts, 'rail'>
+export type AnchorMeasurements = Pick<AnchorFacts, 'rail'> & { readonly modal?: AnchorRect | null }
 
 /** The mark being placed. */
 export interface AnchorRequest {
@@ -260,6 +269,23 @@ export function isSideRailRect(rect: AnchorRect, viewport: ViewportSize): boolea
 }
 
 /**
+ * The browse overlay TikTok opens on top of a profile when a post is clicked.
+ *
+ * Its presence is the layout signal: the same address renders a feed card, a
+ * standalone post and this overlay at different widths, and only this one has a
+ * `#arrow-left` step control beside the comment panel.
+ */
+export const BROWSE_MODAL_SELECTOR = '[data-e2e="browse-video"]'
+
+/** The overlay's video box, when one is on screen. */
+export function findBrowseModal(doc: Document): Element | null {
+  for (const element of Array.from(doc.querySelectorAll(BROWSE_MODAL_SELECTOR))) {
+    if (isMeasurable(element)) return element
+  }
+  return null
+}
+
+/**
  * Read the page's layout from measured geometry alone.
  *
  * One question now: did a container survive the rail predicate? Nothing else is
@@ -271,6 +297,10 @@ export function isSideRailRect(rect: AnchorRect, viewport: ViewportSize): boolea
  * @param viewport the viewport box
  */
 export function detectAnchorLayout(measured: AnchorMeasurements, viewport: ViewportSize): AnchorLayout {
+  // The browse overlay wins over the rail: on a profile page the feed rail behind
+  // the overlay is still laid out, and anchoring to it would put the mark on a
+  // thumbnail the user is not watching.
+  if (measured.modal !== null && measured.modal !== undefined) return 'browse-modal'
   if (measured.rail !== null && isSideRailRect(measured.rail, viewport)) return 'side-rail'
   return 'unknown'
 }
@@ -420,6 +450,25 @@ function attributedAvatarIn(rail: Element | null): Element | null {
 }
 
 /**
+ * Whether an action-bar candidate is the video's own rail.
+ *
+ * Two answers are accepted, both positive signals: the element declares itself a
+ * section action bar, or it holds at least one of the video's action icons. A
+ * bare `[class*="ActionBarContainer"]` match is not enough — TikTok's global
+ * header uses the same class for its utility buttons, and inside the profile
+ * overlay that header bar is the only match.
+ * @param bar the candidate container
+ */
+function isVideoActionBar(bar: Element): boolean {
+  if (bar.closest('#app-header, [class*="DivHeaderContainer"]') !== null) return false
+  const cls = String(bar.className ?? '')
+  if (cls.includes('SectionActionBarContainer')) return true
+  return bar.querySelector(
+    '[class*="AvatarActionItem"], [data-e2e*="like-icon"], [data-e2e*="comment-icon"], [data-e2e*="favorite-icon"], [data-e2e*="share-icon"]'
+  ) !== null
+}
+
+/**
  * Detect the author avatar in the active video feed card's action bar.
  *
  * TikTok's recommendation feed heads every video's right-hand action column
@@ -434,7 +483,7 @@ function findActiveFeedAvatar(doc: Document, viewport: ViewportSize): Element | 
   // 1. Direct AvatarActionItem or video-author-avatar hook in view
   const namedAvatars = Array.from(
     doc.querySelectorAll('[class*="AvatarActionItem"], [data-e2e="video-author-avatar"]')
-  )
+  ).filter((el) => el.closest('#app-header, [class*="DivHeaderContainer"]') === null)
   let bestNamed: { element: Element; diff: number } | null = null
   for (const el of namedAvatars) {
     const r = rectOf(el)
@@ -448,9 +497,15 @@ function findActiveFeedAvatar(doc: Document, viewport: ViewportSize): Element | 
   if (bestNamed !== null) return bestNamed.element
 
   // 2. Active SectionActionBarContainer in the current card
+  //
+  // `[class*="ActionBarContainer"]` alone is too loose: TikTok's global header
+  // renders a `DivActionBarContainer` (coins, settings, account) on every page,
+  // and inside the browse overlay it is the only match. A bar that carries none
+  // of the video's own action icons is chrome, not a rail; anchoring to it put
+  // the mark above the viewport (top=-24) on a profile post overlay.
   const actionBars = Array.from(
     doc.querySelectorAll('section[class*="SectionActionBarContainer"], [class*="ActionBarContainer"]')
-  )
+  ).filter(isVideoActionBar)
   let bestBar: Element | null = null
   let minBarDiff = Infinity
 
@@ -473,13 +528,10 @@ function findActiveFeedAvatar(doc: Document, viewport: ViewportSize): Element | 
     }
     const avatarImg = bestBar.querySelector('img')
     if (avatarImg !== null && isAvatarRect(rectOf(avatarImg))) return avatarImg
-    for (const child of Array.from(bestBar.children)) {
-      if (child.className && String(child.className).includes('extension-portal')) continue
-      const fr = rectOf(child)
-      if (fr.width >= 24 && fr.width <= 64 && fr.height >= 24 && fr.height <= 64) {
-        return child
-      }
-    }
+    // No guess from the bar's children: the first 24-64px box in a toolbar is a
+    // button, and treating a button as a person is what parked the mark outside
+    // the viewport. The named hooks and the rail scan below are the honest
+    // fallbacks.
   }
 
   return null
@@ -506,10 +558,12 @@ export function findAvatarElement(doc: Document, viewport: ViewportSize): Elemen
 export function measureAnchorFacts(doc: Document, viewport: ViewportSize): AnchorFacts {
   const railElement = findSideRailElement(doc, viewport)
   const avatarElement = findAvatarElement(doc, viewport)
+  const modalElement = findBrowseModal(doc)
   const rail = railElement === null ? null : rectOf(railElement)
   const avatar = avatarElement === null ? null : rectOf(avatarElement)
-  const layout = detectAnchorLayout({ rail }, viewport)
-  return { doc, viewport, layout, rail, avatar }
+  const modal = modalElement === null ? null : rectOf(modalElement)
+  const layout = detectAnchorLayout({ rail, modal }, viewport)
+  return { doc, viewport, layout, rail, avatar, modal }
 }
 
 /**
@@ -574,6 +628,90 @@ function placeAtViewportCornerRight(viewport: ViewportSize, request: AnchorReque
 }
 
 /**
+ * Gap kept between the mark and the browse overlay's previous-video arrow.
+ *
+ * The same 8px the avatar rule uses, and the same 8px CreatOK keeps above that
+ * arrow: two marks that both stand there read as one column only when the gap
+ * matches.
+ */
+export const MODAL_ARROW_GAP = 8
+
+/** Distance kept between the mark and the comment panel's left edge. */
+export const MODAL_PANEL_INSET = 14
+
+/**
+ * The comment panel of the browse overlay.
+ *
+ * Several hashed classes have carried this panel; the first measurable one wins,
+ * so a TikTok class rename degrades to the next candidate instead of to the
+ * viewport corner.
+ */
+export const BROWSE_PANEL_SELECTORS: readonly string[] = [
+  '[class*="DivCommentListContainer"]',
+  '[data-e2e="browse-comment"]',
+  '[class*="DivCommentContainer"]',
+]
+
+/**
+ * Above the overlay's own previous-video arrow.
+ *
+ * This is the slot CreatOK uses in the same overlay, and the reason the chain
+ * tries it first: it is the one point both extensions derive from TikTok's own
+ * geometry, so our mark and the rival end up in one column rather than on top of
+ * each other. The arrow only exists while the video is hovered, which is why the
+ * chain must keep a step that does not need it.
+ * @param facts the measured page
+ * @param viewport the viewport box
+ * @param request the mark being placed
+ */
+function placeAtModalPrevArrow(
+  facts: AnchorFacts,
+  viewport: ViewportSize,
+  request: AnchorRequest,
+): AnchorPlacement | null {
+  const arrow = firstMeasurable(facts.doc, ['#arrow-left'])
+  if (arrow === null) return null
+  const rect = arrow.getBoundingClientRect()
+  const left = Math.max(VIEWPORT_MARGIN, Math.round(rect.left + (rect.width - request.box) / 2))
+  const top = Math.max(VIEWPORT_MARGIN, Math.round(rect.top - MODAL_ARROW_GAP - request.box))
+  return {
+    left,
+    bottom: viewport.height - top - request.box,
+    source: 'modal-prev-arrow',
+  }
+}
+
+/**
+ * Left of the overlay's comment panel, vertically centred on the video.
+ *
+ * The fallback for the arrow-less state, and a column of its own: the mark sits
+ * outside the video's right edge at the same inset CreatOK's column has, so a
+ * rival that appears above the arrow still has room next to it rather than under
+ * it.
+ * @param facts the measured page
+ * @param viewport the viewport box
+ * @param request the mark being placed
+ */
+function placeAtModalPanelLeft(
+  facts: AnchorFacts,
+  viewport: ViewportSize,
+  request: AnchorRequest,
+): AnchorPlacement | null {
+  const modal = facts.modal
+  if (modal === null || modal === undefined) return null
+  const panel = firstMeasurable(facts.doc, BROWSE_PANEL_SELECTORS)
+  if (panel === null) return null
+  const rect = panel.getBoundingClientRect()
+  const left = Math.max(VIEWPORT_MARGIN, Math.round(rect.left - request.box - MODAL_PANEL_INSET))
+  const top = Math.max(VIEWPORT_MARGIN, Math.round(modal.top + modal.height / 2 - request.box / 2))
+  return {
+    left,
+    bottom: viewport.height - top - request.box,
+    source: 'modal-panel-left',
+  }
+}
+
+/**
  * Stacked above an element the page already renders.
  *
  * `rank` is how many mark-sized slots the mark sits above that element, so
@@ -613,6 +751,10 @@ function runStep(
   switch (step) {
     case 'avatar-above':
       return placeAtAvatar(facts, viewport)
+    case 'modal-prev-arrow':
+      return placeAtModalPrevArrow(facts, viewport, request)
+    case 'modal-panel-left':
+      return placeAtModalPanelLeft(facts, viewport, request)
     case 'side-rail-parking':
       return placeAtRailParking()
     case 'viewport-corner-left':

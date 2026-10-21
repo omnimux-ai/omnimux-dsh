@@ -1,0 +1,119 @@
+{
+  "issue": 3583,
+  "startedAt": "2026-10-21T10:52:04.100Z",
+  "scenarios": [
+    {
+      "name": "browse-modal-coexist",
+      "fixture": "(() => {\n  window.stop();\n  document.body.replaceChildren();\n  document.body.insertAdjacentHTML('beforeend', [\n    '<div id=\"app-header\" style=\"position:absolute;left:0;top:0;width:100%;height:80px\">',\n    '<div class=\"DivActionBarContainer\" style=\"position:absolute;left:1250px;top:20px;width:120px;height:40px\">',\n    '<div class=\"icon\" style=\"width:32px;height:32px;background:#333\"></div></div></div>',\n    '<div data-e2e=\"browse-video\" style=\"position:absolute;left:0;top:0;width:1200px;height:900px;background:#111\"></div>',\n    '<div class=\"DivCommentListContainer\" style=\"position:absolute;left:1200px;top:0;width:200px;height:900px;background:#1a1a1a\"></div>',\n    '<button id=\"arrow-left\" style=\"position:absolute;left:1150px;top:400px;width:40px;height:40px\">^</button>',\n    '<div id=\"creatok-video-trigger\" style=\"position:absolute;left:1148px;top:348px;width:44px;height:44px;background:#ff5a1f\"></div>',\n  ].join(''));\n  window.dispatchEvent(new Event('resize'));\n  return true;\n})()",
+      "shot": "01-browse-modal.png",
+      "withMenu": true,
+      "measured": {
+        "viewport": [
+          1400,
+          900
+        ],
+        "hasScene": true,
+        "hostZ": "2147483647",
+        "anchor": {
+          "x": 1146,
+          "y": 292,
+          "w": 48,
+          "h": 48
+        },
+        "anchorStyle": "position: fixed; left: 1146px; bottom: 560px;",
+        "rival": {
+          "x": 1148,
+          "y": 348,
+          "w": 44,
+          "h": 44
+        },
+        "rivalStyle": "position:absolute;left:1148px;top:348px;width:44px;height:44px;background:#ff5a1f",
+        "rivalShiftAttr": false,
+        "gapAboveRival": 8,
+        "overlapArea": 0,
+        "inViewport": true
+      },
+      "menu": {
+        "open": true,
+        "rect": [
+          1188,
+          258,
+          165,
+          116
+        ],
+        "topmost": {
+          "id": "omnimux-tiktok-scene-root",
+          "inOurShadow": false
+        },
+        "hostIsLastRootChild": true
+      },
+      "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-tiktok-coexist-issue-3583/.agent-reports/tiktok-coexist-3583/01-browse-modal.png"
+    },
+    {
+      "name": "feed-coexist",
+      "fixture": "(() => {\n  window.stop();\n  document.body.replaceChildren();\n  document.body.insertAdjacentHTML('beforeend', [\n    '<section class=\"css-fixture SectionActionBarContainer\" style=\"position:absolute;left:1100px;top:600px;width:64px;height:400px\">',\n    '<div id=\"creatok-video-trigger\" style=\"width:64px;height:64px;background:#ff5a1f;margin-bottom:12px\"></div>',\n    '<div class=\"AvatarActionItem\" style=\"width:48px;height:48px;margin-left:8px\">',\n    '<img src=\"data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7\" style=\"width:48px;height:48px\">',\n    '</div></section>',\n    '<video style=\"position:absolute;left:300px;top:100px;width:700px;height:700px;background:#222\"></video>',\n  ].join(''));\n  window.dispatchEvent(new Event('resize'));\n  return true;\n})()",
+      "shot": "02-feed.png",
+      "withMenu": false,
+      "measured": {
+        "viewport": [
+          1400,
+          900
+        ],
+        "hasScene": true,
+        "hostZ": "2147483647",
+        "anchor": {
+          "x": 1108,
+          "y": 544,
+          "w": 48,
+          "h": 48
+        },
+        "anchorStyle": "position: fixed; left: 1108px; bottom: 308px;",
+        "rival": {
+          "x": 1100,
+          "y": 600,
+          "w": 64,
+          "h": 64
+        },
+        "rivalStyle": "width:64px;height:64px;background:#ff5a1f;margin-bottom:12px",
+        "rivalShiftAttr": false,
+        "gapAboveRival": 8,
+        "overlapArea": 0,
+        "inViewport": true
+      },
+      "menu": null,
+      "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-tiktok-coexist-issue-3583/.agent-reports/tiktok-coexist-3583/02-feed.png"
+    },
+    {
+      "name": "header-only-fallback",
+      "fixture": "(() => {\n  window.stop();\n  document.body.replaceChildren();\n  document.body.insertAdjacentHTML('beforeend', [\n    '<div id=\"app-header\" style=\"position:absolute;left:0;top:0;width:100%;height:80px\">',\n    '<div class=\"DivActionBarContainer\" style=\"position:absolute;left:1250px;top:20px;width:120px;height:40px\">',\n    '<a href=\"/@someone\"><img src=\"data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7\" style=\"width:32px;height:32px\"></a>',\n    '</div></div>',\n  ].join(''));\n  window.dispatchEvent(new Event('resize'));\n  return true;\n})()",
+      "shot": "03-header-only.png",
+      "withMenu": false,
+      "measured": {
+        "viewport": [
+          1400,
+          900
+        ],
+        "hasScene": true,
+        "hostZ": "2147483647",
+        "anchor": {
+          "x": 12,
+          "y": 764,
+          "w": 48,
+          "h": 48
+        },
+        "anchorStyle": "position: fixed; left: 12px; bottom: 88px;",
+        "rival": null,
+        "rivalStyle": null,
+        "rivalShiftAttr": null,
+        "gapAboveRival": null,
+        "overlapArea": 0,
+        "inViewport": true
+      },
+      "menu": null,
+      "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-tiktok-coexist-issue-3583/.agent-reports/tiktok-coexist-3583/03-header-only.png"
+    }
+  ],
+  "chromePath": "/Users/x/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "extensionId": "enpebimoddololoedmpfcccefdhpbogk",
+  "finishedAt": "2026-10-21T10:52:14.463Z"
+}
