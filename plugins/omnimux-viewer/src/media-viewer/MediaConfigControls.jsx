@@ -39,6 +39,9 @@ export function useMediaGenerationConfig({ initialMode = 'image' } = {}) {
     image: parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.image),
     video: parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.video),
   }));
+  // Only a live catalog may feed money-adjacent UI (cost estimate). The offline
+  // fallback keeps the composer usable but must not show a price.
+  const [catalogStatus, setCatalogStatus] = useState('fallback');
 
   useEffect(() => {
     let alive = true;
@@ -48,6 +51,8 @@ export function useMediaGenerationConfig({ initialMode = 'image' } = {}) {
         if (!resp.ok) return;
         const data = await resp.json();
         if (!alive || !data || typeof data !== 'object') return;
+        const hasLiveCatalog = (Array.isArray(data.image) && data.image.length > 0)
+          || (Array.isArray(data.video) && data.video.length > 0);
 
         const nextImage = Array.isArray(data.image) && data.image.length > 0
           ? parseCatalogToCascade(data.image)
@@ -58,8 +63,10 @@ export function useMediaGenerationConfig({ initialMode = 'image' } = {}) {
           : parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.video);
 
         setCatalogMap({ image: nextImage, video: nextVideo });
-      } catch {
-        // 后备真实目录平滑兜底
+        setCatalogStatus(hasLiveCatalog ? 'live' : 'fallback');
+      } catch (error) {
+        console.warn('[MediaConfigControls] model catalog unavailable:', error?.message || error);
+        if (alive) setCatalogStatus('fallback');
       }
     }
     loadCatalog();
@@ -129,6 +136,7 @@ export function useMediaGenerationConfig({ initialMode = 'image' } = {}) {
     mode, setMode,
     popoverEpoch, closePopovers,
     catalogMap,
+    catalogStatus,
     currentCascadeList,
     brand, setBrand,
     model, setModel,

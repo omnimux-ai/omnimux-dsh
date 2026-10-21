@@ -67,19 +67,19 @@ check('wide: rail visible beside stage', wide.railVisibility !== 'hidden' && wid
 check('wide: toggle is hidden by container query', wide.toggleDisplay === 'none', wide.toggleDisplay);
 check('wide: five generation groups', wide.cards === 5, wide.cards);
 check('wide: batch result renders ×2 badge', wide.batches.includes('×2'), wide.batches);
-check('wide: newest completed item is current', /沙漠里的柴犬/.test(wide.activeText), wide.activeText);
+check('wide: newest completed item is current', /产品图/.test(wide.activeText), wide.activeText);
 check('wide: image-mode cost estimate visible', /预估消耗/.test(wide.costText) && /0\.26/.test(wide.costText), wide.costText);
 await page.screenshot({ path: `${target.evidence}/wide-1280.png` });
 
 const stageBefore = wide.stageSrc;
-await page.click('.omx-mv-history__list li:nth-child(2) .omx-mv-history__card');
+await page.click('.omx-mv-history__list li:nth-child(3) .omx-mv-history__card');
 await page.waitForTimeout(300);
 const afterSwitch = await snapshot();
 check('wide: history click switches stage media', afterSwitch.stageSrc !== stageBefore, { stageBefore, stageAfter: afterSwitch.stageSrc });
-await page.click('css=.omx-mv-history__list li:nth-child(2) .omx-mv-history__actions .omx-mv-history__action >> nth=0');
+await page.click('css=.omx-mv-history__list li:nth-child(3) .omx-mv-history__actions .omx-mv-history__action >> nth=0');
 await page.waitForTimeout(400);
 const afterReuse = await snapshot();
-check('wide: reuse prompt fills composer', /产品图/.test(afterReuse.promptValue), afterReuse.promptValue);
+check('wide: reuse prompt fills composer', /沙漠里的柴犬/.test(afterReuse.promptValue), afterReuse.promptValue);
 
 await open(640);
 const narrowClosed = await snapshot();
@@ -107,7 +107,8 @@ const report = {
   pass: assertions.every((item) => item.pass),
   issue: 3533,
   capturedAt: new Date().toISOString(),
-  commit: target.commit,
+  sourceCommit: target.commit,
+  sourceDirty: target.dirty,
   browser: 'ego-lite',
   harness: target.harness,
   sources,

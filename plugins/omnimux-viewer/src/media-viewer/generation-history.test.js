@@ -82,6 +82,18 @@ describe('generation history projection', () => {
     assert.match(formatHistoryTime(1_760_000_000_000), /^\d{2}:\d{2}$/);
     assert.equal(formatHistoryTime(0), '');
     assert.equal(formatHistoryTime(Number.NaN), '');
+    assert.equal(formatHistoryTime(8.64e15 + 1), '');
+  });
+
+  it('trims whitespace-only fallback prompts and reports batch failure counts', () => {
+    assert.equal(promptSnapshotOf({ prompt: '   ' }), '');
+    const [entry] = buildHistoryEntries([
+      item({ id: 'ok', groupId: 'mix', timestamp: 2 }),
+      item({ id: 'bad', groupId: 'mix', timestamp: 1, status: 'failed', url: undefined }),
+    ]);
+    assert.equal(entry.failedCount, 1);
+    assert.equal(entry.completedCount, 1);
+    assert.equal(entry.count, 2);
   });
 
   it('ignores malformed input without throwing', () => {

@@ -17,6 +17,7 @@ export type ViewerKey =
   | 'mediaViewer.history.title' | 'mediaViewer.history.empty' | 'mediaViewer.history.toggle'
   | 'mediaViewer.history.close' | 'mediaViewer.history.reusePrompt' | 'mediaViewer.history.download'
   | 'mediaViewer.history.noPrompt' | 'mediaViewer.history.failed' | 'mediaViewer.history.generating'
+  | 'mediaViewer.history.partialFailed'
   | 'mediaViewer.kind.image' | 'mediaViewer.kind.video'
   | 'mediaViewer.cost.estimated' | 'mediaViewer.cost.unit' | 'mediaViewer.cost.hint'
 
@@ -50,11 +51,12 @@ export const zh: Record<ViewerKey, string> = {
   'mediaViewer.history.empty': '暂无历史',
   'mediaViewer.history.toggle': '历史',
   'mediaViewer.history.close': '关闭',
-  'mediaViewer.history.reusePrompt': '复用提示',
+  'mediaViewer.history.reusePrompt': '复用提示词',
   'mediaViewer.history.download': '下载',
   'mediaViewer.history.noPrompt': '无提示词',
   'mediaViewer.history.failed': '生成失败',
   'mediaViewer.history.generating': '生成中',
+  'mediaViewer.history.partialFailed': '部分失败',
   'mediaViewer.kind.image': '图片',
   'mediaViewer.kind.video': '视频',
   'mediaViewer.cost.estimated': '预估消耗',
@@ -97,6 +99,7 @@ export const en: Record<ViewerKey, string> = {
   'mediaViewer.history.noPrompt': 'No prompt',
   'mediaViewer.history.failed': 'Generation failed',
   'mediaViewer.history.generating': 'Generating',
+  'mediaViewer.history.partialFailed': 'Partially failed',
   'mediaViewer.kind.image': 'Image',
   'mediaViewer.kind.video': 'Video',
   'mediaViewer.cost.estimated': 'Estimated',

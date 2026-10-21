@@ -102,7 +102,7 @@ function mediaItem(id, timestamp, prompt, extra) {
   }, extra);
 }
 
-async function withMountedTab(run) {
+async function withMountedTab(run, options = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://synthetic.example.test' });
   const prior = new Map();
   const setGlobal = (name, value) => {
@@ -123,13 +123,17 @@ async function withMountedTab(run) {
   store.addMedia(mediaItem('m3', 3000, '第三张：沙漠柴犬', { groupId: 'g3' }));
   store.addMedia(mediaItem('g4:0', 4000, '批量四张：产品图', { groupId: 'g4' }));
   store.addMedia(mediaItem('g4:1', 4100, '批量四张：产品图', { groupId: 'g4' }));
-  store.setActiveId('m3');
+  store.addMedia(mediaItem('v6', 4200, '视频结果：镜头推进', { groupId: 'g6', type: 'video', url: 'data:video/mp4;base64,AAAA' }));
+  store.setActiveId(options.activeId || 'm3');
 
   const previousFetch = globalThis.fetch;
   const requests = [];
-  globalThis.fetch = async (url, options) => {
-    requests.push({ url: String(url), method: options && options.method ? options.method : 'GET' });
+  globalThis.fetch = async (url, init) => {
+    requests.push({ url: String(url), method: init && init.method ? init.method : 'GET' });
     if (String(url) === '/omnimux/model-catalog') {
+      if (options.catalogFailure) {
+        return new Response('unavailable', { status: 503 });
+      }
       return new Response(JSON.stringify(catalog()), { status: 200, headers: { 'content-type': 'application/json' } });
     }
     if (String(url) === '/omnimux/assets/state') {
@@ -140,9 +144,10 @@ async function withMountedTab(run) {
 
   production.resetComposerPrefill();
   let root;
+  const activeSession = options.sessionId || 's1';
   const sessions = {
     list: {
-      getSnapshot: () => ({ current: 's1' }),
+      getSnapshot: () => ({ current: activeSession }),
       subscribe: () => () => {},
     },
   };
@@ -190,21 +195,21 @@ async function withMountedTab(run) {
 test('历史栏渲染分组卡片、当前项与提示词快照', async () => {
   await withMountedTab(async ({ text }) => {
     const cards = document.querySelectorAll('.omx-mv-history__card');
-    assert.equal(cards.length, 4);
+    assert.equal(cards.length, 5);
     assert.equal(document.querySelector('.omx-mv-history__title').textContent, '历史');
     assert.match(text(), /第三张：沙漠柴犬/);
     assert.match(text(), /×2/);
     const active = document.querySelector('.omx-mv-history__card[aria-current="true"]');
     assert.ok(active);
     assert.match(active.textContent, /第三张：沙漠柴犬/);
-    assert.equal(document.querySelector('.omx-mv-history__list').children.length, 4);
+    assert.equal(document.querySelector('.omx-mv-history__list').children.length, 5);
   });
 });
 
 test('点击历史卡切换舞台素材', async () => {
   await withMountedTab(async ({ click }) => {
     const beforeSrc = document.querySelector('.omx-mv-display img').getAttribute('src');
-    await click('.omx-mv-history__list li:nth-child(3) .omx-mv-history__card');
+    await click('.omx-mv-history__list li:nth-child(4) .omx-mv-history__card');
     const afterSrc = document.querySelector('.omx-mv-display img').getAttribute('src');
     assert.notEqual(afterSrc, beforeSrc);
     assert.match(document.querySelector('.omx-mv-history__card[aria-current="true"]').textContent, /第二张：窗边人像/);
@@ -214,12 +219,9 @@ test('点击历史卡切换舞台素材', async () => {
 test('复用提示只写入 composer 预填队列，不提交生成', async () => {
   await withMountedTab(async ({ click, requests }) => {
     const before = requests.filter((request) => request.method !== 'GET').length;
-    await click('.omx-mv-history__list li:nth-child(3) .omx-mv-history__action');
-    const pending = production.peekComposerPrefill();
+    await click('.omx-mv-history__list li:nth-child(4) .omx-mv-history__action');
     const textarea = document.querySelector('textarea');
-    const filled = pending ? pending.prompt : textarea.value;
-    assert.equal(filled, '第二张：窗边人像');
-    if (pending) assert.equal(pending.kind, 'image');
+    assert.equal(textarea.value, '第二张：窗边人像');
     const after = requests.filter((request) => request.method !== 'GET').length;
     assert.equal(after, before);
   });
@@ -238,6 +240,48 @@ test('图像模式显示成本预估，视频模式隐藏', async () => {
   });
 });
 
+test('视频记录的历史缩略图使用 video 元素', async () => {
+  await withMountedTab(async () => {
+    const videoThumb = document.querySelector('.omx-mv-history video');
+    assert.ok(videoThumb);
+    assert.equal(videoThumb.getAttribute('src'), 'data:video/mp4;base64,AAAA');
+  });
+});
+
+test('批量中的非 primary 项选中时卡片仍高亮', async () => {
+  await withMountedTab(async () => {
+    const active = document.querySelector('.omx-mv-history__card[aria-current="true"]');
+    assert.ok(active);
+    assert.match(active.textContent, /批量四张：产品图/);
+  }, { activeId: 'g4:1' });
+});
+
+test('目录加载失败时不显示成本预估', async () => {
+  await withMountedTab(async () => {
+    assert.equal(document.querySelector('.omx-mv-cost'), null);
+  }, { catalogFailure: true });
+});
+
+test('空会话显示历史空态且不聚合其他会话', async () => {
+  await withMountedTab(async () => {
+    assert.equal(document.querySelectorAll('.omx-mv-history__card').length, 0);
+    assert.match(document.body.textContent, /暂无历史/);
+  }, { sessionId: 's-empty' });
+});
+
+test('抽屉打开时方向键不切换背后舞台，关闭按钮可收起', async () => {
+  await withMountedTab(async ({ click, keydown, dom }) => {
+    const before = document.querySelector('.omx-mv-display img').getAttribute('src');
+    await click('.omx-mv-history-toggle');
+    await keydown('ArrowDown');
+    const after = document.querySelector('.omx-mv-display img').getAttribute('src');
+    assert.equal(after, before);
+    assert.equal(document.querySelector('.omx-media-viewer').getAttribute('data-history-open'), 'true');
+    await click('.omx-mv-history__close');
+    assert.equal(document.querySelector('.omx-media-viewer').getAttribute('data-history-open'), 'false');
+  });
+});
+
 test('下载历史卡触发对应素材的 anchor 且使用记录标题', async () => {
   await withMountedTab(async ({ dom, click }) => {
     const captured = [];
@@ -246,11 +290,11 @@ test('下载历史卡触发对应素材的 anchor 且使用记录标题', async 
     prototype.click = function capture() {
       captured.push({ href: this.href, download: this.download });
     };
-    const firstCard = document.querySelector('.omx-mv-history__list li:nth-child(1)');
+    const firstCard = document.querySelector('.omx-mv-history__list li:nth-child(2)');
     assert.match(firstCard.textContent, /产品图/, firstCard.textContent);
     if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
     try {
-      await click('.omx-mv-history__list li:nth-child(1) .omx-mv-history__actions button:nth-child(2)');
+      await click('.omx-mv-history__list li:nth-child(2) .omx-mv-history__actions button:nth-child(2)');
     } finally {
       prototype.click = original;
     }

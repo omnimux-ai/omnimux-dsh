@@ -12,6 +12,7 @@ import { registerContextContributor } from '../../../omnimux/src/client/workbenc
 import { serializeReferenceAssets, isAllowedReferenceUrl } from './media-slot.js';
 import { runGenerationTask, resumePendingGenerations, canRetryGeneration } from './generation-runner.js';
 import { describeGenerationFailure } from './generation-failure.js';
+import { isElementShown } from './prefill-claim.js';
 import { HistoryPanel } from './HistoryPanel.jsx';
 import { buildHistoryEntries } from './generation-history.js';
 import { injectFlowAlignmentStyles } from './flow-alignment-styles.js';
@@ -181,16 +182,34 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
   const timelineGroups = store.getTimelineGroups(sessionId);
 
   // 生成历史：数据全部来自既有 mediaList 的提交快照，不新增 store。
+  // 有会话时按会话过滤；无会话时保持空态，避免把其他会话的提示词聚合进来。
   const historyEntries = React.useMemo(
-    () => buildHistoryEntries(sessionMediaList, null),
-    [sessionMediaList]
+    () => buildHistoryEntries(sessionMediaList, sessionId),
+    [sessionMediaList, sessionId]
   );
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [containerWidth, setContainerWidth] = useState(null);
+  const historyId = React.useId();
 
-  // 会话切换时历史抽屉必须收起，避免停留在上一会话的记录上。
+  // 用 ResizeObserver 而不是 CSS container-type：container-type 的 layout containment
+  // 会改变 fixed 浮层（如 .omx-slot-notice）的包含块，属于既有布局回归风险。
   useEffect(() => {
-    setHistoryOpen(false);
-  }, [sessionId]);
+    const node = viewerRootRef.current;
+    if (!node || typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect?.width;
+      if (Number.isFinite(width) && width > 0) setContainerWidth(width);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  const wideLayout = containerWidth === null ? true : containerWidth >= 900;
+  const compactLayout = containerWidth !== null && containerWidth < 520;
+
+  // 会话切换、退出单图或切到宽档时，历史抽屉都必须收起。
+  useEffect(() => {
+    if (subViewMode !== 'single' || wideLayout) setHistoryOpen(false);
+  }, [sessionId, subViewMode, wideLayout]);
 
   // 会话切换时，若当前 activeId 不属于当前会话的媒体列表，自动联动选中该会话最新的一张素材
   useEffect(() => {
@@ -414,10 +433,12 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
         return;
       }
       if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
-      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (historyOpen || !isElementShown(viewerRootRef.current)) return;
       const target = e.target;
       const tagName = target?.tagName;
       if (tagName === 'INPUT' || tagName === 'TEXTAREA' || target?.isContentEditable) return;
+      if (target?.closest?.('button, a, select, [role="button"], [role="dialog"], [role="menu"]')) return;
       if (subViewMode !== 'single' || thumbnailsList.length === 0) return;
       const currentIndex = thumbnailsList.findIndex((item) => item.id === activeItem?.id);
       const delta = e.key === 'ArrowDown' ? 1 : -1;
@@ -499,8 +520,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
   };
 
   const handleReuseHistoryPrompt = (entry) => {
-    if (!entry?.prompt) return;
-    store.setSubViewMode('single');
+    if (!entry?.prompt?.trim()) return;
     queueComposerPrefill({
       prompt: entry.prompt,
       kind: entry.kind === 'video' ? 'video' : 'image',
@@ -529,7 +549,14 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
   };
 
   return (
-    <div className="omx-media-viewer" ref={viewerRootRef} data-layout-mode={layoutMode} data-history-open={historyOpen ? 'true' : 'false'}>
+    <div
+      className="omx-media-viewer"
+      ref={viewerRootRef}
+      data-layout-mode={layoutMode}
+      data-history-width={wideLayout ? 'wide' : 'narrow'}
+      data-layout-compact={compactLayout ? 'true' : 'false'}
+      data-history-open={historyOpen ? 'true' : 'false'}
+    >
       {/* 顶部工具栏 */}
       <div className="omx-mv-toolbar">
         <div className="omx-mv-toolbar__left">
@@ -615,7 +642,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
               title={flowAlignmentText(t, 'mediaViewer.history.toggle')}
               aria-label={flowAlignmentText(t, 'mediaViewer.history.toggle')}
               aria-expanded={historyOpen}
-              aria-controls="omx-mv-history"
+              aria-controls={historyId}
               onClick={() => setHistoryOpen((open) => !open)}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1002,6 +1029,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
               onClick={() => setHistoryOpen(false)}
             />
             <HistoryPanel
+              id={historyId}
               entries={historyEntries}
               activeId={activeItem?.id}
               open={historyOpen}

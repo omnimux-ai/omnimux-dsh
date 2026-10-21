@@ -24,12 +24,14 @@ export function estimateMediaPoints({ points, count } = {}) {
   if (typeof points !== 'number' || !Number.isFinite(points) || points < 0) return null;
   const unit = points;
   const batch = Number.parseInt(String(count ?? 1), 10);
-  const quantity = Number.isFinite(batch) && batch > 0 ? batch : 1;
+  // Image submissions clamp to 1..4 (MediaViewerTab); the estimate must match.
+  const quantity = Math.min(4, Math.max(1, Number.isFinite(batch) && batch > 0 ? batch : 1));
   const raw = unit * quantity;
   const rounded = raw >= 10
     ? Math.round(raw)
     : raw >= 1
       ? Math.round(raw * 10) / 10
       : Math.round(raw * 100) / 100;
-  return { points: rounded, text: formatEstimatedPoints(rounded) };
+  const text = rounded === 0 && raw > 0 ? '<0.01' : formatEstimatedPoints(rounded);
+  return { points: rounded, text };
 }

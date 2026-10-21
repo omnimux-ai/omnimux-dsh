@@ -3,15 +3,15 @@
  *
  * Kept in the viewer plugin rather than the hub's shared media-viewer sheet:
  * every selector is owned by this plugin's tab UI and none of the rules touch
- * existing class names. The root becomes an inline-size container so the rail
- * turns into a drawer based on the *tab* width, not the window width.
+ * existing class names. Width mode comes from `data-history-width` /
+ * `data-layout-compact` set by a ResizeObserver on the tab root — not CSS
+ * `container-type`, whose layout containment would change the containing block
+ * of existing `position: fixed` descendants.
  */
 
 export const FLOW_ALIGNMENT_STYLE_ID = 'omnimux-media-viewer-flow-alignment';
 
 export const FLOW_ALIGNMENT_CSS = `
-.omx-media-viewer { container: omx-mv / inline-size; }
-
 /* ---------- history rail (wide default) ---------- */
 .omx-mv-history {
   display: flex;
@@ -115,7 +115,8 @@ export const FLOW_ALIGNMENT_CSS = `
   justify-content: center;
   background: var(--dsw-alias-bg-layer-2);
 }
-.omx-mv-history__thumb img {
+.omx-mv-history__thumb img,
+.omx-mv-history__thumb-media {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -223,50 +224,46 @@ export const FLOW_ALIGNMENT_CSS = `
 }
 
 /* ---------- narrow: rail becomes an overlay drawer ---------- */
-@container omx-mv (max-width: 899px) {
-  .omx-mv-history {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(320px, 86%);
-    flex: 0 0 auto;
-    z-index: 120;
-    box-shadow: -8px 0 24px var(--dsw-alias-bg-layer-1);
-    transform: translateX(100%);
-    visibility: hidden;
-    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.18s;
-  }
-  .omx-media-viewer[data-history-open="true"] .omx-mv-history {
-    transform: none;
-    visibility: visible;
-  }
-  .omx-mv-history-scrim {
-    display: block;
-    position: absolute;
-    inset: 0;
-    z-index: 110;
-    background: var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.5));
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.18s ease;
-  }
-  .omx-media-viewer[data-history-open="true"] .omx-mv-history-scrim {
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .omx-mv-history__close {
-    display: inline-flex;
-  }
-  .omx-mv-history-toggle {
-    display: inline-flex;
-  }
+.omx-media-viewer[data-history-width="narrow"] .omx-mv-history {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(320px, 86%);
+  flex: 0 0 auto;
+  z-index: 120;
+  box-shadow: -8px 0 24px var(--dsw-alias-shadow-overlay, rgba(0, 0, 0, 0.45));
+  transform: translateX(100%);
+  visibility: hidden;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.18s;
+}
+.omx-media-viewer[data-history-width="narrow"][data-history-open="true"] .omx-mv-history {
+  transform: none;
+  visibility: visible;
+}
+.omx-media-viewer[data-history-width="narrow"] .omx-mv-history-scrim {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 110;
+  background: var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.5));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.omx-media-viewer[data-history-width="narrow"][data-history-open="true"] .omx-mv-history-scrim {
+  opacity: 1;
+  pointer-events: auto;
+}
+.omx-media-viewer[data-history-width="narrow"] .omx-mv-history__close {
+  display: inline-flex;
+}
+.omx-media-viewer[data-history-width="narrow"] .omx-mv-history-toggle {
+  display: inline-flex;
 }
 
-@container omx-mv (max-width: 519px) {
-  .omx-mv-cost {
-    display: none;
-  }
+.omx-media-viewer[data-layout-compact="true"] .omx-mv-cost {
+  display: none;
 }
 
 /* Touch devices have no hover: keep the two card actions visible. */

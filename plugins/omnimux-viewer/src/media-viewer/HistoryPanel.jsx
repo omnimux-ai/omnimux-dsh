@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { flowAlignmentText } from './flow-alignment-copy.js';
 import { formatHistoryTime } from './generation-history.js';
 
@@ -11,6 +11,13 @@ function CloseIcon() {
   );
 }
 
+function entryStatusLabel(entry, text) {
+  if (entry.status === 'generating') return text('mediaViewer.history.generating');
+  if (entry.status === 'failed') return text('mediaViewer.history.failed');
+  if (entry.failedCount > 0) return text('mediaViewer.history.partialFailed');
+  return '';
+}
+
 /**
  * Flow-style generation history rail.
  *
@@ -19,6 +26,7 @@ function CloseIcon() {
  * root's `data-history-open` attribute. Only the single-stage view mounts it.
  *
  * @param {{
+ *   id: string,
  *   entries: object[],
  *   activeId?: string | null,
  *   open?: boolean,
@@ -30,6 +38,7 @@ function CloseIcon() {
  * }} props
  */
 export function HistoryPanel({
+  id,
   entries,
   activeId,
   open = false,
@@ -41,17 +50,52 @@ export function HistoryPanel({
 }) {
   const text = (key) => flowAlignmentText(t, key);
   const list = Array.isArray(entries) ? entries : [];
+  const rootRef = useRef(null);
+  const closeRef = useRef(null);
+  const previousFocusRef = useRef(null);
+
+  // Overlay drawer semantics: move focus in, trap Tab, restore focus on close.
+  // Wide mode never sets `open`, so the static rail keeps normal page focus order.
+  useEffect(() => {
+    if (!open) return undefined;
+    previousFocusRef.current = document.activeElement;
+    closeRef.current?.focus();
+    const onKeyDown = (event) => {
+      if (event.key !== 'Tab') return;
+      const nodes = rootRef.current?.querySelectorAll('button:not(:disabled), [tabindex="0"]');
+      if (!nodes || nodes.length === 0) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      const previous = previousFocusRef.current;
+      if (previous && typeof previous.focus === 'function' && previous.isConnected) previous.focus();
+    };
+  }, [open]);
 
   return (
     <aside
-      id="omx-mv-history"
+      id={id}
+      ref={rootRef}
       className="omx-mv-history"
+      role={open ? 'dialog' : 'complementary'}
+      aria-modal={open ? 'true' : undefined}
       aria-label={text('mediaViewer.history.title')}
       data-open={open ? 'true' : 'false'}
     >
       <div className="omx-mv-history__header">
         <span className="omx-mv-history__title">{text('mediaViewer.history.title')}</span>
         <button
+          ref={closeRef}
           type="button"
           className="omx-mv-history__close"
           title={text('mediaViewer.history.close')}
@@ -68,13 +112,10 @@ export function HistoryPanel({
         <ul className="omx-mv-history__list">
           {list.map((entry) => {
             const primary = entry.primary;
-            const active = Boolean(primary?.id) && primary.id === activeId;
-            const statusLabel = entry.status === 'generating'
-              ? text('mediaViewer.history.generating')
-              : entry.status === 'failed'
-                ? text('mediaViewer.history.failed')
-                : '';
+            const active = Array.isArray(entry.items) && entry.items.some((item) => item.id === activeId);
+            const statusLabel = entryStatusLabel(entry, text);
             const kindLabel = text(entry.kind === 'video' ? 'mediaViewer.kind.video' : 'mediaViewer.kind.image');
+            const prompt = entry.prompt || text('mediaViewer.history.noPrompt');
             return (
               <li className="omx-mv-history__item" key={entry.id} data-status={entry.status}>
                 <button
@@ -85,7 +126,9 @@ export function HistoryPanel({
                   onClick={() => onSelect?.(entry)}
                 >
                   <span className="omx-mv-history__thumb">
-                    {primary?.url ? (
+                    {primary?.url && entry.kind === 'video' ? (
+                      <video className="omx-mv-history__thumb-media" src={primary.url} muted preload="metadata" aria-hidden="true" />
+                    ) : primary?.url ? (
                       <img src={primary.url} alt="" loading="lazy" />
                     ) : (
                       <span className="omx-mv-history__placeholder">{kindLabel}</span>
@@ -93,9 +136,7 @@ export function HistoryPanel({
                     {entry.count > 1 ? <span className="omx-mv-history__count">×{entry.count}</span> : null}
                   </span>
                   <span className="omx-mv-history__body">
-                    <span className="omx-mv-history__prompt">
-                      {entry.prompt || text('mediaViewer.history.noPrompt')}
-                    </span>
+                    <span className="omx-mv-history__prompt">{prompt}</span>
                     <span className="omx-mv-history__meta">
                       {formatHistoryTime(entry.timestamp)} · {kindLabel}
                     </span>
@@ -107,6 +148,7 @@ export function HistoryPanel({
                     type="button"
                     className="omx-mv-history__action"
                     disabled={!entry.prompt}
+                    aria-label={`${text('mediaViewer.history.reusePrompt')}: ${prompt.slice(0, 40)}`}
                     onClick={() => onReusePrompt?.(entry)}
                   >
                     {text('mediaViewer.history.reusePrompt')}
@@ -115,6 +157,7 @@ export function HistoryPanel({
                     type="button"
                     className="omx-mv-history__action"
                     disabled={!entry.hasDownload}
+                    aria-label={`${text('mediaViewer.history.download')}: ${prompt.slice(0, 40)}`}
                     onClick={() => onDownload?.(entry.primary)}
                   >
                     {text('mediaViewer.history.download')}

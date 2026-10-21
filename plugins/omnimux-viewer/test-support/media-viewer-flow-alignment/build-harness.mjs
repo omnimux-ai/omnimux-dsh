@@ -84,17 +84,28 @@ const html = `<!doctype html>
 const harnessPath = join(outDir, 'harness.html');
 writeFileSync(harnessPath, html);
 const commit = execSync(`git -C ${JSON.stringify(worktree)} rev-parse HEAD`, { encoding: 'utf8' }).trim();
+const dirty = execSync(`git -C ${JSON.stringify(worktree)} status --porcelain -- plugins/omnimux-viewer specs`, { encoding: 'utf8' }).trim().length > 0;
 writeFileSync(join(outDir, 'target.json'), JSON.stringify({
   harness: harnessPath,
   evidence,
   worktree,
   commit,
+  dirty,
   sources: {
     tab: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/MediaViewerTab.jsx'),
     panel: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/HistoryPanel.jsx'),
     styles: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/flow-alignment-styles.js'),
     history: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/generation-history.js'),
     cost: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/media-cost.js'),
+    composer: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/MediaViewerComposer.jsx'),
+    composerData: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/MediaViewerComposerData.js'),
+    configControls: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/MediaConfigControls.jsx'),
+    mount: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/mount.js'),
+    locales: join(worktree, 'plugins/omnimux-viewer/src/client/locales.ts'),
+    copy: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/flow-alignment-copy.js'),
+    harness: join(worktree, 'plugins/omnimux-viewer/test-support/media-viewer-flow-alignment/harness.jsx'),
+    capture: join(worktree, 'plugins/omnimux-viewer/test-support/media-viewer-flow-alignment/capture.mjs'),
+    buildHarness: join(worktree, 'plugins/omnimux-viewer/test-support/media-viewer-flow-alignment/build-harness.mjs'),
   },
 }, null, 2));
 console.log(JSON.stringify({ harness: harnessPath, evidence, commit }, null, 2));

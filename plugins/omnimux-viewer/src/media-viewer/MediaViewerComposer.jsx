@@ -1089,7 +1089,10 @@ export function MediaViewerComposer({
 
   // 生成前成本提示：只消费中枢目录已有的 pointsEstimate，缺失时整行不渲染。
   const estimatedPoints = mode === 'image'
-    ? estimateMediaPoints({ points: config.channel?.points, count: config.params?.batch })
+    ? estimateMediaPoints({
+        points: config.catalogStatus === 'live' ? config.channel?.points : null,
+        count: config.params?.batch,
+      })
     : null;
 
   return (

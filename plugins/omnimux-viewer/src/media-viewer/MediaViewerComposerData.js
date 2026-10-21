@@ -298,9 +298,12 @@ export function parseCatalogToCascade(rawList = []) {
       default: ch.default === true,
       name: ch.label || ch.id,
       price: ch.pricing?.pointsEstimate ? `≈${ch.pricing.pointsEstimate} 积分` : '按量计费',
-      points: typeof ch.pricing?.pointsEstimate === 'number' && Number.isFinite(ch.pricing.pointsEstimate)
-        ? ch.pricing.pointsEstimate
-        : null,
+      points: (() => {
+        const raw = ch.pricing?.pointsEstimate;
+        if (raw === null || raw === undefined || raw === '') return null;
+        const numeric = Number(raw);
+        return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+      })(),
       tag: ch.badge || (ch.pricing?.billingMode === 'per_second' ? '按秒计费' : '按次专线'),
       billing: ch.pricing?.billingMode === 'per_second' ? '按秒计费' : '按条计费',
       ratio: ch.pricing?.discountRate && ch.pricing.discountRate > 1 ? `×${ch.pricing.discountRate.toFixed(2)}` : '',

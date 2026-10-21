@@ -16,7 +16,7 @@
 export function promptSnapshotOf(item) {
   const submitted = item?.request?.prompt;
   if (typeof submitted === 'string' && submitted.trim()) return submitted;
-  return typeof item?.prompt === 'string' ? item.prompt : '';
+  return typeof item?.prompt === 'string' ? item.prompt.trim() : '';
 }
 
 /**
@@ -54,6 +54,7 @@ export function formatHistoryTime(ts) {
   const value = Number(ts);
   if (!Number.isFinite(value) || value <= 0) return '';
   const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
   const hh = String(date.getHours()).padStart(2, '0');
   const mm = String(date.getMinutes()).padStart(2, '0');
   return `${hh}:${mm}`;
@@ -91,6 +92,8 @@ export function buildHistoryEntries(mediaList = [], sessionId = null) {
       || items.map(promptSnapshotOf).find((value) => value)
       || '';
     const timestamp = items.reduce((max, item) => Math.max(max, item.timestamp ?? 0), 0);
+    const completedCount = items.filter((item) => item.status === 'completed').length;
+    const failedCount = items.filter((item) => item.status === 'failed').length;
     entries.push({
       id: groupId,
       groupId,
@@ -101,6 +104,8 @@ export function buildHistoryEntries(mediaList = [], sessionId = null) {
       timestamp,
       kind: primary?.type === 'video' ? 'video' : 'image',
       count: items.length,
+      completedCount,
+      failedCount,
       hasDownload: Boolean(primary?.url),
     });
   }

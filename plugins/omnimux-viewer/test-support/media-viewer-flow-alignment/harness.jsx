@@ -78,7 +78,7 @@ for (const entry of items) {
     failure: entry.status === 'failed' ? { reason: '本次生成被上游拒绝，未扣点', retryable: true } : undefined,
   });
 }
-store.setActiveId('v3');
+store.setActiveId('v4:0');
 
 const sessions = {
   list: {

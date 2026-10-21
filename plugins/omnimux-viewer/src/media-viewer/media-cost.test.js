@@ -12,11 +12,12 @@ describe('media cost estimate', () => {
 
   it('keeps two decimals below one point', () => {
     assert.deepEqual(estimateMediaPoints({ points: 0.01, count: 4 }), { points: 0.04, text: '0.04' });
-    assert.deepEqual(estimateMediaPoints({ points: 0.004, count: 1 }), { points: 0, text: '0' });
+    assert.deepEqual(estimateMediaPoints({ points: 0.004, count: 1 }), { points: 0, text: '<0.01' });
   });
 
   it('accepts a string batch value and clamps to at least one', () => {
     assert.deepEqual(estimateMediaPoints({ points: 2, count: '3' }), { points: 6, text: '6' });
+    assert.deepEqual(estimateMediaPoints({ points: 2, count: '9' }), { points: 8, text: '8' });
     assert.deepEqual(estimateMediaPoints({ points: 2, count: '0' }), { points: 2, text: '2' });
     assert.deepEqual(estimateMediaPoints({ points: 2, count: undefined }), { points: 2, text: '2' });
   });
