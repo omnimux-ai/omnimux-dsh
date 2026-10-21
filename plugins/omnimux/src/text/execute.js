@@ -186,6 +186,7 @@ export async function executeOmnimuxText(input) {
           toolResult = await streamTextReply(input.llm, {
             provider: catalogDefault.provider,
             model: catalogDefault.model,
+            reasoningEffort: 'off',
             prompt,
             system: typeof input.system === 'string' ? input.system.trim() : '',
             maxTokens: typeof input.maxTokens === 'number' && Number.isFinite(input.maxTokens) && input.maxTokens > 0
@@ -474,6 +475,7 @@ async function streamTextReply(llm, input) {
     model: input.model,
     messages: [{ role: 'user', content: input.content }],
     maxTokens: input.maxTokens,
+    ...(input.reasoningEffort ? { reasoningEffort: input.reasoningEffort } : {}),
     ...(input.system ? { system: input.system } : {}),
     ...(input.signal ? { signal: input.signal } : {}),
     ...(input.sessionId === undefined ? {} : { sessionId: input.sessionId }),

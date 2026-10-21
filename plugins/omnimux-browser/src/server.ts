@@ -520,7 +520,7 @@ export class BridgeServer {
       }
       const deadline = new AbortController()
       const signal = AbortSignal.any([conn.abort.signal, deadline.signal])
-      const timer = setTimeout(() => deadline.abort(new Error('Text completion timed out')), 25_000)
+      const timer = setTimeout(() => deadline.abort(new Error('Text completion timed out')), 90_000)
       let onAbort: (() => void) | undefined
       try {
         if (!this.deps.completeText) throw new Error('Text completion service unavailable')

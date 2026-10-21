@@ -117,3 +117,12 @@ describe('generateOpinionResult', () => {
 })
 
 })
+
+describe('generateOpinionResult deadline', () => {
+  it('returns a timeout reason when the host never answers', async () => {
+    globalThis.chrome = { runtime: { lastError: undefined, sendMessage: () => {} } }
+    const result = await generateOpinionResult({ text: '正文', author: 'alice', locale: 'zh' }, 30)
+    assert.equal(result.text, '')
+    assert.ok(result.error.startsWith('生成超时'))
+  })
+})

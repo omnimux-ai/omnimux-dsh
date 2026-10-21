@@ -18,7 +18,7 @@ function settingsWithToolModel(toolModel) {
 function llmStub(calls) {
   return {
     async *stream(options) {
-      calls.push({ provider: options.provider, model: options.model })
+      calls.push({ provider: options.provider, model: options.model, reasoningEffort: options.reasoningEffort })
       if (options.provider === 'cpa') {
         throw new Error('no adapter registered for provider "cpa"')
       }
@@ -43,6 +43,7 @@ test('tool model without a registered provider retries with the live catalog def
   strictEqual(calls.length, 2, 'the catalog default must run exactly once')
   strictEqual(calls.at(1).provider, 'deepseek-official')
   strictEqual(calls.at(1).model, 'deepseek-flash')
+  strictEqual(calls.at(1).reasoningEffort, 'off')
   strictEqual(result.text, '回退后的正文')
 })
 
