@@ -402,7 +402,7 @@ auto_materialize_and_reload() {
   # 只认插件目录。文档、流程、脚本、测试夹具不进开发版。
   # 逐次提交收集：同一范围里先改后还原的文件，两端净差是空的，不能因此跳过。
   local changed_paths changed_plugins=() pending=()
-  changed_paths="$(git -C "${ROOT}" log --no-renames --name-only --pretty=format: "${base_ref}..${target_ref}" -- plugins 2>/dev/null | grep -E '^plugins/' | sort -u || true)"
+  changed_paths="$(git -C "${ROOT}" log --no-renames --name-only --diff-merges=first-parent --pretty=format: "${base_ref}..${target_ref}" -- plugins 2>/dev/null | grep -E '^plugins/' | sort -u || true)"
   # 插件根目录的 *.md（AGENTS.md / README*.md / PRD.md …）与 plugins/<name>/docs/ 只给人和 Agent 读，
   # 运行时不加载；测试文件（*.test.* 与 tests/、test/、test-support/、__tests__/）同样不进开发版运行时，
   # 两类改动都不物化也不触发重启。skills/、catalog/ 等运行时读取的 Markdown 不在此列。
@@ -506,17 +506,23 @@ cmd_ship() {
   fi
 
   say "verifying GitHub PR #${pr_number} merge state and task revision..."
-  local pr_info pr_state pr_branch pr_head pr_base
-  pr_info=$(gh pr view "${pr_number}" --json state,headRefName,headRefOid,baseRefName \
-    -q '[.state, .headRefName, .headRefOid, .baseRefName] | @tsv') || die "cannot read PR #${pr_number}"
-  IFS=$'\t' read -r pr_state pr_branch pr_head pr_base <<< "${pr_info}"
+  local pr_info pr_state pr_branch pr_head pr_base pr_merge
+  pr_info=$(gh pr view "${pr_number}" --json state,headRefName,headRefOid,baseRefName,mergeCommit \
+    -q '[.state, .headRefName, .headRefOid, .baseRefName, (.mergeCommit.oid // "")] | @tsv') || die "cannot read PR #${pr_number}"
+  IFS=$'\t' read -r pr_state pr_branch pr_head pr_base pr_merge <<< "${pr_info}"
   [ "${pr_state}" = "MERGED" ] || die "PR #${pr_number} is [${pr_state}], not MERGED"
   [ "${pr_branch}" = "${branch}" ] && [ "${pr_head}" = "$(git -C "${wt}" rev-parse HEAD)" ] \
     && [ "${pr_base}" = "${DEFAULT_BRANCH}" ] || die "PR #${pr_number} does not match this task branch, HEAD and base"
+  [ -n "${pr_merge}" ] || die "PR #${pr_number} has no merge commit; cannot determine the materialization range (rebase-merge is not supported here)"
   git -C "${ROOT}" pull --ff-only "${REMOTE}" "${DEFAULT_BRANCH}"
+  git -C "${ROOT}" merge-base --is-ancestor "${pr_merge}" "${REMOTE}/${DEFAULT_BRANCH}" \
+    || die "merge commit ${pr_merge} of PR #${pr_number} is not an ancestor of ${REMOTE}/${DEFAULT_BRANCH}"
 
-  # 自动物化与桌面 Dev 应用热重载闭环
-  auto_materialize_and_reload "HEAD~1" "HEAD"
+  # 物化范围必须跟随本 PR 的合并提交，且只取相对第一父提交的差异：同一次 Merge
+  # Queue 批次可能合入多个 PR，后 ship 较早的 PR 时 HEAD~1..HEAD 只剩最后一个 PR，
+  # 会漏掉本次的插件改动/删除；而 merge-base(^1,^2) 会把分叉后 main 上其他 PR 的
+  # 改动也纳入。squash 提交与 merge 提交的 ^1..merge 都恰好是本 PR 的增量。
+  auto_materialize_and_reload "${pr_merge}^1" "${pr_merge}"
 
   if [ "${keep_worktree}" -eq 1 ]; then
     say "PR MERGED; applicable Dev materialization auto-completed. Worktree retained (--keep-worktree): ${wt}"
