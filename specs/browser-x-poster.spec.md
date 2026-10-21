@@ -108,3 +108,11 @@ interface PendingPosterPayload {
 ## 10. 非目标
 
 自动发布、定时发布、媒体海报、多模板/配色、海报历史/广场、BlueV 代码复制、X 之外的平台。
+
+## 假设
+
+浏览器 canvas 能直接绘制从 background 取回的 pbs 头像 data URL，且 X 发帖页的 file input 在加载后可通过 DataTransfer 写入并触发 change。若真实 X 使用受保护的 input 或拒绝合成 change，则自动附图会失败。
+
+## 证伪方式
+
+在真实 Chromium 加载扩展并跑 x.com fixture：若 `input.files.length === 0`、change 后无附件预览，或 canvas `toDataURL` 抛安全错误，即证伪。复跑 `docs/evidence/issue-3460` 中的 CDP 流程并检查 report 的 `attached`。

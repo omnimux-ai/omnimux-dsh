@@ -49,3 +49,11 @@ function isProviderAdapterUnavailable(error: unknown): boolean {
 - 总是：保持失败可见、保留 toolModel 的显式优先级、只在 adapter 缺失时回退。
 - 先问：改供应商 adapter、改 Dev/Prod 配置、改凭据。
 - 绝不：吞掉非 adapter 错误、写死模型列表作为唯一来源、打印/提交 token。
+
+## 假设
+
+观点失败源于 toolModel provider 无 adapter，而非 textComplete 链路本身不可用；因此 adapter 错误后回退默认文本路由即可恢复生成。若默认路由也超时，则假设被证伪。
+
+## 证伪方式
+
+物化 Dev 后运行 bridge 探针：若 `bridge.completeText` 仍返回 `completion-failed` 或超时而不是 `ok:true`，即证伪。命令：`node /tmp/bridge-probe2.mjs`（等价 WebSocket 探针），并对照 `docs/evidence/issue-3480/report.json`。

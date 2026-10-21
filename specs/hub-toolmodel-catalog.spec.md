@@ -23,3 +23,11 @@
 ## 4. 边界
 
 R1；只改 hub 文本补全回退，不改对话路由、凭据与配置。
+
+## 假设
+
+`ctx.get('modelCatalog').list()` 的 `default.provider:model`（Dev 为 deepseek-official/deepseek-flash）在当前 host 可路由，因此用它可绕开缺失 adapter 的 toolModel。若该默认组合也超时或无 adapter，则假设错误。
+
+## 证伪方式
+
+Dev 物化后执行 bridge 探针；若 `bridge.completeText` 仍返回 `Text completion timed out` 或 `no adapter registered` 而非 `ok:true`，即证伪。先跑 `node --test plugins/omnimux/src/text/tool-model-fallback.test.js` 验证 catalog 回退分支确实执行。
