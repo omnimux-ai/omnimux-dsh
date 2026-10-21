@@ -471,18 +471,68 @@ async function handleSkillTab(ctx: ApiContext): Promise<void> {
   return sendJson(res, 200, { ok: true, slug, ...result })
 }
 
+let homeOrderConfigPathForTests: string | null = null
+
+/** 测试接缝：覆盖首页自定义排序的配置文件路径；传 null 恢复默认 catalog 路径。仅测试使用。 */
+export function setHomeOrderConfigPathForTests(path: string | null): void {
+  homeOrderConfigPathForTests = path
+}
+
+function homeOrderConfigPath(): string {
+  return homeOrderConfigPathForTests ?? join(packageRoot(), 'catalog', 'skill-recommendations.json')
+}
+
+function errorText(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
+}
+
+/**
+ * 持久化首页自定义排序（Issue #3503）。
+ * 缺文件 / 损坏 JSON / 写盘失败都抛错，由 handler 映射为 5xx；
+ * 先写同目录临时文件再 rename，避免半截写入损坏 catalog。
+ */
+export function persistHomeCustomOrder(configPath: string, order: string[]): void {
+  if (!existsSync(configPath)) {
+    throw new Error(`config file not found: ${configPath}`)
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(readFileSync(configPath, 'utf8'))
+  } catch (err) {
+    throw new Error(`config JSON invalid (${configPath}): ${errorText(err)}`)
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`config JSON must be an object (${configPath})`)
+  }
+  const raw = parsed as Record<string, unknown>
+  raw.homeRecommendations = order
+  const tmpPath = `${configPath}.tmp-${process.pid}-${Date.now()}`
+  try {
+    writeFileSync(tmpPath, `${JSON.stringify(raw, null, 2)}\n`)
+    renameSync(tmpPath, configPath)
+  } finally {
+    if (existsSync(tmpPath)) {
+      try {
+        rmSync(tmpPath, { force: true })
+      } catch (cleanupError) {
+        console.warn(`[omnimux-market] failed to remove temp file ${tmpPath}: ${errorText(cleanupError)}`)
+      }
+    }
+  }
+}
+
 function handleHomeCustomOrder(ctx: ApiContext): void {
   const { req, res, body } = ctx
-  const configPath = join(packageRoot(), 'catalog', 'skill-recommendations.json')
+  const configPath = homeOrderConfigPath()
   if (req.method === 'POST') {
     const order = Array.isArray(body.order) ? body.order.map(String) : []
-    try {
-      if (existsSync(configPath) && order.length > 0) {
-        const raw = JSON.parse(readFileSync(configPath, 'utf8'))
-        raw.homeRecommendations = order
-        writeFileSync(configPath, JSON.stringify(raw, null, 2) + '\n')
+    if (order.length > 0) {
+      try {
+        persistHomeCustomOrder(configPath, order)
+      } catch (err) {
+        return sendJson(res, 500, { ok: false, error: `home custom order not saved: ${errorText(err)}` })
       }
-    } catch {}
+    }
     return sendJson(res, 200, { ok: true, order })
   }
   let currentOrder: string[] = []

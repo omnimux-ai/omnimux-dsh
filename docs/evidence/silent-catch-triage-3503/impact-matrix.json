@@ -1,0 +1,23 @@
+{
+  "dimensions": {
+    "l0": {
+      "required": true,
+      "phase": "pre-merge",
+      "reason": "所有代码变更均需通过 L0 离线单测与语法检查"
+    },
+    "dev": {
+      "required": false,
+      "phase": "post-merge",
+      "target": "human",
+      "reason": "开发版真机验收为人工职责：多工作树并发时共享开发版为单实例、无法并行验收，不作为 Agent 交付卡点；物化保留为可选（供人工实机查看）"
+    },
+    "browser": {
+      "required": true,
+      "phase": "post-merge",
+      "target": "worktree",
+      "reason": "包含客户端/UI文件变更，必须在本任务独立工作树内完成真实浏览器 Web 验证并留存证据（截图/结构化报告）"
+    }
+  },
+  "isUiChange": true,
+  "summary": "L0: pre-merge required；工作树 Web 验证: required；开发版真机验收: 人工职责、非 Agent 卡点（包含客户端/UI文件变更，必须在本任务独立工作树内完成真实浏览器 Web 验证并留存证据（截图/结构化报告））"
+}

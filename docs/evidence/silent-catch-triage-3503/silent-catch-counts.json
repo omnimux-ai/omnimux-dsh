@@ -1,0 +1,38 @@
+{
+  "generatedAt": "2026-10-21T03:57:43.385Z",
+  "headSha": "d2d54d177dac869f8a8cdabeb0c601a81ac571dc",
+  "file": "plugins/omnimux/src/client/sidebar-toggle-topbar.js",
+  "fileBefore": {
+    "sc1": 0,
+    "sc2": 41,
+    "sc3": 3
+  },
+  "fileAfter": {
+    "SC3": 4
+  },
+  "fileAfterSc3Lines": [
+    60,
+    313,
+    877,
+    909
+  ],
+  "repoBefore": {
+    "scanned": 1697,
+    "total": 1568,
+    "byRule": {
+      "SC3": 882,
+      "SC2": 444,
+      "SC1": 242
+    }
+  },
+  "repoAfter": {
+    "scanned": 1697,
+    "total": 1525,
+    "byRule": {
+      "SC3": 885,
+      "SC2": 399,
+      "SC1": 241
+    }
+  },
+  "note": "repo-wide counts drift because sibling worktree tasks edit other files concurrently; only file counts are the acceptance caliber"
+}

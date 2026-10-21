@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { Readable } from 'node:stream'
 import { describe, it } from 'node:test'
 import { apply } from '../index.js'
-import { createAuthDispatcher, readJsonBody, sendJson, SECRET_PATTERN } from './http-routes.js'
+import { createAuthDispatcher, readJsonBody, registerAuthRoutes, sendJson, SECRET_PATTERN } from './http-routes.js'
 import { createPendingStore } from './pending.js'
 import { createTokenStore } from './store.js'
 
@@ -103,6 +104,54 @@ describe('auth http dispatcher', () => {
       const loggedOut = await dispatcher.dispatch({ method: 'POST', url: '/omnimux/auth/logout' })
       assert.equal(loggedOut.body.logged_in, false)
       assert.equal(await store.resolve(), undefined)
+    } finally {
+      rmSync(homeDir, { recursive: true, force: true })
+      rmSync(configDir, { recursive: true, force: true })
+    }
+  })
+
+  it('logout returns 500 instead of reporting success when credential cleanup rejects', async () => {
+    const homeDir = mkdtempSync(join(tmpdir(), 'omnimux-http-'))
+    const configDir = mkdtempSync(join(tmpdir(), 'omnimux-http-cfg-'))
+    /** @type {string[]} */
+    const warnings = []
+    const store = createTokenStore({
+      homeDir,
+      configDir,
+      logger: { warn(message) { warnings.push(String(message)) } },
+    })
+    const pending = createPendingStore()
+    const dispatcher = createAuthDispatcher({ store, pending, siteBaseUrl: 'https://omnimux.ai' })
+    /** @type {Map<string, Function>} */
+    const handlers = new Map()
+    registerAuthRoutes({
+      register(route) {
+        handlers.set(route.path, route.handler)
+        return () => {}
+      },
+    }, dispatcher, { getConnection: () => ({ requestRejection() { return undefined } }) })
+    try {
+      await store.set('pat-logout-failure')
+      // A directory at the secrets path makes rmSync fail while the token stays on disk.
+      rmSync(store.secretsPath, { force: true })
+      mkdirSync(store.secretsPath)
+
+      const handler = handlers.get('/omnimux/auth/logout')
+      assert.equal(typeof handler, 'function')
+      /** @type {{ status?: number, body: string }} */
+      const seen = { body: '' }
+      const res = {
+        writeHead(status) { seen.status = status },
+        end(chunk) { seen.body = String(chunk ?? '') },
+      }
+      const req = Readable.from([])
+      Object.assign(req, { method: 'POST', headers: { host: '127.0.0.1:53985' }, url: '/omnimux/auth/logout' })
+
+      await handler(req, res)
+
+      assert.equal(seen.status, 500)
+      assert.equal(/pat-logout-failure|access_token/.test(seen.body + warnings.join('\n')), false)
+      assert.ok(warnings.some((message) => /unsetSecrets failed:/.test(message)))
     } finally {
       rmSync(homeDir, { recursive: true, force: true })
       rmSync(configDir, { recursive: true, force: true })
