@@ -1,0 +1,55 @@
+xiaohongshu {"name":"xiaohongshu","acceptStatus":202,"acceptMs":5,"statusAfterAccept":"importing","finalStatus":"ready","settledMs":2006,"fileOk":true,"fileSize":93382,"importError":null,"type":"image"}
+x {"name":"x","acceptStatus":202,"acceptMs":1,"statusAfterAccept":"importing","finalStatus":"ready","settledMs":2002,"fileOk":true,"fileSize":126287,"importError":null,"type":"image"}
+douyin {"name":"douyin","acceptStatus":202,"acceptMs":1,"statusAfterAccept":"importing","finalStatus":"ready","settledMs":28012,"fileOk":true,"fileSize":236377548,"importError":null,"type":"video"}
+instagram {"name":"instagram","acceptStatus":202,"acceptMs":2,"statusAfterAccept":"importing","finalStatus":"ready","settledMs":8005,"fileOk":true,"fileSize":25879252,"importError":null,"type":"video"}
+[
+  {
+    "name": "xiaohongshu",
+    "acceptStatus": 202,
+    "acceptMs": 5,
+    "statusAfterAccept": "importing",
+    "finalStatus": "ready",
+    "settledMs": 2006,
+    "fileOk": true,
+    "fileSize": 93382,
+    "importError": null,
+    "type": "image"
+  },
+  {
+    "name": "x",
+    "acceptStatus": 202,
+    "acceptMs": 1,
+    "statusAfterAccept": "importing",
+    "finalStatus": "ready",
+    "settledMs": 2002,
+    "fileOk": true,
+    "fileSize": 126287,
+    "importError": null,
+    "type": "image"
+  },
+  {
+    "name": "douyin",
+    "acceptStatus": 202,
+    "acceptMs": 1,
+    "statusAfterAccept": "importing",
+    "finalStatus": "ready",
+    "settledMs": 28012,
+    "fileOk": true,
+    "fileSize": 236377548,
+    "importError": null,
+    "type": "video"
+  },
+  {
+    "name": "instagram",
+    "acceptStatus": 202,
+    "acceptMs": 2,
+    "statusAfterAccept": "importing",
+    "finalStatus": "ready",
+    "settledMs": 8005,
+    "fileOk": true,
+    "fileSize": 25879252,
+    "importError": null,
+    "type": "video"
+  }
+]
+ASYNC_RESULT PASS

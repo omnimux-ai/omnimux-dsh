@@ -12,16 +12,28 @@
  * Layer rules:
  * - the public URL rule is checked again for every URL in the body; the
  *   downloader re-checks the literal host and the resolved address per hop.
+ * - acceptance and download are separated: the request answers 202 with an
+ *   `importing` placeholder, and the media downloads in-process afterwards. That
+ *   keeps a slow CDN (Instagram ≈119KB/s) or a large file (抖音 236MB) from
+ *   hitting the extension's request timeout and falling back to the cloud path.
  * - a media item that cannot be downloaded does not fail the capture: the rest
  *   is stored and the row records the first reason with `import_status:
- *   degraded`. Only a capture that saved nothing at all answers 422 so the
- *   extension can fall back to the cloud import path.
+ *   degraded`. A capture that saved nothing settles as `failed` so the library
+ *   card shows the reason and can be retried.
  * - `auto_analyze` is always false: a direct capture is not an analysis request.
  */
 
 import { existsSync, unlinkSync } from 'node:fs'
 import { alignMediaExtension, downloadMedia, isKnownUnrenderableCover } from './downloader.js'
-import { IMPORT_STATUS_DEGRADED, IMPORT_STATUS_READY, importStatusOf } from './import-status.js'
+import {
+  IMPORT_STAGES,
+  IMPORT_STATUS_DEGRADED,
+  IMPORT_STATUS_FAILED,
+  IMPORT_STATUS_IMPORTING,
+  IMPORT_STATUS_READY,
+  importStatusOf,
+} from './import-status.js'
+import { activeJobs } from './http-handlers.js'
 import { detectPlatformFromUrl } from './url-normalizer.js'
 import { isPublicHttpUrl } from './url-policy.js'
 
@@ -29,6 +41,28 @@ import { isPublicHttpUrl } from './url-policy.js'
 export const CAPTURE_MEDIA_LIMIT = 20
 /** Longest accepted header value; anything longer is truncated. */
 export const CAPTURE_HEADER_MAX_LENGTH = 4096
+/**
+ * Per-file download budget for a background capture.
+ *
+ * Larger than the import path's 60s on purpose: the captures here are videos
+ * pulled from a CDN that may throttle, and the request no longer waits on them.
+ */
+export const CAPTURE_DOWNLOAD_TIMEOUT_MS = 300_000
+
+/**
+ * Live background capture jobs, keyed by row id.
+ *
+ * The dispatcher owns them for the life of the process; the id is also added to
+ * `activeJobs` so the stale sweep does not fail a row that is still downloading.
+ * Exported so tests can await the real work instead of polling.
+ * @type {Map<string, Promise<void>>}
+ */
+export const captureJobs = new Map()
+
+/** Resolve once every capture job currently known to this process has settled. */
+export function captureJobsSettled() {
+  return Promise.all([...captureJobs.values()])
+}
 
 /** Request headers a capture may forward, lowercased. */
 const ALLOWED_CAPTURE_HEADERS = new Set(['referer', 'user-agent', 'cookie'])
@@ -224,6 +258,7 @@ async function downloadCaptureMedia(args) {
         fetcher: ctx.fetcher,
         resolver: ctx.resolver,
         signal,
+        timeoutMs: CAPTURE_DOWNLOAD_TIMEOUT_MS,
         headers: Object.keys(item.headers).length > 0 ? item.headers : undefined,
       })
       if (!isVideo) {
@@ -269,6 +304,7 @@ async function resolveCaptureCover(args) {
       fetcher: ctx.fetcher,
       resolver: ctx.resolver,
       signal: ctx.signal,
+      timeoutMs: CAPTURE_DOWNLOAD_TIMEOUT_MS,
     })
     const aligned = alignMediaExtension(saved)
     if (isKnownUnrenderableCover(aligned)) {
@@ -338,7 +374,93 @@ function buildCaptureRecord(args) {
 }
 
 /**
+ * Row written before the background download starts.
+ *
+ * Same fields as the import placeholder, so the library card, the stale sweep
+ * and the poll endpoint treat it identically. Attachments are cleared explicitly:
+ * an in-place upgrade of an old row must not keep attachments that the new
+ * capture no longer references.
+ * @param {Record<string, any>} args parsed capture body
+ * @param {string} platform
+ */
+function buildCapturePlaceholder(args, platform) {
+  return {
+    title: args.title || args.sourceUrl,
+    content: args.content,
+    type: 'video',
+    source_platform: platform,
+    source_url: args.sourceUrl,
+    cover_url: args.coverUrl || '',
+    media_items: [],
+    media_urls: [],
+    local_paths: {},
+    content_shape: args.contentShape || 'video',
+    tags: args.tags,
+    auto_analyze: false,
+    author: args.author,
+    stats: args.stats,
+    posted_at: args.postedAt || null,
+    analysis_results: {},
+    deconstruction: null,
+    import_status: IMPORT_STATUS_IMPORTING,
+    import_stage: IMPORT_STAGES.DOWNLOADING,
+    import_started_at: new Date().toISOString(),
+    import_error: null,
+  }
+}
+
+/** Fail a row without letting a vanished row mask the real download failure. */
+function markCaptureFailed(store, id, reason) {
+  try {
+    store.update(id, {
+      import_status: IMPORT_STATUS_FAILED,
+      import_stage: null,
+      import_error: String(reason || '媒体素材下载失败'),
+    })
+  } catch {
+    // 行已在下载期间被删除：没有可写的目标，下载结果自然作废。
+  }
+}
+
+/**
+ * Background job: download the attachments, then replace the placeholder.
+ *
+ * Runs after the HTTP response, so it must never throw into the request. Every
+ * outcome lands on the row: ready, degraded (some files) or failed (none).
+ * @param {{ ctx: Record<string, any>, parsed: Record<string, any>, platform: string, id: string }} args
+ */
+async function runCaptureJob(args) {
+  const { ctx, parsed, platform, id } = args
+  let download = null
+  let cover = null
+  try {
+    download = await downloadCaptureMedia({ ctx, media: parsed.media })
+    cover = await resolveCaptureCover({ ctx, coverUrl: parsed.coverUrl, savedByUrl: download.savedByUrl })
+    // 没有独立封面时，图集的第一张图就是封面（与导入路径一致）。
+    if (!cover.path) {
+      const firstImage = parsed.media.find((item) => item.type === 'image' && download.savedByUrl.has(item.url))
+      if (firstImage) cover = { path: download.savedByUrl.get(firstImage.url).path, renderable: true }
+    }
+    if (download.mediaItems.length === 0 && !cover.path) {
+      for (const filePath of Object.values(download.localPaths)) removeQuietly(filePath)
+      markCaptureFailed(ctx.store, id, download.errors[0] || '媒体素材下载全部失败，无法入库')
+      return
+    }
+    const record = buildCaptureRecord({ parsed, platform, download, cover })
+    const saved = await ctx.store.replace(id, record)
+    if (!saved) ctx.store.add(record, { allowDuplicate: true })
+  } catch (error) {
+    for (const filePath of Object.values(download?.localPaths || {})) removeQuietly(filePath)
+    if (cover?.path) removeQuietly(cover.path)
+    markCaptureFailed(ctx.store, id, describeFailure(ctx, error))
+  }
+}
+
+/**
  * POST /local/capture handler.
+ *
+ * Acceptance is synchronous (validate → dedupe → placeholder), the download is
+ * not: the caller gets the importing row immediately and polls `GET /local/:id`.
  * @param {Record<string, any>} ctx dispatcher context plus the request
  * @returns {Promise<{ status: number, body: Record<string, any> }>}
  */
@@ -354,49 +476,35 @@ export async function handleCapture(ctx) {
   const platform = detected && detected !== 'unknown' ? detected : (args.requestedPlatform || 'unknown')
 
   const existing = ctx.store.findByUrl(args.sourceUrl)
-  if (existing && isCaptureDuplicate(existing)) {
-    return { status: 200, body: { data: existing, existing: true } }
-  }
-  const upgradeId = existing ? existing.id : ''
-
-  let download
-  let cover
-  try {
-    download = await downloadCaptureMedia({ ctx, media: args.media })
-    cover = await resolveCaptureCover({ ctx, coverUrl: args.coverUrl, savedByUrl: download.savedByUrl })
-    // 没有独立封面时，图集的第一张图就是封面（与导入路径一致）。
-    if (!cover.path) {
-      const firstImage = args.media.find((item) => item.type === 'image' && download.savedByUrl.has(item.url))
-      if (firstImage) cover = { path: download.savedByUrl.get(firstImage.url).path, renderable: true }
+  if (existing) {
+    if (isCaptureDuplicate(existing)) {
+      return { status: 200, body: { data: existing, existing: true } }
     }
-    if (ctx.signal?.aborted) throw createAbortError()
-  } catch (error) {
-    // 中止时清理已落盘文件；其它异常下载层已自行删除临时文件。
-    for (const filePath of Object.values(download?.localPaths || {})) removeQuietly(filePath)
-    if (cover?.path) removeQuietly(cover.path)
-    throw error
-  }
-
-  // 全部媒体失败且没有可用封面：调用方应回退云端/降级链路，不写半条记录。
-  if (download.mediaItems.length === 0 && !cover.path) {
-    return fail(422, download.errors[0] || '媒体素材下载全部失败，无法入库')
-  }
-
-  const record = buildCaptureRecord({ parsed: args, platform, download, cover })
-  let saved
-  try {
-    saved = upgradeId ? await ctx.store.replace(upgradeId, record) : null
-    if (!saved) saved = ctx.store.add(record, { allowDuplicate: true })
-  } catch (error) {
-    for (const filePath of Object.values(record.local_paths)) removeQuietly(filePath)
-    throw error
-  }
-
-  if (download.errors.length > 0) {
-    return {
-      status: 201,
-      body: { data: saved, media_degraded: true, degrade_reason: download.errors[0] },
+    // 同一作品正在下载：幂等返回同一行，不再启动第二个任务。
+    if (importStatusOf(existing) === IMPORT_STATUS_IMPORTING) {
+      return { status: 202, body: { data: existing, existing: true, accepted: true } }
     }
   }
-  return { status: 201, body: { data: saved } }
+
+  const placeholder = buildCapturePlaceholder(args, platform)
+  const row = existing
+    ? ctx.store.update(existing.id, placeholder)
+    : ctx.store.add(placeholder, { allowDuplicate: true })
+  const id = String(row.id)
+
+  // 请求已经结束：后台任务不继承它的 abort 信号，否则响应一返回下载就被取消。
+  const jobCtx = { ...ctx, signal: undefined, req: undefined }
+  activeJobs.add(id)
+  const job = Promise.resolve()
+    .then(() => runCaptureJob({ ctx: jobCtx, parsed: args, platform, id }))
+    .catch(() => {
+      // runCaptureJob 自己把失败写到行上；这里只兜住意外拒绝，避免进程级未处理拒绝。
+    })
+    .finally(() => {
+      activeJobs.delete(id)
+      captureJobs.delete(id)
+    })
+  captureJobs.set(id, job)
+
+  return { status: 202, body: { data: ctx.store.get(id) ?? row, accepted: true } }
 }
