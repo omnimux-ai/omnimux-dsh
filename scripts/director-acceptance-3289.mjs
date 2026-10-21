@@ -63,6 +63,62 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
   };
   let step = 'init';
   const act = async (name, fn) => { step = name; return fn(); };
+  /** Count elements matching a selector that can receive pointer input (visible, not disabled/inert). */
+  const visibleCount = selector => page.evaluate(candidate => [...document.querySelectorAll(candidate)].filter(element => {
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none' && style.pointerEvents !== 'none' && !element.disabled && !element.closest('[inert]');
+  }).length, selector);
+  /** Click the first candidate selector that resolves to exactly one visible element; never guesses. */
+  const clickFirstActionable = async (selectors, timeout = 30000) => {
+    const deadline = Date.now() + timeout;
+    while (Date.now() < deadline) {
+      for (const selector of selectors) {
+        let count = 0;
+        try { count = await visibleCount(selector); } catch { count = 0; }
+        if (count !== 1) continue;
+        try { await page.click(selector, { timeout: 3000 }); return selector; } catch { /* try the next reviewed candidate */ }
+      }
+      await page.waitForTimeout(200);
+    }
+    return null;
+  };
+  /** Wait for one of the exact button labels to be visible, then click it. Returns the label. */
+  const clickFirstLabel = async (labels, timeout = 30000) => {
+    const deadline = Date.now() + timeout;
+    while (Date.now() < deadline) {
+      for (const label of labels) {
+        const count = await page.evaluate(text => [...document.querySelectorAll('button,[role="button"],[role="menuitem"]')].filter(element => {
+          if ((element.textContent || '').trim() !== text) return false;
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none' && !element.disabled && !element.closest('[inert]');
+        }).length, label);
+        if (count === 1) {
+          try { await page.click(`text="${label}"`, { timeout: 3000 }); return label; } catch { /* try the next reviewed label */ }
+        }
+      }
+      await page.waitForTimeout(200);
+    }
+    return null;
+  };
+  /** Wait until any reviewed exact label is visible (does not click). Returns the label. */
+  const waitForAnyLabel = async (labels, timeout = 30000) => {
+    const deadline = Date.now() + timeout;
+    while (Date.now() < deadline) {
+      for (const label of labels) {
+        const visibleNow = await page.evaluate(text => [...document.querySelectorAll('button,[role="button"],[role="menuitem"],[role="note"]')].some(element => {
+          if ((element.textContent || '').trim() !== text) return false;
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+        }), label);
+        if (visibleNow) return label;
+      }
+      await page.waitForTimeout(200);
+    }
+    return null;
+  };
   /** Visible DOM inventory for an unresolved selector: never guess, retain facts. */
   async function diagnose(error) {
     const summary = { phase, step, error: { name: error?.name, code: error?.code, message: redact(error?.message || error).slice(0, 2000) } };
@@ -104,29 +160,55 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
       await page.click(notice);
       await page.waitForSelector(notice, { state: 'hidden', timeout: 15000 });
     }
-    await page.click('button[aria-label="Projects"]');
-    await visible('text="New Project"'); await page.click('text="New Project"');
-    await visible('input[placeholder="Project name"]');
-    await page.fill('input[placeholder="Project name"]', projectTitle);
+    const projectsControl = await clickFirstActionable(['button[aria-label="Projects"]', 'button[aria-label="项目"]'], 15000);
+    if (!projectsControl) throw new Error('Projects sidebar entry not actionable');
+    // The project library is localized; accept both reviewed labels and require one visible button.
+    const newProjectLabel = await clickFirstLabel(['New Project', '新建项目'], 30000);
+    if (!newProjectLabel) throw new Error('project library "New Project" action not found');
+    const namePlaceholder = await page.evaluate(() => {
+      const candidates = ['Project name', '项目名称'];
+      return [...document.querySelectorAll('input')].map(input => input.getAttribute('placeholder')).find(value => candidates.includes(value)) ?? null;
+    });
+    if (!namePlaceholder) throw new Error('project name input placeholder not found');
+    await page.fill(`input[placeholder="${namePlaceholder}"]`, projectTitle);
     await page.click('loc=css:.omnimux-workflow-dialog-footer button >> nth=1');
-    await visible('.wf-canvas-toolbar'); await page.click('button[aria-label="Fullscreen"]');
-    await page.click('loc=css:.wf-canvas-toolbar button >> nth=0');
-    await visible('text="3D Director"'); await page.click('text="3D Director"');
+    await visible('.wf-canvas-toolbar');
+    // In the workbench-tab layout the shell-level Fullscreen button stays hidden; the visible
+    // control is the official right-panel mode button. Try the reviewed candidates in order.
+    const fullscreenControl = await clickFirstActionable([
+      'button[data-sidebar-right-mode="fullscreen"]',
+      'button[aria-label="Fullscreen"]',
+      'button[aria-label="全屏"]',
+      'button[aria-label="To fullscreen"]',
+    ], 15000);
+    if (fullscreenControl) {
+      await page.waitForFunction(() => Boolean(
+        document.querySelector('[data-sidebar-right-panel="fullscreen"][data-sidebar-right-open]')
+        || document.querySelector('[data-rightbar-fullscreen="true"]'),
+      ), undefined, { timeout: 8000 }).catch(() => {});
+    }
+    await visible('.wf-canvas-toolbar');
+    await page.click('loc=css:.wf-canvas-toolbar button.wf-canvas-toolbar__item--primary-add');
+    const menuLabel = await waitForAnyLabel(['3D Director', '3D 导演台'], 30000);
+    if (!menuLabel) throw new Error('3D director palette entry did not appear');
+    const nodeLabel = await clickFirstLabel([menuLabel], 10000);
+    if (!nodeLabel) throw new Error('3D director palette entry not actionable');
     await visible('text="打开导演台"'); await page.click('text="打开导演台"');
     await visible('.wf-director-root');
     await visible('.director-viewport-shell[data-renderer-ready="true"]', 45000);
-    record(phase, { normalUI: true, rendererReady: true, firstRunNoticeDismissed });
+    record(phase, { normalUI: true, rendererReady: true, firstRunNoticeDismissed, newProjectLabel, namePlaceholder, fullscreenControl, nodeLabel });
 
     step = 'add-actor-standard-female'; phase = 'portrait-selected';
-    await page.click('button[aria-label="添加角色"]');
-    await visible('button[aria-label="标准女性"]'); await page.click('button[aria-label="标准女性"]');
-    await visible('text="跳过引导"'); await page.click('text="跳过引导"');
-    await hidden('text="跳过引导"');
+    const director = 'loc=css:.wf-director-root ';
+    await page.click(director + 'button[aria-label="添加角色"]');
+    await visible(director + 'button[aria-label="标准女性"]'); await page.click(director + 'button[aria-label="标准女性"]');
+    const skipOnboarding = await clickFirstLabel(['跳过引导'], 15000);
+    if (skipOnboarding) await hidden('text="跳过引导"');
     step = 'select-portrait-aspect';
-    await page.click('button[aria-label="选择画幅比例"]');
-    await visible('button[aria-label="9:16"]'); await page.click('button[aria-label="9:16"]');
-    assert.equal(await page.evaluate(() => document.querySelector('button[aria-label="9:16"]')?.getAttribute('aria-pressed')), 'true');
-    record(phase, { aspectRatio: '9:16' });
+    await page.click(director + 'button[aria-label="选择画幅比例"]');
+    await visible(director + 'button[aria-label="9:16"]'); await page.click(director + 'button[aria-label="9:16"]');
+    assert.equal(await page.evaluate(() => document.querySelector('.wf-director-root button[aria-label="9:16"]')?.getAttribute('aria-pressed')), 'true');
+    record(phase, { aspectRatio: '9:16', skipOnboarding });
 
     // Camera inspector: the camera-properties panel lives in the right inspector and the
     // shot controls are collapsed inside a <details> summary; open it before selecting 运镜.
@@ -134,7 +216,7 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
     await page.keyboard.press('Escape');
     await page.waitForSelector('.director-menu', { state: 'hidden', timeout: 5000 }).catch(() => {});
     await act('click-camera-view', async () => {
-      await page.click('loc=css:[role="group"][aria-label="导演台取景模式"] button[aria-label="机位视角"]');
+      await page.click('loc=css:.wf-director-root [role="group"][aria-label="导演台取景模式"] button[aria-label="机位视角"]');
     });
     await act('wait-property-inspector', async () => {
       await visible('[data-director-property-inspector]', 20000);
@@ -227,7 +309,7 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
     await write('media.json', { ...media, imageDecoded, scenePath }); record(phase, { ...media, imageDecoded });
 
     step = 'close-and-verify-saved-scene'; phase = 'saved-scene';
-    await page.click('button[aria-label="关闭导演台"]');
+    await page.click(director + 'button[aria-label="关闭导演台"]');
     await page.waitForSelector('.wf-director-root', { state: 'hidden', timeout: 30000 });
     const saved = await publicScene(scenePath);
     assert.ok(saved.revision > 0); assert.equal(saved.scene.aspectRatio, '9:16');
@@ -266,7 +348,7 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
     step = 'reopen-director'; phase = 'scene-reopened';
     await page.click('text="打开导演台"'); await visible('.wf-director-root');
     await visible('.director-viewport-shell[data-renderer-ready="true"]', 45000);
-    await page.click('button[aria-label="添加角色"]');
+    await page.click(director + 'button[aria-label="添加角色"]');
     await visible('loc=css:[data-director-workbench] [role="note"]');
     const actorName = saved.scene.objects.find(item => item.actorPreset === 'standard_female').name;
     await page.waitForFunction(name => [...document.querySelectorAll('[data-director-scene-row]')].some(row => row.getAttribute('data-director-row-label') === name), actorName, { timeout: 30000 });
@@ -278,8 +360,8 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
     await write('reopened-scene.json', reopened); record(phase, { sceneId: reopened.scene.id, revision: reopened.revision });
 
     step = 'verify-reopened-aspect'; phase = 'aspect-reopened';
-    await page.click('button[aria-label="选择画幅比例"]');
-    assert.equal(await page.evaluate(() => document.querySelector('button[aria-label="9:16"]')?.getAttribute('aria-pressed')), 'true');
+    await page.click(director + 'button[aria-label="选择画幅比例"]');
+    assert.equal(await page.evaluate(() => document.querySelector('.wf-director-root button[aria-label="9:16"]')?.getAttribute('aria-pressed')), 'true');
     await page.screenshot({ path: `${evidence}/reopened.png` }); record(phase, { aspectRatio: '9:16' });
     await write('completion.json', { completed: true });
   } catch (error) {
