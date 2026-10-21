@@ -4,7 +4,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
-import { DOM_RENDER_LOADERS } from './test-fixtures/dom-render-build.mjs'
+import { DOM_RENDER_LOADERS } from '../../tests/fixtures/dom-render-build.mjs'
 import { JSDOM } from 'jsdom'
 import { zh } from './locales.js'
 import { analysisInputFingerprint } from '../analysis-input.js'
@@ -37,7 +37,7 @@ const { createRoot } = await import('react-dom/client')
  * through the content importer.
  *
  * This gate mounts the real `InspirationSection` (esbuild bundle + jsdom, the
- * `dsh-ui-kit` leaf components replaced by `test-fixtures/ui-kit-shim.mjs`) against
+ * `dsh-ui-kit` leaf components replaced by `tests/fixtures/ui-kit-shim.mjs`) against
  * a scripted HTTP stub and drives the real dialog. It asserts what the fix
  * promises:
  *
@@ -54,7 +54,7 @@ const { createRoot } = await import('react-dom/client')
 
 const here = fileURLToPath(new URL('.', import.meta.url))
 const sourceEntry = join(here, 'InspirationSection.jsx')
-const shimEntry = join(here, 'test-fixtures', 'ui-kit-shim.mjs')
+const shimEntry = join(here, '../../tests/fixtures', 'ui-kit-shim.mjs')
 const cacheDir = join(here, '.esbuild-cache', 'landing')
 
 const IMPORT_URL_PATH = '/omnimux/inspiration/local/import-url'

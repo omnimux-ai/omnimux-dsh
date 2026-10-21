@@ -24,10 +24,10 @@ import { createRoot } from 'react-dom/client'
 const hereUrl = new URL('.', import.meta.url)
 const stageEntry = fileURLToPath(new URL('collection-card-stage.jsx', hereUrl))
 const shimEntry = fileURLToPath(new URL('ui-kit-shim.mjs', hereUrl))
-const pluginRoot = fileURLToPath(new URL('../../../', hereUrl))
+const pluginRoot = fileURLToPath(new URL('../../', hereUrl))
 
 /** Build output directory; the gate removes it in `after`. */
-export const COLLECTION_CARD_CACHE_URL = new URL('../.esbuild-cache/collection-card-stage/', hereUrl)
+export const COLLECTION_CARD_CACHE_URL = new URL('../../src/client/.esbuild-cache/collection-card-stage/', hereUrl)
 
 let bundleCounter = 0
 

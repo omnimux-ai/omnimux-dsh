@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict'
 import { after, describe, it } from 'node:test'
-import { rmSync } from 'node:fs'
+import { readdirSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import {
   COLLECTION_DETAIL_CACHE_URL,
+  activeMountCount,
   mountCollectionHeader,
   mountCoverCard,
-} from './test-fixtures/collection-detail-render.mjs'
+} from '../../tests/fixtures/collection-detail-render.mjs'
 import { toCollectionMemberCard, toInspirationCardRow } from './inspiration-card.js'
 import {
   COLLECTION_MEMBER_LAYOUT,
@@ -158,6 +159,8 @@ function buttonList(container) {
 }
 
 after(() => {
+  // The harness owns release; a non-zero count means a case leaked a mount.
+  assert.equal(activeMountCount(), 0, 'every mount must be released by the suite')
   rmSync(fileURLToPath(COLLECTION_DETAIL_CACHE_URL), { recursive: true, force: true })
 })
 
