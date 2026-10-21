@@ -486,23 +486,29 @@ function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
 }
 
+function errorCode(err: unknown): string {
+  const code = (err as NodeJS.ErrnoException | null)?.code
+  return typeof code === 'string' && code ? code : 'unknown'
+}
+
 /**
- * 持久化首页自定义排序（Issue #3503）。
- * 缺文件 / 损坏 JSON / 写盘失败都抛错，由 handler 映射为 5xx；
- * 先写同目录临时文件再 rename，避免半截写入损坏 catalog。
+ * 持久化首页自定义排序（Issue #3503 / #3509）。
+ * 缺文件 / 损坏 JSON / 写盘失败都抛错，由 handler 映射为 5xx；错误文案只保留
+ * 固定描述与错误码，不回传安装路径（本地 API 响应也会被客户端读取）。
+ * 先写同目录临时文件再 rename，避免半截写入损坏 catalog；空数组表示清空自定义排序。
  */
 export function persistHomeCustomOrder(configPath: string, order: string[]): void {
   if (!existsSync(configPath)) {
-    throw new Error(`config file not found: ${configPath}`)
+    throw new Error('recommendations catalog missing')
   }
   let parsed: unknown
   try {
     parsed = JSON.parse(readFileSync(configPath, 'utf8'))
-  } catch (err) {
-    throw new Error(`config JSON invalid (${configPath}): ${errorText(err)}`)
+  } catch {
+    throw new Error('recommendations catalog is not valid JSON')
   }
   if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error(`config JSON must be an object (${configPath})`)
+    throw new Error('recommendations catalog must be a JSON object')
   }
   const raw = parsed as Record<string, unknown>
   raw.homeRecommendations = order
@@ -510,12 +516,14 @@ export function persistHomeCustomOrder(configPath: string, order: string[]): voi
   try {
     writeFileSync(tmpPath, `${JSON.stringify(raw, null, 2)}\n`)
     renameSync(tmpPath, configPath)
+  } catch (err) {
+    throw new Error(`recommendations catalog not writable (${errorCode(err)})`)
   } finally {
     if (existsSync(tmpPath)) {
       try {
         rmSync(tmpPath, { force: true })
       } catch (cleanupError) {
-        console.warn(`[omnimux-market] failed to remove temp file ${tmpPath}: ${errorText(cleanupError)}`)
+        console.warn(`[omnimux-market] failed to remove stale recommendations temp file (${errorCode(cleanupError)})`)
       }
     }
   }
@@ -525,13 +533,19 @@ function handleHomeCustomOrder(ctx: ApiContext): void {
   const { req, res, body } = ctx
   const configPath = homeOrderConfigPath()
   if (req.method === 'POST') {
-    const order = Array.isArray(body.order) ? body.order.map(String) : []
-    if (order.length > 0) {
-      try {
-        persistHomeCustomOrder(configPath, order)
-      } catch (err) {
-        return sendJson(res, 500, { ok: false, error: `home custom order not saved: ${errorText(err)}` })
-      }
+    // Mutating path: same rule as the other mutating methods (Issue #3509).
+    if (!trustedRestartRequest(req)) {
+      return sendJson(res, 403, { ok: false, error: 'home custom order is limited to same-origin requests' })
+    }
+    if (!Array.isArray(body.order)) {
+      return sendJson(res, 400, { ok: false, error: 'order must be an array' })
+    }
+    const order = body.order.map(String)
+    // An empty array is the documented reset (clear custom order), so it must persist too.
+    try {
+      persistHomeCustomOrder(configPath, order)
+    } catch (err) {
+      return sendJson(res, 500, { ok: false, error: `home custom order not saved: ${errorText(err)}` })
     }
     return sendJson(res, 200, { ok: true, order })
   }
