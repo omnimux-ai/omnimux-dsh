@@ -18,7 +18,8 @@
       { "name": "workflow_connect", "summary": "在两个节点端口之间建立连线", "category": "graph", "isWriteOperation": true, "requiresAuth": false },
       { "name": "workflow_disconnect", "summary": "断开两个节点之间的连线", "category": "graph", "isWriteOperation": true, "requiresAuth": false },
       { "name": "workflow_run", "summary": "触发工作流 DAG 执行调度", "category": "execution", "isWriteOperation": true, "requiresAuth": false },
-      { "name": "workflow_execution_control", "summary": "控制工作流执行状态 (暂停/继续/终止)", "category": "execution", "isWriteOperation": true, "requiresAuth": false }
+      { "name": "workflow_execution_control", "summary": "控制工作流执行状态 (暂停/继续/终止)", "category": "execution", "isWriteOperation": true, "requiresAuth": false },
+      { "name": "workflow_director", "summary": "创建/读取/保存 3D 导演场景，打开导演台并显式导出构图图或白膜视频；场景以项目主机为唯一权威", "category": "canvas", "isWriteOperation": true, "requiresAuth": false }
     ],
     "seamsProvided": [],
     "seamsConsumed": ["mediaSeam", "videoProcess"],

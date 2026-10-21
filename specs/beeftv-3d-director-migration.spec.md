@@ -172,7 +172,7 @@ TypeScript精确领域类型，数学/状态与副作用分层，主机校验/�
 
 ## 8. 本轮状态
 
-2026-10-21 收尾（本分支）：原实施树已基于 origin/main `0856e06c2` 重做为线性集成分支，四个冲突按主分支语义解决；`#3290` 私有 profile 装配由主分支 `#3357/#3414` 的 task-private installation 取代并删除；`test-env-bootstrap` 采用主分支实现。许可正文已随包（MIT × 3、CC0 × 1），notice 三处 unknown 闭合。安全复审 P1 已由当前源码与 HTTP 15/15 验证：操作来源哈希只绑定稳定内容、模型任务归属改为稳定账号（session cookie 轮换可恢复）。workflow 2773/2773、hub 3528+89、typecheck、build、plugin-load 22/22、静态门禁均绿。
+2026-10-21 收尾（本分支）：原实施树已重做为基于 `origin/main` 的线性集成分支并合入最新 `origin/main`，四个冲突按主分支语义解决；`#3290` 私有 profile 装配由主分支 `#3357/#3414` 的 task-private installation 取代并删除；`test-env-bootstrap` 采用主分支实现，并为 canvas 级任务补上 `omnimux-workflow`/`omnimux-automation` 的 first-party task-source 准备目标（allowlist、reviewed build script、必需产物）。旧的任务私有 `.test.mjs` 验收脚本依赖已删除的 `assembly`/`taskPackages` API，已由 `scripts/director-acceptance-3289.mjs`（非测试运行器，fresh task-source 安装 + 真实 ego 浏览器旅程 + 独立 ffmpeg 解码）取代。许可正文已随包（MIT × 3、CC0 × 1），notice 三处 unknown 闭合。安全复审 P1 已由当前源码与 HTTP 15/15 验证：操作来源哈希只绑定稳定内容、模型任务归属改为稳定账号（session cookie 轮换可恢复）；`ctx.inject` Fiber 清理语义已修正。workflow 2773/2773、hub 3528+89、typecheck、build、plugin-load 22/22、静态门禁均绿。
 
 正式验收在本集成分支上重跑（路径/结论见 `docs/evidence/2026-10-21-director-3289-integration-acceptance.md`）；旧 `formal-acceptance-vdQfTK` 的 `ElementResolutionError` 是 10-15 旧树相机面板步骤的失效，不作为本分支结论。
 

@@ -45,9 +45,17 @@ export function createStaticRoutes(opts: {
     }
     const assetName = path.startsWith(`${WORKFLOW_ROUTE_PREFIX}/director-assets/`)
       ? path.slice(`${WORKFLOW_ROUTE_PREFIX}/director-assets/`.length) : '';
-    const directorAssets = ['quaternius-standard-male.glb', 'quaternius-standard-female.glb', 'quaternius-standard-male.LICENSE.md', 'quaternius-standard-female.LICENSE.md', 'LICENSE'];
+    const directorAssets = ['quaternius-standard-male.glb', 'quaternius-standard-female.glb', 'quaternius-standard-male.LICENSE.md', 'quaternius-standard-female.LICENSE.md'];
     if (method === 'GET' && directorAssets.includes(assetName)) {
       const file = join(pluginRoot, 'assets', 'director', 'models', assetName);
+      if (!existsSync(file)) return { status: 404, body: { error: 'director-asset-not-found' } };
+      return { status: 200, file };
+    }
+    if (method === 'GET' && path.startsWith(`${WORKFLOW_ROUTE_PREFIX}/director-assets/licenses/`)) {
+      const licenseName = path.slice(`${WORKFLOW_ROUTE_PREFIX}/director-assets/licenses/`.length);
+      const licenses = new Set(['fix-webm-duration-MIT.txt', 'react-three-fiber-MIT.txt', 'cc0-1.0-legalcode.txt']);
+      if (!licenses.has(licenseName)) return { status: 404, body: { error: 'director-asset-not-found' } };
+      const file = join(pluginRoot, 'assets', 'director', 'licenses', licenseName);
       if (!existsSync(file)) return { status: 404, body: { error: 'director-asset-not-found' } };
       return { status: 200, file };
     }

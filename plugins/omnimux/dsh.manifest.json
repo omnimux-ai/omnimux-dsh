@@ -14,7 +14,7 @@
       { "name": "omnimux_jev_decision", "summary": "调用 TypeSafe Jev 决策模型执行结构化决策与评分", "category": "decision", "isWriteOperation": false, "requiresAuth": true }
     ],
     "seamsProvided": [
-      { "name": "identity", "interfaceDoc": "ctx.get('identity').status / .require()" },
+      { "name": "identity", "interfaceDoc": "ctx.get('identity').status / .require() / .getSnapshot()" },
       { "name": "textComplete", "interfaceDoc": "ctx.get('textComplete').generate(params)" },
       { "name": "modelCatalog", "interfaceDoc": "ctx.get('modelCatalog').list() → { source, fingerprint, defaults, text, image, video, audio }" },
       { "name": "decisions", "interfaceDoc": "ctx.get('decisions').evaluate(params)" }

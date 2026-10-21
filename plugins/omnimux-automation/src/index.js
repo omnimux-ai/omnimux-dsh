@@ -175,7 +175,8 @@ export async function apply(ctx, rawConfig) {
           reason: humanApprovalReason(exec.name),
         }
       })
-      removeRpc = ctx.inject(['webServer'], (rpcContext) => registerAutomationRpc(rpcContext, service))
+      const rpcFiber = ctx.inject(['webServer'], (rpcContext) => registerAutomationRpc(rpcContext, service))
+      removeRpc = async () => { await rpcFiber.dispose() }
 
       const loader = ctx.get('loader')
       if (loader === undefined) service.start()
