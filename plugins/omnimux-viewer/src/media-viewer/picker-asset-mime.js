@@ -50,13 +50,17 @@ const cloudPreviewUrl = (c) => c.meta?.source_cover_url || c.cover_url || `/omni
 /** Map one `/omnimux/assets/state` asset row. */
 export function mapLocalAsset(a) {
   const files = Array.isArray(a.files) ? a.files : [];
-  const coverFile = a.cover?.id ? a.cover : (files.find((file) => file?.kind === 'image') || files[0] || null);
+  const previewable = files.filter((file) => file?.id && (file.kind === 'image' || file.kind === 'video'));
+  const coverFile = a.cover?.kind === 'image' && a.cover?.id
+    ? a.cover
+    : (previewable.find((file) => file.kind === 'image') || null);
   const coverUrl = coverFile?.id ? localPreviewUrl(a.id, coverFile.id) : '';
   const mediaByKind = {};
-  const variants = coverFile?.id ? [coverFile, ...files] : files;
+  const variants = coverFile?.id ? [coverFile, ...previewable] : previewable;
   for (const file of variants) {
     const kind = file?.kind;
-    // Preview route serves image/video only; audio files cannot be referenced here.
+    // Preview route serves image/video only; audio-only assets are not pickable
+    // here (their preview URL would 400), so they never become dead cards.
     if (!file?.id || !kind || !['image', 'video'].includes(kind)) continue;
     if (!mediaByKind[kind]) {
       mediaByKind[kind] = {
@@ -66,9 +70,9 @@ export function mapLocalAsset(a) {
       };
     }
   }
-  const defaultVariant = mediaByKind.image || mediaByKind.video || mediaByKind.audio || null;
+  const defaultVariant = mediaByKind.image || mediaByKind.video || null;
   const defaultUrl = defaultVariant?.url || coverUrl;
-  const mime = defaultVariant?.mime || pickerMimeOf(coverFile) || pickerMimeOf(a);
+  const mime = defaultVariant?.mime || '';
   return {
     id: a.id,
     title: a.name || a.handle || a.id,

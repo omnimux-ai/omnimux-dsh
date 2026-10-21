@@ -137,3 +137,21 @@ describe('media URL vs thumbnail separation', () => {
     assert.equal(item.url, 'https://cdn.example.test/movie.mp4');
   });
 });
+
+
+describe('audio-only local assets never become dead picker cards', () => {
+  it('omits the preview URL instead of pointing at an unsupported route', () => {
+    const item = mapLocalAsset({
+      id: 'voice',
+      name: '纯音频',
+      type: 'custom',
+      files: [{ id: 'voice', kind: 'audio', original_name: 'voice.mp3' }],
+    });
+    assert.equal(item.url, '');
+    assert.equal(item.mime, undefined);
+    assert.equal(item.mediaByKind.audio, undefined);
+    // The picker filters on url, so this item is not rendered and cannot submit
+    // a preview URL that the assets route would reject.
+    assert.equal(Boolean(item.url), false);
+  });
+});
