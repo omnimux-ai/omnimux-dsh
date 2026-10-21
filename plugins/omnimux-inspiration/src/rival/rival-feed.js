@@ -108,6 +108,22 @@ export function feedCoverSrc(post) {
 }
 
 /**
+ * Safe remote video address for a post's inline preview.
+ * @param {Record<string, any>} post
+ * @returns {string}
+ */
+export function feedVideoSrc(post) {
+  const raw = text(post?.video_url).trim()
+  if (!raw) return ''
+  try {
+    const url = new URL(raw)
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : ''
+  } catch {
+    return ''
+  }
+}
+
+/**
  * Display title of a post, with the same fallback order the library rows use.
  * @param {Record<string, any>} post
  * @returns {string}
@@ -338,6 +354,7 @@ export function toFeedRow(post, account) {
     cover_src: coverSrc,
     cover_key: coverSrc,
     cover_url: text(post?.cover_url),
+    video_src: feedVideoSrc(post),
     // 增速原料不随行下发：mergeAccountPosts 把原始 post 传给 feedVelocity
     //（需要全账号中位数，计算在第二阶段），wire 行只带 velocity 结论——
     // views_history/first_seen_at 透传只增 wire 体积（四轴 M5 死载荷）。

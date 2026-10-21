@@ -10,6 +10,7 @@ import {
   paginateFeed,
   sortFeedRows,
   toFeedRow,
+  feedVideoSrc,
 } from './rival-feed.js'
 
 /**
@@ -194,5 +195,14 @@ describe('rival-feed — pagination', () => {
     assert.deepEqual(beyond.items, [])
     assert.equal(beyond.has_more, false)
     assert.equal(beyond.total, 45)
+  })
+})
+
+describe('feedVideoSrc — inline preview safety (#3469)', () => {
+  it('passes http(s) video URLs and drops unsafe or missing ones', () => {
+    assert.equal(feedVideoSrc({ video_url: 'https://cdn.example/v.mp4' }), 'https://cdn.example/v.mp4')
+    assert.equal(feedVideoSrc({ video_url: 'javascript:alert(1)' }), '')
+    assert.equal(feedVideoSrc({ video_url: 'file:///etc/passwd' }), '')
+    assert.equal(feedVideoSrc({}), '')
   })
 })

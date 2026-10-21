@@ -256,6 +256,7 @@ export function toRivalCardRow(row) {
     // Kept beside the display address: the replication chain reads the original
     // and must not be handed a locally rewritten one.
     cover_http_url: coverSrc,
+    video_src: /^https?:\/\//i.test(String(row?.video_src || '')) ? String(row.video_src) : '',
     source_platform: String(row?.source_platform || account.platform || ''),
     source_url: String(row?.url || ''),
     posted_at: String(row?.posted_at || ''),

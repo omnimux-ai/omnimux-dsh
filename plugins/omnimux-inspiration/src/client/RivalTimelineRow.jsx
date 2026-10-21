@@ -8,7 +8,7 @@
  * row so the default state stays a readable timeline.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, IconButton } from 'dsh-ui-kit'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
 import {
@@ -42,6 +42,8 @@ export function RivalTimelineRow(props) {
   const { card, t, onDetail, onReplicate, onDeconstruct, onMarkDone, busy } = props
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [mediaFailed, setMediaFailed] = useState(false)
+  const [videoFailed, setVideoFailed] = useState(false)
+  const [videoLoaded, setVideoLoaded] = useState(false)
   const locale = rivalLocaleOf(t)
   const account = card?.account || {}
   const authorName = String(account.nickname || card?.author_name || account.handle || t('rivalAccounts.refresh.account'))
@@ -51,6 +53,11 @@ export function RivalTimelineRow(props) {
   const body = timelineBody(card)
   const cover = String(card?.cover_key || card?.cover_src || '')
   const isVideo = String(card?.type || '') === 'video' || String(card?.media_kind || '') === 'video'
+  const videoSrc = String(card?.video_src || '')
+  const coverIsHeic = /\.heic(?:$|[?#])/i.test(cover)
+  const useVideoPreview = isVideo && Boolean(videoSrc) && !videoFailed && (coverIsHeic || !cover || mediaFailed)
+  const showImage = Boolean(cover) && !coverIsHeic && !mediaFailed && !useVideoPreview
+  const showPlaceholder = !useVideoPreview && !showImage && (Boolean(cover) || isVideo)
   const duration = formatDuration(card?.duration)
   const stats = card?.stats || {}
   const views = typeof stats.views === 'number' && Number.isFinite(stats.views) && stats.views >= 0 ? stats.views : null
@@ -64,6 +71,18 @@ export function RivalTimelineRow(props) {
   const done = Boolean(card?.done || card?.done_at || card?.in_library || card?.interacted_at || card?.state || card?.state_label)
   const stateLabel = timelineStateText(card, t)
   const showAvatar = Boolean(account.avatar_url || card?.avatar_url) && !avatarFailed
+
+  useEffect(() => {
+    setVideoFailed(false)
+    setVideoLoaded(false)
+    setMediaFailed(false)
+  }, [cover, videoSrc])
+
+  useEffect(() => {
+    if (!useVideoPreview || videoLoaded) return undefined
+    const timer = setTimeout(() => setVideoFailed(true), 5000)
+    return () => clearTimeout(timer)
+  }, [useVideoPreview, videoLoaded, videoSrc])
 
   const stop = (event) => {
     event.preventDefault()
@@ -108,14 +127,42 @@ export function RivalTimelineRow(props) {
 
         {body ? <p className="omnimux-rival-timeline-body">{body}</p> : null}
 
-        {cover && !mediaFailed ? (
-          <div className={`omnimux-rival-timeline-media${isVideo ? ' is-video' : ''}`}>
-            <img
-              src={cover}
-              alt=""
-              loading="lazy"
-              onError={() => setMediaFailed(true)}
-            />
+        {useVideoPreview || showImage || showPlaceholder ? (
+          <div className={`omnimux-rival-timeline-media${isVideo ? ' is-video' : ''}${showPlaceholder ? ' is-placeholder' : ''}`}>
+            {useVideoPreview ? (
+              <video
+                className="omnimux-rival-timeline-video"
+                src={(() => {
+                  try {
+                    const url = new URL(videoSrc)
+                    url.hash = 't=0.1'
+                    return url.href
+                  } catch {
+                    return `${videoSrc}#t=0.1`
+                  }
+                })()}
+                muted
+                playsInline
+                preload="metadata"
+                aria-hidden="true"
+                onError={() => setVideoFailed(true)}
+                onLoadedData={() => setVideoLoaded(true)}
+              />
+            ) : null}
+            {showImage ? (
+              <img
+                src={cover}
+                alt=""
+                loading="lazy"
+                onError={() => setMediaFailed(true)}
+              />
+            ) : null}
+            {showPlaceholder ? (
+              <span className="omnimux-rival-timeline-placeholder">
+                <RivalPlatformMark platform={platform} />
+                <span>{t(isVideo ? 'rivalFeed.card.videoFallback' : 'rivalFeed.card.mediaFallback')}</span>
+              </span>
+            ) : null}
             {isVideo ? (
               <IconButton
                 variant="ghost"
