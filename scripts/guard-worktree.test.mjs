@@ -807,6 +807,23 @@ describe('guard-worktree bash command write safety guard (防命令行绕过篡�
       decideBashCommand({ command: `cd ${worktreeRoot} && pnpm build`, cwd: mainRepoRoot }).decision,
       'allow',
     )
+    // 依赖恢复在主检出放行（node_modules 维护），manifest/lock 变更仍拦截。
+    assert.equal(
+      decideBashCommand({ command: 'pnpm install --frozen-lockfile --config.confirmModulesPurge=false', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'npm ci', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'pnpm add left-pad', cwd: mainRepoRoot }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'npm install left-pad', cwd: mainRepoRoot }).decision,
+      'deny',
+    )
     assert.equal(
       decideBashCommand({ command: 'touch -r package.json .tmp/out.txt', cwd: mainRepoRoot }).decision,
       'allow',
