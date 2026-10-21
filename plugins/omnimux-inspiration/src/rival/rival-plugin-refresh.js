@@ -43,15 +43,15 @@ export const PLUGIN_REFRESH_PLATFORMS = Object.freeze(['tiktok', 'x'])
 const CODES = Object.freeze({
   ACCOUNT_NOT_FOUND: RIVAL_ERROR_CODES.ACCOUNT_NOT_FOUND,
   PLATFORM_UNSUPPORTED: RIVAL_ERROR_CODES.PLATFORM_UNSUPPORTED,
-  UNKNOWN_TOKEN: 'plugin-refresh-unknown-token',
-  TOKEN_EXPIRED: 'plugin-refresh-expired',
-  ALREADY_CLAIMED: 'plugin-refresh-already-claimed',
-  ALREADY_COMPLETED: 'plugin-refresh-already-completed',
-  NOT_CLAIMED: 'plugin-refresh-not-claimed',
-  PLATFORM_MISMATCH: 'plugin-refresh-platform-mismatch',
-  HANDLE_MISMATCH: 'plugin-refresh-handle-mismatch',
-  INVALID_CAPTURE: 'plugin-refresh-invalid-capture',
-  PROFILE_URL_MISSING: 'plugin-refresh-profile-url-missing',
+  UNKNOWN: 'plugin-refresh-unknown-token',
+  EXPIRED: 'plugin-refresh-expired',
+  CLAIMED: 'plugin-refresh-already-claimed',
+  COMPLETED: 'plugin-refresh-already-completed',
+  UNCLAIMED: 'plugin-refresh-not-claimed',
+  PLATFORM: 'plugin-refresh-platform-mismatch',
+  HANDLE: 'plugin-refresh-handle-mismatch',
+  CAPTURE: 'plugin-refresh-invalid-capture',
+  PROFILE_URL: 'plugin-refresh-profile-url-missing',
 })
 
 /** @param {unknown} value */
@@ -337,7 +337,7 @@ export function handlePluginRefreshRequest(ctx) {
   }
   const pageUrl = profilePageUrl(account).split('#')[0]
   if (!pageUrl) {
-    return fail(422, CODES.PROFILE_URL_MISSING, '该账号缺少主页地址，无法发起浏览器插件更新')
+    return fail(422, CODES.PROFILE_URL, '该账号缺少主页地址，无法发起浏览器插件更新')
   }
   const at = nowMs(ctx)
   const token = randomBytes(16).toString('hex')
@@ -361,28 +361,28 @@ export function handlePluginRefreshClaim(ctx) {
   const body = isPlainObject(ctx?.body) ? ctx.body : {}
   const token = typeof body.token === 'string' ? body.token.trim() : ''
   const at = nowMs(ctx)
-  if (!token) return fail(404, CODES.UNKNOWN_TOKEN, '刷新令牌不存在或已失效')
+  if (!token) return fail(404, CODES.UNKNOWN, '刷新令牌不存在或已失效')
   const account = findAccountByToken(store, token)
   if (!account) {
     if (isCompletedToken(store, token, at)) {
-      return fail(409, CODES.ALREADY_COMPLETED, '该刷新令牌已完成回写，请在 OmniMux 重新发起更新')
+      return fail(409, CODES.COMPLETED, '该刷新令牌已完成回写，请在 OmniMux 重新发起更新')
     }
-    return fail(404, CODES.UNKNOWN_TOKEN, '刷新令牌不存在或已失效')
+    return fail(404, CODES.UNKNOWN, '刷新令牌不存在或已失效')
   }
   const record = tokenRecord(account)
   if (isExpired(record, at)) {
-    return fail(410, CODES.TOKEN_EXPIRED, '刷新令牌已过期，请在 OmniMux 重新发起更新')
+    return fail(410, CODES.EXPIRED, '刷新令牌已过期，请在 OmniMux 重新发起更新')
   }
   if (record.claimed_at) {
-    return fail(409, CODES.ALREADY_CLAIMED, '该刷新令牌已被使用，请在 OmniMux 重新发起更新')
+    return fail(409, CODES.CLAIMED, '该刷新令牌已被使用，请在 OmniMux 重新发起更新')
   }
   const platform = pagePlatform(body.page_url)
   if (platform && platform !== account.platform) {
-    return fail(409, CODES.PLATFORM_MISMATCH, '页面平台与目标账号不一致')
+    return fail(409, CODES.PLATFORM, '页面平台与目标账号不一致')
   }
   const handle = normalizedHandle(body.handle)
   if (!handle || handle !== accountHandle(account)) {
-    return fail(409, CODES.HANDLE_MISMATCH, '页面账号与目标账号不一致，请确认打开的是该账号主页')
+    return fail(409, CODES.HANDLE, '页面账号与目标账号不一致，请确认打开的是该账号主页')
   }
   const pageUrl = nonEmptyText(body.page_url) ?? profilePageUrl(account)
   const claimed = store.updateAccount(account.id, {
@@ -408,32 +408,32 @@ export function handlePluginRefreshComplete(ctx) {
   const body = isPlainObject(ctx?.body) ? ctx.body : {}
   const token = typeof body.token === 'string' ? body.token.trim() : ''
   const at = nowMs(ctx)
-  if (!token) return fail(404, CODES.UNKNOWN_TOKEN, '刷新令牌不存在或已失效')
+  if (!token) return fail(404, CODES.UNKNOWN, '刷新令牌不存在或已失效')
   const account = findAccountByToken(store, token)
   if (!account) {
     if (isCompletedToken(store, token, at)) {
-      return fail(409, CODES.ALREADY_COMPLETED, '该刷新令牌已完成回写，请在 OmniMux 重新发起更新')
+      return fail(409, CODES.COMPLETED, '该刷新令牌已完成回写，请在 OmniMux 重新发起更新')
     }
-    return fail(404, CODES.UNKNOWN_TOKEN, '刷新令牌不存在或已失效')
+    return fail(404, CODES.UNKNOWN, '刷新令牌不存在或已失效')
   }
   const record = tokenRecord(account)
   if (isExpired(record, at)) {
-    return fail(410, CODES.TOKEN_EXPIRED, '刷新令牌已过期，请在 OmniMux 重新发起更新')
+    return fail(410, CODES.EXPIRED, '刷新令牌已过期，请在 OmniMux 重新发起更新')
   }
   if (!record.claimed_at) {
-    return fail(409, CODES.NOT_CLAIMED, '刷新令牌尚未认领，无法回写')
+    return fail(409, CODES.UNCLAIMED, '刷新令牌尚未认领，无法回写')
   }
   if (!isPlainObject(body.account)) {
-    return fail(400, CODES.INVALID_CAPTURE, '缺少采集数据 (account)')
+    return fail(400, CODES.CAPTURE, '缺少采集数据 (account)')
   }
   const capture = body.account
   const capturePlatform = typeof capture.platform === 'string' ? capture.platform.trim().toLowerCase() : ''
   if (capturePlatform && capturePlatform !== account.platform) {
-    return fail(409, CODES.PLATFORM_MISMATCH, '采集数据平台与目标账号不一致')
+    return fail(409, CODES.PLATFORM, '采集数据平台与目标账号不一致')
   }
   const handle = normalizedHandle(capture.handle)
   if (!handle || handle !== accountHandle(account)) {
-    return fail(409, CODES.HANDLE_MISMATCH, '采集数据账号与目标账号不一致，请确认打开的是该账号主页')
+    return fail(409, CODES.HANDLE, '采集数据账号与目标账号不一致，请确认打开的是该账号主页')
   }
 
   const intervalHours = Number(account.refresh_interval_hours)
