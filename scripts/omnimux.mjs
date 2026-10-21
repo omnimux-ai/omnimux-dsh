@@ -18,7 +18,7 @@ import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import { launchApp } from './dev-launch-env.mjs'
+import { restartDesktopApp } from './app-restart.mjs'
 import { fileURLToPath } from 'node:url'
 
 const productRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -85,20 +85,15 @@ function restartApp(target = 'dev') {
 Host 重启须按 docs/contracts/plugin-git-pr.md 核实目标进程、可恢复状态和并发占用，不得强杀不明进程。`)
   }
 
-  if (target === 'dev') {
-    spawnSync('pkill', ['-f', 'OmniMux Dev.app'], { stdio: 'ignore' })
-    spawnSync('sleep', ['1'], { stdio: 'ignore' })
-    const open = launchApp('OmniMux Dev')
-    if (open.status !== 0) die('open -a "OmniMux Dev" 失败（请先执行: node scripts/omnimux.mjs package:dev）')
-    process.stdout.write('✓ 已请求重启 OmniMux Dev 开发版（人工操作）\n')
-    return
-  }
+  const normalized = target === 'dev' ? 'dev' : target === 'prod' ? 'prod' : null
+  if (!normalized) die(`未知重启目标: ${target}（仅支持 dev / prod）`)
 
-  spawnSync('pkill', ['-f', '/Applications/OmniMux.app'], { stdio: 'ignore' })
-  spawnSync('sleep', ['1'], { stdio: 'ignore' })
-  const open = launchApp('OmniMux')
-  if (open.status !== 0) die('open -a OmniMux 失败（确认已安装 /Applications/OmniMux.app）')
-  process.stdout.write('✓ 已请求重启 OmniMux 正式版（人工操作）\n')
+  const result = restartDesktopApp(normalized)
+  if (!result.ok) {
+    die(`重启 ${normalized} 失败: ${result.status}${result.detail ? ` — ${result.detail}` : ''}`)
+  }
+  const label = normalized === 'dev' ? 'OmniMux Dev 开发版' : 'OmniMux 正式版'
+  process.stdout.write(`✓ 已请求重启 ${label}（${result.status}，人工操作）\n`)
 }
 
 function printHelp() {

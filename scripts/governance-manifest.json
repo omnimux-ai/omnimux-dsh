@@ -65,6 +65,8 @@
     "qa-label.mjs",
     "qa-label.test.mjs",
     "dev-launch-env.mjs",
+    "app-restart.mjs",
+    "app-restart.test.mjs",
     "dev-launch-env.test.mjs",
     "dev-app-unlock.mjs",
     "dev-app-unlock.test.mjs",
