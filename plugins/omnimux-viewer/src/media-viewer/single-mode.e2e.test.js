@@ -42,7 +42,9 @@ test('证据哈希绑定单图模式源码，且源码中不再有 grid/subViewM
   const tab = readFileSync(files.tab, 'utf8');
   const store = readFileSync(files.store, 'utf8');
   const stage = readFileSync(files.stage, 'utf8');
-  for (const source of [tab, store, stage]) {
+  const styles = readFileSync(files.styles, 'utf8');
+  const enhancer = readFileSync(join(here, '../../../omnimux/src/client/attachments/assistantMessageMediaEnhancer.ts'), 'utf8');
+  for (const source of [tab, store, stage, styles, enhancer]) {
     assert.doesNotMatch(source, /subViewMode|setSubViewMode|getTimelineGroups|omx-mv-timeline|omx-mv-capsule/);
   }
 });

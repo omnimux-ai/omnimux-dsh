@@ -1,8 +1,10 @@
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 
-const repo = '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/viewer-single-mode';
+const flowTarget = JSON.parse(readFileSync('/tmp/flow-alignment-3533/target.json', 'utf8'));
+const repo = flowTarget.sources.tab.split('/plugins/')[0];
 const evidenceDir = join(repo, 'docs/evidence/viewer-single-mode-3571') + '/';
 await fs.mkdir(evidenceDir, { recursive: true });
 const task = await taskSpace('viewer single mode 3571 evidence');

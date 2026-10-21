@@ -357,7 +357,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
       }
       store.setActiveId(taskIds[0]);
     } finally {
-      // 安全并发任务管理：仅当当前会话中没有其他正在生成的任务时才复位 isGenerating
+      // 安全并发任务管理：仅当当前会话中没有其他正在生成的任务时才复位生成状态
       const currentList = store.getSnapshot().mediaList || [];
       if (!currentList.some((m) => m.status === 'generating')) {
         store.setGenerating(false);
@@ -441,7 +441,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
     });
   }, [activeItem?.id]);
 
-  // Esc 优先关闭历史抽屉，其次退出打点；单图模式下 ↑/↓ 切换历史素材。
+  // Esc 优先关闭历史抽屉，其次退出打点；↑/↓ 切换历史素材。
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {

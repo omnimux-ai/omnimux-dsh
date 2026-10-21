@@ -1,7 +1,7 @@
 {
   "pass": true,
   "issue": 3571,
-  "capturedAt": "2026-10-21T08:28:27.520Z",
+  "capturedAt": "2026-10-21T08:37:12.914Z",
   "browser": "ego-lite",
   "assertions": [
     {
@@ -76,11 +76,11 @@
     "wide-single-zoomed.png"
   ],
   "sources": {
-    "tab": "4523ac73da417983c5bfc0791be85a7a605a11d163f926ada8671b52d18c7666",
-    "styles": "454158820ccdf92aba3625de2a0198a0a394e79feda903a7c71fcb6f7b1b8255",
+    "tab": "87dc807328f41ee74e1af7ed994978fc3b3c79b09c2417e20b868fa0b3949c5f",
+    "styles": "50ea6d6968665dd5c2416a85f8f1a01bddba61cd5e86e206079366be566a1b07",
     "store": "b00b45d1b0da9332d13c51fa7722d37b42b02cf66c1210294f18cbe607515459",
     "stage": "df477e9668c66101daff1ec955b9d241495e0be18526113ac74fbde4a6269a28"
   },
-  "sourceCommit": "bbcdc09bc659131b289cab4515a55839b37eb9ac",
-  "sourceDirty": false
+  "sourceCommit": "ec804580c86e614ff704f64b331ce354c9348799",
+  "sourceDirty": true
 }

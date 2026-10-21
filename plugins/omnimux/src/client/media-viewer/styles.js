@@ -260,17 +260,26 @@ export const MEDIA_VIEWER_CSS = `
 .omx-mv-toolbar {
   height: 46px;
   padding: 0 16px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   border-bottom: 1px solid var(--dsw-alias-border-l2);
   background: var(--dsw-alias-bg-base);
   flex-shrink: 0;
   z-index: 10;
 }
 
-.omx-mv-toolbar__center,
+.omx-mv-toolbar__center {
+  grid-column: 2;
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .omx-mv-toolbar__right {
+  grid-column: 3;
+  justify-self: end;
   display: flex;
   align-items: center;
   gap: 6px;
