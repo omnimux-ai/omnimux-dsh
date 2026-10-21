@@ -1020,8 +1020,11 @@ export function createAppQaRunner(deps = {}) {
       }
       const allowedNames = request ? request.requiredChecks.flatMap(name => request.expectedAssertions[name])
         : [...ENV_ASSERTIONS, ...BROWSER_ASSERTIONS, 'live-model-catalog-ready', 'live-image-generate-http-200', 'live-image-rendered-no-broken-img', 'journey-load', 'journey-export-shape', 'journey-result-shape', 'journey-assertions-invalid', 'journey-error'];
-      if (assertions.some(item => !allowedNames.includes(item.name))) report.errors.push('TEST_APP_QA_ASSERTION_SET_MISMATCH');
-      report.assertions.push(...assertions.filter(item => allowedNames.includes(item.name)).map(({ name, pass }) => ({ name, pass })));
+      // legacy `--journey` 的断言由 runJourney 统一加 `journey:` 前缀；契约模式仍严格按请求声明集合校验，
+      // 未知断言名（含 legacy 未知名）继续判为集合不匹配。
+      const allowed = item => allowedNames.includes(item.name) || (!request && item.name.startsWith('journey:'));
+      if (assertions.some(item => !allowed(item))) report.errors.push('TEST_APP_QA_ASSERTION_SET_MISMATCH');
+      report.assertions.push(...assertions.filter(allowed).map(({ name, pass }) => ({ name, pass })));
     };
     try {
       prepareAttempted = true;
