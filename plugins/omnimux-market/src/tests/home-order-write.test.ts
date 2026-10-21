@@ -6,36 +6,45 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test, { afterEach } from 'node:test'
 import { withDefaults } from '../config-store.js'
-import { handleApi, persistHomeCustomOrder, setHomeOrderConfigPathForTests } from '../local-api.js'
+import {
+  clearHomeOrderState,
+  handleApi,
+  homeOrderStatePath,
+  setHomeOrderPathsForTests,
+  writeHomeOrderState,
+} from '../local-api.js'
 
 /**
  * Issue #3503 + #3509：homeCustomOrder 写路径必须真实落盘、失败不得假成功。
- * - 写失败（损坏 JSON / 只读目录 / 缺文件）→ 500 + ok:false，错误体不含安装路径
- * - 重置（order: []）→ 200 且真实清空 homeRecommendations，GET 可读回 []
- * - 非法 order（缺失/非数组）→ 400，不静默当空数组
- * - POST 必须同源（trustedRestartRequest），GET 读路径保持可用
- * 失败注入只在 mkdtemp 临时目录内进行，绝不触碰真实 catalog 或用户 HOME。
- * 每个用例起临时 HTTP 服务（port 0），走真实请求/响应。本文件保持 JS 语法。
+ * - 自定义排序写入用户可写覆盖文件（DSH_HOME），catalog 的默认推荐永不被改写
+ * - 重置（order: []）= 删除覆盖文件，GET 回退打包默认（source: 'default'）
+ * - 写失败 → 500 + 固定错误码，错误体不含安装路径
+ * - 非法 order → 400；POST 必须同源，GET 保持可用
+ * 失败注入只在 mkdtemp 临时目录内进行，绝不触碰真实 catalog / 用户 DSH_HOME。
  */
 
 const cfg = withDefaults({})
 
 afterEach(() => {
-  setHomeOrderConfigPathForTests(null)
+  setHomeOrderPathsForTests(null)
 })
 
-function makeConfig(t, initial) {
+function makePaths(t, options) {
   const dir = mkdtempSync(join(tmpdir(), 'omnimux-market-home-order-'))
   t.after(() => {
     chmodSync(dir, 0o700)
     rmSync(dir, { recursive: true, force: true })
   })
-  const configPath = join(dir, 'skill-recommendations.json')
-  if (initial !== undefined) {
-    writeFileSync(configPath, typeof initial === 'string' ? initial : `${JSON.stringify(initial, null, 2)}\n`)
+  const catalogPath = join(dir, 'skill-recommendations.json')
+  const statePath = join(dir, 'home-order.json')
+  const catalog = options && options.catalog !== undefined
+    ? options.catalog
+    : { featuredSkills: ['a', 'b', 'c'], homeRecommendations: ['default-a', 'default-b'], keep: { x: 1 } }
+  if (catalog !== null) {
+    writeFileSync(catalogPath, typeof catalog === 'string' ? catalog : `${JSON.stringify(catalog, null, 2)}\n`)
   }
-  setHomeOrderConfigPathForTests(configPath)
-  return { dir, configPath }
+  setHomeOrderPathsForTests({ state: statePath, catalog: catalogPath })
+  return { dir, catalogPath, statePath }
 }
 
 async function withServer(t) {
@@ -76,47 +85,68 @@ function fetchOrder(port) {
   return fetch(`${urlOf(port)}?method=homeCustomOrder`, { method: 'GET' })
 }
 
-function assertNoInstallPath(errorText, dir, configPath) {
-  const text = String(errorText)
-  assert.equal(text.includes(dir), false, `error must not leak the install dir: ${text}`)
-  assert.equal(text.includes(configPath), false, `error must not leak the config path: ${text}`)
-  assert.equal(text.includes('skill-recommendations.json'), false, `error must not leak the file name: ${text}`)
-  assert.equal(text.includes(tmpdir()), false, `error must not leak the tmp dir: ${text}`)
+function stateOrder(statePath) {
+  return JSON.parse(readFileSync(statePath, 'utf8')).order
 }
 
-test('正常写盘：同源 POST 返回 200，配置真实更新且保留其他字段', async (t) => {
-  const { configPath } = makeConfig(t, { homeRecommendations: ['old'], keep: { x: 1 } })
+function assertNoInstallPath(errorText, paths) {
+  const text = String(errorText)
+  for (const value of [paths.dir, paths.statePath, paths.catalogPath, 'home-order.json', tmpdir()]) {
+    assert.equal(text.includes(value), false, `error must not leak path ${value}: ${text}`)
+  }
+}
+
+test('自定义排序写入覆盖文件，catalog 默认推荐保持原样', async (t) => {
+  const paths = makePaths(t)
+  const catalogBefore = readFileSync(paths.catalogPath, 'utf8')
   const port = await withServer(t)
 
   const response = await postOrder(port, { method: 'homeCustomOrder', order: ['b', 'a'] })
   const body = await response.json()
   assert.equal(response.status, 200)
   assert.deepEqual(body, { ok: true, order: ['b', 'a'] })
-
-  const saved = JSON.parse(readFileSync(configPath, 'utf8'))
-  assert.deepEqual(saved.homeRecommendations, ['b', 'a'])
-  assert.deepEqual(saved.keep, { x: 1 })
+  assert.deepEqual(stateOrder(paths.statePath), ['b', 'a'])
+  assert.equal(readFileSync(paths.catalogPath, 'utf8'), catalogBefore, 'catalog default must stay untouched')
 })
 
-test('重置（order: []）：真实清空 catalog，GET 读回空数组', async (t) => {
-  const { configPath } = makeConfig(t, { homeRecommendations: ['old', 'stale'], keep: true })
+test('重置（order: []）：删除覆盖文件，GET 回退打包默认（source: default）', async (t) => {
+  const paths = makePaths(t)
+  const catalogBefore = readFileSync(paths.catalogPath, 'utf8')
   const port = await withServer(t)
 
-  const response = await postOrder(port, { method: 'homeCustomOrder', order: [] })
-  const body = await response.json()
-  assert.equal(response.status, 200)
-  assert.deepEqual(body, { ok: true, order: [] })
-  assert.deepEqual(JSON.parse(readFileSync(configPath, 'utf8')).homeRecommendations, [])
+  const moved = await postOrder(port, { method: 'homeCustomOrder', order: ['b', 'a'] })
+  assert.equal(moved.status, 200)
+  assert.equal(existsSync(paths.statePath), true)
+
+  const reset = await postOrder(port, { method: 'homeCustomOrder', order: [] })
+  const resetBody = await reset.json()
+  assert.equal(reset.status, 200)
+  assert.deepEqual(resetBody, { ok: true, order: [] })
+  assert.equal(existsSync(paths.statePath), false, 'reset must remove the custom override')
 
   const read = await fetchOrder(port)
   const readBody = await read.json()
   assert.equal(read.status, 200)
-  assert.deepEqual(readBody, { ok: true, order: [] })
+  assert.deepEqual(readBody, { ok: true, order: ['default-a', 'default-b'], source: 'default' })
+  assert.equal(readFileSync(paths.catalogPath, 'utf8'), catalogBefore)
 })
 
-test('非法 order：缺失/非数组返回 400，catalog 不被改写', async (t) => {
-  const original = { homeRecommendations: ['keep-me'] }
-  const { configPath } = makeConfig(t, original)
+test('GET 返回自定义排序与来源标记', async (t) => {
+  const paths = makePaths(t)
+  const port = await withServer(t)
+
+  const write = await postOrder(port, { method: 'homeCustomOrder', order: ['b', 'a'] })
+  assert.equal(write.status, 200)
+
+  const read = await fetchOrder(port)
+  const body = await read.json()
+  assert.equal(read.status, 200)
+  assert.deepEqual(body, { ok: true, order: ['b', 'a'], source: 'custom' })
+  assert.deepEqual(stateOrder(paths.statePath), ['b', 'a'])
+})
+
+test('非法 order：缺失/非数组返回 400，不写覆盖文件', async (t) => {
+  const paths = makePaths(t)
   const port = await withServer(t)
 
   const payloads = [
@@ -132,60 +162,59 @@ test('非法 order：缺失/非数组返回 400，catalog 不被改写', async (
     assert.equal(body.ok, false)
     assert.match(body.error, /order must be an array/)
   }
-  assert.deepEqual(JSON.parse(readFileSync(configPath, 'utf8')), original)
+  assert.equal(existsSync(paths.statePath), false)
 })
 
-test('损坏 JSON：persist 抛错，POST 返回 500 且错误体不含路径，坏文件不被覆盖', async (t) => {
-  const corrupt = '{"homeRecommendations": ['
-  const { dir, configPath } = makeConfig(t, corrupt)
+test('覆盖文件损坏：GET 容错回退默认，下一次写入可恢复', async (t) => {
+  const paths = makePaths(t)
+  writeFileSync(paths.statePath, '{"order": [')
   const port = await withServer(t)
 
-  assert.throws(() => persistHomeCustomOrder(configPath, ['b']), /recommendations catalog is not valid JSON/)
+  const read = await fetchOrder(port)
+  const readBody = await read.json()
+  assert.equal(read.status, 200)
+  assert.deepEqual(readBody, { ok: true, order: ['default-a', 'default-b'], source: 'default' })
+
+  const write = await postOrder(port, { method: 'homeCustomOrder', order: ['b'] })
+  assert.equal(write.status, 200)
+  assert.deepEqual(stateOrder(paths.statePath), ['b'])
+})
+
+test('写失败（只读目录）：500 + 固定错误码，错误体不含路径，catalog 不变', async (t) => {
+  const paths = makePaths(t)
+  const catalogBefore = readFileSync(paths.catalogPath, 'utf8')
+  const port = await withServer(t)
+  chmodSync(paths.dir, 0o500)
+
+  assert.throws(() => writeHomeOrderState(paths.statePath, ['b']), /home order state not writable \((?:EACCES|EPERM)\)/)
 
   const response = await postOrder(port, { method: 'homeCustomOrder', order: ['b'] })
   const body = await response.json()
   assert.equal(response.status, 500)
   assert.equal(body.ok, false)
-  assert.match(body.error, /^home custom order not saved: recommendations catalog is not valid JSON$/)
-  assertNoInstallPath(body.error, dir, configPath)
-  assert.equal(readFileSync(configPath, 'utf8'), corrupt)
+  assert.match(body.error, /^home custom order not saved: home order state not writable \((?:EACCES|EPERM)\)$/)
+  assertNoInstallPath(body.error, paths)
+  assert.equal(readFileSync(paths.catalogPath, 'utf8'), catalogBefore)
 })
 
-test('只读目录：写盘失败返回 500 + 错误码，错误体不含路径，原文件保持原值', async (t) => {
-  const original = { homeRecommendations: ['old'] }
-  const { dir, configPath } = makeConfig(t, original)
+test('清除失败（只读目录）：500 + 固定错误码，错误体不含路径', async (t) => {
+  const paths = makePaths(t)
+  writeFileSync(paths.statePath, `${JSON.stringify({ version: 1, order: ['b'] })}\n`)
   const port = await withServer(t)
-  chmodSync(dir, 0o500)
+  chmodSync(paths.dir, 0o500)
 
-  assert.throws(() => persistHomeCustomOrder(configPath, ['b']), /recommendations catalog not writable \((?:EACCES|EPERM)\)/)
+  assert.throws(() => clearHomeOrderState(paths.statePath), /home order state not writable \((?:EACCES|EPERM)\)/)
 
-  const response = await postOrder(port, { method: 'homeCustomOrder', order: ['b'] })
+  const response = await postOrder(port, { method: 'homeCustomOrder', order: [] })
   const body = await response.json()
   assert.equal(response.status, 500)
   assert.equal(body.ok, false)
-  assert.match(body.error, /^home custom order not saved: recommendations catalog not writable \((?:EACCES|EPERM)\)$/)
-  assertNoInstallPath(body.error, dir, configPath)
-  assert.deepEqual(JSON.parse(readFileSync(configPath, 'utf8')), original)
+  assert.match(body.error, /^home custom order not saved: home order state not writable /)
+  assertNoInstallPath(body.error, paths)
 })
 
-test('缺文件：返回 500 且不创建文件，错误体不含路径', async (t) => {
-  const { dir, configPath } = makeConfig(t, undefined)
-  const port = await withServer(t)
-
-  assert.throws(() => persistHomeCustomOrder(configPath, ['b']), /recommendations catalog missing/)
-
-  const response = await postOrder(port, { method: 'homeCustomOrder', order: ['b'] })
-  const body = await response.json()
-  assert.equal(response.status, 500)
-  assert.equal(body.ok, false)
-  assert.match(body.error, /^home custom order not saved: recommendations catalog missing$/)
-  assertNoInstallPath(body.error, dir, configPath)
-  assert.equal(existsSync(configPath), false)
-})
-
-test('非同源 POST：cross-site / Origin 不匹配 / 缺 Origin 均 403，catalog 不变', async (t) => {
-  const original = { homeRecommendations: ['keep-me'] }
-  const { configPath } = makeConfig(t, original)
+test('非同源 POST：cross-site / Origin 不匹配 / 缺 Origin 均 403，不写覆盖文件', async (t) => {
+  const paths = makePaths(t)
   const port = await withServer(t)
 
   const cases = [
@@ -200,5 +229,25 @@ test('非同源 POST：cross-site / Origin 不匹配 / 缺 Origin 均 403，cata
     assert.equal(body.ok, false)
     assert.match(body.error, /same-origin/)
   }
-  assert.deepEqual(JSON.parse(readFileSync(configPath, 'utf8')), original)
+  assert.equal(existsSync(paths.statePath), false)
+})
+
+test('catalog 缺失：GET 返回空默认，自定义排序仍可写入（互不依赖）', async (t) => {
+  const paths = makePaths(t, { catalog: null })
+  const port = await withServer(t)
+
+  const read = await fetchOrder(port)
+  const readBody = await read.json()
+  assert.equal(read.status, 200)
+  assert.deepEqual(readBody, { ok: true, order: [], source: 'default' })
+
+  const write = await postOrder(port, { method: 'homeCustomOrder', order: ['b'] })
+  assert.equal(write.status, 200)
+  assert.deepEqual(stateOrder(paths.statePath), ['b'])
+})
+
+test('默认状态路径位于 DSH_HOME，而不是包内 catalog', () => {
+  const statePath = homeOrderStatePath()
+  assert.equal(statePath.endsWith('omnimux-market-home-order.json'), true)
+  assert.equal(statePath.includes('skill-recommendations.json'), false)
 })
