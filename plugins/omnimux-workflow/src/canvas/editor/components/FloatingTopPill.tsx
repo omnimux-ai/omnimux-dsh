@@ -16,6 +16,7 @@ import {
   partitionToolbarActions,
   type ToolbarSection,
 } from '../utils/nodeToolbarLogic';
+import { computePillClampShift } from '../utils/pillClamp';
 import { stopToolbarNativeEvent } from './toolbarPointerGuard';
 
 export interface FloatingPillAction {
@@ -95,6 +96,9 @@ export const FloatingTopPill: React.FC<FloatingTopPillProps> = ({
   const inverseScale = externalInverseScale ?? calculatedInverseScale;
 
   const measureRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const clampShiftRef = useRef(0);
+  const [clampShift, setClampShift] = useState(0);
   const moreBtnRef = useRef<HTMLButtonElement | null>(null);
   const [overflowKeys, setOverflowKeys] = useState<string[]>([]);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -160,6 +164,43 @@ export const FloatingTopPill: React.FC<FloatingTopPillProps> = ({
     };
   }, [moreOpen]);
 
+  // 视口上沿保护：胶囊不得被 .react-flow 的 overflow 裁掉（Issue #3604）。
+  // 用「未加偏移的 top」反推，避免测量到已下移的位置后反复归零。
+  useLayoutEffect(() => {
+    if (!visible) return;
+    const measure = () => {
+      const el = rootRef.current;
+      if (!el) return;
+      const boundary = el.closest('.react-flow') as HTMLElement | null;
+      if (!boundary) {
+        clampShiftRef.current = 0;
+        setClampShift((prev) => (prev === 0 ? prev : 0));
+        return;
+      }
+      const pillTop = el.getBoundingClientRect().top;
+      const unclampedTop = pillTop - clampShiftRef.current * zoom;
+      const shift = computePillClampShift({
+        pillTop: unclampedTop,
+        boundaryTop: boundary.getBoundingClientRect().top,
+        zoom,
+      });
+      clampShiftRef.current = shift;
+      setClampShift((prev) => (Math.abs(prev - shift) < 0.5 ? prev : shift));
+    };
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    const boundary = rootRef.current?.closest('.react-flow') as HTMLElement | null;
+    if (observer) {
+      if (rootRef.current) observer.observe(rootRef.current);
+      if (boundary) observer.observe(boundary);
+    }
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [visible, zoom, list, topOffset]);
+
   if (!visible) return null;
   if (!children && list.length === 0) return null;
 
@@ -179,9 +220,11 @@ export const FloatingTopPill: React.FC<FloatingTopPillProps> = ({
 
   return (
     <div
+      ref={rootRef}
       className={`wf-floating-top-pill nodrag nowheel nopan ${className}`.trim()}
+      data-pill-clamp-shift={clampShift ? Math.round(clampShift * 100) / 100 : undefined}
       style={{
-        top: -(topOffset * inverseScale),
+        top: -(topOffset * inverseScale) + clampShift,
         transform: `translate(-50%, -100%) scale(${inverseScale})`,
         transformOrigin: 'bottom center',
         ...style,

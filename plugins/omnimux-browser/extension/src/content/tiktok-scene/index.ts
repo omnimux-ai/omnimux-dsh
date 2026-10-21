@@ -4,10 +4,11 @@
  * to the background worker.
  *
  * Three facts about TikTok's web app shape this module. First, it is a
- * single-page app: the address bar is rewritten as the user scrolls the For You
- * feed, and a click on a profile tile replaces the whole page without a
- * navigation event, so the address is re-read rather than captured once at
- * mount. Second, the rail can be re-rendered at any time, so the trigger is
+ * single-page app, and the address is not a reliable answer: the current For You
+ * feed keeps `/` while the user swipes, so the watched post is read from the card
+ * at the viewport centre (`active-post.ts`); a click on a profile tile replaces
+ * the page without a navigation event, so the address is re-read rather than
+ * captured once at mount. Second, the rail can be re-rendered at any time, so the trigger is
  * re-measured on DOM changes rather than trusting its first position. Third, the
  * trigger belongs to the home feed and nowhere else: every other address —
  * a profile, a single post, search, explore, messages, settings — renders
@@ -22,6 +23,7 @@ import { tiktokCopy } from './copy.ts'
 import { mountTiktokScene } from './menu.ts'
 import { TIKTOK_TIMING } from './messages.ts'
 import { resolveTargetPost } from './target.ts'
+import { resolveActivePostUrl } from './active-post.ts'
 import { sendTiktokShortcut } from './transport.ts'
 import { sceneTriggerFor } from '../surfaces/registry.ts'
 import type { TiktokSceneHandle } from './menu.ts'
@@ -88,55 +90,12 @@ export function initTiktokScene(): void {
     if (anchor instanceof HTMLAnchorElement) hoveredHref = anchor.href
   }
 
-  const resolveActiveFeedHref = (): string | null => {
-    // 1. Try active XGPlayer container in viewport (TikTok feed & player architecture)
-    const xgPlayers = Array.from(doc.querySelectorAll<HTMLElement>('[id*="xgwrapper-"], [id*="xgmedia-"]'))
-    const vCenter = window.innerHeight / 2
-    let bestPlayer: HTMLElement | null = null
-    let minDiff = Infinity
-
-    for (const player of xgPlayers) {
-      const r = player.getBoundingClientRect()
-      if (r.width > 0 && r.height > 0 && r.top < window.innerHeight && r.bottom > 0) {
-        const diff = Math.abs((r.top + r.bottom) / 2 - vCenter)
-        if (diff < minDiff) {
-          minDiff = diff
-          bestPlayer = player
-        }
-      }
-    }
-
-    if (bestPlayer) {
-      const match = bestPlayer.id.match(/\d{18,19}/)
-      if (match) {
-        const card = bestPlayer.closest('section, article, [class*="ItemContainer"], [data-e2e="feed-video"]')
-        const authorLink = card?.querySelector<HTMLAnchorElement>('a[href*="/@"]')
-        const authorMatch = authorLink?.href?.match(/\/@([^/?#]+)/)
-        const author = authorMatch ? authorMatch[1] : 'i'
-        return `https://www.tiktok.com/@${author}/video/${match[0]}`
-      }
-    }
-
-    // 2. Try currently playing / visible video in browse modal or container
-    const modal = doc.querySelector('[data-e2e="browse-video"], [class*="DivVideoContainer"], [class*="DivContainer"]')
-    if (modal) {
-      const modalLink = modal.querySelector<HTMLAnchorElement>('a[href*="/video/"], a[href*="/photo/"]')
-      if (modalLink && modalLink.href) return modalLink.href
-    }
-
-    // 3. Try nearby anchor of the active action bar that has a video element
-    const bar = doc.querySelector('section[class*="SectionActionBarContainer"], [class*="ActionBarContainer"]')
-    if (bar) {
-      const card = bar.closest('section, article, [class*="ItemContainer"]')
-      if (card && card.querySelector('video')) {
-        const cardLink = card.querySelector<HTMLAnchorElement>('a[href*="/video/"], a[href*="/photo/"]')
-        if (cardLink && cardLink.href) return cardLink.href
-      }
-    }
-
-    return null
-  }
-
+  // The feed does not rewrite the address bar, so the current post is read from the
+  // card that owns the viewport centre (`active-post.ts`).
+  const resolveActiveFeedHref = (): string | null =>
+    resolveActivePostUrl(doc, {
+      height: doc.defaultView?.innerHeight ?? window.innerHeight,
+    })
   const run = async (action: TiktokAction): Promise<ExportOutcome> => {
     const activeHref = resolveActiveFeedHref()
     const target = resolveTargetPost({ pageUrl: window.location.href, hoveredHref, activeHref })
