@@ -1,0 +1,104 @@
+{
+  "task": "3486",
+  "base": "7fa369822d068b028fad621af8fe5773f111194f",
+  "harness": "real RivalTimeline + injected styles/tokens; 1728 viewport; localhost port 59130",
+  "timeline": {
+    "left": 554,
+    "width": 620,
+    "viewport": 1728,
+    "centred": true
+  },
+  "portraitVideo": {
+    "box": [
+      287,
+      508
+    ],
+    "intrinsic": [
+      360,
+      640
+    ],
+    "ratio": 0.565
+  },
+  "landscapeImage": {
+    "box": [
+      566,
+      318
+    ],
+    "ratio": 1.778,
+    "objectFit": "contain"
+  },
+  "failures": [],
+  "screenshot": "browser-x-layout-1728-3486.png",
+  "componentHarness": {
+    "timeline": {
+      "left": 554,
+      "width": 620
+    },
+    "viewport": [
+      1728,
+      883
+    ],
+    "videoContainer": [
+      289,
+      510
+    ],
+    "imageContainer": [
+      536,
+      302
+    ]
+  },
+  "realDevPage": {
+    "note": "real two-column OmniMux Dev page with the final CSS applied for pre-merge verification",
+    "1728": {
+      "timeline": {
+        "left": 822,
+        "width": 620
+      },
+      "content": {
+        "left": 565,
+        "width": 1136
+      },
+      "mediaBox": [
+        289,
+        510
+      ],
+      "scrollWidth": 1728
+    },
+    "1440": {
+      "timeline": {
+        "left": 678,
+        "width": 620
+      },
+      "content": {
+        "left": 565,
+        "width": 848
+      },
+      "mediaBox": [
+        289,
+        510
+      ],
+      "scrollWidth": 1440
+    },
+    "390": {
+      "timeline": {
+        "left": 20,
+        "width": 342
+      },
+      "media": [
+        256,
+        455
+      ],
+      "mediaBox": [
+        258,
+        457
+      ],
+      "scrollWidth": 390
+    }
+  },
+  "screenshots": [
+    "browser-x-layout-1728-3486.png",
+    "dev-real-1728-3486.png",
+    "dev-real-1440-3486.png",
+    "dev-real-390-3486.png"
+  ]
+}

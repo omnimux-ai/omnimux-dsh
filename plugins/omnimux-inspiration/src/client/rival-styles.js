@@ -1108,15 +1108,13 @@ export const RIVAL_CSS = `
 .omnimux-rival-timeline {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--dsw-alias-bg-layer-1);
+  width: min(100%, 620px);
+  margin: 0 auto;
 }
 .omnimux-rival-timeline-item {
   display: flex;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 16px;
   border-bottom: 1px solid var(--dsw-alias-border-l1);
   cursor: pointer;
   transition: background-color 160ms ease;
@@ -1195,8 +1193,13 @@ export const RIVAL_CSS = `
 }
 .omnimux-rival-timeline-media {
   position: relative;
-  margin-top: 10px;
-  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  width: fit-content;
+  max-width: 100%;
+  margin: 10px auto 0;
+  max-height: 510px;
+  border-radius: 16px;
   overflow: hidden;
   border: 1px solid var(--dsw-alias-border-l1);
   background: var(--dsw-specific-media-ink);
@@ -1204,19 +1207,21 @@ export const RIVAL_CSS = `
 .omnimux-rival-timeline-media img,
 .omnimux-rival-timeline-video {
   display: block;
-  width: 100%;
-  max-height: 360px;
-  object-fit: cover;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 510px;
+  object-fit: contain;
 }
 .omnimux-rival-timeline-video {
   background: var(--dsw-specific-media-ink);
 }
 .omnimux-rival-timeline-media.is-placeholder {
-  display: flex;
   align-items: center;
-  justify-content: center;
+  width: 320px;
+  max-width: 100%;
   aspect-ratio: 9 / 16;
-  max-height: 360px;
+  max-height: 510px;
 }
 .omnimux-rival-timeline-placeholder {
   display: flex;
@@ -1304,6 +1309,7 @@ export const RIVAL_CSS = `
   flex-direction: column;
   gap: 10px;
   padding: 14px 16px;
+  width: 100%;
 }
 .omnimux-rival-timeline-skel {
   height: 88px;
