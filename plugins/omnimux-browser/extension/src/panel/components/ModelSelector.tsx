@@ -19,7 +19,21 @@ export interface ModelItem {
 
 export interface ModelGroup {
   group: string
+  /** Host provider id when the group came from the live catalog. */
+  provider?: string
   models: ModelItem[]
+}
+
+/**
+ * Model 支持的 effort 归一化：无 reasoning 元数据一律为空，绝不继承旧值。
+ */
+export function resolveEffortForModel(item: ModelItem | undefined, current: string): string {
+  const efforts = item?.reasoning?.efforts ?? []
+  if (efforts.length === 0) return ''
+  if (current !== '' && efforts.some((effort) => effort.id === current)) return current
+  const preferred = item?.reasoning?.defaultEffort
+  if (typeof preferred === 'string' && efforts.some((effort) => effort.id === preferred)) return preferred
+  return efforts[0]?.id ?? ''
 }
 
 export const DEFAULT_FALLBACK_EFFORTS: EffortOption[] = [
@@ -192,7 +206,10 @@ export function catalogToModelGroups(payload: unknown): ModelGroup[] {
       }
       models.push(item)
     }
-    if (models.length > 0) result.push({ group: label, models })
+    if (models.length > 0) {
+      const provider = typeof group.id === 'string' && group.id.trim() !== '' ? group.id.trim() : undefined
+      result.push(provider === undefined ? { group: label, models } : { group: label, provider, models })
+    }
   }
   return result
 }
@@ -329,14 +346,33 @@ export const ModelSelector = memo(function ModelSelector({
     }
   }
 
-  const modelEfforts: EffortOption[] = currentModelItem?.reasoning?.efforts?.length
-    ? currentModelItem.reasoning.efforts
-    : DEFAULT_FALLBACK_EFFORTS
+  const modelEfforts: EffortOption[] = currentModelItem?.reasoning?.efforts ?? []
 
   // 合并可能存在的动态模型
   const allKnownIds = new Set<string>()
   modelGroups.forEach((g) => g.models.forEach((m) => allKnownIds.add(m.id)))
   const unassignedDynamic = dynamicModels.filter((dm) => !allKnownIds.has(dm.id))
+
+  // 实时目录加载后，按模型元数据纠正历史/默认 effort；无 reasoning 的模型清空。
+  useEffect(() => {
+    if (currentModelItem === undefined) return
+    const nextEffort = resolveEffortForModel(currentModelItem, selectedEffort)
+    if (nextEffort === selectedEffort) return
+    setSelectedEffort(nextEffort)
+    try {
+      if (nextEffort === '') {
+        localStorage.removeItem(`omnimux_default_effort_${activePort}`)
+        localStorage.removeItem('omnimux_default_effort')
+      } else {
+        localStorage.setItem(`omnimux_default_effort_${activePort}`, nextEffort)
+        localStorage.setItem('omnimux_default_effort', nextEffort)
+      }
+    } catch {
+      // Ignore
+    }
+    const group = modelGroups.find((candidate) => candidate.models.some((model) => model.id === selectedModel))
+    onSelectModel?.(selectedModel, nextEffort === '' ? undefined : nextEffort, group?.provider)
+  }, [modelGroups, selectedModel, selectedEffort])
 
   const handleSelectModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value
@@ -347,37 +383,29 @@ export const ModelSelector = memo(function ModelSelector({
     setSelectedModel(val)
     setShowCustomInput(false)
 
-    // 检查新模型是否声明 defaultEffort 或是否包含当前选中的 effort
-    let newEffort = selectedEffort
-    for (const g of modelGroups) {
-      const found = g.models.find((m) => m.id === val)
-      if (found?.reasoning?.efforts?.length) {
-        const hasCurrent = found.reasoning.efforts.some((eff) => eff.id === selectedEffort)
-        if (!hasCurrent) {
-          newEffort = found.reasoning.defaultEffort || found.reasoning.efforts[0]?.id || 'medium'
-          setSelectedEffort(newEffort)
-        }
-      }
-    }
+    // 无 reasoning 元数据的模型必须清空 effort，不能继承旧值。
+    const found = modelGroups.flatMap((g) => g.models).find((m) => m.id === val)
+    const newEffort = resolveEffortForModel(found, selectedEffort)
+    setSelectedEffort(newEffort)
 
     try {
       localStorage.setItem(`omnimux_default_model_${activePort}`, val)
       localStorage.setItem('omnimux_default_model', val)
-      localStorage.setItem(`omnimux_default_effort_${activePort}`, newEffort)
-      localStorage.setItem('omnimux_default_effort', newEffort)
+      if (newEffort === '') {
+        localStorage.removeItem(`omnimux_default_effort_${activePort}`)
+        localStorage.removeItem('omnimux_default_effort')
+      } else {
+        localStorage.setItem(`omnimux_default_effort_${activePort}`, newEffort)
+        localStorage.setItem('omnimux_default_effort', newEffort)
+      }
     } catch {
       // Ignore
     }
 
-    let matchedProvider: string | undefined
-    for (const g of modelGroups) {
-      if (g.models.some((m) => m.id === val)) {
-        matchedProvider = (g as unknown as { provider?: string }).provider
-          || (g.group === 'ChatGPT (Codex)' ? 'chatgpt' : g.group === 'Grok (Subscription)' ? 'grok' : undefined)
-        break
-      }
-    }
-    onSelectModel?.(val, newEffort, matchedProvider)
+    const group = modelGroups.find((candidate) => candidate.models.some((model) => model.id === val))
+    const matchedProvider = group?.provider
+      || (group?.group === 'ChatGPT (Codex)' ? 'chatgpt' : group?.group === 'Grok (Subscription)' ? 'grok' : group?.group === 'OmniMux' ? 'omnimux' : undefined)
+    onSelectModel?.(val, newEffort === '' ? undefined : newEffort, matchedProvider)
   }
 
   const handleEffortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -450,6 +478,7 @@ export const ModelSelector = memo(function ModelSelector({
             </select>
           </div>
 
+          {modelEfforts.length > 0 && (
           <div className="reasoning-effort-container">
             <select
               className="effort-select-control"
@@ -464,6 +493,7 @@ export const ModelSelector = memo(function ModelSelector({
               ))}
             </select>
           </div>
+          )}
         </div>
       ) : (
         <div className="custom-port-input-row" style={{ marginTop: '7px' }}>

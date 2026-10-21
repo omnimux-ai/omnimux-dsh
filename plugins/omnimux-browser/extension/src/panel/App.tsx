@@ -863,7 +863,9 @@ export function App(): React.JSX.Element {
   const [selectedReasoningEffort, setSelectedReasoningEffort] = useState<string>(() => {
     return safeGetStorage(`omnimux_default_effort_${targetPort}`) || safeGetStorage('omnimux_default_effort') || 'medium'
   })
-  const [selectedDefaultProvider, setSelectedDefaultProvider] = useState<string>('')
+  const [selectedDefaultProvider, setSelectedDefaultProvider] = useState<string>(() => {
+    return safeGetStorage('omnimux_default_provider') || ''
+  })
 
   const handleSelectModel = (modelId: string, effort?: string, provider?: string) => {
     setSelectedDefaultModel(modelId)
@@ -871,13 +873,20 @@ export function App(): React.JSX.Element {
     safeSetStorage('omnimux_default_model', modelId)
     if (provider) {
       setSelectedDefaultProvider(provider)
+      safeSetStorage('omnimux_default_provider', provider)
     }
 
-    const eff = effort || selectedReasoningEffort
-    if (eff) {
+    // effort === '' 表示该模型没有 reasoning 元数据：必须清除，不能继承 max。
+    const eff = effort !== undefined ? effort : selectedReasoningEffort
+    const hasEffort = eff !== '' && eff !== 'none'
+    if (hasEffort) {
       setSelectedReasoningEffort(eff)
       safeSetStorage(`omnimux_default_effort_${targetPort}`, eff)
       safeSetStorage('omnimux_default_effort', eff)
+    } else {
+      setSelectedReasoningEffort('')
+      safeRemoveStorage(`omnimux_default_effort_${targetPort}`)
+      safeRemoveStorage('omnimux_default_effort')
     }
 
     // 同步到当前 Host 实例的 agent-default-model
@@ -887,8 +896,10 @@ export function App(): React.JSX.Element {
     if (provider) {
       ops.push({ op: 'set', path: ['provider'], value: provider })
     }
-    if (eff && eff !== 'none') {
+    if (hasEffort) {
       ops.push({ op: 'set', path: ['reasoningEffort'], value: eff })
+    } else {
+      ops.push({ op: 'unset', path: ['reasoningEffort'] })
     }
 
     void api.rpc('settings.mutate', {
@@ -902,7 +913,7 @@ export function App(): React.JSX.Element {
         sessionId: sessionRef.current,
         model: modelId,
         ...(provider ? { provider } : {}),
-        ...(eff && eff !== 'none' ? { reasoningEffort: eff } : {}),
+        ...(hasEffort ? { reasoningEffort: eff } : {}),
       }).catch(() => {})
     }
   }
