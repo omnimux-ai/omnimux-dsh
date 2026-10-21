@@ -1165,6 +1165,7 @@ export const RIVAL_CSS = `
 .omnimux-rival-timeline-main {
   flex: 1;
   min-width: 0;
+  position: relative;
 }
 .omnimux-rival-timeline-head {
   display: flex;
@@ -1332,6 +1333,78 @@ export const RIVAL_CSS = `
 }
 .omnimux-rival-timeline-sentinel {
   height: 1px;
+}
+
+/* ── 官方嵌入（#3542）：时间线直接展示平台原帖 ────────────────────
+   懒加载成功前宿主透明且不占位（仍是现有卡片）；成功后整卡（X/Instagram）
+   替换行内自绘内容，播放器（TikTok/YouTube）只替换媒体区。 */
+.omnimux-rival-timeline-embed {
+  width: 100%;
+  max-width: 550px;
+  margin-inline: auto;
+}
+.omnimux-rival-timeline-embed.is-loading {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  width: 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+.omnimux-rival-timeline-embed.is-ready {
+  position: relative;
+  opacity: 1;
+}
+.omnimux-rival-timeline-embed iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+}
+.omnimux-rival-timeline-embed.is-card {
+  margin-block: 2px 10px;
+}
+.omnimux-rival-timeline-embed.is-card iframe {
+  min-height: 180px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-module-platform);
+}
+.omnimux-rival-timeline-embed.is-player {
+  max-width: 100%;
+  margin: 0;
+}
+.omnimux-rival-timeline-embed.is-player iframe {
+  margin: 0 auto;
+  border-radius: 16px;
+  background: var(--dsw-specific-media-ink);
+}
+.omnimux-rival-timeline-embed.is-player.is-portrait iframe {
+  width: auto;
+  max-width: 100%;
+  height: 510px;
+  max-height: 510px;
+  aspect-ratio: var(--omnimux-rival-embed-ratio, 9 / 16);
+}
+.omnimux-rival-timeline-embed.is-player.is-landscape iframe {
+  width: 100%;
+  height: auto;
+  max-height: 510px;
+  aspect-ratio: var(--omnimux-rival-embed-ratio, 16 / 9);
+}
+.omnimux-rival-timeline-item.is-embed-card .omnimux-rival-timeline-avatar,
+.omnimux-rival-timeline-item.is-embed-card .omnimux-rival-timeline-head,
+.omnimux-rival-timeline-item.is-embed-card .omnimux-rival-timeline-body,
+.omnimux-rival-timeline-item.is-embed-card .omnimux-rival-timeline-media {
+  display: none;
+}
+.omnimux-rival-timeline-item.is-embed-player .omnimux-rival-timeline-media {
+  width: min(100%, 550px);
+  max-height: none;
+  border: 0;
+  background: transparent;
+}
+.omnimux-rival-timeline-item.is-embed-player .omnimux-rival-timeline-media > :not(.omnimux-rival-timeline-embed) {
+  display: none;
 }
 
 `

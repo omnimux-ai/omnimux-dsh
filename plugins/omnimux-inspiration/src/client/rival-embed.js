@@ -66,6 +66,42 @@ export function rivalEmbedIsCard(card) {
 }
 
 /**
+ * Parsed official embed target for one feed row (#3542).
+ *
+ * The timeline mounts the platform's own embed instead of re-drawing the post:
+ * `card` embeds replace the whole row body (X/Instagram), `player` embeds
+ * replace only the media block (TikTok/YouTube). Returns `null` for platforms
+ * without a public embed (抖音/小红书) and for rows whose URL cannot be parsed —
+ * the caller then keeps the hand-written card.
+ *
+ * @param {Record<string, any>} card
+ * @returns {{ platform: string, kind: 'card'|'player', id: string, url: string }|null}
+ */
+export function rivalEmbedTarget(card) {
+  const url = rivalEmbedUrl(card)
+  if (!url) return null
+  const platform = String(card?.source_platform || card?.account?.platform || '').toLowerCase()
+  const canonical = platform === 'twitter' ? 'x' : platform
+  let id = ''
+  if (canonical === 'x') {
+    id = url.match(/[?&]id=([^&#]+)/)?.[1] || ''
+  } else if (canonical === 'tiktok') {
+    id = url.match(/\/player\/v1\/([^/?#]+)/)?.[1] || ''
+  } else if (canonical === 'youtube') {
+    id = url.split('/embed/')[1]?.split(/[?&#]/)[0] || ''
+  } else if (canonical === 'instagram') {
+    id = url.match(/\/(?:p|reel|tv)\/([^/?#]+)\/embed/)?.[1] || ''
+  }
+  if (!id) return null
+  return {
+    platform: canonical,
+    kind: rivalEmbedIsCard(card) ? 'card' : 'player',
+    id: decodeURIComponent(id),
+    url,
+  }
+}
+
+/**
  * Player aspect ratio for media-style embeds (TikTok/YouTube): the measured
  * post ratio when sane, otherwise a platform-appropriate default.
  * @param {Record<string, any>} card

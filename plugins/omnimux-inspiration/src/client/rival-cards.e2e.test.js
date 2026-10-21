@@ -9,6 +9,7 @@ import { JSDOM } from 'jsdom'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { zh } from './locales.js'
+import { resetTwitterWidgetsLoader } from './rival-timeline-embed-loader.js'
 
 /**
  * End-to-end gate for the 账号监控 page wiring after #3432.
@@ -306,6 +307,14 @@ async function mountStageOnAccounts() {
       const release = deferredAppends.shift()
       assert.ok(release, 'a deferred append must be in flight')
       release()
+    },
+    /** Fire every row's visibility observer, which is what a scroll does (#3542). */
+    async revealRows() {
+      const rowObservers = observers.filter((entry) => !entry.disconnected)
+      await act(async () => {
+        for (const observer of rowObservers) observer.callback([{ isIntersecting: true }])
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      })
     },
     /** Cross the timeline's bottom sentinel the way a scroll would. */
     async loadMore() {
@@ -759,5 +768,116 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
     const remaining = POSTS.filter((post) => post.account !== higgs).map(cardId)
     await settle(mounted.container, () => itemIds(mounted.container).length === remaining.length)
     assert.deepEqual(itemIds(mounted.container), remaining, '全部 after the deletion shows only the remaining accounts')
+  })
+})
+
+/**
+ * Inline official embeds (#3542).
+ *
+ * The row still owns the page: it keeps the footer metrics and all four monitor
+ * actions, and it only hands the body to the platform when the post has an
+ * official embed and the row comes near the viewport. The third-party script
+ * and iframes are stubbed here; the real embed URLs and playback are verified
+ * in the worktree browser evidence (`.agent-reports/3542-timeline-embeds/`).
+ */
+describe('账号监控 — 时间线内嵌官方卡片 (#3542)', () => {
+  /** @type {Array<{ unmount: () => Promise<void> }>} */
+  const open = []
+
+  after(async () => {
+    while (open.length) {
+      // eslint-disable-next-line no-await-in-loop
+      await open.pop().unmount()
+    }
+  })
+
+  /** Install an X widget stub that appends a frame and records the options. */
+  function installFakeWidgets(behavior) {
+    const calls = []
+    globalThis.window.twttr = {
+      widgets: {
+        createTweet: async (id, host, options) => {
+          calls.push({ id, options })
+          if (behavior === 'fail') return null
+          const frame = globalThis.window.document.createElement('iframe')
+          host.appendChild(frame)
+          return frame
+        },
+      },
+    }
+    return calls
+  }
+
+  it('mounts the official card only after the row nears the viewport', async () => {
+    resetTwitterWidgetsLoader()
+    const mounted = await mountStageOnAccounts()
+    open.push(mounted)
+    const xPost = POSTS.find((post) => post.platform === 'x' && post.type === 'video')
+    const xRow = rowOf(mounted.container, xPost)
+    const tiktokRow = rowOf(mounted.container, POSTS[0])
+    assert.equal(xRow.getAttribute('data-embed-kind'), 'card', 'an X post must be marked as a whole-card embed')
+    assert.equal(tiktokRow.getAttribute('data-embed-kind'), 'player', 'a TikTok post must be marked as a player embed')
+    assert.equal(xRow.getAttribute('data-embed-mounted'), 'false', 'no embed may mount before the row is near the viewport')
+    assert.equal(mounted.container.querySelector('[data-rival-timeline="true"] iframe'), null, 'the timeline must not create third-party frames up front')
+
+    const calls = installFakeWidgets('ok')
+    await mounted.revealRows()
+    await settle(mounted.container, () => xRow.classList.contains('is-embed-card'))
+    const videoCall = calls.find((call) => call.id === '7698442056158465004')
+    assert.ok(videoCall, 'the video X row must create its own tweet widget')
+    assert.equal(videoCall.options.theme, 'dark', 'the X card must follow the app dark theme')
+    assert.equal(videoCall.options.dnt, true, 'the X card must opt out of tracking')
+    assert.equal(videoCall.options.conversation, 'none', 'the feed card must not embed the reply conversation')
+    assert.ok(xRow.querySelector('iframe'), 'the ready X row must carry the official widget frame')
+    assert.ok(tiktokRow.classList.contains('is-embed-player'), 'the TikTok row must swap only its media block to the player')
+    assert.ok(tiktokRow.querySelector('.omnimux-rival-timeline-head'), 'a player row keeps our author header')
+    assert.match(tiktokRow.querySelector('iframe').getAttribute('src'), /^https:\/\/www\.tiktok\.com\/player\/v1\//, 'the TikTok row must use the official player')
+    assert.deepEqual(actionsOf(xRow), ['original', 'replicate', 'deconstruct', 'markDone'], 'the four monitor actions must survive the embed')
+    delete globalThis.window.twttr
+    resetTwitterWidgetsLoader()
+  })
+
+  it('keeps the hand-written card when the X widget cannot render the post', async () => {
+    resetTwitterWidgetsLoader()
+    const mounted = await mountStageOnAccounts()
+    open.push(mounted)
+    const xPost = POSTS.find((post) => post.platform === 'x' && post.type === 'video')
+    const xRow = rowOf(mounted.container, xPost)
+    installFakeWidgets('fail')
+    await mounted.revealRows()
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 60)) })
+    assert.equal(xRow.getAttribute('data-embed-mounted'), 'false', 'a failed X embed must release the row')
+    assert.equal(xRow.classList.contains('is-embed-card'), false, 'a failed embed must not claim the whole-card state')
+    assert.equal(xRow.querySelector('iframe'), null, 'a failed embed must not leave a frame behind')
+    assert.equal(xRow.querySelector('.omnimux-rival-timeline-embed'), null, 'a failed embed must remove its host')
+    assert.ok(xRow.querySelector('.omnimux-rival-timeline-head'), 'the fallback keeps the author header')
+    assert.deepEqual(actionsOf(xRow), ['original', 'replicate', 'deconstruct', 'markDone'], 'the fallback keeps every action')
+    delete globalThis.window.twttr
+    resetTwitterWidgetsLoader()
+  })
+
+  it('keeps 作品详情 closed when the click lands on an embedded card', async () => {
+    resetTwitterWidgetsLoader()
+    const mounted = await mountStageOnAccounts()
+    open.push(mounted)
+    const xPost = POSTS.find((post) => post.platform === 'x' && post.type === 'video')
+    const xRow = rowOf(mounted.container, xPost)
+    installFakeWidgets('ok')
+    await mounted.revealRows()
+    await settle(mounted.container, () => xRow.classList.contains('is-embed-card'))
+    const view = mounted.container.ownerDocument.defaultView
+    await act(async () => {
+      xRow.querySelector('iframe').dispatchEvent(new view.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+    assert.equal(mounted.container.querySelector('[role="dialog"]'), null, 'a click on the official embed belongs to the platform, not to 作品详情')
+    await act(async () => {
+      xRow.querySelector('.omnimux-rival-timeline-head').dispatchEvent(new view.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+    await settle(mounted.container, () => Boolean(mounted.container.querySelector('[role="dialog"]')))
+    assert.ok(mounted.container.querySelector('[role="dialog"]'), 'clicking the row chrome still opens 作品详情')
+    delete globalThis.window.twttr
+    resetTwitterWidgetsLoader()
   })
 })

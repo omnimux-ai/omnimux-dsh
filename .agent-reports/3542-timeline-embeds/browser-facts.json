@@ -1,0 +1,82 @@
+{
+  "task": "3542",
+  "issue": "https://github.com/omnimux-ai/omnimux-dsh/issues/3542",
+  "base": "f02a22135",
+  "harness": "real RivalTimeline + RivalTimelineRow from this worktree, production rival-styles/tokens injected, ui-kit shim for Button/IconButton; localhost ephemeral port 50386; real network to platform.twitter.com / tiktok.com / youtube.com / instagram.com",
+  "browser": "ego-browser (real Chromium) 1440x1000, dark data-theme, one TaskSpace per run, finished with keep:[]",
+  "lazyLoad": {
+    "totalRows": 12,
+    "embeddableRows": 11,
+    "mountedBeforeScroll": 3,
+    "mountedIdsBeforeScroll": [
+      "x-1",
+      "tt-1",
+      "yt-1"
+    ],
+    "mountedAfterScroll": 6,
+    "note": "rows more than ~600px below the viewport create no iframe; mounting happens on intersection"
+  },
+  "x": {
+    "frame": [
+      550,
+      823
+    ],
+    "src": "https://platform.twitter.com/embed/Tweet.html?...&dnt=true...&lang=zh-cn&theme=dark",
+    "articleClass": "is-embed-card",
+    "playback": "clicking the play button started the video inline (media-region pixel diff mean 49.41/42.49/44.84; frame changed); window.__detailOpens stayed 0"
+  },
+  "tiktok": {
+    "frame": [
+      287,
+      510
+    ],
+    "src": "https://www.tiktok.com/player/v1/7698442056158465294",
+    "articleClass": "is-embed-player",
+    "headerKept": true
+  },
+  "youtube": {
+    "frame": [
+      536,
+      302
+    ],
+    "src": "https://www.youtube.com/embed/aqz-KE-bpKQ?rel=0",
+    "articleClass": "is-embed-player"
+  },
+  "instagram": {
+    "frame": [
+      550,
+      740
+    ],
+    "src": "https://www.instagram.com/p/CqX0YyYvZzZ/embed/",
+    "articleClass": "is-embed-card",
+    "note": "fixture shortcode is not a live post; the card iframe and sizing are verified, the white platform page is Instagram's own rendering"
+  },
+  "fallback": {
+    "row": "dy-1",
+    "platform": "douyin",
+    "mounted": false,
+    "frames": 0,
+    "keptHeader": true,
+    "keptActions": true
+  },
+  "footerActions": [
+    "original",
+    "replicate",
+    "deconstruct",
+    "markDone"
+  ],
+  "clickGuard": {
+    "test": "programmatic click on the TikTok iframe element after the guard (#3542)",
+    "detailOpens": 0,
+    "note": "a click that lands on the embed must not open 作品详情; the X play click also stayed at 0"
+  },
+  "failures": [],
+  "screenshots": [
+    "timeline-top.png",
+    "timeline-x-playing.png",
+    "timeline-tiktok-player.png",
+    "timeline-tiktok-playing.png",
+    "timeline-youtube-player.png",
+    "timeline-douyin-fallback.png"
+  ]
+}
