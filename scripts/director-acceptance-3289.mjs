@@ -96,6 +96,14 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
     step = 'open-project'; phase = 'normal-project-entry';
     await page.goto(loginUrl);
     await visible('button[aria-label="Projects"]');
+    // A fresh task-private profile opens the first-run "Internal Testing Notice" modal; while it
+    // is open the shell is inert and sidebar clicks cannot receive input. Acknowledge it first.
+    const notice = 'button:text-is("Continue")';
+    const firstRunNoticeDismissed = await page.waitForSelector(notice, { state: 'visible', timeout: 10000 }).then(() => true).catch(() => false);
+    if (firstRunNoticeDismissed) {
+      await page.click(notice);
+      await page.waitForSelector(notice, { state: 'hidden', timeout: 15000 });
+    }
     await page.click('button[aria-label="Projects"]');
     await visible('text="New Project"'); await page.click('text="New Project"');
     await visible('input[placeholder="Project name"]');
@@ -107,7 +115,7 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
     await visible('text="打开导演台"'); await page.click('text="打开导演台"');
     await visible('.wf-director-root');
     await visible('.director-viewport-shell[data-renderer-ready="true"]', 45000);
-    record(phase, { normalUI: true, rendererReady: true });
+    record(phase, { normalUI: true, rendererReady: true, firstRunNoticeDismissed });
 
     step = 'add-actor-standard-female'; phase = 'portrait-selected';
     await page.click('button[aria-label="添加角色"]');
