@@ -311,6 +311,21 @@ function asTrimmedString(value: unknown): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+/**
+ * 媒体素材节点可能只把地址存在 mediaAssets（生视频/生图节点的产物），
+ * 表格节点重试路径没有组件侧解析后的 URL 可传，需从节点数据兜底取第一个可用地址。
+ */
+function firstMediaAssetUrl(data: Record<string, unknown>): string | undefined {
+  const assets = data.mediaAssets;
+  if (!Array.isArray(assets)) return undefined;
+  for (const asset of assets) {
+    if (!asset || typeof asset !== 'object') continue;
+    const url = asTrimmedString((asset as Record<string, unknown>).url);
+    if (url) return url;
+  }
+  return undefined;
+}
+
 function buildDerivedTableResult(returnedTableId: string, resultBody: any, defaultLabel: string): DerivedTableOutputData {
   return {
     tableId: returnedTableId,
@@ -396,11 +411,13 @@ export async function deriveVideoTable(params: DeriveVideoTableParams): Promise<
   const store = useCanvasStore.getState();
   const sourceNode = store.nodes.find((n: any) => n.id === sourceVideoNodeId);
   const sourceData = (sourceNode?.data ?? {}) as Record<string, unknown>;
+  // 重试路径没有组件侧解析后的媒体 URL：从 mediaAssets 兜底，保证生成型视频节点也能重试。
+  const assetUrl = firstMediaAssetUrl(sourceData);
   const videoPath = (kind === 'deconstruct' ? getVideoDeconstructPath : getVideoStoryboardPath)({
     realPath: asTrimmedString(sourceData.realPath),
     relativePath: asTrimmedString(sourceData.relativePath),
-    mediaUrl: params.mediaUrl ?? asTrimmedString(sourceData.mediaUrl),
-    previewUrl: params.previewUrl ?? asTrimmedString(sourceData.previewUrl),
+    mediaUrl: params.mediaUrl ?? asTrimmedString(sourceData.mediaUrl) ?? assetUrl,
+    previewUrl: params.previewUrl ?? asTrimmedString(sourceData.previewUrl) ?? assetUrl,
     workspaceId,
   });
   if (!videoPath) {
