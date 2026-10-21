@@ -24,6 +24,8 @@ import { resolve } from 'node:path'
 import { DEFINITE_RULES, isScannableSource, scanContent } from '../verify-silent-catch.mjs'
 
 const MAX_FILE_BYTES = 1024 * 1024
+/** 交付钩子有 8s 预算：单文件一次 `git show`，超过上限改为 fail-open，避免拖垮每次提交。 */
+const MAX_FILES = 300
 
 function git(root, args) {
   const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8', timeout: 8000, maxBuffer: 16 * 1024 * 1024 })
@@ -81,6 +83,9 @@ export function newSilentCatchHits(root, { baseRef, changedFiles } = {}) {
   try {
     if (!ref) ref = resolveBaseRef(root)
     if (!ref) return { hits: [], suspected: [], scanned: 0, baseRef: null, error: 'no-base-ref' }
+    if (files.length > MAX_FILES) {
+      return { hits: [], suspected: [], scanned: 0, baseRef: ref, error: 'too-many-files' }
+    }
     // 基线必须是可解析的提交：否则「基线为空」会把全部存量误判为新增。
     if (!git(root, ['rev-parse', '--verify', `${ref}^{commit}`])) {
       return { hits: [], suspected: [], scanned: 0, baseRef: ref, error: 'invalid-base-ref' }
