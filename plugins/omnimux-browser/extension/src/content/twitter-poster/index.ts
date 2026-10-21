@@ -12,7 +12,7 @@
 import { extractTweetCapture } from '../twitter-capture/extractor.ts'
 import { BRAND_MARK_COLOR } from '../surfaces/media-trigger.ts'
 import { FEATURE_FLAG, readFlag, readFlagSync, subscribeFlag } from '../../feature-flags.ts'
-import { generateOpinion, type PosterLocale } from './opinion.ts'
+import { generateOpinionResult, type PosterLocale } from './opinion.ts'
 import { openPosterModal, type PosterModalHandle } from './modal.ts'
 import { renderPoster } from './render.ts'
 import { DEFAULT_POSTER_THEME } from './themes.ts'
@@ -286,7 +286,7 @@ function createController(): PosterController {
         selectedTheme,
       ),
     )
-    const opinionPromise = generateOpinion({
+    const opinionPromise = generateOpinionResult({
       text: source.text,
       author: source.handle,
       locale: localeCode,
@@ -305,13 +305,16 @@ function createController(): PosterController {
     }
     handle.setStep('poster', 'done')
 
-    const opinion = await opinionPromise.catch(() => '')
-    handle.setStep('opinion', opinion === '' ? 'failed' : 'done')
+    const opinion = await opinionPromise.catch((error: unknown) => ({
+      text: '',
+      error: error instanceof Error ? error.message : String(error),
+    }))
+    handle.setStep('opinion', opinion.text === '' ? 'failed' : 'done', opinion.error)
 
     try {
       await savePendingPoster({
         dataUrl: poster.dataUrl,
-        text: opinion,
+        text: opinion.text,
         sourceUrl: source.url,
         theme: selectedTheme,
         createdAt: Date.now(),

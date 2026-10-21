@@ -3234,6 +3234,7 @@ export function App(): React.JSX.Element {
               <ModelSelector
                 locale={locale}
                 activePort={targetPort}
+                api={api}
                 hostDefaultModel={hostDefaultModel}
                 hostDefaultEffort={hostDefaultEffort}
                 dynamicModels={dynamicModels}

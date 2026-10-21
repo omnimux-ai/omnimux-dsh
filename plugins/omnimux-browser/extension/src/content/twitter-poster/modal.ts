@@ -27,7 +27,7 @@ export interface PosterModalHandle {
   close(): void
   isOpen(): boolean
   setPhase(phase: PosterModalPhase, message?: string): void
-  setStep(step: 'poster' | 'opinion', state: PosterStepState): void
+  setStep(step: 'poster' | 'opinion', state: PosterStepState, detail?: string): void
   selectedTheme(): PosterTheme
 }
 
@@ -220,22 +220,26 @@ export function openPosterModal(options: PosterModalOptions): PosterModalHandle 
       if (errorBox !== null) errorBox.textContent = message ?? ''
       paintPhase()
     },
-    setStep(step, state) {
+    setStep(step, state, detail) {
       const row = host.querySelector<HTMLElement>(`[data-step="${step}"]`)
       if (row === null) return
       row.dataset.state = state
       const label = row.querySelector<HTMLElement>('[data-role="state"]')
       if (label !== null) {
+        const reason = typeof detail === 'string' ? detail.trim() : ''
         label.textContent =
           state === 'done'
             ? options.locale === 'en'
               ? 'Done'
               : '完成'
             : state === 'failed'
-              ? options.locale === 'en'
-                ? 'Failed'
-                : '失败'
+              ? reason !== ''
+                ? reason.slice(0, 80)
+                : options.locale === 'en'
+                  ? 'Failed'
+                  : '失败'
               : ''
+        label.title = reason
       }
     },
   }
