@@ -269,6 +269,12 @@ test('E2E A7: 执行链路透传 targetNodeId，服务端原样复用客户端�
   assert.match(deriveBlock, /const targetNodeId = provisioning\.targetNodeId/);
   assert.match(deriveBlock, /targetNodeId,/);
   assert.doesNotMatch(deriveBlock, /updateNodeData\(\{\s*executionStatus/, '派生执行不得写源视频节点状态');
+  // hydrate 后必须再落一次完成态结算：服务端 patch 浅合并不会清掉预建节点的 executionStatus
+  assert.match(
+    deriveBlock,
+    /applyServerWorkspaceGraph\(body\.workspace, tableResult\.tableId, setNodes\);[\s\S]{0,400}applyDerivedTableSettlement\(kind,/,
+    'hydrate 后必须补一次完成态结算，避免派生节点卡在生成中',
+  );
 
   // 两个 API 客户端都声明了 targetNodeId 载荷字段
   const deconstructApi = apiClientSrc.indexOf('export function deconstructVideo');

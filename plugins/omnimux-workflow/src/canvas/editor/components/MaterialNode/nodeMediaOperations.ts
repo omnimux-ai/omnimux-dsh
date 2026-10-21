@@ -482,6 +482,15 @@ export async function deriveVideoTable(params: DeriveVideoTableParams): Promise<
       );
       if (hasTargetNode) {
         applyServerWorkspaceGraph(body.workspace, tableResult.tableId, setNodes);
+        // 服务端 patch 是数据浅合并，不会清掉预建节点上残留的 executionStatus/executionError；
+        // hydrate 后必须再落一次完成态结算，保证派生节点不会卡在「生成中」。
+        applyDerivedTableSettlement(kind, {
+          targetNodeId,
+          origin: config.origin,
+          sourceVideoNodeId,
+          label: tableResult.title,
+          tableResult,
+        });
       } else {
         applyDerivedTableSettlement(kind, {
           targetNodeId,
