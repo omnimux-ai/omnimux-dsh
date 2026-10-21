@@ -1,9 +1,9 @@
 {
   "pass": true,
   "issue": 3548,
-  "capturedAt": "2026-10-21T07:44:25.193Z",
-  "sourceCommit": "b826e660dd63f4d908fc04fd17bed162fdc1c398",
-  "sourceDirty": true,
+  "capturedAt": "2026-10-21T07:44:32.893Z",
+  "sourceCommit": "1ecd6d02aef203da13be3f59e2bbbd6a45fae64d",
+  "sourceDirty": false,
   "browser": "ego-lite",
   "assertions": [
     {
