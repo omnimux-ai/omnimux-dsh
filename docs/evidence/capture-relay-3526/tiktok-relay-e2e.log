@@ -1,0 +1,6 @@
+HOST http://127.0.0.1:52963
+CLICK clicked TOAST 已保存到 OmniMux 灵感素材库！ after 1410ms
+ROW {"id":"insp_7c98e468","type":"video","import_status":"ready","media_urls":["/omnimux/inspiration/local/media/videos/video_67f89a4b3204b21b09a0519a_0.mp4"],"local_paths":{"video":"/tmp/omnimux-relay-e2e-home-1792561630294/omnimux/inspirations/media/videos/video_67f89a4b3204b21b09a0519a_0.mp4"},"import_error":null}
+FILE {"localVideo":"/tmp/omnimux-relay-e2e-home-1792561630294/omnimux/inspirations/media/videos/video_67f89a4b3204b21b09a0519a_0.mp4","fileSize":3288875,"served":2048}
+E2E_RESULT PASS
+CLEANUP status=200

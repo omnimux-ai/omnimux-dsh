@@ -97,6 +97,12 @@ import {
 } from './save-target.ts'
 import { loopbackFetch } from '../shared/loopback-fetch.ts'
 import {
+  activeHttpTabId,
+  forwardMediaChunk,
+  relayCapturedMedia,
+  shouldRelayPost,
+} from './media-relay.ts'
+import {
   INSPIRATION_CAPTURE_PATH,
   buildCaptureRequestBody,
   readCaptureSaveOutcome,
@@ -1940,6 +1946,29 @@ export async function capturePostFromActiveTab(): Promise<CaptureAttempt> {
   return { kind: lastReply === null ? 'capture-unavailable' : 'capture-empty' }
 }
 
+/** Cache one captured post for the panel's media strip; a cache miss never fails a save. */
+async function cacheCapturedPost(post: NonNullable<ReturnType<typeof readCapturedPost>>): Promise<void> {
+  const firstMedia = post.media[0]
+  try {
+    await appendMediaInspiration({
+      id: `insp_${Date.now().toString(36)}`,
+      src: post.cover_url || firstMedia?.url || post.source_url,
+      type: (post.content_shape === 'video' || firstMedia?.type === 'video') ? 'video' : 'image',
+      pageUrl: post.source_url,
+      pageTitle: post.title,
+      alt: post.content,
+      previewSrc: post.cover_url || firstMedia?.url || '',
+      width: 0,
+      height: 0,
+      naturalWidth: 0,
+      naturalHeight: 0,
+      capturedAt: Date.now(),
+    })
+  } catch {
+    // 缓存失败不影响已入库的作品
+  }
+}
+
 /**
  * 把页面提取到的作品直传 host 下载入库。
  *
@@ -2749,6 +2778,14 @@ armBridgeKeepalive()
 // 监听来自前台面板的实例切换与设置更新消息，彻底打通连接业务逻辑
 chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
   const m = msg as { type?: string; payload?: Record<string, unknown> } | null
+  if (m?.type === 'CAPTURE_MEDIA_CHUNK') {
+    // 内容脚本每读完 1MB 就把 base64 块交过来；host 接受后才回 ack，保证顺序。
+    void forwardMediaChunk(m as unknown as Record<string, unknown>).then(
+      (result) => sendResponse(result),
+      (error) => sendResponse({ ok: false, error: String(error instanceof Error ? error.message : error) }),
+    )
+    return true
+  }
   if (m?.type === 'SWITCH_DSH_PORT') {
     const port = m.payload?.port
     const bridgeUrl = (typeof m.payload?.bridgeUrl === 'string' && m.payload.bridgeUrl)
@@ -2933,6 +2970,9 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
 
       // 2. 作品页：先在页面内提取（内容脚本可能尚未注入，带短暂重试），成功即由
       //    host 下载落盘；确实失败才继续走 import-url，并把失败原因带回面板。
+      // 2. 作品页：先在页面内提取（内容脚本可能尚未注入，带短暂重试）。TikTok/抖音
+      //    的 CDN 拒绝 host 下载，改由页面内取字节分块回传；其它平台照旧由 host 下载。
+      //    两条路都失败才继续走 import-url，并把真实原因带回面板。
       let captureFallback: string | undefined
       if (payload?.capturePage === true) {
         const attempt = await capturePostFromActiveTab()
@@ -2941,27 +2981,21 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
             // 页面只有标题、没有可下载素材：直传不会写入任何东西，按「无作品」回退。
             captureFallback = 'capture-empty'
           } else {
+            if (shouldRelayPost(attempt.post)) {
+              const tabId = await activeHttpTabId()
+              const relayed = tabId === null
+                ? { ok: false as const, reason: 'capture-media-unavailable' }
+                : await relayCapturedMedia(attempt.post, tabId, candidatePorts)
+              if (relayed.ok) {
+                await cacheCapturedPost(attempt.post)
+                sendResponse({ ok: true, target: 'inspiration', via: 'relay' })
+                return
+              }
+              captureFallback = relayed.reason
+            }
             const captureResult = await saveCapturedPostOnHost(attempt.post, candidatePorts)
             if (captureResult.ok) {
-              const firstMedia = attempt.post.media[0]
-              try {
-                await appendMediaInspiration({
-                  id: `insp_${Date.now().toString(36)}`,
-                  src: attempt.post.cover_url || firstMedia?.url || attempt.post.source_url,
-                  type: (attempt.post.content_shape === 'video' || firstMedia?.type === 'video') ? 'video' : 'image',
-                  pageUrl: attempt.post.source_url,
-                  pageTitle: attempt.post.title,
-                  alt: attempt.post.content,
-                  previewSrc: attempt.post.cover_url || firstMedia?.url || '',
-                  width: 0,
-                  height: 0,
-                  naturalWidth: 0,
-                  naturalHeight: 0,
-                  capturedAt: Date.now(),
-                })
-              } catch {
-                // 缓存失败不影响已入库的作品
-              }
+              await cacheCapturedPost(attempt.post)
               sendResponse({
                 ok: true,
                 target: 'inspiration',
@@ -2970,7 +3004,7 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
               })
               return
             }
-            captureFallback = 'capture-rejected'
+            if (captureFallback === undefined) captureFallback = 'capture-rejected'
           }
         } else {
           captureFallback = attempt.kind

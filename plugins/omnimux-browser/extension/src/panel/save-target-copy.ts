@@ -123,6 +123,13 @@ export function saveFallbackToast(fallback: string | undefined, locale: UiLocale
       'Saved to Inspiration Library (in-page capture was not stored; parsed in the cloud)',
     )
   }
+  if (reason === 'capture-media-unavailable') {
+    return localized(
+      locale,
+      '已保存到灵感库（页面媒体字节读取失败，已转云端解析）',
+      'Saved to Inspiration Library (page media bytes were unavailable; parsed in the cloud)',
+    )
+  }
   if (reason === 'no-tab') {
     return localized(
       locale,

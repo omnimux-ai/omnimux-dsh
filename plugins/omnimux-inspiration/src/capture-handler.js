@@ -328,7 +328,7 @@ async function resolveCaptureCover(args) {
  * creation reference) reads a capture exactly like an import.
  * @param {{ parsed: Record<string, any>, platform: string, download: Record<string, any>, cover: { path: string, renderable: boolean | null } }} args
  */
-function buildCaptureRecord(args) {
+export function buildCaptureRecord(args) {
   const { parsed, platform, download, cover } = args
   const savedVideos = download.mediaItems.filter((item) => item.type === 'video')
   const savedImages = download.mediaItems.filter((item) => item.type === 'image')

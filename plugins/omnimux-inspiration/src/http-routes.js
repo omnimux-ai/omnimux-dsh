@@ -15,6 +15,11 @@ import {
 } from './http-handlers.js'
 import { handleCollectionRequest } from './collection-handlers.js'
 import { handleCapture } from './capture-handler.js'
+import {
+  handleCaptureCommit,
+  handleCaptureMediaChunk,
+  handleCaptureMediaSession,
+} from './capture-relay.js'
 import { handleRadarKeywords, handleRadarMatch } from './radar/radar-handlers.js'
 import { handleSaveCreationDraft, handlePrepareCreationReferences, handleMaterializeCreationReferences } from './creation-handlers.js'
 import { detectPlatformFromUrl } from './url-normalizer.js'
@@ -44,6 +49,9 @@ const ROUTE_HANDLERS = {
   'import-url': handleImportUrl,
   'fetch-media': handleFetchMedia,
   capture: handleCapture,
+  'capture-media-session': handleCaptureMediaSession,
+  'capture-media-chunk': handleCaptureMediaChunk,
+  'capture-commit': handleCaptureCommit,
   analyze: handleAnalyze,
   translate: handleTranslate,
   'creation-draft': handleSaveCreationDraft,
@@ -190,6 +198,9 @@ const SPECIAL_PATHS = {
   [`${LOCAL_PREFIX}/import-url`]: { POST: 'import-url' },
   [`${LOCAL_PREFIX}/fetch-media`]: { POST: 'fetch-media' },
   [`${LOCAL_PREFIX}/capture`]: { POST: 'capture' },
+  [`${LOCAL_PREFIX}/capture-media-session`]: { POST: 'capture-media-session' },
+  [`${LOCAL_PREFIX}/capture-media-chunk`]: { POST: 'capture-media-chunk' },
+  [`${LOCAL_PREFIX}/capture-commit`]: { POST: 'capture-commit' },
   [`${LOCAL_PREFIX}/batch-delete`]: { POST: 'batch-delete', DELETE: 'batch-delete' },
   [`${LOCAL_PREFIX}/radar/keywords`]: { POST: 'radar-keywords' },
   [`${LOCAL_PREFIX}/radar/match`]: { POST: 'radar-match' },
