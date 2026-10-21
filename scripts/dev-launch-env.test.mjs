@@ -52,24 +52,27 @@ test('launchApp 允许显式环境与自定义 spawn', () => {
   assert.deepEqual(seen, [{ command: 'open', args: ['-a', 'OmniMux'], options: { stdio: 'inherit', env } }]);
 });
 
+const OPEN_CALL = /(?:spawn|spawnSync|exec|execFile|execFileSync|execSync)\(\s*['"`]open['"`][\s\S]{0,400}?\)/g;
+
 function assertNoBareOpen(rel, source) {
-  for (const line of source.split('\n')) {
-    if (/(?:spawnSync|execFileSync|execSync)\('open'/.test(line)) {
-      assert.match(line, /\benv\b/, `${rel}: 裸 open 必须显式携带 env`);
-    }
+  for (const match of source.matchAll(OPEN_CALL)) {
+    assert.match(match[0], /\benv\s*:/, `${rel}: open 调用必须显式携带 env`);
+    assert.doesNotMatch(match[0], /env\s*:\s*process\.env/, `${rel}: 不得直接继承 process.env`);
   }
 }
 
-test('所有 Dev/Prod 拉起入口都经共享 helper，且裸 open 必须携带 env', () => {
+test('所有 Dev/Prod 拉起入口都经共享 helper，且 open 调用必须携带剔除后的 env', () => {
   for (const rel of ['scripts/omnimux.mjs', 'scripts/dev-app-unlock.mjs', 'scripts/reload-dev-app.mjs']) {
     const source = readFileSync(join(root, rel), 'utf8');
     assert.match(source, /\.\/dev-launch-env\.mjs/, `${rel} 必须使用共享拉起环境`);
     assert.match(source, /\blaunchApp\(/, `${rel} 必须经 launchApp 拉起`);
     assertNoBareOpen(rel, source);
   }
-  // 已废弃的 workflow forwarder 仍可拉起 Prod：它自包含（插件不能 import 根脚本），
-  // 但同样不得把 ELECTRON_RUN_AS_NODE 带进 Electron。
+  // 已废弃的 workflow forwarder 仍可拉起 Prod：它自包含（插件 npm 包不含仓库根
+  // scripts，不能 import），但同样不得把 ELECTRON_RUN_AS_NODE 带进 Electron。
   const deploy = readFileSync(join(root, 'plugins/omnimux-workflow/scripts/deploy.mjs'), 'utf8');
   assertNoBareOpen('plugins/omnimux-workflow/scripts/deploy.mjs', deploy);
+  assert.match(deploy, /launchEnv\s*=\s*\{\s*\.\.\.process\.env\s*\}/, 'deploy.mjs 必须复制父环境');
+  assert.match(deploy, /delete launchEnv\.ELECTRON_RUN_AS_NODE/, 'deploy.mjs 必须剔除 ELECTRON_RUN_AS_NODE');
   assert.match(deploy, /env:\s*launchEnv/, 'deploy.mjs 的 open 必须传剔除后的 launchEnv');
 });

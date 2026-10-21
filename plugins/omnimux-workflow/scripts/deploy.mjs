@@ -26,8 +26,8 @@ const syncToApp = join(productRoot, 'scripts/sync-to-app.sh')
 const restart = process.argv.includes('--restart')
 // Agent shells often carry ELECTRON_RUN_AS_NODE=1; `open` inherits it, so the
 // Electron app would boot as Node and exit immediately. Keep this deprecated
-// forwarder self-contained: plugin scripts must not import repository-root
-// helpers (packaging/runtime boundary), so the one variable is stripped here.
+// forwarder self-contained: the plugin npm package does not ship the repo-root
+// scripts, so the one variable is stripped here instead of importing the helper.
 const launchEnv = { ...process.env }
 delete launchEnv.ELECTRON_RUN_AS_NODE
 
@@ -54,4 +54,4 @@ console.log('\n== restart OmniMux（deploy --restart 兼容路径）==')
 spawnSync('pkill', ['-f', 'OmniMux.app'], { stdio: 'ignore' })
 spawnSync('sleep', ['1'], { stdio: 'ignore' })
 const open = spawnSync('open', ['-a', 'OmniMux'], { stdio: 'inherit', env: launchEnv })
-process.exit(open.status ?? 0)
+process.exit(open.status ?? 1)

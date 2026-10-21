@@ -157,6 +157,24 @@ describe('pickNativePath macOS JXA script', () => {
       () => pickNativePath('file', { platform: 'darwin', run: async () => { throw unrelatedStderr } }),
       (error) => error instanceof PickerError && error.code === 'picker-failed',
     )
+
+    const nonNumericCode = Object.assign(new Error('open failed'), {
+      code: 'EACCES',
+      stderr: 'execution error: User canceled. (-128)',
+    })
+    await assert.rejects(
+      () => pickNativePath('file', { platform: 'darwin', run: async () => { throw nonNumericCode } }),
+      (error) => error instanceof PickerError && error.code === 'picker-failed',
+    )
+
+    const otherAppleScriptError = Object.assign(new Error('osascript exited with code 1'), {
+      code: 1,
+      stderr: 'execution error: Something went wrong. (-2700)',
+    })
+    await assert.rejects(
+      () => pickNativePath('file', { platform: 'darwin', run: async () => { throw otherAppleScriptError } }),
+      (error) => error instanceof PickerError && error.code === 'picker-failed',
+    )
   })
 
   it('maps invalid picker output to picker-failed and keeps the raw stdout diagnosis', async () => {

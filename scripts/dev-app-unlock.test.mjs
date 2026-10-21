@@ -19,7 +19,10 @@ test('clearCanvasCache returns clear false on unreachable port', async () => {
 
 test('unlockDevApp launches through launchApp with an env free of ELECTRON_RUN_AS_NODE', async () => {
   const previous = process.env.ELECTRON_RUN_AS_NODE;
+  const previousPath = process.env.PATH;
   process.env.ELECTRON_RUN_AS_NODE = '1';
+  // 若 spawn 转发回归，launchApp 会退回真实 open；清空 PATH 让它不可能真的拉起共用 Dev。
+  process.env.PATH = '';
   try {
     const launches = [];
     const spawn = (command, args, options) => {
@@ -40,6 +43,8 @@ test('unlockDevApp launches through launchApp with an env free of ELECTRON_RUN_A
   } finally {
     if (previous === undefined) delete process.env.ELECTRON_RUN_AS_NODE;
     else process.env.ELECTRON_RUN_AS_NODE = previous;
+    if (previousPath === undefined) delete process.env.PATH;
+    else process.env.PATH = previousPath;
   }
 });
 
