@@ -1,0 +1,26 @@
+{
+  "capturedAt": "2026-10-21T11:20:05.006Z",
+  "harness": "http://127.0.0.1:4934/",
+  "healed": {
+    "executionStatus": "error",
+    "executionError": "上次深度视频转换被中断，请重试",
+    "hasRetry": true
+  },
+  "result": {
+    "executionStatus": "completed",
+    "realPath": "/tmp/omnimux-depth/depth_retry.mp4",
+    "mediaUrl": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    "depthCalls": 1,
+    "calls": [
+      {
+        "url": "/omnimux-workflow/api/workspaces/ws_harness/video-depth",
+        "body": {
+          "nodeId": "n-video",
+          "videoPath": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+          "title": "成片视频 深度视频"
+        }
+      }
+    ],
+    "nodeCount": 6
+  }
+}

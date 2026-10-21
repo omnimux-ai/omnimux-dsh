@@ -158,6 +158,7 @@ const en: Record<DictKey, string> = {
   'depthVideo.toast.success': 'Depth video generated into video node',
   'depthVideo.running': 'Generating depth video…',
   'depthVideo.toast.failed': 'Depth video generation failed, please retry',
+  'depthVideo.toast.interrupted': 'The previous depth video conversion was interrupted. Please retry',
   'depthVideo.noWorkspace': 'Workspace not ready',
   'depthVideo.noVideo': 'No video file found',
   // Video deconstruction (deconstructVideo.*)

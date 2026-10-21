@@ -107,6 +107,39 @@ test('provisioning: 下游仍在运行时不重复触发 (noop)', () => {
   assert.equal(plan.nodePatches.length, 0);
 });
 
+test('provisioning: running 但无活跃请求时重跑，不 noop（Issue #3586）', () => {
+  const runningNode = {
+    id: 'depth_running',
+    type: 'material',
+    data: {
+      materialType: 'video',
+      executionStatus: 'running',
+      origin: VIDEO_DEPTH_ORIGIN,
+      sourceVideoNodeId: 'video_1',
+      realPath: '/tmp/old.mp4',
+      mediaUrl: '/old.mp4',
+    },
+    position: { x: 600, y: 200 },
+  };
+  const input = {
+    videoNodeId: 'video_1',
+    videoPosition: { x: 100, y: 200 },
+    videoNodeWidth: 360,
+    label: '深度视频',
+    currentNodes: [sourceVideo, runningNode],
+    currentEdges: [{ source: 'video_1', target: 'depth_running' }],
+  };
+
+  const active = planVideoDepthProvisioning({ ...input, isNodeActive: () => true });
+  assert.equal(active.mode, 'noop', '本渲染器确实在跑 → 防抖');
+
+  const stale = planVideoDepthProvisioning({ ...input, isNodeActive: () => false });
+  assert.equal(stale.mode, 'update', '失联的 running 必须重跑');
+  assert.equal(stale.targetNodeId, 'depth_running');
+  assert.equal(stale.nodePatches[0].data.executionStatus, 'running');
+  assert.equal(stale.nodePatches[0].data.realPath, undefined, '重跑前清旧媒体');
+});
+
 test('provisioning: 同 y 已有其它下游节点时纵向错开，避免重叠', () => {
   const plan = planVideoDepthProvisioning({
     videoNodeId: 'video_1',

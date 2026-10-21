@@ -60,5 +60,5 @@ test('E2E 解释器发现：候选链版本优先，显式配置优先且不回�
 test('E2E 缓存与环境：自动发现结果被缓存，深度结果回传实际解释器', () => {
   assert.match(depthSrc, /depthPythonCache\.set\(cacheKey, pythonBin\)/, '自动发现成功后必须缓存');
   assert.match(depthSrc, /const cached = depthPythonCache\.get\(cacheKey\)/, '重复调用必须命中缓存');
-  assert.match(depthSrc, /python: pythonBin/, '深度结果必须回传实际使用的解释器');
+  assert.match(depthSrc, /python: runtime\.kind === 'uv'/, '深度结果必须回传实际使用的运行时（系统 Python 或 uv）');
 });

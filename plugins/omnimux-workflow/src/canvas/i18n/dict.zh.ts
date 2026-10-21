@@ -164,6 +164,7 @@ const zh = {
   'depthVideo.toast.success': '深度视频已生成，视频节点已就绪',
   'depthVideo.running': '正在生成深度视频…',
   'depthVideo.toast.failed': '深度视频生成失败，请重试',
+  'depthVideo.toast.interrupted': '上次深度视频转换被中断，请重试',
   'depthVideo.noWorkspace': '工作区未就绪',
   'depthVideo.noVideo': '未找到可用视频文件',
   // 视频内容拆解（deconstructVideo.*）

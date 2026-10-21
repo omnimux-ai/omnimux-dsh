@@ -67,6 +67,12 @@ export interface PlanVideoDepthProvisioningInput {
   currentNodes: VideoDepthGraphNode[];
   currentEdges: VideoDepthGraphEdge[];
   createNodeId?: () => string;
+  /**
+   * 该下游节点是否仍有本渲染器的活跃请求（Issue #3586）。缺省视为活跃，
+   * 保持「running 时 noop 防抖」的旧行为；宿主重启/页面重载后由调用方传入
+   * 真实活跃判定，让失联的 running 节点可以真正重跑。
+   */
+  isNodeActive?: (nodeId: string) => boolean;
 }
 
 export interface PlanVideoDepthSettlementInput {
@@ -140,7 +146,8 @@ export function planVideoDepthProvisioning(
   const nodeLabel = input.label || '深度视频';
 
   if (existingNode) {
-    if (existingNode.data?.executionStatus === 'running') {
+    const stillActive = input.isNodeActive ? input.isNodeActive(existingNode.id) : true;
+    if (existingNode.data?.executionStatus === 'running' && stillActive) {
       return {
         mode: 'noop',
         targetNodeId: existingNode.id,

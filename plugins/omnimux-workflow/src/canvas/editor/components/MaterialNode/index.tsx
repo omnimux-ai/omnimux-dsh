@@ -60,6 +60,12 @@ import {
   planVideoDepthProvisioning,
   planVideoDepthSettlement,
 } from '../../utils/planVideoDepthDownstream.ts';
+import {
+  isDepthConversionActive,
+  registerDepthConversion,
+  releaseDepthConversion,
+  shouldSelfHealDepthNode,
+} from '../../utils/depthConversionActivity.ts';
 import { convertVideoToDepth, extractAudioFromVideo, extractVideoFromUrl } from '../../../bridge/apiClient.ts';
 import { planSelectAndPatchNode } from '../../utils/planSelectAndPatchNode';
 import { useExecutionStore } from '../../../store/executionStore';
@@ -813,6 +819,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       label: depthLabel,
       currentNodes: store.nodes as any,
       currentEdges: store.edges as any,
+      isNodeActive: isDepthConversionActive,
     });
 
     if (provision.mode === 'noop') {
@@ -820,19 +827,21 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     }
 
     const targetNodeId = provision.targetNodeId;
-    const nodesToAdd = attachVideoSourceToNodes(provision.addNodes, videoPath, workspaceId);
-    const patchesToApply = attachVideoSourceToNodes(provision.nodePatches, videoPath, workspaceId);
-
-    applyCanvasInputMutation({
-      addNodes: nodesToAdd as any,
-      addEdges: provision.addEdges as any,
-      nodePatches: patchesToApply as any,
-    });
-
-    selectTargetNode(targetNodeId, setNodes);
-
+    // 先登记活跃，再写 running：避免挂载自愈把刚刚开始的转换误判为失联。
+    registerDepthConversion(targetNodeId);
     setIsConvertingDepth(true);
     try {
+      const nodesToAdd = attachVideoSourceToNodes(provision.addNodes, videoPath, workspaceId);
+      const patchesToApply = attachVideoSourceToNodes(provision.nodePatches, videoPath, workspaceId);
+
+      applyCanvasInputMutation({
+        addNodes: nodesToAdd as any,
+        addEdges: provision.addEdges as any,
+        nodePatches: patchesToApply as any,
+      });
+
+      selectTargetNode(targetNodeId, setNodes);
+
       const result = await convertVideoToDepth(workspaceId, {
         nodeId: id,
         videoPath,
@@ -865,6 +874,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       applyCanvasInputMutation({ nodePatches: settlement.nodePatches as any });
       toast.error(message);
     } finally {
+      releaseDepthConversion(targetNodeId);
       setIsConvertingDepth(false);
     }
   }, [applyCanvasInputMutation, id, isConvertingDepth, label, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, nodeWidth, previewUrl, setNodes, t]);
@@ -1328,6 +1338,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     }
 
     const title = label || t('depthVideo.nodeLabel');
+    registerDepthConversion(id);
     updateNodeData({
       executionStatus: 'running',
       executionError: undefined,
@@ -1364,9 +1375,23 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       updateNodeData({ executionStatus: 'error', executionError: message, status: 'failed' });
       toast.error(message);
     } finally {
+      releaseDepthConversion(id);
       setIsConvertingDepth(false);
     }
   }, [id, isConvertingDepth, label, nodeData, t, updateNodeData]);
+
+  // 页面重载/宿主重启后，没有活跃请求的 running 深度节点收敛为可重试错误（Issue #3586）
+  useEffect(() => {
+    if (!shouldSelfHealDepthNode(nodeData as unknown as Record<string, unknown>, id)) return;
+    updateNodeData({
+      executionStatus: 'error',
+      executionError: t('depthVideo.toast.interrupted'),
+      status: 'failed',
+      realPath: undefined,
+      mediaUrl: undefined,
+      previewUrl: undefined,
+    });
+  }, [id, nodeData, t, updateNodeData]);
 
   const handleMediaRetry = useCallback(() => {
     if (materialType === 'video' && nodeData.origin === 'video_depth') {
