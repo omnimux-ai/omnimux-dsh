@@ -11,7 +11,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createTestEnvironmentStarter } from './test-env-bootstrap.mjs';
 import { validateEvidence } from './evidence-contract.mjs';
-import { createAppQaRunner, resolveWorktreeRoot, isAppReady, assertBlankSessionHubPath } from './worktree-app-qa.mjs';
+import { createAppQaRunner, resolveWorktreeRoot, isAppReady, assertBlankSessionHubPath, isJourneyAssertionName, isAllowedAssertionName } from './worktree-app-qa.mjs';
 
 const publicRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const publicRepository = resolve(publicRoot, '../..');
@@ -310,6 +310,86 @@ test('runner 对合规根产出报告且 cleanup 只调用一次', async () => {
     assert.equal(/loginUrl/.test(item.value), false, '报告不得包含 loginUrl');
     assert.doesNotMatch(item.value, /unit-cookie-value|unit-secret-never-log/, '报告只保留分类码，不含 cookie 或清理异常原文');
   }
+});
+
+test('legacy journey 断言带 journey: 前缀时保留并计入通过，未知名仍被拒绝', async () => {
+  const root = '/repo/.worktrees/task';
+  const gitdir = '/repo/.git/worktrees/task';
+  const files = new Set([root + '/.git', gitdir + '/commondir', gitdir + '/gitdir']);
+  const dirs = new Set(['/repo', '/repo/.worktrees', root, '/repo/.git', '/repo/.git/worktrees', gitdir]);
+  const bodies = new Map([
+    [root + '/.git', 'gitdir: ' + gitdir + '\n'],
+    [gitdir + '/commondir', '../..\n'],
+    [gitdir + '/gitdir', root + '/.git\n'],
+  ]);
+  const written = [];
+  const io = {
+    lstatSync: path => {
+      if (!files.has(path) && !dirs.has(path)) throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      return { isSymbolicLink: () => false, isDirectory: () => dirs.has(path), isFile: () => files.has(path) };
+    },
+    realpathSync: path => path,
+    readFileSync: path => {
+      if (!bodies.has(path)) throw new Error('unapproved read: ' + path);
+      return bodies.get(path);
+    },
+    mkdirSync: () => {},
+    writeFileSync: (path, value) => written.push({ path, value }),
+  };
+  let browserAssertions = [];
+  const run = createAppQaRunner({
+    io,
+    uuid: () => 'run-journey-whitelist',
+    now: () => new Date('2026-09-14T00:00:00.000Z'),
+    fetchImpl: async () => ({
+      status: 303,
+      headers: { getSetCookie: () => ['dsh-auth-unit=unit-cookie-value; Path=/; HttpOnly'] },
+    }),
+    startEnv: async () => ({
+      origin: 'http://127.0.0.1:15000',
+      summary: Object.freeze({ mode: 'ui', evidenceLevel: 'core-only', taskPluginsInstalled: false }),
+      loginUrl: 'http://127.0.0.1:15000/?token=unit-only',
+      cleanup: async () => ({ cleaned: true }),
+    }),
+    driveBrowser: async ({ journey }) => ({
+      cdpPort: 15001,
+      // 真实 driver 只在传入 journey 时追加 journey 断言；桩保持同一行为。
+      assertions: journey
+        ? browserAssertions
+        : browserAssertions.filter(item => !isJourneyAssertionName(item.name)),
+      screenshot: { path: '/tmp/app-home.png', width: 1280, height: 713, bytes: 100 },
+    }),
+  });
+
+  // 纯判定：前缀后必须非空，且只有 legacy + 传入 journey 时放行；契约模式永远只认预声明集合。
+  assert.equal(isJourneyAssertionName('journey:C1-derived-node-created'), true);
+  assert.equal(isJourneyAssertionName('journey:'), false, '空后缀不得放行');
+  assert.equal(isJourneyAssertionName('journey-load'), false, '错误形态名不得当作 journey 断言');
+  assert.equal(isJourneyAssertionName('unknown:x'), false);
+  assert.equal(isAllowedAssertionName('journey:x', [], { request: false, journey: null }), false);
+  assert.equal(isAllowedAssertionName('journey:x', [], { request: false, journey: 'qa/journey.mjs' }), true);
+  assert.equal(isAllowedAssertionName('journey:x', [], { request: true, journey: 'qa/journey.mjs' }), false, '契约模式不得放行未声明 journey 断言');
+  assert.equal(isAllowedAssertionName('journey:declared', ['journey:declared'], { request: true, journey: 'qa/journey.mjs' }), true);
+  assert.equal(isAllowedAssertionName('app-dom-mounted', ['app-dom-mounted'], { request: true }), true);
+
+  browserAssertions = [
+    { name: 'app-dom-mounted', pass: true },
+    { name: 'journey:C1-derived-node-created', pass: true },
+  ];
+  const allowed = await run({ root, repo: '/repo', journey: 'qa/journey.mjs' });
+  assert.equal(allowed.pass, true, 'legacy journey 断言必须计入通过');
+  assert.ok(allowed.assertions.some(item => item.name === 'journey:C1-derived-node-created'));
+  assert.equal(allowed.errors.includes('TEST_APP_QA_ASSERTION_SET_MISMATCH'), false);
+
+  browserAssertions = [
+    { name: 'app-dom-mounted', pass: true },
+    { name: 'journey:C1-derived-node-created', pass: true },
+    { name: 'unknown:not-allowed', pass: true },
+  ];
+  const rejected = await run({ root, repo: '/repo', journey: 'qa/journey.mjs' });
+  assert.equal(rejected.pass, false);
+  assert.ok(rejected.errors.includes('TEST_APP_QA_ASSERTION_SET_MISMATCH'));
+  assert.equal(rejected.assertions.some(item => item.name === 'unknown:not-allowed'), false);
 });
 
 test('assertBlankSessionHubPath 进入空白会话并断言 Explore / asset-hub', async () => {
