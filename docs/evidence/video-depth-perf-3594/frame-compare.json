@@ -1,0 +1,11 @@
+{
+  "corr": 0.9918,
+  "mae_norm": 0.0419,
+  "fastMean": 68.3,
+  "qualityMean": 58.69,
+  "shape": [
+    1024,
+    576
+  ],
+  "note": "fast=plugin run (int8/384); quality=engine direct (float/518)"
+}

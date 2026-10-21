@@ -37,6 +37,14 @@ export function parseVideoConfig(value) {
   const envPython = process.env.OMNIMUX_VIDEO_PYTHON_PATH || process.env.DSH_VIDEO_PYTHON_PATH
   if (typeof envPython === 'string' && envPython.trim() !== '') pythonPath = envPython
 
+  let depthMode = typeof video.depthMode === 'string' ? video.depthMode.trim() : ''
+  const envDepthMode = process.env.OMNIMUX_VIDEO_DEPTH_MODE
+  if (typeof envDepthMode === 'string' && envDepthMode.trim() !== '') depthMode = envDepthMode.trim()
+  if (depthMode === '') depthMode = 'fast'
+  if (depthMode !== 'fast' && depthMode !== 'quality') {
+    throw new Error(`Config.video.depthMode must be 'fast' or 'quality', got ${JSON.stringify(depthMode)}`)
+  }
+
   let modelsDir = typeof video.modelsDir === 'string' ? video.modelsDir : ''
   const envModels = process.env.OMNIMUX_VIDEO_MODELS_DIR || process.env.DSH_VIDEO_MODELS_DIR
   if (typeof envModels === 'string' && envModels.trim() !== '') modelsDir = envModels
@@ -67,7 +75,7 @@ export function parseVideoConfig(value) {
 
   // Unknown top-level fields are ignored.
   return {
-    video: { ffmpegPath, maxConcurrent: n, pythonPath, modelsDir },
+    video: { ffmpegPath, maxConcurrent: n, pythonPath, modelsDir, depthMode },
     understand: {
       defaultModel,
       maxTokens,

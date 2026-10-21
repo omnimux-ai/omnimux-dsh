@@ -41,11 +41,29 @@ except ImportError:
 IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(1, 1, 3)
 IMAGENET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32).reshape(1, 1, 3)
 
-MODEL_FILENAME = "depth_anything_v2_small.onnx"
-MODEL_URLS = [
-    "https://hf-mirror.com/onnx-community/depth-anything-v2-small/resolve/main/onnx/model.onnx",
-    "https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/main/onnx/model.onnx",
-]
+MODEL_PRESETS = {
+    # Fast: int8 quantized Small model, long edge 384. ~2x faster than float CPU
+    # and ~5x faster than the old CoreML-first default (measured on Apple Silicon).
+    "fast": {
+        "filename": "depth_anything_v2_small_int8.onnx",
+        "urls": [
+            "https://hf-mirror.com/onnx-community/depth-anything-v2-small/resolve/main/onnx/model_quantized.onnx",
+            "https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/main/onnx/model_quantized.onnx",
+        ],
+        "max_edge": 384,
+    },
+    # Quality: original float32 model, long edge 518.
+    "quality": {
+        "filename": "depth_anything_v2_small.onnx",
+        "urls": [
+            "https://hf-mirror.com/onnx-community/depth-anything-v2-small/resolve/main/onnx/model.onnx",
+            "https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/main/onnx/model.onnx",
+        ],
+        "max_edge": 518,
+    },
+}
+MODEL_FILENAME = MODEL_PRESETS["quality"]["filename"]
+MODEL_URLS = MODEL_PRESETS["quality"]["urls"]
 
 
 def default_models_dir() -> Path:
@@ -58,13 +76,13 @@ def default_models_dir() -> Path:
     return Path.home() / ".dsh" / "models" / "depth"
 
 
-def ensure_model(model_path: Path) -> Path:
+def ensure_model(model_path: Path, urls: list[str] | None = None) -> Path:
     if model_path.exists() and model_path.stat().st_size > 1_000_000:
         return model_path
     model_path.parent.mkdir(parents=True, exist_ok=True)
     part = model_path.with_suffix(model_path.suffix + ".part")
     last_err = None
-    for url in MODEL_URLS:
+    for url in (urls or MODEL_URLS):
         try:
             print(f"[INFO] Downloading Depth Anything V2 Small ONNX from {url}", file=sys.stderr)
 
@@ -94,7 +112,9 @@ def ensure_model(model_path: Path) -> Path:
 def pick_providers(prefer: str = "auto") -> list[str]:
     avail = ort.get_available_providers()
     order = {
-        "auto": ["CoreMLExecutionProvider", "CUDAExecutionProvider", "CPUExecutionProvider"],
+        # CoreML only claims ~2/3 of this graph and loses time on cross-EP copies
+        # (measured 3.7 fps vs 6.8 fps on CPU), so CPU is preferred over CoreML.
+        "auto": ["CUDAExecutionProvider", "CPUExecutionProvider", "CoreMLExecutionProvider"],
         "coreml": ["CoreMLExecutionProvider", "CPUExecutionProvider"],
         "cuda": ["CUDAExecutionProvider", "CPUExecutionProvider"],
         "cpu": ["CPUExecutionProvider"],
@@ -149,8 +169,12 @@ def side_by_side(bgr: np.ndarray, gray: np.ndarray) -> np.ndarray:
 
 def run(args: argparse.Namespace) -> dict:
     models_dir = Path(args.models_dir).expanduser() if args.models_dir else default_models_dir()
-    model_path = Path(args.model).expanduser() if args.model else (models_dir / MODEL_FILENAME)
-    model_path = ensure_model(model_path)
+    preset_name = args.preset
+    preset = MODEL_PRESETS[preset_name]
+    model_path = Path(args.model).expanduser() if args.model else (models_dir / preset["filename"])
+    model_path = ensure_model(model_path, preset["urls"])
+    # -1 = use the preset default; 0 = native rounded; >0 = explicit long edge.
+    max_edge = args.max_edge if args.max_edge >= 0 else preset["max_edge"]
 
     providers = pick_providers(args.provider)
     sess = ort.InferenceSession(str(model_path), providers=providers)
@@ -200,7 +224,7 @@ def run(args: argparse.Namespace) -> dict:
             ok, frame = cap.read()
             if not ok:
                 break
-            tensor, hw = preprocess(frame, args.max_edge)
+            tensor, hw = preprocess(frame, max_edge)
             pred = sess.run([output_name], {input_name: tensor})[0]
             depth = np.squeeze(pred[0])
             gray = depth_to_gray(depth, hw, invert=args.invert)
@@ -241,7 +265,9 @@ def run(args: argparse.Namespace) -> dict:
         "speedFps": round(processed / max(elapsed, 1e-6), 2),
         "sideBySide": bool(args.side_by_side),
         "invert": bool(args.invert),
-        "maxEdge": args.max_edge,
+        "maxEdge": max_edge,
+        "preset": preset_name,
+        "modelFile": model_path.name,
         "convention": "near=white, far=black" if not args.invert else "near=black, far=white",
     }
     print(json.dumps(meta, ensure_ascii=False), flush=True)
@@ -253,9 +279,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--input", "-i", required=True, help="Input video path")
     p.add_argument("--output", "-o", required=True, help="Output mp4 path (video-only; audio muxed by host)")
     p.add_argument("--model", default="", help="Explicit ONNX model path")
+    p.add_argument("--preset", default="fast", choices=["fast", "quality"],
+                   help="fast=int8 + long-edge 384 (default); quality=float32 + 518")
     p.add_argument("--models-dir", default="", help="Model cache directory")
     p.add_argument("--provider", default="auto", choices=["auto", "coreml", "cuda", "cpu"])
-    p.add_argument("--max-edge", type=int, default=518, help="Long-edge resize before inference (0=native rounded)")
+    p.add_argument("--max-edge", type=int, default=-1,
+                   help="Long-edge resize before inference (-1=preset default, 0=native rounded)")
     p.add_argument("--start", type=float, default=0.0, help="Start seconds")
     p.add_argument("--duration", type=float, default=0.0, help="Duration seconds (0=all)")
     p.add_argument("--max-frames", type=int, default=0, help="Hard frame cap (0=unlimited)")

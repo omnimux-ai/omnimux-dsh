@@ -4,7 +4,7 @@ import { parseVideoConfig, Config } from './config.js'
 
 test('parseVideoConfig defaults', () => {
   const expected = {
-    video: { ffmpegPath: '', maxConcurrent: 2, pythonPath: '', modelsDir: '' },
+    video: { ffmpegPath: '', maxConcurrent: 2, pythonPath: '', modelsDir: '', depthMode: 'fast' },
     understand: {
       defaultModel: 'gemini-3.8-flash',
       maxTokens: 8000,
@@ -31,6 +31,7 @@ test('parseVideoConfig reads video.ffmpegPath, pythonPath, modelsDir and maxConc
   assert.equal(out.video.pythonPath, '/opt/homebrew/bin/python3')
   assert.equal(out.video.modelsDir, '/tmp/models')
   assert.equal(out.video.maxConcurrent, 4)
+  assert.equal(out.video.depthMode, 'fast')
 })
 
 test('parseVideoConfig env overrides (FFMPEG, PYTHON, MODELS_DIR)', () => {
@@ -115,4 +116,21 @@ test('Config Standard Schema validate wraps parse errors into issues', () => {
 test('Config vendor is omnimux-video', () => {
   assert.equal(Config['~standard'].vendor, 'omnimux-video')
   assert.equal(Config['~standard'].version, 1)
+})
+test('parseVideoConfig depthMode：默认 fast、支持 quality、非法值拒绝、env 覆盖', () => {
+  const prev = process.env.OMNIMUX_VIDEO_DEPTH_MODE
+  try {
+    delete process.env.OMNIMUX_VIDEO_DEPTH_MODE
+    assert.equal(parseVideoConfig({ video: { depthMode: 'quality' } }).video.depthMode, 'quality')
+    assert.throws(() => parseVideoConfig({ video: { depthMode: 'turbo' } }), /depthMode/)
+
+    process.env.OMNIMUX_VIDEO_DEPTH_MODE = 'quality'
+    assert.equal(parseVideoConfig({ video: { depthMode: 'fast' } }).video.depthMode, 'quality')
+
+    process.env.OMNIMUX_VIDEO_DEPTH_MODE = 'nope'
+    assert.throws(() => parseVideoConfig({}), /depthMode/)
+  } finally {
+    if (prev === undefined) delete process.env.OMNIMUX_VIDEO_DEPTH_MODE
+    else process.env.OMNIMUX_VIDEO_DEPTH_MODE = prev
+  }
 })

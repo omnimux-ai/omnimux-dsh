@@ -18,7 +18,17 @@ brew install ffmpeg
 pip install onnxruntime opencv-python
 ```
 
-首次运行会把 Depth Anything V2 Small ONNX 下载到 `$DSH_HOME/models/depth/`（或 `~/.dsh/models/depth/`）。
+首次运行会把 Depth Anything V2 Small ONNX 下载到 `$DSH_HOME/models/depth/`（或 `~/.dsh/models/depth/`）：`fast` 档用 int8 量化版（约 27MB），`quality` 档用 float32 版（约 99MB）。
+
+### 性能档位（`mode`）
+
+| 档位 | 模型 | 长边 | 实测（8.75s / 576×1024 / 210 帧） | 说明 |
+|---|---|---|---|---|
+| `fast`（默认） | int8 量化 | 384 | **约 10.5s**（20 fps） | 与 quality 相关性约 0.99，边缘略软 |
+| `quality` | float32 | 518 | 约 31s（6.8 fps） | 原始画质 |
+
+- 默认值可用 `Config.video.depthMode` 或环境变量 `OMNIMUX_VIDEO_DEPTH_MODE=quality` 覆盖；工具入参 `mode` 优先级最高。
+- `auto` provider 顺序已改为 **CUDA → CPU → CoreML**：CoreML 在该模型上因分区回退实测只有 3.7 fps，不再优先。显式 `provider` 仍可强制。
 
 每次 `video_depth` 执行前会按顺序挑选运行时：
 
@@ -45,7 +55,7 @@ ffmpeg 缺失不会阻止插件加载；工具/seam 调用时会抛 `ffmpeg-miss
 | `video_scene_detect` | multi | 300s | `videoUrl` + `threshold` |
 | `slideshow_export` | single | 1200s | `imageUrls[]` + 转场/背景乐 |
 | `video_export` | single | 1200s | `clips[]` + `subtitles` / 分辨率 / 画幅 |
-| `video_depth` | single | 1800s | `videoUrl` + `maxEdge?` / `invert?` / `sideBySide?` / `keepAudio?` |
+| `video_depth` | single | 1800s | `videoUrl` + `mode? fast\|quality` / `maxEdge?` / `invert?` / `sideBySide?` / `keepAudio?` |
 
 ## 聊天例子
 
@@ -55,6 +65,7 @@ ffmpeg 缺失不会阻止插件加载；工具/seam 调用时会抛 `ffmpeg-miss
 把这 4 张图做成 9:16 轮播配背景乐 → video_process(slideshow_export, ...)
 给这条片烧中文字幕，导出 9:16 720p → video_process(video_export, clips[] + subtitles, dest)
 把舞蹈视频转成黑白深度图 → video_depth(video, dest) 或 video_process(video_depth, ...)
+要更高画质 → video_depth(video, dest, mode: 'quality')
 ```
 
 工具的 `input` 字段值为本地绝对路径或 `http(s)` URL 皆可：

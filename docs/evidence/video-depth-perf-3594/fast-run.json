@@ -1,0 +1,12 @@
+{
+  "mode": "fast",
+  "seconds": 8.7,
+  "result": {
+    "model": "depth-anything-v2-small",
+    "convention": "near=white, far=black",
+    "audioPreserved": true,
+    "preset": "fast",
+    "python": "python3.14"
+  },
+  "file": "/tmp/perf-fast.mp4"
+}
