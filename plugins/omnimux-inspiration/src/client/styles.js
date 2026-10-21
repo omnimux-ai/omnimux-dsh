@@ -737,9 +737,9 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-card-pure.is-library.t-text .omnimux-rival-card-text {
   padding-right: 28px;
 }
-/* 帖子卡的 ⋯ 菜单仍在右下，元信息行右侧留出它的位置。 */
-.omnimux-inspiration-card-pure.is-library.t-text .omnimux-inspiration-card-meta {
-  padding-right: 34px;
+/* 帖子卡的 ⋯ 菜单仍在右下：悬停 CTA 右侧留出它的位置，避免主按钮被盖住。 */
+.omnimux-inspiration-card-pure.is-library.t-text .omnimux-inspiration-card-overlay {
+  padding-right: 40px;
 }
 .omnimux-inspiration-cover-img {
   display: block;

@@ -67,6 +67,12 @@ function fixtureHtml() {
         <span class="omnimux-inspiration-card-meta-time">3 天前</span>
       </div>
     </div>
+    <div class="omnimux-inspiration-card-overlay">
+      <div class="omnimux-inspiration-overlay-cta">
+        <button class="omnimux-inspiration-overlay-cta-btn secondary"><span class="omnimux-inspiration-overlay-cta-label">详情</span></button>
+        <button class="omnimux-inspiration-overlay-cta-btn primary"><span class="omnimux-inspiration-overlay-cta-label">立即复刻</span></button>
+      </div>
+    </div>
     <div class="probe-menu omnimux-inspiration-collection-menu"><button aria-label="更多">…</button></div>
     <button class="omnimux-inspiration-card-check" aria-label="选择"></button>
   </article>
@@ -133,8 +139,7 @@ function measure() {
   const statusChip = mediaCard.querySelector('.omnimux-inspiration-card-status')
   const mediaMenu = mediaCard.querySelector('.omnimux-inspiration-collection-menu')
   const postText = postCard.querySelector('.omnimux-rival-card-text')
-  const postMeta = postCard.querySelector('.omnimux-inspiration-card-meta')
-  const postMetaLast = postMeta.lastElementChild
+  const postOverlayPrimary = postCard.querySelector('.omnimux-inspiration-overlay-cta-btn.primary')
   const postMenu = postCard.querySelector('.omnimux-inspiration-collection-menu')
   const postCheck = postCard.querySelector('.omnimux-inspiration-card-check')
   const failedText = failedPost.querySelector('.omnimux-rival-card-text')
@@ -144,7 +149,7 @@ function measure() {
   const statusRect = rect(statusChip)
   const mediaMenuRect = rect(mediaMenu)
   const postMenuRect = rect(postMenu)
-  const postMetaLastRect = rect(postMetaLast)
+  const postOverlayRect = rect(postOverlayPrimary)
   return {
     mediaCard: rect(mediaCard),
     cover: rect(cover),
@@ -162,7 +167,8 @@ function measure() {
     postText: rect(postText),
     postCheck: rect(postCheck),
     postTextClamp: getComputedStyle(postText).webkitLineClamp,
-    postMenuOverlapsContent: overlap(postMenuRect, postMetaLastRect),
+    postTextPaddingRight: getComputedStyle(postText).paddingRight,
+    postOverlayOverlapsMenu: overlap(postOverlayRect, postMenuRect),
     failedPost: rect(failedPost),
     failedText: rect(failedText),
     failedClamp: getComputedStyle(failedText).webkitLineClamp,
@@ -207,7 +213,8 @@ test('根层帖子卡：三行正文 + 元信息，菜单不压内容', () => {
   assert.ok(geometry.postCard.h >= 144, 'the post card keeps the shared minimum height')
   assert.ok(geometry.postCheck.y <= geometry.postText.y, 'the checkbox sits above the excerpt')
   assert.ok(geometry.postCheck.x > geometry.postCard.x + geometry.postCard.w / 2, 'the post checkbox moved to the right corner')
-  assert.equal(geometry.postMenuOverlapsContent, false, 'the ⋯ menu must not cover the meta row content')
+  assert.equal(geometry.postTextPaddingRight, '28px', 'the first line clears the right-hand checkbox')
+  assert.equal(geometry.postOverlayOverlapsMenu, false, 'the ⋯ menu must not cover the hover CTA')
 })
 
 test('根层帖子卡：长失败原因仍按三行截断，高度与估算一致', () => {

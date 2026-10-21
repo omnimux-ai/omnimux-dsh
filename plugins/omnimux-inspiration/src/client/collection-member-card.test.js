@@ -198,13 +198,13 @@ describe('collection member geometry', () => {
     assert.equal(rivalCardHeightPx(xCard, 240), 238 / (4 / 5) + 82 + 2)
   })
 
-  it('leaves text members and plain cards on their old geometry', () => {
+  it('gives text members the shared post formula and keeps plain cards old geometry', () => {
     const text = { card_type: 'text', type: 'text', title: '一条纯文字灵感' }
-    const withLayout = { card_type: 'text', type: 'text', title: '一条纯文字灵感', layout: COLLECTION_MEMBER_LAYOUT }
-    const textHeight = Math.max(144, 24 + 20 + 2)
-    assert.equal(rivalCardHeightPx(text, 240), textHeight)
-    assert.equal(rivalCardHeightPx(withLayout, 240), textHeight, 'a text member keeps its text card geometry')
-    assert.notEqual(rivalMediaRatioOf(withLayout), 4 / 5)
+    const longMember = { card_type: 'text', type: 'text', title: '一条纯文字灵感'.repeat(40), layout: COLLECTION_MEMBER_LAYOUT }
+    assert.equal(rivalCardHeightPx(text, 240), Math.max(144, 24 + 20 + 2))
+    // 帖子公式最长为 3 行：再长的正文也不会长过 144 的下限；旧文本公式会算到 8 行。
+    assert.equal(rivalCardHeightPx(longMember, 240), Math.max(144, 24 + 3 * 20 + 24 + 2))
+    assert.notEqual(rivalMediaRatioOf(longMember), 4 / 5)
     const plain = { card_type: 'short-video', type: 'video', title: '普通卡' }
     assert.equal(rivalMediaRatioOf(plain), 9 / 16)
     assert.equal(rivalCardHeightPx(plain, 240), 238 / (9 / 16) + 22 + 18 + 2)
