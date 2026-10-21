@@ -1,17 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PRESET_REFERENCE_ASSETS, REFERENCE_TABS } from './reference-constants.js';
 import { readDuration } from './MediaSlotGroup.jsx';
+import { pickerKindOf, pickerMimeOf } from './picker-asset-mime.js';
 import {
   ensureReferenceTab,
   peekReferenceTab,
   subscribeReferenceAssets,
 } from './reference-asset-cache.js';
 
-function normalizeMediaType(type) {
-  if (type === 'video') return 'video';
-  if (type === 'audio') return 'audio';
-  return 'image';
-}
 
 /** 首次加载骨架卡数量：铺满两行可视格 */
 const SKELETON_COUNT = 8;
@@ -103,12 +99,15 @@ export function ReferencePickerPopover({
             const coverUrl = coverFile?.id
               ? `/omnimux/assets/library/preview?id=${encodeURIComponent(a.id)}&file=${encodeURIComponent(coverFile.id)}`
               : '';
+            const mime = pickerMimeOf(coverFile) || pickerMimeOf(coverUrl) || pickerMimeOf(a);
             return {
               id: a.id,
               title: a.name || a.handle || a.id,
               name: a.name || a.handle || a.id,
+              filename: coverFile?.original_name || undefined,
               url: coverUrl,
-              type: normalizeMediaType(a.type),
+              type: pickerKindOf(mime, a.type),
+              mime: mime || undefined,
               isMine: true,
               raw: a,
             };
@@ -123,12 +122,14 @@ export function ReferencePickerPopover({
           const data = await res.json();
           const items = (data.items || []).map((c) => {
             const coverUrl = c.meta?.source_cover_url || `/omnimux/assets/cloud/media?id=${encodeURIComponent(c.id)}&which=cover`;
+            const mime = pickerMimeOf(c) || pickerMimeOf(coverUrl) || pickerMimeOf(c.media_url);
             return {
               id: c.id,
               title: c.name || c.id,
               name: c.name || c.id,
               url: coverUrl,
-              type: normalizeMediaType(c.media_type),
+              type: pickerKindOf(mime, c.media_type),
+              mime: mime || undefined,
               isMine: false,
               raw: c,
             };
@@ -146,12 +147,14 @@ export function ReferencePickerPopover({
             const coverUrl = coverMediaId
               ? `/omnimux/products/${encodeURIComponent(p.id)}?preview=${encodeURIComponent(coverMediaId)}`
               : '';
+            const mime = pickerMimeOf(p.cover) || pickerMimeOf(coverUrl) || pickerMimeOf(p);
             return {
               id: p.id,
               title: p.name || p.id,
               name: p.name || p.id,
               url: coverUrl,
-              type: 'image',
+              type: pickerKindOf(mime, 'image'),
+              mime: mime || undefined,
               isMine: true,
               raw: p,
             };
@@ -166,12 +169,14 @@ export function ReferencePickerPopover({
           const data = await res.json();
           const items = (data.artifacts || []).map((art) => {
             const coverUrl = `/omnimux/assets/artifacts/preview?id=${encodeURIComponent(art.id)}`;
+            const mime = pickerMimeOf(art) || pickerMimeOf(coverUrl);
             return {
               id: art.id,
               title: art.title || art.id,
               name: art.title || art.id,
               url: coverUrl,
-              type: normalizeMediaType(art.type),
+              type: pickerKindOf(mime, art.type),
+              mime: mime || undefined,
               isMine: true,
               raw: art,
             };

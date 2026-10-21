@@ -1,0 +1,52 @@
+{
+  "pass": true,
+  "issue": 3548,
+  "capturedAt": "2026-10-21T07:02:08.580Z",
+  "sourceCommit": "1260895d4fdea348c59424ad63e95db31ae8aa61",
+  "sourceDirty": true,
+  "browser": "ego-lite",
+  "assertions": [
+    {
+      "name": "local asset maps to MIME and enters the slot",
+      "pass": true,
+      "detail": {
+        "notice": "素材 [本地角色] 已入槽",
+        "pickerOpen": false,
+        "slotCards": 1,
+        "slotImages": [
+          "/omnimux/assets/library/preview?id=ast_3548&file=file_3548"
+        ],
+        "bodyText": "添加评论历史100%打开图像视频素材 [本地角色] 已入槽Synthetic Image标准版参数1:1·1K·1预估消耗 ≈0.13 积分历史基准图16:53 · 图片复用提示词下载\"use strict\"; (() => { var __create = Object.create; var __defProp = Object.defineProperty; var __getOwnPropDesc = Object.getOwnPropertyDescriptor; "
+      }
+    },
+    {
+      "name": "no format-unknown notice after selection",
+      "pass": true,
+      "detail": "素材 [本地角色] 已入槽"
+    },
+    {
+      "name": "picker closes after acceptance",
+      "pass": true,
+      "detail": false
+    }
+  ],
+  "after": {
+    "notice": "素材 [本地角色] 已入槽",
+    "pickerOpen": false,
+    "slotCards": 1,
+    "slotImages": [
+      "/omnimux/assets/library/preview?id=ast_3548&file=file_3548"
+    ],
+    "bodyText": "添加评论历史100%打开图像视频素材 [本地角色] 已入槽Synthetic Image标准版参数1:1·1K·1预估消耗 ≈0.13 积分历史基准图16:53 · 图片复用提示词下载\"use strict\"; (() => { var __create = Object.create; var __defProp = Object.defineProperty; var __getOwnPropDesc = Object.getOwnPropertyDescriptor; "
+  },
+  "sources": {
+    "picker": "93d3a5155979e8cda4839bcd4f6bbf70405de067178a6b35348fd6d8b3daa99c",
+    "mime": "0cff51b99fb2468506f66d9ff76b0b7fbc18da2029882aff7e8ab6469506c813",
+    "harness": "dbbf971cb9ea5548c64bb9f82f97e4fb924f881e16ae78f621bd9c0411e69a21"
+  },
+  "screenshots": [
+    "before-picker.png",
+    "picker-open.png",
+    "after-select.png"
+  ]
+}
