@@ -90,6 +90,17 @@ subsystem: "omnimux"
 - 先在同一 ego Tab 完成本地认证与 QA 会话准备。证据不得保存 token；探针不得发送消息、生成媒体或提交账号任务。用户接管、任务 inactive/not assigned 或浏览器拒绝立即停止，必须得到明确确认才可恢复；不得换任务、工具、路径或协议绕过。
 - 跨轮复用同一 task space；适配器锁定该任务，每次操作核验所有权与选中 Tab。验收结束后先确认报告，再用独立最终 heredoc 调用 `completeTaskSpace(id, { keep: false })` 并检查 `done`；只有 skill 规定的具体理由才可保留页面。
 
+### 扩展类 e2e（未打包扩展）
+
+验收对象是浏览器扩展本体、需要以未打包形式加载工作树构建产物（`extension/dist`）时，ego lite 是固定构建的 Chromium，不支持运行时加载未打包扩展，故这类验收只能使用真实 Chrome。它是浏览器验收的唯一例外，并遵守以下条款：
+
+- **唯一入口**是 `scripts/lib/extension-e2e.mjs`：一次运行只起一个 Chrome 进程，多个场景通过 `browser.newPage()`（CDP `Target.createTarget`）复用同一进程，禁止每个场景重启浏览器。
+- **必须清理**：runner 的 `close()` 与进程退出钩子会终止 Chrome 并删除临时 profile；调用方必须把 `browser.close()` 放在 `finally`，断言失败也不得跳过。
+- **禁止仓库外自建脚本**：不得在 `/tmp` 等仓库外路径写 spawn Chrome 的一次性脚本，也不得把调试端口参数散落在未评审的脚本里；扩展 e2e 逻辑应进入受控 runner 或本任务 worktree 内、进入 PR 的脚本。
+- **证据**：保留结构化报告与真实 PNG，并记录 Chrome pid、场景数量、profile 是否已清理；运行后核对没有残留进程。
+- **门禁**：DSH 的 CDP PreToolUse gate 会读取命令所引用脚本文件的内容；仓库内脚本放行，仓库外脚本命中调试端口模式时拒绝，只有用户明确同意并写入 `~/.dsh/cdp-allow` 后才可临时放行。
+- **缺少 Chrome** 时显式失败并给出安装/`CHROME_PATH` 指引，不得静默回退到其他浏览器或 IAB。品牌版 Chrome 137+ 会忽略 `--load-extension`，runner 因此优先使用 Chrome for Testing；可用 `CHROME_PATH` 显式指定。
+
 ### 页面准备与认证恢复
 
 页面准备复用 `scripts/ego-live-qa.mjs`，由 `runPreparedQa` 在消费请求前调用，也可单独调用。目标仅限 Dev 45120；先核对当前 Tab 的 origin，再执行页面操作。
