@@ -1,0 +1,29 @@
+{
+  "capability": "video_depth",
+  "input": "/tmp/depthcheck/src.mp4 (2s testsrc2 320x240, aac audio)",
+  "output": "03-real-depth-output.mp4",
+  "model": "depth-anything-v2-small (ONNX, cached at ~/.dsh/models/depth)",
+  "python": "/opt/homebrew/opt/python@3.14/bin/python3.14 (has numpy/cv2/onnxruntime)",
+  "command": "OMNIMUX_VIDEO_PYTHON_PATH=<python> executeVideoProcess({capability:\"video_depth\", input:{videoUrl, maxEdge:256}, dest})",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 320,
+        "height": 240,
+        "duration": "2.000000"
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio",
+        "duration": "1.997007"
+      }
+    ]
+  },
+  "frame_stats": {
+    "note": "R≈G≈B confirms grayscale depth; audio stream preserved"
+  }
+}

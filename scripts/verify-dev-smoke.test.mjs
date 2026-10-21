@@ -81,6 +81,9 @@ test('runSmokeCheck end-to-end against mock HTTP server', async () => {
     } else if (req.url === '/broken') {
       res.writeHead(200, { 'Content-Type': 'text/html' })
       res.end('<!DOCTYPE html><html><body><div id="root" data-dsh-boot="hanging"></div></body></html>')
+    } else if (req.url === '/auth') {
+      res.writeHead(401, { 'Content-Type': 'text/plain' })
+      res.end('dsh web authentication required; reopen the URL printed by dsh web.')
     } else {
       res.writeHead(500)
       res.end('Internal Server Error')
@@ -109,6 +112,21 @@ test('runSmokeCheck end-to-end against mock HTTP server', async () => {
     const unreachableRes = await runSmokeCheck('http://127.0.0.1:59999', { strict: false })
     strictEqual(unreachableRes.skipped, true)
     strictEqual(unreachableRes.success, true)
+
+    // 5. Auth-gated HTTP (401) falls back to CDP page health instead of failing.
+    const authOkRes = await runSmokeCheck(`http://127.0.0.1:${port}/auth`, {
+      strict: true,
+      cdpProbe: async () => ({ ok: true, detail: { hasRoot: true } }),
+    })
+    strictEqual(authOkRes.success, true)
+    strictEqual(authOkRes.via, 'cdp')
+
+    // 6. A failing CDP probe must not turn the 401 into a silent pass.
+    const authFailRes = await runSmokeCheck(`http://127.0.0.1:${port}/auth`, {
+      strict: true,
+      cdpProbe: async () => ({ ok: false, error: 'cdp target missing' }),
+    })
+    strictEqual(authFailRes.success, false)
   } finally {
     server.close()
   }

@@ -52,7 +52,8 @@ const PROCESS_DESCRIPTION =
 const DEPTH_DESCRIPTION =
   'Generate a grayscale monocular depth-map video (Depth Anything V2 Small ONNX). ' +
   'Default convention: near=white, far=black. Optional invert / side-by-side preview. Keeps original audio by default. ' +
-  'Uses local onnxruntime (CoreML/CUDA/CPU). Not a style-transfer / anime stylize tool.'
+  'Uses local onnxruntime (CoreML/CUDA/CPU); missing numpy/cv2/onnxruntime fails fast with `video-depth-deps-missing` and an install hint. ' +
+  'Not a style-transfer / anime stylize tool.'
 
 const ANALYZE_DESCRIPTION =
   'Understand a local short video into a Chinese five-dimension breakdown markdown (目标/影响力/叙事/画面/复刻策略). ' +

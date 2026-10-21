@@ -15,24 +15,114 @@
  *   node scripts/verify-dev-smoke.mjs [--port=45120] [--strict]
  */
 
+import http from 'node:http'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { probeHttpEndpoint, analyzeHtmlSkeleton } from './lib/smoke-probe-utils.mjs'
 
 const DEFAULT_DEV_PORTS = [45120, 44200]
+const DEFAULT_CDP_PORT = Number(process.env.OMNIMUX_CDP_PORT || process.env.OMNIMUX_DEV_CDP_PORT || 9229)
+
+function cdpTargets(port) {
+  return new Promise((resolvePromise) => {
+    const req = http.get(`http://127.0.0.1:${port}/json`, (res) => {
+      let data = ''
+      res.on('data', (chunk) => { data += chunk })
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data)
+          resolvePromise(Array.isArray(parsed) ? parsed : [])
+        } catch {
+          resolvePromise([])
+        }
+      })
+    })
+    req.on('error', () => resolvePromise([]))
+    req.setTimeout(1500, () => { req.destroy(); resolvePromise([]) })
+  })
+}
+
+function evaluateInPage(wsUrl, expression, timeoutMs = 5000) {
+  return new Promise((resolvePromise) => {
+    let settled = false
+    let timer
+    const finish = (value) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      try { ws.close() } catch {}
+      resolvePromise(value)
+    }
+    const ws = new WebSocket(wsUrl)
+    timer = setTimeout(() => finish({ ok: false, error: 'CDP evaluate timed out' }), timeoutMs)
+    ws.onopen = () => ws.send(JSON.stringify({
+      id: 1,
+      method: 'Runtime.evaluate',
+      params: { expression, returnByValue: true },
+    }))
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(String(event.data))
+        if (data.id === 1) finish({ ok: true, result: data?.result?.result?.value })
+      } catch (error) {
+        finish({ ok: false, error: error.message })
+      }
+    }
+    ws.onerror = () => finish({ ok: false, error: 'WebSocket error' })
+  })
+}
+
+/**
+ * Read-only page-health check through the desktop window's CDP port (same
+ * mechanism as scripts/dev-smoke.mjs). Used when HTTP is auth-gated (401):
+ * the probe cannot obtain the token `dsh web` prints, but the live window is
+ * already authenticated and can report its real DOM state.
+ * @param {{ cdpPort?: number }} [opts]
+ */
+export async function probeDevCdpHealth(opts = {}) {
+  const port = opts.cdpPort ?? DEFAULT_CDP_PORT
+  const targets = await cdpTargets(port)
+  const page = targets.find((t) => t.type === 'page' && /127\.0\.0\.1:45120/.test(String(t.url || '')))
+    || targets.find((t) => t.type === 'page')
+  if (!page || !page.webSocketDebuggerUrl) return { ok: false, error: `no CDP page target on ${port}` }
+  const expression = `JSON.stringify({readyState:document.readyState,hasRoot:!!document.querySelector('#root'),bootHanging:!!document.querySelector('[data-dsh-boot="hanging"],[data-dsh-boot-error]'),recovery:!!document.querySelector('[data-dsh-desktop-recovery]'),bodyText:((document.body&&document.body.innerText)||'').trim().length})`
+  const evaluated = await evaluateInPage(page.webSocketDebuggerUrl, expression)
+  if (!evaluated.ok) return { ok: false, error: evaluated.error || 'CDP evaluate failed' }
+  let detail
+  try {
+    detail = JSON.parse(evaluated.result)
+  } catch {
+    return { ok: false, error: 'CDP returned malformed page state' }
+  }
+  const healthy = detail.hasRoot && !detail.bootHanging && !detail.recovery
+    && detail.bodyText > 0 && detail.readyState !== 'loading'
+  return healthy ? { ok: true, detail } : { ok: false, error: `page unhealthy: ${JSON.stringify(detail)}`, detail }
+}
 
 /**
  * Run smoke check against target URL.
  * @param {string} url
- * @param {{ strict?: boolean }} [opts]
+ * @param {{ strict?: boolean, cdpPort?: number, cdpProbe?: Function, probeHttpEndpoint?: Function }} [opts]
  */
 export async function runSmokeCheck(url, opts = {}) {
   const strict = opts.strict ?? false
+  const probe = opts.probeHttpEndpoint ?? probeHttpEndpoint
+  const cdpProbe = opts.cdpProbe ?? probeDevCdpHealth
   console.log(`[Smoke Probe] Probing ${url}...`)
 
-  const res = await probeHttpEndpoint(url, { timeoutMs: 5000 })
+  const res = await probe(url, { timeoutMs: 5000 })
 
   if (!res.ok) {
+    if (res.status === 401) {
+      console.log(`  ⚠ HTTP 401 (auth required) from ${url}; falling back to CDP page health...`)
+      const cdp = await cdpProbe({ url, cdpPort: opts.cdpPort })
+      if (cdp.ok) {
+        console.log('  ✓ CDP page health OK (auth-gated HTTP)')
+        return { skipped: false, success: true, via: 'cdp', detail: cdp.detail }
+      }
+      console.error(`❌ [Smoke Failure] HTTP 401 and CDP fallback failed: ${cdp.error || 'unknown'}`)
+      return { skipped: false, success: false, error: `HTTP 401; CDP: ${cdp.error || 'unknown'}` }
+    }
     if (res.status === 0) {
       if (!strict) {
         console.log(`[SMOKE SKIP] Host unreachable at ${url} (${res.error || 'Connection refused'}).`)

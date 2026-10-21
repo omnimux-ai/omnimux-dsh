@@ -1,13 +1,92 @@
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import { VideoError } from '../../errors.js'
-import { runControlled } from '../ffmpeg.js'
+import { runControlled, truncateTail } from '../ffmpeg.js'
 
 export const slug = 'video_depth'
 export const timeoutMs = 1_800_000 // 30 minutes
 export const destKind = 'single'
 
 export const PROVIDERS = ['auto', 'coreml', 'cuda', 'cpu']
+
+/** Python packages the depth engine imports at module scope. */
+export const DEPTH_PYTHON_MODULES = ['numpy', 'cv2', 'onnxruntime']
+
+const DEPTH_DEPS_HINT =
+  'Install them with `pip install onnxruntime opencv-python`, or point Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH at an interpreter that already has them.'
+
+/** `import a; import b` probe so missing deps fail before any model work starts. */
+export function buildDepthRuntimeCheckCode(modules = DEPTH_PYTHON_MODULES) {
+  return modules.map((name) => `import ${name}`).join('; ')
+}
+
+/** Extract `No module named 'x'` names from a Python traceback tail. */
+export function missingDepthModules(stderrTail) {
+  const names = []
+  const re = /No module named '([^']+)'/g
+  const text = String(stderrTail || '')
+  let match
+  while ((match = re.exec(text)) !== null) {
+    if (match[1] && !names.includes(match[1])) names.push(match[1])
+  }
+  return names
+}
+
+/**
+ * Fail fast with an actionable code when the configured Python cannot import
+ * the depth engine dependencies. Never lets a raw traceback become the
+ * user-facing error.
+ *
+ * @param {{
+ *   pythonBin: string,
+ *   signal?: AbortSignal,
+ *   procs?: Set<unknown>,
+ *   runProbe?: (args: string[]) => Promise<unknown>,
+ * }} input
+ */
+export async function ensureDepthPython({ pythonBin, signal, procs, runProbe }) {
+  const probe =
+    runProbe ??
+    ((args) =>
+      runControlled({
+        cmd: pythonBin,
+        args,
+        timeoutMs: 20_000,
+        signal,
+        procs,
+        failCode: 'video-depth-deps-missing',
+        cancelCode: 'video-canceled',
+        timeoutCode: 'video-timeout',
+      }))
+  try {
+    await probe(['-c', buildDepthRuntimeCheckCode()])
+    return
+  } catch (error) {
+    if (
+      error instanceof VideoError &&
+      (error.code === 'video-canceled' || error.code === 'video-timeout')
+    ) {
+      throw error
+    }
+    const detail = truncateTail(String(error?.stderrTail || error?.message || error), 600)
+    const missing = missingDepthModules(detail)
+    if (missing.length > 0) {
+      throw new VideoError(
+        'video-depth-deps-missing',
+        `video_depth requires Python packages that '${pythonBin}' cannot import: ${missing.join(', ')}. ${DEPTH_DEPS_HINT}`,
+        { hint: DEPTH_DEPS_HINT, stderrTail: detail },
+      )
+    }
+    const unusable = /ENOENT|not found|failed to run/i.test(detail)
+    throw new VideoError(
+      'video-depth-deps-missing',
+      unusable
+        ? `video_depth cannot start Python interpreter '${pythonBin}'. Set Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH to a usable python3. ${DEPTH_DEPS_HINT}`
+        : `video_depth Python runtime check failed for '${pythonBin}'. ${DEPTH_DEPS_HINT}`,
+      { hint: DEPTH_DEPS_HINT, stderrTail: detail },
+    )
+  }
+}
 
 export function validate(input) {
   if (!String(input?.videoUrl || '').trim()) {
@@ -152,12 +231,33 @@ function parseProbeStdout(probeRes) {
  *   runFfmpeg: (args: string[]) => Promise<unknown>,
  *   runFprobe: (args: string[]) => Promise<{ stdout: string, stderr: string } | string>,
  *   runPython?: (args: string[], opts?: object) => Promise<unknown>,
+ *   runDepthRuntimeProbe?: (args: string[]) => Promise<unknown>,
  * }} ctx
  */
 export async function execute(input, ctx) {
   validate(input)
   const out = ctx.dest
   ctx.addFile(out)
+
+  const pythonBin =
+    ctx.videoConfig?.video?.pythonPath ||
+    process.env.OMNIMUX_VIDEO_PYTHON_PATH ||
+    process.env.DSH_VIDEO_PYTHON_PATH ||
+    'python3'
+  const modelsDir =
+    ctx.videoConfig?.video?.modelsDir ||
+    process.env.OMNIMUX_VIDEO_MODELS_DIR ||
+    process.env.DSH_VIDEO_MODELS_DIR ||
+    ''
+
+  // Dependency gate before any encode: a missing onnxruntime must surface as an
+  // actionable error, not as a Python traceback after a long ffmpeg pass.
+  await ensureDepthPython({
+    pythonBin,
+    signal: ctx.signal,
+    procs: ctx.procs,
+    runProbe: ctx.runDepthRuntimeProbe,
+  })
 
   const videoPath = await ctx.materialize(input.videoUrl, 'depth_src')
 
@@ -187,8 +287,6 @@ export async function execute(input, ctx) {
   }
 
   const scriptPath = fileURLToPath(new URL('../../../scripts/depth_engine.py', import.meta.url))
-  const pythonBin = ctx.videoConfig?.video?.pythonPath || process.env.OMNIMUX_VIDEO_PYTHON_PATH || process.env.DSH_VIDEO_PYTHON_PATH || 'python3'
-  const modelsDir = ctx.videoConfig?.video?.modelsDir || process.env.OMNIMUX_VIDEO_MODELS_DIR || process.env.DSH_VIDEO_MODELS_DIR || ''
   const tmpDepth = join(ctx.tmpDir, 'depth_raw.mp4')
 
   const pyArgs = buildDepthCliArgs(input, {

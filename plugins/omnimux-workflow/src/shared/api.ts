@@ -95,6 +95,9 @@ export const WORKFLOW_API_ROUTES = {
   /** POST: extract audio track from video and generate material audio node. */
   extractAudio: (workspaceId: string) =>
     `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${workspaceId}/extract-audio`,
+  /** POST: convert a video into a grayscale depth-map video (local Depth Anything). */
+  videoDepth: (workspaceId: string) =>
+    `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${workspaceId}/video-depth`,
   /** GET: list templates. POST: create template. */
   templates: `${WORKFLOW_ROUTE_PREFIX}/api/templates`,
   /** GET/DELETE one template. */

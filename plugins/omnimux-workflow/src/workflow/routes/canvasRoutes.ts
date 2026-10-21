@@ -79,6 +79,8 @@ import { createVideoExtractionRoutes } from './videoExtractionRoutes';
 import { createVideoDeconstructRoutes } from './videoDeconstructRoutes';
 import { createVideoStoryboardRoutes } from './videoStoryboardRoutes';
 import { createAudioExtractRoutes } from './audioExtractRoutes';
+import { createVideoDepthRoutes } from './videoDepthRoutes';
+import { resolveVideoAbsolutePath } from '../videoDeconstruct/service';
 
 export {
   MAX_JSON_BODY_BYTES,
@@ -198,6 +200,24 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
     getTool: deps.getTool,
     resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
   });
+  const videoDepthRoutes = createVideoDepthRoutes({
+    store,
+    mediaDir,
+    getSeam: deps.getSeam,
+    getTool: deps.getTool,
+    resolveVideoPath: (workspaceId, videoPath) =>
+      resolveVideoAbsolutePath(
+        {
+          store,
+          mediaDir,
+          getSeam: deps.getSeam,
+          getTool: deps.getTool,
+          resolveProjectFile: (id, rel) => assetsStore.resolveProjectFile(id, rel),
+        },
+        workspaceId,
+        videoPath,
+      ),
+  });
 
   /**
    * Legacy M1 prefix compatibility: /dsh-workflow/* is rewritten (in-memory,
@@ -237,6 +257,9 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
 
       const fromAudioExtract = await audioExtractRoutes.tryHandle(method, path, req);
       if (fromAudioExtract) return fromAudioExtract;
+
+      const fromVideoDepth = await videoDepthRoutes.tryHandle(method, path, req);
+      if (fromVideoDepth) return fromVideoDepth;
 
       if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
         try {

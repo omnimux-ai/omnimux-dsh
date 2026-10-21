@@ -546,6 +546,23 @@ export function resolveJourneyPath(candidate, root) {
 }
 
 /**
+ * journey 断言名 = `journey:` 前缀 + 非空名称。runJourney 统一生成该形态；
+ * 契约模式另按请求预声明集合校验，legacy 模式才用本判定放行自定义旅程断言。
+ */
+export function isJourneyAssertionName(name) {
+  return typeof name === 'string' && name.startsWith('journey:') && name.slice(8).trim().length > 0;
+}
+
+/**
+ * 断言名是否允许进入报告：契约模式只认请求预声明集合；legacy 模式额外放行
+ * 本次传入 journey 的 `journey:<名称>` 断言，其余未知名一律拒绝。
+ */
+export function isAllowedAssertionName(name, allowedNames, { request = false, journey = null } = {}) {
+  if (allowedNames.includes(name)) return true;
+  return !request && Boolean(journey) && isJourneyAssertionName(name);
+}
+
+/**
  * 执行任务自定义功能旅程：模块默认导出 async ({send, sleep, evidenceDir, origin, io}) => {assertions:[...]}。
  * 断言缺 pass:true 或模块抛错都算 FAIL——journey 异常绝不静默 PASS。
  */
@@ -837,7 +854,7 @@ function contractRequest(options, io) {
     || !sameNames(Object.keys(expected), checks)
     || !sameNames(expected['app-environment'], [...ENV_ASSERTIONS, ...(scope !== 'smoke' || taskPlugins ? ['task-source-installed-loaded'] : [])])
     || !sameNames(expected['app-browser'], BROWSER_ASSERTIONS)
-    || (journey && (!namedList(expected['task-journey']) || expected['task-journey'].some(name => !name.startsWith('journey:') || !name.slice(8).trim())))) throw qaFailure('TEST_APP_QA_EXPECTED_POLICY');
+    || (journey && (!namedList(expected['task-journey']) || expected['task-journey'].some(name => !isJourneyAssertionName(name))))) throw qaFailure('TEST_APP_QA_EXPECTED_POLICY');
   const allNames = checks.flatMap(name => expected[name]);
   if (new Set(allNames).size !== allNames.length) throw qaFailure('TEST_APP_QA_EXPECTED_POLICY');
   if (options.extraInputs !== undefined && !Array.isArray(options.extraInputs)) throw qaFailure('TEST_APP_QA_INPUT_PATH');
@@ -1020,8 +1037,11 @@ export function createAppQaRunner(deps = {}) {
       }
       const allowedNames = request ? request.requiredChecks.flatMap(name => request.expectedAssertions[name])
         : [...ENV_ASSERTIONS, ...BROWSER_ASSERTIONS, 'live-model-catalog-ready', 'live-image-generate-http-200', 'live-image-rendered-no-broken-img', 'journey-load', 'journey-export-shape', 'journey-result-shape', 'journey-assertions-invalid', 'journey-error'];
-      if (assertions.some(item => !allowedNames.includes(item.name))) report.errors.push('TEST_APP_QA_ASSERTION_SET_MISMATCH');
-      report.assertions.push(...assertions.filter(item => allowedNames.includes(item.name)).map(({ name, pass }) => ({ name, pass })));
+      // legacy `--journey` 的断言由 runJourney 统一加 `journey:` 前缀；契约模式仍严格按请求声明集合校验，
+      // 非 `journey:` 前缀的未知名（含 legacy）继续判为集合不匹配。
+      const allowed = item => isAllowedAssertionName(item.name, allowedNames, { request: Boolean(request), journey });
+      if (assertions.some(item => !allowed(item))) report.errors.push('TEST_APP_QA_ASSERTION_SET_MISMATCH');
+      report.assertions.push(...assertions.filter(allowed).map(({ name, pass }) => ({ name, pass })));
     };
     try {
       prepareAttempted = true;
