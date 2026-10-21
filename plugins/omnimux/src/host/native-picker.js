@@ -117,10 +117,18 @@ function messageOf(error) {
 }
 
 /**
+ * A legacy AppleScript cancel is only recognized on a failed osascript run
+ * (non-zero numeric exit code) whose stderr is the AppleScript execution error
+ * -128. Arbitrary messages that merely contain "-128" must not be classified
+ * as a user cancellation.
  * @param {unknown} error
  */
 function isUserCancel(error) {
-  return /User canceled|-128/i.test(messageOf(error))
+  if (!error || typeof error !== 'object') return false
+  const code = (/** @type {{ code?: unknown }} */ (error)).code
+  if (typeof code !== 'number' || code === 0) return false
+  const stderr = (/** @type {{ stderr?: unknown }} */ (error)).stderr
+  return typeof stderr === 'string' && /execution error:[\s\S]*\(-128\)/.test(stderr)
 }
 
 /**

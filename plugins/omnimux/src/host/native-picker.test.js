@@ -127,15 +127,36 @@ describe('pickNativePath macOS JXA script', () => {
     assert.deepEqual(result, { path: '/Users/x/project', paths: ['/Users/x/project'] })
   })
 
-  it('treats empty stdout as cancellation and keeps the -128 compatibility arm', async () => {
+  it('treats empty stdout as cancellation and only osascript -128 execution errors as legacy cancel', async () => {
     const cancelled = await pickNativePath('file', { platform: 'darwin', run: runOk('\n') })
     assert.deepEqual(cancelled, { path: null, paths: [] })
 
+    const legacyCancel = Object.assign(new Error('osascript exited with code 1'), {
+      code: 1,
+      stderr: 'execution error: User canceled. (-128)',
+    })
     const legacy = await pickNativePath('file', {
       platform: 'darwin',
-      run: runFail('User canceled. (-128)'),
+      run: async () => { throw legacyCancel },
     })
     assert.deepEqual(legacy, { path: null, paths: [] })
+  })
+
+  it('does not treat arbitrary -128 text as a cancellation', async () => {
+    const messageOnly = Object.assign(new Error('User canceled. (-128)'), { code: 1, stderr: '' })
+    await assert.rejects(
+      () => pickNativePath('file', { platform: 'darwin', run: async () => { throw messageOnly } }),
+      (error) => error instanceof PickerError && error.code === 'picker-failed',
+    )
+
+    const unrelatedStderr = Object.assign(new Error('osascript exited with code 1'), {
+      code: 1,
+      stderr: 'helper failed with status -128 while decoding',
+    })
+    await assert.rejects(
+      () => pickNativePath('file', { platform: 'darwin', run: async () => { throw unrelatedStderr } }),
+      (error) => error instanceof PickerError && error.code === 'picker-failed',
+    )
   })
 
   it('maps invalid picker output to picker-failed and keeps the raw stdout diagnosis', async () => {
