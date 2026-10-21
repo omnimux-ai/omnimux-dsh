@@ -1,0 +1,8 @@
+SEED {"id":"riv_d95c37a8","platform":"tiktok","handle":"tiktok"}
+HOST http://127.0.0.1:61082
+EXT lnngdejconaogfammhjeikojlogcmiak
+TOKEN {"status":201,"url":"https://www.tiktok.com/@tiktok#omnimux-refresh=9bf5deff65f280f7e0d3147bd8d9bc1a","hasToken":true}
+OPENED https://www.tiktok.com/@tiktok#omnimux-refresh=9bf5deff65f280f7e0d3147bd8d9bc1a
+DOM {"url":"https://www.tiktok.com/@tiktok#omnimux-refresh=9bf5deff65f280f7e0d3147bd8d9bc1a","title":"TikTok - Make Your Day","universal":true,"postItems":0,"videoLinks":0,"body":"TikTok\ntiktok\n1\n已关注\n96.4M\n粉丝\n465.9M\n赞\nYour next di covery i  waiting on TikTok.\ntiktok.com/di covermore\n\n出错了\n\n很抱歉！请稍后重试。\n\n刷新\n登录"}
+RESULT_TIKTOK {"lastChecked":"2026-10-21T07:36:06.269Z","pluginRefresh":null,"followers":96400000,"posts":0,"tabStillOpen":false}
+E2E_RESULT FAIL

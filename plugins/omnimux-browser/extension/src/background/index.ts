@@ -98,6 +98,11 @@ import {
 } from './save-target.ts'
 import { loopbackFetch } from '../shared/loopback-fetch.ts'
 import {
+  claimAccountRefresh,
+  closeRefreshedTab,
+  completeAccountRefresh,
+} from './account-refresh.ts'
+import {
   activeHttpTabId,
   forwardMediaChunk,
   relayCapturedMedia,
@@ -2857,7 +2862,7 @@ chrome.runtime.onInstalled?.addListener((details) => {
 armBridgeKeepalive()
 
 // 监听来自前台面板的实例切换与设置更新消息，彻底打通连接业务逻辑
-chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
   const m = msg as { type?: string; payload?: Record<string, unknown> } | null
   if (m?.type === 'CAPTURE_MEDIA_CHUNK') {
     // 内容脚本每读完 1MB 就把 base64 块交过来；host 接受后才回 ack，保证顺序。
@@ -2865,6 +2870,33 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
       (result) => sendResponse(result),
       (error) => sendResponse({ ok: false, error: String(error instanceof Error ? error.message : error) }),
     )
+    return true
+  }
+  if (m?.type === 'ACCOUNT_REFRESH_CLAIM' || m?.type === 'ACCOUNT_REFRESH_COMPLETE') {
+    // 账号主页的手动更新：内容脚本采集前/后各一次，只走本机 host。
+    void (async () => {
+      const ports = await resolveHostCandidatePorts()
+      if (m.type === 'ACCOUNT_REFRESH_CLAIM') {
+        const token = typeof m.payload?.token === 'string' ? m.payload.token : ''
+        const pageUrl = typeof m.payload?.pageUrl === 'string' ? m.payload.pageUrl : ''
+        const handle = typeof m.payload?.handle === 'string' ? m.payload.handle : ''
+        const result = await claimAccountRefresh(ports, { token, pageUrl, handle })
+        sendResponse(result)
+        return
+      }
+      const token = typeof m.payload?.token === 'string' ? m.payload.token : ''
+      const account = m.payload?.account && typeof m.payload.account === 'object'
+        ? m.payload.account as Record<string, unknown>
+        : {}
+      const result = await completeAccountRefresh(ports, { token, account })
+      sendResponse(result)
+    })().then(() => undefined, (error) => sendResponse({ ok: false, error: String(error instanceof Error ? error.message : error) }))
+    return true
+  }
+  if (m?.type === 'ACCOUNT_REFRESH_CLOSE_TAB') {
+    const tabId = sender.tab?.id
+    if (tabId !== undefined) void closeRefreshedTab(tabId)
+    sendResponse({ ok: tabId !== undefined })
     return true
   }
   if (m?.type === 'SWITCH_DSH_PORT') {

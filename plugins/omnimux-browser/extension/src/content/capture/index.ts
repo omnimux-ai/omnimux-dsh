@@ -32,6 +32,12 @@ export type {
   ContentShape,
 } from './types.ts'
 export { MAX_CAPTURE_MEDIA } from './types.ts'
+export type {
+  AccountCaptureResult,
+  CapturedAccount,
+  CapturedAccountPost,
+} from './account.ts'
+export { captureAccount, mergeAccountSnapshots } from './account.ts'
 export { extractGeneric } from './generic.ts'
 export { extractXPost } from './x.ts'
 export { extractYoutube } from './youtube.ts'

@@ -35,7 +35,7 @@ const platformLabel = (platform, t) => (platform === 'x' ? 'X' : t(`platform.${p
  */
 export function RivalAccountColumn(props) {
   const {
-    t, accounts, selection, allIds, onSelect, onReset, onRemove, onRefresh, onRetry,
+    t, accounts, selection, allIds, onSelect, onReset, onRemove, onRefresh, onRetry, onPluginRefresh,
     quotaLeft, refreshBusy = false, active = true,
   } = props
   const list = Array.isArray(accounts) ? accounts : []
@@ -213,6 +213,18 @@ export function RivalAccountColumn(props) {
             }}
           >
             {t('rivalAccounts.column.refresh')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="omnimux-rival-menu-item"
+            role="menuitem"
+            onClick={() => {
+              onPluginRefresh?.(menu.id)
+              setMenu(null)
+            }}
+          >
+            {t('rivalAccounts.column.pluginRefresh')}
           </Button>
           <Button
             variant="ghost"
