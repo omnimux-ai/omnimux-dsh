@@ -17,6 +17,14 @@
 - 高度估算与渲染逐像素一致：根层媒体卡 `(列宽−2)/比例 + 82 + 2`；帖子卡 `24 + 行数(≤3)×20 + 24 + 2`；合集卡与账号监控卡公式不变。
 - 账号监控卡、账号监控弹窗、合集卡、拖拽合并、选择模式、落地高亮与「加入会话」行为不变。
 
+## 假设
+
+这次统一依赖的设计假设是：根层与合集的外观分叉只发生在渲染分支（根层是封面上的 title-zone，合集是封面下的正文区），只要让两处消费同一种 `layout` 描述、并让高度估算与 CSS 共用同一组正文高度常量，就能在不改数据与接口的前提下让外观一致；媒体比例是唯一允许按上下文不同的变量，账号监控因为浏览方式不同不进入这次统一。
+
+## 证伪方式
+
+若同一行内容在根层与合集仍出现不同的标题位置、角标或状态表达，或 `rivalCardHeightPx` 与真实渲染高度相差超过 2px 导致同列卡片重叠，则假设不成立。可执行验证：`node --test plugins/omnimux-inspiration/src/client/collection-member-card.test.js plugins/omnimux-inspiration/src/client/feed-card-parity.test.js` 与真机证据 `node .workbuddy/evidence/inspiration-feed-card-3477/run.mjs`（宽/窄/选择/悬停/滚动/合集回归 + report.json）；把统一映射 revert 回两套分支后，上述几何与外观断言必须失败。
+
 ## 实施边界与文档影响
 
 仅 `omnimux-inspiration` 客户端、样式、文案与测试；新增 `layout: 'feed'` 的客户端 descriptor 标记。更新插件 README 卡片一节与本规格。不新增模型、发布、工具或全局模式。
