@@ -1,0 +1,109 @@
+{
+  "issue": 3588,
+  "startedAt": "2026-10-21T12:04:36.287Z",
+  "scenarios": [
+    {
+      "name": "default-state",
+      "state": {
+        "menuOpen": true,
+        "rows": [
+          {
+            "action": "video",
+            "text": "下载视频",
+            "busy": false,
+            "error": false,
+            "done": false
+          },
+          {
+            "action": "audio",
+            "text": "保存原声",
+            "busy": false,
+            "error": false,
+            "done": false
+          },
+          {
+            "action": "save",
+            "text": "收藏到灵感库",
+            "busy": false,
+            "error": false,
+            "done": false
+          }
+        ],
+        "detail": ""
+      },
+      "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-tiktok-silent-done-issue-3588/.agent-reports/tiktok-silent-done-3588/01-menu-default.png"
+    },
+    {
+      "name": "busy-state",
+      "state": {
+        "menuOpen": true,
+        "rows": [
+          {
+            "action": "video",
+            "text": "下载视频解析下载中",
+            "busy": true,
+            "error": false,
+            "done": false
+          },
+          {
+            "action": "audio",
+            "text": "保存原声",
+            "busy": false,
+            "error": false,
+            "done": false
+          },
+          {
+            "action": "save",
+            "text": "收藏到灵感库",
+            "busy": false,
+            "error": false,
+            "done": false
+          }
+        ],
+        "detail": ""
+      },
+      "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-tiktok-silent-done-issue-3588/.agent-reports/tiktok-silent-done-3588/02-menu-busy.png"
+    },
+    {
+      "name": "settled-state",
+      "state": {
+        "menuOpen": true,
+        "rows": [
+          {
+            "action": "video",
+            "text": "下载视频",
+            "busy": false,
+            "error": false,
+            "done": false
+          },
+          {
+            "action": "audio",
+            "text": "保存原声",
+            "busy": false,
+            "error": false,
+            "done": false
+          },
+          {
+            "action": "save",
+            "text": "收藏到灵感库",
+            "busy": false,
+            "error": false,
+            "done": false
+          }
+        ],
+        "detail": ""
+      },
+      "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-tiktok-silent-done-issue-3588/.agent-reports/tiktok-silent-done-3588/03-menu-after.png"
+    }
+  ],
+  "chromePath": "/Users/x/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "extensionId": "kchkdcjfbdpkmiomjnhjkcbbinndfaea",
+  "downloadedFiles": [
+    "cecilia_pouponneau-He texted me afterwards ✨ #fyp.mp4"
+  ],
+  "successReturnedToDefault": true,
+  "noSuccessCopy": [],
+  "defaultRowsClean": true,
+  "failureKeepsReason": false,
+  "finishedAt": "2026-10-21T12:04:58.063Z"
+}
