@@ -1,0 +1,86 @@
+{
+  "capturedAt": "2026-10-21T07:58:40.624Z",
+  "harness": "http://127.0.0.1:4932/",
+  "wide": {
+    "group": {
+      "left": 167,
+      "right": 529,
+      "width": 362,
+      "radius": "999px"
+    },
+    "buttons": [
+      {
+        "text": "内容拆解",
+        "left": 173,
+        "right": 255,
+        "top": 82,
+        "bottom": 106
+      },
+      {
+        "text": "分镜表",
+        "left": 255,
+        "right": 325,
+        "top": 82,
+        "bottom": 106
+      },
+      {
+        "text": "提取音频",
+        "left": 325,
+        "right": 407,
+        "top": 82,
+        "bottom": 106
+      },
+      {
+        "text": "深度视频",
+        "left": 407,
+        "right": 489,
+        "top": 82,
+        "bottom": 106
+      },
+      {
+        "text": "",
+        "left": 494,
+        "right": 523,
+        "top": 84,
+        "bottom": 105
+      }
+    ],
+    "allInside": true,
+    "hasMore": false,
+    "maxWidthInline": null
+  },
+  "narrow": {
+    "group": {
+      "left": 138,
+      "right": 365,
+      "width": 227,
+      "radius": "999px"
+    },
+    "buttons": [
+      {
+        "text": "内容拆解",
+        "left": 144,
+        "right": 226,
+        "top": 82,
+        "bottom": 106
+      },
+      {
+        "text": "分镜表",
+        "left": 226,
+        "right": 296,
+        "top": 82,
+        "bottom": 106
+      },
+      {
+        "text": "更多",
+        "left": 301,
+        "right": 359,
+        "top": 82,
+        "bottom": 106
+      }
+    ],
+    "allInside": true,
+    "hasMore": true,
+    "maxWidthInline": null
+  }
+}

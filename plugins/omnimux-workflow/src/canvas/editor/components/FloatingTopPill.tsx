@@ -210,7 +210,7 @@ export const FloatingTopPill: React.FC<FloatingTopPillProps> = ({
             </div>
           </div>
 
-          <div className="wf-floating-top-pill__group" style={{ maxWidth }}>
+          <div className="wf-floating-top-pill__group">
             {primaryActions.length > 0 && (
               <div className="wf-floating-top-pill__section">
                 {primaryActions.map((action) => (
