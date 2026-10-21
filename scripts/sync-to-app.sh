@@ -470,8 +470,8 @@ build_one() {
       fi
       ;;
     omnimux-workflow)
-      echo "→ build $name (host + client + canvas)"
-      (cd "$dir" && node scripts/build-host.mjs && node scripts/build-client.mjs && node scripts/build-canvas.mjs)
+      echo "→ build $name (host + client + canvas + director)"
+      (cd "$dir" && node scripts/build-host.mjs && node scripts/build-client.mjs && node scripts/build-canvas.mjs && node scripts/build-director.mjs)
       ;;
     omnimux-apps)
       echo "→ build $name (host + client)"
