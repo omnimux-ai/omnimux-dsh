@@ -52,6 +52,10 @@ export function RivalTimelineEmbed(props) {
   useEffect(() => {
     if (!target || !hostRef.current) return undefined
     const host = hostRef.current
+    // A dependency change (live locale/theme switch) re-runs this effect: an
+    // append-only host would stack a second official card under `is-loading`
+    // while the row already hides its own content.
+    host.replaceChildren()
     let cancelled = false
     let timer = null
     const timeout = new Promise((resolve, reject) => {

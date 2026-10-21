@@ -127,12 +127,16 @@ describe('createTimelineEmbed — 各平台官方嵌入（#3542）', () => {
   })
 
   it('creates a TikTok player iframe with the official URL and allowances', async () => {
-    const ok = await createTimelineEmbed({
+    const pending = createTimelineEmbed({
       platform: 'tiktok',
       kind: 'player',
       id: '7698442056158465',
       url: 'https://www.tiktok.com/player/v1/7698442056158465',
     }, host, { title: '作者 · TikTok' })
+    const player = host.querySelector('iframe')
+    assert.ok(player, 'the iframe must be mounted before it loads')
+    player.dispatchEvent(new window.Event('load'))
+    const ok = await pending
     assert.equal(ok, true)
     const frame = host.querySelector('iframe')
     assert.equal(frame.getAttribute('src'), 'https://www.tiktok.com/player/v1/7698442056158465')
@@ -146,27 +150,42 @@ describe('createTimelineEmbed — 各平台官方嵌入（#3542）', () => {
   })
 
   it('creates a YouTube player iframe that does not scroll', async () => {
-    const ok = await createTimelineEmbed({
+    const pending = createTimelineEmbed({
       platform: 'youtube',
       kind: 'player',
       id: 'abc123',
       url: 'https://www.youtube.com/embed/abc123?rel=0',
     }, host, {})
+    host.querySelector('iframe').dispatchEvent(new window.Event('load'))
+    const ok = await pending
     assert.equal(ok, true)
     const frame = host.querySelector('iframe')
     assert.equal(frame.getAttribute('scrolling'), 'no')
     assert.ok(String(frame.className).includes('is-youtube'))
   })
 
-  it('creates an Instagram card iframe', async () => {
-    const ok = await createTimelineEmbed({
+  it('creates an Instagram card iframe once it loads', async () => {
+    const pending = createTimelineEmbed({
       platform: 'instagram',
       kind: 'card',
       id: 'CqX0YyYvZzZ',
       url: 'https://www.instagram.com/p/CqX0YyYvZzZ/embed/',
     }, host, {})
-    assert.equal(ok, true)
-    assert.ok(host.querySelector('iframe'), 'the Instagram embed is an iframe card')
+    const frame = host.querySelector('iframe')
+    assert.ok(frame, 'the Instagram embed is an iframe card')
+    frame.dispatchEvent(new window.Event('load'))
+    assert.equal(await pending, true)
+  })
+
+  it('reports failure when an iframe embed cannot load', async () => {
+    const pending = createTimelineEmbed({
+      platform: 'youtube',
+      kind: 'player',
+      id: 'abc123',
+      url: 'https://www.youtube.com/embed/abc123?rel=0',
+    }, host, {})
+    host.querySelector('iframe').dispatchEvent(new window.Event('error'))
+    assert.equal(await pending, false, 'a blocked/failed iframe must release the row fallback')
   })
 
   it('refuses platforms without an official embed', async () => {

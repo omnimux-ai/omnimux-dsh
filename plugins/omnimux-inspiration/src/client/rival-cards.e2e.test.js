@@ -829,6 +829,8 @@ describe('账号监控 — 时间线内嵌官方卡片 (#3542)', () => {
     assert.equal(videoCall.options.dnt, true, 'the X card must opt out of tracking')
     assert.equal(videoCall.options.conversation, 'none', 'the feed card must not embed the reply conversation')
     assert.ok(xRow.querySelector('iframe'), 'the ready X row must carry the official widget frame')
+    tiktokRow.querySelector('iframe').dispatchEvent(new globalThis.window.Event('load'))
+    await settle(mounted.container, () => tiktokRow.classList.contains('is-embed-player'))
     assert.ok(tiktokRow.classList.contains('is-embed-player'), 'the TikTok row must swap only its media block to the player')
     assert.ok(tiktokRow.querySelector('.omnimux-rival-timeline-head'), 'a player row keeps our author header')
     assert.match(tiktokRow.querySelector('iframe').getAttribute('src'), /^https:\/\/www\.tiktok\.com\/player\/v1\//, 'the TikTok row must use the official player')
@@ -852,6 +854,36 @@ describe('账号监控 — 时间线内嵌官方卡片 (#3542)', () => {
     assert.equal(xRow.querySelector('.omnimux-rival-timeline-embed'), null, 'a failed embed must remove its host')
     assert.ok(xRow.querySelector('.omnimux-rival-timeline-head'), 'the fallback keeps the author header')
     assert.deepEqual(actionsOf(xRow), ['original', 'replicate', 'deconstruct', 'markDone'], 'the fallback keeps every action')
+    delete globalThis.window.twttr
+    resetTwitterWidgetsLoader()
+  })
+
+  it('rebuilds the embed without stacking a second card when theme or language changes', async () => {
+    resetTwitterWidgetsLoader()
+    const mounted = await mountStageOnAccounts()
+    open.push(mounted)
+    const xPost = POSTS.find((post) => post.platform === 'x' && post.type === 'video')
+    const xRow = rowOf(mounted.container, xPost)
+    const calls = installFakeWidgets('ok')
+    await mounted.revealRows()
+    await settle(mounted.container, () => xRow.classList.contains('is-embed-card'))
+    const host = xRow.querySelector('.omnimux-rival-timeline-embed')
+    assert.equal(host.querySelectorAll('iframe').length, 1, 'the row starts with exactly one official card')
+    assert.equal(calls.some((call) => call.options.theme === 'light'), false)
+
+    // A live theme switch re-renders the row through any parent state update;
+    // the effect must clear its host before creating the new card.
+    mounted.container.ownerDocument.documentElement.setAttribute('data-theme', 'light')
+    const mark = xRow.querySelector('[data-act="markDone"]')
+    await act(async () => {
+      mark.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 60))
+    })
+    await settle(mounted.container, () => calls.some((call) => call.options.theme === 'light'))
+    assert.equal(host.querySelectorAll('iframe').length, 1, 'a theme/language change must not stack a second official card')
+    assert.equal(xRow.classList.contains('is-embed-card'), true, 'the rebuilt embed keeps the whole-card layout')
+    assert.deepEqual(actionsOf(xRow), ['original', 'replicate', 'deconstruct'], 'the remaining actions stay after the rebuild (标为已处理 was the clicked one)')
+    mounted.container.ownerDocument.documentElement.removeAttribute('data-theme')
     delete globalThis.window.twttr
     resetTwitterWidgetsLoader()
   })

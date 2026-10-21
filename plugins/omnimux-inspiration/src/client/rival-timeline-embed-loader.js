@@ -113,7 +113,13 @@ export async function createTimelineEmbed(target, host, options = {}) {
     frame.setAttribute('allowfullscreen', 'true')
     if (target.platform === 'youtube') frame.setAttribute('scrolling', 'no')
     host.appendChild(frame)
-    return true
+    // The component's 10s race is the watchdog: a blocked/offline domain never
+    // fires `load`, so the row must keep its own card until the frame proves it
+    // loaded (a public embed cannot be inspected cross-origin).
+    return new Promise((resolve) => {
+      frame.addEventListener('load', () => resolve(true), { once: true })
+      frame.addEventListener('error', () => resolve(false), { once: true })
+    })
   }
   return false
 }

@@ -1400,6 +1400,7 @@ export const RIVAL_CSS = `
 .omnimux-rival-timeline-item.is-embed-player .omnimux-rival-timeline-media {
   width: min(100%, 550px);
   max-height: none;
+  aspect-ratio: auto;
   border: 0;
   background: transparent;
 }
