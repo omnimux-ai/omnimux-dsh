@@ -3,26 +3,28 @@ import test from 'node:test'
 import { runStyleDomProbe } from '../../../../scripts/test-fixtures/style-dom-probe.mjs'
 import { INSPIRATION_CSS } from './styles.js'
 import { RIVAL_CSS } from './rival-styles.js'
+import { COLLECTION_CSS } from './collection-styles.js'
 
 /**
- * Geometry gate for the collection member card (Issue 3459).
+ * Geometry gate for the collection member card (Issue 3459 / 3502).
  *
  * jsdom cannot measure layout, so the card contract is asserted in a real
- * Chrome: the cover is 4:5, the body starts exactly under it, the card height
- * matches the masonry estimate, the checkbox never covers the title, and the
- * type/duration chips keep their two corners.
+ * Chrome: the cover is 4:5 and is the whole default face, the card height is
+ * cover + border, the title/meta hover layer is absolutely positioned over the
+ * cover, the CTA row is horizontally centred, and the failure icon / ⋯ menu stay
+ * inside the card without covering the default face.
  *
  * The fixture uses the production class contract; CSS comes from the real style
  * modules. React is not involved: this is the same markup the components emit.
- * `t-text-media` is covered explicitly: X/Twitter members land in that shape and
- * it used to carry its own card padding, which the collection layout must drop.
  */
 
 const CARD_WIDTH = 240
+const LONG_REASON = '导入中断或超时，请重试'
 
 const BASE_CSS = `
   .probe-stage { width: 1600px; padding: 20px; }
   .probe-card { position: relative !important; left: auto !important; top: auto !important; }
+  .probe-menu button { width: 28px; height: 28px; }
 `
 
 function fixtureHtml(cardTypeClass) {
@@ -31,24 +33,21 @@ function fixtureHtml(cardTypeClass) {
   <article class="probe-card omnimux-rival-card ${cardTypeClass} omnimux-inspiration-card-pure is-library is-media-first" style="--rival-card-w:${CARD_WIDTH}px">
     <div class="omnimux-inspiration-cover-wrap">
       <div class="omnimux-rival-card-media" style="--rival-media-ratio:0.8"></div>
-      <span class="omnimux-inspiration-badge-type">视频</span>
-      <span class="omnimux-inspiration-badge-duration">0:32</span>
-      <div class="omnimux-inspiration-cover-tools">
-        <div class="omnimux-inspiration-overlay-cta">
-          <button class="omnimux-inspiration-overlay-cta-btn secondary"><span class="omnimux-inspiration-overlay-cta-label">详情</span></button>
-          <button class="omnimux-inspiration-overlay-cta-btn primary"><span class="omnimux-inspiration-overlay-cta-label">立即复刻</span></button>
-        </div>
-      </div>
     </div>
     <div class="omnimux-rival-card-body">
       <div class="omnimux-rival-card-title clamp-2" title="标题">封面优先的合集成员卡标题，最多两行</div>
       <div class="omnimux-inspiration-card-meta">
         <span class="omnimux-inspiration-card-meta-source">YouTube</span>
         <span class="omnimux-inspiration-card-meta-sep" aria-hidden="true">·</span>
-        <span class="omnimux-inspiration-card-meta-duration">0:32</span>
-        <span class="omnimux-inspiration-card-meta-sep" aria-hidden="true">·</span>
         <span class="omnimux-inspiration-card-meta-time">3 天前</span>
-        <span class="omnimux-inspiration-card-status is-failed" role="status" title="导入失败：导入中断或超时">导入失败</span>
+      </div>
+    </div>
+    <span class="omnimux-inspiration-card-failure is-failed" role="img" title="${LONG_REASON}" aria-label="${LONG_REASON}"><svg width="14" height="14"></svg></span>
+    <div class="omnimux-inspiration-card-menu probe-menu"><button aria-label="更多操作">…</button></div>
+    <div class="omnimux-inspiration-card-overlay is-cover">
+      <div class="omnimux-inspiration-overlay-cta">
+        <button class="omnimux-inspiration-overlay-cta-btn secondary"><span class="omnimux-inspiration-overlay-cta-label">详情</span></button>
+        <button class="omnimux-inspiration-overlay-cta-btn primary"><span class="omnimux-inspiration-overlay-cta-label">立即复刻</span></button>
       </div>
     </div>
     <button class="omnimux-inspiration-card-check" aria-label="选择"></button>
@@ -66,8 +65,10 @@ function measure() {
   const body = card.querySelector('.omnimux-rival-card-body')
   const title = card.querySelector('.omnimux-rival-card-title')
   const check = card.querySelector('.omnimux-inspiration-card-check')
-  const typeChip = card.querySelector('.omnimux-inspiration-badge-type')
-  const durationChip = card.querySelector('.omnimux-inspiration-badge-duration')
+  const failure = card.querySelector('.omnimux-inspiration-card-failure')
+  const menu = card.querySelector('.omnimux-inspiration-card-menu')
+  const cta = card.querySelector('.omnimux-inspiration-overlay-cta')
+  const overlay = card.querySelector('.omnimux-inspiration-card-overlay.is-cover')
   const rect = (node) => {
     const box = node.getBoundingClientRect()
     return {
@@ -80,38 +81,48 @@ function measure() {
     }
   }
   const mediaBox = media.getBoundingClientRect()
+  const cardBox = card.getBoundingClientRect()
+  const ctaBox = cta.getBoundingClientRect()
   return {
     card: rect(card),
     media: rect(media),
     body: rect(body),
     title: rect(title),
     check: rect(check),
-    typeChip: rect(typeChip),
-    durationChip: rect(durationChip),
+    failure: rect(failure),
+    menu: rect(menu),
+    cta: rect(cta),
     ratio: mediaBox.width / mediaBox.height,
     titleClamp: getComputedStyle(title).webkitLineClamp,
     objectFit: getComputedStyle(media).objectFit,
+    bodyOpacity: getComputedStyle(body).opacity,
+    menuOpacity: getComputedStyle(menu).opacity,
+    bodyPosition: getComputedStyle(body).position,
+    overlayOpacity: getComputedStyle(overlay).opacity,
+    ctaCenterOffset: Math.round((ctaBox.left + ctaBox.width / 2) - (cardBox.left + cardBox.width / 2)),
   }
 }
 
 function probe(cardTypeClass) {
   return runStyleDomProbe({
     name: 'collection-member-card',
-    styles: `${INSPIRATION_CSS}\n${RIVAL_CSS}\n${BASE_CSS}`,
+    styles: `${INSPIRATION_CSS}\n${RIVAL_CSS}\n${COLLECTION_CSS}\n${BASE_CSS}`,
     html: fixtureHtml(cardTypeClass),
     measure,
     viewportHeight: 900,
   })
 }
 
-test('合集成员卡：4:5 封面、正文紧随、固定高度', () => {
+test('合集成员卡：4:5 封面就是默认卡面，高度为封面 + 描边', () => {
   const geometry = probe('t-short-video')
   assert.ok(Math.abs(geometry.ratio - 0.8) <= 0.02, `cover must be 4:5, got ${geometry.ratio.toFixed(3)}`)
   assert.equal(geometry.objectFit, 'cover', 'the collection cover crops to fill')
   assert.equal(geometry.titleClamp, '2', 'the title is clamped to two lines')
-  assert.ok(geometry.body.y >= geometry.media.bottom, 'the body starts below the cover')
+  assert.equal(geometry.bodyPosition, 'absolute', 'the title/meta layer overlays the cover instead of adding height')
+  assert.equal(geometry.bodyOpacity, '0', 'the hover layer is hidden by default')
+  assert.equal(geometry.overlayOpacity, '0', 'the CTA layer is hidden by default')
   assert.ok(
-    Math.abs(geometry.card.h - (geometry.media.h + 82 + 2)) <= 2,
+    Math.abs(geometry.card.h - (geometry.media.h + 2)) <= 2,
     `card height must match the masonry estimate (card ${geometry.card.h}, cover ${geometry.media.h})`,
   )
 })
@@ -119,20 +130,20 @@ test('合集成员卡：4:5 封面、正文紧随、固定高度', () => {
 test('合集成员卡：text-media 成员同样按封面优先几何', () => {
   const geometry = probe('t-text-media')
   assert.ok(Math.abs(geometry.ratio - 0.8) <= 0.02, `text-media cover must be 4:5, got ${geometry.ratio.toFixed(3)}`)
-  assert.ok(geometry.body.y >= geometry.media.bottom, 'the body starts below the cover')
   assert.ok(
-    Math.abs(geometry.card.h - (geometry.media.h + 82 + 2)) <= 2,
+    Math.abs(geometry.card.h - (geometry.media.h + 2)) <= 2,
     `text-media member must drop its card padding (card ${geometry.card.h}, cover ${geometry.media.h})`,
   )
 })
 
-test('合集成员卡：复选框与角标互不越界', () => {
+test('合集成员卡：CTA 居中，失败图标与菜单不越界', () => {
   const geometry = probe('t-short-video')
-  assert.ok(geometry.check.bottom <= geometry.title.y, 'the checkbox must not cover the title')
+  assert.ok(Math.abs(geometry.ctaCenterOffset) <= 2, `CTA must be horizontally centred, offset ${geometry.ctaCenterOffset}px`)
+  assert.ok(geometry.cta.bottom <= geometry.card.bottom, 'the CTA stays inside the card')
+  assert.ok(geometry.failure.y <= geometry.media.y + 12, 'the failure icon sits in the cover top-right corner')
+  assert.ok(geometry.failure.right <= geometry.card.right, 'the failure icon stays inside the card')
+  assert.ok(geometry.menu.right <= geometry.card.right, 'the ⋯ menu stays inside the card')
+  assert.ok(geometry.menu.y >= geometry.failure.bottom, 'the ⋯ menu sits below the failure icon')
+  assert.equal(geometry.menuOpacity, '0', 'the ⋯ menu is hidden by default')
   assert.ok(geometry.check.right <= geometry.card.right, 'the checkbox stays inside the card')
-  assert.equal(geometry.typeChip.y, geometry.durationChip.y, 'type and duration chips share one baseline')
-  assert.ok(geometry.typeChip.x < geometry.durationChip.x, 'type is on the left, duration on the right')
-  assert.ok(geometry.typeChip.x >= geometry.card.x, 'the type chip stays inside the cover')
-  assert.ok(geometry.durationChip.right <= geometry.card.right, 'the duration chip stays inside the cover')
-  assert.ok(geometry.durationChip.bottom <= geometry.media.bottom, 'chips stay inside the cover, not the body')
 })

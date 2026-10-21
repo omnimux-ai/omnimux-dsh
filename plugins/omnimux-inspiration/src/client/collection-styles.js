@@ -159,6 +159,7 @@ export const COLLECTION_CSS = `
    强制成透明窄条）。 */
 .omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-overlay-cta {
   margin-bottom: 0;
+  justify-content: center;
   pointer-events: none;
 }
 .omnimux-inspiration-collection-card:hover .omnimux-inspiration-collection-actions .omnimux-inspiration-overlay-cta,

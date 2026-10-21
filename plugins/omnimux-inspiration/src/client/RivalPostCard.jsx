@@ -127,7 +127,7 @@ export function RivalPostCard(props) {
   const {
     card, t, onDetail, onReplicate, onDeconstruct, onMarkDone, style, column, busy,
     mediaNode: customMedia, overlayNode, metaNode, children, className = '', selected, inspirationId, collectionId,
-    bodyClassName = '', bodyRole,
+    bodyClassName = '', bodyRole, bodyLabel,
   } = props
   const cardType = rivalCardTypeOf(card)
   const onMedia = cardType === 'short-video' || cardType === 'long-video' || cardType === 'image' || cardType === 'collection'
@@ -243,7 +243,7 @@ export function RivalPostCard(props) {
         </>
       ) : postLayout ? (
         <div className="omnimux-rival-card-body is-post">
-          <div className={`omnimux-rival-card-text clamp-3 ${bodyClassName}`.trim()} role={bodyRole}>{title}</div>
+          <div className={`omnimux-rival-card-text clamp-3 ${bodyClassName}`.trim()} role={bodyRole}>{bodyLabel || title}</div>
           {metaNode || null}
         </div>
       ) : onMedia ? (

@@ -60,12 +60,11 @@ export const COLLECTION_MEMBER_LAYOUT = 'media-first'
  */
 export const FEED_LAYOUT = 'feed'
 
-/** 合集详情成员卡正文区：上 10 + 标题两行 36 + 间距 6 + 元信息行 18 + 下 12。 */
-const MEDIA_FIRST_BODY_H = 82
-
 /** 帖子卡（无媒体）：正文最多 3 行，元信息行 18 + 间距 6。 */
 const POST_MAX_LINES = 3
 const POST_META_H = 18 + 6
+/** 帖子卡高度上限：竖屏比例（高 ≤ 宽 × 16/9），超过就按上限截。 */
+const POST_MAX_RATIO = 16 / 9
 
 /** 卡片 1px 描边（上 + 下）：估算按渲染的 border-box 高度计，含这 2px。 */
 const CARD_BORDER = 2
@@ -677,14 +676,16 @@ export function rivalCardHeightPx(card, columnWidth) {
   const type = rivalCardTypeOf(card)
   const layout = card?.layout
   if (type !== 'text' && (layout === COLLECTION_MEMBER_LAYOUT || layout === FEED_LAYOUT)) {
-    // 库卡片（合集成员 / 根层信息流）：封面 + 固定正文区（标题两行 + 元信息行）。
-    // 两者的唯一差异是比例：合集固定 4:5，根层取数据比例。
-    return Math.max(RIVAL_MIN_CARD_HEIGHT, inner / rivalMediaRatioOf(card) + MEDIA_FIRST_BODY_H + CARD_BORDER)
+    // 库卡片（合集成员 / 根层信息流）：默认只显示封面，标题/元信息/CTA 悬停时
+    // 叠在封面上，不占卡高。两者唯一差异是比例：合集固定 4:5，根层取数据比例。
+    return inner / rivalMediaRatioOf(card) + CARD_BORDER
   }
   if (type === 'text' && (layout === FEED_LAYOUT || layout === COLLECTION_MEMBER_LAYOUT)) {
-    // 帖子卡（根层与合集成员）：正文最多 3 行 + 元信息行，没有封面。
+    // 帖子卡（根层与合集成员）：默认显示 3 行收敛正文，没有封面；
+    // 高度不超过竖屏比例（高 ≤ 宽 × 16/9）。
     const lines = Math.min(POST_MAX_LINES, textBodyLines(card, w))
-    return Math.max(RIVAL_MIN_CARD_HEIGHT, TEXT_PAD_V + lines * BODY_LINE + POST_META_H + CARD_BORDER)
+    const content = Math.max(RIVAL_MIN_CARD_HEIGHT, TEXT_PAD_V + lines * BODY_LINE + POST_META_H + CARD_BORDER)
+    return Math.min(content, inner * POST_MAX_RATIO)
   }
   if (type === 'collection') {
     return inner / RIVAL_COLLECTION_MEDIA_RATIO + RIVAL_COLLECTION_TITLE_HEIGHT + CARD_BORDER
