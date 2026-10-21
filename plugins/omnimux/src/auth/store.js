@@ -54,6 +54,26 @@ function runningUnderNodeTest() {
 }
 
 /**
+ * Resolves a thrown value into a loggable message without touching token material.
+ * @param {unknown} error
+ */
+function errorDetail(error) {
+  return error instanceof Error ? error.message : String(error)
+}
+
+/**
+ * Wraps a failed logout cleanup step so callers can act on the step name.
+ * @param {string} step
+ * @param {unknown} error
+ */
+function cleanupStepError(step, error) {
+  const wrapped = new Error(`${step} failed: ${errorDetail(error)}`)
+  wrapped.cleanupStep = step
+  wrapped.cause = error
+  return /** @type {Error & { cleanupStep: string, cause: unknown }} */ (wrapped)
+}
+
+/**
  * One-shot copy of a home-local profile cache into the shared config dir.
  * Never reads ~/.dsh as an ongoing auth path; only lifts the previous
  * `$DSH_HOME/omnimux/profile.json` when the canonical file is absent.
@@ -83,6 +103,7 @@ function migrateLegacyProfileCache(opts) {
  *   env?: Record<string, string | undefined>,
  *   now?: () => number,
  *   profilePath?: string,
+ *   logger?: { warn: (message: string) => void },
  * }} [opts]
  */
 export function createTokenStore(opts = {}) {
@@ -103,6 +124,17 @@ export function createTokenStore(opts = {}) {
     ? join(sandboxRoot, 'profile.json')
     : join(configDir, 'profile.json'))
   const credentials = opts.credentials
+  // Cleanup failures must stay observable even when tests or callers replace the logger.
+  const logger = opts.logger && typeof opts.logger.warn === 'function' ? opts.logger : console
+
+  /**
+   * Leaves a credential-free trace (step + error message) of a failed logout cleanup.
+   * @param {string} step
+   * @param {unknown} error
+   */
+  function logCleanupFailure(step, error) {
+    logger.warn(`[omnimux-auth] ${step} failed: ${errorDetail(error)}`)
+  }
 
   migrateLegacyProfileCache({
     dest: profilePath,
@@ -158,6 +190,8 @@ export function createTokenStore(opts = {}) {
 
   /**
    * Cleans user_id in config.json on explicit logout.
+   * Absent/already-clean files are success; a real write failure is logged and thrown
+   * so logout cannot report success while config.json still carries account state.
    */
   function unsetConfig() {
     try {
@@ -171,8 +205,9 @@ export function createTokenStore(opts = {}) {
           atomicWriteFileSync(configPath, `${JSON.stringify(existing, null, 2)}\n`, { mode: 0o600, dirMode: 0o700 })
         }
       }
-    } catch {
-      // ignore
+    } catch (error) {
+      logCleanupFailure('unsetConfig', error)
+      throw cleanupStepError('unsetConfig', error)
     }
   }
 
@@ -237,6 +272,8 @@ export function createTokenStore(opts = {}) {
 
   /**
    * Cleans up token in secrets.json on explicit logout.
+   * Absent/already-clean files are success; a real removal/rewrite failure is logged
+   * and thrown so logout cannot report success while the token stays on disk.
    */
   function unsetSecrets() {
     try {
@@ -271,8 +308,9 @@ export function createTokenStore(opts = {}) {
         }
         atomicWriteFileSync(secretsPath, `${JSON.stringify(payload, null, 2)}\n`, { mode: 0o600, dirMode: 0o700 })
       }
-    } catch {
-      // absent or clean failure is ignored
+    } catch (error) {
+      logCleanupFailure('unsetSecrets', error)
+      throw cleanupStepError('unsetSecrets', error)
     }
   }
 
@@ -370,30 +408,58 @@ export function createTokenStore(opts = {}) {
 
   /**
    * Cleans up token on explicit user logout.
+   * Every step runs independently so one failure cannot leave later credential
+   * copies behind; the aggregated failure then propagates so HTTP logout is 5xx.
    */
   async function unset() {
     clearExpired()
 
-    // 1. Unset from canonical secrets.json
-    unsetSecrets()
+    // OMNIMUX_ACCESS_TOKEN is explicit process-level configuration, not a credential
+    // this store persisted; logout owns the on-disk copies only. The official
+    // credentials seam refuses `unset` while the env shadows it (assertUnshadowed),
+    // so a shadowed seam failure is recorded as a known residue instead of a 5xx.
+    const envOverride = typeof env.OMNIMUX_ACCESS_TOKEN === 'string' && env.OMNIMUX_ACCESS_TOKEN.length > 0
 
-    // 2. Clean user_id in config.json
-    unsetConfig()
+    /** @type {string[]} */
+    const failedSteps = []
+    /** @type {Array<[string, () => void | Promise<void>]>} */
+    const cleanupSteps = [
+      // 1. Canonical secrets.json (logs + throws on real failure)
+      ['unsetSecrets', () => unsetSecrets()],
+      // 2. config.json user_id (logs + throws on real failure)
+      ['unsetConfig', () => unsetConfig()],
+      // 3. Credentials seam: a stale seam value still resolves after logout.
+      //    Always attempt it; under an env override the seam refuses by design, so
+      //    the refusal is kept visible as a warning (seam mirror may survive) rather
+      //    than failing a logout whose active credential is process config.
+      ['credentials.unset', async () => {
+        if (!credentials || typeof credentials.unset !== 'function') return
+        try {
+          await credentials.unset(CREDENTIAL_REF)
+        } catch (error) {
+          if (!envOverride) throw error
+          logCleanupFailure('credentials.unset', error)
+        }
+      }],
+      // 4. Profile cache
+      ['profile cache cleanup', () => rmSync(profilePath, { force: true })],
+    ]
 
-    // 3. Unset credentials seam
-    if (credentials && typeof credentials.unset === 'function') {
+    for (const [step, run] of cleanupSteps) {
       try {
-        await credentials.unset(CREDENTIAL_REF)
-      } catch {
-        // ignore seam failure
+        await run()
+      } catch (error) {
+        // unsetSecrets/unsetConfig warn and tag the step before throwing; only
+        // the remaining steps need their warning emitted here.
+        const tagged = error instanceof Error && typeof (/** @type {Error & { cleanupStep?: string }} */ (error)).cleanupStep === 'string'
+        if (!tagged) logCleanupFailure(step, error)
+        const detail = error instanceof Error && error.cause instanceof Error ? error.cause.message : errorDetail(error)
+        failedSteps.push(`${step} failed: ${detail}`)
       }
     }
 
-    // 4. Clean profile cache
-    try {
-      rmSync(profilePath, { force: true })
-    } catch {
-      // absent is success
+    if (failedSteps.length > 0) {
+      throw new Error(`logout cleanup incomplete: ${failedSteps.join('; ')}`)
     }
   }
 

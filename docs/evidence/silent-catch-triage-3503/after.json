@@ -1,0 +1,28 @@
+{
+  "capturedAt": "2026-10-21T03:58:33.611Z",
+  "head": "d2d54d177dac869f8a8cdabeb0c601a81ac571dc",
+  "byRule": {
+    "SC1": 241,
+    "SC2": 399,
+    "SC3": 885
+  },
+  "total": 1525,
+  "targetFiles": {
+    "plugins/omnimux-market/src/local-api.ts": {
+      "SC1": 10,
+      "SC2": 0,
+      "SC3": 10
+    },
+    "plugins/omnimux/src/auth/store.js": {
+      "SC1": 0,
+      "SC2": 8,
+      "SC3": 4
+    },
+    "plugins/omnimux/src/client/sidebar-toggle-topbar.js": {
+      "SC1": 0,
+      "SC2": 0,
+      "SC3": 4
+    }
+  },
+  "note": "worktree-dirty 扫描：head 记录的是 base（d2d54d177），统计对象为含未提交改动的本工作树；提交后以 PR head 为准。"
+}

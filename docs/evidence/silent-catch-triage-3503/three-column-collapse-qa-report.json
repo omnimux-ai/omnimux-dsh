@@ -1,0 +1,722 @@
+{
+  "runId": "f7385c34-1481-4ff8-9160-771bd4070221",
+  "scenario": "three-column-collapse",
+  "startedAt": "2026-10-21T03:54:38.977Z",
+  "sourcePaths": [
+    "plugins/omnimux/src/client/conversation-box.js",
+    "plugins/omnimux/src/client/sidebar-toggle-topbar.js",
+    "plugins/omnimux/src/client/conversation-ratio.js"
+  ],
+  "assertions": [
+    {
+      "name": "ephemeral-server-listen",
+      "pass": true,
+      "port": 55646
+    },
+    {
+      "name": "ephemeral-cdp-listen",
+      "pass": true,
+      "port": 55649
+    },
+    {
+      "name": "expanded-conversation-positive",
+      "pass": true,
+      "conversation": 485
+    },
+    {
+      "name": "expanded-rightbar-positive",
+      "pass": true,
+      "rightbar": 1155
+    },
+    {
+      "name": "collapsed-keeps-conversation-width",
+      "pass": true,
+      "conversationBefore": 485,
+      "conversationAfter": 485,
+      "rightbarBefore": 1155,
+      "rightbarAfter": 1435,
+      "reasons": []
+    },
+    {
+      "name": "screenshot-captured",
+      "pass": true,
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/common-silent-catch-triage-issue-3503/docs/evidence/three-column-collapse-collapsed.png",
+      "width": 1920,
+      "height": 993,
+      "bytes": 7826
+    },
+    {
+      "name": "matrix-expanded",
+      "pass": true,
+      "label": "① 三分栏展开（无任何收起标记）",
+      "knownDeviation": false,
+      "reasons": []
+    },
+    {
+      "name": "matrix-left-collapsed",
+      "pass": true,
+      "label": "② 左栏收起（右栏开）",
+      "knownDeviation": false,
+      "reasons": []
+    },
+    {
+      "name": "matrix-left+right-collapsed",
+      "pass": true,
+      "label": "③ 左栏收起 + 右栏收起",
+      "knownDeviation": false,
+      "reasons": []
+    },
+    {
+      "name": "matrix-conversation-collapsed",
+      "pass": true,
+      "label": "④ 中间栏收起（左栏展开，右栏开）",
+      "knownDeviation": false,
+      "reasons": []
+    },
+    {
+      "name": "matrix-conversation+left-collapsed",
+      "pass": true,
+      "label": "⑤ 中间栏收起 + 左栏收起（右栏开）",
+      "knownDeviation": true,
+      "reasons": []
+    },
+    {
+      "name": "matrix-rightbar-collapsed",
+      "pass": true,
+      "label": "⑥ 右栏收起（左栏展开）",
+      "knownDeviation": false,
+      "reasons": []
+    },
+    {
+      "name": "round-trip-conversation-width-stable",
+      "pass": true,
+      "first": 485,
+      "second": 485,
+      "reasons": []
+    },
+    {
+      "name": "round-trip-expanded-restores",
+      "pass": true,
+      "before": 485,
+      "after": 485,
+      "reasons": []
+    },
+    {
+      "name": "legacy-rule-reproduces-collapse",
+      "pass": true,
+      "rightbarAfter": 0,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-bridge-ready",
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1920",
+      "pass": true,
+      "viewport": 1920,
+      "expectedChat": 492,
+      "measuredChat": 492,
+      "trackSum": 1920,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1920-rightbar",
+      "pass": true,
+      "viewport": 1920,
+      "expectedRightbar": 1148,
+      "measuredRightbar": 1148,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1920-production-pinned",
+      "pass": true,
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
+      "bridgeChat": 492,
+      "measuredChat": 492,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1920-pin-bound-to-var",
+      "pass": true,
+      "sentinelPx": 612,
+      "measuredChat": 612,
+      "restoredChat": 492,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1920-pin-reverse-control",
+      "pass": true,
+      "productionDisabledChat": 1640,
+      "expectedChat": 492,
+      "driftPx": 1148,
+      "restoredChat": 492,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-2560",
+      "pass": true,
+      "viewport": 2560,
+      "expectedChat": 684,
+      "measuredChat": 684,
+      "trackSum": 2560,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-2560-rightbar",
+      "pass": true,
+      "viewport": 2560,
+      "expectedRightbar": 1596,
+      "measuredRightbar": 1596,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-2560-production-pinned",
+      "pass": true,
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
+      "bridgeChat": 684,
+      "measuredChat": 684,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-2560-pin-bound-to-var",
+      "pass": true,
+      "sentinelPx": 804,
+      "measuredChat": 804,
+      "restoredChat": 684,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-2560-pin-reverse-control",
+      "pass": true,
+      "productionDisabledChat": 2280,
+      "expectedChat": 684,
+      "driftPx": 1596,
+      "restoredChat": 684,
+      "reasons": []
+    },
+    {
+      "name": "viewport-resize-1920-to-2560",
+      "pass": true,
+      "before": 492,
+      "after": 684,
+      "expectedBefore": 492,
+      "expectedAfter": 684,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1440",
+      "pass": true,
+      "viewport": 1440,
+      "expectedChat": 360,
+      "measuredChat": 360,
+      "trackSum": 1440,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1440-rightbar",
+      "pass": true,
+      "viewport": 1440,
+      "expectedRightbar": 800,
+      "measuredRightbar": 800,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1440-production-pinned",
+      "pass": true,
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
+      "bridgeChat": 360,
+      "measuredChat": 360,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1440-pin-bound-to-var",
+      "pass": true,
+      "sentinelPx": 480,
+      "measuredChat": 480,
+      "restoredChat": 360,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1440-pin-reverse-control",
+      "pass": true,
+      "productionDisabledChat": 1160,
+      "expectedChat": 360,
+      "driftPx": 800,
+      "restoredChat": 360,
+      "reasons": []
+    },
+    {
+      "name": "viewport-resize-2560-to-1440",
+      "pass": true,
+      "before": 684,
+      "after": 360,
+      "expectedBefore": 684,
+      "expectedAfter": 360,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-screenshot-captured",
+      "pass": true,
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/common-silent-catch-triage-issue-3503/docs/evidence/three-column-collapse-viewport-tiers.png",
+      "viewport": 2560,
+      "width": 2560,
+      "height": 1080,
+      "bytes": 10536
+    }
+  ],
+  "cleanup": {
+    "httpServerClosed": true,
+    "profileRemoved": true,
+    "allReleased": true
+  },
+  "errors": [],
+  "pass": true,
+  "serverPort": 55646,
+  "cdpPort": 55649,
+  "expanded": {
+    "viewport": 1920,
+    "tracks": [
+      280,
+      485,
+      1155
+    ],
+    "firstTrack": 280,
+    "conversationTrack": 485,
+    "rightbarTrack": 1155,
+    "conversation": 485,
+    "rightbar": 1155,
+    "conversationVar": "",
+    "frameTrackStyle": "280px minmax(0px, 1fr) 1155px"
+  },
+  "collapsed": {
+    "viewport": 1920,
+    "tracks": [
+      0,
+      485,
+      1435
+    ],
+    "firstTrack": 0,
+    "conversationTrack": 485,
+    "rightbarTrack": 1435,
+    "conversation": 485,
+    "rightbar": 1435,
+    "conversationVar": "485px",
+    "frameTrackStyle": "90px minmax(0px, 1fr) 1155px"
+  },
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/common-silent-catch-triage-issue-3503/docs/evidence/three-column-collapse-collapsed.png",
+    "width": 1920,
+    "height": 993,
+    "bytes": 7826
+  },
+  "matrix": [
+    {
+      "key": "expanded",
+      "label": "① 三分栏展开（无任何收起标记）",
+      "why": "展开态交外壳原生网格，插件不得介入（INV-11：顶栏让位靠重叠量而非 collapsed 布尔）",
+      "expected": {
+        "firstTrack": 280,
+        "conversationTrack": 485,
+        "rightbarTrack": 1155
+      },
+      "contractExpect": {
+        "firstTrack": 280,
+        "conversationTrack": 485,
+        "rightbarTrack": 1155
+      },
+      "knownDeviation": false,
+      "measured": {
+        "viewport": 1920,
+        "firstTrack": 280,
+        "conversationTrack": 485,
+        "rightbarTrack": 1155
+      },
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "key": "left-collapsed",
+      "label": "② 左栏收起（右栏开）",
+      "why": "INV-1/INV-2/INV-7：会话栏保宽 485px，释放的 280px 全部给右栏，且左轨必须归零",
+      "expected": {
+        "firstTrack": 0,
+        "conversationTrack": 485,
+        "rightbarTrack": 1435
+      },
+      "contractExpect": {
+        "firstTrack": 0,
+        "conversationTrack": 485,
+        "rightbarTrack": 1435
+      },
+      "knownDeviation": false,
+      "measured": {
+        "viewport": 1920,
+        "firstTrack": 0,
+        "conversationTrack": 485,
+        "rightbarTrack": 1435
+      },
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "key": "left+right-collapsed",
+      "label": "③ 左栏收起 + 右栏收起",
+      "why": "INV-6：右栏确证收起时会话栏占满整个视口，绝不留下黑色死区",
+      "expected": {
+        "firstTrack": 0,
+        "conversationTrack": 1920,
+        "rightbarTrack": 0
+      },
+      "contractExpect": {
+        "firstTrack": 0,
+        "conversationTrack": 1920,
+        "rightbarTrack": 0
+      },
+      "knownDeviation": false,
+      "measured": {
+        "viewport": 1920,
+        "firstTrack": 0,
+        "conversationTrack": 1920,
+        "rightbarTrack": 0
+      },
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "key": "conversation-collapsed",
+      "label": "④ 中间栏收起（左栏展开，右栏开）",
+      "why": "INV-9：中间栏收起时右栏占满右侧，中间列必须收缩为 0，绝不留下空白占位",
+      "expected": {
+        "firstTrack": 280,
+        "conversationTrack": 0,
+        "rightbarTrack": 1640
+      },
+      "contractExpect": {
+        "firstTrack": 280,
+        "conversationTrack": 0,
+        "rightbarTrack": 1640
+      },
+      "knownDeviation": false,
+      "measured": {
+        "viewport": 1920,
+        "firstTrack": 280,
+        "conversationTrack": 0,
+        "rightbarTrack": 1640
+      },
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "key": "conversation+left-collapsed",
+      "label": "⑤ 中间栏收起 + 左栏收起（右栏开）",
+      "why": "INV-9 与 INV-1 的交叉态：左栏与会话栏都已收起，右栏必须吃掉全部宽度，中间不得留下空白占位",
+      "expected": {
+        "firstTrack": 0,
+        "conversationTrack": 485,
+        "rightbarTrack": 1435
+      },
+      "contractExpect": {
+        "firstTrack": 0,
+        "conversationTrack": 0,
+        "rightbarTrack": 1920
+      },
+      "knownDeviation": true,
+      "measured": {
+        "viewport": 1920,
+        "firstTrack": 0,
+        "conversationTrack": 485,
+        "rightbarTrack": 1435
+      },
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "key": "rightbar-collapsed",
+      "label": "⑥ 右栏收起（左栏展开）",
+      "why": "INV-6：右栏收起时会话栏占满剩余宽度",
+      "expected": {
+        "firstTrack": 280,
+        "conversationTrack": 1640,
+        "rightbarTrack": 0
+      },
+      "contractExpect": {
+        "firstTrack": 280,
+        "conversationTrack": 1640,
+        "rightbarTrack": 0
+      },
+      "knownDeviation": false,
+      "measured": {
+        "viewport": 1920,
+        "firstTrack": 280,
+        "conversationTrack": 1640,
+        "rightbarTrack": 0
+      },
+      "pass": true,
+      "reasons": []
+    }
+  ],
+  "roundTrip": {
+    "expanded": {
+      "viewport": 1920,
+      "tracks": [
+        280,
+        485,
+        1155
+      ],
+      "firstTrack": 280,
+      "conversationTrack": 485,
+      "rightbarTrack": 1155,
+      "conversation": 485,
+      "rightbar": 1155,
+      "conversationVar": "485px",
+      "frameTrackStyle": "280px minmax(0px, 1fr) 1155px"
+    },
+    "collapsedOnce": {
+      "viewport": 1920,
+      "tracks": [
+        0,
+        485,
+        1435
+      ],
+      "firstTrack": 0,
+      "conversationTrack": 485,
+      "rightbarTrack": 1435,
+      "conversation": 485,
+      "rightbar": 1435,
+      "conversationVar": "485px",
+      "frameTrackStyle": "90px minmax(0px, 1fr) 1155px"
+    },
+    "expandedAgain": {
+      "viewport": 1920,
+      "tracks": [
+        280,
+        485,
+        1155
+      ],
+      "firstTrack": 280,
+      "conversationTrack": 485,
+      "rightbarTrack": 1155,
+      "conversation": 485,
+      "rightbar": 1155,
+      "conversationVar": "485px",
+      "frameTrackStyle": "280px minmax(0px, 1fr) 1155px"
+    },
+    "collapsedTwice": {
+      "viewport": 1920,
+      "tracks": [
+        0,
+        485,
+        1435
+      ],
+      "firstTrack": 0,
+      "conversationTrack": 485,
+      "rightbarTrack": 1435,
+      "conversation": 485,
+      "rightbar": 1435,
+      "conversationVar": "485px",
+      "frameTrackStyle": "90px minmax(0px, 1fr) 1155px"
+    }
+  },
+  "legacyControl": {
+    "viewport": 1920,
+    "tracks": [
+      0,
+      1920,
+      0
+    ],
+    "firstTrack": 0,
+    "conversationTrack": 1920,
+    "rightbarTrack": 0,
+    "conversation": 1920,
+    "rightbar": 0,
+    "conversationVar": "485px",
+    "frameTrackStyle": "90px minmax(0px, 1fr) 1155px"
+  },
+  "viewportTiers": [
+    {
+      "key": "viewport-tier-1920",
+      "viewport": 1920,
+      "note": "比例生效：round((1920 − 280) × 30%) = 492，未被夹紧",
+      "rail": 280,
+      "expected": {
+        "stage": 1640,
+        "chat": 492,
+        "rightbar": 1148,
+        "source": "conversationWidthFromRatio(viewport - rail, CONVERSATION_RATIO_DEFAULT)"
+      },
+      "bridge": {
+        "viewport": 1920,
+        "rail": 280,
+        "stage": 1640,
+        "chat": 492,
+        "rightbar": 1148,
+        "authoredGrid": "280px minmax(0px, 1fr) 0px"
+      },
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
+      "before": {
+        "viewport": 1920,
+        "firstTrack": 280,
+        "conversationTrack": 492,
+        "rightbarTrack": 1148,
+        "conversation": 492,
+        "rightbar": 1148,
+        "conversationVar": "492px"
+      },
+      "after": {
+        "viewport": 1920,
+        "firstTrack": 280,
+        "conversationTrack": 492,
+        "rightbarTrack": 1148,
+        "conversation": 492,
+        "rightbar": 1148,
+        "conversationVar": "492px"
+      },
+      "trackSum": 1920,
+      "sentinel": {
+        "sentinelPx": 612,
+        "measuredChat": 612,
+        "restoredChat": 492
+      },
+      "reverseControl": {
+        "productionDisabledChat": 1640,
+        "driftPx": 1148,
+        "restoredChat": 492
+      },
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "key": "viewport-tier-2560",
+      "viewport": 2560,
+      "note": "大屏按比例分账：round((2560 − 280) × 30%) = 684，未被夹紧",
+      "rail": 280,
+      "expected": {
+        "stage": 2280,
+        "chat": 684,
+        "rightbar": 1596,
+        "source": "conversationWidthFromRatio(viewport - rail, CONVERSATION_RATIO_DEFAULT)"
+      },
+      "bridge": {
+        "viewport": 2560,
+        "rail": 280,
+        "stage": 2280,
+        "chat": 684,
+        "rightbar": 1596,
+        "authoredGrid": "280px minmax(0px, 1fr) 0px"
+      },
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
+      "before": {
+        "viewport": 1920,
+        "firstTrack": 280,
+        "conversationTrack": 492,
+        "rightbarTrack": 1148,
+        "conversation": 492,
+        "rightbar": 1148,
+        "conversationVar": "492px"
+      },
+      "after": {
+        "viewport": 2560,
+        "firstTrack": 280,
+        "conversationTrack": 684,
+        "rightbarTrack": 1596,
+        "conversation": 684,
+        "rightbar": 1596,
+        "conversationVar": "684px"
+      },
+      "trackSum": 2560,
+      "sentinel": {
+        "sentinelPx": 804,
+        "measuredChat": 804,
+        "restoredChat": 684
+      },
+      "reverseControl": {
+        "productionDisabledChat": 2280,
+        "driftPx": 1596,
+        "restoredChat": 684
+      },
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "key": "viewport-tier-1440",
+      "viewport": 1440,
+      "note": "被 360px 下限夹住：round((1440 − 280) × 30%) = 348 → 360",
+      "rail": 280,
+      "expected": {
+        "stage": 1160,
+        "chat": 360,
+        "rightbar": 800,
+        "source": "conversationWidthFromRatio(viewport - rail, CONVERSATION_RATIO_DEFAULT)"
+      },
+      "bridge": {
+        "viewport": 1440,
+        "rail": 280,
+        "stage": 1160,
+        "chat": 360,
+        "rightbar": 800,
+        "authoredGrid": "280px minmax(0px, 1fr) 0px"
+      },
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
+      "before": {
+        "viewport": 2560,
+        "firstTrack": 280,
+        "conversationTrack": 684,
+        "rightbarTrack": 1596,
+        "conversation": 684,
+        "rightbar": 1596,
+        "conversationVar": "684px"
+      },
+      "after": {
+        "viewport": 1440,
+        "firstTrack": 280,
+        "conversationTrack": 360,
+        "rightbarTrack": 800,
+        "conversation": 360,
+        "rightbar": 800,
+        "conversationVar": "360px"
+      },
+      "trackSum": 1440,
+      "sentinel": {
+        "sentinelPx": 480,
+        "measuredChat": 480,
+        "restoredChat": 360
+      },
+      "reverseControl": {
+        "productionDisabledChat": 1160,
+        "driftPx": 800,
+        "restoredChat": 360
+      },
+      "pass": true,
+      "reasons": []
+    }
+  ],
+  "viewportTierArm": {
+    "bridge": {
+      "viewport": 1920,
+      "rail": 280,
+      "stage": 1640,
+      "chat": 492,
+      "rightbar": 1148,
+      "authoredGrid": "280px minmax(0px, 1fr) 0px"
+    },
+    "measured": {
+      "viewport": 1920,
+      "firstTrack": 280,
+      "conversationTrack": 492,
+      "rightbarTrack": 1148,
+      "conversation": 492,
+      "rightbar": 1148,
+      "conversationVar": "492px"
+    }
+  },
+  "viewportTierScreenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/common-silent-catch-triage-issue-3503/docs/evidence/three-column-collapse-viewport-tiers.png",
+    "viewport": 2560,
+    "width": 2560,
+    "height": 1080,
+    "bytes": 10536
+  },
+  "completedAt": "2026-10-21T03:54:40.757Z"
+}

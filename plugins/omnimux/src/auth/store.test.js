@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
@@ -364,5 +364,255 @@ describe('token store (canonical 0600 file)', () => {
     assert.equal(existsSync(realSecrets), hadSecrets)
     assert.notEqual(store.secretsPath, realSecrets)
     await store.unset()
+  })
+})
+
+describe('logout cleanup failures are observable and propagated', () => {
+  it('normal logout stays silent and removes secrets, config user_id and profile cache', async () => {
+    const homeDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-home-'))
+    const configDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-cfg-'))
+    /** @type {string[]} */
+    const warnings = []
+    const store = createTokenStore({
+      homeDir,
+      configDir,
+      logger: { warn(message) { warnings.push(String(message)) } },
+    })
+    try {
+      await store.set('pat-normal-logout', { userId: '42', baseUrl: 'https://omnimux.ai' })
+      store.writeProfileCache({ username: 'ada' })
+
+      await store.unset()
+
+      assert.deepEqual(warnings, [])
+      assert.equal(await store.resolve(), undefined)
+      assert.equal(existsSync(store.secretsPath), false)
+      assert.equal(store.readConfig()?.user_id, undefined)
+      assert.equal(existsSync(store.profilePath), false)
+    } finally {
+      rmSync(homeDir, { recursive: true, force: true })
+      rmSync(configDir, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects with the failed step when secrets.json cannot be removed, and still runs later steps', async () => {
+    const homeDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-home-'))
+    const configDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-cfg-'))
+    /** @type {string[]} */
+    const warnings = []
+    /** @type {string[]} */
+    const seamUnsets = []
+    const store = createTokenStore({
+      env: {},
+      homeDir,
+      configDir,
+      logger: { warn(message) { warnings.push(String(message)) } },
+      credentials: {
+        async unset(ref) {
+          seamUnsets.push(String(ref))
+        },
+      },
+    })
+    try {
+      await store.set('pat-secrets-stuck', { userId: '42' })
+      store.writeProfileCache({ username: 'ada' })
+      // A directory at the secrets path makes rmSync fail without deleting token material.
+      rmSync(store.secretsPath, { force: true })
+      mkdirSync(store.secretsPath)
+
+      await assert.rejects(store.unset(), (error) => {
+        assert.match(error.message, /unsetSecrets failed:/)
+        assert.match(error.message, /logout cleanup incomplete/)
+        return true
+      })
+
+      assert.equal(warnings.length, 1)
+      assert.match(warnings[0], /unsetSecrets failed:/)
+      assert.equal(/pat-secrets-stuck|access_token/.test(warnings.join('\n')), false)
+      assert.equal(store.readConfig()?.user_id, undefined, 'config user_id cleanup still ran')
+      assert.equal(existsSync(store.profilePath), false, 'profile cache cleanup still ran')
+      assert.equal(seamUnsets.length, 1, 'credentials seam cleanup still ran')
+    } finally {
+      rmSync(homeDir, { recursive: true, force: true })
+      rmSync(configDir, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects with the failed step when config.json cannot be atomically rewritten', async () => {
+    const homeDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-home-'))
+    const configDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-cfg-'))
+    const profileDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-profile-'))
+    /** @type {string[]} */
+    const warnings = []
+    const store = createTokenStore({
+      env: {},
+      homeDir,
+      configDir,
+      profilePath: join(profileDir, 'profile.json'),
+      logger: { warn(message) { warnings.push(String(message)) } },
+    })
+    try {
+      writeFileSync(
+        store.configPath,
+        JSON.stringify({ user_id: '42', base_url: 'https://omnimux.ai' }),
+        { mode: 0o600 },
+      )
+      store.writeProfileCache({ username: 'ada' })
+      // Read-only parent directory defeats the atomic tmp-file + rename without hiding config.json.
+      chmodSync(configDir, 0o500)
+
+      await assert.rejects(store.unset(), (error) => {
+        assert.match(error.message, /unsetConfig failed:/)
+        assert.match(error.message, /logout cleanup incomplete/)
+        return true
+      })
+
+      assert.equal(warnings.length, 1)
+      assert.match(warnings[0], /unsetConfig failed:/)
+      assert.equal(existsSync(store.secretsPath), false)
+      const configAfter = JSON.parse(readFileSync(store.configPath, 'utf8'))
+      assert.equal(configAfter.user_id, '42', 'failed cleanup must leave config visible, not fake success')
+      assert.equal(existsSync(store.profilePath), false, 'profile cache cleanup still ran after config failure')
+    } finally {
+      chmodSync(configDir, 0o700)
+      rmSync(homeDir, { recursive: true, force: true })
+      rmSync(configDir, { recursive: true, force: true })
+      rmSync(profileDir, { recursive: true, force: true })
+    }
+  })
+
+  it('never echoes token material when both file cleanups fail', async () => {
+    const homeDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-home-'))
+    const configDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-cfg-'))
+    const profileDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-profile-'))
+    /** @type {string[]} */
+    const warnings = []
+    const store = createTokenStore({
+      homeDir,
+      configDir,
+      profilePath: join(profileDir, 'profile.json'),
+      logger: { warn(message) { warnings.push(String(message)) } },
+    })
+    try {
+      await store.set('pat-must-not-leak', { userId: '42', baseUrl: 'https://omnimux.ai' })
+      chmodSync(configDir, 0o500)
+
+      /** @type {Error | undefined} */
+      let rejection
+      try {
+        await store.unset()
+      } catch (error) {
+        rejection = /** @type {Error} */ (error)
+      }
+
+      assert.ok(rejection instanceof Error)
+      assert.match(rejection.message, /unsetSecrets failed:/)
+      assert.match(rejection.message, /unsetConfig failed:/)
+      const trace = `${rejection.message}\n${warnings.join('\n')}`
+      assert.equal(/pat-must-not-leak|access_token/.test(trace), false)
+      assert.equal(warnings.length, 2)
+    } finally {
+      chmodSync(configDir, 0o700)
+      rmSync(homeDir, { recursive: true, force: true })
+      rmSync(configDir, { recursive: true, force: true })
+      rmSync(profileDir, { recursive: true, force: true })
+    }
+  })
+
+  it('collects a credentials seam failure while file-backed credentials are still removed', async () => {
+    const homeDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-home-'))
+    const configDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-cfg-'))
+    /** @type {string[]} */
+    const warnings = []
+    const store = createTokenStore({
+      env: {},
+      homeDir,
+      configDir,
+      logger: { warn(message) { warnings.push(String(message)) } },
+      credentials: {
+        async unset() {
+          throw new Error('seam unavailable')
+        },
+      },
+    })
+    try {
+      await store.set('pat-seam-residual', { userId: '42' })
+      store.writeProfileCache({ username: 'ada' })
+
+      await assert.rejects(store.unset(), /credentials\.unset failed: seam unavailable/)
+
+      assert.equal(warnings.length, 1)
+      assert.match(warnings[0], /credentials\.unset failed: seam unavailable/)
+      assert.equal(existsSync(store.secretsPath), false)
+      assert.equal(store.readConfig()?.user_id, undefined)
+      assert.equal(existsSync(store.profilePath), false)
+    } finally {
+      rmSync(homeDir, { recursive: true, force: true })
+      rmSync(configDir, { recursive: true, force: true })
+    }
+  })
+
+  it('falls back to console.warn when no logger is injected', async () => {
+    const homeDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-home-'))
+    const configDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-cfg-'))
+    const store = createTokenStore({ env: {}, homeDir, configDir })
+    const originalWarn = console.warn
+    /** @type {string[]} */
+    const captured = []
+    try {
+      mkdirSync(store.secretsPath)
+      console.warn = (message) => {
+        captured.push(String(message))
+      }
+      await assert.rejects(store.unset(), /unsetSecrets failed:/)
+    } finally {
+      console.warn = originalWarn
+      rmSync(homeDir, { recursive: true, force: true })
+      rmSync(configDir, { recursive: true, force: true })
+    }
+    assert.equal(captured.length, 1)
+    assert.match(captured[0], /unsetSecrets failed:/)
+  })
+
+  it('does not turn an env-token logout into a 5xx and records the shadowed seam residue', async () => {
+    const homeDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-home-'))
+    const configDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-cfg-'))
+    /** @type {string[]} */
+    const warnings = []
+    /** @type {string[]} */
+    const seamUnsets = []
+    const store = createTokenStore({
+      homeDir,
+      configDir,
+      env: { OMNIMUX_ACCESS_TOKEN: 'pat-from-env' },
+      logger: { warn(message) { warnings.push(String(message)) } },
+      credentials: {
+        // Mirrors the official credentials-local seam: unset throws while the env shadows it.
+        async unset(ref) {
+          seamUnsets.push(String(ref))
+          throw new Error('credential is shadowed by the environment')
+        },
+      },
+    })
+    try {
+      await store.set('pat-env-ignored', { userId: '42', baseUrl: 'https://omnimux.ai' })
+      store.writeProfileCache({ username: 'ada' })
+
+      // env token is process configuration; logout can only clear the on-disk copies it owns.
+      await store.unset()
+
+      assert.equal(seamUnsets.length, 1, 'the seam unset must still be attempted, not skipped')
+      assert.equal(warnings.length, 1, 'the refused seam unset is kept visible instead of being silent')
+      assert.match(warnings[0], /credentials\.unset failed: .*shadowed/)
+      assert.equal(/pat-from-env|pat-env-ignored|access_token/.test(warnings.join('\n')), false)
+      assert.equal(existsSync(store.secretsPath), false)
+      assert.equal(store.readConfig()?.user_id, undefined)
+      assert.equal(existsSync(store.profilePath), false)
+      // The env override still authenticates after logout; only disk cleanup was attempted.
+      assert.equal(await store.resolve(), 'pat-from-env')
+    } finally {
+      rmSync(homeDir, { recursive: true, force: true })
+      rmSync(configDir, { recursive: true, force: true })
+    }
   })
 })

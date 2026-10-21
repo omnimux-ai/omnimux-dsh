@@ -1,0 +1,40 @@
+{
+  "baseSha": "d2d54d177dac869f8a8cdabeb0c601a81ac571dc",
+  "headSha": "d2d54d177dac869f8a8cdabeb0c601a81ac571dc",
+  "capturedAt": "2026-10-21T03:58:33.611Z",
+  "byRuleBefore": {
+    "SC1": 242,
+    "SC2": 444,
+    "SC3": 882
+  },
+  "byRuleAfter": {
+    "SC1": 241,
+    "SC2": 399,
+    "SC3": 885
+  },
+  "delta": {
+    "SC1": -1,
+    "SC2": -45,
+    "SC3": 3,
+    "total": -43
+  },
+  "byRuleAfterNote": "SC1 -1（market 写路径 catch 改为 500 留痕）；SC2 -45（sidebar 41 + auth unsetConfig/unsetSecrets/unset 的两处 best-effort）；SC3 +3（market handler、auth 聚合 catch、sidebar safeDom helper，均为有语句留痕）",
+  "targetFilesAfter": {
+    "plugins/omnimux-market/src/local-api.ts": {
+      "SC1": 10,
+      "SC2": 0,
+      "SC3": 10
+    },
+    "plugins/omnimux/src/auth/store.js": {
+      "SC1": 0,
+      "SC2": 8,
+      "SC3": 4
+    },
+    "plugins/omnimux/src/client/sidebar-toggle-topbar.js": {
+      "SC1": 0,
+      "SC2": 0,
+      "SC3": 4
+    }
+  },
+  "note": "worktree-dirty 扫描：baseSha 为 origin/main；统计对象为含未提交改动的本工作树。"
+}

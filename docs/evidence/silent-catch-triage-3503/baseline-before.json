@@ -1,0 +1,202 @@
+{
+  "capturedAt": "2026-10-21T03:52:22.333Z",
+  "head": "d2d54d177dac869f8a8cdabeb0c601a81ac571dc",
+  "scanned": 1697,
+  "total": 1568,
+  "byRule": {
+    "SC1": 242,
+    "SC2": 444,
+    "SC3": 882
+  },
+  "targetFiles": {
+    "plugins/omnimux-market/src/local-api.ts": {
+      "SC1": 11,
+      "SC2": 0,
+      "SC3": 9
+    },
+    "plugins/omnimux/src/auth/store.js": {
+      "SC1": 0,
+      "SC2": 12,
+      "SC3": 3
+    },
+    "plugins/omnimux/src/client/sidebar-toggle-topbar.js": {
+      "SC1": 0,
+      "SC2": 41,
+      "SC3": 3
+    }
+  },
+  "byPluginRule": {
+    "omnimux-accounts": {
+      "SC1": 3,
+      "SC2": 2,
+      "SC3": 5
+    },
+    "omnimux-analytics": {
+      "SC1": 5,
+      "SC2": 4,
+      "SC3": 6
+    },
+    "omnimux-apps": {
+      "SC1": 9,
+      "SC2": 9,
+      "SC3": 12
+    },
+    "omnimux-assets": {
+      "SC1": 8,
+      "SC2": 33,
+      "SC3": 37
+    },
+    "omnimux-automation": {
+      "SC1": 5,
+      "SC2": 4,
+      "SC3": 17
+    },
+    "omnimux-avatar": {
+      "SC1": 1,
+      "SC2": 4,
+      "SC3": 30
+    },
+    "omnimux-browser": {
+      "SC1": 1,
+      "SC2": 5,
+      "SC3": 30
+    },
+    "omnimux-clip": {
+      "SC1": 8,
+      "SC2": 15,
+      "SC3": 13
+    },
+    "omnimux-device": {
+      "SC1": 2,
+      "SC2": 0,
+      "SC3": 0
+    },
+    "omnimux-forms": {
+      "SC1": 1,
+      "SC2": 0,
+      "SC3": 3
+    },
+    "omnimux-inspiration": {
+      "SC1": 11,
+      "SC2": 38,
+      "SC3": 88
+    },
+    "omnimux-intercept": {
+      "SC1": 0,
+      "SC2": 2,
+      "SC3": 12
+    },
+    "omnimux-market": {
+      "SC1": 57,
+      "SC2": 17,
+      "SC3": 88
+    },
+    "omnimux-products": {
+      "SC1": 8,
+      "SC2": 21,
+      "SC3": 49
+    },
+    "omnimux-publish": {
+      "SC1": 4,
+      "SC2": 1,
+      "SC3": 19
+    },
+    "omnimux-social-harvest": {
+      "SC1": 4,
+      "SC2": 0,
+      "SC3": 7
+    },
+    "omnimux-studio": {
+      "SC1": 0,
+      "SC2": 0,
+      "SC3": 3
+    },
+    "omnimux-video-preview": {
+      "SC1": 21,
+      "SC2": 8,
+      "SC3": 22
+    },
+    "omnimux-video": {
+      "SC1": 0,
+      "SC2": 4,
+      "SC3": 12
+    },
+    "omnimux-viewer": {
+      "SC1": 2,
+      "SC2": 4,
+      "SC3": 8
+    },
+    "omnimux-workflow": {
+      "SC1": 22,
+      "SC2": 67,
+      "SC3": 148
+    },
+    "omnimux": {
+      "SC1": 70,
+      "SC2": 206,
+      "SC3": 273
+    }
+  },
+  "topFiles": [
+    {
+      "path": "plugins/omnimux/src/client/sidebar-toggle-topbar.js",
+      "SC1": 0,
+      "SC2": 41,
+      "SC3": 3
+    },
+    {
+      "path": "plugins/omnimux-market/src/client/session-create.js",
+      "SC1": 14,
+      "SC2": 1,
+      "SC3": 4
+    },
+    {
+      "path": "plugins/omnimux/src/auth/store.js",
+      "SC1": 0,
+      "SC2": 12,
+      "SC3": 3
+    },
+    {
+      "path": "plugins/omnimux/src/client/workbench/tab-viewport-reconciler.js",
+      "SC1": 12,
+      "SC2": 0,
+      "SC3": 0
+    },
+    {
+      "path": "plugins/omnimux-apps/src/client/AppWorkspaceView.tsx",
+      "SC1": 8,
+      "SC2": 3,
+      "SC3": 2
+    },
+    {
+      "path": "plugins/omnimux-market/src/local-api.ts",
+      "SC1": 11,
+      "SC2": 0,
+      "SC3": 9
+    },
+    {
+      "path": "plugins/omnimux/src/client/workbench/sidebar-controller.js",
+      "SC1": 2,
+      "SC2": 8,
+      "SC3": 2
+    },
+    {
+      "path": "plugins/omnimux-video-preview/src/breakdown/analyzerPipeline.js",
+      "SC1": 9,
+      "SC2": 0,
+      "SC3": 8
+    },
+    {
+      "path": "plugins/omnimux-products/src/cdp-client.js",
+      "SC1": 0,
+      "SC2": 8,
+      "SC3": 1
+    },
+    {
+      "path": "plugins/omnimux/src/client/composer-compact.js",
+      "SC1": 0,
+      "SC2": 8,
+      "SC3": 1
+    }
+  ]
+}

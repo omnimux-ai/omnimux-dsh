@@ -36,6 +36,33 @@ import {
   schedulePersistChatRatio,
 } from './workbench/workspace-layout-store.js'
 
+/**
+ * DOM best-effort boundary for this module.
+ *
+ * Every call site here is chrome probing/injection/removal/listener teardown: a
+ * hostile or mid-teardown host can make any single DOM read/write throw, and the
+ * caller already owns the degraded result (next probe stage, safe default, or
+ * "continue the remaining cleanup"). Letting one throw escape would abort the
+ * rest of the cleanup/geometry pass and leave the injected chrome half-applied.
+ *
+ * Scope is deliberately local: DOM probing, injection, removal and
+ * listener/observer teardown only. Auth, credential, network and product write
+ * paths must keep their real errors visible — never route those through here.
+ *
+ * @template T
+ * @param {() => T} fn best-effort DOM operation
+ * @param {T} [fallback] value the caller already used after the old `catch`
+ * @returns {T}
+ */
+function safeDom(fn, fallback) {
+  try {
+    return fn()
+  } catch {
+    // 只吞 DOM best-effort 的失败：返回调用方原有的降级值，让后续探测/清理继续。
+    return fallback
+  }
+}
+
 export const SIDEBAR_TOGGLE_TOPBAR_ATTR = 'data-omnimux-sidebar-toggle-topbar'
 export const SIDEBAR_TOGGLE_TOPBAR_HTML_ATTR = 'data-omnimux-sidebar-toggle-topbar'
 export const LEFT_COLLAPSED_HTML_ATTR = 'data-omnimux-left-collapsed'
@@ -61,32 +88,29 @@ export const TOPBAR_TOGGLE_Z_INDEX = 2147483647
  */
 export function triggerClick(el) {
   if (!el) return
-  try {
+  // 三段式降级：React synthetic props → dispatchEvent → click。任何一段抛错只代表
+  // 「该段在这个宿主上不可用」，必须继续尝试下一段（safeDom 只保证异常不外溢）。
+  const viaReactProps = safeDom(() => {
     const propKey = Object.keys(el).find(k => k.startsWith('__reactProps$') || k.startsWith('__reactEventHandlers$'))
-    if (propKey && typeof el[propKey]?.onClick === 'function') {
-      el[propKey].onClick({
-        preventDefault: () => {},
-        stopPropagation: () => {},
-        nativeEvent: new MouseEvent('click', { bubbles: true, cancelable: true, view: window }),
-        target: el,
-        currentTarget: el,
-      })
-      return
-    }
-  } catch {
-    // fall through
-  }
-  try {
+    if (!propKey || typeof el[propKey]?.onClick !== 'function') return false
+    el[propKey].onClick({
+      preventDefault: () => {},
+      stopPropagation: () => {},
+      nativeEvent: new MouseEvent('click', { bubbles: true, cancelable: true, view: window }),
+      target: el,
+      currentTarget: el,
+    })
+    return true
+  }, false)
+  if (viaReactProps) return
+  if (safeDom(() => {
     el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }))
-    return
-  } catch {
-    // fall through
-  }
-  try {
+    return true
+  }, false)) return
+  safeDom(() => {
     el.click()
-  } catch {
-    // fall through
-  }
+    return true
+  })
 }
 
 const TOGGLE_ARIA_LABELS = Object.freeze([
@@ -158,16 +182,14 @@ export function findOfficialNewSessionButton(doc) {
   )
   if (byClass instanceof HTMLElement) return byClass
   // Text fallback for localized labels without exact aria match.
-  try {
+  return safeDom(() => {
     for (const btn of doc.querySelectorAll(`button${notInjected}`)) {
       if (!(btn instanceof HTMLElement)) continue
       const text = `${btn.getAttribute('aria-label') || ''} ${btn.textContent || ''}`
       if (/新会话|新建会话|新对话|新建对话|new session/i.test(text)) return btn
     }
-  } catch {
-    // ignore
-  }
-  return null
+    return null
+  }, null)
 }
 
 /**
@@ -180,12 +202,8 @@ export function findSidebarCollapsedHost(doc) {
     '[data-pane="sidebar"], [class*="sidebarCol"], .dshDesktopSidebarSurface, [class*="dshDesktopSidebarSurface"]',
   )
   if (column && typeof column.closest === 'function') {
-    try {
-      const marked = column.closest('[data-sidebar-collapsed]')
-      if (marked) return marked
-    } catch {
-      // ignore
-    }
+    const marked = safeDom(() => column.closest('[data-sidebar-collapsed]'), null)
+    if (marked) return marked
   }
   return doc.querySelector(
     '[class*="frame"][data-sidebar-collapsed], .dshDesktopFrame[data-sidebar-collapsed], [data-sidebar-collapsed]',
@@ -231,11 +249,7 @@ export function isLeftSidebarCollapsed(doc) {
     '[data-pane="sidebar"], [class*="sidebarCol"], .dshDesktopSidebarSurface, [class*="dshDesktopSidebarSurface"]',
   )
   if (column && typeof column.closest === 'function') {
-    try {
-      if (column.closest('[data-sidebar-collapsed]')) return true
-    } catch {
-      // ignore
-    }
+    if (safeDom(() => column.closest('[data-sidebar-collapsed]'), null)) return true
   }
   return Boolean(
     doc.querySelector(
@@ -308,13 +322,12 @@ export function findVisibleWorkbenchPanel(doc) {
     // Official right panel class fragment is `_panel` (CSS-module hashed).
     if (!/(^|[\s_])panel($|[\s_])/i.test(cls)) continue
     if (/panelHidden|bottomPanel|panelResize|panelBody|panelHost/i.test(cls)) continue
-    try {
+    const visible = safeDom(() => {
       const box = el.getBoundingClientRect?.()
-      if (!box) continue
-      if (box.width > 40 && box.height > 40 && box.left < vw - 8) return el
-    } catch {
-      // ignore
-    }
+      if (!box) return false
+      return box.width > 40 && box.height > 40 && box.left < vw - 8
+    }, false)
+    if (visible) return el
   }
   return null
 }
@@ -573,12 +586,11 @@ function readViewportWidthPx(doc) {
  */
 export function readFrameWidthPx(doc) {
   const frame = readFrame(doc)
-  try {
+  const measured = safeDom(() => {
     const width = frame?.getBoundingClientRect?.().width
-    if (typeof width === 'number' && Number.isFinite(width) && width > 0) return Math.round(width)
-  } catch {
-    // ignore
-  }
+    return typeof width === 'number' && Number.isFinite(width) && width > 0 ? Math.round(width) : null
+  }, null)
+  if (measured !== null) return measured
   return readViewportWidthPx(doc)
 }
 
@@ -796,11 +808,8 @@ export function settleConversationRatioFromAuthoredGeometry(doc) {
   // 结算即真源：缓存立刻跟上，否则下一次几何同步还会用旧比例（M-3）。
   rememberResolvedRatio(ratio)
   // 结算即回到稳态：比例已等于拖拽结果，重算对可见宽度是恒等变换（无跳变）。
-  try {
-    applyTopbarToggleCssVars(doc)
-  } catch {
-    // 重算失败不吞掉已落盘的比例：下一帧的观察者同步会补上。
-  }
+  // 重算失败不吞掉已落盘的比例：下一帧的观察者同步会补上。
+  safeDom(() => applyTopbarToggleCssVars(doc))
   return ratio
 }
 
@@ -1017,7 +1026,7 @@ export function applyTopbarToggleCssVars(doc, geom = {}) {
   if (typeof newSessionLeft === 'number') {
     root.style.setProperty('--omnimux-topbar-new-session-left', `${newSessionLeft}px`)
   } else {
-    try { root.style.removeProperty('--omnimux-topbar-new-session-left') } catch { /* ignore */ }
+    safeDom(() => root.style.removeProperty('--omnimux-topbar-new-session-left'))
   }
 }
 
@@ -1038,11 +1047,8 @@ export function setTopbarGeometryHook(hook) {
 
 function runTopbarGeometryHook(doc) {
   if (!topbarGeometryHook) return
-  try {
-    topbarGeometryHook(doc)
-  } catch {
-    // 协调失败不得中断顶栏几何同步（面板宽最多滞后一帧）。
-  }
+  // 协调失败不得中断顶栏几何同步（面板宽最多滞后一帧）。
+  safeDom(() => topbarGeometryHook(doc))
 }
 
 /**
@@ -1075,8 +1081,8 @@ export function injectTopbarToggleButton(doc) {
     btn.setAttribute('aria-label', '收起侧边栏')
     btn.innerHTML = COLLAPSE_ICON_SVG + EXPAND_ICON_SVG
     btn.addEventListener('click', (event) => {
-      try { event.preventDefault() } catch { /* ignore */ }
-      try { event.stopPropagation() } catch { /* ignore */ }
+      safeDom(() => event.preventDefault())
+      safeDom(() => event.stopPropagation())
       const willCollapse = !isLeftSidebarCollapsed(doc)
       setExplicitLeftCollapseIntent(willCollapse)
       const official = findOfficialSidebarToggle(doc)
@@ -1099,7 +1105,7 @@ export function injectTopbarNewSessionButton(doc, collapsed) {
   let btn = doc.querySelector(`[${TOPBAR_NEW_SESSION_ATTR}="1"]`)
   if (!collapsed) {
     if (btn instanceof HTMLElement) {
-      try { btn.remove() } catch { /* ignore */ }
+      safeDom(() => btn.remove())
     }
     return null
   }
@@ -1113,16 +1119,13 @@ export function injectTopbarNewSessionButton(doc, collapsed) {
     btn.setAttribute('title', '新建会话')
     btn.innerHTML = NEW_SESSION_ICON_SVG
     btn.addEventListener('click', (event) => {
-      try { event.preventDefault() } catch { /* ignore */ }
-      try { event.stopPropagation() } catch { /* ignore */ }
+      safeDom(() => event.preventDefault())
+      safeDom(() => event.stopPropagation())
       // Anchor the coordinator menu to THIS visible topbar control. Clicking the
       // official newSession button would open the menu at the hidden rail rect
       // (x≈0) and split it away from the icon.
-      try {
-        if (openCollapsedNewMenuAt(btn)) return
-      } catch {
-        // Fall through to official click if coordinator is not ready.
-      }
+      // Fall through to official click if coordinator is not ready.
+      if (safeDom(() => openCollapsedNewMenuAt(btn), false)) return
       const official = findOfficialNewSessionButton(doc)
       if (official) triggerClick(official)
     })
@@ -1143,21 +1146,17 @@ function applyButtonChrome(btn) {
     `z-index:${TOPBAR_TOGGLE_Z_INDEX}`,
     'pointer-events:auto',
   ].join(';')
-  try {
+  safeDom(() => {
     btn.style.setProperty('-webkit-app-region', 'no-drag', 'important')
     btn.style.setProperty('z-index', String(TOPBAR_TOGGLE_Z_INDEX), 'important')
     btn.style.setProperty('pointer-events', 'auto', 'important')
-  } catch {
-    // ignore
-  }
-  try {
+  })
+  safeDom(() => {
     const prev = btn.getAttribute('style') || ''
     if (!/-webkit-app-region\s*:\s*no-drag/i.test(prev)) {
       btn.setAttribute('style', `${prev};${inlineChrome}`.replace(/^;/, ''))
     }
-  } catch {
-    // ignore
-  }
+  })
 }
 
 /**
@@ -1170,11 +1169,7 @@ function hideOriginalToggle(doc) {
   const btn = findOfficialSidebarToggle(doc)
   if (!btn) return null
   btn.setAttribute(SIDEBAR_ORIGINAL_TOGGLE_ATTR, '1')
-  try {
-    btn.style.setProperty('display', 'none', 'important')
-  } catch {
-    // ignore
-  }
+  safeDom(() => btn.style.setProperty('display', 'none', 'important'))
   return btn
 }
 
@@ -1327,9 +1322,7 @@ export function syncNativeRightbarControls(doc) {
 
   // 1. 移除我们自定义注入的重复按钮，彻底保留原生
   const injected = doc.querySelectorAll(`[${TOPBAR_RIGHT_EXPAND_ATTR}]`)
-  injected.forEach((el) => {
-    try { el.remove() } catch { /* ignore */ }
-  })
+  injected.forEach((el) => safeDom(() => el.remove()))
 
   // 2. 注入全局样式补丁（修复 Tab 标题文字遮挡）
   ensureRightbarChromeStyles(doc)
@@ -1404,7 +1397,7 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
 
   // Track mounted controls and leaf panes so split dragging updates overlap.
   const syncGeometry = () => {
-    try { applyTopbarToggleCssVars(doc) } catch { /* ignore */ }
+    safeDom(() => applyTopbarToggleCssVars(doc))
     runTopbarGeometryHook(doc)
   }
   /** @type {Set<Element>} */
@@ -1456,13 +1449,13 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
       const id = win.requestAnimationFrame(runner)
       pendingSchedule = () => {
         isCancelled = true
-        try { win.cancelAnimationFrame(id) } catch { /* ignore */ }
+        safeDom(() => win.cancelAnimationFrame(id))
       }
     } else if (typeof requestAnimationFrame === 'function') {
       const id = requestAnimationFrame(runner)
       pendingSchedule = () => {
         isCancelled = true
-        try { cancelAnimationFrame(id) } catch { /* ignore */ }
+        safeDom(() => cancelAnimationFrame(id))
       }
     } else if (typeof queueMicrotask === 'function') {
       pendingSchedule = () => { isCancelled = true }
@@ -1471,7 +1464,7 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
       const timer = setTimeout(runner, 0)
       pendingSchedule = () => {
         isCancelled = true
-        try { clearTimeout(timer) } catch { /* ignore */ }
+        safeDom(() => clearTimeout(timer))
       }
     }
   }
@@ -1484,7 +1477,7 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
     const host = collapsedHostNode(doc)
     if (!host || host === observedCollapsedHost) return
     if (collapsedObserver) {
-      try { collapsedObserver.disconnect() } catch { /* ignore */ }
+      safeDom(() => collapsedObserver.disconnect())
       collapsedObserver = null
     }
     observedCollapsedHost = host
@@ -1506,7 +1499,7 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
     const anchor = findTopbarAnchor(doc) || doc.querySelector?.('[data-dsh-better-sidebar]')
     if (!anchor || anchor === observedAnchor) return
     if (anchorObserver) {
-      try { anchorObserver.disconnect() } catch { /* ignore */ }
+      safeDom(() => anchorObserver.disconnect())
       anchorObserver = null
     }
     observedAnchor = anchor
@@ -1553,7 +1546,7 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
     const frame = readFrame(doc)
     if (!frame || frame === observedFrame) return
     if (frameObserver) {
-      try { frameObserver.disconnect() } catch { /* ignore */ }
+      safeDom(() => frameObserver.disconnect())
       frameObserver = null
     }
     observedFrame = frame
@@ -1576,44 +1569,44 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
 
   rebindHostObservers()
   ensureObserveTargets()
-  try {
+  safeDom(() => {
     const win = doc.defaultView
     if (win?.addEventListener) {
       resizeListener = () => { syncGeometry() }
       win.addEventListener('resize', resizeListener)
     }
-  } catch { /* ignore */ }
+  })
 
   return () => {
     if (typeof pendingSchedule === 'function') {
-      try { pendingSchedule() } catch { /* ignore */ }
+      safeDom(() => pendingSchedule())
       pendingSchedule = null
     }
     if (collapsedObserver) {
-      try { collapsedObserver.disconnect() } catch { /* ignore */ }
+      safeDom(() => collapsedObserver.disconnect())
       collapsedObserver = null
     }
     if (anchorObserver) {
-      try { anchorObserver.disconnect() } catch { /* ignore */ }
+      safeDom(() => anchorObserver.disconnect())
       anchorObserver = null
     }
     if (desktopObserver) {
-      try { desktopObserver.disconnect() } catch { /* ignore */ }
+      safeDom(() => desktopObserver.disconnect())
       desktopObserver = null
     }
     if (frameObserver) {
-      try { frameObserver.disconnect() } catch { /* ignore */ }
+      safeDom(() => frameObserver.disconnect())
       frameObserver = null
     }
     observedCollapsedHost = null
     observedAnchor = null
     observedFrame = null
     if (widthObserver) {
-      try { widthObserver.disconnect() } catch { /* ignore */ }
+      safeDom(() => widthObserver.disconnect())
       widthObserver = null
     }
     if (resizeListener) {
-      try { doc.defaultView?.removeEventListener?.('resize', resizeListener) } catch { /* ignore */ }
+      safeDom(() => doc.defaultView?.removeEventListener?.('resize', resizeListener))
       resizeListener = null
     }
     setExplicitLeftCollapseIntent(null)
@@ -1630,7 +1623,7 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
         '--omnimux-tabbar-pad-left',
         '--omnimux-topbar-new-session-left',
       ]) {
-        try { root.style.removeProperty(k) } catch { /* ignore */ }
+        safeDom(() => root.style.removeProperty(k))
       }
     }
     for (const bar of doc.querySelectorAll('[data-dsh-better-sidebar] [class*="tabBar"]:not([class*="Plus"])')) {
@@ -1638,20 +1631,20 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
     }
     const injected = doc.querySelector?.(`[${SIDEBAR_TOGGLE_TOPBAR_ATTR}="1"]`)
     if (injected instanceof HTMLElement) {
-      try { injected.remove() } catch { /* ignore */ }
+      safeDom(() => injected.remove())
     }
     const newSession = doc.querySelector?.(`[${TOPBAR_NEW_SESSION_ATTR}="1"]`)
     if (newSession instanceof HTMLElement) {
-      try { newSession.remove() } catch { /* ignore */ }
+      safeDom(() => newSession.remove())
     }
     const rightExpand = doc.querySelector?.(`[${TOPBAR_RIGHT_EXPAND_ATTR}="1"]`)
     if (rightExpand instanceof HTMLElement) {
-      try { rightExpand.remove() } catch { /* ignore */ }
+      safeDom(() => rightExpand.remove())
     }
     const official = doc.querySelector?.(`[${SIDEBAR_ORIGINAL_TOGGLE_ATTR}="1"]`)
     if (official instanceof HTMLElement) {
       official.removeAttribute(SIDEBAR_ORIGINAL_TOGGLE_ATTR)
-      try { official.style.removeProperty('display') } catch { /* ignore */ }
+      safeDom(() => official.style.removeProperty('display'))
     }
   }
 }
