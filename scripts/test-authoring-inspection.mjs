@@ -170,6 +170,47 @@ export function inspectTestAuthoring(code, trustedFacts = {}) {
   return { allowed: !reason, reason, scope }
 }
 
+/**
+ * Extract the evaluation contract at syntax level: assertion fingerprints and
+ * named runner cases. Used to reject weakening (removed/rewritten assertions
+ * or cases) while letting additive coverage through.
+ */
+function collectAssertionFacts(code) {
+  let ast
+  try { ast = parse(code, { ecmaVersion: 'latest', sourceType: 'module', allowHashBang: true }) }
+  catch { return null }
+  const assertions = new Map()
+  const cases = new Set()
+  const runners = new Set(['test', 'it', 'describe'])
+  function calleeRoot(node) {
+    let current = node
+    while (current && current.type === 'MemberExpression' && !current.computed) current = current.object
+    if (current?.type === 'CallExpression') return calleeRoot(current.callee)
+    return current?.type === 'Identifier' ? current.name : null
+  }
+  function visit(node) {
+    if (!node || typeof node !== 'object') return
+    if (Array.isArray(node)) { node.forEach(visit); return }
+    if (!node.type) return
+    if (node.type === 'CallExpression') {
+      const root = calleeRoot(node.callee)
+      if (root === 'assert' || root === 'expect') {
+        const fingerprint = JSON.stringify(canonical({ callee: node.callee, arguments: node.arguments }))
+        assertions.set(fingerprint, (assertions.get(fingerprint) || 0) + 1)
+      }
+      const directRunner = node.callee.type === 'Identifier' && runners.has(node.callee.name)
+      const first = node.arguments[0]
+      if (directRunner && first?.type === 'Literal' && typeof first.value === 'string') cases.add(first.value)
+    }
+    for (const value of Object.values(node)) {
+      if (Array.isArray(value)) value.forEach(visit)
+      else if (value && typeof value === 'object') visit(value)
+    }
+  }
+  visit(ast)
+  return { assertions, cases }
+}
+
 /** Pure comparison; the guard, never tool-supplied metadata, owns the actual before source. */
 export function inspectTestAuthoringDelta(before, after, trustedFacts = {}) {
   const old = collectRisks(before, trustedFacts)
@@ -181,6 +222,17 @@ export function inspectTestAuthoringDelta(before, after, trustedFacts = {}) {
     const count = remaining.get(risk.fingerprint) || 0
     if (!count) return { allowed: false, reason: risk.reason, scope }
     remaining.set(risk.fingerprint, count - 1)
+  }
+  const beforeFacts = collectAssertionFacts(before)
+  const afterFacts = collectAssertionFacts(after)
+  if (!beforeFacts || !afterFacts) return { allowed: false, reason: 'unsupported-or-incomplete-test-syntax', scope }
+  for (const [fingerprint, count] of beforeFacts.assertions) {
+    if ((afterFacts.assertions.get(fingerprint) || 0) < count) {
+      return { allowed: false, reason: 'test-assertion-removed-or-rewritten', scope }
+    }
+  }
+  for (const name of beforeFacts.cases) {
+    if (!afterFacts.cases.has(name)) return { allowed: false, reason: 'test-case-removed-or-renamed', scope }
   }
   return { allowed: true, reason: null, scope }
 }

@@ -66,6 +66,14 @@ test('unused safe sibling imports preserve existing use-site risks only in delta
   const after = "import { values, safeApi } from './domain.mjs'; consume([...values])"
   assert.equal(inspectTestAuthoringDelta(before, after).allowed, true)
   assert.equal(inspectTestAuthoring(after).allowed, false)
+
+  // 测试契约：禁削弱、放行新增。断言指纹与用例名缺失即视为削弱。
+  const contractBefore = "import test from 'node:test'; import assert from 'node:assert/strict'; test('keeps contract', () => { assert.equal(actual(), 1) })"
+  const contractBase = "import test from 'node:test'; import assert from 'node:assert/strict'; test('keeps contract', () => { assert.equal(actual(), 1) })"
+  assert.equal(inspectTestAuthoringDelta(contractBefore, contractBase + "; test('adds coverage', () => { assert.equal(other(), 2) })").allowed, true)
+  assert.equal(inspectTestAuthoringDelta(contractBefore, "import test from 'node:test'; import assert from 'node:assert/strict'; test('keeps contract', () => {})").allowed, false)
+  assert.equal(inspectTestAuthoringDelta(contractBefore, "import test from 'node:test'; import assert from 'node:assert/strict'; test('keeps contract', () => { assert.equal(actual(), 2) })").allowed, false)
+  assert.equal(inspectTestAuthoringDelta(contractBefore, "import test from 'node:test'; import assert from 'node:assert/strict'; test('renamed contract', () => { assert.equal(actual(), 1) })").allowed, false)
 })
 
 test('default namespace and literal named bindings ignore unused safe siblings at use sites', () => {
