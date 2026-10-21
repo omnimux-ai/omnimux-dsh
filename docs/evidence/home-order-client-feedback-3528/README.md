@@ -25,6 +25,7 @@
 - 结果 **PASS**：10 条断言全过 —— warnings=2（reset / move-to-top，含 `home order state not writable (EACCES)`）、unhandled=0、乐观状态历史 `[null, ["b","a"]]`、DOM 日志/状态文本渲染正确、截图 100898 bytes（1920×1280 @2x，sha256 `bd32555e…`）。
 - TaskSpace 由 driver 在 finally 中 `finish({ keep: [] })` 清理（报告的 `cleanup` 字段与 driver 实现对应；ego 空间列表无本任务空间）；不读 Dev profile、不写共享状态。
 - 报告：`report.json`（含 headCommitAtRun / loadedUrl / esbuild 版本 / source+bundle+PNG 哈希 / 实测 viewport / cleanup / 10 条断言）；截图：`browser-console.png`（可见两条黄色 warn 与 `warnings: 2 · unhandled: 0`）。
+- provenance：报告记录 `sourceCommit`（引入 source 内容的提交）、`sourceMatchesCommitted`（工作副本与提交字节一致，当前 true）、`committedSha256`、`workingTreeDirty`（当前 true，仅证据/脚本改动未提交）与 `headCommitAtRun`；审计按 `source.sha256` + `sourceCommit` 复算。
 - 复算说明：bundle sha256 依赖锁文件内 esbuild 版本（当前 0.25.12）；报告显式记录 `esbuild.version` 与 `absWorkingDir`，换安装环境需按同版本重算。
 
 ## 测试与检查（实际执行）

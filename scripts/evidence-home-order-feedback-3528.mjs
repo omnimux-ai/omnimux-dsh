@@ -39,6 +39,25 @@ function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex')
 }
 
+function gitText(args) {
+  return execFileSync('git', ['-C', ROOT].concat(args), { encoding: 'utf8' }).trim()
+}
+
+/** Source provenance: which commit introduced this exact file content, and whether the
+ *  working copy still matches it. Keeps the report honest when the run happens on a
+ *  dirty tree (only evidence/script files pending) and HEAD is still the parent commit. */
+function sourceProvenance(sourceSha256) {
+  const sourceRel = 'plugins/omnimux-market/src/client/plaza/plazaUtils.js'
+  const sourceCommit = gitText(['log', '-1', '--format=%H', '--', sourceRel])
+  const committedSha256 = sha256(execFileSync('git', ['-C', ROOT, 'show', `${sourceCommit}:${sourceRel}`]))
+  return {
+    sourceCommit,
+    sourceMatchesCommitted: committedSha256 === sourceSha256,
+    committedSha256,
+    workingTreeDirty: gitText(['status', '--porcelain']).length > 0,
+  }
+}
+
 async function bundleSource() {
   const sourceBytes = readFileSync(SOURCE)
   const result = await build({
@@ -120,6 +139,7 @@ async function main() {
   mkdirSync(EVIDENCE_DIR, { recursive: true })
   mkdirSync(WORK_DIR, { recursive: true })
   const bundled = await bundleSource()
+  const provenance = sourceProvenance(bundled.sourceSha256)
   writeFileSync(HARNESS, renderHarness(bundled.code))
 
   const run = await runEgoSteps({
@@ -177,13 +197,13 @@ async function main() {
     generatedAt: new Date().toISOString(),
     script: 'scripts/evidence-home-order-feedback-3528.mjs',
     source: { path: 'plugins/omnimux-market/src/client/plaza/plazaUtils.js', sha256: bundled.sourceSha256 },
-    bundleSha256: bundled.bundleSha256,
-    headCommitAtRun: execFileSync('git', ['-C', ROOT, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+    headCommitAtRun: gitText(['rev-parse', 'HEAD']),
+    provenance,
     loadedUrl: `file://${HARNESS}`,
     esbuild: { version: esbuildVersion, absWorkingDir: ROOT, entry: 'plugins/omnimux-market/src/client/plaza/plazaUtils.js' },
     bundle: { bytes: bundled.bytes, sha256: bundled.bundleSha256, harness: '.workbuddy/evidence/home-order-feedback-3528/harness.html' },
     engine: { userAgent: run.userAgent, taskSpaceId: run.spaceId, viewport: values.viewport || null, requestedViewport: { width: 960, height: 640, deviceScaleFactor: 2 } },
-    cleanup: { driverFinally: true, note: 'ego-browser-steps driver awaits task.finish({ keep: [] }) before writing its result' },
+    cleanup: { driverFinally: true, selfReported: true, note: 'ego-browser-steps driver awaits task.finish({ keep: [] }) before writing its result; independent space listing is the external check' },
     observed: {
       warnings,
       unhandled,

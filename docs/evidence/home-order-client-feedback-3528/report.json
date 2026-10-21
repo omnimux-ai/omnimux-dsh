@@ -1,13 +1,18 @@
 {
   "task": "3528",
-  "generatedAt": "2026-10-21T06:34:33.050Z",
+  "generatedAt": "2026-10-21T06:38:00.250Z",
   "script": "scripts/evidence-home-order-feedback-3528.mjs",
   "source": {
     "path": "plugins/omnimux-market/src/client/plaza/plazaUtils.js",
     "sha256": "fff538a7ffddc14daeae0141b4d620b53492c20d22bb3a3c463ad9a0f4669f43"
   },
-  "bundleSha256": "b35eabd14a473929fa8b7a5680562d4d9a1867f63828be21fb8871c50deba7ee",
-  "headCommitAtRun": "2f3df7fced3ea9d9c95c9d95af6b3be3a02947b9",
+  "headCommitAtRun": "e68bea2a5445e53114b01b0d62989680422e4282",
+  "provenance": {
+    "sourceCommit": "e68bea2a5445e53114b01b0d62989680422e4282",
+    "sourceMatchesCommitted": true,
+    "committedSha256": "fff538a7ffddc14daeae0141b4d620b53492c20d22bb3a3c463ad9a0f4669f43",
+    "workingTreeDirty": true
+  },
   "loadedUrl": "file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/market-home-order-feedback-3528/.workbuddy/evidence/home-order-feedback-3528/harness.html",
   "esbuild": {
     "version": "0.25.12",
@@ -21,7 +26,7 @@
   },
   "engine": {
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
-    "taskSpaceId": 128,
+    "taskSpaceId": 130,
     "viewport": {
       "width": 960,
       "height": 640,
@@ -35,7 +40,8 @@
   },
   "cleanup": {
     "driverFinally": true,
-    "note": "ego-browser-steps driver awaits task.finish({ keep: [] }) before writing its result"
+    "selfReported": true,
+    "note": "ego-browser-steps driver awaits task.finish({ keep: [] }) before writing its result; independent space listing is the external check"
   },
   "observed": {
     "warnings": [
