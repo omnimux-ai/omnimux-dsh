@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { mapArtifactAsset, mapCloudAsset, mapLocalAsset, mapProductAsset, pickerKindOf, pickerMimeOf } from './picker-asset-mime.js';
+import { assetForSlot, mapArtifactAsset, mapCloudAsset, mapLocalAsset, mapProductAsset, pickerKindOf, pickerMimeOf } from './picker-asset-mime.js';
 
 describe('picker asset MIME projection', () => {
   it('reads the real cover filename instead of the extension-less preview URL', () => {
@@ -90,21 +90,28 @@ describe('media URL vs thumbnail separation', () => {
     assert.equal(item.mime, undefined);
   });
 
-  it('prefers the local video file over its image cover', () => {
+  it('resolves the local file variant against the target slot, not the asset category', () => {
     const item = mapLocalAsset({
       id: 'v',
-      name: '本地视频',
-      type: 'video',
+      name: '本地场景',
+      type: 'scene',
       cover: { id: 'cover', kind: 'image', original_name: 'cover.png' },
       files: [
         { id: 'cover', kind: 'image', original_name: 'cover.png' },
         { id: 'media', kind: 'video', original_name: 'clip.mp4' },
       ],
     });
-    assert.equal(item.mime, 'video/mp4');
-    assert.equal(item.type, 'video');
-    assert.equal(item.url, '/omnimux/assets/library/preview?id=v&file=media');
     assert.equal(item.thumbUrl, '/omnimux/assets/library/preview?id=v&file=cover');
+    const image = assetForSlot(item, 'image');
+    assert.equal(image.type, 'image');
+    assert.equal(image.mime, 'image/png');
+    assert.equal(image.url, '/omnimux/assets/library/preview?id=v&file=cover');
+    const video = assetForSlot(item, 'video');
+    assert.equal(video.type, 'video');
+    assert.equal(video.mime, 'video/mp4');
+    assert.equal(video.url, '/omnimux/assets/library/preview?id=v&file=media');
+    // No audio variant: fail-closed, caller rejects with the slot's type error.
+    assert.equal(assetForSlot(item, 'audio').type, 'image');
   });
 
   it('reads mime_type and meta.source_media_url', () => {

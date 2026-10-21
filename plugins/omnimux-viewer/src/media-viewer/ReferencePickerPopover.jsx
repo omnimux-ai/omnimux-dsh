@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PRESET_REFERENCE_ASSETS, REFERENCE_TABS } from './reference-constants.js';
 import { readDuration } from './MediaSlotGroup.jsx';
-import { mapArtifactAsset, mapCloudAsset, mapLocalAsset, mapProductAsset } from './picker-asset-mime.js';
+import { assetForSlot, mapArtifactAsset, mapCloudAsset, mapLocalAsset, mapProductAsset } from './picker-asset-mime.js';
 import {
   ensureReferenceTab,
   peekReferenceTab,
@@ -220,7 +220,8 @@ export function ReferencePickerPopover({
     if (selectingRef.current) return;
     selectingRef.current = true;
     try {
-      const result = onSelectAsset ? onSelectAsset(asset, targetSlot) : false;
+      const selected = assetForSlot(asset, targetSlot?.type);
+      const result = onSelectAsset ? onSelectAsset(selected, targetSlot) : false;
       const accepted = result instanceof Promise ? await result : result;
       if (accepted === true) {
         onClose?.();

@@ -1,9 +1,9 @@
 {
   "pass": true,
   "issue": 3548,
-  "capturedAt": "2026-10-21T07:20:26.728Z",
-  "sourceCommit": "5bb081cd0a9d6f66e468269bca9dfb51a61f2d31",
-  "sourceDirty": false,
+  "capturedAt": "2026-10-21T07:28:32.409Z",
+  "sourceCommit": "bd4dffddd522340edaee175451ca6970c0d36ae4",
+  "sourceDirty": true,
   "browser": "ego-lite",
   "assertions": [
     {
@@ -40,8 +40,8 @@
     "bodyText": "添加评论历史100%打开图像视频素材 [本地角色] 已入槽Synthetic Image标准版参数1:1·1K·1预估消耗 ≈0.13 积分历史基准图16:53 · 图片复用提示词下载\"use strict\"; (() => { var __create = Object.create; var __defProp = Object.defineProperty; var __getOwnPropDesc = Object.getOwnPropertyDescriptor; "
   },
   "sources": {
-    "picker": "ecf6aa7ee5c2bb657e18b762ce1f224916665b65c0f73c2170e995da3d6fbd4d",
-    "mime": "cf26365b7e243315be0bcea7773e4578da51b762d9f9abdb48b1a697afc032c5",
+    "picker": "619aef5ede59230074ce47c03b5a7e3802a7d6e49286a6ee7f79b91ed8800b6a",
+    "mime": "9687fd3d979f69fb31bf2f6d9a75f9fabe559717b6354c3563c8a471cc4f722d",
     "composer": "094c0e1595196036ecf28fcf208a0959392a2ad07a013245dfc1dfe300a875a5",
     "slot": "fac05484b1b76cb22c314990552e70572feff76b7c46a9392d73ade41ea20f43",
     "harness": "c1099a471d0660745c238db52cb7c0bf2d1df6f44eb597c0ed5e45256689361f",

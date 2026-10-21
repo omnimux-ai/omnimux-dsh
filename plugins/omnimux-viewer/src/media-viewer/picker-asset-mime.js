@@ -51,22 +51,55 @@ const cloudPreviewUrl = (c) => c.meta?.source_cover_url || c.cover_url || `/omni
 export function mapLocalAsset(a) {
   const files = Array.isArray(a.files) ? a.files : [];
   const coverFile = a.cover?.id ? a.cover : (files.find((file) => file?.kind === 'image') || files[0] || null);
-  const preferredKind = a.type === 'video' ? 'video' : (a.type === 'audio' ? 'audio' : null);
-  const mediaFile = (preferredKind && files.find((file) => file?.kind === preferredKind)) || coverFile;
   const coverUrl = coverFile?.id ? localPreviewUrl(a.id, coverFile.id) : '';
-  const mediaUrl = mediaFile?.id ? localPreviewUrl(a.id, mediaFile.id) : coverUrl;
-  const mime = pickerMimeOf(mediaFile) || pickerMimeOf(a);
+  const mediaByKind = {};
+  const variants = coverFile?.id ? [coverFile, ...files] : files;
+  for (const file of variants) {
+    const kind = file?.kind;
+    if (!file?.id || !kind || !['image', 'video', 'audio'].includes(kind)) continue;
+    if (!mediaByKind[kind]) {
+      mediaByKind[kind] = {
+        url: localPreviewUrl(a.id, file.id),
+        mime: pickerMimeOf(file) || undefined,
+        filename: file.original_name,
+      };
+    }
+  }
+  const defaultVariant = mediaByKind.image || mediaByKind.video || mediaByKind.audio || null;
+  const defaultUrl = defaultVariant?.url || coverUrl;
+  const mime = defaultVariant?.mime || pickerMimeOf(coverFile) || pickerMimeOf(a);
   return {
     id: a.id,
     title: a.name || a.handle || a.id,
     name: a.name || a.handle || a.id,
-    filename: mediaFile?.original_name,
-    url: mediaUrl,
-    thumbUrl: coverUrl || mediaUrl,
+    filename: defaultVariant?.filename,
+    url: defaultUrl,
+    thumbUrl: coverUrl || defaultUrl,
     type: pickerKindOf(mime, a.type),
     mime: mime || undefined,
+    mediaByKind,
     isMine: true,
     raw: a,
+  };
+}
+
+/**
+ * Pick the file variant that matches the slot being filled. The library asset
+ * category (character/scene/…) says nothing about a file's media kind, so the
+ * image/video/audio choice must happen against the target slot.
+ * @param {object} item
+ * @param {'image' | 'video' | 'audio' | undefined} targetType
+ * @returns {object}
+ */
+export function assetForSlot(item, targetType) {
+  const variant = targetType && item?.mediaByKind?.[targetType];
+  if (!variant) return item;
+  return {
+    ...item,
+    url: variant.url,
+    mime: variant.mime,
+    filename: variant.filename,
+    type: targetType,
   };
 }
 
