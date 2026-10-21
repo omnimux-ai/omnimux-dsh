@@ -9,6 +9,9 @@ export const destKind = 'single'
 
 export const PROVIDERS = ['auto', 'coreml', 'cuda', 'cpu']
 
+/** fast = int8 model + long-edge 384 (default); quality = float32 + 518. */
+export const DEPTH_MODES = ['fast', 'quality']
+
 /** Python packages the depth engine imports at module scope. */
 export const DEPTH_PYTHON_MODULES = ['numpy', 'cv2', 'onnxruntime']
 
@@ -56,12 +59,13 @@ export function resolveUvCandidates() {
 }
 
 /** `uv run --with ... python depth_engine.py <engine args>` */
-export function buildUvDepthArgs({ scriptPath, input, inputPath, outputPath, modelsDir }) {
+export function buildUvDepthArgs({ scriptPath, input, inputPath, outputPath, modelsDir, mode = 'fast' }) {
   const engineArgs = buildDepthCliArgs(input, {
     scriptPath,
     inputPath,
     outputPath,
     modelsDir,
+    mode,
   }).slice(1)
   const withArgs = []
   for (const pkg of UV_DEPTH_PACKAGES) withArgs.push('--with', pkg)
@@ -343,6 +347,15 @@ export function validate(input) {
       throw new VideoError('video-invalid-input', 'video_depth durationSeconds must be > 0')
     }
   }
+  if (input.mode !== undefined && input.mode !== null) {
+    const mode = String(input.mode).toLowerCase().trim()
+    if (!DEPTH_MODES.includes(mode)) {
+      throw new VideoError(
+        'video-invalid-input',
+        `video_depth invalid mode '${input.mode}'. Available modes: ${DEPTH_MODES.join(', ')}`,
+      )
+    }
+  }
   const prov = input.device ?? input.provider
   if (prov !== undefined && prov !== null) {
     const p = String(prov).toLowerCase().trim()
@@ -360,9 +373,10 @@ export function validate(input) {
  * @param {object} input
  * @param {{ scriptPath: string, inputPath: string, outputPath: string, modelsDir?: string }} opts
  */
-export function buildDepthCliArgs(input, { scriptPath, inputPath, outputPath, modelsDir }) {
+export function buildDepthCliArgs(input, { scriptPath, inputPath, outputPath, modelsDir, mode = 'fast' }) {
   const args = [
     scriptPath,
+    '--preset', String(mode),
     '--input', String(inputPath),
     '--output', String(outputPath),
   ]
@@ -478,6 +492,14 @@ export async function execute(input, ctx) {
     process.env.OMNIMUX_VIDEO_MODELS_DIR ||
     process.env.DSH_VIDEO_MODELS_DIR ||
     ''
+  const requestedMode =
+    (typeof input?.mode === 'string' ? input.mode : '') ||
+    ctx.videoConfig?.video?.depthMode ||
+    process.env.OMNIMUX_VIDEO_DEPTH_MODE ||
+    'fast'
+  const depthMode = DEPTH_MODES.includes(String(requestedMode).toLowerCase().trim())
+    ? String(requestedMode).toLowerCase().trim()
+    : 'fast'
 
   // Dependency gate before any encode: explicit python config wins, then any
   // local python with numpy/cv2/onnxruntime, then uv-managed python (the
@@ -526,6 +548,7 @@ export async function execute(input, ctx) {
     inputPath: videoPath,
     outputPath: tmpDepth,
     modelsDir,
+    mode: depthMode,
   })
 
   if (runtime.kind === 'uv') {
@@ -535,6 +558,7 @@ export async function execute(input, ctx) {
       inputPath: videoPath,
       outputPath: tmpDepth,
       modelsDir,
+      mode: depthMode,
     })
     if (typeof ctx.runUv === 'function') {
       await ctx.runUv(uvArgs, { timeoutMs })
@@ -587,6 +611,7 @@ export async function execute(input, ctx) {
       model: 'depth-anything-v2-small',
       convention: input.invert ? 'near=black, far=white' : 'near=white, far=black',
       audioPreserved: keepAudio,
+      preset: depthMode,
       // Which runtime selection actually used (useful for support/evidence).
       python: runtime.kind === 'uv'
         ? `uv (managed python ${UV_DEPTH_PYTHON_VERSION})`

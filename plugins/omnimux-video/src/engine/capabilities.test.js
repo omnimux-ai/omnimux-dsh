@@ -519,6 +519,8 @@ test('depth: validate requires videoUrl and checks params', () => {
   assert.throws(() => depth.validate({ videoUrl: '/a.mp4', durationSeconds: 0 }), VideoError)
   assert.throws(() => depth.validate({ videoUrl: '/a.mp4', provider: 'quantum' }), VideoError)
   depth.validate({ videoUrl: '/a.mp4' })
+  assert.throws(() => depth.validate({ videoUrl: '/a.mp4', mode: 'turbo' }), (e) => e instanceof VideoError)
+  depth.validate({ videoUrl: '/a.mp4', mode: 'quality' })
   depth.validate({
     videoUrl: '/a.mp4',
     maxEdge: 518,
@@ -551,6 +553,7 @@ test('depth: buildDepthCliArgs maps flags correctly', () => {
   )
   assert.deepEqual(args, [
     '/opt/depth_engine.py',
+    '--preset', 'fast',
     '--input', '/in.mp4',
     '--output', '/out.mp4',
     '--max-edge', '518',
@@ -562,6 +565,17 @@ test('depth: buildDepthCliArgs maps flags correctly', () => {
     '--side-by-side',
     '--models-dir', '/models',
   ])
+})
+
+test('depth: buildDepthCliArgs 支持 quality 档，默认 fast', () => {
+  const base = { scriptPath: '/s.py', inputPath: '/i.mp4', outputPath: '/o.mp4' }
+  const fast = depth.buildDepthCliArgs({ videoUrl: '/a.mp4' }, base)
+  assert.deepEqual(fast.slice(0, 3), ['/s.py', '--preset', 'fast'])
+  const quality = depth.buildDepthCliArgs(
+    { videoUrl: '/a.mp4' },
+    { scriptPath: '/s.py', inputPath: '/i.mp4', outputPath: '/o.mp4', mode: 'quality' },
+  )
+  assert.deepEqual(quality.slice(0, 3), ['/s.py', '--preset', 'quality'])
 })
 
 test('depth: buildAudioExtractArgs and buildMuxArgs', () => {
@@ -743,7 +757,7 @@ test('depth: buildUvDepthArgs 组装 uv 托管运行时命令', () => {
     outputPath: '/tmp/depth.mp4',
     modelsDir: '/models',
   })
-  assert.deepEqual(args.slice(0, 13), [
+  assert.deepEqual(args.slice(0, 15), [
     'run',
     '--no-project',
     '--python',
@@ -753,9 +767,11 @@ test('depth: buildUvDepthArgs 组装 uv 托管运行时命令', () => {
     '--with', 'onnxruntime',
     'python',
     '/opt/depth_engine.py',
+    '--preset',
+    'fast',
     '--input',
   ])
-  assert.equal(args[13], '/tmp/src.mp4')
+  assert.equal(args[15], '/tmp/src.mp4')
   assert.ok(args.includes('--max-edge'))
   assert.ok(args.includes('--invert'))
   assert.ok(args.includes('--models-dir'))

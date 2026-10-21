@@ -1,0 +1,15 @@
+{
+  "mode": "quality",
+  "seconds": 30.8,
+  "source": "depth_engine.py direct (same args the plugin passes: --preset quality, provider cpu)",
+  "result": {
+    "model": "depth-anything-v2-small",
+    "modelFile": "depth_anything_v2_small.onnx",
+    "preset": "quality",
+    "maxEdge": 518,
+    "providers": ["CPUExecutionProvider"],
+    "convention": "near=white, far=black",
+    "audioPreserved": false,
+    "note": "engine-only; audio mux adds ~1-2s in the plugin path"
+  }
+}

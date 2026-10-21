@@ -51,6 +51,7 @@ const PROCESS_DESCRIPTION =
 
 const DEPTH_DESCRIPTION =
   'Generate a grayscale monocular depth-map video (Depth Anything V2 Small ONNX). ' +
+  'mode defaults to fast (int8 quantized model + long-edge 384, ~5x faster); mode=quality uses float32 + 518. ' +
   'Default convention: near=white, far=black. Optional invert / side-by-side preview. Keeps original audio by default. ' +
   'Uses local onnxruntime (CoreML/CUDA/CPU); picks an explicit python config, then any local python3.x that can import numpy/cv2/onnxruntime, then a uv-managed python (the desktop app ships uv, so no user-installed Python is required). Explicit config never falls back. Fails fast with `video-depth-deps-missing` plus an install/uv hint when none works. ' +
   'Not a style-transfer / anime stylize tool.'
@@ -120,7 +121,7 @@ export function apply(ctx, config = {}) {
           'video_scene_detect: { videoUrl, threshold?, extractFrames? }. ' +
           'slideshow_export: { imageUrls[], durationPerImage?, aspectRatio?, resolution?, transitionType?, frameRate?, audioUrl?, audioVolume? }. ' +
           'video_export: { clips:[{url,type?,duration?,start?,volume?}], resolution?, aspectRatio?, width?, height?, frameRate?, subtitles?, timeline? }. ' +
-          'video_depth: { videoUrl, maxEdge?, invert?, sideBySide?, keepAudio?, startSeconds?, durationSeconds?, provider?, fps? }.',
+          'video_depth: { videoUrl, mode?: fast|quality, maxEdge?, invert?, sideBySide?, keepAudio?, startSeconds?, durationSeconds?, provider?, fps? }.',
       },
       dest: {
         type: 'string',
@@ -154,9 +155,14 @@ export function apply(ctx, config = {}) {
         required: true,
         description: 'Absolute output .mp4 path for the grayscale depth video.',
       },
+      mode: {
+        type: 'string',
+        enum: ['fast', 'quality'],
+        description: 'fast (default) = int8 quantized model + long-edge 384; quality = float32 model + long-edge 518.',
+      },
       max_edge: {
         type: 'number',
-        description: 'Long-edge resize before inference (default 518; 0 keeps source rounded to multiples of 14).',
+        description: 'Long-edge resize before inference (overrides the mode default; -1 = mode default, 0 = source rounded to multiples of 14).',
       },
       invert: {
         type: 'boolean',
@@ -194,6 +200,7 @@ export function apply(ctx, config = {}) {
         capability: 'video_depth',
         input: {
           videoUrl: args.video,
+          mode: args.mode,
           maxEdge: args.max_edge,
           invert: args.invert,
           sideBySide: args.side_by_side,
