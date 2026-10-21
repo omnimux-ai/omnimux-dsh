@@ -841,6 +841,23 @@ describe('guard-worktree bash command write safety guard (防命令行绕过篡�
       decideBashCommand({ command: 'pnpm build > /tmp/x.log 2>&1', cwd: mainRepoRoot }).decision,
       'deny',
     )
+    // 管道下游命令不参与包管理器/构建判定。
+    assert.equal(
+      decideBashCommand({ command: 'pnpm install --frozen-lockfile 2>&1 | tail -3', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'pnpm install --frozen-lockfile | tee /tmp/x.log', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'pnpm build | cat', cwd: mainRepoRoot }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'npm install left-pad | cat', cwd: mainRepoRoot }).decision,
+      'deny',
+    )
     assert.equal(
       decideBashCommand({ command: 'touch -r package.json .tmp/out.txt', cwd: mainRepoRoot }).decision,
       'allow',
