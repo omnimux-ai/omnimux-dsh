@@ -1454,6 +1454,9 @@ export function App(): React.JSX.Element {
                 targetUrl,
                 ...directItem,
                 targetPort,
+                // 整页保存才允许页面内提取作品直传；用户点的是某个具体媒体时
+                // 保持「保存这一条媒体」的旧语义。
+                capturePage: mediaItem === undefined,
               },
             },
             (response) => {

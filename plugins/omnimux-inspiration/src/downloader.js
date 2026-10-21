@@ -243,10 +243,15 @@ function documentResponseError(url) {
  * point at a name that was never validated, and the resolution of an already
  * checked name is not stable, so a single up-front lookup would not cover the
  * address actually contacted.
+ *
+ * `deps.headers` is an already-sanitized request-header object supplied by the
+ * capture route (Referer / UA / Cookie). It is the only way a download carries
+ * headers; without it the request init is exactly what it always was, including
+ * on every redirect hop.
  * @param {typeof fetch} fetcher
  * @param {string} url
  * @param {AbortSignal} signal
- * @param {{ resolver?: Function }} deps resolver forwarded to the policy check
+ * @param {{ resolver?: Function, headers?: Record<string, string> }} deps resolver forwarded to the policy check
  * @returns {Promise<{ response: Response, url: string }>}
  */
 async function fetchValidated(fetcher, url, signal, deps = {}) {
@@ -255,7 +260,9 @@ async function fetchValidated(fetcher, url, signal, deps = {}) {
     if (signal?.aborted) throw createAbortError()
     await assertDownloadableUrl(current, deps)
     if (signal?.aborted) throw createAbortError()
-    const response = await fetcher(current, { redirect: 'manual', signal })
+    const init = { redirect: 'manual', signal }
+    if (deps.headers) init.headers = deps.headers
+    const response = await fetcher(current, init)
     if (!isRedirectStatus(response.status)) return { response, url: current }
     const location = resolveRedirectUrl(response.headers?.get?.('location'), current)
     if (!location) return { response, url: current }
@@ -393,7 +400,9 @@ async function writeBody(response, tempPath, maxBytes, url, signal) {
  *   timeoutMs?: number,
  *   resolver?: Function,
  *   signal?: AbortSignal,
- * }} [opts] `resolver` overrides the DNS lookup used by the target check
+ *   headers?: Record<string, string>,
+ * }} [opts] `resolver` overrides the DNS lookup used by the target check;
+ * `headers` is an already-sanitized request-header set (capture route only)
  * @returns {Promise<string>} absolute path of saved file
  */
 export async function downloadMedia(url, destDir, opts = {}) {
@@ -419,7 +428,10 @@ export async function downloadMedia(url, destDir, opts = {}) {
       timeoutErr.code = 'ETIMEDOUT'
       throw timeoutErr
     }
-    const deps = opts.resolver ? { resolver: opts.resolver } : {}
+    const deps = {}
+    if (opts.resolver) deps.resolver = opts.resolver
+    // 只透传调用方已清洗的 header；未提供时请求参数与旧行为完全一致。
+    if (opts.headers && typeof opts.headers === 'object') deps.headers = opts.headers
     const { response, url: finalUrl } = await fetchValidated(
       fetcher,
       url,
