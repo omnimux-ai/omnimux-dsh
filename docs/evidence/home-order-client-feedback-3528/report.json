@@ -1,0 +1,133 @@
+{
+  "task": "3528",
+  "generatedAt": "2026-10-21T06:38:00.250Z",
+  "script": "scripts/evidence-home-order-feedback-3528.mjs",
+  "source": {
+    "path": "plugins/omnimux-market/src/client/plaza/plazaUtils.js",
+    "sha256": "fff538a7ffddc14daeae0141b4d620b53492c20d22bb3a3c463ad9a0f4669f43"
+  },
+  "headCommitAtRun": "e68bea2a5445e53114b01b0d62989680422e4282",
+  "provenance": {
+    "sourceCommit": "e68bea2a5445e53114b01b0d62989680422e4282",
+    "sourceMatchesCommitted": true,
+    "committedSha256": "fff538a7ffddc14daeae0141b4d620b53492c20d22bb3a3c463ad9a0f4669f43",
+    "workingTreeDirty": true
+  },
+  "loadedUrl": "file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/market-home-order-feedback-3528/.workbuddy/evidence/home-order-feedback-3528/harness.html",
+  "esbuild": {
+    "version": "0.25.12",
+    "absWorkingDir": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/market-home-order-feedback-3528",
+    "entry": "plugins/omnimux-market/src/client/plaza/plazaUtils.js"
+  },
+  "bundle": {
+    "bytes": 121733,
+    "sha256": "b35eabd14a473929fa8b7a5680562d4d9a1867f63828be21fb8871c50deba7ee",
+    "harness": ".workbuddy/evidence/home-order-feedback-3528/harness.html"
+  },
+  "engine": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "taskSpaceId": 130,
+    "viewport": {
+      "width": 960,
+      "height": 640,
+      "devicePixelRatio": 2
+    },
+    "requestedViewport": {
+      "width": 960,
+      "height": 640,
+      "deviceScaleFactor": 2
+    }
+  },
+  "cleanup": {
+    "driverFinally": true,
+    "selfReported": true,
+    "note": "ego-browser-steps driver awaits task.finish({ keep: [] }) before writing its result; independent space listing is the external check"
+  },
+  "observed": {
+    "warnings": [
+      "[omnimux-market] home custom order write failed (reset): home custom order not saved: home order state not writable (EACCES)",
+      "[omnimux-market] home custom order write failed (move-to-top): home custom order not saved: home order state not writable (EACCES)"
+    ],
+    "unhandled": [],
+    "lastOrder": [
+      "b",
+      "a"
+    ],
+    "history": [
+      null,
+      [
+        "b",
+        "a"
+      ]
+    ],
+    "viewport": {
+      "width": 960,
+      "height": 640,
+      "devicePixelRatio": 2
+    },
+    "statusText": "warnings: 2 · unhandled: 0",
+    "logText": "[omnimux-market] home custom order write failed (reset): home custom order not saved: home order state not writable (EACCES)\n[omnimux-market] home custom order write failed (move-to-top): home custom order not saved: home order state not writable (EACCES)"
+  },
+  "screenshot": {
+    "path": "docs/evidence/home-order-client-feedback-3528/browser-console.png",
+    "bytes": 100898,
+    "sha256": "bd32555e4f6bc13ca770ef2ff5017cb437d06afba048480efc70a01de58cd093",
+    "cdpShot": {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/market-home-order-feedback-3528/docs/evidence/home-order-client-feedback-3528/browser-console.png",
+      "bytes": 100898
+    }
+  },
+  "assertions": [
+    {
+      "name": "harness-ready",
+      "pass": true
+    },
+    {
+      "name": "warning-count",
+      "pass": true,
+      "detail": 2
+    },
+    {
+      "name": "warning-reset",
+      "pass": true
+    },
+    {
+      "name": "warning-move-to-top",
+      "pass": true
+    },
+    {
+      "name": "warning-has-server-error",
+      "pass": true
+    },
+    {
+      "name": "no-unhandled-rejection",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "name": "optimistic-state-history",
+      "pass": true,
+      "detail": [
+        null,
+        [
+          "b",
+          "a"
+        ]
+      ]
+    },
+    {
+      "name": "rendered-log",
+      "pass": true
+    },
+    {
+      "name": "rendered-status",
+      "pass": true
+    },
+    {
+      "name": "screenshot-bytes",
+      "pass": true,
+      "detail": 100898
+    }
+  ],
+  "pass": true
+}
