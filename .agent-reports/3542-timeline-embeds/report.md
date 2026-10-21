@@ -24,6 +24,7 @@
 - YouTube：官方播放器 `536×302`（16:9），Big Buck Bunny 真实可播。
 - Instagram：官方 `/embed/` 卡片 iframe `550×740`（夹具 shortcode 非真实帖子，白色页为 Instagram 自己的渲染；只证明卡片与尺寸）。
 - 抖音（无官方嵌入）：零 iframe，保留自绘卡片、媒体占位与四个操作。
+- 探测后真机复核：新增可达性探测落盘后重新跑真实 Chromium，滚动到 TikTok/YouTube/Instagram 行，三者均挂载成功（`287×510` / `536×302` / `550×740`），说明探测不会误杀正常平台。
 - 离线回退：正常加载后用 CDP 断网，再滚到未挂载的 Instagram 行——`no-cors` HEAD 探测失败，行内零 iframe、保留作者/正文/指标与四个操作，不显示浏览器错误页（`timeline-offline-fallback.png`）。
 - 四个操作（原帖直达 / 立即复刻 / AI 拆解 / 标为已处理）在所有行保留；点嵌入区不会打开详情弹窗（点击守卫）。
 - 截图：`timeline-top.png`、`timeline-x-playing.png`、`timeline-tiktok-player.png`、`timeline-tiktok-playing.png`、`timeline-youtube-player.png`、`timeline-douyin-fallback.png`；事实：`browser-facts.json`。
@@ -33,8 +34,8 @@
 | 检查 | 实际结果 |
 | --- | --- |
 | 插件核心套件 | 1810 项通过、0 失败、0 skip、0 外连（`npm test`，exit 0；含本任务新增 e2e 4 项与单测 24 项） |
-| 新增嵌入单测 | 13 项通过（loader/主题/语言/iframe/失败缓存/高度） |
-| `build-client` | 成功，`lib/client.js` 2,453,757 bytes（gitignored） |
+| 新增嵌入单测 | 24 项通过（目标解析 7 + loader 17：主题/语言/可达性探测/iframe load-error/失败缓存/高度） |
+| `build-client` | 成功，`lib/client.js` 2,454,042 bytes（gitignored） |
 | `verify-stage-contracts` | PASS（14 Stage / 8 sidebar；补齐工作树依赖软链后与 main 一致） |
 | `scan-ui-gates` | 退出 1；与 main 同为 7 条既有违规（其它插件），inspiration 0 条 |
 

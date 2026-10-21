@@ -52,12 +52,13 @@ export function RivalTimelineEmbed(props) {
   useEffect(() => {
     if (!target || !hostRef.current) return undefined
     const host = hostRef.current
-    // A dependency change (live locale/theme switch) re-runs this effect: an
-    // append-only host would stack a second official card under `is-loading`
-    // while the row already hides its own content.
-    host.replaceChildren()
-    // Tell the row it is loading again: during a rebuild it must show its own
-    // card instead of an empty slot, and only hand the body back when ready.
+    // A dependency change (live locale/theme switch) re-runs this effect. Each
+    // run gets its own slot: an in-flight embed from the previous run can only
+    // append into its detached slot, so it can never stack a second card over
+    // the new one. The row keeps its own card until this run reports ready.
+    const slot = document.createElement('div')
+    slot.className = 'omnimux-rival-embed-slot'
+    host.replaceChildren(slot)
     setState('loading')
     onStateRef.current?.('loading')
     let cancelled = false
@@ -70,7 +71,7 @@ export function RivalTimelineEmbed(props) {
     })
     setState('loading')
     Promise.race([
-      createTimelineEmbed(target, host, { theme, lang, title, ratio }),
+      createTimelineEmbed(target, slot, { theme, lang, title, ratio }),
       timeout,
     ])
       .then((ok) => {
@@ -89,6 +90,7 @@ export function RivalTimelineEmbed(props) {
     return () => {
       cancelled = true
       if (timer) clearTimeout(timer)
+      slot.remove()
     }
     // `targetKey` is the identity that matters: handing a new object with the
     // same URL must not re-create the iframe.

@@ -96,17 +96,23 @@ export async function probeEmbedReachable(url) {
   const fetcher = typeof window !== 'undefined' && typeof window.fetch === 'function' ? window.fetch : null
   if (!fetcher || !url) return true
   const controller = typeof AbortController === 'function' ? new AbortController() : null
-  const timer = setTimeout(() => controller?.abort(), EMBED_PROBE_TIMEOUT_MS)
+  let timer = null
+  const timeout = new Promise((resolve, reject) => {
+    timer = setTimeout(() => {
+      controller?.abort()
+      reject(new Error('embed-probe-timeout'))
+    }, EMBED_PROBE_TIMEOUT_MS)
+  })
   if (timer && typeof timer.unref === 'function') timer.unref()
   try {
-    await fetcher(url, {
+    await Promise.race([fetcher(url, {
       mode: 'no-cors',
       method: 'HEAD',
       cache: 'no-store',
       credentials: 'omit',
       referrerPolicy: 'no-referrer',
       signal: controller?.signal,
-    })
+    }), timeout])
     return true
   } catch {
     return false

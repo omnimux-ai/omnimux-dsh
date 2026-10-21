@@ -73,6 +73,7 @@
   "failures": [],
   "screenshots": [
     "timeline-douyin-fallback.png",
+    "timeline-instagram-card.png",
     "timeline-offline-fallback.png",
     "timeline-tiktok-player.png",
     "timeline-tiktok-playing.png",
@@ -95,5 +96,45 @@
     ],
     "note": "no-cors HEAD reachability probe rejects a dead domain before the iframe is mounted; the row keeps its hand-written card instead of showing the browser error page",
     "screenshot": "timeline-offline-fallback.png"
+  },
+  "probe": {
+    "method": "no-cors HEAD to the exact embed URL before mounting Instagram/TikTok/YouTube iframes (5s race, credentials omit, referrer no-referrer)",
+    "postProbeRealBrowser": {
+      "tiktok": {
+        "mounted": true,
+        "frame": [
+          287,
+          510
+        ]
+      },
+      "youtube": {
+        "mounted": true,
+        "frame": [
+          536,
+          302
+        ]
+      },
+      "instagram": {
+        "mounted": true,
+        "frame": [
+          550,
+          740
+        ]
+      },
+      "note": "after the probe landed, a real Chromium run scrolled to each row and every iframe mounted; screenshots regenerated at that revision"
+    },
+    "offlineProbe": {
+      "method": "CDP Network.emulateNetworkConditions offline after load, then scroll to an unmounted Instagram row",
+      "mounted": false,
+      "frames": 0,
+      "keptHeader": true,
+      "keptActions": [
+        "original",
+        "replicate",
+        "deconstruct",
+        "markDone"
+      ],
+      "screenshot": "timeline-offline-fallback.png"
+    }
   }
 }
