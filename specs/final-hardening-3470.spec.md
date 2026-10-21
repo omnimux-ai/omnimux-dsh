@@ -22,6 +22,12 @@
 ## 测试策略
 静态守卫逐行检查带 options 的 `open`；deploy 文件纳入清单。unlock 用注入 spawn 断言 `open` 参数、stdio、env（父进程临时设置 `ELECTRON_RUN_AS_NODE=1`）。picker 取消识别新增三类用例并保留既有取消（空 stdout）与成功用例。
 
+## 假设
+拉起失败源于 Electron 运行变量被裸 `open` 继承（`ELECTRON_RUN_AS_NODE` 让 App 以 Node 模式退出）；取消误判源于用 message/stderr 子串匹配 `-128`，而不是 osascript 的执行错误形态。修复依赖两条前提：env 归一化后 `open` 能正确拉起；真实 AppleScript 取消固定为退出码非 0 且 stderr 含 `execution error: … (-128)`。
+
+## 证伪方式
+在父进程设置 `ELECTRON_RUN_AS_NODE=1` 后，若注入 `spawn` 记录的拉起 env 仍含该变量，或 deploy 的 open 调用未带剔除后的 env，则 env 假设被证伪；把 `isUserCancel` 回退为 `/User canceled|-128/i` 后，message 或无关 stderr 含 `-128` 的用例若仍返回取消而不是 `picker-failed`，则取消识别假设被证伪。可执行：`node --test scripts/dev-launch-env.test.mjs scripts/dev-app-unlock.test.mjs plugins/omnimux/src/host/native-picker.test.js`；回退改动后上述用例必须失败。
+
 ## 浏览器与 Electron 边界
 不改 Client/Stage；Dev 物化后由 Agent/人工复核 picker 面板，不走原始 CDP 驱动。
 

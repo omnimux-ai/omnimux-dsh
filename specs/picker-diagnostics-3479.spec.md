@@ -21,6 +21,12 @@
 ## 测试策略
 单测：失败路径断言 logger 恰好一次且内容含 code/stdout 长度/片段；片段 >200 被截断；成功与取消 0 次；stdout 为空时长度 0 且不因空串误判。域插件路由测试保持注入 picker，不依赖日志实现。
 
+## 假设
+picker 失败时 `PickerError` 已携带可诊断的 stdout（或 runner 非零退出附带的 stdout），且失败路径与成功/取消可由 code 明确区分；因此可以在不改变 HTTP body 与客户端文案的前提下，把诊断只写入宿主日志。日志写入失败也不应影响 picker 错误本身的抛出。
+
+## 证伪方式
+若 `picker-failed` 路径始终拿不到 stdout（日志恒为 `stdout=0chars` 且真实失败无法定位），或成功/取消路径也触发日志（日志次数 >0），则诊断覆盖假设被证伪；若注入抛错 logger 后不再抛出 `picker-failed`，则日志隔离假设被证伪。可执行：`node --test plugins/omnimux/src/host/native-picker.test.js`；删掉截断、成功/取消静默或 logger 抛错保护后，对应用例必须失败。
+
 ## 浏览器与 Electron 边界
 不改 Client/Stage；Dev 物化后由 Agent/人工复核 picker 面板与一次失败日志（临时注入非法输出），不伪造截图。
 
