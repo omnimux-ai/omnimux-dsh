@@ -10,6 +10,7 @@
  */
 
 import { extractTweetCapture } from '../twitter-capture/extractor.ts'
+import { BRAND_MARK_COLOR } from '../surfaces/media-trigger.ts'
 import { FEATURE_FLAG, readFlag, readFlagSync, subscribeFlag } from '../../feature-flags.ts'
 import { generateOpinion, type PosterLocale } from './opinion.ts'
 import { openPosterModal, type PosterModalHandle } from './modal.ts'
@@ -26,13 +27,12 @@ import {
 import type { PosterTheme, TweetPosterSource } from './types.ts'
 import './styles.css'
 
-const ROW_ATTR = 'data-omnimux-poster-row'
+const ACTION_ATTR = 'data-omnimux-poster-action'
 const ARTICLE_ATTR = 'data-omnimux-poster'
 const TOAST_ID = 'omnimux-poster-toast'
 
 const COPY = {
   zh: {
-    trigger: '生成海报',
     triggerTitle: '生成海报并预填观点',
     noTweet: '没有读取到这篇帖子的正文',
     posterFailed: '海报生成失败，请重试',
@@ -47,7 +47,6 @@ const COPY = {
     genericFail: '操作失败，请重试',
   },
   en: {
-    trigger: 'Create poster',
     triggerTitle: 'Create a poster and prefill a post',
     noTweet: 'Could not read this post',
     posterFailed: 'Poster generation failed, please retry',
@@ -64,7 +63,7 @@ const COPY = {
 } as const
 
 const SVG_POSTER =
-  '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2.5"/><circle cx="9" cy="8.5" r="1.6"/><path d="M8 14h8M8 17.5h5"/></svg>'
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2.5"/><circle cx="9" cy="8.5" r="1.6"/><path d="M8 14h8M8 17.5h5"/></svg>'
 
 /** Page language decides the trigger and modal copy; X chrome is the signal. */
 export function detectPosterLocale(): PosterLocale {
@@ -149,6 +148,35 @@ function findActionBar(article: HTMLElement): HTMLElement | null {
   )
 }
 
+/** The direct child of the action bar that wraps `element`, if any. */
+function actionBarItemOf(group: HTMLElement, element: Element): Element | null {
+  let node: Element | null = element
+  while (node !== null && node.parentElement !== group) node = node.parentElement
+  return node !== null && node.parentElement === group ? node : null
+}
+
+/**
+ * Where the poster entry belongs inside the native action bar.
+ *
+ * The requested slot is immediately left of the bookmark icon; layouts without
+ * a bookmark fall back to the share icon, and a bar with neither becomes the
+ * append target (`null`). Returning the wrapper rather than the button keeps
+ * the entry a sibling flex item instead of nesting inside another action.
+ */
+export function findPosterActionAnchor(group: HTMLElement): Element | null {
+  const bookmark = group.querySelector('[data-testid="bookmark"], [data-testid="removeBookmark"]')
+  if (bookmark !== null) {
+    const item = actionBarItemOf(group, bookmark)
+    if (item !== null) return item
+  }
+  const share = group.querySelector('[data-testid="share"]')
+  if (share !== null) {
+    const item = actionBarItemOf(group, share)
+    if (item !== null) return item
+  }
+  return null
+}
+
 interface PosterController {
   start(): void
   stop(): void
@@ -160,47 +188,50 @@ function createController(): PosterController {
   let running = false
   let modal: PosterModalHandle | null = null
   let theme: PosterTheme = DEFAULT_POSTER_THEME
-  const rows = new WeakMap<HTMLElement, HTMLElement>()
+  const entries = new WeakMap<HTMLElement, HTMLElement>()
 
   function locale(): PosterLocale {
     return detectPosterLocale()
   }
 
-  function mountRow(article: HTMLElement): void {
+  function mountAction(article: HTMLElement): void {
     if (!article.querySelector('a[href*="/status/"]')) return
-    const existing = rows.get(article)
+    const existing = entries.get(article)
     if (existing?.isConnected === true) return
 
     const actionBar = findActionBar(article)
     if (actionBar === null) return
 
     const copy = COPY[locale()]
-    const row = document.createElement('div')
-    row.className = 'omnimux-poster-row'
-    row.setAttribute(ROW_ATTR, '1')
-    row.innerHTML = `<button type="button" class="omnimux-poster-trigger" title="${copy.triggerTitle}" aria-haspopup="dialog">${SVG_POSTER}<span>${copy.trigger}</span></button>`
+    const entry = document.createElement('div')
+    entry.className = 'omnimux-poster-action'
+    entry.setAttribute(ACTION_ATTR, '1')
+    entry.style.setProperty('--omnimux-poster-brand', BRAND_MARK_COLOR)
+    entry.innerHTML = `<button type="button" class="omnimux-poster-action-button" title="${copy.triggerTitle}" aria-label="${copy.triggerTitle}" aria-haspopup="dialog">${SVG_POSTER}</button>`
 
-    row.querySelector('button')?.addEventListener('click', (event) => {
+    entry.querySelector('button')?.addEventListener('click', (event) => {
       event.preventDefault()
       event.stopPropagation()
       void openForArticle(article)
     })
 
-    actionBar.insertAdjacentElement('afterend', row)
-    rows.set(article, row)
+    const anchor = findPosterActionAnchor(actionBar)
+    if (anchor !== null) actionBar.insertBefore(entry, anchor)
+    else actionBar.appendChild(entry)
+    entries.set(article, entry)
     article.setAttribute(ARTICLE_ATTR, '1')
 
-    // A previous row can survive in a re-rendered container; keep exactly one.
-    for (const stale of Array.from(article.querySelectorAll<HTMLElement>(`[${ROW_ATTR}="1"]`))) {
-      if (stale !== row && stale.closest('article') === article) stale.remove()
+    // React re-renders can leave a previous entry beside the bookmark; keep one.
+    for (const stale of Array.from(actionBar.querySelectorAll<HTMLElement>(`[${ACTION_ATTR}="1"]`))) {
+      if (stale !== entry) stale.remove()
     }
   }
 
   function scan(): void {
     for (const article of Array.from(document.querySelectorAll<HTMLElement>('article[data-testid="tweet"]'))) {
-      // Only the outermost article of a quote/repost owns a row.
+      // Only the outermost article of a quote/repost owns an entry.
       if (article.parentElement?.closest('article') !== null) continue
-      mountRow(article)
+      mountAction(article)
     }
   }
 
@@ -342,7 +373,7 @@ function createController(): PosterController {
         scanTimer = null
       }
       window.removeEventListener('popstate', scheduleScan)
-      for (const row of Array.from(document.querySelectorAll<HTMLElement>(`[${ROW_ATTR}="1"]`))) row.remove()
+      for (const entry of Array.from(document.querySelectorAll<HTMLElement>(`[${ACTION_ATTR}="1"]`))) entry.remove()
       for (const article of Array.from(document.querySelectorAll<HTMLElement>(`[${ARTICLE_ATTR}]`))) {
         article.removeAttribute(ARTICLE_ATTR)
       }

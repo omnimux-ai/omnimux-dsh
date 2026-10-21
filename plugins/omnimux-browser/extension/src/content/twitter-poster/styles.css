@@ -1,43 +1,50 @@
 /* X poster surface: monochrome, minimal, page-neutral. */
 
-.omnimux-poster-row {
+.omnimux-poster-action {
   display: flex;
   align-items: center;
-  margin: 6px 0 2px;
-  padding-left: 2px;
+  justify-content: center;
+  flex: 0 0 auto;
 }
 
-.omnimux-poster-trigger {
+.omnimux-poster-action-button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid rgba(127, 127, 127, 0.28);
-  border-radius: 8px;
-  background: rgba(127, 127, 127, 0.1);
-  color: inherit;
-  font: 600 13px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  /*
+   * Brand mark fill comes from its single owner (media-trigger) via a custom
+   * property; X paints its own button colour with higher specificity, so the
+   * mark must win the cascade.
+   */
+  color: var(--omnimux-poster-brand, currentColor) !important;
+  /* A faint dark halo keeps the light brand lavender legible on white X themes. */
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.45));
   cursor: pointer;
   box-sizing: border-box;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.omnimux-poster-trigger:hover {
-  background: rgba(127, 127, 127, 0.2);
-  border-color: rgba(127, 127, 127, 0.45);
+.omnimux-poster-action-button:hover {
+  background: color-mix(in srgb, var(--omnimux-poster-brand, currentColor) 16%, transparent);
+  color: var(--omnimux-poster-brand, currentColor) !important;
 }
 
-.omnimux-poster-trigger:focus-visible {
-  outline: 2px solid var(--dsw-alias-label-primary, rgba(127, 127, 127, 0.9));
+.omnimux-poster-action-button:focus-visible {
+  outline: 2px solid var(--omnimux-poster-brand, currentColor);
   outline-offset: 2px;
 }
 
-.omnimux-poster-trigger:active {
-  transform: translateY(1px);
+.omnimux-poster-action-button:active {
+  transform: scale(0.94);
 }
 
-.omnimux-poster-trigger svg {
+.omnimux-poster-action-button svg {
   flex: 0 0 auto;
 }
 

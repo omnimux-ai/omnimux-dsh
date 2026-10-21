@@ -34,6 +34,15 @@ import {
 /** Host element id; also how a duplicate injection is found and removed. */
 export const MEDIA_TRIGGER_HOST_ID = 'omnimux-media-trigger-root'
 
+/**
+ * The approved OmniMux brand-mark fill for marks drawn on third-party pages.
+ *
+ * This file is the allowlisted owner of the literal (see
+ * `tests/no-purple-theme.spec.ts`); other surfaces must reference this constant
+ * instead of writing a second purple literal.
+ */
+export const BRAND_MARK_COLOR = '#b8b7ff'
+
 /** Layer above the page, matching the other page surfaces. */
 const HOST_Z = 2147483645
 
@@ -197,7 +206,7 @@ function stylesheet(size: number, corner: string): string {
     border-radius: ${Math.round(size / 3)}px;
     background: rgba(30, 32, 38, 0.95);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(255, 255, 255, 0.07);
-    color: #b8b7ff;
+    color: ${BRAND_MARK_COLOR};
     display: flex;
     align-items: center;
     justify-content: center;
