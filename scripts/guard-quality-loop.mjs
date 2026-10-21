@@ -19,6 +19,13 @@ import { pathToFileURL } from 'node:url'
 import { captureCandidate, validateEvidence } from './evidence-contract.mjs'
 import { newSilentCatchHits } from './lib/silent-catch-delta.mjs'
 
+/**
+ * Ruleset revision surfaced in every denial. The hook executes this file from
+ * the session workspace, so a task worktree's edited copy is NOT what evaluates
+ * its commit; printing the version makes that mismatch diagnosable.
+ */
+export const GUARD_RULESET_VERSION = '2026-10-21.2'
+
 const EVIDENCE_WINDOW_MS = 4 * 60 * 60 * 1000
 const MAX_SCAN_ENTRIES = 4000
 
@@ -82,9 +89,20 @@ export function isE2EPath(rel) {
   )
 }
 
+/**
+ * Test scaffolding (harnesses, fixtures, cases, specs) is never product UI or
+ * business source. One predicate keeps isUiSourcePath and isBusinessSourceFile
+ * from drifting apart — the drift is what made a test-harness fix demand e2e.
+ * @param {string} rel repository-relative path
+ */
+export function isTestScaffoldingPath(rel) {
+  return rel.includes('/tests/') || rel.includes('/test-fixtures/')
+    || rel.includes('.test.') || rel.includes('.spec.') || rel.startsWith('specs/')
+}
+
 export function isUiSourcePath(rel) {
-  // 测试文件与规格文档不算「界面源码」，避免把测试改动误判成界面改动
-  if (rel.includes('/tests/') || rel.includes('.test.') || rel.includes('.spec.') || rel.startsWith('specs/')) {
+  // 测试脚手架与规格文档不算「界面源码」，避免把测试改动误判成界面改动。
+  if (isTestScaffoldingPath(rel)) {
     return false
   }
   if (rel.endsWith('.css') || rel.endsWith('.tsx') || rel.endsWith('.jsx')) return true
@@ -325,10 +343,7 @@ export function isBusinessSourceFile(fullPath, rootDir) {
     rel.startsWith('tmp/') ||
     rel.startsWith('dist/') ||
     rel.startsWith('node_modules/') ||
-    rel.includes('/test-fixtures/') ||
-    rel.includes('/tests/') ||
-    rel.includes('.test.') ||
-    rel.includes('.spec.') ||
+    isTestScaffoldingPath(rel) ||
     rel === 'package.json' ||
     rel.startsWith('tsconfig') ||
     rel === 'design.md'
@@ -610,7 +625,8 @@ export function handle(rawInput) {
   const output = { hookEventName, permissionDecision: result.decision }
   if (result.decision === 'deny') {
     const builder = REASONS[result.reason]
-    output.permissionDecisionReason = builder ? builder(result).join('\n') : '🚫 质量五步闭环硬门禁拦截。'
+    output.permissionDecisionReason = `${builder ? builder(result).join('\n') : '🚫 质量五步闭环硬门禁拦截。'}\n· 规则集：${GUARD_RULESET_VERSION}`
+    output.ruleset = GUARD_RULESET_VERSION
   }
   return { hookSpecificOutput: output }
 }
