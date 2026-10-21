@@ -307,4 +307,12 @@ describe('post detail narrow-screen navigation', () => {
     assert.match(INSPIRATION_CSS, /omnimux-post-source\.is-active/)
     assert.match(INSPIRATION_CSS, /omnimux-post-analysis\.is-active/)
   })
+
+  it('centres the timeline at an X-like reading width and keeps media uncropped (#3486)', () => {
+    const timeline = ruleBody(RIVAL_CSS, '.omnimux-rival-timeline')
+    assert.match(timeline, /width:\s*min\(100%,\s*620px\)/, 'the timeline must cap its reading width')
+    assert.match(timeline, /margin:\s*0 auto/, 'the timeline must centre itself')
+    assert.match(RIVAL_CSS, /\.omnimux-rival-timeline-media img,[\s\S]*?object-fit:\s*contain/, 'media must use contain, not cover')
+    assert.match(RIVAL_CSS, /max-height:\s*510px/, 'media must cap its height instead of stretching')
+  })
 })

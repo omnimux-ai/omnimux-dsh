@@ -401,6 +401,16 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
     assert.equal(row.querySelector('.omnimux-rival-timeline-media img'), null, 'the undecodable HEIC <img> must be gone')
   })
 
+  it('renders the timeline at the X-like centred reading width (#3486)', async () => {
+    const mounted = await mountStageOnAccounts()
+    open.push(mounted)
+    const timeline = mounted.container.querySelector('.omnimux-rival-timeline')
+    assert.ok(timeline, 'the account monitor must render the timeline')
+    const sheet = mounted.container.ownerDocument.getElementById('omnimux-rival-accounts-styles')
+    assert.ok(sheet?.textContent.includes('width: min(100%, 620px)'), 'the timeline must cap its reading width')
+    assert.ok(sheet.textContent.includes('object-fit: contain'), 'timeline media must not be cropped')
+  })
+
   it('opens the official embedded player from a timeline row (#3462)', async () => {
     const mounted = await mountStageOnAccounts()
     open.push(mounted)
