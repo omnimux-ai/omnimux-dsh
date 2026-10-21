@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
 import { JSDOM } from 'jsdom'
-import './test-fixtures/dom-bootstrap.mjs'
+import '../../tests/fixtures/dom-bootstrap.mjs'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { zh, en } from './locales.js'
@@ -21,8 +21,8 @@ import { toRivalCardRow } from './rival-filter.js'
  */
 
 const here = fileURLToPath(new URL('.', import.meta.url))
-const sourceEntry = join(here, 'test-fixtures', 'rival-modal-stage.jsx')
-const shimEntry = join(here, 'test-fixtures', 'ui-kit-shim.mjs')
+const sourceEntry = join(here, '../../tests/fixtures', 'rival-modal-stage.jsx')
+const shimEntry = join(here, '../../tests/fixtures', 'ui-kit-shim.mjs')
 const cacheDir = join(here, '.esbuild-cache', 'rival-modal-stage')
 
 let bundleCounter = 0

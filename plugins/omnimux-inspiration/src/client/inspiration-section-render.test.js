@@ -4,7 +4,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
-import { DOM_RENDER_LOADERS } from './test-fixtures/dom-render-build.mjs'
+import { DOM_RENDER_LOADERS } from '../../tests/fixtures/dom-render-build.mjs'
 import { JSDOM } from 'jsdom'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -22,7 +22,7 @@ import { OFFICIAL_CATEGORIES } from '../gxgen-category-map.js'
  *
  * This gate instead bundles the real `.jsx` with esbuild, mounts it in jsdom with
  * a stubbed feed response and asserts on the rendered DOM. The `dsh-ui-kit` leaf
- * components are replaced by `test-fixtures/ui-kit-shim.mjs` (the production kit's
+ * components are replaced by `tests/fixtures/ui-kit-shim.mjs` (the production kit's
  * lib pulls in `.module.css`, which esbuild cannot inline); the gate itself —
  * whether `InspirationSection` renders the platform dropdown — is plugin code and
  * is exercised for real.
@@ -35,7 +35,7 @@ import { OFFICIAL_CATEGORIES } from '../gxgen-category-map.js'
 
 const here = fileURLToPath(new URL('.', import.meta.url))
 const sourceEntry = join(here, 'InspirationSection.jsx')
-const shimEntry = join(here, 'test-fixtures', 'ui-kit-shim.mjs')
+const shimEntry = join(here, '../../tests/fixtures', 'ui-kit-shim.mjs')
 const cacheDir = join(here, '.esbuild-cache', 'section')
 
 /** aria-label the section puts on the platform dropdown (`filter.platform`). */

@@ -4,9 +4,9 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
-import { DOM_RENDER_LOADERS } from './test-fixtures/dom-render-build.mjs'
+import { DOM_RENDER_LOADERS } from '../../tests/fixtures/dom-render-build.mjs'
 import { JSDOM } from 'jsdom'
-import './test-fixtures/dom-bootstrap.mjs'
+import '../../tests/fixtures/dom-bootstrap.mjs'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { zh } from './locales.js'
@@ -16,7 +16,7 @@ import { zh } from './locales.js'
  *
  * Mounted the same way `account-monitor-feed-render.test.js` mounts: the real
  * `InspirationStage` bundled by esbuild, in jsdom, with `dsh-ui-kit`'s leaf
- * components replaced by `test-fixtures/ui-kit-shim.mjs`. What this file pins
+ * components replaced by `tests/fixtures/ui-kit-shim.mjs`. What this file pins
  * down, word for word from the spec dictionary:
  *
  *   - the pool bar renders exactly one row carrying the refresh allowance and
@@ -32,7 +32,7 @@ import { zh } from './locales.js'
 
 const here = fileURLToPath(new URL('.', import.meta.url))
 const sourceEntry = join(here, 'InspirationStage.jsx')
-const shimEntry = join(here, 'test-fixtures', 'ui-kit-shim.mjs')
+const shimEntry = join(here, '../../tests/fixtures', 'ui-kit-shim.mjs')
 const cacheDir = join(here, '.esbuild-cache', 'pool-health')
 
 const RIVAL_PREFIX = '/omnimux/inspiration/local/rival-accounts'

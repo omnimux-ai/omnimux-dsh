@@ -3,7 +3,7 @@ import { rmSync } from 'node:fs'
 import { after, describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { en, zh } from './locales.js'
-import { COLLECTION_CARD_CACHE_URL, mountCollectionCard } from './test-fixtures/collection-card-render.mjs'
+import { COLLECTION_CARD_CACHE_URL, mountCollectionCard } from '../../tests/fixtures/collection-card-render.mjs'
 
 const zhTable = new Map(Object.entries(zh))
 const enTable = new Map(Object.entries(en))

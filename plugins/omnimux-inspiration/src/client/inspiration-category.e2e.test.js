@@ -4,7 +4,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
-import { DOM_RENDER_LOADERS } from './test-fixtures/dom-render-build.mjs'
+import { DOM_RENDER_LOADERS } from '../../tests/fixtures/dom-render-build.mjs'
 import { JSDOM } from 'jsdom'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -18,7 +18,7 @@ import { OFFICIAL_CATEGORIES } from '../gxgen-category-map.js'
 
 const here = fileURLToPath(new URL('.', import.meta.url))
 const sourceEntry = join(here, 'InspirationSection.jsx')
-const shimEntry = join(here, 'test-fixtures', 'ui-kit-shim.mjs')
+const shimEntry = join(here, '../../tests/fixtures', 'ui-kit-shim.mjs')
 const cacheDir = join(here, '.esbuild-cache', 'category-e2e')
 
 const CATEGORY_LABEL = zh['filter.category']

@@ -28,7 +28,7 @@ import { zh } from './locales.js'
  */
 
 const here = fileURLToPath(new URL('.', import.meta.url))
-const shimEntry = join(here, 'test-fixtures', 'ui-kit-shim.mjs')
+const shimEntry = join(here, '../../tests/fixtures', 'ui-kit-shim.mjs')
 const cacheDir = join(here, '.esbuild-cache', 'rival-first-fetch')
 
 /** The production cadence — the gate must still see the server value consumed. */

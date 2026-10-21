@@ -6,7 +6,7 @@
  * an integration break (wrong prop name, dropped callback) fails here first.
  */
 
-import { RivalMasonry } from '../RivalMasonry.jsx'
+import { RivalMasonry } from '../../src/client/RivalMasonry.jsx'
 
 export function RivalCardStage(props) {
   const {

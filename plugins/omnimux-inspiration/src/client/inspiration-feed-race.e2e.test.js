@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 import * as esbuild from 'esbuild'
-import { DOM_RENDER_LOADERS } from './test-fixtures/dom-render-build.mjs'
+import { DOM_RENDER_LOADERS } from '../../tests/fixtures/dom-render-build.mjs'
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { JSDOM } from 'jsdom'
@@ -37,7 +37,7 @@ async function bundleSection() {
     plugins: [{
       name: 'ui-kit-shim',
       setup(build) {
-        build.onResolve({ filter: /^dsh-ui-kit$/ }, () => ({ path: join(here, 'test-fixtures', 'ui-kit-shim.mjs') }))
+        build.onResolve({ filter: /^dsh-ui-kit$/ }, () => ({ path: join(here, '../../tests/fixtures', 'ui-kit-shim.mjs') }))
       },
     }],
   })

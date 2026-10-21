@@ -5,7 +5,7 @@
  * many times the orchestrator actually runs.
  */
 
-import { RivalAccountsPanel } from '../RivalAccountsPanel.jsx'
+import { RivalAccountsPanel } from '../../src/client/RivalAccountsPanel.jsx'
 
 export function RivalPanelStage(props) {
   return <RivalAccountsPanel {...props} />
