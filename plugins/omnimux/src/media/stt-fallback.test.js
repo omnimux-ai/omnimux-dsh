@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { executeOmnimuxSpeechToText, transcribeSpeechToTextRequest } from './stt.js'
+import { transcribeSpeechToTextRequest } from './stt.js'
 
 const bytes = Buffer.from([0x49, 0x44, 0x33, 0x04, 0, 0])
 const dataAudio = `data:audio/mpeg;base64,${bytes.toString('base64')}`
@@ -10,6 +10,22 @@ const endpoint = 'https://api.omnimux.ai/v1/audio/transcriptions'
 const srt = '1\r\n00:00:00,000 --> 00:00:01,500\r\n你好世界\r\n\r\n'
 const urlError = "audio url is required for Auc BigModel ASR: please provide 'url' or 'audio_url' (URL-first mode)"
 const request = { model, audio: audioUrl, response_format: 'srt', language: ' zh ', env: { OMNIMUX_API_KEY: 'sk-fixture-stt' } }
+
+// 2026-10-21 网关对账 #3516：doubao-asr-bigmodel / seedasr-auc 仅登记不上架，listing 依赖路径
+// 由 SubmitGuard 拒绝（见 stt.test.js）。URL-first → Whisper 的传输层回退逻辑仍保留在
+// transcribeSpeechToTextRequest 这一 wire primitive 内，故本文件直接验证该 primitive，
+// 保持「错误分类 / 有界回退 / 取消 / 脱敏」等全部断言强度。
+function transcribeWithFallback(input) {
+  const env = input.env ?? {}
+  return transcribeSpeechToTextRequest({
+    ...input,
+    route: {
+      baseUrl: env.OMNIMUX_BASE_URL ?? 'https://api.omnimux.ai/v1',
+      modelId: input.model ?? model,
+    },
+    apiKey: input.apiKey ?? env.OMNIMUX_API_KEY,
+  })
+}
 
 function failure(body, status = 500, contentType) {
   return new Response(typeof body === 'string' ? body : JSON.stringify(body), {
@@ -34,7 +50,7 @@ for (const audio of [
   test(`STT adapts local HTTP audio to Whisper before submission: ${audio}`, async () => {
     const calls = []
     const signal = new AbortController().signal
-    const result = await executeOmnimuxSpeechToText({
+    const result = await transcribeWithFallback({
       ...request, audio, signal,
       fetcher: async (url, init) => {
         calls.push(String(url))
@@ -83,7 +99,7 @@ for (const [body, contentType] of [
     const calls = []
     const models = []
     const signal = new AbortController().signal
-    const result = await executeOmnimuxSpeechToText({
+    const result = await transcribeWithFallback({
       ...request, signal,
       fetcher: async (url, init) => {
         calls.push(String(url))
@@ -142,7 +158,7 @@ for (const [status, body, code, message] of [
 ]) {
   test(`STT preserves classified or detailed failures without unrelated retries: ${status} ${code}`, async () => {
     let calls = 0
-    await assert.rejects(() => executeOmnimuxSpeechToText({
+    await assert.rejects(() => transcribeWithFallback({
       ...request,
       fetcher: async (_url, init) => {
         calls++
@@ -162,7 +178,7 @@ for (const [status, body, code, message] of [
 test('STT transport errors do not trigger URL-first fallback without an HTTP response', async () => {
   const error = Object.assign(new Error(urlError), { code: 'omnimux-request-failed' })
   let calls = 0
-  await assert.rejects(() => executeOmnimuxSpeechToText({
+  await assert.rejects(() => transcribeWithFallback({
     ...request, fetcher: async () => { calls++; throw error },
   }), (actual) => actual === error)
   assert.equal(calls, 1)
@@ -170,7 +186,7 @@ test('STT transport errors do not trigger URL-first fallback without an HTTP res
 
 test('STT fallback failure is bounded and reports the final upstream error', async () => {
   let posts = 0
-  await assert.rejects(() => executeOmnimuxSpeechToText({
+  await assert.rejects(() => transcribeWithFallback({
     ...request,
     fetcher: async (_url, init) => {
       if (init.method !== 'POST') return new Response(bytes)
@@ -183,7 +199,7 @@ test('STT fallback failure is bounded and reports the final upstream error', asy
 
 test('STT does not retry Whisper when local adaptation still fails', async () => {
   let calls = 0
-  await assert.rejects(() => executeOmnimuxSpeechToText({
+  await assert.rejects(() => transcribeWithFallback({
     ...request, audio: dataAudio,
     fetcher: async () => { calls++; return failure({ error: { message: urlError } }) },
   }), (error) => error.code === 'omnimux-request-failed' && error.message.includes(urlError))
@@ -191,7 +207,7 @@ test('STT does not retry Whisper when local adaptation still fails', async () =>
 })
 
 test('STT errors redact credentials, omit raw envelopes and cap diagnostics', async () => {
-  await assert.rejects(() => executeOmnimuxSpeechToText({
+  await assert.rejects(() => transcribeWithFallback({
     ...request,
     fetcher: async () => failure({ error: { message: `Decoder failed with Bearer sk-fixture-stt ${'x'.repeat(3000)}`, stack: 'private-stack' } }),
   }), (error) => {
@@ -206,7 +222,7 @@ test('STT errors redact credentials, omit raw envelopes and cap diagnostics', as
 test('STT canceled URL-first request never starts a fallback download', async () => {
   const controller = new AbortController()
   let calls = 0
-  await assert.rejects(() => executeOmnimuxSpeechToText({
+  await assert.rejects(() => transcribeWithFallback({
     ...request, signal: controller.signal,
     fetcher: async () => { calls++; controller.abort(); return failure({ error: { message: urlError } }) },
   }), { code: 'omnimux-aborted' })
@@ -216,7 +232,7 @@ test('STT canceled URL-first request never starts a fallback download', async ()
 test('STT cancellation during the Whisper retry preserves the aborted error', async () => {
   const controller = new AbortController()
   let posts = 0
-  await assert.rejects(() => executeOmnimuxSpeechToText({
+  await assert.rejects(() => transcribeWithFallback({
     ...request, signal: controller.signal,
     fetcher: async (_url, init) => {
       if (init.method !== 'POST') return new Response(bytes)

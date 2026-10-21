@@ -4,9 +4,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { executeOmnimuxAudio, pollAudioTask } from './audio.js'
-import { executeOmnimuxMedia } from './execute.js'
 import { OmnimuxError } from './errors.js'
 import { assertGuardOutput, assertGuardSubmit } from '../catalog/contract/submit-guard/index.js'
+import { parseMediaConfig, resolveMediaAuth, resolveMediaRoute } from './route.js'
+import { generateSpeech } from './speech.js'
+import { generateCliSpeech } from './cli-speech.js'
+import { mapOmnimuxInput } from './vendors/omnimux.js'
 
 const model = 'seed-audio-1.0'
 const voice = 'zh_male_guanggaojieshuo_uranus_bigtts'
@@ -25,11 +28,58 @@ function destFor(t) {
   return join(dir, 'nested', 'speech.mp3')
 }
 
+// 2026-10-21 网关对账 #3516：全部 TTS 型号（seed-audio-1.0 / gemini-3.8-flash-tts）上游渠道停用，
+// 转为「仅登记不上架」，官方默认 text_to_speech 路由已移除。本文件验证的是**同步语音传输层**
+// （generateSpeech / generateCliSpeech + 参数映射 + 认证 + 错误分类）；因此按设计意图以
+// requireListed:false 走「unlisted 放行」契约路径，listing 依赖路径的 fail-closed 由
+// submit-guard / route / audio 等测试锁定。
+async function speak(input) {
+  const route = resolveMediaRoute('audio', { model: input.model ?? model }, parseMediaConfig(input.media), input.env)
+  const guardPlan = assertGuardSubmit({
+    model: route.modelId,
+    operation: input.operation ?? 'text_to_speech',
+    prompt: input.prompt,
+    voice: input.voice,
+    speed: input.speed,
+    format: input.format,
+  }, { seam: 'audioGenerate', capability: 'audio', outputType: 'audio', requireListed: false })
+  const payload = mapOmnimuxInput('audio', {
+    prompt: guardPlan.prompt,
+    model: guardPlan.modelId,
+    voice: input.voice,
+    speed: input.speed,
+    format: input.format,
+    operation: guardPlan.operationId,
+    guardPlan,
+  })
+  const speechRoute = { ...route, modelId: guardPlan.modelId }
+  if (guardPlan.operationId === 'text_to_speech' && guardPlan.modelId === 'gemini-3.8-flash-tts') {
+    return generateCliSpeech({
+      route: speechRoute,
+      guardPlan,
+      payload,
+      dest: input.dest,
+      signal: input.signal,
+      runner: input.cliRunner,
+    })
+  }
+  const auth = await resolveMediaAuth(route, { env: input.env, store: input.store, credentials: input.credentials })
+  return generateSpeech({
+    route: speechRoute,
+    guardPlan,
+    payload,
+    apiKey: auth.apiKey,
+    dest: input.dest,
+    fetcher: input.fetcher,
+    signal: input.signal,
+  })
+}
+
 for (const id of [undefined, model, 'doubao-seed-audio-1.0', 'seed-audio']) {
-  test(`synchronous speech writes raw bytes and sends canonical defaults for ${id ?? 'default route'}`, async (t) => {
+  test(`synchronous speech writes raw bytes and sends canonical defaults for ${id ?? 'canonical contract'}`, async (t) => {
     const dest = destFor(t)
     const calls = []
-    const result = await executeOmnimuxAudio({
+    const result = await speak({
       dest, prompt: '  文本内容\n第二段  ', model: id, env, wait: false,
       runtime: { execute() { assert.fail('speech must not create an async runtime task') } },
       fetcher: async (url, options) => {
@@ -51,7 +101,7 @@ for (const id of [undefined, model, 'doubao-seed-audio-1.0', 'seed-audio']) {
 for (const [format, mime] of [['mp3', 'audio/mpeg'], ['wav', 'audio/wav'], ['pcm', 'audio/pcm']]) {
   test(`shared audio execution supports ${format} without optional response headers`, async (t) => {
     const dest = destFor(t)
-    const result = await executeOmnimuxMedia('audio', {
+    const result = await speak({
       dest, prompt: 'Hello', operation: 'text_to_speech', env: {}, format,
       voice: 'ICL_uranus_en_female_charlie_tob', speed: 1.25,
       credentials: { async resolve(ref) { return ref === 'OMNIMUX_API_KEY' ? { value: 'sk-credential-fixture' } : undefined } },
@@ -72,7 +122,7 @@ test('newly indexed non-core voice reaches only the synchronous speech HTTP body
   const selectedVoice = 'zh_female_linxiao_uranus_bigtts'
   const calls = []
   const dest = destFor(t)
-  await executeOmnimuxAudio({ dest, model, operation: 'text_to_speech', prompt: '正文', voice: selectedVoice, env,
+  await speak({ dest, model, operation: 'text_to_speech', prompt: '正文', voice: selectedVoice, env,
     fetcher: async (url, options) => {
       calls.push({ url, body: JSON.parse(options.body) })
       return response()
@@ -87,7 +137,7 @@ test('admission fails before auth or HTTP for invalid speech input', async (t) =
   let authCalls = 0, httpCalls = 0
   for (const invalid of [{ prompt: '' }, { prompt: '  ' }, { voice: 'alloy' }, { speed: NaN }, { speed: '1' }, { format: 'ogg' }, { model: 'suno' }]) {
     const dest = destFor(t)
-    await assert.rejects(executeOmnimuxAudio({
+    await assert.rejects(speak({
       dest, prompt: 'hi', env: {}, ...invalid,
       store: { async resolve() { authCalls++; return 'fixture' } },
       fetcher: async () => { httpCalls++; return response() },
@@ -99,7 +149,7 @@ test('admission fails before auth or HTTP for invalid speech input', async (t) =
 })
 
 test('valid speech without auth never issues a request', async (t) => {
-  await assert.rejects(executeOmnimuxAudio({
+  await assert.rejects(speak({
     dest: destFor(t), prompt: 'hi', env: {}, fetcher: () => assert.fail('unauthenticated HTTP'),
   }), { code: 'needs-omnimux' })
 })
@@ -113,7 +163,7 @@ for (const [status, body, code] of [
 ]) {
   test(`speech classifies HTTP ${status} and never writes an error response`, async (t) => {
     const dest = destFor(t)
-    await assert.rejects(executeOmnimuxAudio({ dest, prompt: 'hi', env,
+    await assert.rejects(speak({ dest, prompt: 'hi', env,
       fetcher: async () => new Response(body, { status }),
     }), (err) => err instanceof OmnimuxError && err.code === code && err.status === status && !err.message.includes('sk-secret'))
     assert.equal(existsSync(dest), false)
@@ -122,7 +172,7 @@ for (const [status, body, code] of [
 
 test('invalid duration headers stay unknown rather than zero or NaN', async (t) => {
   for (const duration of ['', 'unknown', '-1', 'Infinity']) {
-    const result = await executeOmnimuxAudio({ dest: destFor(t), prompt: 'hi', env,
+    const result = await speak({ dest: destFor(t), prompt: 'hi', env,
       fetcher: async () => response({ 'x-audio-duration': duration }),
     })
     assert.equal(result.duration, undefined)
@@ -134,7 +184,7 @@ for (const bad of [new Response('error', { headers: { 'content-type': 'applicati
   test('speech rejects missing MIME, wrong MIME and empty body without overwriting files', async (t) => {
     const dest = destFor(t).replace('/nested/', '/')
     writeFileSync(dest, 'existing')
-    await assert.rejects(executeOmnimuxAudio({ dest, prompt: 'hi', env,
+    await assert.rejects(speak({ dest, prompt: 'hi', env,
       fetcher: async () => bad,
     }), { code: 'omnimux-invalid-response' })
     assert.equal(readFileSync(dest, 'utf8'), 'existing')
@@ -143,11 +193,11 @@ for (const bad of [new Response('error', { headers: { 'content-type': 'applicati
 
 test('network failures and aborted response bodies become standard errors', async (t) => {
   const controller = new AbortController()
-  await assert.rejects(executeOmnimuxAudio({ dest: destFor(t), prompt: 'hi', env,
+  await assert.rejects(speak({ dest: destFor(t), prompt: 'hi', env,
     fetcher: async () => { throw new TypeError('network down') },
   }), { code: 'omnimux-request-failed' })
   const dest = destFor(t)
-  await assert.rejects(executeOmnimuxAudio({ dest, prompt: 'hi', env, signal: controller.signal,
+  await assert.rejects(speak({ dest, prompt: 'hi', env, signal: controller.signal,
     fetcher: async (_url, options) => {
       controller.abort()
       assert.equal(options.signal.aborted, true)
@@ -155,13 +205,16 @@ test('network failures and aborted response bodies become standard errors', asyn
     },
   }), { code: 'omnimux-aborted' })
   assert.equal(existsSync(dest), false)
-  await assert.rejects(executeOmnimuxAudio({ dest, prompt: 'hi', env, signal: controller.signal,
+  await assert.rejects(speak({ dest, prompt: 'hi', env, signal: controller.signal,
     fetcher: () => assert.fail('pre-aborted signal must not fetch'),
   }), { code: 'omnimux-aborted' })
 })
 
 test('audio output guard accepts verified bytes but not empty bytes or wrong MIME', () => {
-  const plan = assertGuardSubmit({ model, prompt: 'hi', operation: 'text_to_speech' }, { seam: 'audioGenerate' })
+  const plan = assertGuardSubmit(
+    { model, prompt: 'hi', operation: 'text_to_speech' },
+    { seam: 'audioGenerate', requireListed: false },
+  )
   assert.doesNotThrow(() => assertGuardOutput(plan, { mode: 'live', outputs: [{ type: 'audio', bytes, mime: 'audio/mpeg' }] }, { capability: 'audio' }))
   for (const output of [{ type: 'audio', bytes: Buffer.alloc(0), mime: 'audio/mpeg' }, { type: 'audio', bytes, mime: 'image/png' }, { type: 'audio', bytes }]) {
     assert.throws(() => assertGuardOutput(plan, { mode: 'live', outputs: [output] }, { capability: 'audio' }), { code: 'omnimux-invalid-response' })
@@ -202,7 +255,7 @@ test('gemini-3.8-flash-tts dispatches to cliRunner without needing remote auth (
     }
   }
 
-  const result = await executeOmnimuxAudio({
+  const result = await speak({
     dest,
     model: 'gemini-3.8-flash-tts',
     prompt: '你好，这是来自 Gemini TTS 的测试',

@@ -544,7 +544,8 @@ describe('omnimux_text_complete tool', () => {
     const result = await executeOmnimuxText({
       prompt: 'hello',
       model: 'gemini-3.8-flash',
-      allowedGroups: ['cheap'],
+      // #3516：`cheap` 分组已退场；用现役 standard 分组验证 routed 路径。
+      allowedGroups: ['standard'],
       strategy: 'cost_first',
       env: { OMNIMUX_API_KEY: 'sk-test', OMNIMUX_BASE_URL: 'https://gateway.test/v1' },
       fetcher: async (url, options) => {
@@ -562,7 +563,7 @@ describe('omnimux_text_complete tool', () => {
 
     assert.equal(streamCalls, 0)
     assert.equal(requests.length, 1)
-    assert.equal(requests[0].body.model, 'gemini-3.8-flash@gemini-cheap')
+    assert.equal(requests[0].body.model, 'gemini-3.8-flash@default')
     assert.equal(result.text, 'routed reply')
     assert.equal(result.model, 'gemini-3.8-flash')
   })
@@ -594,7 +595,7 @@ describe('omnimux_text_complete tool', () => {
     const result = await executeOmnimuxText({
       prompt: 'describe',
       model: 'gemini-3.8-flash',
-      allowedGroups: ['cheap'],
+      allowedGroups: ['standard'],
       image: `data:image/png;base64,${Buffer.from(PNG).toString('base64')}`,
       attachments: { saveImage: async () => ({ id: 'unused' }) },
       env: { OMNIMUX_API_KEY: 'sk-test', OMNIMUX_BASE_URL: 'https://gateway.test/v1' },
@@ -612,7 +613,7 @@ describe('omnimux_text_complete tool', () => {
 
     assert.equal(streamCalls, 0)
     assert.equal(requests.length, 1)
-    assert.equal(requests[0].body.model, 'gemini-3.8-flash@gemini-cheap')
+    assert.equal(requests[0].body.model, 'gemini-3.8-flash@default')
     const parts = requests[0].body.messages.at(-1).content
     assert.equal(parts[0].type, 'text')
     const imagePart = parts.find((part) => part.type === 'image_url')

@@ -38,17 +38,21 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
   });
 
   it('retrieves channel groups for supported models', () => {
+    // 2026-10-21 网关对账 #3516：seedance-2-0 只剩标准版一条官方线路。
     const seedanceGroups = getModelChannelGroups('seedance-2-0');
     assert.ok(Array.isArray(seedanceGroups));
-    assert.ok(seedanceGroups.length >= 3);
-    const ids = seedanceGroups.map((g) => g.id);
-    assert.ok(ids.includes('pro'));
-    assert.ok(ids.includes('official'));
-    assert.ok(ids.includes('standard'));
+    assert.deepEqual(seedanceGroups.map((g) => g.id), ['standard']);
+    assert.equal(seedanceGroups[0].default, true);
 
-    const claudeGroups = getModelChannelGroups('claude-opus-4-6');
-    assert.ok(claudeGroups.length >= 2);
-    assert.ok(claudeGroups.map((g) => g.id).includes('claude-plus'));
+    // seedance-2-5 提供 480p（默认）/720p 两档；gpt-image-2.5 提供标准/经济两条线路。
+    const seedance25Groups = getModelChannelGroups('seedance-2-5');
+    assert.deepEqual(seedance25Groups.map((g) => g.id), ['480p', '720p']);
+    assert.equal(seedance25Groups[0].default, true);
+    const imageGroups = getModelChannelGroups('gpt-image-2.5');
+    assert.deepEqual(imageGroups.map((g) => g.id), ['standard', 'economy']);
+
+    // Claude 已随网关对账整体停用，不得再有任何渠道池。
+    assert.deepEqual(getModelChannelGroups('claude-opus-4-6'), []);
   });
 
   it('offers no channels for a model the hub has no pool for', () => {
@@ -112,12 +116,14 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         assert.equal(typeof group.sla.stability24h, 'number', `${modelId}@${group.id} SLA 必须是真实数值`);
       }
     }
-    // 网关公开定价接口不提供 SLA，所以这批新条目必须整体缺省。
-    for (const modelId of ['gemini-3.8-flash', 'gpt-5.5', 'gpt-image-2.5', 'wan-3.0', 'suno']) {
-      for (const group of MODEL_CHANNEL_GROUPS[modelId]) {
+    // 网关公开定价接口不提供 SLA，这批条目必须整体缺省。
+    for (const modelId of ['gpt-image-2.5', 'seedream-5-0-pro', 'suno']) {
+      for (const group of getModelChannelGroups(modelId)) {
         assert.equal(group.sla, undefined, `${modelId}@${group.id} 不应凭空带 SLA`);
       }
     }
+    // 网关确实公布了 SLA 的线路则必须保留真实数值（不能反向丢掉）。
+    assert.deepEqual(getModelChannelGroups('gemini-3.8-flash')[0].sla, { stability24h: 99, avgWaitTimeSec: 8 });
   });
 
   it('never repeats the discount inside a feature badge', () => {
@@ -164,16 +170,27 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     assert.equal(resolveShortModelName('gpt-5.5', 'openai'), 'GPT-5.5');
   });
 
-  // #1818：线路约束是完整规格——可用生成方式、参数选项集与输入能力，不只是固定时长。
+  // #1818：线路约束是完整规格——参数选项集与固定值，不只是固定时长。
   it('resolves the full spec of the lines the node routes to', () => {
-    // 旗舰版目前只固定了时长；标准版与自动路由都不施加约束
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: 'pro' }), { parameters: { duration: { fixed: 30 } } });
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['standard'] }), {});
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', undefined), {});
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', {}), {});
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['nope'] }), {});
-    // 未声明约束的模型行为不变
-    assert.deepEqual(resolveLineConstraints('seedance-2-0', { allowedGroups: ['pro'] }), {});
+    // 2026-10-21 网关对账 #3516：唯一仍声明线路约束的官方模型是 gpt-image-2.5。
+    // 标准版固定分辨率 1K、张数 1 并关闭 quality；经济版不施加约束。
+    const imageConstraints = {
+      parameters: {
+        resolution: { fixed: '1K' },
+        quality: { supported: false },
+        n: { fixed: 1 },
+      },
+    };
+    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', { group: 'standard' }), imageConstraints);
+    // 自动路由命中默认线路（standard）时同样落实约束。
+    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', undefined), imageConstraints);
+    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', {}), imageConstraints);
+    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', { allowedGroups: ['economy'] }), {});
+    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', { allowedGroups: ['nope'] }), {});
+    // 视频现售线路不再声明参数/输入约束，行为保持为空对象。
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: '480p' }), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: '720p' }), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-0', { allowedGroups: ['standard'] }), {});
   });
 
   // 30 秒 / 9 图特惠线路（wireGroup seedance-cheap）上游断货已下架：
@@ -186,38 +203,15 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap', 'standard'] }), {});
   });
 
-  // H3 全系列按分组接入：包含标准版、3倍速极速版、ComfyUI工作流双档专线、15秒长片版以及口型同步专线版。
-  // 画布必须把各自的独立契约落到节点上。
-  it('applies the H3 task line contract and leaves the standard line unconstrained', () => {
-    const task = resolveLineConstraints('minimax-h3', { allowedGroups: ['task'] });
-    assert.deepEqual(task.parameters.duration, { fixed: 15 });
-    assert.deepEqual(task.parameters.resolution, { only: ['768P', '2K'] });
-    assert.deepEqual(task.operations, [
-      'text_to_video',
-      'first_frame',
-      'first_last_frame',
-      'video_multi_ref',
-    ]);
-
-    // 口型同步专线：约束分辨率 768P/2K，生成方式仅 digital_human（对口型）
-    const lipsync = resolveLineConstraints('minimax-h3', { allowedGroups: ['lipsync'] });
-    assert.deepEqual(lipsync.parameters.resolution, { only: ['768P', '2K'] });
-    assert.deepEqual(lipsync.operations, ['digital_human']);
-
-    // 工作流双档专线：约束分辨率 768P/2K
-    const videoFast = resolveLineConstraints('minimax-h3', { allowedGroups: ['video_fast'] });
-    assert.deepEqual(videoFast.parameters.resolution, { only: ['768P', '2K'] });
-    const videoPro = resolveLineConstraints('minimax-h3', { allowedGroups: ['video_pro'] });
-    assert.deepEqual(videoPro.parameters.resolution, { only: ['768P', '2K'] });
-
-    // 极速版与标准版沿用模型契约（4–15 秒可选），不额外施加分组时长约束
-    assert.deepEqual(resolveLineConstraints('minimax-h3', { allowedGroups: ['turbo'] }), {});
-    assert.deepEqual(resolveLineConstraints('minimax-h3', { allowedGroups: ['standard'] }), {});
+  // 2026-10-21 网关对账 #3516：MiniMax H3 渠道全部停用，模型只登记不上架；
+  // 它此前的 task/lipsync/video_fast/video_pro/turbo 线路不得再贡献任何约束。
+  it('drops every former H3 line contract now that the model is registered-only', () => {
+    for (const group of ['task', 'lipsync', 'video_fast', 'video_pro', 'turbo', 'standard']) {
+      assert.deepEqual(resolveLineConstraints('minimax-h3', { allowedGroups: [group] }), {}, group);
+    }
     assert.deepEqual(resolveLineConstraints('minimax-h3', undefined), {});
-
-    // 两组同选时取交集：长片版固定 15 秒会赢（标准版不施加时长约束）
-    const mixed = resolveLineConstraints('minimax-h3', { allowedGroups: ['standard', 'task'] });
-    assert.deepEqual(mixed.parameters.duration, { fixed: 15 });
+    // 选型器同样不再给 H3 任何渠道池。
+    assert.deepEqual(getModelChannelGroups('minimax-h3'), []);
   });
 
   describe('resolveModelChannelGroups implementation robustness', () => {
@@ -728,12 +722,15 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         const byokConstraints = resolveLineConstraints('seedance-2-0', mixedByok, settings);
         assert.deepEqual(byokConstraints.inputs, { image: { max: 1 } }, '显式 sourceType: byok 时优先采纳 BYOK 约束');
 
+        // 官方线路留在混合路由里时，只能采纳官方线路自己的约束（gpt-image-2.5 标准版）。
         const mixedOfficial = {
-          allowedGroups: ['pro', 'byok-fal'],
+          allowedGroups: ['standard', 'byok-fal'],
           sourceType: 'official',
         };
-        const officialConstraints = resolveLineConstraints('seedance-2-5', mixedOfficial, settings);
-        assert.deepEqual(officialConstraints.parameters?.duration?.fixed, 30, '显式 sourceType: official 时优先采纳 official 约束');
+        const officialConstraints = resolveLineConstraints('gpt-image-2.5', mixedOfficial, settings);
+        assert.deepEqual(officialConstraints, {
+          parameters: { resolution: { fixed: '1K' }, quality: { supported: false }, n: { fixed: 1 } },
+        }, '显式 sourceType: official 时优先采纳 official 约束');
       });
 
       it('deduplicates conflicting BYOK IDs with channelGroupId as authoritative source', () => {

@@ -25,8 +25,10 @@ describe('Channel Group Routing & Failover', () => {
     const result = await executeOmnimuxMedia('video', {
       prompt: 'a cinematic shot',
       dest: '/tmp/test-out.mp4',
-      model: 'seedance-2-0',
+      // #3516：seedance-2-0 只剩单条 default 线路；用现役双线路 seedance-2-5 验证 failover。
+      model: 'seedance-2-5',
       operation: 'text_to_video',
+      allowedGroups: ['480p', '720p'],
       strategy: 'cost_first',
       runtime,
       wait: true,
@@ -46,7 +48,7 @@ describe('Channel Group Routing & Failover', () => {
     // Issue #1851: the media path sends the bare model id and carries the group
     // as X-Omnimux-Group, so the injected runtime must never see the candidate
     // string — and a shared injection must survive every failover attempt.
-    assert.deepEqual(attempts, ['seedance-2-0', 'seedance-2-0'])
+    assert.deepEqual(attempts, ['seedance-2-5', 'seedance-2-5'])
   })
 
   it('completeTextViaChat falls over to next candidate when first candidate returns 503', async () => {

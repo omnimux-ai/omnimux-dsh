@@ -24,7 +24,10 @@ export function buildVoicePreviewSnapshot() {
   // One load only: the catalog carries the same snapshot's raw mapping hash.
   // Mapping parse/audit validation happens inside buildModelCatalog (fail closed).
   const catalog = buildModelCatalog({ env: {} });
-  const audio = catalog.audio.find((model) => model.id === AUDIO_MODEL_ID);
+  // Read the contract row, not the listed-only `audio` bucket: the voice index is
+  // an asset source for the registered TTS contract and must survive a temporary
+  // delisting (2026-10-21 gateway reconciliation #3516).
+  const audio = catalog.models.find((model) => model.id === AUDIO_MODEL_ID);
   if (!audio?.parameters?.voice?.options) {
     throw new Error(`audio model ${AUDIO_MODEL_ID} has no voice options`);
   }

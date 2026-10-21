@@ -67,8 +67,10 @@ test('registered tool and seam reject bypassSubmitGuard before transcription HTT
   const { ctx, tools, provided } = fakeCtx()
   let calls = 0
   mountSpeechToText(ctx, { execute: executeOmnimuxSpeechToText, jsonOut: JSON_TOOL_OUTPUT })
+  // 2026-10-21 网关对账 #3516：whisper-1 已上架，改用仅登记不上架的 doubao-asr-bigmodel
+  // 保持「bypassSubmitGuard 无法绕过 admission」的断言意图。
   const request = {
-    audio: '/tmp/omnimux-guard-never-reads.mp3', model: 'whisper-1', operation: 'speech_to_text', bypassSubmitGuard: true,
+    audio: '/tmp/omnimux-guard-never-reads.mp3', model: 'doubao-asr-bigmodel', operation: 'speech_to_text', bypassSubmitGuard: true,
     env: {}, fetcher: async () => { calls++ },
   }
   await assert.rejects(() => tools[STT_TOOL_NAME].execute(request, {}), { code: 'omnimux-invalid-request' })

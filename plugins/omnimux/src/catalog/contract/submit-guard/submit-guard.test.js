@@ -34,10 +34,11 @@ it('parameter options and stepped range are alternative members through the orig
 })
 
 describe('SubmitGuard listed profile coverage (#468)', () => {
-  it('strict listedOperations is exactly 37 and every key has a ready profile payload contract', () => {
+  it('strict listedOperations is exactly 24 and every key has a ready profile payload contract', () => {
     const report = verifyContracts({ strict: true })
     assert.equal(report.ok, true)
-    assert.equal(report.listedOperations.length, 37) // #3209 google-vids-omni 下线 −4 → 37（#3152 为 37）
+    // 2026-10-21 网关对账 #3516：上架面收敛为 9 模型 / 24 operation。
+    assert.equal(report.listedOperations.length, 24)
     const profileById = new Map((profiles.profiles ?? []).map((p) => [p.id, p]))
     for (const key of report.listedOperations) {
       const [modelId, opId] = key.split('#')
@@ -134,15 +135,22 @@ describe('SubmitGuard admission', () => {
     assert.equal(hit.code, GUARD_CODES.UNKNOWN_MODEL)
   })
 
-  it('rejects whisper-1 speech_to_text as not listed / research draft', () => {
+  it('admits whisper-1 speech_to_text now that #3516 flipped it canonical and listed', () => {
     const model = index.get('whisper-1')
     assert.ok(model)
     const hit = admitOperation(model, 'speech_to_text', profiles)
-    assert.equal(hit.ok, false)
+    assert.equal(hit.ok, true)
+    assert.equal(hit.profileId, 'speechToText')
+    // 对照：上游渠道停用的 doubao-asr-bigmodel 保持「仅登记不上架」，不得被初次提交放行。
+    const delisted = index.get('doubao-asr-bigmodel')
+    assert.ok(delisted)
+    const blocked = admitOperation(delisted, 'speech_to_text', profiles)
+    assert.equal(blocked.ok, false)
     assert.ok(
-      hit.code === GUARD_CODES.RESEARCH_NOT_VERIFIED ||
-        hit.code === GUARD_CODES.EXECUTION_UNAVAILABLE ||
-        hit.code === GUARD_CODES.NOT_LISTED,
+      blocked.code === GUARD_CODES.RESEARCH_NOT_VERIFIED ||
+        blocked.code === GUARD_CODES.EXECUTION_UNAVAILABLE ||
+        blocked.code === GUARD_CODES.IMPLEMENTATION_UNAVAILABLE ||
+        blocked.code === GUARD_CODES.NOT_LISTED,
     )
   })
 
@@ -195,10 +203,15 @@ describe('SubmitGuard legacy operation inference', () => {
   })
 
   it('returns operation_required when inputs are empty and no listed op for seam', () => {
-    const model = index.get('suno')
-    const hit = inferUniqueOperation(model, [], { prompt: 'song', seam: 'audioGenerate', profiles })
+    // #3516：suno 已上架 text_to_music；用「仅登记不上架」的 seed-audio-1.0 保留本断言意图。
+    const model = index.get('seed-audio-1.0')
+    const hit = inferUniqueOperation(model, [], { prompt: 'voice', seam: 'audioGenerate', profiles })
     assert.equal(hit.ok, false)
     assert.equal(hit.code, GUARD_CODES.OPERATION_REQUIRED)
+    // suno 现在恰好有一个 audioGenerate listed op，可被唯一推断。
+    const suno = inferUniqueOperation(index.get('suno'), [], { prompt: 'song', seam: 'audioGenerate', profiles })
+    assert.equal(suno.ok, true)
+    assert.equal(suno.operationId, 'text_to_music')
   })
 
   it('guardSubmit records deprecation diagnostic only when the operation is unique', () => {

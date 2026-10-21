@@ -226,7 +226,8 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
       assert.throws(() => api.execute({ dest: '/tmp/unused.png', model: 'unregistered-custom-model' }), { code: 'omnimux-unconfigured' }); assert.equal(calls, 0)
       await api.execute({ dest: '/tmp/unused.png', model: 'gpt-image-2.5' }); assert.equal(captured.provider, 'omnimux')
       const video = mounted(() => current, (req) => { calls++; captured = req; return { ok: true } }, {}, 'video')
-      for (const model of ['seedance-2-0', 'minimax-h3', 'seedance-2-0@official']) {
+      // #3516：`official` 不是已登记分组；用现役分组别名 `@standard` 表达官方线路。
+      for (const model of ['seedance-2-0', 'seedance-2-5', 'seedance-2-0@standard']) {
         await video.execute({ dest: '/tmp/unused.mp4', model }); assert.equal(captured.provider, 'omnimux')
       }
       const before = calls
@@ -235,12 +236,13 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
       assert.throws(() => api.execute({ dest: '/tmp/unused.png', model: 'gpt-image-2.5@official' }), { code: 'unknown-group' }); assert.equal(calls, before)
       await api.execute({ dest: '/tmp/unused.png', model: 'gpt-image-2.5@standard' }); assert.equal(captured.provider, 'omnimux')
       await api.execute({ dest: '/tmp/unused.png', model: 'gpt-image-2.5', provider: 'omnimux' }); assert.equal(captured.provider, 'omnimux')
-      current = { runtimeMode: 'key', runtimeKeyVerified: false }; await video.execute({ dest: '/tmp/unused.png', model: 'seedance-2-0@official' }); assert.equal(captured.provider, 'omnimux')
+      // #3516：分组别名 `official` 已退场，改用现役 `@standard`。
+      current = { runtimeMode: 'key', runtimeKeyVerified: false }; await video.execute({ dest: '/tmp/unused.png', model: 'seedance-2-0@standard' }); assert.equal(captured.provider, 'omnimux')
       current = { runtimeMode: 'official' }; await video.execute({ dest: '/tmp/unused.mp4', model: 'seedance-2-0' }); assert.equal(captured.provider, 'omnimux')
       current = { runtimeMode: 'agent', runtimeAgentVerified: true, runtimeKeyVerified: false, allowOfficialMediaFallback: false }
       assert.throws(() => api.execute({ dest: '/tmp/unused.png', model: 'unregistered-custom-model' }), { code: 'omnimux-unconfigured' })
       current.allowOfficialMediaFallback = true; await video.execute({ dest: '/tmp/unused.png', model: 'seedance-2-0' }); assert.equal(captured.provider, 'omnimux')
-      await video.execute({ dest: '/tmp/unused.mp4', model: 'seedance-2-0@official', env: { OMNIMUX_API_KEY: 'forged', UNTRUSTED_CLIENT_VAR: 'forged' } })
+      await video.execute({ dest: '/tmp/unused.mp4', model: 'seedance-2-0@standard', env: { OMNIMUX_API_KEY: 'forged', UNTRUSTED_CLIENT_VAR: 'forged' } })
       assert.equal(captured.env.UNTRUSTED_CLIENT_VAR, undefined); assert.notEqual(captured.env.OMNIMUX_API_KEY, 'forged')
     })
     it('an explicitly disabled image remains blocked despite its declared model, capability and registered protocol', async () => {
@@ -344,7 +346,8 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
     it('official line works in agent mode but cross-model dedicated line appropriation is blocked', async () => {
       let calls = 0
       const api = mounted(() => ({ runtimeMode: 'agent', runtimeAgentVerified: false }), () => { calls++; return { ok: true } })
-      await api.execute({ dest: '/tmp/unused.png', model: 'seedance-2-0@official' }); assert.equal(calls, 1)
+      await api.execute({ dest: '/tmp/unused.png', model: 'seedance-2-0@standard' }); assert.equal(calls, 1)
+      // 已退场的跨模型专线仍然不可冒领。
       assert.throws(() => api.execute({ dest: '/tmp/unused.png', model: 'gpt-image-2.5@seedance-2-0-task-pro' }), { code: 'unknown-group' }); assert.equal(calls, 1)
     })
     it('siliconflow identity and documented default endpoint remain available', () => {
@@ -432,7 +435,8 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
     })
     it('mount normalizes official channel case without changing the selected provider', async () => {
       let captured; const api = mounted(() => ({ runtimeMode: 'official' }), (req) => { captured = req; return { ok: true } }, {}, 'video')
-      await api.execute({ dest: '/tmp/unused.mp4', model: 'seedance-2-0', group: '  OFFICIAL  ' }); assert.equal(captured.provider, 'omnimux')
+      // #3516：`official` 不再是分组名；大小写归一化改用现役 `STANDARD` 分组验证。
+      await api.execute({ dest: '/tmp/unused.mp4', model: 'seedance-2-0', group: '  STANDARD  ' }); assert.equal(captured.provider, 'omnimux')
     })
   })
 })

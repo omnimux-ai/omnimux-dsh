@@ -190,14 +190,13 @@ describe('Gateway Truth Reconciliation (SPEC-GATEWAY-TRUTH-001) Tests', () => {
       const opIds = contract.operations.map((o) => o.id)
       assert.ok(opIds.includes('first_last_frame'), 'minimax-h3 has first_last_frame')
       assert.ok(opIds.includes('end_frame'), 'minimax-h3 has end_frame')
-      assert.deepEqual(contract.listedOperations, [
-        'minimax-h3#digital_human',
-        'minimax-h3#end_frame',
-        'minimax-h3#first_frame',
-        'minimax-h3#first_last_frame',
-        'minimax-h3#text_to_video',
-        'minimax-h3#video_multi_ref',
-      ])
+      // 2026-10-21 网关对账 #3516：minimax-h3 上游渠道停用，全部 operation 转为仅登记不上架。
+      assert.deepEqual(contract.listedOperations, [])
+      // 合同本身仍在：unlisted 放行路径依旧映射这些 operation。
+      const plan = assertGuardSubmit({
+        model: 'minimax-h3', operation: 'text_to_video', prompt: 'a', resolution: '768P', duration: 5,
+      }, { seam: 'videoGenerate', requireListed: false })
+      assert.equal(plan.ok, true)
     })
   })
 
@@ -235,7 +234,7 @@ describe('Gateway Truth Reconciliation (SPEC-GATEWAY-TRUTH-001) Tests', () => {
         operation: 'speech_to_text',
         audio: 'https://cdn.example.com/audio/speech-record.wav',
         response_format: 'json',
-      }, { seam: 'speechToText', outputType: 'text' })
+      }, { seam: 'speechToText', outputType: 'text', requireListed: false })
       assert.equal(plan.ok, true)
       assert.equal(plan.vendorPayload.file, 'https://cdn.example.com/audio/speech-record.wav')
       assert.equal(plan.vendorPayload.url, 'https://cdn.example.com/audio/speech-record.wav')

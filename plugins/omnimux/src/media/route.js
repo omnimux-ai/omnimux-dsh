@@ -36,8 +36,8 @@ export const DEFAULT_MEDIA = Object.freeze({
       models: Object.freeze({
         video: 'seedance-2-5',
         image: 'gpt-image-2.5',
-        audio: 'seed-audio-1.0',
-        stt: 'doubao-asr-bigmodel',
+        audio: 'suno',
+        stt: 'whisper-1',
       }),
     }),
   }),

@@ -1098,36 +1098,36 @@ test('E2E: 表单多参数（比例、时长、分辨率）跟随模型契约自
   assert.equal(submittedPayload.formValues.resolution, '480p')
   assert.equal(submittedPayload.formValues.quality, 'hd')
 
-  // 2. 显式切换到 MiniMax H3（权威契约：4–15s，分辨率 2K/768P，比例 16:9/9:16/1:1/4:3/3:4/21:9）
+  // 2. 显式切换到 Seedance 2.0（权威契约：4–15s，分辨率 480p/720p/1080p/4k，比例含 21:9）
   const modelSelectGroup = Array.from(host.querySelectorAll('.omx-apptab-field-group')).find((fg) => {
     return fg.textContent.includes('生成模型')
   })
   const modelTrigger = modelSelectGroup.querySelector('.omx-apptab-select-trigger')
   fireClick(modelTrigger)
   const optionsPanel = modelSelectGroup.querySelector('.omx-apptab-select-options')
-  const minimaxOption = Array.from(optionsPanel.querySelectorAll('.omx-apptab-select-option')).find((opt) =>
-    opt.textContent.includes('MiniMax H3'),
+  const seedanceOption = Array.from(optionsPanel.querySelectorAll('.omx-apptab-select-option')).find((opt) =>
+    opt.textContent.includes('Seedance 2.0') && opt.textContent.includes('高清多运镜'),
   )
-  assert.ok(minimaxOption)
+  assert.ok(seedanceOption)
   await act(async () => {
-    fireClick(minimaxOption)
+    fireClick(seedanceOption)
   })
 
-  // 再次提交：时长 20s 超出 MiniMax H3 连续范围上限 (15s)，安全截断为 15s；
-  // 分辨率 480p 不在 MiniMax H3 支持范围 (2K/768P)，安全重置为默认分辨率 (2K)；
+  // 再次提交：时长 20s 超出 Seedance 2.0 连续范围上限 (15s)，安全截断为 15s；
+  // 分辨率 480p 属于 Seedance 2.0 支持范围，保持用户显式选择；
   // 独立画质参数 quality ('hd') 绝不被误归类改写为分辨率！
   await act(async () => {
     const submitBtn = host.querySelector('.omx-apptab-cta-btn')
     fireClick(submitBtn)
   })
 
-  assert.equal(submittedPayload.formValues.__model__, 'minimax-h3')
-  assert.equal(submittedPayload.formValues.duration, 15, '时长 20s 超过 MiniMax H3 上限 15s，平滑收敛为 15s')
-  assert.equal(submittedPayload.formValues.resolution, '2K', '分辨率 480p 不被 MiniMax H3 支持，平滑重置为默认 2K')
-  assert.equal(submittedPayload.formValues.aspect_ratio, '21:9', 'MiniMax H3 支持 21:9，故保留')
+  assert.equal(submittedPayload.formValues.__model__, 'seedance-2.0')
+  assert.equal(submittedPayload.formValues.duration, 15, '时长 20s 超过 Seedance 2.0 上限 15s，平滑收敛为 15s')
+  assert.equal(submittedPayload.formValues.resolution, '480p', '分辨率 480p 在 Seedance 2.0 支持范围内，必须保留用户显式选择')
+  assert.equal(submittedPayload.formValues.aspect_ratio, '21:9', 'Seedance 2.0 支持 21:9，故保留')
   assert.equal(submittedPayload.formValues.quality, 'hd', '独立 quality 画质参数严禁被误当成 resolution 覆写')
 
-  // 3. 验证在区间模型 (MiniMax H3: 4–15s) 下，用户在时长数字输入框逐字符输入 '1' 再输入 '0' 组成 '10' 时，不会在输入 '1' 时被强制 clamp 为 4
+  // 3. 验证在区间模型 (Seedance 2.0: 4–15s) 下，用户在时长数字输入框逐字符输入 '1' 再输入 '0' 组成 '10' 时，不会在输入 '1' 时被强制 clamp 为 4
   const numInput = host.querySelector('input[type="number"]')
   assert.ok(numInput, '应存在时长数字输入框')
   await act(async () => {

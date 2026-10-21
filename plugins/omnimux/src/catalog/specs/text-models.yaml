@@ -57,6 +57,8 @@ models:
       profileId: "textComplete"
       seam: "textComplete"
 
+  # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+  # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
   - id: "claude-sonnet-4-6"
     label: "Claude Sonnet 4.6"
     family: "anthropic"
@@ -81,7 +83,8 @@ models:
           verifiedAt: "2026-10-05"
           notes: "生产网关实测 200：id chatcmpl-req_vrtx_011CfiPiyWDMENUoDzjrYwaF，usage 15+5=20"
         implementation:
-          status: "ready"
+          # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+          status: "none"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "复用 textComplete 适配与 chat 路线"
@@ -120,7 +123,8 @@ models:
           verifiedAt: "2026-10-05"
           notes: "生产网关实测 200：id chatcmpl-req_vrtx_011CfiPmNi33kpeF5oJ33tB3，图像理解回答非空"
         implementation:
-          status: "ready"
+          # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+          status: "none"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "复用 textComplete 适配与 vision_chat 路线"
@@ -134,7 +138,8 @@ models:
       docUrl: "docs/evidence/2026-09-05-model-claude-opus-4-6-chat.md"
       verifiedAt: "2026-10-04"
     implementation:
-      status: "ready"
+      # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+      status: "none"
       profileId: "textComplete"
       seam: "textComplete"
       notes: "复用 textComplete 适配与 chat/vision_chat 路线"

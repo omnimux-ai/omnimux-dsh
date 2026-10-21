@@ -9,16 +9,20 @@ import { planCanvasInputMutation } from './graph/canvasInputMutationGateway.ts';
 import { reconcileCanvasForCatalog } from './graph/catalogReconcile.ts';
 
 // These fixtures use the offline public catalog, never a provider request or a private index.
+// 2026-10-21 网关对账 #3516：text/audio 各只剩一个在售模型，image/video 仍有一个可配置的合法替代项。
 const DEFAULT_CASES = [
-  { kind: 'text', setting: 'defaultTextModel', selected: 'claude-sonnet-4-6', fallback: 'gemini-3.8-flash', operation: 'chat' },
-  { kind: 'image', setting: 'defaultImageModel', selected: 'gpt-image-2.5-flare', fallback: 'gpt-image-2.5', operation: 'text_to_image' },
+  { kind: 'text', setting: 'defaultTextModel', selected: 'gemini-3.8-flash', fallback: 'gemini-3.8-flash', operation: 'chat' },
+  { kind: 'image', setting: 'defaultImageModel', selected: 'seedream-5-0-pro', fallback: 'gpt-image-2.5', operation: 'text_to_image' },
   { kind: 'video', setting: 'defaultVideoModel', selected: 'seedance-2-0-fast', fallback: 'seedance-2-5', operation: 'text_to_video' },
-  { kind: 'audio', setting: 'defaultAudioModel', selected: 'gemini-3.8-flash-tts', fallback: 'seed-audio-1.0', operation: 'text_to_speech' },
+  { kind: 'audio', setting: 'defaultAudioModel', selected: 'suno', fallback: 'suno', operation: 'text_to_music' },
 ];
+// A case exercises "configured default vs policy default" only when both models exist.
+const ALTERNATIVE_CASES = DEFAULT_CASES.filter((row) => row.selected !== row.fallback);
+const SELECTED_DEFAULTS = { text: 'gemini-3.8-flash', image: 'seedream-5-0-pro', video: 'seedance-2-0-fast', audio: 'suno' };
 function configuredHub() {
   return buildModelCatalog({ env: {}, settingsDefaults: {
-    defaultTextModel: 'claude-sonnet-4-6', defaultImageModel: 'gpt-image-2.5-flare',
-    defaultVideoModel: 'seedance-2-0-fast', defaultAudioModel: 'gemini-3.8-flash-tts',
+    defaultTextModel: 'gemini-3.8-flash', defaultImageModel: 'seedream-5-0-pro',
+    defaultVideoModel: 'seedance-2-0-fast', defaultAudioModel: 'suno',
   } });
 }
 function bridge(hub) {
@@ -90,7 +94,8 @@ test('readCanvasCatalog tolerates catalogs without preview_fingerprint (old hub 
 
 test('real Hub catalog exposes the curated text models and selects Gemini 3.8 for video', () => {
   const catalog = projectCanvasCatalog(buildModelCatalog({ env: {} }));
-  assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash', 'claude-sonnet-4-6']); // #3086 Anthropic 品牌上新
+  // 2026-10-21 网关对账 #3516：Claude 全部渠道停用，文本侧只剩 Gemini 3.8 Flash。
+  assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash']);
   assert.equal(catalog.defaults.text, 'gemini-3.8-flash');
   const select = (assets = [], currentModelId) => planAutoAdaptation({ catalog, outputType: 'text', currentModelId,
     fingerprint: buildUpstreamFingerprint({ prompt: 'analyze', assets }) });
@@ -101,9 +106,10 @@ test('real Hub catalog exposes the curated text models and selects Gemini 3.8 fo
   assert.equal(catalog.models.find((row) => row.id === pick.modelId).operations.find((op) => op.id === pick.operationId).execution.status, 'none');
 });
 
-test('real Hub catalog: both ASR contracts are selectable in the audio-transcription tool (#1789)', () => {
+test('real Hub catalog: the listed whisper-1 ASR contract is selectable in the audio-transcription tool (#1789)', () => {
   const catalog = projectCanvasCatalog(buildModelCatalog({ env: {} }));
-  const ASR = ['doubao-asr-bigmodel', 'seedasr-auc'];
+  // 2026-10-21 网关对账 #3516：豆包/SeedASR 渠道停用，语音识别只剩 whisper-1。
+  const ASR = ['whisper-1'];
 
   // Admission is contract-derived: a model enters only through its LISTED speech operation.
   for (const id of ASR) {
@@ -113,11 +119,12 @@ test('real Hub catalog: both ASR contracts are selectable in the audio-transcrip
     assert.deepEqual(row.listedOperations, [`${id}#speech_to_text`]);
   }
   // ...and never through a generative bucket: the chat whitelist stays chat-only.
-  assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash', 'claude-sonnet-4-6']); // #3086 Anthropic 品牌上新
+  assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash']);
 
   const withAudio = buildUpstreamFingerprint({
     prompt: '',
-    assets: [{ sourceNodeId: 'audio-1', type: 'audio', mimeType: 'audio/mpeg', sizeBytes: 4096 }],
+    // whisper-1 合同公布的 MIME 为 audio/mp3、wav、m4a、webm；用其中一项验证可选性。
+    assets: [{ sourceNodeId: 'audio-1', type: 'audio', mimeType: 'audio/mp3', sizeBytes: 4096 }],
   });
   const transcription = buildFilteredModelOptions({ catalog, fingerprint: withAudio, outputType: 'text', tool: 'audio-transcription' });
   assert.deepEqual(transcription.options.map((row) => row.id).sort(), ASR.slice().sort());
@@ -126,7 +133,7 @@ test('real Hub catalog: both ASR contracts are selectable in the audio-transcrip
   assert.equal(isZeroCandidateEmptyState(transcription), false);
 
   // Every other tool keeps the curated whitelist: a chat node never offers an ASR model.
-  const CHAT = ['gemini-3.8-flash', 'claude-sonnet-4-6']; // #3086 Anthropic 品牌上新
+  const CHAT = ['gemini-3.8-flash'];
   const chat = buildFilteredModelOptions({ catalog, fingerprint: buildUpstreamFingerprint({ prompt: '请润色这段文字' }), outputType: 'text', tool: 'text-to-text' });
   assert.deepEqual(chat.options.map((row) => row.id).sort(), CHAT.slice().sort());
   // Callers that pass no tool keep the pre-#1789 behaviour (whitelist only).
@@ -150,10 +157,7 @@ test('configured defaults survive public catalog projection, adaptation and new 
 test('adaptation respects a legal catalog default even when the attached policy prefers another model (#3312)', () => {
   const catalog = bridge(configuredHub());
   // Separate the planner boundary from projection: this is an explicit valid catalog input.
-  catalog.defaults = {
-    text: 'claude-sonnet-4-6', image: 'gpt-image-2.5-flare',
-    video: 'seedance-2-0-fast', audio: 'gemini-3.8-flash-tts',
-  };
+  catalog.defaults = SELECTED_DEFAULTS;
   const before = structuredClone(catalog);
   for (const row of DEFAULT_CASES) {
     assert.equal(adaptation(catalog, row.kind).modelId, row.selected, row.kind);
@@ -175,7 +179,8 @@ test('invalid defaults fall back to a real admitted policy model for all four ou
 });
 
 test('missing policy models fall back only to real remaining rows for all four outputs (#3312)', () => {
-  for (const row of DEFAULT_CASES) {
+  // text/audio have a single admitted model, so "another real remaining row" only exists for image/video.
+  for (const row of ALTERNATIVE_CASES) {
     const hub = configuredHub();
     hub.defaults = { text: 'missing-model', image: 'missing-model', video: 'missing-model', audio: 'missing-model' };
     hub.models = hub.models.filter(model => model.id !== row.fallback);
@@ -188,7 +193,8 @@ test('missing policy models fall back only to real remaining rows for all four o
 });
 
 test('defaults outside enabled buckets or listed output contracts cannot enter the canvas (#3312)', () => {
-  for (const row of DEFAULT_CASES) {
+  // Only a kind with a second admissible row can fall back to a *different* real model.
+  for (const row of ALTERNATIVE_CASES) {
     for (const invalidation of ['disabled', 'absent', 'draft', 'wrong-output']) {
       const hub = configuredHub();
       if (invalidation === 'disabled') {
@@ -259,10 +265,10 @@ test('operation recommendations cannot impersonate a model preference or overrid
 test('same-model valid operation recommendations initialize new nodes while invalid recommendations are removed (#3312)', () => {
   const hub = configuredHub();
   hub.defaultOperations = {
-    text: { modelId: 'claude-sonnet-4-6', operationId: 'vision_chat', rule: 'configured' },
-    image: { modelId: 'gpt-image-2.5-flare', operationId: 'text_to_image', rule: 'configured' },
+    text: { modelId: 'gemini-3.8-flash', operationId: 'vision_chat', rule: 'configured' },
+    image: { modelId: 'seedream-5-0-pro', operationId: 'text_to_image', rule: 'configured' },
     video: { modelId: 'seedance-2-0-fast', operationId: 'video_multi_ref', rule: 'configured' },
-    audio: { modelId: 'gemini-3.8-flash-tts', operationId: 'text_to_speech', rule: 'configured' },
+    audio: { modelId: 'suno', operationId: 'text_to_music', rule: 'configured' },
   };
   const catalog = bridge(hub);
   for (const row of DEFAULT_CASES) {
@@ -272,20 +278,20 @@ test('same-model valid operation recommendations initialize new nodes while inva
   }
   hub.defaultOperations = {
     text: { modelId: 'missing-model', operationId: 'chat' },
-    image: { modelId: 'gpt-image-2.5-flare', operationId: 'missing-operation' },
-    video: { modelId: 'claude-sonnet-4-6', operationId: 'chat' },
-    audio: { modelId: 'gemini-3.8-flash-tts', operationId: 'missing-operation' },
+    image: { modelId: 'seedream-5-0-pro', operationId: 'missing-operation' },
+    video: { modelId: 'gemini-3.8-flash', operationId: 'chat' },
+    audio: { modelId: 'suno', operationId: 'missing-operation' },
   };
-  hub.defaultsByOperation = { missing_operation: 'claude-sonnet-4-6', chat: 'missing-model' };
+  hub.defaultsByOperation = { missing_operation: 'seedance-2-0-fast', chat: 'gemini-3.8-flash' };
   const filtered = bridge(hub);
   assert.deepEqual(filtered.defaultOperations, {});
   assert.equal(filtered.defaultsByOperation.missing_operation, undefined);
-  assert.equal(filtered.defaultsByOperation.chat, 'claude-sonnet-4-6');
+  assert.equal(filtered.defaultsByOperation.chat, 'gemini-3.8-flash');
 });
 
 test('compatible recent manual preferences win only for new nodes and are never rewritten (#3312)', () => {
   const catalog = bridge(configuredHub());
-  const preferences = { text: 'gemini-3.8-flash', image: 'gpt-image-2.5', video: 'seedance-2-5', audio: 'seed-audio-1.0' };
+  const preferences = { text: 'gemini-3.8-flash', image: 'gpt-image-2.5', video: 'seedance-2-5', audio: 'suno' };
   const before = structuredClone(preferences);
   for (const row of DEFAULT_CASES) {
     assert.equal(adaptation(catalog, row.kind, { preferredModelId: row.fallback }).modelId, row.fallback, row.kind);
@@ -298,18 +304,21 @@ test('compatible recent manual preferences win only for new nodes and are never 
 });
 
 test('an incompatible configured text default safely yields to a listed video-capable text model (#3312)', () => {
-  const catalog = bridge(configuredHub());
+  const hub = configuredHub();
+  // 2026-10-21 网关对账 #3516：Claude 已不在上架白名单，配置里残留的旧文本默认必须被投影掉。
+  hub.defaults.text = 'claude-sonnet-4-6';
+  const catalog = bridge(hub);
   const pick = planAutoAdaptation({ catalog, outputType: 'text', fingerprint: buildUpstreamFingerprint({
     prompt: 'Analyze this video', assets: [{ sourceNodeId: 'video', type: 'video', mimeType: 'video/mp4', sizeBytes: 1024 }],
   }) });
-  assert.equal(catalog.defaults.text, 'claude-sonnet-4-6');
+  assert.equal(catalog.defaults.text, 'gemini-3.8-flash');
   assert.equal(pick.modelId, 'gemini-3.8-flash');
   assert.equal(pick.operationId, 'vision_chat');
 });
 
 test('catalog hydration preserves saved models, operations, results and original edge data for all outputs (#3312)', () => {
   const catalog = bridge(configuredHub());
-  const preferences = { text: 'claude-sonnet-4-6', image: 'gpt-image-2.5-flare', video: 'seedance-2-0-fast', audio: 'gemini-3.8-flash-tts' };
+  const preferences = { text: 'gemini-3.8-flash', image: 'gpt-image-2.5', video: 'seedance-2-5', audio: 'suno' };
   for (const row of DEFAULT_CASES) {
     for (const modelId of [row.fallback, 'unavailable-saved-model']) {
       const saved = generateNode('saved', row.kind, { model: modelId, operation: row.operation, customParameter: { keep: true } });

@@ -568,9 +568,12 @@
     },
     {
       "id": "whisper-1",
-      "disposition": "draft",
-      "reason": "speechToText seam 已挂载（#538），可探测；仓内无 dated live 证据不上架，#530 探测后方可翻 live",
-      "notes": "speech_to_text 产出 text，不得入 audio 产出桶；探测前 listed 保持空"
+      "disposition": "canonical",
+      "reason": "2026-10-21 网关对账 #3516：网关渠道 31（APIMart 语音识别专线）status=1，default 分组可达 whisper-1；中枢 speechToText profile/seam 已挂载，按现役在售上架。",
+      "notes": "speech_to_text 产出 text，不得入 audio 产出桶；探测前 listed 保持空",
+      "evidence": [
+        "docs/evidence/2026-10-21-model-whisper-1-speech_to_text.md"
+      ]
     },
     {
       "id": "kling-avatar",

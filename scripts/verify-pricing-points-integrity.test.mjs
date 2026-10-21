@@ -58,7 +58,8 @@ describe('Pricing Three Defenses: Pricing Points Integrity Gate', () => {
   });
 
   it('verifies pointsEstimate matches pricing-calculator derivation for registered models', () => {
-    const verifiedModels = ['minimax-h3', 'seedance-2-5', 'seedance-2-0', 'gpt-image-2.5', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'];
+    // 2026-10-21 #3516：对账后所有在册分组都必须可由 pricing-calculator 推导（不再手工维护白名单）。
+    const verifiedModels = Object.keys(HUB_GROUPS);
 
     for (const modelId of verifiedModels) {
       const groups = HUB_GROUPS[modelId] || [];

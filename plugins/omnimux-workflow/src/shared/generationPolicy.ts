@@ -10,31 +10,29 @@ export interface GenerationPolicy {
 
 export const CANVAS_GENERATION_POLICY: Readonly<Record<MaterialType, GenerationPolicy>> = {
   text: {
-    // 开放谷歌 Gemini 3.8 Flash 与 Claude Sonnet 4.6
-    allowedModelIds: ['gemini-3.8-flash', 'claude-sonnet-4-6'],
+    // 2026-10-21 网关对账 #3516：Claude 全部渠道停用；仅开放现役 Gemini 3.8 Flash。
+    allowedModelIds: ['gemini-3.8-flash'],
     defaultModelId: 'gemini-3.8-flash',
     modeSelection: 'model',
   },
   image: {
-    // 官方价目表在售生图模型全量准入：GPT Image 2.5 标准版、极速版 (Flare)、画质版 (Sunburst)
-    // #3148：Seedream 5.0 Pro 真机验证通过（文生图 + 垫图），加入画布准入
-    allowedModelIds: ['gpt-image-2.5', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst', 'seedream-5-0-pro'],
+    // 2026-10-21 网关对账 #3516：Flare/Sunburst 渠道 63-66 全部停用；
+    // 仅保留现役 GPT Image 2.5（default + economy）与 Seedream 5.0 Pro（default）。
+    allowedModelIds: ['gpt-image-2.5', 'seedream-5-0-pro'],
     defaultModelId: 'gpt-image-2.5',
     modeSelection: 'model',
   },
   video: {
-    // 仅保留网关在售主流视频模型：字节即梦 2.5/2.0/2.0 Fast/2.0 Mini 与 MiniMax H3（含对应任务版）
-    // #3152：Seedance 2.0 Fast / Mini 以当前映射契约真机验证通过（文生视频 + 首帧 + 全能参考），加入画布准入
-    allowedModelIds: ['seedance-2-5', 'seedance-2-0', 'seedance-2-0-fast', 'seedance-2-0-mini', 'minimax-h3'],
+    // 2026-10-21 网关对账 #3516：MiniMax H3 全部渠道停用；仅保留现役 Seedance 2.5/2.0/2.0 Fast/2.0 Mini。
+    allowedModelIds: ['seedance-2-5', 'seedance-2-0', 'seedance-2-0-fast', 'seedance-2-0-mini'],
     defaultModelId: 'seedance-2-5',
     modeSelection: 'model',
   },
   audio: {
-    // 仅保留火山官方直连配音主力模型；indextts-2 提供声音克隆（参考音 + 文稿）；gemini-3.8-flash-tts 提供 Google AI Studio 拟真语音。
-    // 白名单只决定「可进入画布」，具体节点仍由输入兼容性过滤：只有文稿的节点看不到
-    // 需要参考音的 indextts-2，只有参考音 + 文稿的克隆节点才看得到它。
-    allowedModelIds: ['seed-audio-1.0', 'gemini-3.8-flash-tts', 'indextts-2'],
-    defaultModelId: 'seed-audio-1.0',
+    // 2026-10-21 网关对账 #3516：火山配音/克隆渠道 43/70 停用；
+    // 仅保留现役 Suno 音乐生成（渠道 32 default）。语音识别经 speechToText 能力 seam 进入画布。
+    allowedModelIds: ['suno'],
+    defaultModelId: 'suno',
     modeSelection: 'model',
   },
 };

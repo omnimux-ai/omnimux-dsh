@@ -6,7 +6,6 @@
     "text_to_image": "gpt-image-2.5",
     "text_to_video": "seedance-2-5",
     "text_to_music": "suno",
-    "text_to_speech": "seed-audio-1.0",
-    "speech_to_text": "doubao-asr-bigmodel"
+    "speech_to_text": "whisper-1"
   }
 }

@@ -109,17 +109,40 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
   assert.ok(cov.contractIds.includes('seedasr-auc'));
   // kling-avatar was removed upstream on 2026-09-14 (#1751) — it is no longer a contract.
   assert.equal(cov.contractIds.includes('kling-avatar'), false);
-  assert.equal(cov.listedOperationCount, 37, 'H2 lists evidence-backed ops'); // #3209 google-vids-omni 下线 −4 → 37（#3152 为 37）
+  // 2026-10-21 网关对账 #3516：上架面收敛为 9 个模型 / 24 个 operation。
+  assert.equal(cov.listedOperationCount, 24, 'H2 lists evidence-backed ops');
   // #3209: the retired local channel leaves no listed operation behind.
   assert.equal(cov.listedOperations.some((key) => key.startsWith('google-vids-omni#')), false);
   assert.ok(cov.listedOperations.includes('seedance-2-5#text_to_video'));
   assert.ok(cov.listedOperations.includes('seedance-2-0#text_to_video'));
-  assert.ok(cov.listedOperations.includes('minimax-h3#text_to_video'));
+  assert.ok(cov.listedOperations.includes('seedance-2-0-fast#text_to_video'));
+  assert.ok(cov.listedOperations.includes('seedance-2-0-mini#text_to_video'));
+  assert.ok(cov.listedOperations.includes('seedream-5-0-pro#text_to_image'));
   assert.ok(cov.listedOperations.includes('gpt-image-2.5#text_to_image'));
+  assert.ok(cov.listedOperations.includes('gpt-image-2.5#multi_reference'));
   assert.ok(cov.listedOperations.includes('gemini-3.8-flash#chat'));
-  // #1789: both ASR models are listed independently; neither aliases the other.
-  assert.ok(cov.listedOperations.includes('seedasr-auc#speech_to_text'));
-  assert.ok(cov.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
+  assert.ok(cov.listedOperations.includes('suno#text_to_music'));
+  // #3516: whisper-1 由 draft 翻 canonical，成为唯一在架 speech_to_text 模型。
+  assert.ok(cov.listedOperations.includes('whisper-1#speech_to_text'));
+  // #3516: minimax-h3 / seedasr-auc / doubao-asr-bigmodel / seed-audio-1.0 上游渠道停用，
+  // 转为「仅登记不上架」：契约仍在，但不再暴露任何 listed operation。
+  for (const delisted of [
+    'minimax-h3',
+    'seedasr-auc',
+    'doubao-asr-bigmodel',
+    'seed-audio-1.0',
+    'gemini-3.8-flash-tts',
+    'indextts-2',
+    'claude-sonnet-4-6',
+    'gpt-image-2.5-flare',
+    'gpt-image-2.5-sunburst',
+  ]) {
+    assert.equal(
+      cov.listedOperations.some((key) => key.startsWith(`${delisted}#`)),
+      false,
+      `${delisted} must not keep a listed operation`,
+    );
+  }
   // grok-imagine-image-2-0 was downgraded to "registered, not on shelf": no listed op at all.
   assert.equal(cov.listedOperations.includes('grok-imagine-image-2-0#text_to_image'), false);
   assert.equal(cov.listedOperations.some((key) => key.startsWith('grok-imagine-image-2-0#')), false);
@@ -161,7 +184,7 @@ test('verifyContracts: audit ok; strict ok once 83 dispositions resolve', () => 
   assert.equal(strict.dispositions.total, 83); // #3209 google-vids-omni 转墓碑行，行数不变 → 83
   assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
   assert.deepEqual(strict.coverage.extraInYaml, []);
-  assert.equal(strict.listedOperations.length, 37); // #3209 google-vids-omni 下线 −4 → 37（#3152 为 37）
+  assert.equal(strict.listedOperations.length, 24); // 2026-10-21 网关对账 #3516：上架面收敛为 24
   // forbidden-listed models never expose listed operations
   assert.equal(strict.dispositions.forbiddenListed.length, 13); // #3209 google-vids-omni 墓碑 +1 → 13
   for (const id of strict.dispositions.forbiddenListed) {
@@ -169,15 +192,18 @@ test('verifyContracts: audit ok; strict ok once 83 dispositions resolve', () => 
   }
 });
 
-test('whisper-1 not listed in real specs; the removed kling-avatar has left the contract universe', () => {
+test('whisper-1 is listed in real specs; the removed kling-avatar has left the contract universe', () => {
   resetContractCache();
   const index = loadAll(DEFAULT_SPECS_DIR, { useCache: false });
   const w = index.get('whisper-1');
   assert.ok(w);
-  assert.equal(w.listed, false);
-  assert.equal(w.operations[0].listed, false);
+  // 2026-10-21 网关对账 #3516：whisper-1 处置由 draft 翻 canonical，speech_to_text 上架。
+  assert.equal(w.listed, true);
+  assert.equal(w.operations[0].listed, true);
+  assert.equal(w.implementation.status, 'ready');
   assert.equal(w.operations[0].id, 'speech_to_text');
   assert.equal(w.operations[0].output.type, 'text');
+  // 模型级 execution 仍待 #530 探测证据，listing 不等于 live 执行声明。
   assert.equal(w.operations[0].execution.status, 'none');
 
   // #1751: kling-avatar was removed upstream, so it is no longer a contract at all. Its

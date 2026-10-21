@@ -11,13 +11,15 @@ const defaults = {
   speed: 1,
   response_format: 'mp3',
 }
-const options = { seam: 'audioGenerate', capability: 'audio', outputType: 'audio' }
+// 2026-10-21 网关对账 #3516：seed-audio-1.0 上游渠道停用 → 仅登记不上架；
+// 契约与映射断言以 unlisted 放行（requireListed:false）保持覆盖。
+const options = { seam: 'audioGenerate', capability: 'audio', outputType: 'audio', requireListed: false }
 const request = { model, operation: 'text_to_speech', prompt: defaults.input }
 
-test('Seed Audio canonical and aliases share a listed speech contract and wire defaults', () => {
+test('Seed Audio canonical and aliases share an unlisted speech contract and wire defaults', () => {
   const index = getContractIndex()
   const contract = index.get(model)
-  assert.deepEqual(contract.listedOperations, [`${model}#text_to_speech`])
+  assert.deepEqual(contract.listedOperations, [])
   assert.equal(contract.research.verifiedAt, '2026-09-18') // #2277 live 验收更新证据日期
   for (const id of [model, ...contract.aliases]) {
     const plan = assertGuardSubmit({ ...request, model: id }, options)

@@ -104,32 +104,7 @@ const DEFAULT_PRESET_MODELS = {
       pro: true,
       badge: { text: '高达43%折扣', type: 'purple' },
       icon: 'bytedance',
-    },
-    {
-      id: 'wan-3.0',
-      name: 'Wan 3.0',
-      capsuleName: 'Wan 3.0',
-      subtitle: '通义万相电影级视效与长镜头生成',
-      pro: false,
-      icon: 'alibaba',
-    },
-    {
-      id: 'minimax-h3',
-      name: 'MiniMax H3',
-      capsuleName: 'MiniMax H3',
-      subtitle: '电影感画质，原生高帧率动态生成',
-      pro: true,
-      icon: 'minimax',
-    },
-    {
-      id: 'grok-imagine-video-1-5',
-      name: 'Grok Imagine Video 1.5',
-      capsuleName: 'Grok Video 1.5',
-      subtitle: '极速拟真运镜与多画幅自适应',
-      pro: false,
-      icon: 'grok',
-    },
-  ],
+    },  ],
   image: [
     {
       id: 'seedream-5-0-pro',

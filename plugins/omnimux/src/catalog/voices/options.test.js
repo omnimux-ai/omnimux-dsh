@@ -25,13 +25,17 @@ test('catalog DTO and contract expose the same 509 rich options with one canonic
     records.map((row) => ({ value: row.voice_type, label: row.display_name, meta: row })),
   );
   assert.equal(voice.defaultValue, records[0].voice_type);
-  assert.equal(loadCatalogDefaults().byOperation.text_to_speech, 'seed-audio-1.0');
+  // 2026-10-21 网关对账 #3516：text_to_speech 默认键随渠道停用移除；语音识别默认改为 whisper-1。
+  assert.equal('text_to_speech' in loadCatalogDefaults().byOperation, false);
+  assert.equal(loadCatalogDefaults().byOperation.speech_to_text, 'whisper-1');
   const catalog = buildModelCatalog({ env: {} });
-  assert.equal(catalog.defaults.audio, 'seed-audio-1.0');
-  assert.equal(catalog.defaultsByOperation.text_to_speech, 'seed-audio-1.0');
-  assert.deepEqual(catalog.audio.find((model) => model.id === 'seed-audio-1.0').parameters.voice, voice);
+  // #3516：音频产出桶只剩在架 suno；seed-audio-1.0 仅登记不上架。
+  assert.equal(catalog.defaults.audio, 'suno');
+  assert.equal('text_to_speech' in catalog.defaultsByOperation, false);
+  assert.deepEqual(catalog.audio.map((model) => model.id), ['suno']);
+  // 509 个音色选项仍由契约提供：DTO 的 models[]（权威目录）与契约同源且是独立副本。
   assert.deepEqual(catalog.models.find((model) => model.id === 'seed-audio-1.0').parameters.voice, voice);
-  assert.notEqual(catalog.audio.find((model) => model.id === 'seed-audio-1.0').parameters.voice.options, voice.options);
+  assert.notEqual(catalog.models.find((model) => model.id === 'seed-audio-1.0').parameters.voice.options, voice.options);
 });
 
 test('options source resolution is pure and supports operation-level declarations', () => {

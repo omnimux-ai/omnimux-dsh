@@ -95,38 +95,7 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
           ],
         },
       },
-    },
-    {
-      id: 'minimax-h3',
-      name: 'MiniMax H3',
-      label: 'MiniMax H3',
-      subtitle: '768P/2K · 4–15s · 强叙事高动态',
-      parameters: {
-        aspectRatio: {
-          defaultValue: '16:9',
-          options: [
-            { label: '16:9 横屏', value: '16:9' },
-            { label: '9:16 竖屏', value: '9:16' },
-            { label: '1:1 方屏', value: '1:1' },
-            { label: '4:3', value: '4:3' },
-            { label: '3:4', value: '3:4' },
-            { label: '21:9 超宽屏', value: '21:9' },
-          ],
-        },
-        duration: {
-          range: { min: 4, max: 15, step: 1 },
-          defaultValue: 5,
-        },
-        resolution: {
-          defaultValue: '2K',
-          options: [
-            { label: '2K 超清', value: '2K' },
-            { label: '768P 高清', value: '768P' },
-          ],
-        },
-      },
-    },
-    {
+    },    {
       id: 'kling-v1-6',
       name: '可灵 Kling v1.6',
       label: '可灵 Kling v1.6',
@@ -185,36 +154,7 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
           ],
         },
       },
-    },
-    {
-      id: 'wan-3.0',
-      name: '通义万相 Wan 3.0',
-      label: '通义万相 Wan 3.0',
-      subtitle: '2–30s · 自由时长生成',
-      parameters: {
-        aspectRatio: {
-          defaultValue: '16:9',
-          options: [
-            { label: '16:9 横屏', value: '16:9' },
-            { label: '9:16 竖屏', value: '9:16' },
-            { label: '1:1 方屏', value: '1:1' },
-          ],
-        },
-        duration: {
-          range: { min: 2, max: 30, step: 1 },
-          defaultValue: 5,
-          allowAuto: true,
-        },
-        resolution: {
-          defaultValue: '720p',
-          options: [
-            { label: '720p', value: '720p' },
-            { label: '1080p', value: '1080p' },
-          ],
-        },
-      },
-    },
-  ],
+    },  ],
   image: [
     {
       id: 'gpt-image-2.5',

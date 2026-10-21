@@ -9,10 +9,11 @@ const audio = 'https://example.com/audio.mp3'
 const request = { model, audio, operation: 'speech_to_text' }
 const options = { seam: 'speechToText', capability: 'stt', outputType: 'text' }
 
-test('Doubao ASR canonical is admitted with text output and no prompt', () => {
+test('Doubao ASR canonical is registered-but-unlisted; only unlisted admission keeps its text contract', () => {
   const index = getContractIndex()
   const contract = index.get(model)
-  assert.deepEqual(contract.listedOperations, [`${model}#speech_to_text`])
+  // 2026-10-21 网关对账 #3516：上游渠道停用，doubao-asr-bigmodel 仅登记不上架。
+  assert.deepEqual(contract.listedOperations, [])
   // #1789: `doubao-asr-bigmodel` and `seedasr-auc` are two independent models. Neither one
   // declares the other as an alias, and no disposition row unifies them either way.
   assert.deepEqual(contract.aliases ?? [], [])
@@ -26,17 +27,24 @@ test('Doubao ASR canonical is admitted with text output and no prompt', () => {
   assert.equal(resolveDisposition(dispositions, 'seedasr-auc').target, undefined)
   const other = index.get('seedasr-auc')
   assert.deepEqual(other.aliases ?? [], [])
-  assert.deepEqual(other.listedOperations, ['seedasr-auc#speech_to_text'])
+  assert.deepEqual(other.listedOperations, [])
   // Bidirectional non-unification: neither id resolves onto the other.
   assert.notEqual(resolveModelId(index, 'seedasr-auc'), model)
   assert.notEqual(resolveModelId(index, model), 'seedasr-auc')
-  const plan = assertGuardSubmit({ ...request, model }, options)
+  // Listing-dependent paths fail closed for the delisted pair.
+  for (const id of [model, 'seedasr-auc']) {
+    const rejected = guardSubmit({ ...request, model: id }, options)
+    assert.equal(rejected.ok, false, id)
+    assert.equal(rejected.code, GUARD_CODES.IMPLEMENTATION_UNAVAILABLE, id)
+  }
+  // Unlisted admission (BYOK / historical paths) still maps the full URL-first payload.
+  const plan = assertGuardSubmit({ ...request, model }, { ...options, requireListed: false })
   assert.equal(plan.modelId, model)
   assert.equal(plan.profileId, 'speechToText')
   assert.deepEqual(plan.vendorPayload, { model, file: audio, url: audio, audio_url: audio, response_format: 'json' })
   assert.deepEqual(plan.logicalPayload, { model, audio, response_format: 'json' })
   // The sibling ASR model is admitted under its own id — never归一 onto doubao-asr-bigmodel.
-  const sibling = assertGuardSubmit({ ...request, model: 'seedasr-auc' }, options)
+  const sibling = assertGuardSubmit({ ...request, model: 'seedasr-auc' }, { ...options, requireListed: false })
   assert.equal(sibling.modelId, 'seedasr-auc')
   assert.notEqual(sibling.modelId, model)
   assert.equal(sibling.vendorPayload.model, 'seedasr-auc')
@@ -46,7 +54,7 @@ test('Doubao ASR maps every admitted response format without speech-generation f
   const profile = loadAdapterProfiles().profiles.find((row) => row.id === 'speechToText')
   for (const field of ['model', 'audio', 'response_format']) assert.ok(profile.logicalFields.includes(field))
   for (const response_format of ['json', 'text', 'verbose_json', 'srt', 'vtt']) {
-    const plan = assertGuardSubmit({ ...request, response_format, prompt: 'not required' }, options)
+    const plan = assertGuardSubmit({ ...request, response_format, prompt: 'not required' }, { ...options, requireListed: false })
     assert.deepEqual(plan.vendorPayload, { model, file: audio, url: audio, audio_url: audio, response_format })
   }
 })
@@ -54,8 +62,12 @@ test('Doubao ASR maps every admitted response format without speech-generation f
 test('Doubao ASR rejects unsupported formats, absent audio and wrong operation', () => {
   for (const invalid of [
     { response_format: 'xml' }, { response_format: 1 }, { response_format: {} },
-    { audio: '' }, { operation: 'text_to_speech' }, { model: 'whisper-1' },
+    { audio: '' }, { operation: 'text_to_speech' }, { model: 'gpt-image-2.5' },
   ]) {
-    assert.equal(guardSubmit({ ...request, ...invalid }, options).ok, false, JSON.stringify(invalid))
+    assert.equal(
+      guardSubmit({ ...request, ...invalid }, { ...options, requireListed: false }).ok,
+      false,
+      JSON.stringify(invalid),
+    )
   }
 })

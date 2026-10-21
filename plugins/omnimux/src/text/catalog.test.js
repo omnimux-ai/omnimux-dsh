@@ -163,18 +163,26 @@ describe('text whitelist', () => {
   })
 
   it('resolves model@group and strategy in text route', () => {
-    const route = resolveTextRoute({ model: 'claude-opus-4-6@claude-plus' }, parseTextConfig(undefined))
-    assert.equal(route.modelId, 'claude-opus-4-6')
-    assert.equal(route.group, 'claude-plus')
-    assert.equal(route.candidates[0], 'claude-opus-4-6@claude-plus')
+    // 2026-10-21 网关对账 #3516：claude 文本渠道分组已随上游停用整体退场，
+    // 现役仅 gemini-3.8-flash 保留 standard 分组（wireGroup default）。
+    const route = resolveTextRoute({ model: 'gemini-3.8-flash@standard' }, parseTextConfig(undefined))
+    assert.equal(route.modelId, 'gemini-3.8-flash')
+    assert.equal(route.group, 'standard')
+    assert.equal(route.candidates[0], 'gemini-3.8-flash@default')
 
-    const costRoute = resolveTextRoute({ model: 'claude-opus-4-6', strategy: 'cost_first' }, parseTextConfig(undefined))
+    const costRoute = resolveTextRoute({ model: 'gemini-3.8-flash', strategy: 'cost_first' }, parseTextConfig(undefined))
     assert.equal(costRoute.strategy, 'cost_first')
-    assert.equal(costRoute.candidates[0], 'claude-opus-4-6@standard')
+    assert.equal(costRoute.candidates[0], 'gemini-3.8-flash@default')
 
-    const stabRoute = resolveTextRoute({ model: 'claude-opus-4-6', strategy: 'stability_first' }, parseTextConfig(undefined))
+    const stabRoute = resolveTextRoute({ model: 'gemini-3.8-flash', strategy: 'stability_first' }, parseTextConfig(undefined))
     assert.equal(stabRoute.strategy, 'stability_first')
-    assert.ok(stabRoute.candidates[0].includes('@claude-max-open'))
+    assert.equal(stabRoute.candidates[0], 'gemini-3.8-flash@default')
+
+    // 无分组的文本模型带分组意图必须 fail-closed，绝不回落到裸模型。
+    assert.throws(
+      () => resolveTextRoute({ model: 'claude-opus-4-6@claude-plus' }, parseTextConfig(undefined)),
+      { code: 'unknown-group' },
+    )
   })
 })
 

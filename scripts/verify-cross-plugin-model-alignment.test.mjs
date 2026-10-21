@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import {
-  verifyCrossPluginModelAlignment,
   formatCrossPluginImpactNotice,
+  MANIFEST_URL,
+  verifyCrossPluginModelAlignment,
 } from './verify-cross-plugin-model-alignment.mjs';
 import {
   loadCatalogDefaults,
@@ -18,17 +20,13 @@ test('baseline repository contracts pass cross-plugin model alignment verificati
   assert.equal(report.ok, true, JSON.stringify(report.issues));
   assert.equal(report.exitCode, 0);
   assert.equal(report.issues.length, 0);
-  // #2256: index-tts joins the canvas audio whitelist
-  // #2801: gemini-3.8-flash-tts joins the canvas audio whitelist
-  // #3148: seedream-5-0-pro joins the canvas image whitelist
-  // #3152: seedance-2-0-fast / seedance-2-0-mini join the canvas video whitelist
-  // #3167: google-vids-omni joins the canvas video whitelist
-  // #3209: Google Vids 下线，该模型移出画布视频白名单 → 15−1
-  assert.equal(report.alignment.whitelistModelsChecked, 14);
+  // 2026-10-21 网关对账 #3516：画布白名单收敛为 8 款已上架型号
+  // （文本 1 + 图片 2 + 视频 4 + 音频 1；seedance-2-5 / seedance-2-0 各计一次）。
+  assert.equal(report.alignment.whitelistModelsChecked, 8);
   assert.equal(report.alignment.defaultModelsChecked, 4);
   assert.ok(report.alignment.aspectRatiosChecked >= 8);
-  // #1789: the capability seam behind audio transcription admits the two ASR contracts.
-  assert.equal(report.alignment.capabilityModelsChecked, 2);
+  // #1789 / #3516：能力 seam 现在只有 whisper-1 以 listed speech_to_text 进入画布。
+  assert.equal(report.alignment.capabilityModelsChecked, 1);
 });
 
 test('fails when a capability-seam model is not canonical in hub dispositions', () => {
@@ -60,14 +58,14 @@ test('fails when a capability tool declares a seam no admission rule consumes', 
 
 test('fails when a canvas default model is unlisted in hub specs', () => {
   const policy = structuredClone(CANVAS_GENERATION_POLICY);
-  // Set defaultModelId to unlisted model suno
-  policy.audio.defaultModelId = 'suno';
+  // #3516 后音频白名单只剩 suno；seed-audio-1.0 仍是 canonical 但无 listed 音频操作。
+  policy.audio.defaultModelId = 'seed-audio-1.0';
 
   const report = verifyCrossPluginModelAlignment({ policy });
   assert.equal(report.ok, false);
   assert.equal(report.exitCode, 1);
   assert.ok(
-    report.issues.some((i) => i.code === 'cross_plugin_default_model_unlisted' && i.modelId === 'suno'),
+    report.issues.some((i) => i.code === 'cross_plugin_default_model_unlisted' && i.modelId === 'seed-audio-1.0'),
     JSON.stringify(report.issues),
   );
 });
@@ -76,8 +74,12 @@ test('fails when a canvas whitelist model is unlisted without manifest exemption
   const policy = structuredClone(CANVAS_GENERATION_POLICY);
   // Add canonical seed-audio-1.0 to image allowedModelIds (not listed for image modality)
   policy.image.allowedModelIds = [...policy.image.allowedModelIds, 'seed-audio-1.0'];
+  // #3516: seed-audio-1.0 默认带 requiredInAuto: false 的未上架豁免；撤销该豁免后，
+  // 白名单里这个无 listed 操作的型号必须被门禁拒绝。
+  const manifest = JSON.parse(readFileSync(MANIFEST_URL, 'utf8'));
+  manifest.models.find((row) => row.productId === 'seed-audio-1.0').requiredInAuto = true;
 
-  const report = verifyCrossPluginModelAlignment({ policy });
+  const report = verifyCrossPluginModelAlignment({ policy, manifest });
   assert.equal(report.ok, false);
   assert.equal(report.exitCode, 1);
   assert.ok(

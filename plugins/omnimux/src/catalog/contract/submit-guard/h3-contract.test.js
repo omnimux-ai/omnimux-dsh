@@ -6,16 +6,18 @@ import { pollOpenAiMediaTask } from '../../../media/protocols/openai-media.js'
 
 // #1751: the `minimax-h3-max` / `minimax-h3-max-turbo` SKUs left the contract universe;
 // `minimax-h3` is the single remaining H3 model, so the honest-limits checks read it directly.
+// 2026-10-21 网关对账 #3516：minimax-h3 上游渠道停用 → 仅登记不上架；契约与映射逻辑仍在，
+// 故这些合同断言以 requireListed:false（unlisted 放行）保持覆盖，listing 依赖路径由 coverage 测试锁定。
 test('minimax-h3 exposes honest resolution and prompt limits', () => {
   const model = 'minimax-h3'
-  const plan = guardSubmit({ model, operation: 'text_to_video', prompt: 'a'.repeat(7000), resolution: '768P', duration: 5 }, { seam: 'videoGenerate' })
+  const plan = guardSubmit({ model, operation: 'text_to_video', prompt: 'a'.repeat(7000), resolution: '768P', duration: 5 }, { seam: 'videoGenerate', requireListed: false })
   assert.equal(plan.ok, true, JSON.stringify(plan))
   assert.equal(plan.vendorPayload.resolution, '768P')
   assert.equal(plan.model.parameters.prompt.maxLength, 7000)
-  assert.equal(guardSubmit({ model, operation: 'text_to_video', prompt: 'a'.repeat(7001), duration: 5 }, { seam: 'videoGenerate' }).ok, false)
+  assert.equal(guardSubmit({ model, operation: 'text_to_video', prompt: 'a'.repeat(7001), duration: 5 }, { seam: 'videoGenerate', requireListed: false }).ok, false)
   // resolution values are case-sensitive: only the published 768P spelling is admitted
-  assert.equal(guardSubmit({ model, operation: 'text_to_video', prompt: 'fixture', resolution: '768p', duration: 5 }, { seam: 'videoGenerate' }).ok, false)
-  const legacy = guardSubmit({ model, operation: 'text_to_video', prompt: 'fixture', resolution: '720p', duration: 5 }, { seam: 'videoGenerate' })
+  assert.equal(guardSubmit({ model, operation: 'text_to_video', prompt: 'fixture', resolution: '768p', duration: 5 }, { seam: 'videoGenerate', requireListed: false }).ok, false)
+  const legacy = guardSubmit({ model, operation: 'text_to_video', prompt: 'fixture', resolution: '720p', duration: 5 }, { seam: 'videoGenerate', requireListed: false })
   assert.equal(legacy.ok, false)
   assert.match(legacy.message, /重新选择 768p/)
 })
@@ -27,7 +29,7 @@ test('Hub reference payload preserves all selected media in order', () => {
     { type: 'video', role: 'reference', slot: 'reference_videos', pathOrUrl: 'https://example.invalid/2.mp4', mime: 'video/mp4', durationSec: 3 },
     { type: 'video', role: 'reference', slot: 'reference_videos', pathOrUrl: 'https://example.invalid/1.mp4', mime: 'video/mp4', durationSec: 3 },
   ]
-  const plan = guardSubmit({ model: 'minimax-h3', operation: 'video_multi_ref', prompt: 'fixture', references: references.map(r => ({ ...r, sizeBytes: 1000 })), resolution: '768P', duration: 5 }, { seam: 'videoGenerate' })
+  const plan = guardSubmit({ model: 'minimax-h3', operation: 'video_multi_ref', prompt: 'fixture', references: references.map(r => ({ ...r, sizeBytes: 1000 })), resolution: '768P', duration: 5 }, { seam: 'videoGenerate', requireListed: false })
   assert.equal(plan.ok, true, JSON.stringify(plan))
   const body = mapOmnimuxInput('video', { prompt: 'fixture', guardPlan: plan })
   assert.deepEqual(body.image_urls, references.slice(0, 2).map(r => r.pathOrUrl))

@@ -13,7 +13,10 @@ describe('media route', () => {
     assert.equal(route.protocol, 'openai-media')
     assert.equal(route.baseUrl, 'https://api.omnimux.ai/v1')
     assert.equal(route.modelId, 'seedance-2-5')
-    assert.deepEqual(route.candidates, ['seedance-2-5', 'seedance-2.5'])
+    // 2026-10-21 网关对账 #3516：seedance-2-5 的 480p 分组带 default:true，
+    // 空意图请求自动钉住该默认线路（不再返回裸候选）。
+    assert.equal(route.group, 'seedance-2-5-480p')
+    assert.deepEqual(route.candidates, ['seedance-2-5@seedance-2-5-480p'])
     assert.equal(route.apiKey, '')
     assert.equal(route.authMode, 'auto')
   })
@@ -300,13 +303,24 @@ describe('resolveMediaAuth (dual-track auth)', () => {
 
   it('resolves channel candidates by cost_first and stability_first strategy', () => {
     const media = parseMediaConfig(undefined)
-    const costRoute = resolveMediaRoute('video', { model: 'seedance-2-0', strategy: 'cost_first' }, media)
+    // #3516：seedance-2-5 是现役唯一多线路模型：480p (21 积分) / 720p (29 积分)。
+    const costRoute = resolveMediaRoute('video', { model: 'seedance-2-5', strategy: 'cost_first' }, media)
     assert.equal(costRoute.strategy, 'cost_first')
-    assert.ok(costRoute.candidates[0].includes('@cheap'))
+    assert.deepEqual(costRoute.candidates, [
+      'seedance-2-5@seedance-2-5-480p',
+      'seedance-2-5@seedance-2-5-720p',
+    ])
+    assert.equal(costRoute.candidates[0], 'seedance-2-5@seedance-2-5-480p')
 
-    const stabRoute = resolveMediaRoute('video', { model: 'seedance-2-0', strategy: 'stability_first' }, media)
+    const stabRoute = resolveMediaRoute('video', { model: 'seedance-2-5', strategy: 'stability_first' }, media)
     assert.equal(stabRoute.strategy, 'stability_first')
-    assert.ok(stabRoute.candidates[0].includes('@seedance-2-0-task-pro') || stabRoute.candidates[0].includes('@seedance-standard'))
+    // 两档 24h 稳定性同为 100%，排序由平均等待时间决定（480p 60s < 720p 70s）。
+    assert.equal(stabRoute.candidates[0], 'seedance-2-5@seedance-2-5-480p')
+    // 只剩单条线路的 seedance-2-0 在任何策略下都只有 default 一条。
+    assert.deepEqual(
+      resolveMediaRoute('video', { model: 'seedance-2-0', strategy: 'cost_first' }, media).candidates,
+      ['seedance-2-0@default'],
+    )
   })
 
   it('resolves explicit group from model@group or request.group', () => {
@@ -316,17 +330,28 @@ describe('resolveMediaAuth (dual-track auth)', () => {
     assert.equal(inlineRoute.group, 'standard')
     assert.equal(inlineRoute.candidates[0], 'seedance-2-0@default')
 
-    const fieldRoute = resolveMediaRoute('video', { model: 'seedance-2-0', group: 'pro' }, media)
-    assert.equal(fieldRoute.group, 'pro')
-    assert.equal(fieldRoute.candidates[0], 'seedance-2-0@seedance-2-0-task-pro')
+    const fieldRoute = resolveMediaRoute('video', { model: 'seedance-2-0', group: 'standard' }, media)
+    assert.equal(fieldRoute.group, 'standard')
+    assert.equal(fieldRoute.candidates[0], 'seedance-2-0@default')
+    // #3516：旧 pro 分组已随上游对账退场，显式点名必须 fail-closed。
+    assert.throws(
+      () => resolveMediaRoute('video', { model: 'seedance-2-0', group: 'pro' }, media),
+      (error) => error instanceof OmnimuxError && error.code === 'unknown-group' && /pro/.test(error.message),
+    )
   })
 
-  it('reports no strategy on a legacy request that never asked for one', () => {
+  it('reports no strategy only when no default line can be auto-pinned', () => {
     const media = parseMediaConfig(undefined)
     const legacy = resolveMediaRoute('video', { model: 'seedance-2-0' }, media)
-    assert.equal(legacy.strategy, undefined)
+    // #3516：seedance-2-0 声明 default 分组 → 空意图自动钉住默认线路，策略记为 auto。
+    assert.equal(legacy.strategy, 'auto')
     assert.deepEqual(legacy.unresolvedGroups, [])
-    assert.ok(legacy.candidates.every((id) => !id.includes('@')))
+    assert.deepEqual(legacy.candidates, ['seedance-2-0@default'])
+    // 无 default 分组、无分组表的型号保持未设置策略。
+    const bare = resolveMediaRoute('image', { model: 'nano-banana-2' }, media)
+    assert.equal(bare.strategy, undefined)
+    assert.deepEqual(bare.unresolvedGroups, [])
+    assert.ok(bare.candidates.every((id) => !id.includes('@')))
   })
 
   it('refuses a routing request whose pool matches no configured channel', () => {
@@ -353,16 +378,22 @@ describe('resolveMediaAuth (dual-track auth)', () => {
 
   it('auto-pins the default line when a model declares one and the caller gave no intent', () => {
     const media = parseMediaConfig(undefined)
+    const imageRoute = resolveMediaRoute('image', { model: 'gpt-image-2.5' }, media)
+    // 默认分组的 wireGroup 是 `default`（分组 id 为 standard）。
+    assert.equal(imageRoute.group, 'default')
+    // Pool is locked to the single default line so it never fails over into a different price tier.
+    assert.deepEqual(imageRoute.candidates, ['gpt-image-2.5@default'])
+
+    // 显式选择非默认线路仍只锁定该线路。
+    const economyRoute = resolveMediaRoute('image', { model: 'gpt-image-2.5', group: 'economy' }, media)
+    assert.equal(economyRoute.group, 'economy')
+    assert.deepEqual(economyRoute.candidates, ['gpt-image-2.5@gpt-image-2.5-economy'])
+
+    // #3516：flare / sunburst 的分组表已移除（仅登记不上架），空意图保留裸候选而不钉线路。
     const flareRoute = resolveMediaRoute('image', { model: 'gpt-image-2.5-flare' }, media)
     assert.equal(flareRoute.modelId, 'gpt-image-2.5-flare')
-    assert.equal(flareRoute.group, 'gpt-image-2.5-flare-std')
-    // Pool is locked to the single default line so it never fails over into a different price tier.
-    assert.deepEqual(flareRoute.candidates, ['gpt-image-2.5-flare@gpt-image-2.5-flare-std'])
-
-    const sunburstRoute = resolveMediaRoute('image', { model: 'gpt-image-2.5-sunburst' }, media)
-    assert.equal(sunburstRoute.modelId, 'gpt-image-2.5-sunburst')
-    assert.equal(sunburstRoute.group, 'gpt-image-2.5-sunburst-std')
-    assert.deepEqual(sunburstRoute.candidates, ['gpt-image-2.5-sunburst@gpt-image-2.5-sunburst-std'])
+    assert.equal(flareRoute.group, undefined)
+    assert.deepEqual(flareRoute.candidates, ['gpt-image-2.5-flare'])
   })
 
   it('rejects an unregistered explicit line and honors a registered default override', () => {
@@ -371,9 +402,15 @@ describe('resolveMediaAuth (dual-track auth)', () => {
       () => resolveMediaRoute('image', { model: 'gpt-image-2.5-flare', group: 'pro' }, media, {}),
       (error) => error instanceof OmnimuxError && error.code === 'unknown-group',
     )
-    const explicit = resolveMediaRoute('image', { model: 'gpt-image-2.5', group: 'pro' }, media, {})
-    assert.equal(explicit.group, 'pro')
-    assert.deepEqual(explicit.candidates, ['gpt-image-2.5@gpt-image-2.5-pro'])
+    // #3516：旧 pro 线路已退场，显式点名同样 fail-closed。
+    assert.throws(
+      () => resolveMediaRoute('image', { model: 'gpt-image-2.5', group: 'pro' }, media, {}),
+      (error) => error instanceof OmnimuxError && error.code === 'unknown-group',
+    )
+    // 已登记的 economy 线路可被显式选择。
+    const explicit = resolveMediaRoute('image', { model: 'gpt-image-2.5', group: 'economy' }, media, {})
+    assert.equal(explicit.group, 'economy')
+    assert.deepEqual(explicit.candidates, ['gpt-image-2.5@gpt-image-2.5-economy'])
   })
 
   it('models without a pinned default line retain legacy bare candidates under empty intent', () => {

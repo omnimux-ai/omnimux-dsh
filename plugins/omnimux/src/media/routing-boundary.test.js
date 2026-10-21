@@ -15,11 +15,14 @@ describe('routing request boundaries', () => {
     const media = parseMediaConfig()
     const text = parseTextConfig()
     assert.throws(() => resolveMediaRoute('video', { model: 'seedance-2-0@cheap', group: 'standard' }, media, {}), { code: 'unknown-group' })
-    assert.throws(() => resolveTextRoute({ model: 'claude-opus-4-6@claude-plus', group: 'standard' }, text, {}), { code: 'unknown-group' })
+    // #3516：claude 的文本渠道分组已随渠道停用退场；文本路由用现役 gemini-3.8-flash 分组验证冲突。
+    assert.throws(() => resolveTextRoute({ model: 'gemini-3.8-flash@standard', group: 'unknown-text-line' }, text, {}), { code: 'unknown-group' })
     assert.deepEqual(resolveMediaRoute('video', { model: 'seedance-2-0@standard', group: 'default' }, media, {}).candidates, ['seedance-2-0@default'])
-    assert.deepEqual(resolveMediaRoute('video', { model: 'minimax-h3@turbo', group: 'default' }, media, {}).candidates, ['minimax-h3-turbo@default'])
-    assert.throws(() => resolveMediaRoute('video', { model: 'minimax-h3@turbo', group: 'standard' }, media, {}), { code: 'unknown-group' })
-    assert.deepEqual(resolveTextRoute({ model: 'claude-opus-4-6@standard', group: 'STANDARD' }, text, {}).candidates, ['claude-opus-4-6@standard'])
+    // #3516：minimax-h3 专线整体退场；现役多线路模型 seedance-2-5 上同一线路的 id/wireGroup 写法可互换。
+    assert.deepEqual(resolveMediaRoute('video', { model: 'seedance-2-5@480p', group: 'seedance-2-5-480p' }, media, {}).candidates, ['seedance-2-5@seedance-2-5-480p'])
+    assert.throws(() => resolveMediaRoute('video', { model: 'seedance-2-5@480p', group: '720p' }, media, {}), { code: 'unknown-group' })
+    assert.throws(() => resolveMediaRoute('video', { model: 'minimax-h3@turbo', group: 'default' }, media, {}), { code: 'unknown-group' })
+    assert.deepEqual(resolveTextRoute({ model: 'gemini-3.8-flash@standard', group: 'STANDARD' }, text, {}).candidates, ['gemini-3.8-flash@default'])
   })
 
   it('rejects disabled, unknown, excluded and malformed pools without widening channel plans', () => {
@@ -43,10 +46,10 @@ describe('routing request boundaries', () => {
   it('locks a single explicit line and preserves allowed strategy, wire models and verified BYOK', () => {
     const media = parseMediaConfig()
     const text = parseTextConfig()
-    assert.deepEqual(resolveMediaRoute('video', { model: 'seedance-2-0', group: 'cheap', strategy: 'stability_first' }, media, {}).candidates, ['seedance-2-0@cheap'])
-    assert.deepEqual(resolveTextRoute({ model: 'claude-opus-4-6', group: 'claude-plus', strategy: 'cost_first' }, text, {}).candidates, ['claude-opus-4-6@claude-plus'])
-    assert.deepEqual(resolveChannelPlan('seedance-2-0', { group: 'cheap', allowedGroups: ['cheap', 'standard', 'preferred'], strategy: 'cost_first' }).candidates, ['seedance-2-0@cheap', 'seedance-2-0@default', 'seedance-2-0@seedance-standard'])
-    assert.deepEqual(resolveChannelPlan('minimax-h3', { group: 'turbo', allowedGroups: ['turbo', 'standard'], strategy: 'cost_first' }).candidates, ['minimax-h3-turbo@default', 'minimax-h3@default'])
+    assert.deepEqual(resolveMediaRoute('video', { model: 'seedance-2-5', group: '480p', strategy: 'stability_first' }, media, {}).candidates, ['seedance-2-5@seedance-2-5-480p'])
+    assert.deepEqual(resolveTextRoute({ model: 'gemini-3.8-flash', group: 'standard', strategy: 'cost_first' }, text, {}).candidates, ['gemini-3.8-flash@default'])
+    assert.deepEqual(resolveChannelPlan('seedance-2-5', { group: '480p', allowedGroups: ['480p', '720p'], strategy: 'cost_first' }).candidates, ['seedance-2-5@seedance-2-5-480p', 'seedance-2-5@seedance-2-5-720p'])
+    assert.deepEqual(resolveChannelPlan('seedance-2-5', { group: '720p', allowedGroups: ['480p', '720p'], strategy: 'cost_first' }).candidates, ['seedance-2-5@seedance-2-5-720p', 'seedance-2-5@seedance-2-5-480p'])
     assert.deepEqual(resolveChannelPlan('seedance-2-0', { group: 'BYOK-FAL', runtimeSettings: { runtimeKeyVerified: true, runtimeMediaProvider: 'fal', runtimeMediaVideo: true } }).candidates, ['seedance-2-0@byok-fal'])
   })
 

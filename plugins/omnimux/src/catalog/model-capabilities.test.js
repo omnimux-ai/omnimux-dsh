@@ -67,25 +67,33 @@ test('H2: 处置表 83 行 + implementation-ready 集合与处置一致', () => 
     }
   }
 
-  assert.equal(index.listedOperations.length, 37); // #3209 google-vids-omni 下线 −4 → 37（#3152 为 37）
-  assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
+  // 2026-10-21 网关对账 #3516：上架面收敛为 9 模型 / 24 operation。
+  assert.equal(index.listedOperations.length, 24);
+  assert.equal(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'), false);
+  // #3516：minimax-h3 上游渠道停用，全部 operation 仅登记不上架；seedance 系列保持上架。
   for (const [modelId, operations] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
+    const delisted = modelId === 'minimax-h3';
     for (const operation of operations) {
-      assert.ok(index.listedOperations.includes(`${modelId}#${operation}`), `${modelId}#${operation}`);
+      const key = `${modelId}#${operation}`;
+      // 契约行必须仍在（unlisted ≠ deleted），只改变上架状态。
+      assert.ok(index.get(modelId).operations.some((op) => op.id === operation), key);
+      assert.equal(index.listedOperations.includes(key), !delisted, key);
     }
   }
   // gpt-image-2.5 的 multi_reference 已于 2026-10-05 真机出图验证通过并上架（#3138）
   assert.ok(index.listedOperations.includes('gpt-image-2.5#multi_reference'));
   assert.ok(index.listedOperations.includes('gpt-image-2.5#text_to_image'));
-  // flare 与 sunburst 在售开放
-  assert.ok(index.listedOperations.includes('gpt-image-2.5-flare#text_to_image'));
-  assert.ok(index.listedOperations.includes('gpt-image-2.5-sunburst#text_to_image'));
-  assert.ok(index.listedOperations.includes('seed-audio-1.0#text_to_speech'));
-  // Existing draft audio models remain unlisted.
-  assert.ok(!index.listedOperations.some((key) => key.startsWith('suno#')));
-  assert.ok(!index.listedOperations.some((key) => key.startsWith('whisper-1#')));
+  // #3516：flare 与 sunburst 上游渠道停用 → 转为仅登记不上架。
+  assert.equal(index.listedOperations.includes('gpt-image-2.5-flare#text_to_image'), false);
+  // 对照：契约行的 research/implementation 仍可查询（unlisted ≠ deleted）。
+  assert.equal(index.get('gpt-image-2.5-flare').operations[0].listed, false);
+  assert.equal(index.listedOperations.includes('gpt-image-2.5-sunburst#text_to_image'), false);
+  // #3516：TTS 渠道停用；语音识别改由 whisper-1 上架，suno 上架音乐生成。
+  assert.equal(index.listedOperations.includes('seed-audio-1.0#text_to_speech'), false);
+  assert.ok(index.listedOperations.includes('whisper-1#speech_to_text'));
+  assert.ok(index.listedOperations.includes('suno#text_to_music'));
   assert.ok(!index.listedOperations.some((key) => key.startsWith('kling-avatar#')));
-  assert.ok(index.listedOperations.includes('minimax-h3#end_frame'));
+  assert.equal(index.listedOperations.includes('minimax-h3#end_frame'), false);
   assert.ok(!index.listedOperations.some((key) => key.startsWith('minimax-h3-endframe#')));
 
   const report = verifyContracts({ strict: true });

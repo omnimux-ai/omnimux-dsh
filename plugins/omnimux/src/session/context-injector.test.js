@@ -39,8 +39,9 @@ describe('session model context injector', () => {
     assert.match(text, /Seedance 2\.5/)
     assert.match(text, /seedance-2-5/)
     assert.match(text, /计费标准：按秒计费/)
-    assert.match(text, /5 秒约 16 积分/)
-    assert.match(text, /30 秒约 94 积分/)
+    // 2026-10-21 网关对账 #3516：seedance-2-5 基准价 0.8 USD/s → 5s=40 / 30s=240 积分。
+    assert.match(text, /5 秒约 40 积分/)
+    assert.match(text, /30 秒约 240 积分/)
     assert.equal(decision.messages[0].source.plugin, 'omnimux')
   })
 

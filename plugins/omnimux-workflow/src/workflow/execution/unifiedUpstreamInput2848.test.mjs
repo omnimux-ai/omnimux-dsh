@@ -9,12 +9,14 @@ import { executeOmnimuxText } from '../../../../omnimux/src/text/execute.js';
 import { createOmnimuxSeamClient } from '../seam/omnimuxGateway.ts';
 import { createMaterialGatewayExecutor } from './materialGatewayExecutor.ts';
 import { deriveSlotLayout } from '../../shared/graph/feedSlot/deriveSlotLayout.ts';
+import { findExecutionReadinessFailure } from '../../shared/validation/executionReadiness.ts';
 
+// 2026-10-21 网关对账 #3516：audio 只剩 Suno text_to_music（单一 prompt 槽，无双角色正文），
+// 单独用下面的专用用例覆盖；其余三类仍走同一条上游正文装配链路。
 const rows = [
   ['text', 'gemini-3.8-flash', 'chat'],
   ['image', 'gpt-image-2.5', 'text_to_image'],
   ['video', 'seedance-2-5', 'text_to_video'],
-  ['audio', 'seed-audio-1.0', 'text_to_speech'],
 ];
 const env = { OMNIMUX_API_KEY: 'sk-fixture-offline-only', OMNIMUX_BASE_URL: 'https://fixture.invalid/v1' };
 
@@ -153,4 +155,85 @@ test('R2 production Add resumes saved intent once and OCR1/OCR20 invalid identit
   }
   assert.deepEqual(graph, before);
   console.log('R2_BINDING_IDENTITY_TRANSPORT_CAPTURE', JSON.stringify({ saved, active: next.data.slotBindings.prompt, captures: bodies, invalidSubmissions: 0 }));
+});
+
+// 2026-10-21 网关对账 #3516：音频上架模型只剩 Suno text_to_music（单一 prompt 槽）。
+// 契约不能分别表达“上游正文”和“本地要求”，因此生产链路只允许单一来源并显式 fail-closed。
+test('production audio (suno) sends only the selected upstream text and restores the local-only prompt', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'omnimux-2848-audio-'));
+  const previousHome = process.env.DSH_HOME;
+  process.env.DSH_HOME = dir;
+  t.after(() => {
+    if (previousHome === undefined) delete process.env.DSH_HOME;
+    else process.env.DSH_HOME = previousHome;
+    rmSync(dir, { recursive: true, force: true });
+  });
+  const catalog = buildModelCatalog({ env: {} });
+  const model = catalog.models.find(row => row.id === 'suno');
+  const op = model.operations.find(row => row.id === 'text_to_music');
+  assert.equal(op.listed, true);
+  const textSlot = op.inputs.find(slot => slot.type === 'text' && slot.role === 'prompt');
+  assert.ok(textSlot);
+  // Suno 的音频合同只有单一 prompt 槽，没有双角色 composition。
+  assert.equal(textSlot.valueSources, undefined);
+  assert.equal(textSlot.composition, undefined);
+  // 文本经由节点字段消费；音频合同没有可渲染的槽位面板，因此没有 addButton。
+  const layout = deriveSlotLayout(catalog, 'suno', 'text_to_music');
+  assert.equal(layout.acceptsText, true);
+  assert.equal(layout.addButton, false);
+
+  const bodies = [];
+  const fetcher = async (url, init) => {
+    assert.equal(init.method, 'POST');
+    bodies.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response(Buffer.from([0x49, 0x44, 0x33, 0, 1]), { headers: { 'content-type': 'audio/mpeg' } });
+  };
+  const seams = {
+    modelCatalog: { list: () => catalog },
+    audioGenerate: { execute: req => executeOmnimuxMedia('audio', Object.assign({}, req, { env, fetcher })) },
+  };
+  const getSeam = name => {
+    if (name === 'modelCatalog') return seams.modelCatalog;
+    if (name === 'audioGenerate') return seams.audioGenerate;
+    return undefined;
+  };
+  const gateway = createOmnimuxSeamClient({ getSeam, env: {} });
+  const executor = createMaterialGatewayExecutor({ gateway });
+  const target = { id: 'target', type: 'material', data: { materialType: 'audio', nodeKind: 'generate',
+    inputBindingVersion: 1, prompt: '', params: { model: 'suno', operation: 'text_to_music' } } };
+  const ctx = { mediaDir: dir, signal: new AbortController().signal,
+    upstreamOutputs: new Map([['a', { text: '已选正文。' }], ['b', { text: '未选供给。' }]]),
+    upstreamBindings: [{ edgeId: 'ea', sourceNodeId: 'a', output: { text: '已选正文。' } }] };
+
+  // 单槽音频提交在真实 transport 捕获后即止：离线 fixture 返回 MP3 字节，openai-compatible
+  // 适配器解析 JSON 会失败，这里只验收“提交了什么”，不宣称真实音频链路成功。
+  const capture = async () => {
+    await assert.rejects(executor.execute(target, ctx), /ADAPTER_FAILED/);
+  };
+
+  // 1. 只有 executor 收到的已选上游正文进入单槽音频 prompt；未选供给不得泄漏。
+  await capture();
+  assert.equal(bodies.length, 1);
+  assert.equal(bodies[0].body.prompt, '已选正文。');
+  assert.ok(!JSON.stringify(bodies).includes('未选供给。'));
+
+  // 2. 本地要求与上游正文同时存在时，单槽音频合同在画布侧必须 fail closed，且不新增提交。
+  target.data.prompt = '本地正文。';
+  const dualSource = { id: 'target', type: 'material', data: { materialType: 'audio',
+    selectedTool: 'text-to-music', inputBindingVersion: 1, prompt: '本地正文。',
+    params: { model: 'suno', operation: 'text_to_music' } } };
+  const source = { id: 'a', type: 'material', data: { nodeKind: 'import', materialType: 'text', content: '已选正文。' } };
+  const readiness = findExecutionReadinessFailure([dualSource], catalog, {
+    nodes: [source, dualSource], edges: [{ id: 'ea', source: 'a', target: 'target' }],
+  });
+  assert.equal(readiness?.reasonCode, 'text_role_required',
+    'suno 单槽音频合同不能分别表达上游正文和本地要求');
+  assert.equal(bodies.length, 1);
+
+  // 3. 断开上游后恢复本地正文，只发送一次本地全文。
+  ctx.upstreamBindings = [];
+  await capture();
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[1].body.prompt, '本地正文。');
+  assert.ok(bodies.every(row => row.url.startsWith('https://fixture.invalid/')));
 });

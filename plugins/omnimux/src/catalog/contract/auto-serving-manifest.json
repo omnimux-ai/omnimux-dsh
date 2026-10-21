@@ -20,9 +20,9 @@
       "gatewayIds": [
         "claude-sonnet-4-6"
       ],
-      "requiredInAuto": true,
-      "canvasExcluded": false,
-      "note": "2026-10-05: 生产网关实测通过，chat/vision_chat 上架为 listed"
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。"
     },
     {
       "productId": "gemini-3.8-flash",
@@ -72,7 +72,9 @@
       "gatewayIds": [
         "gpt-image-2.5-flare"
       ],
-      "requiredInAuto": true
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。"
     },
     {
       "productId": "gpt-image-2.5-sunburst",
@@ -81,7 +83,9 @@
       "gatewayIds": [
         "gpt-image-2.5-sunburst"
       ],
-      "requiredInAuto": true
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。"
     },
     {
       "productId": "seedream-5-0-pro",
@@ -178,7 +182,9 @@
         "MiniMax-H3"
       ],
       "upstreamWireId": "MiniMax-H3",
-      "requiredInAuto": true
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。"
     },
     {
       "productId": "grok-imagine-video-1-5",
@@ -203,7 +209,9 @@
         "seed-audio",
         "tts"
       ],
-      "requiredInAuto": true
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。"
     },
     {
       "productId": "indextts-2",
@@ -212,8 +220,9 @@
       "gatewayIds": [
         "indextts-2"
       ],
-      "requiredInAuto": true,
-      "note": "2026-10-04 #3063：上游将声音克隆从 index-tts 升级为 indextts-2 并下线旧名；新提交契约 POST /v1/tasks/autodl，真实执行证据待补。"
+      "requiredInAuto": false,
+      "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。",
+      "canvasExcluded": true
     },
     {
       "productId": "gemini-3.8-flash-tts",
@@ -222,8 +231,9 @@
       "gatewayIds": [
         "gemini-3.8-flash-tts"
       ],
-      "requiredInAuto": true,
-      "note": "2026-09-29 #2801：本地 CLI 驱动的 Gemini 3.8 Flash TTS（基于 opencli / ego-browser）。"
+      "requiredInAuto": false,
+      "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。",
+      "canvasExcluded": true
     },
     {
       "productId": "suno",
@@ -232,9 +242,8 @@
       "gatewayIds": [
         "suno"
       ],
-      "requiredInAuto": false,
-      "note": "No listed audio operation; registration is not a serving claim.",
-      "canvasExcluded": true
+      "requiredInAuto": true,
+      "note": "2026-10-21 网关对账 #3516：渠道 32 default 现役；text_to_music 上架"
     },
     {
       "productId": "gpt-4o-mini-tts",
@@ -257,6 +266,17 @@
       "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-09-14 #1789：独立在售的语音识别型号（官方直连-火山 渠道 43，upstream_id 与公开 ID 相同），以独立 canonical 登记；speech_to_text 产出 text，不属于任何画布产出桶，故 canvasExcluded。登记只声明网关注册名，不改变默认语音识别型号（仍为 doubao-asr-bigmodel，见 catalog-defaults.json）。"
+    },
+    {
+      "productId": "whisper-1",
+      "kind": "text",
+      "priority": "P1",
+      "gatewayIds": [
+        "whisper-1"
+      ],
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-10-21 网关对账 #3516：渠道 31 default 现役语音识别能力模型；经 speechToText seam 进入画布，不进入文本生成白名单"
     }
   ]
 }

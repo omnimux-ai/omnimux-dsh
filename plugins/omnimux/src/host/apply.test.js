@@ -76,8 +76,8 @@ describe('hub apply composition', () => {
     const catalog = provided.modelCatalog.list()
     assert.equal(catalog.source, 'omnimux')
     assert.ok(Array.isArray(catalog.text))
-    // Catalog includes the user-confirmed Gemini 3.8 mapping; #3086 Anthropic 品牌上新.
-    assert.equal(catalog.text.length, 2)
+    // #3516: claude-sonnet-4-6 上游渠道停用（仅登记不上架），文本桶只剩 Gemini 3.8。
+    assert.equal(catalog.text.length, 1)
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
   })
 

@@ -116,13 +116,15 @@ function withChannelGroups(t) {
   return groups
 }
 
+// 2026-10-21 网关对账 #3516：seedance-2-5 的两个分组（480p/720p）都不再声明 constraints，
+// 且 480p 已带 default:true —— 断言意图是「该字段单独变化时必须失效」，故直接赋值/翻转。
 for (const [field, mutate] of [
-  ['constraints', (group) => { group.constraints.parameters.duration.fixed = 20 }],
+  ['constraints', (group) => { group.constraints = { parameters: { duration: { fixed: 20 } } } }],
   ['enabled', (group) => { group.enabled = !group.enabled }],
   ['wireGroup', (group) => { group.wireGroup = 'fixture-wire-group' }],
   ['pricing', (group) => { group.pricing.pointsEstimate += 1 }],
   ['sla', (group) => { group.sla.avgWaitTimeSec += 1 }],
-  ['default', (group) => { group.default = true }],
+  ['default', (group) => { group.default = !group.default }],
 ]) {
   test(`buildModelCatalog invalidates when channelGroups ${field} alone changes`, (t) => {
     const groups = withChannelGroups(t)

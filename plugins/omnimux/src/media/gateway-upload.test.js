@@ -346,7 +346,8 @@ describe('gateway-upload: end-to-end media integration', () => {
     const result = await executeOmnimuxVideo({
       prompt: 'a running cat',
       dest: join(tmpdir(), `out-${Date.now()}.mp4`),
-      model: 'minimax-h3',
+      // #3516：minimax-h3 仅登记不上架；first_frame 由在架的 seedance-2-5 承载。
+      model: 'seedance-2-5',
       operation: 'first_frame',
       image: tmpImg,
       env: { OMNIMUX_API_KEY: 'sk-test-e2e' },

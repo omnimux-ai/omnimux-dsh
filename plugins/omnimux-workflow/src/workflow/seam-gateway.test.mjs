@@ -718,9 +718,12 @@ test('capabilities：hub 目录按画布白名单投影，不继承画布外默�
           { id: 'nanobanana-2', operations: [operation('text_to_image', 'image')] },
           { id: 'kling-o3', operations: [operation('text_to_video', 'video')] },
           { id: 'seedance-2-5', operations: [operation('text_to_video', 'video')] },
+          // 2026-10-21 网关对账 #3516：音频只剩 Suno 在售；旧语音合成模型登记但不再上架。
           { id: 'seed-audio-1.0', operations: [operation('text_to_speech', 'audio')] },
-          { id: 'gpt-4o-mini-tts', operations: [{ ...operation('text_to_speech', 'audio'), listed: false }] },
-          { id: 'suno', operations: [{ ...operation('text_to_music', 'audio'), listed: false }] },
+          { id: 'gpt-4o-mini-tts', operations: [
+            { id: 'text_to_speech', listed: false, output: { type: 'audio' }, inputs: [] },
+          ] },
+          { id: 'suno', operations: [operation('text_to_music', 'audio')] },
         ],
         defaults: {
           text: 'gemini-3.8-flash',
@@ -764,10 +767,10 @@ test('capabilities：hub 目录按画布白名单投影，不继承画布外默�
     assert.deepEqual(caps.body.text.map((r) => r.id), [
       'gemini-3.8-flash',
     ]);
-    assert.deepEqual(caps.body.audio.map((row) => row.id), ['seed-audio-1.0']);
-    assert.equal(caps.body.defaults.audio, 'seed-audio-1.0');
-    assert.equal(caps.body.audio.some((row) => row.id === 'suno'), false);
-    // 未上架的音频能力不能因 bucket 或默认项存在而被启用。
+    assert.deepEqual(caps.body.audio.map((row) => row.id), ['suno']);
+    assert.equal(caps.body.defaults.audio, 'suno');
+    // 白名单外的旧语音合成/克隆模型不得因 bucket 或默认项存在而被启用。
+    assert.equal(caps.body.audio.some((row) => row.id === 'seed-audio-1.0'), false);
     assert.equal(caps.body.audio.some((row) => row.id === 'gpt-4o-mini-tts'), false);
   } finally {
     h.dispose();

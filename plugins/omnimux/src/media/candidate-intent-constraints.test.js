@@ -41,9 +41,11 @@ async function isolated(run) {
 }
 
 function videoInput(home, requestKey) {
+  // 2026-10-21 网关对账 #3516：H3 分组整体系列退场；现役多线路模型是 seedance-2-5
+  //（480p 默认 / 720p），用它保留「候选池 + 约束 + failover」的通用断言。
   return {
-    model: 'minimax-h3@standard', operation: 'text_to_video', prompt: 'synthetic running horse',
-    allowedGroups: ['standard', 'task'], duration: 5, resolution: '2K',
+    model: 'seedance-2-5@480p', operation: 'text_to_video', prompt: 'synthetic running horse',
+    allowedGroups: ['480p', '720p'], duration: 5, resolution: '720p',
     dest: join(home, requestKey + '.mp4'), requestKey, wait: false,
     env: { OMNIMUX_API_KEY: 'sk-synthetic-candidate-fixture' },
     fetcher: async () => { throw new Error('Unexpected HTTP in the runtime fixture') },
@@ -69,7 +71,7 @@ function assertVideoCall(request, model, duration) {
   assert.equal(request.modelId, 'omnimux-video')
   assert.equal(request.input.model, model)
   assert.equal(request.input.duration, duration)
-  assert.equal(request.input.resolution, '2K')
+  assert.equal(request.input.resolution, '720p')
   assert.equal(request.metadata.wait, false)
 }
 
@@ -120,18 +122,18 @@ async function assertDirectRejected(home, body, code) {
   assert.equal(existsSync(body.dest), false)
 }
 
-test('3312: public H3 metadata and the legal first head admit text_to_video duration 5 resolution 2K without a bad operation fixture', async () => isolated(async (home) => {
-  const task = getModelChannelGroups('minimax-h3').find((group) => group.id === 'task')
-  assert.equal(task.enabled, true)
-  assert.equal(task.wireModel, 'minimax-h3-task')
-  assert.equal(task.wireGroup, 'default')
-  assert.deepEqual(task.constraints.parameters.duration, { fixed: 15 })
-  assert.ok(task.constraints.operations.includes('text_to_video'))
-  assert.deepEqual(resolveChannelPlan('minimax-h3@standard', { allowedGroups: ['standard', 'task'] }).candidates,
-    ['minimax-h3@default', 'minimax-h3-task@default'])
+test('3312: the delisted H3 series exposes no channel groups while the listed multi-line model resolves legal heads', async () => isolated(async (home) => {
+  // #3516：minimax-h3 的 7 条专线随上游渠道停用整体移除。
+  assert.deepEqual(getModelChannelGroups('minimax-h3'), [])
+  assert.deepEqual(resolveChannelPlan('minimax-h3@standard', { allowedGroups: ['standard', 'task'] }), {
+    candidates: [], unresolvedGroups: ['standard', 'task'],
+  })
+  // 现役多线路模型 seedance-2-5 的合法首行与候选池保持按约束解析。
+  assert.deepEqual(resolveChannelPlan('seedance-2-5@480p', { allowedGroups: ['480p', '720p'] }).candidates,
+    ['seedance-2-5@seedance-2-5-480p', 'seedance-2-5@seedance-2-5-720p'])
   const calls = []
   const input = videoInput(home, 'legal-first-head')
-  input.allowedGroups = ['standard']
+  input.allowedGroups = ['480p']
   input.runtime = { async execute(request) {
     calls.push(request)
     return { taskId: 'synthetic-first-head-task-3312', outputs: [] }
@@ -139,78 +141,86 @@ test('3312: public H3 metadata and the legal first head admit text_to_video dura
   const result = await executeOmnimuxMedia('video', input)
   assert.equal(result.mode, 'submitted')
   assert.equal(calls.length, 1)
-  assertVideoCall(calls[0], 'minimax-h3', 5)
-  assert.equal(getMediaTaskRecord(result.taskRef).wireModel, 'minimax-h3')
+  assertVideoCall(calls[0], 'seedance-2-5', 5)
+  assert.equal(getMediaTaskRecord(result.taskRef).wireModel, 'seedance-2-5')
+  assert.equal(getMediaTaskRecord(result.taskRef).group, 'seedance-2-5-480p')
 }))
 
-test('3312: H3 duration 5 refuses the allowed task tail fixed at 15 before a second runtime call rather than rewriting the user duration', async () => isolated(async (home) => {
+test('3312: an out-of-range duration is refused before any runtime call instead of being rewritten', async () => isolated(async (home) => {
   const calls = []
-  const input = videoInput(home, 'incompatible-task-tail')
+  const input = videoInput(home, 'incompatible-duration')
+  // seedance-2-5 的 duration 契约是 4–30 秒（allowAuto 允许 -1）；31 秒必须在 runtime 之前拒绝。
+  input.duration = 31
   input.runtime = capturedRuntime(calls)
   let rejection
   try { await executeOmnimuxMedia('video', input) } catch (error) { rejection = error }
-  assert.equal(calls.length, 1, 'an allowed line still must admit the original duration before runtime')
-  assertVideoCall(calls[0], 'minimax-h3', 5)
-  assert.ok(rejection, 'duration 5 cannot submit to the fixed-15 task line')
+  assert.equal(calls.length, 0, 'guard must refuse the illegal duration before runtime')
+  assert.ok(rejection, 'duration 31 cannot be submitted')
   assert.equal(rejection.code, 'omnimux-invalid-request')
-  assert.match(rejection.message, /duration|时长|15/)
-  assert.equal(input.duration, 5)
-  assert.equal(input.model, 'minimax-h3@standard')
+  assert.match(rejection.message, /duration|时长/)
+  assert.equal(input.duration, 31, 'the caller duration is never rewritten')
+  assert.equal(input.model, 'seedance-2-5@480p')
   assert.equal(existsSync(input.dest), false)
-  const record = findMediaTaskByRequestKey(input.requestKey)
-  assert.equal(record.status, 'failed')
-  assert.equal(record.upstreamTaskId, undefined)
+  assert.equal(findMediaTaskByRequestKey(input.requestKey), null)
 }))
 
-test('3312: an omitted duration cannot carry the head default of 5 into a fixed-15 task fallback', async () => isolated(async (home) => {
+test('3312: an omitted duration uses the documented head default and never mutates the caller request', async () => isolated(async (home) => {
   const calls = []
-  const input = videoInput(home, 'omitted-duration-task-tail')
+  const input = videoInput(home, 'omitted-duration-tail')
   delete input.duration
   input.runtime = capturedRuntime(calls)
-  await assert.rejects(() => executeOmnimuxMedia('video', input), { code: 'omnimux-invalid-request' })
-  assert.equal(calls.length, 1)
-  assertVideoCall(calls[0], 'minimax-h3', 5)
+  const result = await executeOmnimuxMedia('video', input)
+  // 首行失败后回落到兼容的 720p 行，两行都收到契约默认时长 5 秒。
+  assert.equal(result.mode, 'submitted')
+  assert.equal(calls.length, 2)
+  assertVideoCall(calls[0], 'seedance-2-5', 5)
+  assertVideoCall(calls[1], 'seedance-2-5', 5)
   assert.equal(Object.hasOwn(input, 'duration'), false)
 }))
 
-test('3312: H3 duration 15 keeps a legal task fallback successful with the original logical intent and accepted task record', async () => isolated(async (home) => {
+test('3312: a compatible duration keeps a legal failover successful with the original logical intent and accepted task record', async () => isolated(async (home) => {
   const calls = []
-  const input = videoInput(home, 'compatible-task-tail')
-  input.duration = 15
+  const input = videoInput(home, 'compatible-tail')
+  input.duration = 5
   input.runtime = capturedRuntime(calls)
   const result = await executeOmnimuxMedia('video', input)
   assert.equal(result.mode, 'submitted')
   assert.equal(result.taskId, 'synthetic-fallback-task-3312')
   assert.equal(calls.length, 2)
-  assertVideoCall(calls[0], 'minimax-h3', 15)
-  assertVideoCall(calls[1], 'minimax-h3-task', 15)
-  assert.equal(input.model, 'minimax-h3@standard')
+  assertVideoCall(calls[0], 'seedance-2-5', 5)
+  assertVideoCall(calls[1], 'seedance-2-5', 5)
+  assert.equal(input.model, 'seedance-2-5@480p')
   const record = getMediaTaskRecord(result.taskRef)
-  assert.equal(record.model, 'minimax-h3')
-  assert.equal(record.wireModel, 'minimax-h3-task')
-  assert.equal(record.group, 'default')
+  assert.equal(record.model, 'seedance-2-5')
+  assert.equal(record.wireModel, 'seedance-2-5')
+  assert.equal(record.group, 'seedance-2-5-720p')
   assert.equal(record.status, 'submitted')
   assert.equal(record.upstreamTaskId, result.taskId)
 }))
 
-test('3312: H3 duration 5 keeps another compatible video-fast tail usable instead of blanket refusing failover', async () => isolated(async (home) => {
+test('3312: a compatible failover keeps every user parameter intact on the second line', async () => isolated(async (home) => {
   const calls = []
   const input = videoInput(home, 'compatible-video-tail')
-  input.allowedGroups = ['standard', 'video_fast']
+  input.allowedGroups = ['480p', '720p']
   input.runtime = capturedRuntime(calls)
   const result = await executeOmnimuxMedia('video', input)
   assert.equal(result.mode, 'submitted')
   assert.equal(calls.length, 2)
-  assertVideoCall(calls[0], 'minimax-h3', 5)
-  assertVideoCall(calls[1], 'minimax-h3-video', 5)
-  assert.equal(getMediaTaskRecord(result.taskRef).wireModel, 'minimax-h3-video')
-  assert.equal(getMediaTaskRecord(result.taskRef).group, 'minimax-h3-video-fast')
+  const [first, second] = calls
+  assertVideoCall(first, 'seedance-2-5', 5)
+  assertVideoCall(second, 'seedance-2-5', 5)
+  // 持续时间 / 分辨率 / 提示词在换行后必须逐字保留。
+  for (const key of ['duration', 'resolution', 'size', 'prompt', 'operation']) {
+    assert.deepEqual(second.input[key], first.input[key], key)
+  }
+  assert.equal(getMediaTaskRecord(result.taskRef).wireModel, 'seedance-2-5')
+  assert.equal(getMediaTaskRecord(result.taskRef).group, 'seedance-2-5-720p')
 }))
 
-test('3312: legal H3 task fallback sends the exact bare wire model and group header with unchanged duration through synthetic HTTP', async () => isolated(async (home) => {
+test('3312: legal failover sends the exact bare wire model and per-line group header with unchanged duration through synthetic HTTP', async () => isolated(async (home) => {
   const posts = []
-  const input = videoInput(home, 'compatible-task-wire')
-  input.duration = 15
+  const input = videoInput(home, 'compatible-wire')
+  input.allowedGroups = ['480p', '720p']
   input.fetcher = async (url, init) => {
     assert.equal(String(url), 'https://api.omnimux.ai/v1/video/generations')
     assert.equal(init.method, 'POST')
@@ -225,21 +235,21 @@ test('3312: legal H3 task fallback sends the exact bare wire model and group hea
   const result = await executeOmnimuxMedia('video', input)
   assert.equal(result.mode, 'submitted')
   assert.equal(posts.length, 2)
-  assert.equal(posts[0].body.model, 'minimax-h3')
-  assert.equal(posts[1].body.model, 'minimax-h3-task')
-  assert.equal(posts[0].group, 'default')
-  assert.equal(posts[1].group, 'default')
-  assert.equal(posts[0].body.duration, 15)
-  assert.equal(posts[1].body.duration, 15)
-  assert.equal(posts[1].body.resolution, '2K')
-  assert.equal(getMediaTaskRecord(result.taskRef).wireModel, 'minimax-h3-task')
-  assert.equal(getMediaTaskRecord(result.taskRef).group, 'default')
+  // 模型 ID 保持裸产品 ID；只有分组头随候选切换。
+  assert.equal(posts[0].body.model, 'seedance-2-5')
+  assert.equal(posts[1].body.model, 'seedance-2-5')
+  assert.equal(posts[0].group, 'seedance-2-5-480p')
+  assert.equal(posts[1].group, 'seedance-2-5-720p')
+  assert.equal(posts[0].body.duration, 5)
+  assert.equal(posts[1].body.duration, 5)
+  assert.equal(posts[1].body.resolution, '720p')
+  assert.equal(getMediaTaskRecord(result.taskRef).wireModel, 'seedance-2-5')
+  assert.equal(getMediaTaskRecord(result.taskRef).group, 'seedance-2-5-720p')
 }))
 
-test('3312: an accepted H3 task followed by channel failure never submits a second candidate and keeps its original handle', async () => isolated(async (home) => {
+test('3312: an accepted task followed by channel failure never submits a second candidate and keeps its original handle', async () => isolated(async (home) => {
   const calls = []
   const input = videoInput(home, 'accepted-task-no-resubmit')
-  input.duration = 15
   input.runtime = { async execute(request) {
     calls.push(request)
     request.metadata.onSubmitted('synthetic-already-accepted-3312')
@@ -250,7 +260,7 @@ test('3312: an accepted H3 task followed by channel failure never submits a seco
   const record = findMediaTaskByRequestKey(input.requestKey)
   assert.equal(record.status, 'submitted')
   assert.equal(record.upstreamTaskId, 'synthetic-already-accepted-3312')
-  assert.equal(record.wireModel, 'minimax-h3')
+  assert.equal(record.wireModel, 'seedance-2-5')
   assert.equal(record.collectionErrorCode, 'CHANNEL_UNAVAILABLE')
 }))
 
@@ -266,7 +276,9 @@ test('3312: the direct HTTP planner preserves current official Config defaults w
   })
   const result = await post(route, { kind: 'image', prompt: 'synthetic default', dest: join(home, 'default.png'), wait: false })
   assert.equal(result.status, 200)
-  assert.equal(captured.model, 'gpt-image-2.5-flare')
+  // #3516：已下架的 gpt-image-2.5-flare 作为默认保存值同样被视为无效，
+  // 回落到现役 listed 默认 gpt-image-2.5（不再采纳任何不可达模型）。
+  assert.equal(captured.model, 'gpt-image-2.5')
 }))
 
 test('3312: direct image HTTP rejects a standard head excluded by the economy-only allowed pool before executor or new ledger', async () => isolated(async (home) => {

@@ -144,11 +144,15 @@ test('withdrawn models leave models[]; unlisted canonical/draft rows stay author
   assert.equal(dto.models.find((m) => m.id === 'kling-o3')?.disposition, 'canonical');
   assert.equal(dto.models.find((m) => m.id === 'kling-v3-motion-control')?.disposition, 'canonical');
   assert.equal(dto.models.find((m) => m.id === 'grok-imagine-image-2-0')?.disposition, 'canonical');
-  assert.equal(dto.models.find((m) => m.id === 'whisper-1')?.disposition, 'draft');
+  // 2026-10-21 网关对账 #3516：whisper-1 处置 draft → canonical 并上架 speech_to_text。
+  assert.equal(dto.models.find((m) => m.id === 'whisper-1')?.disposition, 'canonical');
   for (const kind of ['text', 'image', 'video', 'audio']) {
     for (const unlisted of [
-      'whisper-1', 'suno', 'gpt-4o-mini-tts', 'jina-reader-v1',
+      'gpt-4o-mini-tts', 'jina-reader-v1',
       'kling-o3', 'kling-v2-6', 'kling-v3', 'kling-v3-motion-control', 'grok-imagine-image-2-0',
+      // #3516: 上游渠道停用 → 仅登记不上架，四个产出桶都不得出现。
+      'claude-sonnet-4-6', 'minimax-h3', 'doubao-asr-bigmodel', 'seedasr-auc',
+      'seed-audio-1.0', 'gemini-3.8-flash-tts', 'indextts-2',
     ]) {
       assert.equal(dto[kind].some((r) => r.id === unlisted), false, `${kind}:${unlisted}`);
     }
@@ -160,30 +164,31 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
   const dto = projectCatalog(index, loadDispositions(), loadCatalogDefaults());
   assert.equal(dto.schemaVersion, '1.1');
   assert.equal(dto.source, 'omnimux');
+  // #3516: flare / sunburst 上游渠道停用 → 图片桶只剩两个在架型号。
   assert.deepEqual(dto.image.map((r) => r.id).sort(), [
     'gpt-image-2.5',
-    'gpt-image-2.5-flare',
-    'gpt-image-2.5-sunburst',
     'seedream-5-0-pro',
   ]);
+  // #3516: minimax-h3 上游渠道停用 → 视频桶只剩 seedance 系列。
   assert.deepEqual(dto.video.map((r) => r.id), [
-    'minimax-h3',
     'seedance-2-0',
     'seedance-2-0-fast',
     'seedance-2-0-mini',
     'seedance-2-5',
-  ]); // #3209 google-vids-omni 下线 −1
-  assert.deepEqual(dto.audio.map((row) => row.id), ['gemini-3.8-flash-tts', 'indextts-2', 'seed-audio-1.0']); // #3063 indextts-2 声音克隆
-  // Text bucket includes implementation-ready models without requiring live history.
-  assert.deepEqual(dto.text.map((r) => r.id), [
-    'claude-sonnet-4-6', // #3086 Anthropic 品牌上新
-    'gemini-3.8-flash',
-    // #1789: the two ASR contracts output text, so both sit in the text bucket by output.type;
-    // they are independent rows — seedasr-auc is not folded into doubao-asr-bigmodel.
-    'seedasr-auc',
-    'doubao-asr-bigmodel',
   ]);
-  assert.equal(dto.defaultsByOperation.text_to_speech, 'seed-audio-1.0');
+  // #3516: 音频桶收敛为在架 suno；TTS 与声音克隆转为仅登记不上架。
+  assert.deepEqual(dto.audio.map((row) => row.id), ['suno']);
+  // Text bucket includes implementation-ready models without requiring live history.
+  // #3516: claude-sonnet-4-6 / seedasr-auc / doubao-asr-bigmodel 渠道停用，
+  // 只剩 gemini-3.8-flash，加上新上架的 whisper-1（speech_to_text 产出 text）。
+  assert.deepEqual(dto.text.map((r) => r.id), [
+    'gemini-3.8-flash',
+    'whisper-1',
+  ]);
+  // #3516: text_to_speech 键移除；语音识别默认改为 whisper-1，音乐生成默认 suno。
+  assert.equal('text_to_speech' in dto.defaultsByOperation, false);
+  assert.equal(dto.defaultsByOperation.speech_to_text, 'whisper-1');
+  assert.equal(dto.defaultsByOperation.text_to_music, 'suno');
   assert.equal(dto.defaultsByOperation.text_to_video, 'seedance-2-5');
   assert.equal(dto.defaultsByOperation.chat, 'gemini-3.8-flash');
 });
@@ -294,5 +299,5 @@ test('visibleOps only surfaces listed ops', () => {
     visibleOps(seedance).map((op) => op.id),
     ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref'],
   );
-  assert.equal(projectKindRows(index, 'video').length, 5); // #3209 google-vids-omni 下线 → 5（#3152 为 5）
+  assert.equal(projectKindRows(index, 'video').length, 4); // #3516 minimax-h3 停用 → 4
 });

@@ -80,7 +80,9 @@ test('the routing plan hands the executor model@group candidates for a pinned gr
 
 test('each failing candidate re-pins the wire group and keeps the bare model id', async (t) => {
   const seen = []
-  const input = inputFor(t, { group: 'economy', allowedGroups: ['economy', 'pro'], fetcher: async (url, init) => {
+  // 2026-10-21 网关对账 #3516：gpt-image-2.5 的现役分组为 standard(default) + economy；
+  // 无渠道的 pro 已删除，故用这两个在册分组验证「逐候选重钉分组头」。
+  const input = inputFor(t, { group: 'economy', allowedGroups: ['economy', 'standard'], fetcher: async (url, init) => {
     seen.push({ model: JSON.parse(init.body).model, group: new Headers(init.headers).get('X-Omnimux-Group') })
     if (seen.length === 1) return json({ error: { message: '分组 economy 下模型无可用渠道 (distributor)' } }, 503)
     return json({ data: [{ b64_json: 'cG5n' }] })
@@ -90,7 +92,7 @@ test('each failing candidate re-pins the wire group and keeps the bare model id'
   assert.equal(seen.length, 2)
   assert.deepEqual(seen.map((row) => row.model), ['gpt-image-2.5', 'gpt-image-2.5'])
   assert.equal(seen[0].group, 'gpt-image-2.5-economy')
-  assert.equal(seen[1].group, 'gpt-image-2.5-pro')
+  assert.equal(seen[1].group, 'default')
 })
 
 test('an unregistered cheap line cannot become an implicit failover pool', async (t) => {

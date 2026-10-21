@@ -124,7 +124,8 @@ test('3054: accepted wait=true task is persisted before poll failure and does no
     if (init.method === 'POST') { postCount++; return new Response(JSON.stringify({ task_id: 'task-accepted-fixture' }), { headers: { 'content-type': 'application/json' } }) }
     return new Response(JSON.stringify({ error: { message: 'invalid credential fixture' } }), { status: 401, headers: { 'content-type': 'application/json' } })
   }
-  const input = { model: 'minimax-h3', operation: 'text_to_video', prompt: 'a dog in a garden', duration: 5, resolution: '2K', requestKey: 'accepted-wait-fixture', dest: join(home, 'video.mp4'), env: { OMNIMUX_API_KEY: 'sk-fixture' }, fetcher, wait: true }
+  // #3516：改用现役 seedance-2-5（minimax-h3 仅登记不上架，无法承接新提交）。
+  const input = { model: 'seedance-2-5', operation: 'text_to_video', prompt: 'a dog in a garden', duration: 5, resolution: '720p', requestKey: 'accepted-wait-fixture', dest: join(home, 'video.mp4'), env: { OMNIMUX_API_KEY: 'sk-fixture' }, fetcher, wait: true }
   await assert.rejects(() => executeOmnimuxMedia('video', input), { code: 'needs-omnimux' })
   const record = findMediaTaskByRequestKey(input.requestKey)
   assert.equal(record.upstreamTaskId, 'task-accepted-fixture'); assert.equal(record.status, 'submitted')
