@@ -75,6 +75,17 @@ function videoMediaOf(note: Record<string, unknown>, href: string): CapturedMedi
   return url === null ? [] : [{ type: 'video', url }]
 }
 
+/**
+ * Detail address that still opens the note.
+ *
+ * 小红书只在带 `xsec_token` 的地址上允许回放；host 的 canonical key 会忽略该
+ * token 做去重，所以这里必须保留用户手上这一次访问的 token。
+ */
+function noteSourceUrl(doc: Document, href: string): string {
+  if (/[?&]xsec_token=/i.test(href)) return href
+  return linkHref(doc, ['link[rel="canonical"]'], href) || href
+}
+
 /** Maps the note object onto the capture contract. */
 function postFromNote(doc: Document, href: string, note: Record<string, unknown>): CapturedPost | null {
   const user = recordOf(note['user'])
@@ -106,7 +117,7 @@ function postFromNote(doc: Document, href: string, note: Record<string, unknown>
   const postedAt = isoFromDate(note['time'] ?? note['createTime'] ?? note['create_time'])
   return {
     platform: 'xiaohongshu',
-    source_url: linkHref(doc, ['link[rel="canonical"]'], href) || href,
+    source_url: noteSourceUrl(doc, href),
     title,
     content,
     content_shape: contentShapeOf(media),
@@ -163,12 +174,12 @@ function domFallback(doc: Document, href: string): CapturedPost | null {
   if (title === '' && media.length === 0) return null
   const coverUrl = firstNonEmpty(
     videoPoster(root, href),
-    metaContent(doc, ['meta[property="og:image"]']),
     media.find((entry) => entry.type === 'image')?.url ?? '',
+    metaContent(doc, ['meta[property="og:image"]']),
   )
   return {
     platform: 'xiaohongshu',
-    source_url: linkHref(doc, ['link[rel="canonical"]'], href) || href,
+    source_url: noteSourceUrl(doc, href),
     title,
     content,
     content_shape: contentShapeOf(media),

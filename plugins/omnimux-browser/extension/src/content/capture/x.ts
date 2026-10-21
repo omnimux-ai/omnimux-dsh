@@ -13,6 +13,22 @@ import type { TweetShape, TweetStats } from '../twitter-capture/types.ts'
 import type { CapturedMedia, CapturedPost, CapturedStats, ContentShape } from './types.ts'
 import { absoluteHttpUrl, contentShapeOf, firstNonEmpty, titleFromText, uniqueMedia } from './helpers.ts'
 
+/** Video CDN hosts / extensions a post media address can use. */
+const VIDEO_URL_RE = /video\.twimg\.com|video\/twimg|\/amplify_video\/|\.(mp4|m4v|m3u8|webm)(\?|$)/i
+/** Image CDN addresses, including live-replay thumbnails. */
+const IMAGE_URL_RE = /\.(jpg|jpeg|png|webp|gif|heic)(\?|$)/i
+
+/**
+ * Whether one media address is a playable video.
+ *
+ * 实测（2026-10-21，x.com 直播回放）：`<video>` 存在并不代表媒体是视频——回放的
+ * 媒体地址是 `*.pscp.tv/...thumbnail/*.jpg`。类型必须以地址为准，图片扩展名优先。
+ */
+export function isVideoMediaUrl(url: string): boolean {
+  if (IMAGE_URL_RE.test(url)) return false
+  return VIDEO_URL_RE.test(url)
+}
+
 /** The detail post first, then the focused post of a feed. */
 const TWEET_SELECTORS = [
   'article[tabindex="-1"][data-testid="tweet"]',
@@ -38,7 +54,9 @@ function mediaOf(urls: readonly string[], videoUrls: Set<string>, base: string, 
   for (const raw of urls) {
     const url = absoluteHttpUrl(raw, base)
     if (url === null) continue
-    const isVideo = videoUrls.has(url) || videoOnly
+    // URL 优先：直播回放的媒体只是缩略图（.jpg），不能因为推文 shape=video 就标成视频。
+    const looksImage = IMAGE_URL_RE.test(url)
+    const isVideo = isVideoMediaUrl(url) || (!looksImage && (videoUrls.has(url) || videoOnly))
     media.push({ type: isVideo ? 'video' : 'image', url })
   }
   return media
