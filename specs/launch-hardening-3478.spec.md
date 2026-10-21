@@ -21,6 +21,12 @@
 ## 测试策略
 纯注入：未运行→直接拉起并报告 launched；多实例→shared-instance 不动进程；quit 超时→quit-timeout 且不拉起；quit 成功+launch 失败→launch-failed；quit 成功+launch 成功→restarted；osascript 拒绝→quit-request-failed。断言不出现 pkill/强杀调用。
 
+## 假设
+受控重启依赖两个可观测前提：按精确 bundle 主进程路径（pgrep + ps command 前缀）能唯一识别应用实例；osascript quit 能在有界等待内让应用退出。未运行、多实例、退出超时、拉起失败都能通过进程表和退出码判定，不需要任何强杀信号。
+
+## 证伪方式
+若真实进程表中 helper/shell 进程被误判为主进程（出现 shared-instance 误报），说明精确路径过滤假设不成立；若 quit 成功后 pgrep 仍长期返回主进程而 `waitMs` 内未判 quit-timeout，说明有界等待假设不成立；若 `open` 返回 0 但回读不到新 PID 却仍报 restarted，说明成功核实假设不成立。可执行：`node --test scripts/app-restart.test.mjs`；删掉路径过滤、超时轮询或 PID 回读后，对应用例必须失败。
+
 ## 浏览器与 Electron 边界
 不改 Electron 壳层与启动方式；Dev 物化后由 ship 的受控重启验证；Prod 真实重启人工执行。
 
