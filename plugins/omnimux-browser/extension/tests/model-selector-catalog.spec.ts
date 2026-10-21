@@ -6,7 +6,7 @@
  */
 import assert from 'node:assert/strict'
 import { describe, it } from 'vitest'
-import { catalogToModelGroups } from '../src/panel/components/ModelSelector.tsx'
+import { catalogToModelGroups, resolveEffortForModel } from '../src/panel/components/ModelSelector.tsx'
 
 describe('catalogToModelGroups', () => {
   it('maps live catalog groups and carries reasoning metadata through', () => {
@@ -37,5 +37,22 @@ describe('catalogToModelGroups', () => {
     assert.deepEqual(catalogToModelGroups(null), [])
     assert.deepEqual(catalogToModelGroups({ groups: 'nope' }), [])
     assert.deepEqual(catalogToModelGroups({ groups: [{ models: [] }, { name: 'x' }] }), [])
+  })
+})
+
+describe('resolveEffortForModel', () => {
+  it('returns empty for a model without reasoning metadata instead of inheriting max', () => {
+    assert.equal(resolveEffortForModel({ id: 'gemini-3.8-flash-high', name: 'Gemini 3.8 Flash High' }, 'max'), '')
+  })
+
+  it('keeps a supported effort and falls back to the model default', () => {
+    const item = {
+      id: 'gemini-3.8-flash',
+      name: 'Gemini 3.8 Flash',
+      reasoning: { efforts: [{ id: 'low', name: 'Low' }, { id: 'high', name: 'High' }], defaultEffort: 'high' },
+    }
+    assert.equal(resolveEffortForModel(item, 'high'), 'high')
+    assert.equal(resolveEffortForModel(item, 'max'), 'high')
+    assert.equal(resolveEffortForModel(item, 'low'), 'low')
   })
 })
