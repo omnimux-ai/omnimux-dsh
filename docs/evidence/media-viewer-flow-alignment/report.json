@@ -1,34 +1,44 @@
 {
   "pass": true,
   "issue": 3533,
-  "capturedAt": "2026-10-21T05:55:08.170Z",
-  "commit": "c737c9abd0f5340f16de430118bf5a0c546b0c97",
+  "capturedAt": "2026-10-21T06:09:44.210Z",
+  "sourceCommit": "48e4c495c0840c8d940764af8f598af0e2d24524",
+  "sourceDirty": false,
   "browser": "ego-lite",
   "harness": "/tmp/flow-alignment-3533/harness.html",
   "sources": {
-    "tab": "72af50285145b14993624437427c139be02ea7768c8096234a8d7f98e5b28848",
-    "panel": "91dd57a2a41524b6fce144148c7a0b86d5b28c3bb4bcb69399a93072e44f8914",
-    "styles": "f84e00192f1c16870741192c20bd99f59f8b48eac6d872cf2d443ee92f5e7abe",
-    "history": "4b03cb0e188fcf21e3b8f90e90ffb73fb4744c2a00e923b9dfb5baea864d5090",
-    "cost": "ffcfe96327cb159e74ae3f48f9dc4513aba6dac267850baa57f9e38a6178263c"
+    "tab": "27e0372aa88c9a4be24cc5d2e99b8086bd5ae7b25b3e194dea0a266e59f04f28",
+    "panel": "e204bb22fe655c0f84119d1dc68588b345af1d19b27813ec061c906e49f74361",
+    "styles": "a810ab2a5c967967fada55dd60405673b8de3938ff54a8afe6d1d45d90c4c024",
+    "history": "e981f3f987727055226dba24e86774c0aeb5d75a4b64f8decddccdfdf1b7d720",
+    "cost": "777cbc858b14eeecfb07c19cfec02878a131eae3114d0722ab70e6b18681a67c",
+    "composer": "ab5f7ae06e3dc841bc6e0880fa9c6d8831abee224f78b4bf986f53be0923d777",
+    "composerData": "bab610d439444362bfc5ad9010f39aa4bc9b4fa019dedaf4db36fff63a644422",
+    "configControls": "627652b8fb7654fab53efd5c79e57013232572e129d230778adcc8f49a2f3126",
+    "mount": "62c069a75a28d4d2a6495517feeab9c4cde1d72b8239e2fef6ef2b217ceb4761",
+    "locales": "4da9a9ad55b54984eb24412c88877322d26c5e4e4ed1242ce3e8b0f24309a254",
+    "copy": "3bfaf8d0eba7c9cfcd2b0e87209247f6c002b6528c100817584b303da02ef4b1",
+    "harness": "8cc78b170c9d872404b8709b261ebad66da21f4d6ce1ba5709003695e58520db",
+    "capture": "38e866d064e1b2b3b618c6757d6ff60405021aa17224e931d91c4f4baf3dc64e",
+    "buildHarness": "e40f3deebffb5361ce9b90cb3748ecc97be9372859f3ca343983b493a83bc0e3"
   },
   "assertions": [
     {
       "name": "wide: rail visible beside stage",
       "pass": true,
       "detail": {
-        "x": 1243,
+        "x": 1237,
         "y": 47,
         "width": 261,
         "height": 753,
         "top": 47,
-        "right": 1504,
+        "right": 1498,
         "bottom": 800,
-        "left": 1243
+        "left": 1237
       }
     },
     {
-      "name": "wide: toggle is hidden by container query",
+      "name": "wide: history toggle is hidden",
       "pass": true,
       "detail": "none"
     },
@@ -47,7 +57,7 @@
     {
       "name": "wide: newest completed item is current",
       "pass": true,
-      "detail": "沙漠里的柴犬，手机拍摄质感16:56 · 图片"
+      "detail": "×2产品图，极简白底，四张批量16:57 · 图片"
     },
     {
       "name": "wide: image-mode cost estimate visible",
@@ -58,14 +68,14 @@
       "name": "wide: history click switches stage media",
       "pass": true,
       "detail": {
-        "stageBefore": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23e8590c%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev3%3C%2Ftext%3E%3C%2Fsvg%3E",
-        "stageAfter": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23ae3ec9%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev4%3A1%3C%2Ftext%3E%3C%2Fsvg%3E"
+        "stageBefore": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%237048e8%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev4%3A0%3C%2Ftext%3E%3C%2Fsvg%3E",
+        "stageAfter": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23e8590c%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev3%3C%2Ftext%3E%3C%2Fsvg%3E"
       }
     },
     {
       "name": "wide: reuse prompt fills composer",
       "pass": true,
-      "detail": "产品图，极简白底，四张批量"
+      "detail": "沙漠里的柴犬，手机拍摄质感"
     },
     {
       "name": "narrow: rail is hidden off-canvas",
@@ -95,14 +105,14 @@
       "name": "narrow: drawer width stays inside the frame",
       "pass": true,
       "detail": {
-        "x": 863,
+        "x": 857,
         "y": 47,
         "width": 321,
         "height": 753,
         "top": 47,
-        "right": 1184,
+        "right": 1178,
         "bottom": 800,
-        "left": 863
+        "left": 857
       }
     },
     {
@@ -121,20 +131,20 @@
   ],
   "wide": {
     "viewport": {
-      "width": 1728,
-      "height": 883
+      "width": 1716,
+      "height": 871
     },
     "frameWidth": 1280,
     "hasHistoryOpen": "false",
     "rail": {
-      "x": 1243,
+      "x": 1237,
       "y": 47,
       "width": 261,
       "height": 753,
       "top": 47,
-      "right": 1504,
+      "right": 1498,
       "bottom": 800,
-      "left": 1243
+      "left": 1237
     },
     "railVisibility": "visible",
     "railPosition": "static",
@@ -147,27 +157,27 @@
     "batches": [
       "×2"
     ],
-    "activeText": "沙漠里的柴犬，手机拍摄质感16:56 · 图片",
-    "stageSrc": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23e8590c%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev3%3C%2Ftext%3E%3C%2Fsvg%3E",
+    "activeText": "×2产品图，极简白底，四张批量16:57 · 图片",
+    "stageSrc": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%237048e8%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev4%3A0%3C%2Ftext%3E%3C%2Fsvg%3E",
     "costText": "预估消耗 ≈0.26 积分",
     "promptValue": ""
   },
   "narrowClosed": {
     "viewport": {
-      "width": 1728,
-      "height": 883
+      "width": 1716,
+      "height": 871
     },
     "frameWidth": 640,
     "hasHistoryOpen": "false",
     "rail": {
-      "x": 1184,
+      "x": 1178,
       "y": 47,
       "width": 321,
       "height": 753,
       "top": 47,
-      "right": 1505,
+      "right": 1499,
       "bottom": 800,
-      "left": 1184
+      "left": 1178
     },
     "railVisibility": "hidden",
     "railPosition": "absolute",
@@ -180,27 +190,27 @@
     "batches": [
       "×2"
     ],
-    "activeText": "沙漠里的柴犬，手机拍摄质感16:56 · 图片",
-    "stageSrc": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23e8590c%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev3%3C%2Ftext%3E%3C%2Fsvg%3E",
+    "activeText": "×2产品图，极简白底，四张批量16:57 · 图片",
+    "stageSrc": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%237048e8%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev4%3A0%3C%2Ftext%3E%3C%2Fsvg%3E",
     "costText": "预估消耗 ≈0.13 积分",
     "promptValue": ""
   },
   "narrowOpen": {
     "viewport": {
-      "width": 1728,
-      "height": 883
+      "width": 1716,
+      "height": 871
     },
     "frameWidth": 640,
     "hasHistoryOpen": "true",
     "rail": {
-      "x": 863,
+      "x": 857,
       "y": 47,
       "width": 321,
       "height": 753,
       "top": 47,
-      "right": 1184,
+      "right": 1178,
       "bottom": 800,
-      "left": 863
+      "left": 857
     },
     "railVisibility": "visible",
     "railPosition": "absolute",
@@ -213,15 +223,15 @@
     "batches": [
       "×2"
     ],
-    "activeText": "沙漠里的柴犬，手机拍摄质感16:56 · 图片",
-    "stageSrc": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23e8590c%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev3%3C%2Ftext%3E%3C%2Fsvg%3E",
+    "activeText": "×2产品图，极简白底，四张批量16:57 · 图片",
+    "stageSrc": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%237048e8%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev4%3A0%3C%2Ftext%3E%3C%2Fsvg%3E",
     "costText": "预估消耗 ≈0.13 积分",
     "promptValue": ""
   },
   "interactions": {
-    "stageBefore": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23e8590c%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev3%3C%2Ftext%3E%3C%2Fsvg%3E",
-    "stageAfterSwitch": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23ae3ec9%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev4%3A1%3C%2Ftext%3E%3C%2Fsvg%3E",
-    "reusedPrompt": "产品图，极简白底，四张批量"
+    "stageBefore": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%237048e8%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev4%3A0%3C%2Ftext%3E%3C%2Fsvg%3E",
+    "stageAfterSwitch": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23e8590c%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev3%3C%2Ftext%3E%3C%2Fsvg%3E",
+    "reusedPrompt": "沙漠里的柴犬，手机拍摄质感"
   },
   "screenshots": [
     "wide-1280.png",
