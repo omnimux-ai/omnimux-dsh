@@ -11,7 +11,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createTestEnvironmentStarter } from './test-env-bootstrap.mjs';
 import { validateEvidence } from './evidence-contract.mjs';
-import { createAppQaRunner, resolveWorktreeRoot, isAppReady, assertBlankSessionHubPath } from './worktree-app-qa.mjs';
+import { createAppQaRunner, resolveWorktreeRoot, isAppReady, assertBlankSessionHubPath, isJourneyAssertionName, isAllowedAssertionName } from './worktree-app-qa.mjs';
 
 const publicRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const publicRepository = resolve(publicRoot, '../..');
@@ -351,18 +351,32 @@ test('legacy journey 断言带 journey: 前缀时保留并计入通过，未知�
       loginUrl: 'http://127.0.0.1:15000/?token=unit-only',
       cleanup: async () => ({ cleaned: true }),
     }),
-    driveBrowser: async () => ({
+    driveBrowser: async ({ journey }) => ({
       cdpPort: 15001,
-      assertions: browserAssertions,
+      // 真实 driver 只在传入 journey 时追加 journey 断言；桩保持同一行为。
+      assertions: journey
+        ? browserAssertions
+        : browserAssertions.filter(item => !isJourneyAssertionName(item.name)),
       screenshot: { path: '/tmp/app-home.png', width: 1280, height: 713, bytes: 100 },
     }),
   });
+
+  // 纯判定：前缀后必须非空，且只有 legacy + 传入 journey 时放行；契约模式永远只认预声明集合。
+  assert.equal(isJourneyAssertionName('journey:C1-derived-node-created'), true);
+  assert.equal(isJourneyAssertionName('journey:'), false, '空后缀不得放行');
+  assert.equal(isJourneyAssertionName('journey-load'), false, '错误形态名不得当作 journey 断言');
+  assert.equal(isJourneyAssertionName('unknown:x'), false);
+  assert.equal(isAllowedAssertionName('journey:x', [], { request: false, journey: null }), false);
+  assert.equal(isAllowedAssertionName('journey:x', [], { request: false, journey: 'qa/journey.mjs' }), true);
+  assert.equal(isAllowedAssertionName('journey:x', [], { request: true, journey: 'qa/journey.mjs' }), false, '契约模式不得放行未声明 journey 断言');
+  assert.equal(isAllowedAssertionName('journey:declared', ['journey:declared'], { request: true, journey: 'qa/journey.mjs' }), true);
+  assert.equal(isAllowedAssertionName('app-dom-mounted', ['app-dom-mounted'], { request: true }), true);
 
   browserAssertions = [
     { name: 'app-dom-mounted', pass: true },
     { name: 'journey:C1-derived-node-created', pass: true },
   ];
-  const allowed = await run({ root, repo: '/repo' });
+  const allowed = await run({ root, repo: '/repo', journey: 'qa/journey.mjs' });
   assert.equal(allowed.pass, true, 'legacy journey 断言必须计入通过');
   assert.ok(allowed.assertions.some(item => item.name === 'journey:C1-derived-node-created'));
   assert.equal(allowed.errors.includes('TEST_APP_QA_ASSERTION_SET_MISMATCH'), false);
@@ -372,7 +386,7 @@ test('legacy journey 断言带 journey: 前缀时保留并计入通过，未知�
     { name: 'journey:C1-derived-node-created', pass: true },
     { name: 'unknown:not-allowed', pass: true },
   ];
-  const rejected = await run({ root, repo: '/repo' });
+  const rejected = await run({ root, repo: '/repo', journey: 'qa/journey.mjs' });
   assert.equal(rejected.pass, false);
   assert.ok(rejected.errors.includes('TEST_APP_QA_ASSERTION_SET_MISMATCH'));
   assert.equal(rejected.assertions.some(item => item.name === 'unknown:not-allowed'), false);
