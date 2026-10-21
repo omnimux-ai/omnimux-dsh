@@ -1,0 +1,54 @@
+{
+  "issue": 3590,
+  "startedAt": "2026-10-21T12:28:40.304Z",
+  "scenarios": [
+    {
+      "locale": "zh",
+      "rows": [
+        {
+          "action": "video",
+          "label": "下载视频",
+          "busyLabel": null
+        },
+        {
+          "action": "audio",
+          "label": "下载音频",
+          "busyLabel": null
+        },
+        {
+          "action": "save",
+          "label": "收藏到灵感库",
+          "busyLabel": null
+        }
+      ],
+      "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-tiktok-audio-label-issue-3590/.agent-reports/tiktok-audio-label-3590/menu-zh.png"
+    },
+    {
+      "locale": "en",
+      "rows": [
+        {
+          "action": "video",
+          "label": "Download video",
+          "busyLabel": null
+        },
+        {
+          "action": "audio",
+          "label": "Download audio",
+          "busyLabel": null
+        },
+        {
+          "action": "save",
+          "label": "Save to library",
+          "busyLabel": null
+        }
+      ],
+      "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-tiktok-audio-label-issue-3590/.agent-reports/tiktok-audio-label-3590/menu-en.png"
+    }
+  ],
+  "chromePath": "/Users/x/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "extensionId": "fiaopiafhibpijakcbaengohlbhmhjhk",
+  "zhOk": true,
+  "enOk": true,
+  "audioActionKept": true,
+  "finishedAt": "2026-10-21T12:29:06.844Z"
+}
