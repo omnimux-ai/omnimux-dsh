@@ -16,16 +16,18 @@
 
 ## 修复
 
-1. env 遮蔽导致登出 seam `unset` 被拒时：写 `configDir/seam-cleanup-pending.json`（0600，仅 `ref/reason/createdAt`，**不含 token**），保留 warn，登出仍 200。
-2. 下次 token store 创建（env 已撤销、无 canonical token）时：通过官方 `credentials.unset(CREDENTIAL_REF)` 清理残留并删除 marker；失败则 warn 并保留 marker 重试。
-3. canonical token 存在（已重新登录）：仅删除过期 marker，不调用 seam `unset`；`set` 镜像成功或 seam 清理成功时也清 marker。
-4. `resolve()` / `describe()` 先 `await store.seamCleanup`，确保撤销 env 重启后不再观察到旧 token；`store.seamCleanup` 可被宿主/测试等待。
+1. env 遮蔽导致登出 seam `unset` 被拒、且官方 `describe` 显示 seam 确实存有值时：写 **home 专属** marker `$DSH_HOME/omnimux/seam-cleanup-pending.json`（0600，严格校验 `version/ref/reason`，仅元数据、**不含 token**），保留 warn，登出仍 200；seam 只继承 env 时不写 marker（N2）。
+2. 下次 token store 创建（env 已撤销、无 canonical token）时：通过**本 home 的**官方 `credentials.unset(CREDENTIAL_REF)` 清理残留并删除 marker；失败则 warn 并保留 marker 重试。
+3. canonical token 存在（仍处于登录态）：**保留 marker、不删除 seam**（避免误删当前登录态的合法镜像）；正常登出（无 env）会经官方 seam unset 清理 seam 并删除 marker；`set` 镜像成功或 seam 清理成功时也清 marker。
+4. marker 作用域与官方 seam 一致（per `$DSH_HOME`），Dev/Prod 共享 `configDir` 时互不消费/清除（评审 B1）；无法解析/形状不符的 marker 保留并 warn，不静默失效（S2）。
+5. `resolve()` / `describe()` 先 `await store.seamCleanup`，确保撤销 env 重启后不再观察到旧 token；`store.seamCleanup` 可被宿主/测试等待。
 
 ## 可复现证据（`repro.log`，本目录）
 
 ```text
 1) login (no env): seam = pat-seam-old
-2) logout under env: seam = pat-seam-old | marker = true | warn = "[omnimux-auth] credentials.unset failed: credentials-local: OMNIMUX_ACCESS_TOKEN is supplied read-only by the launching environment"
+2) logout under env: seam = pat-seam-old | marker = true | markerPath = $DSH_HOME/omnimux/seam-cleanup-pending.json
+   warn = "[omnimux-auth] credentials.unset failed: credentials-local: OMNIMUX_ACCESS_TOKEN is supplied read-only by the launching environment"
 3) env removed, restart: cleanup = true | seam = undefined | marker = false
    resolve = undefined | describe = {"configured":false,"writable":true} | seam unset calls = 2
 ```
@@ -40,19 +42,20 @@ node --input-type=module -e "…见 PR 描述/测试 store.test.js 同构脚本�
 
 | 命令 | 结果 |
 |---|---|
-| `node --test src/auth/store.test.js src/auth/http-routes.test.js`（worktree 根 `pnpm --config.verify-deps-before-run=false --filter omnimux test` 的定向子集） | **32 pass / 0 fail**（新增 4 个 #3514 用例 + 既有 env 用例补充 marker 断言） |
-| `pnpm --config.verify-deps-before-run=false --filter omnimux test` | exit 0；**3614 pass / 0 fail**（386 文件：2 + 3523 + 89） |
+| `node --test src/auth/store.test.js src/auth/http-routes.test.js` | **35 pass / 0 fail**（新增 7 个 #3514 用例：主路径/多 home/canonical 保留 marker+登出清理/损坏 marker warn/仅有 env 不写 marker/清理失败保留 marker/非 env 不回归） |
+| `pnpm --config.verify-deps-before-run=false --filter omnimux test` | exit 0；**3617 pass / 0 fail**（386 文件：2 + 3526 + 89） |
 | `pnpm --config.verify-deps-before-run=false check:boundaries` | ✅ 4289 source files |
 | `pnpm --config.verify-deps-before-run=false verify:product-baseline` | exit 0 |
-| `node scripts/verify-silent-catch.mjs --json` + delta | 改动文件新增 SC1/SC2 = 0（新增 4 处 SC3 均为带 `logCleanupFailure` 的失败可见路径） |
+| `node scripts/verify-silent-catch.mjs --json` + delta | 改动文件新增 SC1/SC2 = 0；net +6 SC3：5 处带 `logCleanupFailure` 的失败可见路径 + 1 处 `seamHoldsStoredValue` 的显式保守降级（`catch { return true }`，意为「无法判断则按存有值处理」） |
 | `git diff --check` | exit 0 |
 
 > 备注：worktree 依赖通过软链复用主检出 `node_modules`；`pnpm` 的依赖状态检查在软链工作树会尝试重装，因此按仓库 CI 惯例加 `--config.verify-deps-before-run=false`；同时 `pnpm --filter omnimux build` 生成了被 git 忽略的 `lib/client.js`（materialized-pack 用例需要），未进入 diff。
 
 ## 安全边界
 
-- marker 只写插件自有 `configDir`（0600），内容不含 token/凭据值；清理仅针对固定 `CREDENTIAL_REF`。
-- 自动清理只在「env 已撤销 + 本插件 canonical token 不存在（仍处于登出态）」时执行；canonical token 存在则跳过删除，避免误删新登录态。
+- marker 写在插件自有 `$DSH_HOME/omnimux/`（0600，per-home），内容不含 token/凭据值；严格校验 `version/ref/reason`；清理仅针对固定 `CREDENTIAL_REF`。
+- 自动清理只在「env 已撤销 + 本插件 canonical token 不存在（仍处于登出态）」时执行；canonical token 存在时保留 marker、跳过删除，避免误删当前登录态；下一次正常登出会完成 seam 清理。
+- marker 作用域为 per `$DSH_HOME`，与官方 seam 一致；Dev/Prod 共享 `configDir` 时不会互相消费/清除。
 - 所有失败都 `logger.warn` 留痕并保留 marker，next start 重试；清理 promise 内部全捕获，不产生 unhandled rejection。
 - 未改官方源码/配置，未直接读写 `.credentials.yaml`，未改变 env → secrets → seam 的解析优先级。
 

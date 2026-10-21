@@ -103,6 +103,7 @@ function migrateLegacyProfileCache(opts) {
  *   env?: Record<string, string | undefined>,
  *   now?: () => number,
  *   profilePath?: string,
+ *   seamCleanupMarkerPath?: string,
  *   logger?: { warn: (message: string) => void },
  * }} [opts]
  */
@@ -140,7 +141,14 @@ export function createTokenStore(opts = {}) {
   // official credentials seam (its `set`/`unset` both assertUnshadowed). The marker
   // records that fact — ref/reason/time only, never token material — so a later
   // start without the env override can finish the deletion through the official seam.
-  const seamCleanupMarkerPath = join(configDir, 'seam-cleanup-pending.json')
+  // Scope MUST be the same as the seam ($DSH_HOME), not the shared configDir: Dev and
+  // Prod homes share ~/.config/omnimux but have separate .credentials.yaml files
+  // (Issue #3514 review B1).
+  const seamCleanupMarkerPath = opts.seamCleanupMarkerPath
+    || (pinchesRealHome ? join(sandboxRoot, 'seam-cleanup-pending.json') : join(home, 'omnimux', 'seam-cleanup-pending.json'))
+
+  /** Marker whose content does not match our schema: keep it for inspection, warn, never act on it. */
+  const INVALID_SEAM_MARKER = Object.freeze({ invalid: true })
 
   /** Raw env override, matching the official seam's `inherited()` (raw length > 0). */
   function envOverrideToken() {
@@ -148,14 +156,35 @@ export function createTokenStore(opts = {}) {
     return typeof value === 'string' && value.length > 0 ? value : ''
   }
 
-  /** @returns {{ version?: number, ref?: string, reason?: string, createdAt?: string } | null} */
+  /** @returns {{ version?: number, ref?: string, reason?: string, createdAt?: string } | null | { invalid: true }} */
   function readSeamCleanupMarker() {
     try {
       const raw = JSON.parse(readFileSync(seamCleanupMarkerPath, 'utf8'))
-      if (!raw || typeof raw !== 'object' || raw.ref !== CREDENTIAL_REF) return null
+      if (!raw || typeof raw !== 'object' || raw.version !== 1 || raw.ref !== CREDENTIAL_REF || raw.reason !== 'env-shadowed-logout') {
+        logCleanupFailure('seam cleanup marker', new Error('unexpected marker shape; leaving it for inspection'))
+        return INVALID_SEAM_MARKER
+      }
       return raw
+    } catch (error) {
+      if (/** @type {NodeJS.ErrnoException} */ (error)?.code === 'ENOENT') return null
+      logCleanupFailure('seam cleanup marker', error)
+      return INVALID_SEAM_MARKER
+    }
+  }
+
+  /**
+   * Whether the seam actually stores a value for our ref (vs. only inheriting the
+   * env). Avoids writing a marker when there is nothing to clean (review N2).
+   * Unknown seam capability/describe failures are treated as "may hold a value".
+   * @returns {Promise<boolean>}
+   */
+  async function seamHoldsStoredValue() {
+    if (!credentials || typeof credentials.describe !== 'function') return true
+    try {
+      const info = await credentials.describe(CREDENTIAL_REF)
+      return Boolean(info && info.configured && info.source !== 'env')
     } catch {
-      return null
+      return true
     }
   }
 
@@ -190,12 +219,13 @@ export function createTokenStore(opts = {}) {
    */
   async function cleanupPendingSeamMirror() {
     try {
-      if (!readSeamCleanupMarker()) return false
+      const marker = readSeamCleanupMarker()
+      if (!marker || marker === INVALID_SEAM_MARKER) return false
       if (envOverrideToken()) return false
       if (readSecrets()?.token) {
-        // Re-logged in: the current token is intentional, drop the stale marker and
-        // let the next logout clean the seam with the official API.
-        clearSeamCleanupMarker()
+        // Still logged in: the canonical token is authoritative and the seam may now
+        // be a legitimate mirror. Keep the marker so a later logout (or an external
+        // canonical removal) still converges; do NOT delete a live login's seam token.
         return false
       }
       if (!credentials || typeof credentials.unset !== 'function') return false
@@ -533,7 +563,8 @@ export function createTokenStore(opts = {}) {
           logCleanupFailure('credentials.unset', error)
           // Defer the seam deletion until the env override is gone (official seam
           // refuses writes while shadowed); do not turn this logout into a 5xx.
-          writeSeamCleanupMarker('env-shadowed-logout')
+          // Only record a marker when the seam actually stored a copy (review N2).
+          if (await seamHoldsStoredValue()) writeSeamCleanupMarker('env-shadowed-logout')
         }
       }],
       // 4. Profile cache

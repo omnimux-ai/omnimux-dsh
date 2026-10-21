@@ -631,9 +631,9 @@ describe('env-shadowed seam mirror residue (Issue #3514)', () => {
         return state.value ? { value: state.value, source: 'file' } : undefined
       },
       async describe() {
-        return state.value
-          ? { configured: true, source: 'file', writable: true }
-          : { configured: false, writable: true }
+        if (state.value !== undefined) return { configured: true, source: 'file', writable: true }
+        if (state.shadowed) return { configured: true, source: 'env', writable: true }
+        return { configured: false, writable: true }
       },
       async set(ref, value) {
         state.setCalls += 1
@@ -706,17 +706,18 @@ describe('env-shadowed seam mirror residue (Issue #3514)', () => {
     }
   })
 
-  it('drops a stale marker without deleting the seam when a canonical token is active', async () => {
+  it('keeps the marker without deleting the seam while a canonical token is active; the next logout clears both', async () => {
     const dirs = makeDirs()
     const { state, seam } = createSeam()
     state.value = 'pat-old-mirror'
+    mkdirSync(join(dirs.homeDir, 'omnimux'), { recursive: true })
     writeFileSync(
       join(dirs.configDir, 'secrets.json'),
       JSON.stringify({ version: 1, active_slot: 'desktop:default', access_token: 'pat-active', slots: { 'desktop:default': { access_token: 'pat-active' } } }),
       { mode: 0o600 },
     )
     writeFileSync(
-      join(dirs.configDir, 'seam-cleanup-pending.json'),
+      join(dirs.homeDir, 'omnimux', 'seam-cleanup-pending.json'),
       JSON.stringify({ version: 1, ref: 'OMNIMUX_ACCESS_TOKEN', reason: 'env-shadowed-logout', createdAt: new Date().toISOString() }),
       { mode: 0o600 },
     )
@@ -724,8 +725,97 @@ describe('env-shadowed seam mirror residue (Issue #3514)', () => {
       const store = createTokenStore({ homeDir: dirs.homeDir, configDir: dirs.configDir, credentials: seam })
       assert.equal(await store.seamCleanup, false)
       assert.equal(state.value, 'pat-old-mirror', 'must not delete the seam while a canonical token is active')
-      assert.equal(existsSync(store.seamCleanupMarkerPath), false)
+      assert.equal(existsSync(store.seamCleanupMarkerPath), true, 'marker must survive for the next logout / canonical removal')
       assert.equal(await store.resolve(), 'pat-active')
+      await store.unset()
+      assert.equal(state.value, undefined, 'normal logout must clear the seam mirror')
+      assert.equal(existsSync(store.seamCleanupMarkerPath), false)
+      assert.equal(await store.resolve(), undefined)
+    } finally {
+      cleanupDirs(dirs)
+    }
+  })
+
+  it('keeps per-home markers so another DSH home cannot consume or clear a pending cleanup', async () => {
+    const homeA = mkdtempSync(join(tmpdir(), 'omnimux-auth-home-a-'))
+    const homeB = mkdtempSync(join(tmpdir(), 'omnimux-auth-home-b-'))
+    const sharedConfigDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-shared-cfg-'))
+    const seamA = createSeam()
+    const seamB = createSeam()
+    try {
+      // App (home A) logs in, then logs out while the env shadows its seam.
+      const app = createTokenStore({ homeDir: homeA, configDir: sharedConfigDir, credentials: seamA.seam })
+      await app.set('pat-home-a')
+      assert.equal(seamA.state.value, 'pat-home-a')
+      seamA.state.shadowed = true
+      const appEnv = createTokenStore({
+        homeDir: homeA,
+        configDir: sharedConfigDir,
+        credentials: seamA.seam,
+        env: { OMNIMUX_ACCESS_TOKEN: 'pat-env' },
+      })
+      await appEnv.unset()
+      assert.equal(existsSync(appEnv.seamCleanupMarkerPath), true)
+      assert.equal(appEnv.seamCleanupMarkerPath, join(homeA, 'omnimux', 'seam-cleanup-pending.json'))
+
+      // CLI (home B) logs in and out with the SAME canonical config dir but its own seam.
+      const cli = createTokenStore({ homeDir: homeB, configDir: sharedConfigDir, credentials: seamB.seam })
+      await cli.set('pat-home-b')
+      assert.equal(seamB.state.value, 'pat-home-b')
+      assert.equal(existsSync(appEnv.seamCleanupMarkerPath), true, 'another home must not clear this home marker')
+      await cli.unset()
+      assert.equal(seamB.state.value, undefined)
+      assert.equal(existsSync(appEnv.seamCleanupMarkerPath), true, 'another home logout must not clear this home marker')
+
+      // App restarts without env: its own marker still converges its own seam.
+      seamA.state.shadowed = false
+      const appClean = createTokenStore({ homeDir: homeA, configDir: sharedConfigDir, credentials: seamA.seam })
+      assert.equal(await appClean.seamCleanup, true)
+      assert.equal(seamA.state.value, undefined)
+      assert.equal(existsSync(appClean.seamCleanupMarkerPath), false)
+      assert.equal(await appClean.resolve(), undefined)
+    } finally {
+      rmSync(homeA, { recursive: true, force: true })
+      rmSync(homeB, { recursive: true, force: true })
+      rmSync(sharedConfigDir, { recursive: true, force: true })
+    }
+  })
+
+  it('warns and keeps an unreadable marker for inspection instead of failing silently', async () => {
+    const dirs = makeDirs()
+    const { seam } = createSeam()
+    /** @type {string[]} */
+    const warnings = []
+    mkdirSync(join(dirs.homeDir, 'omnimux'), { recursive: true })
+    writeFileSync(join(dirs.homeDir, 'omnimux', 'seam-cleanup-pending.json'), '{not-json')
+    try {
+      const store = createTokenStore({
+        homeDir: dirs.homeDir,
+        configDir: dirs.configDir,
+        credentials: seam,
+        logger: { warn(message) { warnings.push(String(message)) } },
+      })
+      assert.equal(await store.seamCleanup, false)
+      assert.equal(existsSync(store.seamCleanupMarkerPath), true)
+      assert.match(warnings.join('\n'), /seam cleanup marker failed:/)
+    } finally {
+      cleanupDirs(dirs)
+    }
+  })
+
+  it('does not write a marker when the seam only inherits the env token', async () => {
+    const dirs = makeDirs()
+    const { state, seam } = createSeam()
+    state.shadowed = true
+    try {
+      const store = createTokenStore({
+        homeDir: dirs.homeDir,
+        configDir: dirs.configDir,
+        credentials: seam,
+        env: { OMNIMUX_ACCESS_TOKEN: 'pat-env-only' },
+      })
+      await store.unset()
+      assert.equal(existsSync(store.seamCleanupMarkerPath), false, 'nothing stored in the seam, nothing to clean later')
     } finally {
       cleanupDirs(dirs)
     }
@@ -736,8 +826,9 @@ describe('env-shadowed seam mirror residue (Issue #3514)', () => {
     const { seam } = createSeam()
     /** @type {string[]} */
     const warnings = []
+    mkdirSync(join(dirs.homeDir, 'omnimux'), { recursive: true })
     writeFileSync(
-      join(dirs.configDir, 'seam-cleanup-pending.json'),
+      join(dirs.homeDir, 'omnimux', 'seam-cleanup-pending.json'),
       JSON.stringify({ version: 1, ref: 'OMNIMUX_ACCESS_TOKEN', reason: 'env-shadowed-logout', createdAt: new Date().toISOString() }),
       { mode: 0o600 },
     )

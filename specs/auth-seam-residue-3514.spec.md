@@ -15,9 +15,9 @@
 
 ## 目标
 
-1. **不再静默残留**：env 遮蔽导致登出 seam `unset` 被拒时，写本插件自有 pending marker（`configDir/seam-cleanup-pending.json`，0600，仅含 ref/原因/时间，**不含 token**），并把该事实写进 warn（既有行为保留：登出仍 200，不把 env 场景变成 5xx）。
-2. **env 撤销后自动清理**：token store 下次创建时（env 已撤销、且 canonical `secrets.json` 无 token），通过官方 seam `unset` 清理残留并删除 marker；仍失败则 warn 并保留 marker，下次启动再试。
-3. **不误删新登录态**：若 canonical token 存在（用户已重新登录），只删除过期 marker、不调用 seam `unset`；正常登出/成功镜像成功时也清理 marker。
+1. **不再静默残留**：env 遮蔽导致登出 seam `unset` 被拒、且官方 `describe` 显示 seam 确有存储值时，写 **per-home** pending marker（`$DSH_HOME/omnimux/seam-cleanup-pending.json`，0600，仅含 ref/原因/时间，**不含 token**），并把该事实写进 warn（既有行为保留：登出仍 200，不把 env 场景变成 5xx）。
+2. **env 撤销后自动清理**：token store 下次创建时（env 已撤销、且 canonical `secrets.json` 无 token），通过**本 home 的**官方 seam `unset` 清理残留并删除 marker；仍失败则 warn 并保留 marker，下次启动再试。marker 作用域与官方 seam 一致（per `$DSH_HOME`），Dev/Prod 共享 configDir 时互不消费。
+3. **不误删新登录态**：若 canonical token 存在（用户已重新登录），保留 marker 且不调用 seam `unset`（下一次正常登出完成清理）；正常登出/成功镜像成功时清理 marker。
 4. **可观察**：`resolve()` / `describe()` 在 pending 清理完成后再判断，env 撤销 + 重启后不再从 seam 读出旧 token；`store.seamCleanup` 暴露清理 promise 供测试/宿主等待。
 
 ## 范围
@@ -52,7 +52,7 @@
 ## 假设
 
 1. 残留根因是官方 seam 在 env 遮蔽下同时拒绝 `set`/`unset`，而插件只有 warn、没有「稍后清理」的状态；用一个插件自有 marker 记录待清理事实，就能在 env 撤销后的下一次 store 创建时通过官方 API 收敛。
-2. 清理条件（无 env、无 canonical token）足以区分「已登出等待清理」与「重新登录」，不会误删新 token。
+2. marker 放在 `$DSH_HOME`（与官方 seam 同作用域）后，多 Dev/Prod home 共享 configDir 也不会互相消费/清除；清理条件（无 env、无 canonical token）足以区分「已登出等待清理」与「重新登录」，不会误删新 token；canonical 存在时保留 marker 供下一次登出收口。
 3. `resolve()`/`describe()` 等待一次性 `seamCleanup` 后，行为在 env 撤销 + 重启场景下可被测试确定性验证，且对普通调用无额外副作用。
 
 ## 证伪方式
@@ -61,13 +61,13 @@
 2. env 撤销后新建 store（同一 configDir/credentials mock）：若 `seamCleanup` 未调用官方 `unset`、或 marker 仍在、或 `resolve()` 仍返回旧 token，假设 1/2 被证伪。
 3. 构造「marker 存在 + canonical token 存在」：若清理调用 seam `unset`（删除新登录态）或 marker 未清，假设 2 被证伪。
 
-## 验收
+## 验收（评审 B1/S1/S2/N1/N2 修订后）
 
 - [x] env 遮蔽登出：warn 一次、登出 resolve、marker 存在且不含 token。
 - [x] env 撤销 + 新 store：`await store.seamCleanup` 后 seam 值被清、marker 删除、`resolve()`/`describe()` 不再返回旧 token（repro.log 实测）。
 - [x] canonical token 存在：marker 删除但 seam 不被 `unset`。
-- [x] 非 env 登录/登出行为与错误路径不回归；auth 定向 32 pass / 0 fail。
-- [x] `pnpm --filter omnimux test` 全绿（3614 pass）；`check:boundaries`、`verify:product-baseline`、`git diff --check`；改动文件无新增 SC1/SC2。
+- [x] 非 env 登录/登出行为与错误路径不回归；auth 定向 35 pass / 0 fail。
+- [x] `pnpm --filter omnimux test` 全绿（3617 pass）；`check:boundaries`、`verify:product-baseline`、`git diff --check`；改动文件无新增 SC1/SC2。
 - [x] 证据落盘 `docs/evidence/auth-seam-residue-3514/`（含 env 撤销前后 resolve 的实际输出 repro.log）。
 
 ## 风险复核
