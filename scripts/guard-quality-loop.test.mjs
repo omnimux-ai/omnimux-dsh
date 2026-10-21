@@ -1039,4 +1039,78 @@ test.describe('补丁治理：规格假设/证伪 + 增量静默兜底', () => {
       cleanup(root)
     }
   })
+
+  /* ---------------------------------------------- 批量基线读取（Issue #3510） */
+
+  test('已跟踪文件新增空 catch 被检出（批量基线路径）', () => {
+    const root = makeRepo('delta-tracked-add')
+    try {
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch (error) { throw error }\n}\n')
+      gitIn(root, ['add', '.'])
+      gitIn(root, ['commit', '-m', 'base'])
+      const base = String(gitIn(root, ['rev-parse', 'HEAD']).stdout).trim()
+      gitIn(root, ['update-ref', 'refs/remotes/origin/main', base])
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch (error) { throw error }\n  try { run2() } catch {}\n}\n')
+      const result = newSilentCatchHits(root, { changedFiles: ['plugins/demo/src/a.js'] })
+      assert.equal(result.error, null)
+      assert.equal(result.scanned, 1)
+      assert.equal(result.hits.length, 1)
+      assert.equal(result.hits[0].rule, 'SC1')
+      assert.equal(result.hits[0].path, 'plugins/demo/src/a.js')
+    } finally {
+      cleanup(root)
+    }
+  })
+
+  test('已跟踪文件只做无关改动不误报', () => {
+    const root = makeRepo('delta-tracked-noise')
+    try {
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch {}\n}\n')
+      gitIn(root, ['add', '.'])
+      gitIn(root, ['commit', '-m', 'base'])
+      const base = String(gitIn(root, ['rev-parse', 'HEAD']).stdout).trim()
+      gitIn(root, ['update-ref', 'refs/remotes/origin/main', base])
+      writeFileAt(root, 'plugins/demo/src/a.js', '// 只改注释\nexport function a() {\n  try { run() } catch {}\n}\n')
+      const result = newSilentCatchHits(root, { changedFiles: ['plugins/demo/src/a.js'] })
+      assert.equal(result.error, null)
+      assert.deepEqual(result.hits, [])
+    } finally {
+      cleanup(root)
+    }
+  })
+
+  test('把 catch 体内的日志删掉（SC3 → SC1）被检出', () => {
+    const root = makeRepo('delta-trace-removed')
+    try {
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch (error) { logger.warn(error) }\n}\n')
+      gitIn(root, ['add', '.'])
+      gitIn(root, ['commit', '-m', 'base'])
+      const base = String(gitIn(root, ['rev-parse', 'HEAD']).stdout).trim()
+      gitIn(root, ['update-ref', 'refs/remotes/origin/main', base])
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch (error) {}\n}\n')
+      const result = newSilentCatchHits(root, { changedFiles: ['plugins/demo/src/a.js'] })
+      assert.equal(result.error, null)
+      assert.equal(result.hits.length, 1)
+      assert.equal(result.hits[0].rule, 'SC1')
+    } finally {
+      cleanup(root)
+    }
+  })
+
+  test('当前文件已无 catch 时跳过基线读取', () => {
+    const root = makeRepo('delta-no-catch')
+    try {
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch {}\n}\n')
+      gitIn(root, ['add', '.'])
+      gitIn(root, ['commit', '-m', 'base'])
+      const base = String(gitIn(root, ['rev-parse', 'HEAD']).stdout).trim()
+      gitIn(root, ['update-ref', 'refs/remotes/origin/main', base])
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  return run()\n}\n')
+      const result = newSilentCatchHits(root, { changedFiles: ['plugins/demo/src/a.js'] })
+      assert.equal(result.error, null)
+      assert.deepEqual(result.hits, [])
+    } finally {
+      cleanup(root)
+    }
+  })
 })
