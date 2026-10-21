@@ -1,9 +1,9 @@
 {
   "pass": true,
   "issue": 3533,
-  "capturedAt": "2026-10-21T08:27:18.065Z",
-  "sourceCommit": "396b59a58f5f0fc0ec7aa054bd86dcf86a7a93f5",
-  "sourceDirty": true,
+  "capturedAt": "2026-10-21T08:28:23.317Z",
+  "sourceCommit": "bbcdc09bc659131b289cab4515a55839b37eb9ac",
+  "sourceDirty": false,
   "browser": "ego-lite",
   "harness": "/tmp/flow-alignment-3533/harness.html",
   "sources": {

@@ -1,7 +1,7 @@
 {
   "pass": true,
   "issue": 3571,
-  "capturedAt": "2026-10-21T08:28:01.713Z",
+  "capturedAt": "2026-10-21T08:28:27.520Z",
   "browser": "ego-lite",
   "assertions": [
     {
@@ -81,6 +81,6 @@
     "store": "b00b45d1b0da9332d13c51fa7722d37b42b02cf66c1210294f18cbe607515459",
     "stage": "df477e9668c66101daff1ec955b9d241495e0be18526113ac74fbde4a6269a28"
   },
-  "sourceCommit": "396b59a58f5f0fc0ec7aa054bd86dcf86a7a93f5",
-  "sourceDirty": true
+  "sourceCommit": "bbcdc09bc659131b289cab4515a55839b37eb9ac",
+  "sourceDirty": false
 }
