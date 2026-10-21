@@ -1201,11 +1201,30 @@ export const RIVAL_CSS = `
   border: 1px solid var(--dsw-alias-border-l1);
   background: var(--dsw-specific-media-ink);
 }
-.omnimux-rival-timeline-media img {
+.omnimux-rival-timeline-media img,
+.omnimux-rival-timeline-video {
   display: block;
   width: 100%;
   max-height: 360px;
   object-fit: cover;
+}
+.omnimux-rival-timeline-video {
+  background: var(--dsw-specific-media-ink);
+}
+.omnimux-rival-timeline-media.is-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 9 / 16;
+  max-height: 360px;
+}
+.omnimux-rival-timeline-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
 }
 .omnimux-rival-timeline-media .omnimux-rival-timeline-play {
   position: absolute;

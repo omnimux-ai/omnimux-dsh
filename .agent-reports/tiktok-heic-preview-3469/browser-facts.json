@@ -1,0 +1,20 @@
+{
+  "task": "3469",
+  "base": "4d9c5a1323c6a1487486e5be10a0220de4893218",
+  "harness": "real RivalTimelineRow + injected rival styles/tokens; HEIC cover URL + local 360x640 sample video; localhost port 62060",
+  "video": {
+    "src": "/sample.mp4#t=0.1",
+    "muted": true,
+    "preload": "metadata",
+    "readyState": 4,
+    "videoWidth": 360,
+    "videoHeight": 640,
+    "imageStillRendered": false,
+    "placeholder": false
+  },
+  "fallback": {
+    "noVideoSrcPlaceholder": true
+  },
+  "failures": [],
+  "screenshot": "browser-heic-video-preview-3469.png"
+}

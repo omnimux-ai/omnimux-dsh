@@ -82,7 +82,8 @@ const WORK_ALICE = {
   duration: 31,
   posted_at: '2026-09-12T08:00:00.000Z',
   stats: { views: 1200, likes: 30, comments: 4, shares: 1 },
-  cover_src: '/omnimux/inspiration/local/media/rival-accounts/covers/rival-1.jpg',
+  cover_src: 'https://cdn.example/tiktok-cover.heic',
+  video_src: 'https://cdn.example/tiktok-video.mp4',
   account: {
     id: 'ra_alice',
     nickname: 'Alice Studio',
@@ -659,6 +660,57 @@ describe('账号监控 — 账号单选导航（#3451）', () => {
       await mounted.click(rowById(mounted.container, 'ra_alice').querySelector('.omnimux-rival-filter-select'))
       await settle(mounted.container, () => rowById(mounted.container, 'ra_alice').getAttribute('data-selected') === 'true')
       assert.equal(accountsCalls() - before, 1, 'one click on the row main area must trigger exactly one account reload')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('renders a silent video frame for a HEIC TikTok cover instead of text-only (#3469)', async () => {
+    const mounted = await mountStage()
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => timelineItems(mounted.container).length === WORKS.length)
+      const row = timelineItems(mounted.container).find((node) => node.getAttribute('data-card-id') === WORK_ALICE.row_id)
+      const video = row.querySelector('.omnimux-rival-timeline-video')
+      assert.ok(video, 'HEIC video covers must render an inline video preview')
+      assert.match(video.getAttribute('src'), /tiktok-video\.mp4#t=0\.1$/, 'the preview must seek to a real first frame')
+      assert.equal(video.muted, true, 'the preview must stay silent')
+      assert.equal(video.getAttribute('preload'), 'metadata', 'the preview must only fetch metadata')
+      assert.equal(row.querySelector('.omnimux-rival-timeline-media img'), null, 'the HEIC <img> must not be used')
+
+      // A broken video must fall back to the platform placeholder, not an empty card.
+      await act(async () => {
+        video.dispatchEvent(new window.Event('error'))
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      })
+      assert.equal(row.querySelector('.omnimux-rival-timeline-video'), null, 'a failed video must be removed')
+      assert.ok(row.querySelector('.omnimux-rival-timeline-media.is-placeholder'), 'a failed video must show the platform placeholder')
+      assert.ok(row.querySelector('.omnimux-rival-timeline-placeholder'), 'the placeholder must carry its platform/label content')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('falls back from a failed JPG cover to the video frame or a placeholder (#3469)', async () => {
+    const jpgVideo = { ...WORK_BOB, id: 'post_jpg_video', row_id: 'ra_bob:post_jpg_video', cover_src: '/bad-cover.jpg', video_src: 'https://cdn.example/v.mp4' }
+    const imagePost = { ...WORK_BOB, id: 'post_image', row_id: 'ra_bob:post_image', type: 'image', cover_src: '/bad-image.jpg', video_src: '' }
+    const mounted = await mountStage({ works: [...WORKS, jpgVideo, imagePost] })
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => timelineItems(mounted.container).length === WORKS.length + 2)
+      const videoRow = timelineItems(mounted.container).find((node) => node.getAttribute('data-card-id') === jpgVideo.row_id)
+      const imageRow = timelineItems(mounted.container).find((node) => node.getAttribute('data-card-id') === imagePost.row_id)
+
+      await act(async () => {
+        videoRow.querySelector('.omnimux-rival-timeline-media img').dispatchEvent(new window.Event('error'))
+        imageRow.querySelector('.omnimux-rival-timeline-media img').dispatchEvent(new window.Event('error'))
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      })
+      assert.ok(videoRow.querySelector('.omnimux-rival-timeline-video'), 'a failed JPG video cover must fall forward to the video frame')
+      assert.equal(imageRow.querySelector('.omnimux-rival-timeline-video'), null, 'an image post has no video fallback')
+      assert.ok(imageRow.querySelector('.omnimux-rival-timeline-media.is-placeholder'), 'a failed image cover must show the placeholder')
     } finally {
       await mounted.unmount()
       mounted.close()

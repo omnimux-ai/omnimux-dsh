@@ -181,7 +181,8 @@ function hostRow(post, index) {
     stats: { views: 128000, likes: 8640, comments: 214, shares: 96 },
     interacted_at: post.done ? '2026-10-05T09:12:00.000Z' : null,
     in_library: post.done === true,
-    cover_src: post.cover,
+    cover_src: post.id === 'p1' ? 'https://cdn.example/tiktok-cover.heic' : post.cover,
+    video_src: post.id === 'p1' ? 'https://cdn.example/tiktok-video.mp4' : '',
     source_platform: post.platform,
     account: { id: account.id, nickname: account.nickname, handle: account.handle, platform: account.platform },
   }
@@ -385,6 +386,19 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
       assert.equal(row.textContent.includes('正常'), false, 'the row must not spell out its health status')
       assert.equal(row.querySelector('.omnimux-rival-filter-warning'), null, 'a healthy fixture row carries no warning icon')
     }
+  })
+
+  it('renders a silent first-frame preview for a HEIC TikTok cover (#3469)', async () => {
+    const mounted = await mountStageOnAccounts()
+    open.push(mounted)
+    const row = rowOf(mounted.container, POSTS[0])
+    assert.ok(row, 'the newest TikTok post must render a row')
+    const video = row.querySelector('.omnimux-rival-timeline-video')
+    assert.ok(video, 'a HEIC TikTok video must render an inline <video> preview')
+    assert.match(video.getAttribute('src'), /tiktok-video\.mp4#t=0\.1$/, 'the preview must seek its first frame')
+    assert.equal(video.muted, true, 'the timeline preview must stay silent')
+    assert.equal(video.getAttribute('preload'), 'metadata', 'the preview must only preload metadata')
+    assert.equal(row.querySelector('.omnimux-rival-timeline-media img'), null, 'the undecodable HEIC <img> must be gone')
   })
 
   it('opens the official embedded player from a timeline row (#3462)', async () => {
