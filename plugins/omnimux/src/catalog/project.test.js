@@ -230,20 +230,23 @@ test('mergeInputCapability: union roles, min floor, max ceiling, mimes union', (
   assert.deepEqual(cap.referenceImages.supportedRoles, ['reference', 'first_frame']);
 });
 
-test('projectChatRows: full text directory with brand/role/input derived from ops', () => {
+test('projectChatRows: only listed text models with a text output enter the chat directory', () => {
   const index = freshIndex();
   const rows = projectChatRows(index);
-  assert.equal(rows.length, 13);
-  const gemini = rows.find((r) => r.id === 'gemini-3.7-flash');
-  assert.deepEqual([...gemini.input], ['text', 'image', 'video']);
+  // 2026-10-21 #3527：12 个非网关现役文本行仅保留契约，不再进入 chat/expert 白名单。
+  assert.equal(rows.length, 1);
+  assert.deepEqual(rows.map((r) => r.id), ['gemini-3.8-flash']);
+  const gemini = rows[0];
+  assert.deepEqual([...gemini.input], ['text', 'image', 'video', 'audio', 'document']);
   assert.equal(gemini.brand, 'google');
   assert.equal(gemini.role, 'flagship');
-  const flash = rows.find((r) => r.id === 'deepseek-v4-flash');
-  assert.equal(flash.role, 'classic');
-  // #1751: the renamed canonical row keeps the measured image modality from vision_chat
-  assert.ok(flash.input.includes('image'));
-  const opus5 = rows.find((r) => r.id === 'claude-opus-5');
-  assert.deepEqual([...opus5.input], ['text']);
+  for (const gone of [
+    'claude-opus-5', 'claude-opus-4-6', 'claude-sonnet-4-6', 'gpt-5.6-sol', 'gpt-5.5',
+    'grok-4.6', 'kimi-k3', 'deepseek-v4-pro', 'deepseek-v4-flash', 'gemini-3.7-flash',
+    'gemini-3.1-pro-preview', 'glm-5.3',
+  ]) {
+    assert.equal(rows.some((r) => r.id === gone), false, gone);
+  }
 });
 
 test('projectDirectoryRows: media groups project every contracted model (listed or not)', () => {

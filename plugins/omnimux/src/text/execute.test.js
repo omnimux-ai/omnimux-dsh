@@ -127,7 +127,7 @@ describe('textComplete execute', () => {
     await assert.rejects(
       () => executeOmnimuxText({
         prompt: 'describe',
-        model: 'gemini-3.7-flash',
+        model: 'gemini-3.8-flash',
         operation: 'digital_human',
         bypassSubmitGuard: true,
         llm: {
@@ -195,7 +195,9 @@ describe('textComplete execute', () => {
     )
   })
 
-  it('rejects video on a model without video input', async () => {
+  it('rejects video on an unlisted text model before any provider call', async () => {
+    // 2026-10-21 #3527：grok-4.6 等仅存于契约、不在路由声明里；
+    // 视频请求对它们必须在模态校验之前就以 unknown-model 拒绝。
     await assert.rejects(
       () => executeOmnimuxText({
         prompt: 'describe',
@@ -205,8 +207,8 @@ describe('textComplete execute', () => {
         fetcher: async () => ({ ok: true, json: async () => ({}) }),
       }),
       (error) => error instanceof OmnimuxError
-        && error.code === 'omnimux-invalid-request'
-        && /does not accept video input/.test(error.message),
+        && error.code === 'unknown-model'
+        && /not on the enabled text whitelist/.test(error.message),
     )
   })
 
@@ -397,8 +399,8 @@ describe('omnimux_text_complete tool', () => {
     })
     assert.equal(typeof provided.textComplete.execute, 'function')
     assert.ok(tools.omnimux_text_complete)
-    assert.ok(tools.omnimux_text_complete.parameters.properties.model.enum.includes('grok-4.6'))
-    assert.ok(tools.omnimux_text_complete.parameters.properties.model.enum.includes('gemini-3.7-flash'))
+    // 2026-10-21 #3527：tool enum 只暴露路由声明里的现役文本型号。
+    assert.deepEqual(tools.omnimux_text_complete.parameters.properties.model.enum, ['gemini-3.8-flash'])
     assert.equal(tools.omnimux_text_complete.parameters.properties.model.enum.includes('claude-haiku-4-5'), false)
     assert.match(tools.omnimux_text_complete.description, /whitelist/)
     assert.ok(tools.omnimux_text_complete.parameters.properties.video)
@@ -429,8 +431,10 @@ describe('omnimux_text_complete tool', () => {
       tools: { register(tool) { Object.assign(tools, Object.fromEntries([[tool.name, tool]])) } },
       provide() {},
       get() { return undefined },
-    }, { text: { models: [{ id: 'grok-4.6', enabled: false }, { id: 'glm-5.3' }] } })
-    assert.deepEqual(tools.omnimux_text_complete.parameters.properties.model.enum, ['glm-5.3'])
+    }, { text: { models: [{ id: 'gemini-3.8-flash', enabled: false }] } })
+    // 2026-10-21 #3527：唯一现役文本型号被禁用后，tool schema 不再提供 enum
+    // （空枚举会被省略，而不是把禁用型号暴露给模型）。
+    assert.equal(tools.omnimux_text_complete.parameters.properties.model.enum, undefined)
   })
 
   it('rejects a missing reason at the tool', async () => {
@@ -441,7 +445,7 @@ describe('omnimux_text_complete tool', () => {
       get() { return { stream: async function* () {} } },
     })
     await assert.rejects(
-      () => tools.omnimux_text_complete.execute({ model: 'glm-5.3', prompt: 'hi' }, {}),
+      () => tools.omnimux_text_complete.execute({ model: 'gemini-3.8-flash', prompt: 'hi' }, {}),
       (error) => error instanceof OmnimuxError && error.code === 'omnimux-invalid-request',
     )
   })

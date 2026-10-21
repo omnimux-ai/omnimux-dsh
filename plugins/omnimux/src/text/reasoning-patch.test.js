@@ -54,25 +54,19 @@ describe('omnimux patch reasoning offer', () => {
     }
   })
 
-  it('maps gpt-5.5 UI max to wire xhigh because literal max 400s', () => {
-    assert.match(byCanonicalId.get('gpt-5.5') ?? '', /^\s+max: xhigh$/m)
+  it('maps every declared UI max to a legal wire value after the single-model alignment', () => {
+    // 2026-10-21 #3527：唯一需要 max→xhigh 折中的 gpt-5.5 已从路由声明移除；
+    // 现役 gemini 直接声明 max: max，且不再保留任何 xhigh 折中。
+    for (const row of blocks) {
+      assert.match(row.body, /^\s+max: (max|xhigh)$/m, `${row.id} does not declare a legal max mapping`)
+    }
+    assert.match(byCanonicalId.get('gemini-3.8-flash') ?? '', /^\s+max: max$/m)
+    assert.doesNotMatch(text, /max: xhigh/)
   })
 
-  it('maps Off to wire none only on the models that can disable thinking', () => {
-    assert.match(byCanonicalId.get('gpt-5.6-sol') ?? '', /'off': 'none'/)
-    assert.match(byCanonicalId.get('deepseek-v4-pro') ?? '', /'off': 'none'/)
-    assert.match(byCanonicalId.get('deepseek-v4-flash') ?? '', /'off': 'none'/)
-    for (const id of [
-      'claude-opus-5',
-      'claude-opus-4-6',
-      'gpt-5.5',
-      'grok-4.6',
-      'kimi-k3',
-      'gemini-3.7-flash',
-      'gemini-3.1-pro-preview',
-      'glm-5.3',
-    ]) {
-      assert.doesNotMatch(byCanonicalId.get(id) ?? '', /'off':/, `${id} must not offer Off`)
-    }
+  it('declares no Off mapping now that no listed model can disable thinking', () => {
+    // gpt-5.6-sol / deepseek-v4-* 已不在路由声明里；唯一现役 gemini 不提供 Off。
+    assert.doesNotMatch(text, /'off':/)
+    assert.doesNotMatch(byCanonicalId.get('gemini-3.8-flash') ?? '', /'off':/, 'gemini must not offer Off')
   })
 })

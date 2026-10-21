@@ -60,7 +60,7 @@ describe('ordered text references', () => {
   it('rejects legacy audio and multiple videos before provider submission', async () => {
     let calls = 0
     for (const media of [{ audioTrack: { pathOrUrl: '/audio.wav' } }, { audio: '/audio.wav' }, { references: [ref(video, 'video'), ref(video, 'video')] }]) {
-      await assert.rejects(() => executeOmnimuxText({ prompt: 'describe', model: 'gemini-3.7-flash', operation: 'vision_chat', ...media, fetcher: async () => { calls++; throw new Error('must not call') } }), { code: 'omnimux-invalid-request' })
+      await assert.rejects(() => executeOmnimuxText({ prompt: 'describe', model: 'gemini-3.8-flash', operation: 'vision_chat', ...media, fetcher: async () => { calls++; throw new Error('must not call') } }), { code: 'omnimux-invalid-request' })
     }
     assert.equal(calls, 0)
   })

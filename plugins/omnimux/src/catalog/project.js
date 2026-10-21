@@ -210,7 +210,10 @@ export function projectDirectoryRows(index, managementGroup) {
 }
 
 /**
- * Chat-directory rows (facade CHAT_MODELS): every contracted text model.
+ * Chat-directory rows (facade CHAT_MODELS): text models with a listed text
+ * output. Contracted-but-unlisted rows stay in the registry/dispositions, but
+ * must not enter the chat or expert whitelist — the route declaration in
+ * `cordis.patch.yml` only advertises callable models (#3527).
  * brand ← family, role ← YAML role (default flagship), input ← modalities.
  * @param {import('./contract/index.js').ContractIndex} index
  * @returns {object[]}
@@ -219,6 +222,7 @@ export function projectChatRows(index) {
   return index
     .all()
     .filter((m) => m.managementGroup === 'text')
+    .filter((m) => (m.operations ?? []).some((op) => op.listed === true && op.output?.type === 'text'))
     .map((m) => {
       const inputCapability = mergeInputCapability(m.operations ?? []) ?? { modalities: ['text'] };
       const input = Array.isArray(inputCapability.modalities) ? [...inputCapability.modalities] : ['text'];
