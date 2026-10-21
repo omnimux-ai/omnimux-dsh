@@ -81,6 +81,24 @@ describe('locale dictionaries', () => {
   })
 })
 
+describe('card action layer', () => {
+  it('reveals the CTA layer on hover, keyboard focus and touch', () => {
+    assert.match(INSPIRATION_CSS, /\.omnimux-inspiration-card-pure:hover \.omnimux-inspiration-card-overlay,\s*\n\.omnimux-inspiration-card-pure:focus-within \.omnimux-inspiration-card-overlay \{/)
+    assert.match(INSPIRATION_CSS, /@media \(hover: none\) \{\s*\n\s*\.omnimux-inspiration-card-overlay \{[^}]*opacity: 1;/)
+    assert.match(INSPIRATION_CSS, /\.omnimux-inspiration-card-overlay \{[^}]*visibility: hidden/)
+  })
+
+  it('reveals the media body and the ⋯ menu the same way', () => {
+    assert.match(INSPIRATION_CSS, /is-library:not\(\.t-text\):hover \.omnimux-rival-card-body/)
+    assert.match(INSPIRATION_CSS, /is-library:not\(\.t-text\):focus-within \.omnimux-rival-card-body/)
+    assert.match(INSPIRATION_CSS, /@media \(hover: none\) \{[^@]*\.omnimux-inspiration-card-menu \{/)
+  })
+
+  it('keeps the failure icon clear of the post checkbox and menu', () => {
+    assert.match(INSPIRATION_CSS, /is-library\.t-text \.omnimux-inspiration-card-failure \{\s*\n\s*right: auto;\s*\n\s*left: 8px;/)
+  })
+})
+
 describe('hover overlay CTA', () => {
   it('lets the CTA row receive pointer events and uses 28px / pill geometry', () => {
     const row = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-overlay-cta')

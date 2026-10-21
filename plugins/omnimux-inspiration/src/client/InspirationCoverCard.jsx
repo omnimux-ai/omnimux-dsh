@@ -194,7 +194,7 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
       ) : null}
 
       {/* 导入中：内容还没到，保留一个常显的小阶段标签（默认卡面仍然没有其他 chrome）。 */}
-      {importing && statusPill ? (
+      {coverFirst && importing && statusPill ? (
         <span className="omnimux-inspiration-card-progress" role="status">{statusPill}</span>
       ) : null}
 

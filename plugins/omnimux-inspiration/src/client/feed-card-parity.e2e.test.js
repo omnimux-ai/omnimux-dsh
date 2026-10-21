@@ -72,6 +72,15 @@ function fixtureHtml() {
     </div>
   </article>
 
+  <article class="probe-card probe-post-failed omnimux-rival-card t-text omnimux-inspiration-card-pure is-library" style="--rival-card-w:${CARD_WIDTH}px">
+    <div class="omnimux-rival-card-body is-post">
+      <div class="omnimux-rival-card-text clamp-3 omnimux-inspiration-card-error is-inline is-failed" role="status">导入失败</div>
+    </div>
+    <span class="omnimux-inspiration-card-failure is-failed" role="img" title="${LONG_REASON}" aria-label="${LONG_REASON}"><svg width="14" height="14"></svg></span>
+    <div class="omnimux-inspiration-card-menu probe-menu"><button aria-label="更多操作">…</button></div>
+    <button class="omnimux-inspiration-card-check" aria-label="选择"></button>
+  </article>
+
   <article class="probe-card probe-post omnimux-rival-card t-text omnimux-inspiration-card-pure is-library" style="--rival-card-w:${CARD_WIDTH}px">
     <div class="omnimux-rival-card-body is-post">
       <div class="omnimux-rival-card-text clamp-3">一条纯文字帖子：这里放足够长的正文，用来确认它确实按三行截断，而不是把整段文本铺满卡片。</div>
@@ -127,6 +136,10 @@ function measure() {
   const postOverlay = postCard.querySelector('.omnimux-inspiration-card-overlay.is-post')
   const postCta = postCard.querySelector('.omnimux-inspiration-overlay-cta')
   const postMenu = postCard.querySelector('.omnimux-inspiration-card-menu')
+  const failedPost = document.querySelector('.probe-post-failed')
+  const failedIcon = failedPost.querySelector('.omnimux-inspiration-card-failure')
+  const failedCheck = failedPost.querySelector('.omnimux-inspiration-card-check')
+  const failedMenu = failedPost.querySelector('.omnimux-inspiration-card-menu')
   const mediaBox = media.getBoundingClientRect()
   return {
     mediaCard: rect(mediaCard),
@@ -135,9 +148,7 @@ function measure() {
     objectFit: getComputedStyle(media).objectFit,
     body: rect(body),
     bodyPosition: getComputedStyle(body).position,
-    bodyOpacity: getComputedStyle(body).opacity,
     mediaMenu: rect(mediaMenu),
-    menuOpacity: getComputedStyle(mediaMenu).opacity,
     failure: rect(failure),
     coverCta: rect(coverCta),
     coverCtaCenterOffset: centerOffset(coverCta, mediaCard),
@@ -151,7 +162,9 @@ function measure() {
     postMetaInBody: Boolean(postBody.querySelector('.omnimux-inspiration-card-meta')),
     postCtaCenterOffset: centerOffset(postCta, postCard),
     postMenu: rect(postMenu),
-    postMenuOpacity: getComputedStyle(postMenu).opacity,
+    failedIcon: rect(failedIcon),
+    failedCheck: rect(failedCheck),
+    failedMenu: rect(failedMenu),
   }
 }
 
@@ -170,8 +183,6 @@ test('根层媒体卡：封面就是默认卡面，高度 = 封面 + 描边', ()
   assert.ok(Math.abs(geometry.ratio - SHORT_VIDEO_RATIO) <= 0.01, `root card keeps the row ratio, got ${geometry.ratio.toFixed(3)}`)
   assert.equal(geometry.objectFit, 'cover')
   assert.equal(geometry.bodyPosition, 'absolute', 'the title/meta layer overlays the cover')
-  assert.equal(geometry.bodyOpacity, '0', 'it is hidden by default')
-  assert.equal(geometry.menuOpacity, '0', 'the ⋯ menu is hidden by default')
   assert.ok(geometry.body.y >= geometry.media.y, 'the overlay starts inside the cover')
   assert.ok(
     Math.abs(geometry.mediaCard.h - (geometry.media.h + 2)) <= 2,
@@ -192,12 +203,26 @@ test('根层 text-media 卡：去掉卡片内边距后高度仍是封面 + 描�
   )
 })
 
+test('根层失败帖子卡：失败图标不压复选框和菜单', () => {
+  const geometry = probe()
+  const icon = geometry.failedIcon
+  const check = geometry.failedCheck
+  const menu = geometry.failedMenu
+  const intersects = (a, b) => {
+    const w = Math.min(a.right, b.right) - Math.max(a.x, b.x)
+    const h = Math.min(a.bottom, b.bottom) - Math.max(a.y, b.y)
+    return w > 2 && h > 2
+  }
+  assert.equal(intersects(icon, check), false, 'the failure icon must not cover the checkbox')
+  assert.equal(intersects(icon, menu), false, 'the failure icon must not cover the ⋯ menu')
+  assert.ok(icon.x >= 0 && icon.right <= geometry.postCard.right, 'the icon stays inside the card')
+})
+
 test('根层帖子卡：三行正文常显，元信息与 CTA 在悬停层且居中', () => {
   const geometry = probe()
   assert.equal(geometry.postClamp, '3')
   assert.equal(geometry.postMetaInBody, false, 'meta is not part of the default post body')
   assert.equal(geometry.postOverlayMeta, true, 'the meta row rides in the hover layer')
-  assert.equal(geometry.postMenuOpacity, '0', 'the post ⋯ menu is hidden by default')
   assert.ok(Math.abs(geometry.postCtaCenterOffset) <= 2, `post CTA must be centred, offset ${geometry.postCtaCenterOffset}px`)
   assert.ok(geometry.postCard.h >= 144, 'the post card keeps its minimum height')
   assert.ok(geometry.postCard.h <= Math.round(geometry.postCard.w * (16 / 9)) + 2, 'the post card stays under the portrait cap')

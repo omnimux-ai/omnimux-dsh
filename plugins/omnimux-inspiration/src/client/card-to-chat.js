@@ -17,18 +17,6 @@
 
 import { resolveActiveSessionId, revealConversation, runExclusive, waitForComposerFiles } from './collection-to-chat.js'
 
-/** Module-level inflight lock: a second add while the first runs is refused. */
-let addInflight = null
-
-export function isCardAddBusy() {
-  return addInflight !== null
-}
-
-/** Test-only: drop the inflight handle so cases start from idle. */
-export function resetCardAddLock() {
-  addInflight = null
-}
-
 function plainText(value) {
   return String(value ?? '').replace(/\s+/g, ' ').trim()
 }
@@ -46,9 +34,8 @@ export function cardFileName(row) {
     .replace(/^\.+/, '')
     .replace(/\.+$/, '')
   const idPart = String(row?.id ?? '').replace(/[^\w-]/g, '').slice(0, 8)
-  if (!raw) return `灵感卡片-${idPart || 'card'}.md`
   const safe = raw.slice(0, 60).trim() || '灵感卡片'
-  return `${safe} · 灵感卡.md`
+  return `${safe} · 灵感卡-${idPart || 'card'}.md`
 }
 
 /**
@@ -123,9 +110,7 @@ function reportError(io, error) {
  * @returns {Promise<{ ok: true, duplicate?: boolean } | { ok: false, errorKey: string, code: string, detail?: string }>}
  */
 export async function addCardToSession(row, io = {}) {
-  if (isCardAddBusy()) return { ok: false, errorKey: 'card.sessionBusy', code: 'busy' }
-
-  return runExclusive(async () => {
+  const outcome = await runExclusive(async () => {
     const windowObject = io.window ?? (typeof window !== 'undefined' ? window : undefined)
     const t = typeof io.t === 'function' ? io.t : () => ''
     const id = String(row?.id ?? '').trim()
@@ -181,4 +166,10 @@ export async function addCardToSession(row, io = {}) {
     }
     return { ok: true }
   })
+  // The shared attachment lock is the real exclusion (collection + card share one
+  // composer). Translate its busy result to the card's own copy.
+  if (outcome && outcome.ok === false && outcome.code === 'busy') {
+    return { ok: false, errorKey: 'card.sessionBusy', code: 'busy' }
+  }
+  return outcome
 }

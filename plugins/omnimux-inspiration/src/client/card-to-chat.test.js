@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { it } from 'node:test'
-import { addCardToSession, buildCardDocument, cardFileName, resetCardAddLock } from './card-to-chat.js'
+import { addCardToSession, buildCardDocument, cardFileName } from './card-to-chat.js'
+import { runExclusive } from './collection-to-chat.js'
 
 /**
  * Unit contract for adding one library card to the current conversation
@@ -74,9 +75,11 @@ it('omits missing facts instead of inventing them', () => {
 })
 
 it('sanitises the attachment file name', () => {
-  assert.equal(cardFileName(ROW), '竖屏口播：三秒钩子 · 灵感卡.md')
-  assert.equal(cardFileName({ id: 'x1', title: 'a/b\\c:d*e?f"g<h>i|j' }), 'a-b-c-d-e-f-g-h-i-j · 灵感卡.md')
-  assert.equal(cardFileName({ id: 'x1' }), '灵感卡片-x1.md')
+  assert.equal(cardFileName(ROW), '竖屏口播：三秒钩子 · 灵感卡-card_1.md')
+  assert.equal(cardFileName({ id: 'x1', title: 'a/b\\c:d*e?f"g<h>i|j' }), 'a-b-c-d-e-f-g-h-i-j · 灵感卡-x1.md')
+  assert.equal(cardFileName({ id: 'x1' }), '灵感卡片 · 灵感卡-x1.md')
+  // Same title, different cards must not collide — the id keeps the name unique.
+  assert.notEqual(cardFileName({ id: 'a1', title: '同名' }), cardFileName({ id: 'b2', title: '同名' }))
 })
 
 it('refuses to add without a session', async () => {
@@ -98,12 +101,12 @@ it('mounts exactly one Markdown attachment on the current composer', async () =>
   assert.equal(result.ok, true)
   assert.equal(revealed, 1, 'the conversation is revealed only after the mount')
   assert.equal(files.state.added.length, 1)
-  assert.equal(files.state.added[0].name, '竖屏口播：三秒钩子 · 灵感卡.md')
+  assert.equal(files.state.added[0].name, '竖屏口播：三秒钩子 · 灵感卡-card_1.md')
   assert.equal(files.state.added[0].type, 'text/markdown')
 })
 
 it('reports a duplicate instead of mounting the same card twice', async () => {
-  const files = recordingFiles(['竖屏口播：三秒钩子 · 灵感卡.md'])
+  const files = recordingFiles(['竖屏口播：三秒钩子 · 灵感卡-card_1.md'])
   const result = await addCardToSession(ROW, { t, sessionId: 'sess-1', nativeFiles: files.api, reveal() {} })
   assert.deepEqual(result, { ok: true, duplicate: true })
   assert.equal(files.state.added.length, 0)
@@ -127,19 +130,13 @@ it('returns an explicit error key when there is no composer intake', async () =>
   assert.equal(result.errorKey, 'card.sessionUnavailable')
 })
 
-it('refuses a concurrent add through the module lock', async () => {
-  resetCardAddLock()
+it('maps the shared composer lock to the card copy', async () => {
+  // Collection and card adds share one composer lock; a concurrent card add must
+  // answer with the card key, not the collection copy.
   let release = () => {}
-  const pending = new Promise((resolve) => { release = resolve })
-  const first = addCardToSession(ROW, {
-    t,
-    sessionId: 'sess-1',
-    reveal() {},
-    nativeFiles: { list: () => [], add: async () => { await pending; return { ok: true } } },
-  })
-  const second = await addCardToSession(ROW, { t, sessionId: 'sess-1', reveal() {}, nativeFiles: { list: () => [], add: async () => ({ ok: true }) } })
-  assert.equal(second.code, 'busy')
+  const held = runExclusive(() => new Promise((resolve) => { release = () => resolve({ ok: true }) }))
+  const result = await addCardToSession(ROW, { t, sessionId: 'sess-1', reveal() {}, nativeFiles: { list: () => [], add: async () => ({ ok: true }) } })
+  assert.deepEqual(result, { ok: false, errorKey: 'card.sessionBusy', code: 'busy' })
   release()
-  assert.equal((await first).ok, true)
-  resetCardAddLock()
+  await held
 })

@@ -68,7 +68,6 @@ function measure() {
   const failure = card.querySelector('.omnimux-inspiration-card-failure')
   const menu = card.querySelector('.omnimux-inspiration-card-menu')
   const cta = card.querySelector('.omnimux-inspiration-overlay-cta')
-  const overlay = card.querySelector('.omnimux-inspiration-card-overlay.is-cover')
   const rect = (node) => {
     const box = node.getBoundingClientRect()
     return {
@@ -95,10 +94,7 @@ function measure() {
     ratio: mediaBox.width / mediaBox.height,
     titleClamp: getComputedStyle(title).webkitLineClamp,
     objectFit: getComputedStyle(media).objectFit,
-    bodyOpacity: getComputedStyle(body).opacity,
-    menuOpacity: getComputedStyle(menu).opacity,
     bodyPosition: getComputedStyle(body).position,
-    overlayOpacity: getComputedStyle(overlay).opacity,
     ctaCenterOffset: Math.round((ctaBox.left + ctaBox.width / 2) - (cardBox.left + cardBox.width / 2)),
   }
 }
@@ -119,8 +115,6 @@ test('合集成员卡：4:5 封面就是默认卡面，高度为封面 + 描边'
   assert.equal(geometry.objectFit, 'cover', 'the collection cover crops to fill')
   assert.equal(geometry.titleClamp, '2', 'the title is clamped to two lines')
   assert.equal(geometry.bodyPosition, 'absolute', 'the title/meta layer overlays the cover instead of adding height')
-  assert.equal(geometry.bodyOpacity, '0', 'the hover layer is hidden by default')
-  assert.equal(geometry.overlayOpacity, '0', 'the CTA layer is hidden by default')
   assert.ok(
     Math.abs(geometry.card.h - (geometry.media.h + 2)) <= 2,
     `card height must match the masonry estimate (card ${geometry.card.h}, cover ${geometry.media.h})`,
@@ -144,6 +138,5 @@ test('合集成员卡：CTA 居中，失败图标与菜单不越界', () => {
   assert.ok(geometry.failure.right <= geometry.card.right, 'the failure icon stays inside the card')
   assert.ok(geometry.menu.right <= geometry.card.right, 'the ⋯ menu stays inside the card')
   assert.ok(geometry.menu.y >= geometry.failure.bottom, 'the ⋯ menu sits below the failure icon')
-  assert.equal(geometry.menuOpacity, '0', 'the ⋯ menu is hidden by default')
   assert.ok(geometry.check.right <= geometry.card.right, 'the checkbox stays inside the card')
 })

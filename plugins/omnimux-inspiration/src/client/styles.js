@@ -736,6 +736,12 @@ export const INSPIRATION_CSS = `
 /* 帖子卡的复选框在右上，正文右侧留出它的热区，首行不会被盖住。 */
 .omnimux-inspiration-card-pure.is-library.t-text .omnimux-rival-card-text {
   padding-right: 28px;
+  padding-left: 30px;
+}
+/* 帖子卡没有封面：失败图标放左上，复选框/⋯ 在右上，两者不重叠。 */
+.omnimux-inspiration-card-pure.is-library.t-text .omnimux-inspiration-card-failure {
+  right: auto;
+  left: 8px;
 }
 .omnimux-inspiration-cover-img {
   display: block;
@@ -865,7 +871,7 @@ export const INSPIRATION_CSS = `
   right: 0;
   bottom: 0;
   z-index: 5;
-  padding: 40px 12px 62px;
+  padding: 8px 12px 44px;
   background: linear-gradient(180deg, transparent 0%, var(--dsw-alias-bg-mask-2, rgba(0,0,0,.72)) 34%, var(--dsw-alias-bg-mask-2, rgba(0,0,0,.72)) 100%);
   opacity: 0;
   pointer-events: none;
@@ -1023,11 +1029,29 @@ export const INSPIRATION_CSS = `
   flex-direction: column;
   justify-content: flex-end;
   padding: 12px;
-  transition: opacity 120ms ease;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 160ms ease, visibility 0s linear 160ms;
   pointer-events: none;
 }
-.omnimux-inspiration-card-pure:hover .omnimux-inspiration-card-overlay {
+.omnimux-inspiration-card-pure:hover .omnimux-inspiration-card-overlay,
+.omnimux-inspiration-card-pure:focus-within .omnimux-inspiration-card-overlay {
   opacity: 1;
+  visibility: visible;
+  transition: opacity 160ms ease, visibility 0s;
+}
+/* 触摸设备没有 hover：操作层常显，否则「立即复刻」永远点不到。 */
+@media (hover: none) {
+  .omnimux-inspiration-card-overlay {
+    opacity: 1;
+    visibility: visible;
+    transition: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .omnimux-inspiration-card-overlay {
+    transition: none;
+  }
 }
 .omnimux-inspiration-overlay-cta {
   position: relative;

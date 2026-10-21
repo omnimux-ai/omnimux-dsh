@@ -5,6 +5,7 @@ import { InspirationCollectionCard, toCollectionCardRow } from './InspirationCol
 import { InspirationCollectionDialog } from './InspirationCollectionDialog.jsx'
 import { InspirationCollectionMenu } from './InspirationCollectionMenu.jsx'
 import { InspirationCardMenu } from './InspirationCardMenu.jsx'
+import { buildCardMenuItems } from './card-actions.js'
 import { addCardToSession } from './card-to-chat.js'
 import { addCollectionToSession } from './collection-to-chat.js'
 import { injectCollectionStyles } from './collection-styles.js'
@@ -298,6 +299,7 @@ export function InspirationSection({ t, active }) {
         onError: failure => console.error('[omnimux-inspiration] card to session failed', failure),
       })
       if (result?.duplicate) showToast(t('card.sessionExists'))
+      else if (result?.ok) showToast(t('card.sessionAdded'))
       else if (!result?.ok) {
         const detail = typeof result?.detail === 'string' ? result.detail.trim() : ''
         showToast(detail || t(result?.errorKey || 'card.sessionFailed'))
@@ -711,18 +713,15 @@ export function InspirationSection({ t, active }) {
                       <InspirationCardMenu
                         t={t}
                         disabled={libraryCollections.busy}
-                        items={[
-                          { id: 'chat', label: t('card.menu.addToConversation'), run: () => handleAddCardToSession(descriptor) },
-                          tab === 'local' && !collectionId
-                            ? { id: 'merge', label: t('collection.merge'), run: () => libraryCollections.selectSource(descriptor.source_row) }
-                            : null,
-                          tab === 'local' && collectionId
-                            ? { id: 'remove', label: t('collection.remove'), run: () => libraryCollections.remove(descriptor.source_row) }
-                            : null,
-                          tab === 'local'
-                            ? { id: 'delete', label: t('card.menu.delete'), run: () => setPendingRemove({ ids: [descriptor.source_row.id], count: 1 }) }
-                            : null,
-                        ]}
+                        items={buildCardMenuItems({
+                          t,
+                          local: tab === 'local',
+                          inCollection: Boolean(collectionId),
+                          onAddToConversation: () => handleAddCardToSession(descriptor),
+                          onMerge: () => libraryCollections.selectSource(descriptor.source_row),
+                          onRemove: () => libraryCollections.remove(descriptor.source_row),
+                          onDelete: () => setPendingRemove({ ids: [descriptor.source_row.id], count: 1 }),
+                        })}
                       />
                     )}
                     card={{
