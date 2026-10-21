@@ -858,6 +858,35 @@ describe('guard-worktree bash command write safety guard (防命令行绕过篡�
       decideBashCommand({ command: 'npm install left-pad | cat', cwd: mainRepoRoot }).decision,
       'deny',
     )
+    // 包装执行器（npx / pnpm exec / npm exec）按被包装命令判定。
+    assert.equal(
+      decideBashCommand({ command: 'pnpm exec npm ci', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'npx --yes pnpm install --frozen-lockfile', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'npm exec -- pnpm install --frozen-lockfile', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'pnpm exec npm install left-pad', cwd: mainRepoRoot }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'pnpm exec tsc -p tsconfig.json', cwd: mainRepoRoot }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'npx vite build', cwd: mainRepoRoot }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'pnpm exec node scripts/dev-doctor.sh', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
     assert.equal(
       decideBashCommand({ command: 'touch -r package.json .tmp/out.txt', cwd: mainRepoRoot }).decision,
       'allow',
