@@ -168,7 +168,7 @@ Canonical 前缀：`/omnimux-workflow`。Dispatcher 对 `/dsh-workflow/*` **in-m
 - 选择器由 hub 的 `nativeFilePicker` seam 提供（`osascript -l JavaScript` 驱动 AppKit `NSOpenPanel`，accessory 激活策略，无 Apple Events / Dock 图标依赖）；本插件**不复制** picker 实现，只在请求时 `ctx.get('nativeFilePicker')`。
 - 该 seam 的实现与取消/多选/目录契约由 hub 单测覆盖（注入 runner，零真实 osascript）；seam 内部 `spawn(command, argv)` 无 shell，prompt 经 JSON 编码；**禁止** `import` / 依赖 `omnimux-assets`。
 - 对话框过滤/选择结果**不是安全边界**：Host 仍须按 §6 再校验（绝对路径、regular file、MIME 白名单），本路由只返回路径。
-- 取消：JXA 取消时 exit 0 且 stdout 为空 → 空 paths；兼容旧 AppleScript 的 `/User canceled|-128/i` 取消码。
+- 取消：JXA 取消时 exit 0 且 stdout 为空 → 空 paths；仅兼容旧 AppleScript 的 `execution error: … (-128)`（非零退出码 + stderr 执行错误）取消形态，普通 message 含 `-128` 不再判取消。
 - 提示文案仍由本路由提供：「选择要导入的素材」（目录为「选择要导入的文件夹」），seam 缺失时报 `picker-unavailable` 503，不静默降级。
 - 本路由只返回路径，不 stat、不流式、不写入 `canvas.json`。Client 拿到 path 后应 `probe` 再落节点。
 
