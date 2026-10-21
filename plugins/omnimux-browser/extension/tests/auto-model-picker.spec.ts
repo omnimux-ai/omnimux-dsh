@@ -10,6 +10,7 @@ import {
   flattenCatalogGroups,
   flattenModelGroupsFallback,
   normalizeModelMode,
+  pickEffortForRow,
   resolveModelBrandKey,
   MODEL_MODE_STORAGE_PREFIX,
   type AutoModelPickerProps,
@@ -418,5 +419,24 @@ describe('Issue #2972 面板裁剪修复与触发器纯文本样式', () => {
     expect(body).not.toMatch(/border-radius:\s*999px/)
     expect(body).not.toMatch(/background:\s*var\(--canvas-deep\)/)
     expect(body).toContain('background: transparent')
+  })
+})
+
+describe('pickEffortForRow', () => {
+  it('returns empty for a model without reasoning metadata', () => {
+    expect(pickEffortForRow({ id: 'gemini-3.8-flash-high', name: 'Gemini 3.8 Flash High' })).toBeUndefined()
+  })
+
+  it('returns the default effort or first supported effort', () => {
+    expect(pickEffortForRow({
+      id: 'gemini-3.8-flash',
+      name: 'Gemini 3.8 Flash',
+      reasoning: { efforts: [{ id: 'low' }, { id: 'high' }], defaultEffort: 'high' },
+    })).toBe('high')
+    expect(pickEffortForRow({
+      id: 'custom',
+      name: 'Custom',
+      reasoning: { efforts: [{ id: 'low' }] },
+    })).toBe('low')
   })
 })

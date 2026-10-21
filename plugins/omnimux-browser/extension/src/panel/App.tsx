@@ -877,7 +877,9 @@ export function App(): React.JSX.Element {
     }
 
     // effort === '' 表示该模型没有 reasoning 元数据：必须清除，不能继承 max。
-    const eff = effort !== undefined ? effort : selectedReasoningEffort
+    // 未显式给 effort 的模型选择（如 AutoModelPicker）按「无 reasoning」处理，
+    // 不能沿用上一模型的 max。
+    const eff = effort !== undefined ? effort : ''
     const hasEffort = eff !== '' && eff !== 'none'
     if (hasEffort) {
       setSelectedReasoningEffort(eff)

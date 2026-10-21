@@ -15,6 +15,10 @@ export interface PickerModelRow {
   id: string
   name: string
   provider?: string
+  reasoning?: {
+    efforts?: Array<{ id?: string; name?: string }>
+    defaultEffort?: string
+  }
 }
 
 export interface AutoModelPickerProps {
@@ -66,6 +70,7 @@ interface RawModelEntry {
   id?: unknown
   name?: unknown
   provider?: unknown
+  reasoning?: unknown
 }
 
 interface RawGroup {
@@ -87,7 +92,13 @@ function flattenRows(raw: unknown, providerOf: (group: RawGroup) => string | und
       if (!m || typeof m.id !== 'string' || m.id === '') continue
       const name = typeof m.name === 'string' && m.name !== '' ? m.name : m.id
       const rowProvider = typeof m.provider === 'string' && m.provider !== '' ? m.provider : provider
-      rows.push(rowProvider ? { id: m.id, name, provider: rowProvider } : { id: m.id, name })
+      const reasoning = typeof m.reasoning === 'object' && m.reasoning !== null
+        ? m.reasoning as PickerModelRow['reasoning']
+        : undefined
+      const row = reasoning === undefined
+        ? (rowProvider ? { id: m.id, name, provider: rowProvider } : { id: m.id, name })
+        : (rowProvider ? { id: m.id, name, provider: rowProvider, reasoning } : { id: m.id, name, reasoning })
+      rows.push(row)
     }
   }
   return rows
@@ -99,6 +110,15 @@ export function flattenCatalogGroups(payload: unknown): PickerModelRow[] {
     (typeof g.id === 'string' && g.id !== '' ? g.id
       : typeof g.provider === 'string' && g.provider !== '' ? g.provider
         : undefined))
+}
+
+/** Pick the effort a row can accept; `''` means the model has no reasoning control. */
+export function pickEffortForRow(row: PickerModelRow): string | undefined {
+  const efforts = row.reasoning?.efforts ?? []
+  if (efforts.length === 0) return undefined
+  const preferred = row.reasoning?.defaultEffort
+  if (typeof preferred === 'string' && efforts.some((effort) => effort.id === preferred)) return preferred
+  return typeof efforts[0]?.id === 'string' ? efforts[0].id : ''
 }
 
 /**
@@ -120,7 +140,13 @@ export function flattenModelGroupsFallback(payload: unknown): PickerModelRow[] {
     for (const m of g.models as RawModelEntry[]) {
       if (!m || typeof m.id !== 'string' || m.id === '') continue
       const name = typeof m.name === 'string' && m.name !== '' ? m.name : m.id
-      rows.push(provider ? { id: m.id, name, provider } : { id: m.id, name })
+      const reasoning = typeof m.reasoning === 'object' && m.reasoning !== null
+        ? m.reasoning as PickerModelRow['reasoning']
+        : undefined
+      const row = reasoning === undefined
+        ? (provider ? { id: m.id, name, provider } : { id: m.id, name })
+        : (provider ? { id: m.id, name, provider, reasoning } : { id: m.id, name, reasoning })
+      rows.push(row)
     }
   }
   return rows
@@ -331,7 +357,7 @@ export const AutoModelPicker = memo(function AutoModelPicker({
     setPickedModelId(row.id)
     setIsOpen(false)
     triggerRef.current?.focus()
-    onSelectModel?.(row.id, undefined, row.provider)
+    onSelectModel?.(row.id, pickEffortForRow(row), row.provider)
   }
 
   const handleToggle = () => {
