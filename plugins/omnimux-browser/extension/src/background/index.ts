@@ -96,6 +96,12 @@ import {
   type SaveTargetClassification,
 } from './save-target.ts'
 import { loopbackFetch } from '../shared/loopback-fetch.ts'
+import {
+  INSPIRATION_CAPTURE_PATH,
+  buildCaptureRequestBody,
+  readCaptureSaveOutcome,
+  readCapturedPost,
+} from './capture-save.ts'
 import { PanelPresence } from './panel-presence.ts'
 import { normalizeSaveRequestId, saveImageAssetRpc } from './save-image-assets.ts'
 import type { HoveredMedia } from '../content/media-hover/types.ts'
@@ -1863,6 +1869,63 @@ function readSaveTargetProbeUrl(message: { url?: unknown; payload?: Record<strin
   return typeof payloadUrl === 'string' ? payloadUrl.trim() : ''
 }
 
+// ---- 页面内作品直传（不走云端采集） ----
+//
+// 保存作品时先在当前标签页里提取，成功即把作品与媒体直链交给 host 落盘；
+// 提取不到（或 host 拒绝）就回退旧的 import-url 链路，绝不假成功。
+
+/** 向当前活动标签页索取作品提取结果。 */
+async function capturePostFromActiveTab(): Promise<ReturnType<typeof readCapturedPost>> {
+  try {
+    const tabs = await chrome.tabs?.query?.({ active: true, currentWindow: true })
+    const tab = tabs?.[0]
+    if (tab?.id === undefined || typeof tab.url !== 'string' || !/^https?:/i.test(tab.url)) return null
+    const response = await new Promise<{ ok?: boolean; post?: unknown }>((resolve) => {
+      try {
+        chrome.tabs.sendMessage(tab.id as number, { action: 'CAPTURE_POST' }, (reply) => {
+          if (chrome.runtime?.lastError || !reply) resolve({ ok: false })
+          else resolve(reply as { ok?: boolean; post?: unknown })
+        })
+      } catch {
+        resolve({ ok: false })
+      }
+    })
+    if (response.ok !== true) return null
+    return readCapturedPost(response.post)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 把页面提取到的作品直传 host 下载入库。
+ *
+ * 直传请求会等 host 完成媒体下载，所以超时比纯元数据请求宽；下载失败时 host
+ * 会返回 4xx，调用方回退旧的导入链路。
+ */
+async function saveCapturedPostOnHost(
+  post: ReturnType<typeof readCapturedPost>,
+  candidatePorts: number[],
+): Promise<{ ok: true; existing: boolean } | { ok: false }> {
+  const body = buildCaptureRequestBody(post, '', navigator.userAgent)
+  if (body === null) return { ok: false }
+  for (const port of candidatePorts) {
+    try {
+      const res = await loopbackFetch(`http://127.0.0.1:${port}${INSPIRATION_CAPTURE_PATH}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30_000),
+      })
+      if (!res.ok) continue
+      return { ok: true, ...readCaptureSaveOutcome(await res.json().catch(() => null)) }
+    } catch {
+      // 该端口没有本机 host：试下一个
+    }
+  }
+  return { ok: false }
+}
+
 chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
   if (typeof message !== 'object' || message === null) return
   if (sender.id !== chrome.runtime.id) return
@@ -2793,6 +2856,8 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
       auto_analyze?: boolean
       tags?: string[]
       targetPort?: number
+      /** 整页保存（未指定具体媒体）时允许页面内提取作品后直传。 */
+      capturePage?: boolean
     } | undefined
 
     const targetUrl = payload?.targetUrl || ''
@@ -2821,6 +2886,43 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
           return
         }
         // 账号导入失败：回退到灵感库保存，并如实返回最终落库位置（spec §10）。
+      }
+
+      // 2. 作品页：先在页面内提取，成功即由 host 下载落盘（不依赖云端采集）。
+      //    提取不到或 host 拒绝时继续走下面的 import-url 兜底。
+      if (payload?.capturePage === true) {
+        const captured = await capturePostFromActiveTab()
+        if (captured !== null) {
+          const captureResult = await saveCapturedPostOnHost(captured, candidatePorts)
+          if (captureResult.ok) {
+            const firstMedia = captured.media[0]
+            try {
+              await appendMediaInspiration({
+                id: `insp_${Date.now().toString(36)}`,
+                src: captured.cover_url || firstMedia?.url || captured.source_url,
+                type: (captured.content_shape === 'video' || firstMedia?.type === 'video') ? 'video' : 'image',
+                pageUrl: captured.source_url,
+                pageTitle: captured.title,
+                alt: captured.content,
+                previewSrc: captured.cover_url || firstMedia?.url || '',
+                width: 0,
+                height: 0,
+                naturalWidth: 0,
+                naturalHeight: 0,
+                capturedAt: Date.now(),
+              })
+            } catch {
+              // 缓存失败不影响已入库的作品
+            }
+            sendResponse({
+              ok: true,
+              target: 'inspiration',
+              via: 'capture',
+              existing: captureResult.existing,
+            })
+            return
+          }
+        }
       }
 
       let saved = false

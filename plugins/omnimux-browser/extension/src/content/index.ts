@@ -12,6 +12,8 @@
 
 import { DEFAULT_SNAPSHOT_MAX_CHARS } from 'omnimux-browser/src/protocol.ts'
 import { runAction, ActionError } from './actions.ts'
+import { capturePost } from './capture/index.ts'
+import type { CapturedPost } from './capture/index.ts'
 import { ElementIds } from './ids.ts'
 import { SelectionWatcher } from './selection.ts'
 import { detectPageType, detectPlatform } from './page-sensor.ts'
@@ -37,9 +39,31 @@ export interface ToolResult {
   error?: { code: string; message: string }
 }
 
-function onMessage(message: unknown, _sender: chrome.runtime.MessageSender, sendResponse: (response: ToolResult) => void): true | undefined {
+/** One page capture, as the background asks for it (spec §3.1). */
+export interface CapturePostResponse {
+  ok: boolean
+  post?: CapturedPost
+}
+
+type ContentResponse = ToolResult | CapturePostResponse
+
+function onMessage(message: unknown, _sender: chrome.runtime.MessageSender, sendResponse: (response: ContentResponse) => void): true | undefined {
   if (typeof message !== 'object' || message === null) return
-  const msg = message as { type?: string }
+  const msg = message as { type?: string; action?: string }
+  if (msg.action === 'CAPTURE_POST' || msg.type === 'CAPTURE_POST') {
+    // 只有顶层 frame 代表作品页；iframe 里的页面不是用户保存的对象。
+    if (window.top !== window) {
+      sendResponse({ ok: false })
+      return
+    }
+    try {
+      const post = capturePost()
+      sendResponse(post === null ? { ok: false } : { ok: true, post })
+    } catch {
+      sendResponse({ ok: false })
+    }
+    return
+  }
   if (msg.type === 'DSH_BUDGET') {
     const incoming = (message as { budget?: Partial<SnapshotBudget> }).budget
     if (incoming !== undefined) {

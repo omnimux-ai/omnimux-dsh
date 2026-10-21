@@ -226,4 +226,58 @@ describe('URL Normalizer & Canonical Key Extraction', () => {
     assert.ok(key.key.startsWith('facebook:url:'))
     assert.equal(isSameSocialContent(pageUrl, 'https://www.facebook.com/watch/?v=9876543210'), false)
   })
+
+  it('extracts canonical keys from Douyin post URLs', () => {
+    const pages = [
+      'https://www.douyin.com/video/7126745726494825736',
+      'https://www.douyin.com/note/7126745726494825736?previous_page=app_code_link',
+      'https://www.douyin.com/share/video/7126745726494825736',
+      'https://www.iesdouyin.com/share/video/7126745726494825736/?region=CN',
+    ]
+
+    for (const page of pages) {
+      const key = getCanonicalItemKey(page)
+      assert.equal(key.platform, 'douyin', page)
+      assert.equal(key.key, 'douyin:video:7126745726494825736', page)
+      assert.equal(key.canonicalUrl, 'https://www.douyin.com/video/7126745726494825736', page)
+    }
+    // query/hash 与分享页形态不影响去重。
+    assert.equal(isSameSocialContent(
+      'https://www.douyin.com/video/7126745726494825736?previous_page=web_code_link',
+      'https://www.iesdouyin.com/share/video/7126745726494825736/#detail',
+    ), true)
+
+    // 短链没有作品 id，保持 url key。
+    const shortKey = getCanonicalItemKey('https://v.douyin.com/iJabc12/')
+    assert.equal(shortKey.key, 'douyin:url:https://v.douyin.com/iJabc12')
+
+    // 伪装域名不能被识别成抖音作品 key。
+    const spoofed = getCanonicalItemKey('https://notdouyin.com/video/7126745726494825736')
+    assert.notEqual(spoofed.key, 'douyin:video:7126745726494825736')
+  })
+
+  it('extracts canonical keys from Xiaohongshu note URLs', () => {
+    const noteId = '66abcdef0123456789abcdef'
+    const pages = [
+      `https://www.xiaohongshu.com/explore/${noteId}?xsec_token=ABtoken&xsec_source=pc_feed`,
+      `https://www.xiaohongshu.com/discovery/item/${noteId}?source=webshare`,
+      `https://www.xiaohongshu.com/item/${noteId}`,
+    ]
+
+    for (const page of pages) {
+      const key = getCanonicalItemKey(page)
+      assert.equal(key.platform, 'xiaohongshu', page)
+      assert.equal(key.key, `xiaohongshu:note:${noteId}`, page)
+      assert.equal(key.canonicalUrl, `https://www.xiaohongshu.com/explore/${noteId}`, page)
+    }
+    // xsec_token 不同的同一条笔记是同一内容。
+    assert.equal(isSameSocialContent(pages[0], pages[1]), true)
+
+    // 短链没有笔记 id，保持 url key。
+    const shortKey = getCanonicalItemKey('https://xhslink.com/a/abcDEF')
+    assert.equal(shortKey.key, 'xiaohongshu:url:https://xhslink.com/a/abcDEF')
+
+    const spoofed = getCanonicalItemKey(`https://xiaohongshu.com.evil.net/explore/${noteId}`)
+    assert.notEqual(spoofed.key, `xiaohongshu:note:${noteId}`)
+  })
 })

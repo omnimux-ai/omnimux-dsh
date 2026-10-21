@@ -473,3 +473,61 @@ describe('cover bytes decide the stored name and whether it can be rendered', ()
     assert.equal(readFileSync(aligned).subarray(4, 8).toString('latin1'), 'ftyp')
   })
 })
+
+describe('downloadMedia — forwarded request headers', () => {
+  let dir
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'omnimux-download-headers-'))
+  })
+
+  after(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('passes the sanitized headers to the fetch request', async () => {
+    const requests = []
+    const fetcher = async (url, init) => {
+      requests.push({ url, init })
+      return streamResponse([[1, 2, 3, 4]], { 'content-type': 'video/mp4' })
+    }
+    const headers = { referer: 'https://www.douyin.com/', 'user-agent': 'UA', cookie: 'sid=1' }
+
+    await downloadForTest(PUBLIC_MP4, dir, { fetcher, headers })
+
+    assert.equal(requests.length, 1)
+    assert.equal(requests[0].init.redirect, 'manual')
+    assert.deepEqual(requests[0].init.headers, headers)
+  })
+
+  it('leaves the request init untouched when no headers are given', async () => {
+    const requests = []
+    const fetcher = async (url, init) => {
+      requests.push(init)
+      return streamResponse([[1, 2, 3, 4]], { 'content-type': 'video/mp4' })
+    }
+
+    await downloadForTest(PUBLIC_MP4, dir, { fetcher })
+
+    assert.deepEqual(Object.keys(requests[0]).sort(), ['redirect', 'signal'])
+    assert.equal(requests[0].headers, undefined)
+  })
+
+  it('forwards headers on every redirect hop', async () => {
+    const redirectedUrl = 'https://video.twimg.com/amplify_video/2/vid/1280x720/high.mp4'
+    const requests = []
+    const fetcher = async (url, init) => {
+      requests.push({ url, init })
+      if (url === PUBLIC_MP4) {
+        return { ok: false, status: 302, headers: new Headers({ location: redirectedUrl }) }
+      }
+      return streamResponse([[1, 2, 3, 4]], { 'content-type': 'video/mp4' })
+    }
+
+    await downloadForTest(PUBLIC_MP4, dir, { fetcher, headers: { referer: 'https://www.douyin.com/' } })
+
+    assert.equal(requests.length, 2)
+    assert.equal(requests[0].init.headers.referer, 'https://www.douyin.com/')
+    assert.deepEqual(requests[1].init.headers, { referer: 'https://www.douyin.com/' })
+  })
+})

@@ -290,7 +290,29 @@ export function getCanonicalItemKey(rawUrl) {
     }
   }
 
-  // 7. Dynamic self-registered platform from URL (known platforms above take precedence)
+  // 7. Douyin: /video/<aweme_id>, /note/<id>, /share/video/<id>
+  // 短链（v.douyin.com、iesdouyin share 之外的短码）没有作品 id，保留下面的 url key。
+  const douyinMatch = clean.match(/(?:^|[./])(?:iesdouyin|douyin)\.com\/(?:share\/)?(?:video|note)\/(\d{5,})/i)
+  if (douyinMatch && douyinMatch[1]) {
+    return {
+      platform: 'douyin',
+      key: `douyin:video:${douyinMatch[1]}`,
+      canonicalUrl: `https://www.douyin.com/video/${douyinMatch[1]}`,
+    }
+  }
+
+  // 8. Xiaohongshu: /explore/<note_id>, /discovery/item/<id>, /item/<id>
+  // query 里的 xsec_token / xsec_source 只用于签名，不进 canonical key。
+  const xhsMatch = clean.match(/(?:^|[./])xiaohongshu\.com\/(?:explore|discovery\/item|item)\/([A-Za-z0-9]+)/i)
+  if (xhsMatch && xhsMatch[1]) {
+    return {
+      platform: 'xiaohongshu',
+      key: `xiaohongshu:note:${xhsMatch[1]}`,
+      canonicalUrl: `https://www.xiaohongshu.com/explore/${xhsMatch[1]}`,
+    }
+  }
+
+  // 9. Dynamic self-registered platform from URL (known platforms above take precedence)
   const detected = detectPlatformFromUrl(clean || rawUrl)
   if (detected && detected !== 'unknown') {
     return {

@@ -14,6 +14,7 @@ import {
   handleTranslate,
 } from './http-handlers.js'
 import { handleCollectionRequest } from './collection-handlers.js'
+import { handleCapture } from './capture-handler.js'
 import { handleRadarKeywords, handleRadarMatch } from './radar/radar-handlers.js'
 import { handleSaveCreationDraft, handlePrepareCreationReferences, handleMaterializeCreationReferences } from './creation-handlers.js'
 import { detectPlatformFromUrl } from './url-normalizer.js'
@@ -42,6 +43,7 @@ const ROUTE_HANDLERS = {
   create: handleCreate,
   'import-url': handleImportUrl,
   'fetch-media': handleFetchMedia,
+  capture: handleCapture,
   analyze: handleAnalyze,
   translate: handleTranslate,
   'creation-draft': handleSaveCreationDraft,
@@ -187,6 +189,7 @@ function matchCollection(method, path) {
 const SPECIAL_PATHS = {
   [`${LOCAL_PREFIX}/import-url`]: { POST: 'import-url' },
   [`${LOCAL_PREFIX}/fetch-media`]: { POST: 'fetch-media' },
+  [`${LOCAL_PREFIX}/capture`]: { POST: 'capture' },
   [`${LOCAL_PREFIX}/batch-delete`]: { POST: 'batch-delete', DELETE: 'batch-delete' },
   [`${LOCAL_PREFIX}/radar/keywords`]: { POST: 'radar-keywords' },
   [`${LOCAL_PREFIX}/radar/match`]: { POST: 'radar-match' },
