@@ -126,7 +126,16 @@ export function preparePrivateTaskPackages({ preparation, root, repository, priv
           const expected = resolve(item.resolveRoot, spec.slice(5));
           if (!fs.existsSync(expected) || !fs.statSync(expected).isDirectory() || fs.realpathSync(expected) !== fs.realpathSync(resolved.resolveRoot)) fail('INSTALL_DEPENDENCY_SPEC_MISMATCH');
         } else if (!semver.validRange(spec)) fail('INSTALL_DEPENDENCY_SPEC_UNSUPPORTED');
-        else if (!semver.satisfies(dependencyManifest.version, spec)) fail('INSTALL_DEPENDENCY_SPEC_MISMATCH');
+        else if (!semver.satisfies(dependencyManifest.version, spec)) {
+          // Packages that declare the same name as both a dependency and a peer (the common
+          // three.js ecosystem pattern) are resolved by pnpm through the peer injection. Keep the
+          // dependency honest only when the package's own peer range accepts that exact version.
+          const peerSpec = original.peerDependencies?.[name];
+          if (typeof peerSpec !== 'string' || !semver.validRange(peerSpec)
+            || !semver.satisfies(dependencyManifest.version, peerSpec)) fail('INSTALL_DEPENDENCY_SPEC_MISMATCH');
+          record.dependencySpecExceptions ??= [];
+          record.dependencySpecExceptions.push({ name, declared: spec, resolved: dependencyManifest.version, acceptedByPeer: peerSpec });
+        }
         const child = visit(resolved);
         if (child.name !== name) fail('INSTALL_DEPENDENCY_IDENTITY');
         manifest[kind][name] = `file:${child.target}`;
