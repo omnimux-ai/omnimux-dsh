@@ -610,9 +610,175 @@ describe('logout cleanup failures are observable and propagated', () => {
       assert.equal(existsSync(store.profilePath), false)
       // The env override still authenticates after logout; only disk cleanup was attempted.
       assert.equal(await store.resolve(), 'pat-from-env')
+      // The refused seam unset is deferred through a credential-free marker (Issue #3514).
+      assert.equal(existsSync(store.seamCleanupMarkerPath), true)
+      const marker = JSON.parse(readFileSync(store.seamCleanupMarkerPath, 'utf8'))
+      assert.equal(marker.ref, 'OMNIMUX_ACCESS_TOKEN')
+      assert.equal(marker.reason, 'env-shadowed-logout')
+      assert.equal(/pat-from-env|pat-env-ignored|access_token/.test(JSON.stringify(marker)), false)
     } finally {
       rmSync(homeDir, { recursive: true, force: true })
       rmSync(configDir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('env-shadowed seam mirror residue (Issue #3514)', () => {
+  function createSeam() {
+    const state = { value: undefined, shadowed: false, setCalls: 0, unsetCalls: 0 }
+    const seam = {
+      async resolve() {
+        return state.value ? { value: state.value, source: 'file' } : undefined
+      },
+      async describe() {
+        return state.value
+          ? { configured: true, source: 'file', writable: true }
+          : { configured: false, writable: true }
+      },
+      async set(ref, value) {
+        state.setCalls += 1
+        if (state.shadowed) throw new Error(`credentials-local: "${ref}" is supplied read-only by the launching environment, so set would be shadowed`)
+        state.value = value
+      },
+      async unset(ref) {
+        state.unsetCalls += 1
+        if (state.shadowed) throw new Error(`credentials-local: "${ref}" is supplied read-only by the launching environment, so unset would be shadowed`)
+        state.value = undefined
+      },
+    }
+    return { state, seam }
+  }
+
+  function makeDirs() {
+    return {
+      homeDir: mkdtempSync(join(tmpdir(), 'omnimux-auth-home-')),
+      configDir: mkdtempSync(join(tmpdir(), 'omnimux-auth-cfg-')),
+    }
+  }
+
+  function cleanupDirs(dirs) {
+    rmSync(dirs.homeDir, { recursive: true, force: true })
+    rmSync(dirs.configDir, { recursive: true, force: true })
+  }
+
+  it('records a marker on env-shadowed logout and deletes the seam mirror after the env is gone', async () => {
+    const dirs = makeDirs()
+    const { state, seam } = createSeam()
+    /** @type {string[]} */
+    const warnings = []
+    const logger = { warn(message) { warnings.push(String(message)) } }
+    try {
+      // 1) Login without env: official seam mirror is written.
+      const before = createTokenStore({ homeDir: dirs.homeDir, configDir: dirs.configDir, credentials: seam, logger })
+      await before.set('pat-seam-old')
+      assert.equal(state.value, 'pat-seam-old')
+      assert.equal(state.setCalls, 1)
+
+      // 2) The user starts with OMNIMUX_ACCESS_TOKEN; logout cannot unset the seam.
+      state.shadowed = true
+      const shadowed = createTokenStore({
+        homeDir: dirs.homeDir,
+        configDir: dirs.configDir,
+        env: { OMNIMUX_ACCESS_TOKEN: 'pat-env' },
+        credentials: seam,
+        logger,
+      })
+      await shadowed.unset()
+      assert.equal(state.value, 'pat-seam-old', 'the mirror survives while the env shadows the seam')
+      assert.equal(existsSync(shadowed.seamCleanupMarkerPath), true)
+      const marker = JSON.parse(readFileSync(shadowed.seamCleanupMarkerPath, 'utf8'))
+      assert.equal(marker.ref, 'OMNIMUX_ACCESS_TOKEN')
+      assert.equal(marker.reason, 'env-shadowed-logout')
+      assert.match(warnings.join('\n'), /credentials\.unset failed:/)
+      assert.equal(/pat-seam-old|pat-env/.test(JSON.stringify(marker)), false, 'marker must not contain token material')
+
+      // 3) Env removed, next start cleans through the official seam before resolving.
+      state.shadowed = false
+      const clean = createTokenStore({ homeDir: dirs.homeDir, configDir: dirs.configDir, credentials: seam, logger })
+      assert.equal(await clean.seamCleanup, true)
+      assert.equal(state.value, undefined, 'deferred cleanup must unset the seam mirror')
+      assert.equal(state.unsetCalls, 2)
+      assert.equal(existsSync(clean.seamCleanupMarkerPath), false)
+      assert.equal(await clean.resolve(), undefined)
+      assert.equal((await clean.describe()).configured, false)
+    } finally {
+      cleanupDirs(dirs)
+    }
+  })
+
+  it('drops a stale marker without deleting the seam when a canonical token is active', async () => {
+    const dirs = makeDirs()
+    const { state, seam } = createSeam()
+    state.value = 'pat-old-mirror'
+    writeFileSync(
+      join(dirs.configDir, 'secrets.json'),
+      JSON.stringify({ version: 1, active_slot: 'desktop:default', access_token: 'pat-active', slots: { 'desktop:default': { access_token: 'pat-active' } } }),
+      { mode: 0o600 },
+    )
+    writeFileSync(
+      join(dirs.configDir, 'seam-cleanup-pending.json'),
+      JSON.stringify({ version: 1, ref: 'OMNIMUX_ACCESS_TOKEN', reason: 'env-shadowed-logout', createdAt: new Date().toISOString() }),
+      { mode: 0o600 },
+    )
+    try {
+      const store = createTokenStore({ homeDir: dirs.homeDir, configDir: dirs.configDir, credentials: seam })
+      assert.equal(await store.seamCleanup, false)
+      assert.equal(state.value, 'pat-old-mirror', 'must not delete the seam while a canonical token is active')
+      assert.equal(existsSync(store.seamCleanupMarkerPath), false)
+      assert.equal(await store.resolve(), 'pat-active')
+    } finally {
+      cleanupDirs(dirs)
+    }
+  })
+
+  it('keeps the marker and warns when deferred cleanup still fails', async () => {
+    const dirs = makeDirs()
+    const { seam } = createSeam()
+    /** @type {string[]} */
+    const warnings = []
+    writeFileSync(
+      join(dirs.configDir, 'seam-cleanup-pending.json'),
+      JSON.stringify({ version: 1, ref: 'OMNIMUX_ACCESS_TOKEN', reason: 'env-shadowed-logout', createdAt: new Date().toISOString() }),
+      { mode: 0o600 },
+    )
+    seam.unset = async () => {
+      throw new Error('credentials-local is disposed: cannot unset')
+    }
+    try {
+      const store = createTokenStore({
+        homeDir: dirs.homeDir,
+        configDir: dirs.configDir,
+        credentials: seam,
+        logger: { warn(message) { warnings.push(String(message)) } },
+      })
+      assert.equal(await store.seamCleanup, false)
+      assert.equal(existsSync(store.seamCleanupMarkerPath), true, 'failed cleanup keeps the marker for the next start')
+      assert.match(warnings.join('\n'), /pending seam mirror\) failed:/)
+    } finally {
+      cleanupDirs(dirs)
+    }
+  })
+
+  it('keeps normal login/logout mirroring unchanged and leaves no marker', async () => {
+    const dirs = makeDirs()
+    const { state, seam } = createSeam()
+    /** @type {string[]} */
+    const warnings = []
+    try {
+      const store = createTokenStore({
+        homeDir: dirs.homeDir,
+        configDir: dirs.configDir,
+        credentials: seam,
+        logger: { warn(message) { warnings.push(String(message)) } },
+      })
+      await store.set('pat-normal')
+      assert.equal(state.value, 'pat-normal')
+      await store.unset()
+      assert.equal(state.value, undefined)
+      assert.equal(existsSync(store.seamCleanupMarkerPath), false)
+      assert.deepEqual(warnings, [])
+    } finally {
+      cleanupDirs(dirs)
     }
   })
 })

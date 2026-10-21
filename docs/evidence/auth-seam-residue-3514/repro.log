@@ -1,0 +1,4 @@
+1) login (no env): seam = pat-seam-old
+2) logout under env: seam = pat-seam-old | marker = true | warn = "[omnimux-auth] credentials.unset failed: credentials-local: OMNIMUX_ACCESS_TOKEN is supplied read-only by the launching environment"
+3) env removed, restart: cleanup = true | seam = undefined | marker = false
+   resolve = undefined | describe = {"configured":false,"writable":true} | seam unset calls = 2
