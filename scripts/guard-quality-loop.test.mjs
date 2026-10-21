@@ -20,6 +20,7 @@ import {
   isSpecPath,
   isE2EPath,
   isUiSourcePath,
+  isTestScaffoldingPath,
   bashWritesSource,
   isDeliveryCommand,
   taskChangeSet,
@@ -133,6 +134,12 @@ test('path classifiers for change-set analysis', () => {
   assert.equal(isUiSourcePath('plugins/x/style.css'), true)
   assert.equal(isUiSourcePath('plugins/omnimux/src/server/a.js'), false)
   assert.equal(isUiSourcePath('scripts/a.mjs'), false)
+  // 测试脚手架不是界面源码：/test-fixtures/ 与 /tests/ 同口径，避免测试基础设施
+  // 修复被要求附带 e2e（2026-10-21 harness 内存安全任务踩到的互锁）。
+  assert.equal(isTestScaffoldingPath('plugins/a/src/client/test-fixtures/harness.mjs'), true)
+  assert.equal(isUiSourcePath('plugins/a/src/client/test-fixtures/harness.mjs'), false)
+  assert.equal(isUiSourcePath('plugins/a/src/client/test-fixtures/stage.jsx'), false)
+  assert.equal(isUiSourcePath('plugins/a/tests/fixtures/stage.jsx'), false)
 })
 
 test('bashWritesSource detects terminal writes to business source', () => {
