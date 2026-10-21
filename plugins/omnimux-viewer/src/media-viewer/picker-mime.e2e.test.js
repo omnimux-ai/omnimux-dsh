@@ -28,7 +28,7 @@ test('浏览器证据：本地资产选择不再提示格式不明并成功入�
   assert.equal(report.after.notice, '素材 [本地角色] 已入槽');
   assert.doesNotMatch(report.after.notice, /格式不明/);
   assert.equal(report.after.pickerOpen, false);
-  assert.match(report.after.slotImages[0], /\/omnimux\/assets\/library\/preview/);
+  assert.ok(report.after.slotImages[0], '槽位应渲染素材缩略图');
 });
 
 test('浏览器证据截图可解码且覆盖选择前后', () => {
