@@ -1,0 +1,61 @@
+{
+  "runId": "728b2ea7-79a9-4840-87e3-3da7ae1f2ec1",
+  "stage": "inspiration",
+  "plugin": "omnimux-inspiration",
+  "startedAt": "2026-10-21T08:05:40.492Z",
+  "completedAt": "2026-10-21T08:05:42.401Z",
+  "pass": true,
+  "serverPort": 55682,
+  "cdpPort": 55685,
+  "assertions": [
+    {
+      "name": "bundle-client-code",
+      "pass": true,
+      "size": 7462672
+    },
+    {
+      "name": "ephemeral-server-listen",
+      "pass": true,
+      "port": 55682
+    },
+    {
+      "name": "ephemeral-cdp-listen",
+      "pass": true,
+      "port": 55685
+    },
+    {
+      "name": "runner-page-ready",
+      "pass": true
+    },
+    {
+      "name": "sidebar-entry-clicked",
+      "pass": true,
+      "selector": "[data-omnimux-inspiration-entry]"
+    },
+    {
+      "name": "stage-content-rendered",
+      "pass": true,
+      "dimensions": {
+        "width": 548,
+        "height": 106
+      },
+      "textSnippet": "创作灵感\n\n工作树隔离环境已成功渲染 Stage 内容 (Tab: omnimux-inspirat"
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 37909
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/timeline-left/.workbuddy/evidence/worktree-qa/728b2ea7-79a9-4840-87e3-3da7ae1f2ec1/inspiration.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 37909
+  },
+  "errors": []
+}

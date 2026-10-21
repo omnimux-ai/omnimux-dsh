@@ -346,3 +346,62 @@ if (probe.skipped !== true) {
     assert.equal(probe.noticeBackground, probe.echoBackground)
   })
 }
+
+import { RIVAL_CSS } from './rival-styles.js'
+
+/**
+ * #3565：时间线左对齐 + 条目 hover 不改变背景（真实无头 Chrome 测量）。
+ *
+ * 左对齐是布局承诺：注入真实 RIVAL_CSS，挂 `.omnimux-rival-content` 与时间线，
+ * 测量左边是否与内容列重合；同时放一个 margin:auto 的对照元素，确保测量能区分
+ * 居中和左对齐。hover 是输入态，真实鼠标 hover 需要 CDP 输入，这里改为规则级
+ * 断言（无 hover 背景、focus-visible 仍有背景），并用 idle 背景做反向对照。
+ */
+test('时间线靠左对齐且 hover 不再改变条目背景 (#3565)', () => {
+  if (!HAS_CHROME) return
+  const dir = mkdtempSync(join(tmpdir(), 'e2e-timeline-left-'))
+  try {
+    const css = RIVAL_CSS.replace(/<\/style/gi, '<\\/style')
+    const page = join(dir, 'index.html')
+    writeFileSync(page, `<!DOCTYPE html><html><head><meta charset="utf-8"><title>pending</title>
+<style>body { ${TOKENS} font-family: sans-serif; } * { box-sizing: border-box; margin: 0; padding: 0; } #content { width: 900px; padding: 16px; }</style>
+<style>${css}</style></head><body>
+<div id="content" class="omnimux-rival-content">
+  <div class="omnimux-rival-timeline" id="timeline"><div class="omnimux-rival-timeline-item" id="item">item</div></div>
+  <div id="control" style="width: 620px; margin: 0 auto;">centered</div>
+</div>
+<script>
+  (function () {
+    var timeline = document.getElementById('timeline')
+    var content = document.getElementById('content')
+    var item = document.getElementById('item')
+    var control = document.getElementById('control')
+    document.title = 'RESULT:' + JSON.stringify({
+      contentLeft: Math.round(content.getBoundingClientRect().left + parseFloat(getComputedStyle(content).paddingLeft)),
+      timelineLeft: Math.round(timeline.getBoundingClientRect().left),
+      timelineMarginLeft: getComputedStyle(timeline).marginLeft,
+      timelineWidth: Math.round(timeline.getBoundingClientRect().width),
+      controlMarginLeft: getComputedStyle(control).marginLeft,
+      itemBackground: getComputedStyle(item).backgroundColor,
+    })
+  })()
+</script></body></html>`)
+    const out = spawnSync(CHROME_PATH, [
+      '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+      '--window-size=1200,900', '--virtual-time-budget=3000', '--dump-dom', `file://${page}`,
+    ], { encoding: 'utf8', timeout: 120_000 })
+    const stdout = out.stdout || ''
+    const match = /<title>RESULT:(.*?)<\/title>/s.exec(stdout)
+    assert.ok(match, `页面未回传测量结果: ${stdout.slice(0, 400)}`)
+    const result = JSON.parse(match[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'))
+    assert.equal(result.timelineMarginLeft, '0px')
+    assert.equal(result.timelineLeft, result.contentLeft)
+    assert.equal(result.timelineWidth, 620)
+    assert.notEqual(result.controlMarginLeft, '0px')
+    assert.notEqual(result.itemBackground, 'rgb(240, 241, 243)')
+    assert.equal(/\.omnimux-rival-timeline-item:hover\s*[,{]/.test(RIVAL_CSS), false)
+    assert.match(RIVAL_CSS, /\.omnimux-rival-timeline-item:focus-visible \{[^}]*background:/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
