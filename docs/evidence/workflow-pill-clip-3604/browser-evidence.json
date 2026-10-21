@@ -1,0 +1,51 @@
+{
+  "capturedAt": "2026-10-21T15:02:17.424Z",
+  "harness": "http://127.0.0.1:4935/",
+  "topEdge": {
+    "hasPill": true,
+    "pill": [
+      831,
+      44,
+      82,
+      25
+    ],
+    "rf": [
+      0,
+      37,
+      1728,
+      846
+    ],
+    "clampAttr": "263.43",
+    "pillInsideViewport": true,
+    "hitTestPill": true,
+    "rfOverflow": "hidden"
+  },
+  "clicked": {
+    "calls": 1,
+    "derived": [
+      {
+        "id": "node_depth_1792594933236_pcra",
+        "status": "completed"
+      }
+    ]
+  },
+  "normal": {
+    "hasPill": true,
+    "pill": [
+      831,
+      121,
+      82,
+      25
+    ],
+    "rf": [
+      0,
+      37,
+      1728,
+      846
+    ],
+    "clampAttr": null,
+    "pillInsideViewport": true,
+    "hitTestPill": false,
+    "rfOverflow": "hidden"
+  }
+}

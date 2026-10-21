@@ -1,0 +1,22 @@
+[
+  {
+    "rect": [
+      831,
+      121
+    ],
+    "center": [
+      872,
+      133
+    ],
+    "clampAttr": null,
+    "topEl": {
+      "tag": "SPAN",
+      "cls": "",
+      "text": "深度视频"
+    },
+    "inside": true,
+    "pointerEvents": "auto",
+    "visibility": "visible",
+    "z": "30"
+  }
+]
