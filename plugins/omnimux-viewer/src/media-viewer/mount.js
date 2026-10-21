@@ -25,14 +25,20 @@ export function mountMediaViewerTab(ctx) {
         return () => { if (fileReader === reader) fileReader = null }
       }, 'omnimux-viewer: media file reader')
     })
+    let boundLocale = null
+    let localeBindFailed = false
     const t = (key) => {
-      try {
-        const value = ctx.locale?.bind?.('tool.viewer')?.(key)
-        return value && value !== key ? value : key
-      } catch (error) {
-        console.warn('[omnimux-viewer] locale lookup failed:', error?.message || error)
-        return key
+      if (!boundLocale && !localeBindFailed) {
+        try {
+          boundLocale = ctx.locale?.bind?.('tool.viewer') || null
+        } catch (error) {
+          localeBindFailed = true
+          console.warn('[omnimux-viewer] locale bind failed:', error?.message || error)
+        }
       }
+      if (!boundLocale) return key
+      const value = boundLocale(key)
+      return value && value !== key ? value : key
     }
     inner.effect?.(() => sidebar.registerTab({
       id: MEDIA_VIEWER_TAB_ID,

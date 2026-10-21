@@ -22,7 +22,7 @@ Google Flow 的编辑页把「版本历史 + 提示词快照 + 成本前置」�
 ## 布局与文案契约
 
 - 宽容器（容器宽度 ≥900px）：`.omx-mv-stage-wrapper` 内、viewport 之后渲染 `<aside class="omx-mv-history">`，宽 260px，左边框 `--dsw-alias-border-l2`，列表滚动。
-- 窄容器（<900px）：同一节点变为覆盖抽屉，`inset:0 0 0 auto; width:min(320px,86%)`；根节点 `data-history-open="true"` 时滑入；遮罩 `.omx-mv-history-scrim`；z-index 抽屉 120 / 遮罩 110 / composer 100。
+- 窄容器（<900px）：同一节点变为覆盖抽屉，`inset:0 0 0 auto; width:min(320px,86%)`；根节点 `data-history-open="true"` 时滑入；遮罩 `.omx-mv-history-scrim`；z-index 抽屉 120 / 遮罩 110 / 既有 composer 60。
 - 仅 `subViewMode === 'single'` 渲染历史节点与「历史」按钮；时间线模式不渲染（避免与既有时间线重复）。
 - 卡片：缩略图或状态占位、提示词两行截断（`title` 全文）、`HH:MM · 图片/视频 · ×N`、状态徽标、hover/focus 可见的「复用提示词」「下载」。
 - 空态：`暂无历史`。

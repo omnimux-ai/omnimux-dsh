@@ -172,4 +172,3 @@ export function HistoryPanel({
   );
 }
 
-export default HistoryPanel;

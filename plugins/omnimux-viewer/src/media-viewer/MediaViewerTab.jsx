@@ -506,7 +506,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
     if (!item?.url) return;
     const a = document.createElement('a');
     a.href = item.url;
-    a.download = item.title || 'media_export.jpg';
+    a.download = item.title || (item.type === 'video' ? 'media_export.mp4' : 'media_export.jpg');
     a.click();
   };
 

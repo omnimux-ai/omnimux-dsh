@@ -64,7 +64,7 @@ await page.keyboard.press('Escape');
 await page.waitForTimeout(250);
 const wide = await snapshot();
 check('wide: rail visible beside stage', wide.railVisibility !== 'hidden' && wide.rail && wide.rail.width >= 255 && wide.rail.width <= 265, wide.rail);
-check('wide: toggle is hidden by container query', wide.toggleDisplay === 'none', wide.toggleDisplay);
+check('wide: history toggle is hidden', wide.toggleDisplay === 'none', wide.toggleDisplay);
 check('wide: five generation groups', wide.cards === 5, wide.cards);
 check('wide: batch result renders ×2 badge', wide.batches.includes('×2'), wide.batches);
 check('wide: newest completed item is current', /产品图/.test(wide.activeText), wide.activeText);
