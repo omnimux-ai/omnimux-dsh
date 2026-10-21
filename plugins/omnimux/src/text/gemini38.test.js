@@ -5,7 +5,7 @@ import { parse } from 'yaml'
 import { loadAll, DEFAULT_SPECS_DIR } from '../catalog/contract/index.js'
 import { buildModelCatalog } from '../catalog/list.js'
 import { executeOmnimuxText } from './execute.js'
-import { resolveTextRoute, parseTextConfig } from './catalog.js'
+import { CHAT_MODEL_IDS, resolveTextRoute, parseTextConfig } from './catalog.js'
 
 const image = 'data:image/png;base64,iVBORw0KGgoAAAAA'
 const video = `data:video/mp4;base64,${Buffer.from([0, 0, 0, 16, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]).toString('base64')}`
@@ -26,11 +26,17 @@ test('Gemini 3.8 declares multimodal inputs (image, video, audio, document) with
   assert.equal(current.execution.status, 'none')
   const patch = parse(readFileSync(new URL('../../cordis.patch.yml', import.meta.url), 'utf8'))
   const provider = patch.find((row) => row.id === 'llm-pi-ai').config.providers.omnimux
-  const config = (id) => { const { id: _id, name, ...value } = provider.models.find((row) => row.id === id); return value }
-  assert.deepEqual(config(current.id), config(previous.id))
+  // 2026-10-21 #3527：路由声明只保留网关现役的 gemini-3.8-flash。
+  assert.deepEqual(provider.models.map((row) => row.id), [current.id])
   assert.equal(provider.baseURL, 'https://api.omnimux.ai/v1')
   assert.equal(buildModelCatalog({ env: {} }).defaults.text, current.id)
-  assert.equal(resolveTextRoute({ model: previous.id }, parseTextConfig(), {}).modelId, previous.id)
+  // gemini-3.7-flash 契约仍在目录里（历史证据保留），但不再进入路由/chat 白名单。
+  assert.ok(previous, 'gemini-3.7-flash contract should stay registered')
+  assert.deepEqual(Array.from(CHAT_MODEL_IDS), [current.id])
+  assert.throws(
+    () => resolveTextRoute({ model: previous.id }, parseTextConfig(), {}),
+    (error) => error?.code === 'unknown-model',
+  )
 })
 
 test('Gemini 3.8 sends every image using the exact model on the OmniMux stream', async () => {

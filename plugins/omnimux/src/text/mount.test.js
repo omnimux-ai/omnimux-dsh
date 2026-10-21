@@ -22,7 +22,8 @@ describe('mountTextComplete capability gate', () => {
     assert.equal(tools.length, 1)
     assert.equal(tools[0].name, 'omnimux_text_complete')
     assert.ok(provided.textComplete)
-    assert.equal(tools[0].parameters.properties.model.enum.length, 13)
+    // 2026-10-21 #3527：路由声明只剩网关现役文本型号。
+    assert.deepEqual(tools[0].parameters.properties.model.enum, ['gemini-3.8-flash'])
     assert.equal(tools[0].parameters.properties.metadata, undefined)
     assert.ok(tools[0].parameters.properties.strategy)
     assert.ok(tools[0].parameters.properties.group)
@@ -57,8 +58,7 @@ describe('mountTextComplete capability gate', () => {
       gate: parseGateConfig({
         models: {
           textComplete: {
-            'grok-4.6': false,
-            'claude-opus-5': false,
+            'gemini-3.8-flash': false,
           },
         },
       }),
@@ -66,11 +66,8 @@ describe('mountTextComplete capability gate', () => {
 
     mountTextComplete(ctx, hub, {}, () => {})
     assert.equal(tools.length, 1)
-    const enumModels = tools[0].parameters.properties.model.enum
-    assert.equal(enumModels.length, 11)
-    assert.ok(!enumModels.includes('grok-4.6'))
-    assert.ok(!enumModels.includes('claude-opus-5'))
-    assert.ok(enumModels.includes('gemini-3.7-flash'))
+    // 2026-10-21 #3527：唯一现役文本型号被 gate 禁用后，空枚举被省略而不是暴露。
+    assert.equal(tools[0].parameters.properties.model.enum, undefined)
   })
 
   it('throws capability-disabled at execution time when calling a disabled model', async () => {
@@ -85,7 +82,7 @@ describe('mountTextComplete capability gate', () => {
       gate: parseGateConfig({
         models: {
           textComplete: {
-            'grok-4.6': false,
+            'gemini-3.8-flash': false,
           },
         },
       }),
@@ -95,19 +92,19 @@ describe('mountTextComplete capability gate', () => {
 
     await assert.rejects(
       async () => {
-        await tools[0].execute({ prompt: 'test', reason: 'benchmark', model: 'grok-4.6' })
+        await tools[0].execute({ prompt: 'test', reason: 'benchmark', model: 'gemini-3.8-flash' })
       },
       (err) => {
         assert.ok(err instanceof OmnimuxError)
         assert.equal(err.code, 'capability-disabled')
-        assert.equal(err.message, "Model 'grok-4.6' on textComplete is disabled by capability gate")
+        assert.equal(err.message, "Model 'gemini-3.8-flash' on textComplete is disabled by capability gate")
         return true
       },
     )
 
     await assert.rejects(
       async () => {
-        await provided.textComplete.execute({ prompt: 'test', model: 'grok-4.6' })
+        await provided.textComplete.execute({ prompt: 'test', model: 'gemini-3.8-flash' })
       },
       (err) => {
         assert.ok(err instanceof OmnimuxError)
@@ -138,7 +135,7 @@ describe('mountTextComplete capability gate', () => {
     mountTextComplete(ctx, hub, {}, (error) => { throw error })
     const request = {
       prompt: 'describe',
-      model: 'gemini-3.7-flash',
+      model: 'gemini-3.8-flash',
       operation: 'digital_human',
       bypassSubmitGuard: true,
       reason: 'guard regression',

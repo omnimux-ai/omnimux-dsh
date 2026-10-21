@@ -35,7 +35,8 @@ describe('model display-label contract (#321)', () => {
     // naive scan of indented "name:" under models list (skip package names with @)
     const names = [...raw.matchAll(/^\s+name:\s*(.+)\s*$/gm)].map((m) => m[1].trim().replace(/^['"]|['"]$/g, ''))
     const modelNames = names.filter((n) => n && !n.startsWith('@') && n !== 'omnimux')
-    assert.ok(modelNames.length >= 5, 'expected model name entries')
+    // 2026-10-21 #3527：路由声明只剩 1 个现役文本型号；仍要校验其显示名不含 '-'。
+    assert.ok(modelNames.length >= 1, 'expected model name entries')
     for (const name of modelNames) assertNoHyphen(name, `cordis.name`)
   })
 

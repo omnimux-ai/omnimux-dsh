@@ -326,7 +326,8 @@ test('cordis cross-refs: every composer id resolves to a contract canonical/alia
     return undefined;
   };
   const cordisIds = collectCordisModelIds();
-  assert.ok(cordisIds.length >= 11, `expected cordis composer ids, got ${cordisIds.length}`);
+  // 2026-10-21 #3527：路由声明对齐网关现役文本型号后只剩 1 个 composer id。
+  assert.deepEqual(cordisIds, ['gemini-3.8-flash']);
   const issues = validateCordisCrossRefs(cordisIds, index, resolveModelId, { strict: true });
   assert.deepEqual(issues, [], JSON.stringify(issues, null, 2));
 });

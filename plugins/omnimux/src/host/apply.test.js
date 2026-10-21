@@ -154,7 +154,7 @@ describe('hub apply composition', () => {
       gate: {
         media: { video: false },
         tools: { omnimux_social_data: false },
-        models: { textComplete: { 'grok-4.6': false } },
+        models: { textComplete: { 'gemini-3.8-flash': false } },
       },
     })
 
@@ -172,10 +172,9 @@ describe('hub apply composition', () => {
 
     assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'composerAttachments', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'inspirationShare', 'socialData', 'youtube', 'tiktok', 'instagram', 'x', 'decisions', 'modelCatalog', 'generationProducts', 'mediaInspect', 'nativeFilePicker'])
 
-    // grok-4.6 excluded from enum
+    // #3527：唯一现役文本型号被 gate 禁用后，空枚举被省略而不是暴露。
     const textEnum = tools.omnimux_text_complete.parameters.properties.model.enum
-    assert.ok(!textEnum.includes('grok-4.6'))
-    assert.ok(textEnum.includes('gemini-3.7-flash'))
+    assert.equal(textEnum, undefined)
   })
 })
 

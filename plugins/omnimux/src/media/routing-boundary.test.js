@@ -92,26 +92,28 @@ describe('routing request boundaries', () => {
   it('rejects unsafe text routing before HTTP or the session stream', async () => {
     let fetchCalls = 0
     let streamCalls = 0
+    // 2026-10-21 #3527：chat 白名单只剩 gemini-3.8-flash；claude/grok 等未上架型号
+    // 在任何分组解析之前就以 unknown-model 拒绝，现役型号的非法分组仍走 unknown-group。
     const cases = [
-      { model: 'claude-opus-4-6@claude-plus', group: 'standard' },
-      { model: 'claude-opus-4-6', group: 'default' },
-      { model: 'claude-opus-4-6', group: 'unknown-line' },
-      { model: 'claude-opus-4-6', group: 'claude-plus', allowedGroups: ['standard'] },
-      { model: 'claude-opus-4-6', allowedGroups: [' '] },
-      { model: 'claude-opus-4-6', allowedGroups: ['standard', null] },
-      { model: 'claude-opus-4-6', allowedGroups: 'standard' },
-      { model: 'grok-4.6', strategy: 'auto' },
+      [{ model: 'gemini-3.8-flash@claude-plus' }, 'unknown-group'],
+      [{ model: 'gemini-3.8-flash', group: 'claude-plus' }, 'unknown-group'],
+      [{ model: 'gemini-3.8-flash', group: 'unknown-line' }, 'unknown-group'],
+      [{ model: 'gemini-3.8-flash', group: 'cheap' }, 'unknown-group'],
+      [{ model: 'gemini-3.8-flash', group: 'standard', allowedGroups: ['claude-plus'] }, 'unknown-group'],
+      [{ model: 'gemini-3.8-flash', allowedGroups: [' '] }, 'omnimux-invalid-request'],
+      [{ model: 'gemini-3.8-flash', allowedGroups: ['standard', null] }, 'omnimux-invalid-request'],
+      [{ model: 'gemini-3.8-flash', allowedGroups: 'standard' }, 'omnimux-invalid-request'],
+      [{ model: 'claude-opus-4-6', allowedGroups: ['standard'] }, 'unknown-model'],
+      [{ model: 'grok-4.6', strategy: 'auto' }, 'unknown-model'],
     ]
-    for (const entry of cases) {
+    for (const [entry, code] of cases) {
       await assert.rejects(() => executeOmnimuxText({
         prompt: 'synthetic routing rejection',
         model: entry.model, group: entry.group, allowedGroups: entry.allowedGroups, strategy: entry.strategy,
         env: { OMNIMUX_API_KEY: 'sk-routing-test-only' },
         fetcher: async () => { fetchCalls += 1; throw new Error('HTTP must not be called') },
         llm: { stream: async function* () { streamCalls += 1; throw new Error('stream must not be called') } },
-      }), { code: entry.allowedGroups !== undefined
-        && (!Array.isArray(entry.allowedGroups) || entry.allowedGroups.some((item) => typeof item !== 'string' || !item.trim()))
-        ? 'omnimux-invalid-request' : 'unknown-group' }, entry.model)
+      }), { code }, `${entry.model} ${entry.group ?? ''}`)
       assert.equal(fetchCalls, 0, entry.model)
       assert.equal(streamCalls, 0, entry.model)
     }

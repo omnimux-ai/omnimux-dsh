@@ -69,7 +69,10 @@ it that way: user layers set `agent-default-model` only.
 - The one-shot expert whitelist (`plugins/omnimux/src/text/catalog.js`
   `CHAT_MODELS`) is a subset of this patch list, and its `input` matrix must
   agree with the patch. `verify:models` fails on any mismatch or if a
-  whitelist id is missing from the patch.
+  whitelist id is missing from the patch. Since 2026-10-21 (#3527) the chat
+  directory projects only text models with a **listed** text output, so a
+  contracted-but-unlisted model never re-enters the expert whitelist; the
+  patch itself only advertises models the configured gateway currently serves.
 - Deployment / instance gating for the expert whitelist only:
   `Config.gate.models.textComplete.<id>` can hide a whitelist row from
   `omnimux_text_complete` without editing `cordis.patch.yml`. A model is
