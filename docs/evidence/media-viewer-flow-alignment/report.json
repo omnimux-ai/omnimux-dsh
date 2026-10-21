@@ -1,0 +1,241 @@
+{
+  "pass": true,
+  "issue": 3533,
+  "capturedAt": "2026-10-21T06:27:06.773Z",
+  "sourceCommit": "0c14a1d4ac297bd18dbaeb8f1d34c80b80943644",
+  "sourceDirty": false,
+  "browser": "ego-lite",
+  "harness": "/tmp/flow-alignment-3533/harness.html",
+  "sources": {
+    "tab": "e3164db5495adec1db8ce37a6928b4f3f7b9a3ea5b32ce9d92dcc0abbb7c671b",
+    "panel": "89d55058248e034b9e4f01760670b7a8abca4fc5aafc2aa609590b06fd3e3e0f",
+    "styles": "a810ab2a5c967967fada55dd60405673b8de3938ff54a8afe6d1d45d90c4c024",
+    "history": "e981f3f987727055226dba24e86774c0aeb5d75a4b64f8decddccdfdf1b7d720",
+    "cost": "777cbc858b14eeecfb07c19cfec02878a131eae3114d0722ab70e6b18681a67c",
+    "composer": "094c0e1595196036ecf28fcf208a0959392a2ad07a013245dfc1dfe300a875a5",
+    "composerData": "bab610d439444362bfc5ad9010f39aa4bc9b4fa019dedaf4db36fff63a644422",
+    "configControls": "e81740176373127273a76cbca4f863bdb335eccaf493af12d28c15c8cc77c3bd",
+    "mount": "62c069a75a28d4d2a6495517feeab9c4cde1d72b8239e2fef6ef2b217ceb4761",
+    "locales": "4da9a9ad55b54984eb24412c88877322d26c5e4e4ed1242ce3e8b0f24309a254",
+    "copy": "3bfaf8d0eba7c9cfcd2b0e87209247f6c002b6528c100817584b303da02ef4b1",
+    "harness": "8cc78b170c9d872404b8709b261ebad66da21f4d6ce1ba5709003695e58520db",
+    "capture": "38e866d064e1b2b3b618c6757d6ff60405021aa17224e931d91c4f4baf3dc64e",
+    "buildHarness": "e40f3deebffb5361ce9b90cb3748ecc97be9372859f3ca343983b493a83bc0e3"
+  },
+  "assertions": [
+    {
+      "name": "wide: rail visible beside stage",
+      "pass": true,
+      "detail": {
+        "x": 1237,
+        "y": 47,
+        "width": 261,
+        "height": 753,
+        "top": 47,
+        "right": 1498,
+        "bottom": 800,
+        "left": 1237
+      }
+    },
+    {
+      "name": "wide: history toggle is hidden",
+      "pass": true,
+      "detail": "none"
+    },
+    {
+      "name": "wide: five generation groups",
+      "pass": true,
+      "detail": 5
+    },
+    {
+      "name": "wide: batch result renders ×2 badge",
+      "pass": true,
+      "detail": [
+        "×2"
+      ]
+    },
+    {
+      "name": "wide: newest completed item is current",
+      "pass": true,
+      "detail": "×2产品图，极简白底，四张批量16:57 · 图片"
+    },
+    {
+      "name": "wide: image-mode cost estimate visible",
+      "pass": true,
+      "detail": "预估消耗 ≈0.26 积分"
+    },
+    {
+      "name": "wide: history click switches stage media",
+      "pass": true,
+      "detail": {
+        "stageBefore": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%237048e8%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev4%3A0%3C%2Ftext%3E%3C%2Fsvg%3E",
+        "stageAfter": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23e8590c%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev3%3C%2Ftext%3E%3C%2Fsvg%3E"
+      }
+    },
+    {
+      "name": "wide: reuse prompt fills composer",
+      "pass": true,
+      "detail": "沙漠里的柴犬，手机拍摄质感"
+    },
+    {
+      "name": "narrow: rail is hidden off-canvas",
+      "pass": true,
+      "detail": {
+        "visibility": "hidden",
+        "position": "absolute"
+      }
+    },
+    {
+      "name": "narrow: history toggle visible",
+      "pass": true,
+      "detail": {
+        "display": "flex",
+        "visible": true
+      }
+    },
+    {
+      "name": "narrow: toggle opens the drawer",
+      "pass": true,
+      "detail": {
+        "open": "true",
+        "visibility": "visible"
+      }
+    },
+    {
+      "name": "narrow: drawer width stays inside the frame",
+      "pass": true,
+      "detail": {
+        "x": 857,
+        "y": 47,
+        "width": 321,
+        "height": 753,
+        "top": 47,
+        "right": 1178,
+        "bottom": 800,
+        "left": 857
+      }
+    },
+    {
+      "name": "narrow: scrim is interactive when open",
+      "pass": true,
+      "detail": "1"
+    },
+    {
+      "name": "narrow: Escape closes the drawer",
+      "pass": true,
+      "detail": {
+        "open": "false",
+        "visibility": "hidden"
+      }
+    }
+  ],
+  "wide": {
+    "viewport": {
+      "width": 1716,
+      "height": 871
+    },
+    "frameWidth": 1280,
+    "hasHistoryOpen": "false",
+    "rail": {
+      "x": 1237,
+      "y": 47,
+      "width": 261,
+      "height": 753,
+      "top": 47,
+      "right": 1498,
+      "bottom": 800,
+      "left": 1237
+    },
+    "railVisibility": "visible",
+    "railPosition": "static",
+    "railZIndex": "auto",
+    "toggleDisplay": "none",
+    "toggleVisible": false,
+    "scrimDisplay": "none",
+    "scrimOpacity": "1",
+    "cards": 5,
+    "batches": [
+      "×2"
+    ],
+    "activeText": "×2产品图，极简白底，四张批量16:57 · 图片",
+    "stageSrc": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%237048e8%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev4%3A0%3C%2Ftext%3E%3C%2Fsvg%3E",
+    "costText": "预估消耗 ≈0.26 积分",
+    "promptValue": ""
+  },
+  "narrowClosed": {
+    "viewport": {
+      "width": 1716,
+      "height": 871
+    },
+    "frameWidth": 640,
+    "hasHistoryOpen": "false",
+    "rail": {
+      "x": 1178,
+      "y": 47,
+      "width": 321,
+      "height": 753,
+      "top": 47,
+      "right": 1499,
+      "bottom": 800,
+      "left": 1178
+    },
+    "railVisibility": "hidden",
+    "railPosition": "absolute",
+    "railZIndex": "120",
+    "toggleDisplay": "flex",
+    "toggleVisible": true,
+    "scrimDisplay": "block",
+    "scrimOpacity": "0",
+    "cards": 5,
+    "batches": [
+      "×2"
+    ],
+    "activeText": "×2产品图，极简白底，四张批量16:57 · 图片",
+    "stageSrc": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%237048e8%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev4%3A0%3C%2Ftext%3E%3C%2Fsvg%3E",
+    "costText": "预估消耗 ≈0.13 积分",
+    "promptValue": ""
+  },
+  "narrowOpen": {
+    "viewport": {
+      "width": 1716,
+      "height": 871
+    },
+    "frameWidth": 640,
+    "hasHistoryOpen": "true",
+    "rail": {
+      "x": 857,
+      "y": 47,
+      "width": 321,
+      "height": 753,
+      "top": 47,
+      "right": 1178,
+      "bottom": 800,
+      "left": 857
+    },
+    "railVisibility": "visible",
+    "railPosition": "absolute",
+    "railZIndex": "120",
+    "toggleDisplay": "flex",
+    "toggleVisible": true,
+    "scrimDisplay": "block",
+    "scrimOpacity": "1",
+    "cards": 5,
+    "batches": [
+      "×2"
+    ],
+    "activeText": "×2产品图，极简白底，四张批量16:57 · 图片",
+    "stageSrc": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%237048e8%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev4%3A0%3C%2Ftext%3E%3C%2Fsvg%3E",
+    "costText": "预估消耗 ≈0.13 积分",
+    "promptValue": ""
+  },
+  "interactions": {
+    "stageBefore": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%237048e8%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev4%3A0%3C%2Ftext%3E%3C%2Fsvg%3E",
+    "stageAfterSwitch": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22480%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23e8590c%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%2314161a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22480%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20fill%3D%22%23ffffff%22%20font-family%3D%22system-ui%22%20font-size%3D%2242%22%20text-anchor%3D%22middle%22%3Ev3%3C%2Ftext%3E%3C%2Fsvg%3E",
+    "reusedPrompt": "沙漠里的柴犬，手机拍摄质感"
+  },
+  "screenshots": [
+    "wide-1280.png",
+    "narrow-640-closed.png",
+    "narrow-640-open.png"
+  ]
+}

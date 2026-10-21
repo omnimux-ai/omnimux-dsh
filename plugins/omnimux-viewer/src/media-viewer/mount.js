@@ -25,19 +25,31 @@ export function mountMediaViewerTab(ctx) {
         return () => { if (fileReader === reader) fileReader = null }
       }, 'omnimux-viewer: media file reader')
     })
+    let boundLocale = null
+    let localeBindFailed = false
+    const t = (key) => {
+      if (!boundLocale && !localeBindFailed) {
+        try {
+          boundLocale = ctx.locale?.bind?.('tool.viewer') || null
+        } catch (error) {
+          localeBindFailed = true
+          console.warn('[omnimux-viewer] locale bind failed:', error?.message || error)
+        }
+      }
+      if (!boundLocale) return key
+      const value = boundLocale(key)
+      return value && value !== key ? value : key
+    }
     inner.effect?.(() => sidebar.registerTab({
       id: MEDIA_VIEWER_TAB_ID,
       title: () => {
-        try {
-          const value = ctx.locale?.bind?.('tool.viewer')?.('mediaViewer.tabTitle')
-          if (value && value !== 'mediaViewer.tabTitle') return value
-        } catch {}
-        return '图像生成'
+        const value = t('mediaViewer.tabTitle')
+        return value === 'mediaViewer.tabTitle' ? '图像生成' : value
       },
       order: 7,
       hidden: false,
       single: true,
-      component: (props) => createElement(MediaViewerTab, { ...props, sessions: inner.sessions, imageUrl, readFile }),
+      component: (props) => createElement(MediaViewerTab, { ...props, sessions: inner.sessions, imageUrl, readFile, t }),
     }), 'omnimux-viewer: media viewer tab')
   })
 }
