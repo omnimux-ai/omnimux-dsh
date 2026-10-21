@@ -871,18 +871,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-primitives':
         specifier: '>=0.1.0-rc.6'
         version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
-      '@fix-webm-duration/fix':
-        specifier: 1.0.1
-        version: 1.0.1
       '@lezer/highlight':
         specifier: ^1.2.3
         version: 1.2.3
-      '@react-three/drei':
-        specifier: 10.7.7
-        version: 10.7.7(@react-three/fiber@9.6.1(@types/react@19.2.18)(immer@11.1.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.185.1))(@types/react@19.2.18)(@types/three@0.186.0)(immer@11.1.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.185.1)
-      '@react-three/fiber':
-        specifier: 9.6.1
-        version: 9.6.1(@types/react@19.2.18)(immer@11.1.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.185.1)
       '@types/marked':
         specifier: ^6.0.0
         version: 6.0.0
@@ -898,21 +889,6 @@ importers:
       marked:
         specifier: ^18.0.11
         version: 18.0.11
-      nanoid:
-        specifier: 6.0.0
-        version: 6.0.0
-      react:
-        specifier: 19.2.8
-        version: 19.2.8
-      react-dom:
-        specifier: 19.2.8
-        version: 19.2.8(react@19.2.8)
-      three:
-        specifier: 0.185.1
-        version: 0.185.1
-      three-stdlib:
-        specifier: 2.36.1
-        version: 2.36.1(three@0.185.1)
       uuid:
         specifier: 13.0.0
         version: 13.0.0
@@ -920,6 +896,15 @@ importers:
         specifier: 5.0.15
         version: 5.0.15(@types/react@19.2.18)(immer@11.1.18)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
     devDependencies:
+      '@fix-webm-duration/fix':
+        specifier: 1.0.1
+        version: 1.0.1
+      '@react-three/drei':
+        specifier: 10.7.7
+        version: 10.7.7(@react-three/fiber@9.6.1(@types/react@19.2.18)(immer@11.1.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.185.1))(@types/react@19.2.18)(@types/three@0.186.0)(immer@11.1.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.185.1)
+      '@react-three/fiber':
+        specifier: 9.6.1
+        version: 9.6.1(@types/react@19.2.18)(immer@11.1.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.185.1)
       '@types/node':
         specifier: ^25.9.4
         version: 25.9.5
@@ -935,12 +920,27 @@ importers:
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
+      nanoid:
+        specifier: 6.0.0
+        version: 6.0.0
       postcss:
         specifier: 8.5.6
         version: 8.5.6
+      react:
+        specifier: 19.2.8
+        version: 19.2.8
+      react-dom:
+        specifier: 19.2.8
+        version: 19.2.8(react@19.2.8)
       tailwindcss:
         specifier: 3.4.19
         version: 3.4.19(yaml@2.9.0)
+      three:
+        specifier: 0.185.1
+        version: 0.185.1
+      three-stdlib:
+        specifier: 2.36.1
+        version: 2.36.1(three@0.185.1)
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
