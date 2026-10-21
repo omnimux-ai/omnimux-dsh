@@ -770,7 +770,9 @@ export function decideMainCheckoutBuildCommand(command, cwd) {
   // One synchronous decision shares a metadata snapshot only for the exact cwd.
   const worktreeByCwd = new Map()
 
+  // 拆分管道：`pnpm install … | tail` 的下游命令不参与包管理器/构建判定。
   const segments = rawCommandSegments(command)
+    .flatMap((seg) => seg.split(/(?<!\|)\|(?!\|)/).map((s) => s.trim()).filter(Boolean))
   for (const seg of segments) {
     const words = tokenizeCommandLine(stripShellRedirection(seg))
     if (words.length === 0) continue
