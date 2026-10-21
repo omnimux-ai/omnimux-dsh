@@ -62,17 +62,23 @@ function assertNoBareOpen(rel, source) {
 }
 
 test('所有 Dev/Prod 拉起入口都经共享 helper，且 open 调用必须携带剔除后的 env', () => {
-  for (const rel of ['scripts/omnimux.mjs', 'scripts/dev-app-unlock.mjs', 'scripts/reload-dev-app.mjs']) {
+  for (const rel of ['scripts/dev-app-unlock.mjs', 'scripts/reload-dev-app.mjs']) {
     const source = readFileSync(join(root, rel), 'utf8');
     assert.match(source, /\.\/dev-launch-env\.mjs/, `${rel} 必须使用共享拉起环境`);
     assert.match(source, /\blaunchApp\(/, `${rel} 必须经 launchApp 拉起`);
     assertNoBareOpen(rel, source);
   }
-  // 已废弃的 workflow forwarder 仍可拉起 Prod：它自包含（插件 npm 包不含仓库根
-  // scripts，不能 import），但同样不得把 ELECTRON_RUN_AS_NODE 带进 Electron。
-  const deploy = readFileSync(join(root, 'plugins/omnimux-workflow/scripts/deploy.mjs'), 'utf8');
-  assertNoBareOpen('plugins/omnimux-workflow/scripts/deploy.mjs', deploy);
-  assert.match(deploy, /launchEnv\s*=\s*\{\s*\.\.\.process\.env\s*\}/, 'deploy.mjs 必须复制父环境');
-  assert.match(deploy, /delete launchEnv\.ELECTRON_RUN_AS_NODE/, 'deploy.mjs 必须剔除 ELECTRON_RUN_AS_NODE');
-  assert.match(deploy, /env:\s*launchEnv/, 'deploy.mjs 的 open 必须传剔除后的 launchEnv');
+
+  // 手动 restart 命令经 app-restart 模块拉起，模块本身使用共享 helper。
+  const restart = readFileSync(join(root, 'scripts/app-restart.mjs'), 'utf8');
+  assert.match(restart, /\.\/dev-launch-env\.mjs/, 'app-restart 必须使用共享拉起环境');
+  assert.match(restart, /\blaunchApp\b/, 'app-restart 必须经 launchApp 拉起');
+  assert.match(restart, /deps\.launch \?\? launchApp/, 'app-restart 默认拉起必须走 launchApp');
+  assertNoBareOpen('scripts/app-restart.mjs', restart);
+  assert.doesNotMatch(restart, /\bpkill\b|\bexec\('kill'/, 'app-restart 不得强杀进程');
+
+  const omnimux = readFileSync(join(root, 'scripts/omnimux.mjs'), 'utf8');
+  assert.match(omnimux, /\.\/app-restart\.mjs/, 'omnimux.mjs restart 必须经 app-restart');
+  assertNoBareOpen('scripts/omnimux.mjs', omnimux);
+  assert.doesNotMatch(omnimux, /\bpkill\b/, 'omnimux.mjs 不得强杀桌面应用');
 });

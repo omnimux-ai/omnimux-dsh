@@ -3,7 +3,7 @@
 当前产品方向见[角色生成与视频复刻](../../docs/contracts/product-positioning.md)。本页保留该组件的技术职责与既有实现记录，不证明全部功能当前可用，也不扩展默认产品范围；模型/渠道信息属于内部执行，普通用户的简化入口仍需对应实现证据。
 
 
-> 运维入口：`cd ~/Desktop/Project/omnimux-desktop-fork && yarn omnimux:sync omnimux-workflow`（+ `yarn omnimux:restart`）。`npm run deploy` 已废弃为转发器，勿再加私有同步逻辑。详见 `docs/contracts/ops-entry.md`。
+> 运维入口：`cd ~/Desktop/Project/omnimux-desktop-fork && yarn omnimux:sync omnimux-workflow`（+ `yarn omnimux:restart`）。原 `scripts/deploy.mjs` 转发器已随旧同步旁路一起删除，勿再加私有同步逻辑。详见 `docs/contracts/ops-entry.md`。
 >
 > **Gxgen 迁移蓝图（代理必读）**：产品树 [`docs/contracts/gxgen-workflow-migration.md`](../../docs/contracts/gxgen-workflow-migration.md) —— 进度矩阵 + Phase0 项目壳优先 + 术语表。动手改画布对齐前先更新/阅读矩阵。
 
