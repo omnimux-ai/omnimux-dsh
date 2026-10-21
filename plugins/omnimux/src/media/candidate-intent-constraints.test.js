@@ -41,11 +41,12 @@ async function isolated(run) {
 }
 
 function videoInput(home, requestKey) {
-  // 2026-10-21 网关对账 #3516：H3 分组整体系列退场；现役多线路模型是 seedance-2-5
-  //（480p 默认 / 720p），用它保留「候选池 + 约束 + failover」的通用断言。
+  // 2026-10-21 网关对账 #3516 评审修正：seedance-2-5 两档各自锁定固定分辨率，
+  // 默认档是 720p 标准版（480p 经济版非默认）；H3 分组退场后用它保留
+  // 「候选池 + 每档约束」的通用断言。
   return {
-    model: 'seedance-2-5@480p', operation: 'text_to_video', prompt: 'synthetic running horse',
-    allowedGroups: ['480p', '720p'], duration: 5, resolution: '720p',
+    model: 'seedance-2-5', operation: 'text_to_video', prompt: 'synthetic running horse',
+    allowedGroups: ['720p'], duration: 5, resolution: '720p',
     dest: join(home, requestKey + '.mp4'), requestKey, wait: false,
     env: { OMNIMUX_API_KEY: 'sk-synthetic-candidate-fixture' },
     fetcher: async () => { throw new Error('Unexpected HTTP in the runtime fixture') },
@@ -128,12 +129,19 @@ test('3312: the delisted H3 series exposes no channel groups while the listed mu
   assert.deepEqual(resolveChannelPlan('minimax-h3@standard', { allowedGroups: ['standard', 'task'] }), {
     candidates: [], unresolvedGroups: ['standard', 'task'],
   })
-  // 现役多线路模型 seedance-2-5 的合法首行与候选池保持按约束解析。
-  assert.deepEqual(resolveChannelPlan('seedance-2-5@480p', { allowedGroups: ['480p', '720p'] }).candidates,
-    ['seedance-2-5@seedance-2-5-480p', 'seedance-2-5@seedance-2-5-720p'])
+  // 现役多线路模型 seedance-2-5：720p 标准版是默认档，两档各锁定自己的固定分辨率。
+  const groups = getModelChannelGroups('seedance-2-5')
+  assert.deepEqual(groups.map((group) => group.id), ['480p', '720p'])
+  assert.equal(groups[0].default, undefined)
+  assert.equal(groups[1].default, true)
+  assert.deepEqual(groups.map((group) => group.constraints?.parameters?.resolution), [
+    { fixed: '480p' }, { fixed: '720p' },
+  ])
+  assert.deepEqual(resolveChannelPlan('seedance-2-5@720p', { allowedGroups: ['480p', '720p'] }).candidates,
+    ['seedance-2-5@seedance-2-5-720p', 'seedance-2-5@seedance-2-5-480p'])
   const calls = []
   const input = videoInput(home, 'legal-first-head')
-  input.allowedGroups = ['480p']
+  input.allowedGroups = ['720p']
   input.runtime = { async execute(request) {
     calls.push(request)
     return { taskId: 'synthetic-first-head-task-3312', outputs: [] }
@@ -143,53 +151,59 @@ test('3312: the delisted H3 series exposes no channel groups while the listed mu
   assert.equal(calls.length, 1)
   assertVideoCall(calls[0], 'seedance-2-5', 5)
   assert.equal(getMediaTaskRecord(result.taskRef).wireModel, 'seedance-2-5')
-  assert.equal(getMediaTaskRecord(result.taskRef).group, 'seedance-2-5-480p')
+  assert.equal(getMediaTaskRecord(result.taskRef).group, 'seedance-2-5-720p')
 }))
 
-test('3312: an out-of-range duration is refused before any runtime call instead of being rewritten', async () => isolated(async (home) => {
+test('3312: a 720p request refuses the allowed 480p tail fixed at 480p before a second runtime call rather than rewriting the user resolution', async () => isolated(async (home) => {
   const calls = []
-  const input = videoInput(home, 'incompatible-duration')
-  // seedance-2-5 的 duration 契约是 4–30 秒（allowAuto 允许 -1）；31 秒必须在 runtime 之前拒绝。
-  input.duration = 31
+  const input = videoInput(home, 'incompatible-resolution-tail')
+  input.group = '720p'
+  input.allowedGroups = ['480p', '720p']
+  input.strategy = 'cost_first'
   input.runtime = capturedRuntime(calls)
   let rejection
   try { await executeOmnimuxMedia('video', input) } catch (error) { rejection = error }
-  assert.equal(calls.length, 0, 'guard must refuse the illegal duration before runtime')
-  assert.ok(rejection, 'duration 31 cannot be submitted')
+  assert.equal(calls.length, 1, 'the head tier must admit the original resolution before runtime')
+  assertVideoCall(calls[0], 'seedance-2-5', 5)
+  assert.ok(rejection, '720p cannot submit to the fixed-480p tail')
   assert.equal(rejection.code, 'omnimux-invalid-request')
-  assert.match(rejection.message, /duration|时长/)
-  assert.equal(input.duration, 31, 'the caller duration is never rewritten')
-  assert.equal(input.model, 'seedance-2-5@480p')
+  assert.match(rejection.message, /resolution|480p/)
+  assert.equal(input.resolution, '720p', 'the caller resolution is never rewritten')
+  assert.equal(input.model, 'seedance-2-5')
   assert.equal(existsSync(input.dest), false)
-  assert.equal(findMediaTaskByRequestKey(input.requestKey), null)
+  const record = findMediaTaskByRequestKey(input.requestKey)
+  assert.equal(record.status, 'failed')
+  assert.equal(record.upstreamTaskId, undefined)
 }))
 
-test('3312: an omitted duration uses the documented head default and never mutates the caller request', async () => isolated(async (home) => {
+test('3312: an omitted resolution cannot carry the head default of 720p into a fixed-480p tail', async () => isolated(async (home) => {
   const calls = []
-  const input = videoInput(home, 'omitted-duration-tail')
-  delete input.duration
+  const input = videoInput(home, 'omitted-resolution-tail')
+  delete input.resolution
+  input.group = '720p'
+  input.allowedGroups = ['480p', '720p']
+  input.strategy = 'cost_first'
   input.runtime = capturedRuntime(calls)
-  const result = await executeOmnimuxMedia('video', input)
-  // 首行失败后回落到兼容的 720p 行，两行都收到契约默认时长 5 秒。
-  assert.equal(result.mode, 'submitted')
-  assert.equal(calls.length, 2)
+  await assert.rejects(() => executeOmnimuxMedia('video', input), { code: 'omnimux-invalid-request' })
+  assert.equal(calls.length, 1)
   assertVideoCall(calls[0], 'seedance-2-5', 5)
-  assertVideoCall(calls[1], 'seedance-2-5', 5)
-  assert.equal(Object.hasOwn(input, 'duration'), false)
+  assert.equal(Object.hasOwn(input, 'resolution'), false)
 }))
 
-test('3312: a compatible duration keeps a legal failover successful with the original logical intent and accepted task record', async () => isolated(async (home) => {
+test('3312: the default 720p tier keeps a legal submission with the original logical intent and accepted task record', async () => isolated(async (home) => {
   const calls = []
-  const input = videoInput(home, 'compatible-tail')
+  const input = videoInput(home, 'legal-default-tier')
   input.duration = 5
-  input.runtime = capturedRuntime(calls)
+  input.runtime = { async execute(request) {
+    calls.push(request)
+    return { taskId: 'synthetic-default-task-3312', outputs: [] }
+  } }
   const result = await executeOmnimuxMedia('video', input)
   assert.equal(result.mode, 'submitted')
-  assert.equal(result.taskId, 'synthetic-fallback-task-3312')
-  assert.equal(calls.length, 2)
+  assert.equal(result.taskId, 'synthetic-default-task-3312')
+  assert.equal(calls.length, 1)
   assertVideoCall(calls[0], 'seedance-2-5', 5)
-  assertVideoCall(calls[1], 'seedance-2-5', 5)
-  assert.equal(input.model, 'seedance-2-5@480p')
+  assert.equal(input.model, 'seedance-2-5')
   const record = getMediaTaskRecord(result.taskRef)
   assert.equal(record.model, 'seedance-2-5')
   assert.equal(record.wireModel, 'seedance-2-5')
@@ -198,53 +212,50 @@ test('3312: a compatible duration keeps a legal failover successful with the ori
   assert.equal(record.upstreamTaskId, result.taskId)
 }))
 
-test('3312: a compatible failover keeps every user parameter intact on the second line', async () => isolated(async (home) => {
+test('3312: the explicitly selected 480p economy tier stays usable with its own fixed resolution', async () => isolated(async (home) => {
   const calls = []
-  const input = videoInput(home, 'compatible-video-tail')
-  input.allowedGroups = ['480p', '720p']
-  input.runtime = capturedRuntime(calls)
+  const input = videoInput(home, 'legal-economy-tier')
+  input.group = '480p'
+  input.allowedGroups = ['480p']
+  input.resolution = '480p'
+  input.runtime = { async execute(request) {
+    calls.push(request)
+    return { taskId: 'synthetic-economy-task-3312', outputs: [] }
+  } }
   const result = await executeOmnimuxMedia('video', input)
   assert.equal(result.mode, 'submitted')
-  assert.equal(calls.length, 2)
-  const [first, second] = calls
-  assertVideoCall(first, 'seedance-2-5', 5)
-  assertVideoCall(second, 'seedance-2-5', 5)
-  // 持续时间 / 分辨率 / 提示词在换行后必须逐字保留。
-  for (const key of ['duration', 'resolution', 'size', 'prompt', 'operation']) {
-    assert.deepEqual(second.input[key], first.input[key], key)
-  }
-  assert.equal(getMediaTaskRecord(result.taskRef).wireModel, 'seedance-2-5')
-  assert.equal(getMediaTaskRecord(result.taskRef).group, 'seedance-2-5-720p')
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].input.model, 'seedance-2-5')
+  assert.equal(calls[0].input.duration, 5)
+  assert.equal(calls[0].input.resolution, '480p')
+  const record = getMediaTaskRecord(result.taskRef)
+  assert.equal(record.wireModel, 'seedance-2-5')
+  assert.equal(record.group, 'seedance-2-5-480p')
 }))
 
-test('3312: legal failover sends the exact bare wire model and per-line group header with unchanged duration through synthetic HTTP', async () => isolated(async (home) => {
+test('3312: each explicit tier sends the exact bare wire model and its own group header with unchanged resolution through synthetic HTTP', async () => isolated(async (home) => {
   const posts = []
-  const input = videoInput(home, 'compatible-wire')
-  input.allowedGroups = ['480p', '720p']
+  const input = videoInput(home, 'legal-wire')
+  input.group = '480p'
+  input.allowedGroups = ['480p']
+  input.resolution = '480p'
   input.fetcher = async (url, init) => {
     assert.equal(String(url), 'https://api.omnimux.ai/v1/video/generations')
     assert.equal(init.method, 'POST')
     posts.push({ body: JSON.parse(init.body), group: new Headers(init.headers).get('x-omnimux-group') })
-    if (posts.length === 1) {
-      return new Response(JSON.stringify({ error: { code: 'get_channel_failed', message: 'synthetic channel unavailable' } }),
-        { status: 503, headers: { 'content-type': 'application/json' } })
-    }
     return new Response(JSON.stringify({ task_id: 'synthetic-wire-task-3312' }),
       { headers: { 'content-type': 'application/json' } })
   }
   const result = await executeOmnimuxMedia('video', input)
   assert.equal(result.mode, 'submitted')
-  assert.equal(posts.length, 2)
-  // 模型 ID 保持裸产品 ID；只有分组头随候选切换。
+  assert.equal(posts.length, 1)
+  // 模型 ID 保持裸产品 ID；分组头与分辨率都来自所选档位。
   assert.equal(posts[0].body.model, 'seedance-2-5')
-  assert.equal(posts[1].body.model, 'seedance-2-5')
   assert.equal(posts[0].group, 'seedance-2-5-480p')
-  assert.equal(posts[1].group, 'seedance-2-5-720p')
   assert.equal(posts[0].body.duration, 5)
-  assert.equal(posts[1].body.duration, 5)
-  assert.equal(posts[1].body.resolution, '720p')
+  assert.equal(posts[0].body.resolution, '480p')
   assert.equal(getMediaTaskRecord(result.taskRef).wireModel, 'seedance-2-5')
-  assert.equal(getMediaTaskRecord(result.taskRef).group, 'seedance-2-5-720p')
+  assert.equal(getMediaTaskRecord(result.taskRef).group, 'seedance-2-5-480p')
 }))
 
 test('3312: an accepted task followed by channel failure never submits a second candidate and keeps its original handle', async () => isolated(async (home) => {

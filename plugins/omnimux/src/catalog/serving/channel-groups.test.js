@@ -82,23 +82,28 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       }
     })
 
-    it('returns the 480p default and 720p lines for seedance-2-5', () => {
+    it('returns the 480p economy and 720p standard(default) lines for seedance-2-5', () => {
       const groups = getModelChannelGroups('seedance-2-5')
       assert.ok(Array.isArray(groups))
       assert.equal(groups.length, 2)
       assert.deepEqual(groups.map((g) => g.id), ['480p', '720p'])
       const [p480, p720] = groups
-      // 默认线路是 480p 档，按秒计费，折扣 0.524。
+      // #3516 评审修正：默认档位是 720p 标准版；480p 是经济版（非默认）。
+      assert.equal(p480.label, '经济版')
       assert.equal(p480.wireGroup, 'seedance-2-5-480p')
       assert.equal(p480.pricing?.billingMode, 'per_second')
       assert.equal(p480.pricing?.pointsEstimate, 21)
       assert.equal(p480.pricing?.discountRate, 0.524)
-      assert.equal(p480.default, true)
-      // 720p 档按秒计费，折扣 0.7206。
+      assert.equal(p480.default, undefined)
+      // 每档用固定分辨率约束锁住自己的档位，禁止跨档静默改写。
+      assert.deepEqual(p480.constraints?.parameters?.resolution, { fixed: '480p' })
+      assert.equal(p720.label, '标准版')
       assert.equal(p720.wireGroup, 'seedance-2-5-720p')
       assert.equal(p720.pricing?.billingMode, 'per_second')
       assert.equal(p720.pricing?.pointsEstimate, 29)
       assert.equal(p720.pricing?.discountRate, 0.7206)
+      assert.equal(p720.default, true)
+      assert.deepEqual(p720.constraints?.parameters?.resolution, { fixed: '720p' })
       // 旧的 task-based pro 线路与特惠线路上游断货，已下架
       assert.equal(groups.some((g) => g.wireGroup === 'seedance-2-5-task-pro'), false)
       assert.equal(groups.some((g) => g.wireGroup === 'seedance-cheap'), false)
@@ -165,11 +170,12 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       )
     })
 
-    it('sorts by stability_first (highest 24h stability, then fastest wait)', () => {
+    it('sorts by stability_first (highest 24h stability first; unpublished SLA ranks last)', () => {
       const groups = getModelChannelGroups('seedance-2-5')
-      // 两个现役分组的 24h 稳定性都是 100%，排序退化为平均等待时间升序（60s < 70s）。
-      assert.deepEqual(groups.map((g) => g.sla?.stability24h), [100, 100])
-      assert.deepEqual(groups.map((g) => g.sla?.avgWaitTimeSec), [60, 70])
+      // #3516 评审修正：只有 480p 经济版公布了 SLA（100% / 60s）；720p 默认档未公布，
+      // 按「未公布 SLA 用中性默认值参与排序」的既有规则排在后面。
+      assert.deepEqual(groups.map((g) => g.sla?.stability24h), [100, undefined])
+      assert.deepEqual(groups.map((g) => g.sla?.avgWaitTimeSec), [60, undefined])
       const candidates = resolveChannelCandidates('seedance-2-5', { strategy: 'stability_first' })
       assert.deepEqual(candidates, [
         'seedance-2-5@seedance-2-5-480p',

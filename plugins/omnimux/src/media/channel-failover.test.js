@@ -15,40 +15,36 @@ describe('Channel Group Routing & Failover', () => {
           throw error
         }
         return {
-          taskId: 'task-success',
-          outputs: [{ type: 'video', url: 'https://example.com/video.mp4' }],
+          status: 'completed',
+          outputs: [{ type: 'image', url: 'data:image/png;base64,cG5n' }],
         }
       },
     }
 
-    const mockBuffer = Buffer.from([0, 0, 0, 24, 102, 116, 121, 112, 105, 115, 111, 109])
-    const result = await executeOmnimuxMedia('video', {
-      prompt: 'a cinematic shot',
-      dest: '/tmp/test-out.mp4',
-      // #3516：seedance-2-0 只剩单条 default 线路；用现役双线路 seedance-2-5 验证 failover。
-      model: 'seedance-2-5',
-      operation: 'text_to_video',
-      allowedGroups: ['480p', '720p'],
+    // #3516 评审修正：seedance-2-5 每档固定分辨率（480p/720p），跨档 failover 必须拒绝
+    // 而不是静默改写用户分辨率（见 candidate-intent-constraints 测试）。现役仍可合法
+    // failover 的是 gpt-image-2.5 的 economy → standard 池：请求 1K 同时满足两档。
+    const result = await executeOmnimuxMedia('image', {
+      prompt: 'a cinematic lamp',
+      dest: '/tmp/test-out.png',
+      model: 'gpt-image-2.5',
+      group: 'economy',
+      allowedGroups: ['economy', 'standard'],
       strategy: 'cost_first',
       runtime,
       wait: true,
       env: { OMNIMUX_API_KEY: 'sk-test' },
-      fetcher: async () => ({
-        ok: true,
-        status: 200,
-        headers: new Headers({ 'content-type': 'video/mp4' }),
-        arrayBuffer: async () => mockBuffer,
-        json: async () => ({}),
-      }),
+      fetcher: async () => {
+        throw new Error('Unexpected HTTP in the offline failover fixture')
+      },
     })
 
     assert.equal(result.mode, 'live')
-    assert.equal(result.taskId, 'task-success')
     assert.ok(attempts.length >= 2, 'should have attempted at least two candidates')
     // Issue #1851: the media path sends the bare model id and carries the group
     // as X-Omnimux-Group, so the injected runtime must never see the candidate
     // string — and a shared injection must survive every failover attempt.
-    assert.deepEqual(attempts, ['seedance-2-5', 'seedance-2-5'])
+    assert.deepEqual(attempts, ['gpt-image-2.5', 'gpt-image-2.5'])
   })
 
   it('completeTextViaChat falls over to next candidate when first candidate returns 503', async () => {

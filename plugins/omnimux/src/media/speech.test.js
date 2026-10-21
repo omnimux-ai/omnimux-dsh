@@ -221,10 +221,12 @@ test('audio output guard accepts verified bytes but not empty bytes or wrong MIM
   }
 })
 
-test('existing task IDs retain audio polling and download even with the new default', async (t) => {
+test('existing task IDs retain audio polling and download when their lane model is known', async (t) => {
   const dest = destFor(t)
   const calls = []
-  const result = await executeOmnimuxAudio({ dest, taskId: 'legacy-task', env,
+  // #3516：默认音频模型已切到 video 任务通道的 suno；恢复历史任务必须带原车道模型，
+  // 否则无法区分音频车道与视频车道（本用例固定 legacy 音频车道模型）。
+  const result = await executeOmnimuxAudio({ dest, taskId: 'legacy-task', model: 'seed-audio-1.0', env,
     fetcher: async (url, options) => {
       calls.push({ url, method: options?.method })
       if (url.endsWith('/legacy-task')) return Response.json({ status: 'completed', audio_url: 'https://cdn.example/old.mp3' })

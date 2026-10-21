@@ -13,12 +13,30 @@ describe('media route', () => {
     assert.equal(route.protocol, 'openai-media')
     assert.equal(route.baseUrl, 'https://api.omnimux.ai/v1')
     assert.equal(route.modelId, 'seedance-2-5')
-    // 2026-10-21 网关对账 #3516：seedance-2-5 的 480p 分组带 default:true，
+    // 2026-10-21 网关对账 #3516 评审修正：默认档位是 720p 标准版（default:true），
     // 空意图请求自动钉住该默认线路（不再返回裸候选）。
-    assert.equal(route.group, 'seedance-2-5-480p')
-    assert.deepEqual(route.candidates, ['seedance-2-5@seedance-2-5-480p'])
+    assert.equal(route.group, 'seedance-2-5-720p')
+    assert.deepEqual(route.candidates, ['seedance-2-5@seedance-2-5-720p'])
     assert.equal(route.apiKey, '')
     assert.equal(route.authMode, 'auto')
+  })
+
+  it('pins the seedance-2-5 line by the requested resolution before the default tier', () => {
+    // 2026-10-21 评审修正（#3516）：seedance-2-5 的 480p/720p 是两条带固定分辨率约束的线路，
+    // 无显式分组的请求必须按 resolution 参数选线，否则默认 720p 档会在传输前拒绝 480p。
+    const media = parseMediaConfig(undefined)
+    const economy = resolveMediaRoute('video', { model: 'seedance-2-5', resolution: '480p' }, media, {})
+    assert.equal(economy.group, 'seedance-2-5-480p')
+    assert.deepEqual(economy.candidates, ['seedance-2-5@seedance-2-5-480p'])
+    for (const request of [{ model: 'seedance-2-5', resolution: '720p' }, { model: 'seedance-2-5' }]) {
+      const route = resolveMediaRoute('video', request, media, {})
+      assert.equal(route.group, 'seedance-2-5-720p')
+      assert.deepEqual(route.candidates, ['seedance-2-5@seedance-2-5-720p'])
+    }
+    // 显式分组始终优先于参数派生线路。
+    const explicit = resolveMediaRoute('video', { model: 'seedance-2-5', group: '720p', resolution: '480p' }, media, {})
+    assert.equal(explicit.group, '720p')
+    assert.deepEqual(explicit.candidates, ['seedance-2-5@seedance-2-5-720p'])
   })
 
   it('defaults image to gpt-image-2.5 on the same provider row', () => {

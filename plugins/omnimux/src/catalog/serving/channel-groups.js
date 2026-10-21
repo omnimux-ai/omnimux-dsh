@@ -64,8 +64,8 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
         "billingMode": "per_second"
       },
       "sla": {
-        "stability24h": 100,
-        "avgWaitTimeSec": 70
+        "stability24h": 98,
+        "avgWaitTimeSec": 90
       },
       "wireGroup": "default",
       "default": true,
@@ -84,7 +84,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       },
       "sla": {
         "stability24h": 100,
-        "avgWaitTimeSec": 40
+        "avgWaitTimeSec": 30
       },
       "wireGroup": "default",
       "default": true,
@@ -113,7 +113,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
   "seedance-2-5": [
     {
       "id": "480p",
-      "label": "标准版",
+      "label": "经济版",
       "badge": "480p 档 · 经济走量",
       "pricing": {
         "pointsEstimate": 21,
@@ -124,24 +124,30 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
         "stability24h": 100,
         "avgWaitTimeSec": 60
       },
+      "constraints": {
+        "parameters": {
+          "resolution": { "fixed": "480p" }
+        }
+      },
       "wireGroup": "seedance-2-5-480p",
-      "default": true,
       "enabled": true
     },
     {
       "id": "720p",
-      "label": "高清版",
+      "label": "标准版",
       "badge": "720p 档 · 稳定满血",
       "pricing": {
         "pointsEstimate": 29,
         "discountRate": 0.7206,
         "billingMode": "per_second"
       },
-      "sla": {
-        "stability24h": 100,
-        "avgWaitTimeSec": 70
+      "constraints": {
+        "parameters": {
+          "resolution": { "fixed": "720p" }
+        }
       },
       "wireGroup": "seedance-2-5-720p",
+      "default": true,
       "enabled": true
     }
   ],

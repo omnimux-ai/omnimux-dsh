@@ -62,3 +62,12 @@
 
 - 未修改 `OmniMux` / `OmniMux-docs`；未发起真实模型请求；未替上游裁决 `seedance-2-5` 定价单位。
 - 上游恢复渠道后，回填对应 op 的 implementation 状态与分组即可恢复上架。
+
+## 6. 评审后修订（2026-10-21）
+
+1. **suno 车道修正**：网关只有 `/v1/video/generations` 任务端点（`router/video-router.go`），没有 `/v1/audio/generations`；`media/vendors/omnimux.js` 将 `suno`/`suno-sounds` 纳入 `AUDIO_VIDEO_TASK_MODEL_IDS`，submit 与 poll 都走视频任务车道（官方文档 `audio-series/models/suno.mdx` 亦写明 `POST /v1/video/generations`）。
+2. **seedance-2-5 档位/default 对齐**：契约默认分辨率为 720p，故将 `720p` 设为默认档（标准版），`480p` 为经济版；两档各自声明 `constraints.parameters.resolution.fixed`（480p/720p），避免默认请求 pin 480p 档却发送 720p/1080p。1080p 仅存在于模型契约 union，现役渠道不提供，由线路约束收窄。
+3. **门禁口径**：`verify-cross-plugin-model-alignment` 的 audio 主 op 改为 `text_to_music`（`text_to_speech` 已无现役模型，保留空跳过会在 4 个默认里漏检 1 个）。
+4. **证据快照重生成**：`plugins/omnimux-assets/cloud-catalog/voice-preview-snapshot.json` 与 `docs/tools/hub-interfaces.html` 随契约指纹刷新。
+5. **静态回退表**：`ModelPicker.jsx`/`AppTab.jsx` 只保留现役模型（seedance 2.0/2.5、gpt-image-2.5、seedream-5-0-pro），移除 Kling/Flux/Nano Banana/Grok 等未上架条目与格式残留。
+6. **auto 路由按请求参数选档**：`resolveMediaRoute` 在调用方未指定 group 时，先用请求的 `resolution` 匹配带 `constraints.parameters.resolution` 的线路（`seedance-2-5` 480p → 480p 经济档；720p/未指定 → 720p 标准档），再回落到 `default`；避免「默认 720p 档拒绝 480p 请求」并保持画布 auto 模式与执行层一致。

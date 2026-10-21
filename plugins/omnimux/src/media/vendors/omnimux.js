@@ -15,7 +15,7 @@ export const SPEECH_PATH = 'audio/speech'
  * `/v1/video/generations` even though the artifact is audio, so the capability's
  * default task path would address a route the model is not served on.
  */
-export const AUDIO_VIDEO_TASK_MODEL_IDS = Object.freeze(['index-tts'])
+export const AUDIO_VIDEO_TASK_MODEL_IDS = Object.freeze(['index-tts', 'suno', 'suno-sounds'])
 
 /**
  * Audio-capability models served by the channel's AutoDL task lane

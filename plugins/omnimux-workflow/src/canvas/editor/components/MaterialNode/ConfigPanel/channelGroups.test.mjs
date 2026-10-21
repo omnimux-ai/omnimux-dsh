@@ -44,10 +44,11 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     assert.deepEqual(seedanceGroups.map((g) => g.id), ['standard']);
     assert.equal(seedanceGroups[0].default, true);
 
-    // seedance-2-5 提供 480p（默认）/720p 两档；gpt-image-2.5 提供标准/经济两条线路。
+    // seedance-2-5 提供 480p（经济版）/720p（标准版，默认）两档；gpt-image-2.5 提供标准/经济两条线路。
     const seedance25Groups = getModelChannelGroups('seedance-2-5');
     assert.deepEqual(seedance25Groups.map((g) => g.id), ['480p', '720p']);
-    assert.equal(seedance25Groups[0].default, true);
+    assert.deepEqual(seedance25Groups.map((g) => g.label), ['经济版', '标准版']);
+    assert.deepEqual(seedance25Groups.filter((g) => g.default).map((g) => g.id), ['720p']);
     const imageGroups = getModelChannelGroups('gpt-image-2.5');
     assert.deepEqual(imageGroups.map((g) => g.id), ['standard', 'economy']);
 
@@ -187,9 +188,16 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     assert.deepEqual(resolveLineConstraints('gpt-image-2.5', {}), imageConstraints);
     assert.deepEqual(resolveLineConstraints('gpt-image-2.5', { allowedGroups: ['economy'] }), {});
     assert.deepEqual(resolveLineConstraints('gpt-image-2.5', { allowedGroups: ['nope'] }), {});
-    // 视频现售线路不再声明参数/输入约束，行为保持为空对象。
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: '480p' }), {});
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: '720p' }), {});
+    // 视频现售线路按档位固定清晰度：480p 经济版 / 720p 标准版（默认）。
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: '480p' }),
+      { parameters: { resolution: { fixed: '480p' } } });
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: '720p' }),
+      { parameters: { resolution: { fixed: '720p' } } });
+    assert.deepEqual(resolveLineConstraints('seedance-2-5@seedance-2-5-480p', { group: 'seedance-2-5-480p' }),
+      { parameters: { resolution: { fixed: '480p' } } });
+    // 自动路由只对 gpt-image-2.5 落实默认线路约束；未点名分组的视频路由不额外收紧。
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', undefined), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['nope'] }), {});
     assert.deepEqual(resolveLineConstraints('seedance-2-0', { allowedGroups: ['standard'] }), {});
   });
 

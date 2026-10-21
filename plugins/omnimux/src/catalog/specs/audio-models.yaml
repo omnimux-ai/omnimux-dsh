@@ -357,7 +357,7 @@ models:
       status: "verified"
       docUrl: "docs/evidence/2026-10-21-model-suno-text_to_music.md"
       verifiedAt: "2026-10-21"
-      notes: "runtime AUDIO 目录有 suno；仓内无 dated live 证据，不上架"
+      notes: "2026-10-21 #3516：网关渠道 32 default 现役，按渠道文档与 Video 任务端点证据上架；未发真实生成请求，execution 保持 stub"
     implementation:
       status: "ready"
       profileId: "audioGenerate"
@@ -436,7 +436,7 @@ models:
       status: "verified"
       docUrl: "docs/evidence/2026-10-21-model-whisper-1-speech_to_text.md"
       verifiedAt: "2026-10-21"
-      notes: "draft 处置：speech_to_text output 为 text；speechToText seam 已挂载（#538）可探测；promptPolicy=none；#530 探测翻 live"
+      notes: "2026-10-21 #3516：网关渠道 31 default 现役，canonical + listed；离线文档证据见 research.docUrl，未发真实转写请求"
     implementation:
       status: "ready"
       profileId: "speechToText"

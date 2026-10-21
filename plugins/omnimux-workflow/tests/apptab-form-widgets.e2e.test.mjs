@@ -664,25 +664,31 @@ test('E2E: 表单首部生成模型切换、画幅比例动态契约驱动与提
   assert.ok(optionsPanel, '展开后必须呈现模型下拉面板')
 
   const modelOptions = Array.from(optionsPanel.querySelectorAll('.omx-apptab-select-option'))
-  assert.ok(modelOptions.length >= 3, '模型列表必须包含保底模型（如 Seedance 2.0, MiniMax H3, Kling 等）')
+  assert.ok(modelOptions.length >= 3, '模型列表必须包含默认项 + 两款现役视频模型（Seedance 2.0 / Seedance 2.5）')
+  assert.deepEqual(
+    modelOptions.slice(1).map((opt) => opt.querySelector('.omx-apptab-model-name').textContent.trim()),
+    ['Seedance 2.0', 'Seedance 2.5'],
+    '现役视频模型必须恰好是 Seedance 2.0 与 Seedance 2.5',
+  )
 
-  // 3. 选中可灵模型 (kling-v1-6)
-  const klingOption = modelOptions.find((opt) => opt.textContent.includes('Kling v1.6') || opt.textContent.includes('kling'))
-  assert.ok(klingOption, '列表中必须包含 Kling 模型选项')
-  fireClick(klingOption)
+  // 3. 选中新一代旗舰模型 (seedance-2.5，4–30s)
+  const seedance25Option = modelOptions.find((opt) => opt.textContent.includes('Seedance 2.5'))
+  assert.ok(seedance25Option, '列表中必须包含 Seedance 2.5 模型选项')
+  fireClick(seedance25Option)
 
-  // 验证选择后面板关闭，触发器显示 Kling
+  // 验证选择后面板关闭，触发器显示 Seedance 2.5
   assert.equal(modelSelectGroup.querySelector('.omx-apptab-select-options'), null, '选择后面板自动关闭')
-  assert.match(modelTrigger.textContent, /Kling/, '触发器文案更新为 Kling 模型')
+  assert.match(modelTrigger.textContent, /Seedance 2\.5/, '触发器文案更新为 Seedance 2.5 模型')
 
   // 4. 验证画幅比例由模型动态驱动
   const ratioGrid = host.querySelector('.omx-apptab-ratio-grid')
   assert.ok(ratioGrid, '比例卡片组存在')
   const ratioCards = Array.from(ratioGrid.querySelectorAll('.omx-apptab-ratio-card'))
   const ratioTexts = ratioCards.map((c) => c.textContent.trim())
-  assert.ok(ratioTexts.includes('9:16'), 'Kling 模型支持 9:16')
-  assert.ok(ratioTexts.includes('16:9'), 'Kling 模型支持 16:9')
-  assert.ok(ratioTexts.includes('1:1'), 'Kling 模型支持 1:1')
+  assert.ok(ratioTexts.includes('9:16'), 'Seedance 2.5 模型支持 9:16')
+  assert.ok(ratioTexts.includes('16:9'), 'Seedance 2.5 模型支持 16:9')
+  assert.ok(ratioTexts.includes('1:1'), 'Seedance 2.5 模型支持 1:1')
+  assert.ok(ratioTexts.includes('21:9'), 'Seedance 2.5 模型支持 21:9')
 
   // 5. 点击提交「立即生成」，验证 payload 携带 __model__
   const form = host.querySelector('.omx-apptab-form')
@@ -693,7 +699,7 @@ test('E2E: 表单首部生成模型切换、画幅比例动态契约驱动与提
   })
 
   assert.ok(submittedPayload, '必须成功调用执行中枢接口')
-  assert.equal(submittedPayload.formValues.__model__, 'kling-v1-6', '提交参数必须携带 __model__ 专用通道为用户选中的模型')
+  assert.equal(submittedPayload.formValues.__model__, 'seedance-2.5', '提交参数必须携带 __model__ 专用通道为用户选中的模型')
   assert.equal(submittedPayload.formValues.model, undefined, '严禁直接赋值 model 字段避免污染业务字段 (Issue #2631 Review)')
 
   act(() => {
@@ -755,28 +761,28 @@ test('E2E: 初始默认智能推荐状态下完整保护应用 Schema 声明的�
   )
   assert.equal(submittedPayload.formValues.__model__, undefined, '未显式选择模型时不注入 __model__')
 
-  // 2. 当用户显式选择特定模型时（如 Kling，不支持 21:9），才自愈收敛为新模型默认比例
+  // 2. 显式选择 Seedance 2.5 后，21:9 仍在合同支持范围内，必须原样保留
   const modelSelectGroup = Array.from(host.querySelectorAll('.omx-apptab-field-group')).find((fg) => {
     return fg.textContent.includes('生成模型')
   })
   const modelTrigger = modelSelectGroup.querySelector('.omx-apptab-select-trigger')
   fireClick(modelTrigger)
   const optionsPanel = modelSelectGroup.querySelector('.omx-apptab-select-options')
-  const klingOption = Array.from(optionsPanel.querySelectorAll('.omx-apptab-select-option')).find(
-    (opt) => opt.textContent.includes('Kling v1.6') || opt.textContent.includes('kling'),
+  const seedance25Option = Array.from(optionsPanel.querySelectorAll('.omx-apptab-select-option')).find(
+    (opt) => opt.textContent.includes('Seedance 2.5'),
   )
-  assert.ok(klingOption)
+  assert.ok(seedance25Option)
   await act(async () => {
-    fireClick(klingOption)
+    fireClick(seedance25Option)
   })
 
-  // 提交再次断言，此时因显式选中 Kling，21:9 被合法自愈为 Kling 默认比例（9:16 或 16:9）
+  // 提交再次断言：显式选中 Seedance 2.5 后 21:9 是合同内比例，必须保留并穿透 __model__
   await act(async () => {
     const submitBtn = host.querySelector('.omx-apptab-cta-btn')
     fireClick(submitBtn)
   })
-  assert.equal(submittedPayload.formValues.__model__, 'kling-v1-6')
-  assert.notEqual(submittedPayload.formValues.aspect_ratio, '21:9', '显式选定模型后非法比例必须被收敛')
+  assert.equal(submittedPayload.formValues.__model__, 'seedance-2.5')
+  assert.equal(submittedPayload.formValues.aspect_ratio, '21:9', '显式选定模型后合同内比例必须保留')
 
   act(() => {
     root.unmount()
@@ -934,8 +940,8 @@ test('E2E: 表单首部生成模型默认项显式绑定工程作者模型 (Issu
           data: {
             tool: 'omnimux_video_submit',
             materialType: 'video',
-            model: 'kling-o3',
-            params: { model: 'kling-o3' },
+            model: 'seedance-2.5',
+            params: { model: 'seedance-2.5' },
           },
         },
       ],
@@ -965,7 +971,7 @@ test('E2E: 表单首部生成模型默认项显式绑定工程作者模型 (Issu
   const modelTrigger3 = modelSelectGroup3.querySelector('.omx-apptab-select-trigger')
   assert.equal(
     modelTrigger3.textContent.trim(),
-    '可灵 Kling O3',
+    'Seedance 2.5',
     '在含 slot、import 和 LLM 节点的复杂拓扑中必须排他锁定真实主生成节点纯净模型名',
   )
   assert.doesNotMatch(modelTrigger3.textContent, /工程默认 · 作者推荐/, '绝不包含任何括号后缀')

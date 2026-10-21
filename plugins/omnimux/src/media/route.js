@@ -163,7 +163,7 @@ export function resolveMediaRoute(capability, request, media, env = process.env)
   // served exclusively by a dedicated group has no channel at all. The pinned
   // group also bounds the pool, so a default line never fails over into a
   // differently priced one.
-  const pinned = callerIntent || providerId !== 'omnimux' ? undefined : defaultChannelGroup(modelId)
+  const pinned = callerIntent || providerId !== 'omnimux' ? undefined : pinnedChannelGroup(modelId, request)
   const pinnedWire = pinned ? (pinned.wireGroup || pinned.id) : undefined
   const group = requestedGroup ?? pinnedWire
   // This model's lines use incompatible size protocols; an explicitly selected
@@ -219,6 +219,33 @@ export function resolveMediaRoute(capability, request, media, env = process.env)
  */
 function defaultChannelGroup(modelId) {
   return getModelChannelGroups(modelId).find((group) => group.default === true && group.enabled !== false)
+}
+
+/**
+ * The line a model should use for a legacy (no-group) request.
+ *
+ * A model's default line is only the right answer while the request carries no
+ * parameter that the lines split on. `seedance-2-5` exposes its 480p/720p tiers
+ * as separate lines with a fixed resolution constraint; a legacy request that
+ * asks for 480p must select the 480p line, otherwise the default 720p line
+ * rejects it before transport (2026-10-21 review, #3516).
+ *
+ * @param {string} modelId
+ * @param {{ resolution?: unknown }} request
+ * @returns {{ wireGroup?: string, id: string } | undefined}
+ */
+function pinnedChannelGroup(modelId, request) {
+  const groups = getModelChannelGroups(modelId).filter((group) => group.enabled !== false)
+  const resolution = typeof request?.resolution === 'string' ? request.resolution.trim() : ''
+  if (resolution) {
+    const matching = groups.find((group) => {
+      const constraint = group.constraints?.parameters?.resolution
+      if (constraint?.fixed === resolution) return true
+      return Array.isArray(constraint?.only) && constraint.only.includes(resolution)
+    })
+    if (matching) return matching
+  }
+  return groups.find((group) => group.default === true)
 }
 
 /**

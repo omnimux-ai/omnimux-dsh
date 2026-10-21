@@ -95,73 +95,48 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
           ],
         },
       },
-    },    {
-      id: 'kling-v1-6',
-      name: '可灵 Kling v1.6',
-      label: '可灵 Kling v1.6',
-      subtitle: '1080p · 复杂物理世界模拟',
+    },
+    {
+      id: 'seedance-2.5',
+      name: 'Seedance 2.5',
+      label: 'Seedance 2.5',
+      subtitle: '480p/720p · 4–30s · 有声旗舰',
       parameters: {
         aspectRatio: {
-          defaultValue: '9:16',
+          defaultValue: '16:9',
           options: [
-            { label: '9:16 竖屏', value: '9:16' },
             { label: '16:9 横屏', value: '16:9' },
+            { label: '9:16 竖屏', value: '9:16' },
             { label: '1:1 方屏', value: '1:1' },
+            { label: '4:3', value: '4:3' },
+            { label: '3:4', value: '3:4' },
+            { label: '21:9 超宽屏', value: '21:9' },
           ],
         },
         duration: {
-          options: [
-            { label: '5s', value: 5 },
-            { label: '10s', value: 10 },
-          ],
+          range: { min: 4, max: 30, step: 1 },
           defaultValue: 5,
         },
         resolution: {
-          defaultValue: '1080p',
+          defaultValue: '720p',
           options: [
-            { label: '1080p', value: '1080p' },
+            { label: '480p', value: '480p' },
+            { label: '720p', value: '720p' },
           ],
         },
       },
     },
-    {
-      id: 'kling-o3',
-      name: '可灵 Kling O3',
-      label: '可灵 Kling O3',
-      subtitle: '影视级画质 · 质感光影',
-      parameters: {
-        aspectRatio: {
-          defaultValue: '9:16',
-          options: [
-            { label: '9:16 竖屏', value: '9:16' },
-            { label: '16:9 横屏', value: '16:9' },
-            { label: '1:1 方屏', value: '1:1' },
-          ],
-        },
-        duration: {
-          options: [
-            { label: '5s', value: 5 },
-            { label: '10s', value: 10 },
-            { label: '15s', value: 15 },
-          ],
-          defaultValue: 5,
-        },
-        resolution: {
-          defaultValue: '1080p',
-          options: [
-            { label: '1080p', value: '1080p' },
-            { label: '4k', value: '4k' },
-          ],
-        },
-      },
-    },  ],
+  ],
   image: [
     {
       id: 'gpt-image-2.5',
       name: 'GPT Image 2.5',
       label: 'GPT Image 2.5',
       subtitle: '标准版 1K · 高分档依渠道',
-      channelGroups: [{ id: 'standard', default: true, constraints: { parameters: { resolution: { fixed: '1K' }, n: { fixed: 1 } } } }, { id: 'economy' }, { id: 'pro' }],
+      channelGroups: [
+        { id: 'standard', default: true, constraints: { parameters: { resolution: { fixed: '1K' }, n: { fixed: 1 } } } },
+        { id: 'economy' },
+      ],
       parameters: {
         aspectRatio: {
           defaultValue: '16:9',
@@ -184,31 +159,6 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
         n: {
           defaultValue: 1,
           options: [1, 2, 4].map(value => ({ value })),
-        },
-      },
-    },
-    {
-      id: 'flux-1-schnell',
-      name: 'FLUX.1 schnell',
-      label: 'FLUX.1 schnell',
-      subtitle: '极速出片 · 构图细节丰富',
-      parameters: {
-        aspectRatio: {
-          defaultValue: '1:1',
-          options: [
-            { label: '1:1 方屏', value: '1:1' },
-            { label: '16:9 横屏', value: '16:9' },
-            { label: '9:16 竖屏', value: '9:16' },
-            { label: '4:3', value: '4:3' },
-            { label: '3:4', value: '3:4' },
-          ],
-        },
-        resolution: {
-          defaultValue: '1K',
-          options: [
-            { label: '1K', value: '1K' },
-            { label: '2K', value: '2K' },
-          ],
         },
       },
     },
@@ -351,21 +301,21 @@ const DEFAULT_PRODUCTS = Object.freeze([
     url: 'https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp',
     preview: 'https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp',
   },
-  {
+    {
     id: 'prod-002',
     name: '超轻透气缓震跑鞋',
     sub: '运动户外 · 现货',
     url: 'https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp',
     preview: 'https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp',
   },
-  {
+    {
     id: 'prod-003',
     name: '极简便携桌面加湿器',
     sub: '家居生活 · 现货',
     url: 'https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp',
     preview: 'https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp',
   },
-  {
+    {
     id: 'prod-004',
     name: '极简智能触控保温杯',
     sub: '日常器物 · 现货',
@@ -1320,7 +1270,7 @@ export function AppTab(props) {
 
         const opened = await activateProjectCanvas(
           { betterSidebar: getBetterSidebar(props?.ctx) },
-          { sessionId: project?.sessionId, focusGroupId: target.groupId },
+    { sessionId: project?.sessionId, focusGroupId: target.groupId },
         )
         if (opened) {
           showTemporaryNotice({ type: 'success', text: '已进入应用源画布，可直接编辑与调试。' })
@@ -1381,7 +1331,7 @@ export function AppTab(props) {
 
       const opened = await activateProjectCanvas(
         { betterSidebar: getBetterSidebar(props?.ctx) },
-        { sessionId: project?.sessionId, focusGroupId: groupId },
+    { sessionId: project?.sessionId, focusGroupId: groupId },
       )
       setForkDialogOpen(false)
       if (opened) {
@@ -1594,9 +1544,9 @@ export function AppTab(props) {
                           const modelRatios = resolveModelAspectRatios(activeModelObj, prop)
                           const ratios = modelRatios.length > 0 ? modelRatios : [
                             { label: '1:1', value: '1:1' },
-                            { label: '16:9', value: '16:9' },
-                            { label: '9:16', value: '9:16' },
-                            { label: '4:3', value: '4:3' },
+    { label: '16:9', value: '16:9' },
+    { label: '9:16', value: '9:16' },
+    { label: '4:3', value: '4:3' },
                           ]
                           return (
                             <div className="omx-apptab-ratio-grid">

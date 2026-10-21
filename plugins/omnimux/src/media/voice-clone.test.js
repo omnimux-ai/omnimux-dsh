@@ -77,7 +77,7 @@ test('audio models resolve their task endpoints by lane', () => {
   assert.equal(taskPathFor('audio', 'index-tts'), TASK_PATH.video)
   // Every other capability/model keeps the capability default.
   assert.equal(taskPathFor('audio', 'seed-audio-1.0'), TASK_PATH.audio)
-  assert.equal(taskPathFor('audio', 'suno'), TASK_PATH.audio)
+  assert.equal(taskPathFor('audio', 'suno'), TASK_PATH.video)
   assert.equal(taskPathFor('video', 'seedance-2-5'), TASK_PATH.video)
   assert.equal(taskPathFor('image', 'gpt-image-2.5'), TASK_PATH.image)
   assert.equal(taskPathFor('audio', undefined), TASK_PATH.audio)
@@ -153,12 +153,12 @@ test('a listed audio task submits, polls and downloads the artifact', async (t) 
   assert.deepEqual(readFileSync(dest), AUDIO_BYTES)
   const submit = calls.find((call) => call.method === 'POST')
   assert.ok(submit, 'submit request was issued')
-  assert.ok(submit.url.endsWith('/v1/audio/generations'), submit.url)
+  assert.ok(submit.url.endsWith('/v1/video/generations'), submit.url)
   assert.equal(submit.body.model, 'suno')
   assert.equal(submit.body.prompt, 'a calm piano melody')
   const poll = calls.find((call) => call.method === 'GET' && call.url.includes('task_suno_1'))
   assert.ok(poll, 'task was polled')
-  assert.ok(poll.url.endsWith('/v1/audio/generations/task_suno_1'), poll.url)
+  assert.ok(poll.url.endsWith('/v1/video/generations/task_suno_1'), poll.url)
 })
 
 test('a resumed audio task polls the same task route without resubmitting', async (t) => {

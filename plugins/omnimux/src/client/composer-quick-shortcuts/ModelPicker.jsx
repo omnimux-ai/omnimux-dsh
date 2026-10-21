@@ -104,7 +104,8 @@ const DEFAULT_PRESET_MODELS = {
       pro: true,
       badge: { text: '高达43%折扣', type: 'purple' },
       icon: 'bytedance',
-    },  ],
+    },
+  ],
   image: [
     {
       id: 'seedream-5-0-pro',
@@ -115,28 +116,12 @@ const DEFAULT_PRESET_MODELS = {
       icon: 'seedream',
     },
     {
-      id: 'nano-banana-2',
-      name: 'Nano Banana 2',
-      capsuleName: 'Nano Banana 2',
-      subtitle: '专业图像质量和文本布局',
-      pro: true,
-      icon: 'nanobanana',
-    },
-    {
       id: 'gpt-image-2.5',
       name: 'GPT Image 2.5',
       capsuleName: 'GPT Image 2.5',
       subtitle: '高精细节渲染与指令遵循',
       pro: true,
       icon: 'openai',
-    },
-    {
-      id: 'grok-imagine-image-2-0',
-      name: 'Grok Imagine Image 2',
-      capsuleName: 'Grok Image 2',
-      subtitle: '极致写实摄影感与敏捷生图',
-      pro: false,
-      icon: 'grok',
     },
   ],
 };

@@ -61,33 +61,40 @@ test('structured code-only HTTP failures survive runtime-kit message extraction'
   } })
   await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel); assert.deepEqual(models, [productId])
 })
-test('video fallback moves to the next configured line without switching provider or input', async (t) => {
-  // #3516：seedance-2-5 现役分组为 480p（默认）/720p；默认线路声明后空意图会钉住 480p，
-  // 线路间的 failover 用显式 allowedGroups 表达（网关 alias 回退只对无分组默认的旧路径有效）。
+test('video failover refuses a resolution-incompatible tier instead of silently switching', async (t) => {
+  // #3516 评审修正：seedance-2-5 每档锁定自己的固定分辨率（480p 经济版 / 720p 标准版默认）。
+  // 用户选择 720p 时，允许池里的 480p 尾档必须在 HTTP 之前 fail-closed，绝不静默改写分辨率。
   const bodies = [], groups = []
-  const input = inputFor(t, { model: 'seedance-2-5', operation: 'text_to_video', wait: false, allowedGroups: ['480p', '720p'], fetcher: async (url, init) => {
-    assert.match(String(url), /video\/generations$/); bodies.push(JSON.parse(init.body))
-    groups.push(new Headers(init.headers).get('X-Omnimux-Group'))
-    return bodies.length === 1 ? json({ error: { message: channelMessage } }, 503) : json({ task_id: 'video-alias-task' })
-  } })
-  const result = await executeOmnimuxMedia('video', input)
-  assert.equal(result.mode, 'submitted'); assert.equal(result.taskId, 'video-alias-task'); assert.equal(result.url, null); assert.match(result.taskRef, /^mtask_/)
-  // 同一 provider、同一裸模型 ID，只有分组头随线路切换。
-  assert.deepEqual(bodies.map((body) => body.model), ['seedance-2-5', 'seedance-2-5'])
-  assert.deepEqual(groups, ['seedance-2-5-480p', 'seedance-2-5-720p'])
-  assert.deepEqual(Object.assign({}, bodies[0], { model: bodies[1].model }), bodies[1]); assert.equal(input.model, 'seedance-2-5')
+  const input = inputFor(t, { model: 'seedance-2-5', operation: 'text_to_video', wait: false, resolution: '720p',
+    group: '720p', allowedGroups: ['480p', '720p'], strategy: 'cost_first',
+    fetcher: async (url, init) => {
+      assert.match(String(url), /video\/generations$/); bodies.push(JSON.parse(init.body))
+      groups.push(new Headers(init.headers).get('X-Omnimux-Group'))
+      return json({ error: { message: channelMessage } }, 503)
+    } })
+  await assert.rejects(() => executeOmnimuxMedia('video', input), (error) => {
+    assert.equal(error.code, 'omnimux-invalid-request')
+    assert.match(error.message, /resolution 不满足备用线路限制：480p/)
+    return true
+  })
+  // 头档 720p 只发一次请求；480p 尾档在第二次 HTTP 之前被固定分辨率约束拒绝。
+  assert.deepEqual(bodies.map((body) => body.model), ['seedance-2-5'])
+  assert.deepEqual(groups, ['seedance-2-5-720p'])
+  assert.equal(bodies[0].resolution, '720p')
+  assert.equal(input.model, 'seedance-2-5')
+  assert.equal(input.resolution, '720p')
 })
 test('successful primary sends one request only', async (t) => {
   let calls = 0
   const input = inputFor(t, { runtime: { execute: async () => { calls++; return output() } } })
   assert.equal((await executeOmnimuxMedia('image', input)).mode, 'live'); assert.equal(calls, 1)
 })
-test('two channel failures exhaust the configured line list', async (t) => {
-  const models = [], input = inputFor(t, { model: 'seedance-2-5', operation: 'text_to_video', wait: false, allowedGroups: ['480p', '720p'],
+test('the single configured video tier surfaces channel unavailability without alias fallback', async (t) => {
+  const models = [], input = inputFor(t, { model: 'seedance-2-5', operation: 'text_to_video', wait: false,
     runtime: { execute: async (req) => { models.push(req.input.model); throw channelError() } } })
   await assert.rejects(() => executeOmnimuxMedia('video', input), assertChannel)
-  // 两条现役线路都用裸模型 ID 重试；列表耗尽后统一归类为 CHANNEL_UNAVAILABLE。
-  assert.deepEqual(models, ['seedance-2-5', 'seedance-2-5']); assert.equal(existsSync(input.dest), false)
+  // #3516：空意图自动钉住 720p 默认档（唯一候选）；失败后没有网关 alias 回退可用。
+  assert.deepEqual(models, ['seedance-2-5']); assert.equal(existsSync(input.dest), false)
 })
 test('a model with a single gateway candidate exposes only itself', async (t) => {
   assert.deepEqual(gatewayCandidates('doubao-asr-bigmodel'), ['doubao-asr-bigmodel'])
@@ -112,12 +119,13 @@ async function explicitHttp(t, status, code) {
 test('explicit HTTP 401 suppresses alias retry even with channel wording', async (t) => explicitHttp(t, 401, 'needs-omnimux'))
 test('explicit HTTP 402 suppresses alias retry even with channel wording', async (t) => explicitHttp(t, 402, 'quota-exceeded'))
 test('a different error on the fallback line retains its classification and stops', async (t) => {
+  // #3516 评审修正后 video 各档分辨率互斥、无法跨档 failover；用仍可合法换线的
+  // gpt-image-2.5 economy → standard 池保留「尾档的独立错误分类优先且立即停止」断言。
   let calls = 0
-  const input = inputFor(t, { model: 'seedance-2-5', operation: 'text_to_video', wait: false, allowedGroups: ['480p', '720p'],
-    runtime: { execute: async () => {
-      if (++calls === 1) throw channelError(); throw new Error('quota exceeded')
-    } } })
-  await assert.rejects(() => executeOmnimuxMedia('video', input), { code: 'quota-exceeded' }); assert.equal(calls, 2)
+  const input = inputFor(t, { group: 'economy', allowedGroups: ['economy', 'standard'], runtime: { execute: async () => {
+    if (++calls === 1) throw channelError(); throw new Error('quota exceeded')
+  } } })
+  await assert.rejects(() => executeOmnimuxMedia('image', input), { code: 'quota-exceeded' }); assert.equal(calls, 2)
 })
 test('abort between attempts prevents retry and preserves the signal on execution', async (t) => {
   const controller = new AbortController(); let calls = 0
