@@ -245,6 +245,7 @@
     "issue-839-source-verification.test.mjs",
     "lib/asar-integrity-engine.mjs",
     "lib/ego-browser-steps.mjs",
+    "lib/extension-e2e.mjs",
     "list-tables.mjs",
     "managed-tarball-archive.py",
     "market-try-skill-chip-qa.mjs",
