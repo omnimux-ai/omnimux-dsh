@@ -1,0 +1,227 @@
+{
+  "runId": "1dde5479-990b-4124-9883-80e5ac393aeb",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-video-toolbar-isolated",
+  "origin": "http://127.0.0.1:59086",
+  "appPort": 59086,
+  "cdpPort": 59092,
+  "startedAt": "2026-10-21T08:09:29.580Z",
+  "completedAt": "2026-10-21T08:09:55.754Z",
+  "pass": true,
+  "scope": "smoke",
+  "producer": "controlled-runner",
+  "contract": "none",
+  "taskBinding": "unknown",
+  "userFresh": "unknown",
+  "inputClosure": "unknown",
+  "summary": {
+    "mode": "ui",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "realModelRequest": false,
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true
+    },
+    {
+      "name": "journey:C1-click-creates-downstream-node-immediately",
+      "pass": true
+    },
+    {
+      "name": "journey:C1-downstream-node-shows-generating",
+      "pass": true
+    },
+    {
+      "name": "journey:C1-source-video-node-not-marked-running",
+      "pass": true
+    },
+    {
+      "name": "journey:C1-targetNodeId-forwarded-to-server",
+      "pass": true
+    },
+    {
+      "name": "journey:C1-settled-single-node-no-duplicate",
+      "pass": true
+    },
+    {
+      "name": "journey:C1-source-video-unchanged-after-settle",
+      "pass": true
+    },
+    {
+      "name": "journey:C2-failure-rendered-on-downstream-node",
+      "pass": true
+    },
+    {
+      "name": "journey:C2-source-video-clean-after-failure",
+      "pass": true
+    },
+    {
+      "name": "journey:C2-storyboard-request-targets-downstream-node",
+      "pass": true
+    },
+    {
+      "name": "journey:C3-source-video-allows-second-toolbar-operation",
+      "pass": true
+    },
+    {
+      "name": "journey:C3-both-operations-target-distinct-nodes",
+      "pass": true
+    },
+    {
+      "name": "journey:C3-concurrent-settled-three-nodes",
+      "pass": true
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-video-toolbar-isolated/.workbuddy/evidence/app-qa/1dde5479-990b-4124-9883-80e5ac393aeb/app-home.png",
+    "width": 1280,
+    "height": 657,
+    "bytes": 336033
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true,
+    "resources": [
+      {
+        "name": "app-child",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "mock-server",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "app-private-directory",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "browser-child",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "cdp-transport",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "browser-private-directory",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      }
+    ]
+  },
+  "observations": {
+    "rawOutputRetained": false,
+    "appEvents": [
+      {
+        "event": "spawn",
+        "code": null,
+        "signal": null,
+        "pid": 58654,
+        "parentPid": 58564
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      },
+      {
+        "event": "close",
+        "code": 0,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      }
+    ],
+    "browserEvents": [
+      {
+        "event": "spawn",
+        "code": null,
+        "signal": null,
+        "pid": 59660,
+        "parentPid": 58564
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      },
+      {
+        "event": "close",
+        "code": 0,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      }
+    ]
+  },
+  "beforeCaptureMs": 0,
+  "hubPath": {
+    "clickedNewSession": false,
+    "exploreVisible": true,
+    "assetHubOpened": true,
+    "librarySelected": true,
+    "workbenchRequestAccepted": true
+  }
+}

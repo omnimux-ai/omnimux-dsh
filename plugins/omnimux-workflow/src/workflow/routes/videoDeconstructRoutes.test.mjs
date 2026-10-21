@@ -111,8 +111,15 @@ function harness(t, opts = {}) {
       origin: 'http://127.0.0.1:45120',
       ...extra,
     });
+  const invoke = (body) =>
+    dispatcher.dispatch({
+      method: 'POST',
+      url,
+      body,
+      origin: 'http://127.0.0.1:45120',
+    });
 
-  return { call, toolCalls, store, workspace, url, dummyVideo, root, mediaDir: join(root, 'media') };
+  return { call, invoke, toolCalls, store, workspace, url, dummyVideo, root, mediaDir: join(root, 'media') };
 }
 
 test('videoDeconstruct: 成功拆解视频并持久化五维内容拆解表格（分析维度 + 分析内容）', async (t) => {
@@ -429,4 +436,251 @@ test('videoDeconstruct: 纯净五维内容分析，不插入分镜画面附件�
   assert.equal(savedDoc.columns[0].title, '分析维度');
   assert.equal(savedDoc.columns[1].title, '分析内容');
   assert.equal(savedDoc.rows.length, 6);
+});
+
+function reseed(h, nodes, edges) {
+  const current = h.store.get(h.workspace.id);
+  h.store.save(h.workspace.id, { expectedVersion: current.version, nodes, edges });
+}
+
+function assertSourceVideoUntouched(h) {
+  const source = h.store.get(h.workspace.id).nodes.find((n) => n.id === 'node_video_1');
+  assert.ok(source, '源视频节点必须仍然存在');
+  assert.equal(source.type, 'material');
+  assert.equal('executionStatus' in source.data, false, '源视频节点不得被写入 executionStatus');
+  assert.equal('executionError' in source.data, false, '源视频节点不得被写入 executionError');
+}
+
+test('videoDeconstruct: 工作区已预建 targetNodeId 节点时就地收敛，不新增第二个表格节点', async (t) => {
+  const h = harness(t);
+  const targetNodeId = 'node_table_client_1700000000000_ab12';
+  const base = h.store.get(h.workspace.id);
+  const nodes = base.nodes.slice();
+  nodes.push({
+    id: targetNodeId,
+    type: 'table',
+    position: { x: 470, y: 50 },
+    data: {
+      label: '生成中…',
+      origin: 'video_deconstruct',
+      sourceVideoNodeId: 'node_video_1',
+      status: 'generating',
+      executionStatus: 'running',
+    },
+  });
+  reseed(h, nodes, [
+    {
+      id: `edge_node_video_1_${targetNodeId}`,
+      source: 'node_video_1',
+      target: targetNodeId,
+      sourceHandle: 'out',
+      targetHandle: 'in',
+    },
+  ]);
+
+  const res = await h.invoke({
+    nodeId: 'node_video_1',
+    videoPath: h.dummyVideo,
+    title: '预建节点拆解',
+    targetNodeId,
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.tableId, targetNodeId, '服务端必须原样采用客户端预建的 targetNodeId');
+  assert.equal(res.body.tablePath, `.omnimux/tables/${targetNodeId}.htable`);
+
+  const snapshot = h.store.get(h.workspace.id);
+  const tableNodes = snapshot.nodes.filter((n) => n.type === 'table');
+  assert.equal(tableNodes.length, 1, '不得为同一操作新增第二个表格节点');
+  assert.equal(tableNodes[0].id, targetNodeId);
+  assert.equal(tableNodes[0].data.tableId, targetNodeId);
+  assert.equal(tableNodes[0].data.title, '预建节点拆解');
+  assert.equal(tableNodes[0].data.status, 'ready');
+  assert.equal(tableNodes[0].data.origin, 'video_deconstruct');
+  assert.equal(tableNodes[0].data.sourceVideoNodeId, 'node_video_1');
+  assertSourceVideoUntouched(h);
+
+  const edge = snapshot.edges.find((e) => e.source === 'node_video_1' && e.target === targetNodeId);
+  assert.ok(edge, '源视频节点到预建表格节点的连线应保留');
+
+  const savedDoc = await TableStorageService.loadTable(
+    resolveTableAbsPath(h.store, h.workspace.id, targetNodeId),
+  );
+  assert.equal(savedDoc.title, '预建节点拆解');
+  assert.equal(savedDoc.columns.length, 2);
+});
+
+test('videoDeconstruct: 未预建节点时以合法 targetNodeId 作为新节点 id 与 tableId', async (t) => {
+  const h = harness(t);
+  const targetNodeId = 'node_table_client_1700000000001';
+
+  const res = await h.invoke({
+    nodeId: 'node_video_1',
+    videoPath: h.dummyVideo,
+    title: '直接预指定节点',
+    targetNodeId,
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.tableId, targetNodeId);
+
+  const snapshot = h.store.get(h.workspace.id);
+  assert.equal(snapshot.nodes.length, 2, '应只有源视频节点与新建表格节点');
+  const tableNode = snapshot.nodes.find((n) => n.id === targetNodeId);
+  assert.ok(tableNode, '新节点 id 必须采用 targetNodeId');
+  assert.equal(tableNode.type, 'table');
+  assert.equal(tableNode.data.tableId, targetNodeId);
+  assert.equal(tableNode.data.title, '直接预指定节点');
+  assert.equal(tableNode.data.origin, 'video_deconstruct');
+  assertSourceVideoUntouched(h);
+
+  const edge = snapshot.edges.find((e) => e.source === 'node_video_1' && e.target === targetNodeId);
+  assert.ok(edge, '源视频节点到新表格节点的连线应写入');
+  assert.ok(existsSync(resolveTableAbsPath(h.store, h.workspace.id, targetNodeId)));
+});
+
+test('videoDeconstruct: 非空但非法的 targetNodeId（路径穿越/空格/超长/非字符串）一律 400 invalid-request', async (t) => {
+  const h = harness(t);
+  const invalidValues = ['../escape', 'node table', 'a'.repeat(129), '-leading-dash', 'a/b', '节点_1', 12345];
+
+  for (const targetNodeId of invalidValues) {
+    const res = await h.invoke({ nodeId: 'node_video_1', videoPath: h.dummyVideo, targetNodeId });
+    assert.equal(res.status, 400, `targetNodeId=${String(targetNodeId)} 必须被拒绝`);
+    assert.equal(res.body.ok, false);
+    assert.equal(res.body.error, 'invalid-request');
+  }
+
+  assert.equal(h.toolCalls.length, 0, '非法 targetNodeId 不得触发视频理解');
+  const snapshot = h.store.get(h.workspace.id);
+  assert.equal(snapshot.nodes.filter((n) => n.type === 'table').length, 0, '非法请求不得创建表格节点');
+  assert.equal(snapshot.edges.length, 0, '非法请求不得创建连线');
+  assertSourceVideoUntouched(h);
+});
+
+test('videoDeconstruct: targetNodeId 被非表格节点占用时返回 400，绝不覆写', async (t) => {
+  const h = harness(t);
+  const base = h.store.get(h.workspace.id);
+  const nodes = base.nodes.slice();
+  nodes.push({
+    id: 'node_material_occupied',
+    type: 'material',
+    position: { x: 900, y: 50 },
+    data: { materialType: 'text', label: '其它素材节点' },
+  });
+  reseed(h, nodes, base.edges);
+
+  const res = await h.invoke({
+    nodeId: 'node_video_1',
+    videoPath: h.dummyVideo,
+    targetNodeId: 'node_material_occupied',
+  });
+
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, 'invalid-request');
+  assert.match(res.body.message, /非表格节点/);
+  assert.equal(h.toolCalls.length, 0);
+
+  const snapshot = h.store.get(h.workspace.id);
+  const occupied = snapshot.nodes.find((n) => n.id === 'node_material_occupied');
+  assert.ok(occupied, '被占用的非表格节点必须原样保留');
+  assert.equal(occupied.type, 'material');
+  assert.equal(occupied.data.label, '其它素材节点');
+  assert.equal(snapshot.nodes.filter((n) => n.type === 'table').length, 0);
+  assertSourceVideoUntouched(h);
+});
+
+test('videoDeconstruct: targetNodeId 被异类型/其它视频下游节点占用时返回 400，不夺用其它操作节点', async (t) => {
+  const h = harness(t);
+  const base = h.store.get(h.workspace.id);
+  const nodes = base.nodes.slice();
+  nodes.push({
+    id: 'node_storyboard_owned',
+    type: 'table',
+    position: { x: 470, y: 370 },
+    data: {
+      origin: 'video_storyboard',
+      sourceVideoNodeId: 'node_video_1',
+      tableId: 'node_storyboard_owned',
+      title: '已有分镜表',
+    },
+  });
+  nodes.push({
+    id: 'node_other_video_deconstruct',
+    type: 'table',
+    position: { x: 1200, y: 50 },
+    data: {
+      origin: 'video_deconstruct',
+      sourceVideoNodeId: 'node_other_video',
+      tableId: 'node_other_video_deconstruct',
+      title: '其它视频拆解表',
+    },
+  });
+  reseed(h, nodes, base.edges);
+
+  const foreignType = await h.invoke({
+    nodeId: 'node_video_1',
+    videoPath: h.dummyVideo,
+    targetNodeId: 'node_storyboard_owned',
+  });
+  assert.equal(foreignType.status, 400);
+  assert.equal(foreignType.body.error, 'invalid-request');
+  assert.match(foreignType.body.message, /其它来源/);
+
+  const foreignSource = await h.invoke({
+    nodeId: 'node_video_1',
+    videoPath: h.dummyVideo,
+    targetNodeId: 'node_other_video_deconstruct',
+  });
+  assert.equal(foreignSource.status, 400);
+  assert.equal(foreignSource.body.error, 'invalid-request');
+  assert.match(foreignSource.body.message, /其它视频节点/);
+
+  const snapshot = h.store.get(h.workspace.id);
+  const storyboard = snapshot.nodes.find((n) => n.id === 'node_storyboard_owned');
+  assert.equal(storyboard.data.title, '已有分镜表', '绝不能覆写分镜表节点');
+  assert.equal(storyboard.data.tableId, 'node_storyboard_owned');
+  const otherDeconstruct = snapshot.nodes.find((n) => n.id === 'node_other_video_deconstruct');
+  assert.equal(otherDeconstruct.data.title, '其它视频拆解表', '绝不能覆写其它视频的拆解表');
+  assert.equal(otherDeconstruct.data.sourceVideoNodeId, 'node_other_video');
+  assert.equal(snapshot.nodes.filter((n) => n.type === 'table').length, 2, '失败请求不得新增表格节点');
+  assertSourceVideoUntouched(h);
+});
+
+test('videoDeconstruct: 已有同源下游 tableId 优先于 targetNodeId，避免产生第二个节点', async (t) => {
+  const h = harness(t);
+  const first = await h.invoke({ nodeId: 'node_video_1', videoPath: h.dummyVideo, title: '首版拆解' });
+  assert.equal(first.status, 200);
+  const firstTableId = first.body.tableId;
+
+  const second = await h.invoke({
+    nodeId: 'node_video_1',
+    videoPath: h.dummyVideo,
+    title: '二版拆解',
+    targetNodeId: 'node_table_client_priority',
+  });
+
+  assert.equal(second.status, 200);
+  assert.equal(second.body.tableId, firstTableId, '已存在的同源下游 tableId 优先级最高');
+
+  const snapshot = h.store.get(h.workspace.id);
+  assert.equal(snapshot.nodes.filter((n) => n.type === 'table').length, 1, '不得新增第二个表格节点');
+  assert.equal(snapshot.nodes.find((n) => n.id === 'node_table_client_priority'), undefined);
+  assert.equal(snapshot.nodes.find((n) => n.id === firstTableId).data.title, '二版拆解');
+});
+
+test('videoDeconstruct: targetNodeId 为空串/纯空白时视为未提供（不报错也不参与复用）', async (t) => {
+  const h = harness(t);
+
+  for (const targetNodeId of ['', '   ']) {
+    const res = await h.invoke({ nodeId: 'node_video_1', videoPath: h.dummyVideo, targetNodeId });
+    assert.equal(res.status, 200, `targetNodeId=${JSON.stringify(targetNodeId)} 应视为未提供`);
+    assert.equal(res.body.ok, true);
+    assert.ok(res.body.tableId.startsWith('tbl_'), '未提供 targetNodeId 时 tableId 仍由服务端生成');
+  }
+
+  const snapshot = h.store.get(h.workspace.id);
+  assert.equal(snapshot.nodes.filter((n) => n.type === 'table').length, 1, '单一下游约束仍然成立');
+  assertSourceVideoUntouched(h);
 });

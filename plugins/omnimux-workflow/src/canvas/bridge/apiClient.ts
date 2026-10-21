@@ -320,7 +320,7 @@ export function extractVideoFromUrl(
 /** 视频节点：拆解视频为结构化表格节点 (.htable) */
 export function deconstructVideo(
   workspaceId: string,
-  payload: { nodeId: string; videoPath: string; title?: string },
+  payload: { nodeId: string; videoPath: string; title?: string; targetNodeId?: string },
 ): Promise<ApiResult<import('../../workflow/videoDeconstruct/schema.ts').DeconstructVideoResponse>> {
   return request<import('../../workflow/videoDeconstruct/schema.ts').DeconstructVideoResponse>(
     WORKFLOW_API_ROUTES.deconstructVideo(encodeURIComponent(workspaceId)),
@@ -331,7 +331,7 @@ export function deconstructVideo(
 /** 视频节点：生成视频逐镜头分镜表表格节点 (.htable，含分镜图附件) */
 export function storyboardVideo(
   workspaceId: string,
-  payload: { nodeId: string; videoPath: string; title?: string },
+  payload: { nodeId: string; videoPath: string; title?: string; targetNodeId?: string },
 ): Promise<ApiResult<import('../../workflow/videoStoryboard/schema.ts').StoryboardVideoResponse>> {
   return request<import('../../workflow/videoStoryboard/schema.ts').StoryboardVideoResponse>(
     WORKFLOW_API_ROUTES.storyboardVideo(encodeURIComponent(workspaceId)),

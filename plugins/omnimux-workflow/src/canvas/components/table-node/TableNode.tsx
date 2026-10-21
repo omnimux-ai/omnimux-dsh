@@ -14,6 +14,10 @@ import { formatRowPreview } from '../../../shared/types/htable.ts';
 import NodeHeader from '../../editor/components/MaterialNode/NodeHeader.tsx';
 import CanvasNodeHandle from '../../editor/components/CanvasNodeHandle.tsx';
 import FloatingTopPill, { type FloatingPillAction } from '../../editor/components/FloatingTopPill.tsx';
+import GenerationStateContainer from '../../editor/components/GenerationStateContainer.tsx';
+import { retryDerivedTableNode } from '../../editor/components/MaterialNode/nodeMediaOperations.ts';
+import type { GenerationStatus } from '../../editor/utils/nodeVisualMath.ts';
+import type { NodeExecutionApiStatus, ApiUpstream } from '../../../shared/api.ts';
 import { useAddToConversation } from '../../hooks/useAddToConversation';
 import { useT } from '../../i18n';
 import {
@@ -25,6 +29,14 @@ import {
 
 const DEFAULT_TABLE_NODE_WIDTH = 380;
 const DEFAULT_TABLE_NODE_HEIGHT = 280;
+
+/**
+ * 视频工具栏派生表格节点的 origin（内容拆解 / 分镜表）。
+ *
+ * 这两类节点由视频节点工具栏点击后立即预建并隔离执行：生成中/失败态落在
+ * 本节点，源视频节点保持可用。普通表格节点没有 origin，不进入状态机。
+ */
+const DERIVED_TABLE_ORIGINS = new Set(['video_deconstruct', 'video_storyboard']);
 
 export const TableNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
   const effectiveTableId = (data as any)?.tableId || id;
@@ -57,6 +69,29 @@ export const TableNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
   const rows = document.rows || [];
   const effectiveRowCount = rows.length > 0 ? rows.length : l1RowCount;
 
+  // 视频工具栏派生表格（内容拆解 / 分镜表）：预建后即进入生成中状态，
+  // 失败态与重试都落在本节点，源视频节点不被写入 running/error。
+  const derivedOrigin = (data as any)?.origin as string | undefined;
+  const isDerivedTable = typeof derivedOrigin === 'string' && DERIVED_TABLE_ORIGINS.has(derivedOrigin);
+  const derivedExecutionStatus = ((data as any)?.executionStatus ?? undefined) as
+    | NodeExecutionApiStatus
+    | undefined;
+  const derivedLocalStatus = (data as any)?.status as string | undefined;
+  const generationStatus: GenerationStatus | null = useMemo(() => {
+    if (!isDerivedTable) return null;
+    if (derivedExecutionStatus === 'running' || derivedExecutionStatus === 'pending') return 'generating';
+    if (derivedExecutionStatus === 'error') return 'failed';
+    if (derivedLocalStatus === 'generating') return 'generating';
+    if (derivedLocalStatus === 'failed') return 'failed';
+    if (derivedExecutionStatus === 'completed') return 'completed';
+    return 'completed';
+  }, [derivedExecutionStatus, derivedLocalStatus, isDerivedTable]);
+  const isDerivedReady = generationStatus === null || generationStatus === 'completed';
+  const derivedExecutionError =
+    typeof (data as any)?.executionError === 'string' ? ((data as any).executionError as string) : undefined;
+  const derivedExecutionUpstream = (data as any)?.executionUpstream as ApiUpstream | undefined;
+  const derivedTaskId = typeof (data as any)?.taskId === 'string' ? ((data as any).taskId as string) : undefined;
+
   const isMultiSelected = useIsMultiSelected();
   const t = useT();
   const hasMaterial = hasNodeMaterial({ nodeType: 'table', tableRowCount: effectiveRowCount });
@@ -70,6 +105,7 @@ export const TableNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
   const { addToConversation } = useAddToConversation();
 
   const handleOpenFullscreen = useCallback(async () => {
+    if (!isDerivedReady) return;
     if (effectiveTableId && workspaceId && session.loadState !== 'ready') {
       try {
         await tableDocumentCache.ensure(workspaceId, effectiveTableId, { forceReload: false });
@@ -79,7 +115,15 @@ export const TableNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
     }
     const latestDoc = tableDocumentCache.getSession(effectiveTableId)?.document || session.document;
     openStage(effectiveTableId, latestDoc || session.document);
-  }, [effectiveTableId, openStage, session.document, session.loadState, workspaceId]);
+  }, [effectiveTableId, isDerivedReady, openStage, session.document, session.loadState, workspaceId]);
+
+  const handleRetryDerived = useCallback(
+    (e?: React.MouseEvent) => {
+      e?.stopPropagation();
+      retryDerivedTableNode(id, t);
+    },
+    [id, t],
+  );
 
   const handleAddToConversation = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -133,6 +177,108 @@ export const TableNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
     return document.columns[0]?.title || '文本';
   }, [document.columns]);
 
+  // 卡片主体：空态或表格预览。派生表格节点在生成中/失败时由
+  // GenerationStateContainer 接管展示（骨架 / 失败卡片 + 重试），
+  // 完成态原样渲染既有内容，保持普通表格节点行为不变。
+  const renderCardContent = () => (effectiveRowCount === 0 ? (
+    <div className="wf-node-empty wf-node-empty--text" style={{ padding: '24px 16px', height: '100%', boxSizing: 'border-box' }}>
+      <div className="wf-node-empty__icon-box">
+        <Table size={32} strokeWidth={1.75} className="wf-node-empty__icon" />
+      </div>
+      <div className="wf-node-empty__try-label">试试:</div>
+      <div
+        className="wf-node-empty__actions nodrag"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="wf-node-empty__pill-btn"
+          onClick={() => addRow()}
+        >
+          <Plus size={14} className="wf-node-empty__pill-icon" />
+          <span>添加首行数据</span>
+        </button>
+        <button
+          type="button"
+          className="wf-node-empty__pill-btn"
+          onClick={handleOpenFullscreen}
+        >
+          <Maximize2 size={13} className="wf-node-empty__pill-icon" />
+          <span>双击全屏编辑表格</span>
+        </button>
+      </div>
+    </div>
+  ) : (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        borderTopLeftRadius: 'calc(var(--wb-node-radius, 18px) - 1px)',
+        borderTopRightRadius: 'calc(var(--wb-node-radius, 18px) - 1px)',
+        overflow: 'hidden',
+      }}
+    >
+      {/* 卡片表头 */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 14px',
+          borderBottom: '1px solid var(--wb-border)',
+          borderTopLeftRadius: 'calc(var(--wb-node-radius, 18px) - 1px)',
+          borderTopRightRadius: 'calc(var(--wb-node-radius, 18px) - 1px)',
+          background: 'transparent',
+          fontSize: 12,
+          fontWeight: 500,
+          color: 'var(--wb-text-secondary)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <FileSpreadsheet size={14} />
+          <span>{displayColumnTitle}</span>
+        </div>
+        <span style={{ fontSize: 11, color: 'var(--wb-text-muted)', fontFamily: 'monospace' }}>
+          共 {effectiveRowCount} 行
+        </span>
+      </div>
+
+      {/* 记录预览列表 */}
+      <div style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
+        {previewItems.map((previewText, idx) => (
+          <div
+            key={idx}
+            style={{
+              padding: '8px 12px',
+              background: 'color-mix(in srgb, var(--wb-surface) 40%, transparent)',
+              border: '1px solid var(--wb-border)',
+              borderRadius: 8,
+              fontSize: 12,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              color: 'var(--wb-text-primary)',
+            }}
+          >
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 280 }}>
+              {previewText}
+            </span>
+            <span style={{ color: 'var(--wb-text-muted)', fontFamily: 'monospace', fontSize: 11 }}>
+              #{idx + 1}
+            </span>
+          </div>
+        ))}
+
+        {effectiveRowCount > 3 && (
+          <div style={{ fontSize: 11, color: 'var(--wb-text-muted)', textAlign: 'center', marginTop: 2 }}>
+            ... 更多记录双击卡片查看
+          </div>
+        )}
+      </div>
+    </div>
+  ));
+
   return (
     <div
       className={`wf-material-node ${selected ? 'wf-material-node--selected' : ''}`}
@@ -173,104 +319,22 @@ export const TableNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
           </>
         )}
 
-        {/* 空态或内容展示 */}
-        {effectiveRowCount === 0 ? (
-          <div className="wf-node-empty wf-node-empty--text" style={{ padding: '24px 16px', height: '100%', boxSizing: 'border-box' }}>
-            <div className="wf-node-empty__icon-box">
-              <Table size={32} strokeWidth={1.75} className="wf-node-empty__icon" />
-            </div>
-            <div className="wf-node-empty__try-label">试试:</div>
-            <div
-              className="wf-node-empty__actions nodrag"
-              onMouseDown={(e) => e.stopPropagation()}
+        {/* 空态或内容展示：派生表格节点显示生成中/失败态，完成后展示表格 */}
+        {generationStatus !== null ? (
+          <div className="wf-table-node__state">
+            <GenerationStateContainer
+              status={generationStatus}
+              loadingAspectRatio="auto"
+              errorMessage={derivedExecutionError}
+              errorUpstream={derivedExecutionUpstream}
+              taskId={derivedTaskId}
+              onRetry={generationStatus === 'failed' ? handleRetryDerived : undefined}
             >
-              <button
-                type="button"
-                className="wf-node-empty__pill-btn"
-                onClick={() => addRow()}
-              >
-                <Plus size={14} className="wf-node-empty__pill-icon" />
-                <span>添加首行数据</span>
-              </button>
-              <button
-                type="button"
-                className="wf-node-empty__pill-btn"
-                onClick={handleOpenFullscreen}
-              >
-                <Maximize2 size={13} className="wf-node-empty__pill-icon" />
-                <span>双击全屏编辑表格</span>
-              </button>
-            </div>
+              {renderCardContent()}
+            </GenerationStateContainer>
           </div>
         ) : (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              height: '100%',
-              borderTopLeftRadius: 'calc(var(--wb-node-radius, 18px) - 1px)',
-              borderTopRightRadius: 'calc(var(--wb-node-radius, 18px) - 1px)',
-              overflow: 'hidden',
-            }}
-          >
-            {/* 卡片表头 */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 14px',
-                borderBottom: '1px solid var(--wb-border)',
-                borderTopLeftRadius: 'calc(var(--wb-node-radius, 18px) - 1px)',
-                borderTopRightRadius: 'calc(var(--wb-node-radius, 18px) - 1px)',
-                background: 'transparent',
-                fontSize: 12,
-                fontWeight: 500,
-                color: 'var(--wb-text-secondary)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <FileSpreadsheet size={14} />
-                <span>{displayColumnTitle}</span>
-              </div>
-              <span style={{ fontSize: 11, color: 'var(--wb-text-muted)', fontFamily: 'monospace' }}>
-                共 {effectiveRowCount} 行
-              </span>
-            </div>
-
-            {/* 记录预览列表 */}
-            <div style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
-              {previewItems.map((previewText, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    padding: '8px 12px',
-                    background: 'color-mix(in srgb, var(--wb-surface) 40%, transparent)',
-                    border: '1px solid var(--wb-border)',
-                    borderRadius: 8,
-                    fontSize: 12,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    color: 'var(--wb-text-primary)',
-                  }}
-                >
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 280 }}>
-                    {previewText}
-                  </span>
-                  <span style={{ color: 'var(--wb-text-muted)', fontFamily: 'monospace', fontSize: 11 }}>
-                    #{idx + 1}
-                  </span>
-                </div>
-              ))}
-
-              {effectiveRowCount > 3 && (
-                <div style={{ fontSize: 11, color: 'var(--wb-text-muted)', textAlign: 'center', marginTop: 2 }}>
-                  ... 更多记录双击卡片查看
-                </div>
-              )}
-            </div>
-          </div>
+          renderCardContent()
         )}
       </div>
 

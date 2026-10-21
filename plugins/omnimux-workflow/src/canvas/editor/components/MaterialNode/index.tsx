@@ -76,9 +76,8 @@ import { MediaCardBody } from './CardBody/MediaCardBody';
 import { NodeCornerMarkers } from './StatusMask/NodeCornerMarkers';
 import { MaterialNodeHandles } from './NodeHandles/MaterialNodeHandles';
 import {
-  executeDeconstructVideo,
+  deriveVideoTable,
   executeSpeechToText,
-  executeStoryboardVideo,
 } from './nodeMediaOperations';
 
 const DEFAULT_GEN_TOOLS: Record<MaterialType, MaterialTool> = {
@@ -565,37 +564,36 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     });
   }, [applyCanvasInputMutation, id, mediaUrl, nodeData, nodeWidth, previewUrl, setNodes, t, updateNodeData]);
 
-  // 视频内容拆解：视频节点拆解并派生下游表格节点。
+  // 视频内容拆解：点击瞬间先建下游表格节点（生成中），任务在新节点中执行并收敛；
+  // 源视频节点绝不写 running / error，可继续并发发起其它工具栏操作。
   const handleDeconstructVideo = useCallback(() => {
-    void executeDeconstructVideo({
+    void deriveVideoTable({
+      kind: 'deconstruct',
       workspaceId: typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '',
-      id,
+      sourceVideoNodeId: id,
       label,
-      nodeData,
       mediaUrl,
       previewUrl,
       nodeWidth,
       t,
-      updateNodeData,
-      applyCanvasInputMutation,
       setNodes,
     });
-  }, [applyCanvasInputMutation, id, label, mediaUrl, nodeData, nodeWidth, previewUrl, setNodes, t, updateNodeData]);
+  }, [id, label, mediaUrl, nodeData.__workspaceId, nodeWidth, previewUrl, setNodes, t]);
 
-  // 视频做分镜表：提取逐镜头分镜图与脚本，派生下游表格节点 (.htable，含多模态图片附件)
+  // 视频做分镜表：同一规则——先建下游分镜表节点并隔离执行，源视频零侵入。
   const handleStoryboardVideo = useCallback(() => {
-    void executeStoryboardVideo({
+    void deriveVideoTable({
+      kind: 'storyboard',
       workspaceId: typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '',
-      id,
+      sourceVideoNodeId: id,
       label,
-      nodeData,
       mediaUrl,
       previewUrl,
+      nodeWidth,
       t,
-      updateNodeData,
       setNodes,
     });
-  }, [id, label, mediaUrl, nodeData, previewUrl, setNodes, t, updateNodeData]);
+  }, [id, label, mediaUrl, nodeData.__workspaceId, nodeWidth, previewUrl, setNodes, t]);
 
   // 音频节点自身重试提取音频（就地在下游音频节点执行，源视频完全零侵入）
   const handleRetryAudioExtract = useCallback(async () => {

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "kind": "omnimux-blocker",
+  "taskId": "workflow-video-toolbar-isolated",
+  "phase": "verify",
+  "summary": "隔离工作树真实浏览器验收被宿主 App 版本漂移阻断：OmniMux Dev.app 内置 @deepseek-ai/schemastery 3.18.2（无 .volatile），仓库 omnimux 依赖 3.18.4，插件树启动即崩（z.object(...).default(...).volatile is not a function）。基线工作树复现同一报错，非本任务 diff 引入。",
+  "createdAt": "2026-10-21T07:07:33.812Z",
+  "repo": {
+    "baseSha": "1260895d4fdea348c59424ad63e95db31ae8aa61",
+    "headSha": "1260895d4fdea348c59424ad63e95db31ae8aa61"
+  },
+  "attempts": [
+    {
+      "command": "node scripts/worktree-app-qa.mjs --journey .workbuddy/qa-journeys/video-toolbar-isolated.mjs",
+      "exitCode": 1,
+      "stderrExcerpt": "❌ 应用级 Web 验收未通过 -> TEST_ENV_RUNTIME_EXIT\nREAL_EXIT=1"
+    }
+  ],
+  "missing": [],
+  "evidence": [
+    "docs/evidence/video-toolbar-isolated/browser-acceptance-attempt.md"
+  ],
+  "nextAction": "升级/重建 OmniMux Dev.app 到当前仓库 pin 后，重跑 node scripts/worktree-app-qa.mjs --journey .workbuddy/qa-journeys/video-toolbar-isolated.mjs 获取真实浏览器验收；在取得该证据前不得声明浏览器验收通过或合入。",
+  "authorization": "not-granted"
+}
