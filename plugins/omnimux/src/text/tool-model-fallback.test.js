@@ -5,10 +5,10 @@ import { executeOmnimuxText } from './execute.js'
 import { parseTextConfig } from './catalog.js'
 
 /** Minimal settings seam: only the stale tool model is configured. */
-function settingsWithToolModel(toolModel) {
+function settingsWithToolModel(toolModel, extra = {}) {
   return {
     get(section) {
-      if (section === 'omnimux') return { toolModel }
+      if (section === 'omnimux') return { toolModel, ...extra }
       return {}
     },
   }
@@ -83,4 +83,49 @@ test('non-adapter tool model failures stay visible', async () => {
   }
   strictEqual(failure?.message, 'model overloaded')
   deepEqual(calls, ['cpa'])
+})
+
+test('a verified local agent is preferred over the catalog stream fallback', async () => {
+  const calls = []
+  const agentCalls = []
+  const result = await executeOmnimuxText({
+    prompt: '写一句测试',
+    text: parseTextConfig(undefined),
+    settings: settingsWithToolModel('cpa:gpt-6.1-sol', {
+      runtimeAgentId: 'codex',
+      runtimeAgentModel: 'gpt-6.1-sol',
+      runtimeAgentVerified: true,
+    }),
+    llm: llmStub(calls),
+    agentRun: (input) => {
+      agentCalls.push(input)
+      return 'Agent 生成的正文'
+    },
+    env: {},
+  })
+
+  strictEqual(calls.length, 1, 'the catalog stream must not run when the agent answers')
+  strictEqual(calls.at(0).provider, 'cpa')
+  strictEqual(agentCalls.at(0).id, 'codex')
+  strictEqual(agentCalls.at(0).model, 'gpt-6.1-sol')
+  strictEqual(result.text, 'Agent 生成的正文')
+})
+
+test('a failing local agent falls through to the catalog default', async () => {
+  const calls = []
+  const result = await executeOmnimuxText({
+    prompt: '写一句测试',
+    text: parseTextConfig(undefined),
+    settings: settingsWithToolModel('cpa:gpt-6.1-sol', {
+      runtimeAgentId: 'codex',
+      runtimeAgentVerified: true,
+    }),
+    llm: llmStub(calls),
+    agentRun: () => { throw new Error('agent not installed') },
+    modelCatalog: () => ({ default: { provider: 'deepseek-official', model: 'deepseek-flash' } }),
+    env: {},
+  })
+
+  strictEqual(calls.at(1).provider, 'deepseek-official')
+  strictEqual(result.text, '回退后的正文')
 })
