@@ -31,6 +31,7 @@
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { dirname, extname, join, relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
@@ -378,7 +379,9 @@ function oneLine(text, max = 120) {
 
 /**
  * 扫描单个文件内容，返回命中列表（未做豁免过滤）。
- * @returns {{rule: string, line: number, form: string, detail: string}[]}
+ * bodyKey 是 catch 体的归一化摘要：用于跨版本增量比对（行号漂移不影响判定），
+ * 见 scripts/lib/silent-catch-delta.mjs。它不改变任何现有规则口径。
+ * @returns {{rule: string, line: number, form: string, detail: string, bodyKey: string}[]}
  */
 export function scanContent(relPath, content) {
   if (!isScannableSource(relPath)) return []
@@ -389,6 +392,7 @@ export function scanContent(relPath, content) {
     const codeBody = masked.slice(clause.bodyStart + 1, clause.bodyEnd)
     const line = lineOf(masked, clause.start)
     const detail = oneLine(content.slice(clause.start, clause.bodyEnd + 1))
+    const bodyKey = createHash('sha1').update(codeBody.replace(/\s+/g, ' ').trim()).digest('hex').slice(0, 16)
     // 单行口径：catch 关键字与收尾 `}` 在同一行。历史基线（279 处）就是这个口径。
     const singleLine = !content.slice(clause.start, clause.bodyEnd + 1).includes('\n')
     if (codeBody.trim() === '') {
@@ -400,6 +404,7 @@ export function scanContent(relPath, content) {
         singleLine,
         hasBinding: clause.hasBinding,
         detail,
+        bodyKey,
       })
       continue
     }
@@ -411,6 +416,7 @@ export function scanContent(relPath, content) {
         singleLine,
         hasBinding: clause.hasBinding,
         detail,
+        bodyKey,
       })
     }
   }

@@ -12,6 +12,7 @@ import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { randomUUID } from 'node:crypto'
 import { captureCandidate, sealEvidence } from './evidence-contract.mjs'
+import { newSilentCatchHits } from './lib/silent-catch-delta.mjs'
 import {
   isBusinessSourceFile,
   isE2ETestFile,
@@ -24,6 +25,9 @@ import {
   taskChangeSet,
   taskSpecs,
   hasEvidenceAfterSpec,
+  inspectSpecContract,
+  readSpecSections,
+  inspectDeliveryGovernance,
   inspectTaskVerification,
   findRepoRoot,
   decideQualityGate,
@@ -76,7 +80,7 @@ function repoRootForSpawn() {
 }
 
 const SPEC_BODY =
-  '# 任务规格\n\n## 用户操作旅程\n1. 打开页面\n2. 点击按钮\n3. 期望出现结果\n\n## 验收用例\n- 用例一：可点击\n- 用例二：几何尺寸大于零\n'
+  '# 任务规格\n\n## 用户操作旅程\n1. 打开页面\n2. 点击按钮\n3. 期望出现结果\n\n## 假设\n这条改动依赖的关键假设：状态同步只在主进程完成，渲染层不缓存副本。\n\n## 证伪方式\n什么可观测结果会证明假设是错的：并行修改同一文件时出现覆盖写入，即证伪。\n\n## 验收用例\n- 用例一：可点击\n- 用例二：几何尺寸大于零\n'
 
 test('bash hook uses workdir without weakening source and delivery gates', () => {
   const root = makeRepo('workdir')
@@ -919,4 +923,120 @@ test('public consumer verifies real historical integrity without granting execut
       assert.equal(inspectTaskVerification({ request }).valid, true)
     }
   }
+})
+
+/* ------------------------------------------------------------------ 补丁治理增量 */
+
+const PATCH_SPEC_BODY = '# 任务\n\n## 假设\n' + '这条改动依赖的关键假设写在正文里。'.repeat(3) + '\n\n## 证伪方式\n' + '什么可观测结果会证明假设是错的，写清楚命令。'.repeat(3) + '\n'
+
+test.describe('补丁治理：规格假设/证伪 + 增量静默兜底', () => {
+  test('readSpecSections 解析二级标题正文', () => {
+    const sections = readSpecSections('# 标题\n\n## 假设\n假设正文\n\n### 子标题\n子正文\n\n## 证伪方式\n证伪正文\n')
+    assert.equal(sections.get('假设').trim(), '假设正文\n\n### 子标题\n子正文')
+    assert.equal(sections.get('证伪方式').trim(), '证伪正文')
+  })
+
+  test('inspectSpecContract：缺节与正文过短都要报', () => {
+    const root = makeRepo('spec-contract')
+    try {
+      const spec = writeFileAt(root, 'specs/t.spec.md', '# 任务\n\n## 假设\n太短\n')
+      const result = inspectSpecContract([{ path: spec }])
+      assert.equal(result.ok, false)
+      assert.deepEqual(result.missing.map((item) => item.section).sort(), ['假设', '证伪方式'].sort())
+      writeFileAt(root, 'specs/t.spec.md', PATCH_SPEC_BODY)
+      assert.equal(inspectSpecContract([{ path: spec }]).ok, true)
+    } finally {
+      cleanup(root)
+    }
+  })
+
+  test('阻断记录被排除出验证证据（阻断 ≠ 通过）', () => {
+    const root = makeRepo('blocker-not-evidence')
+    try {
+      const specPath = writeFileAt(root, 'specs/b.spec.md', PATCH_SPEC_BODY)
+      utimesSync(specPath, new Date(Date.now() - 60_000), new Date(Date.now() - 60_000))
+      writeFileAt(root, 'docs/evidence/blockers/task.json', JSON.stringify({ kind: 'omnimux-blocker' }))
+      assert.equal(hasEvidenceAfterSpec(root), false, '阻断记录不能充当验收证据')
+      writeFileAt(root, 'docs/evidence/shot.png', 'png')
+      assert.equal(hasEvidenceAfterSpec(root), true, '普通证据仍应被认可')
+    } finally {
+      cleanup(root)
+    }
+  })
+
+  test('改业务源码但规格缺「证伪方式」→ deny', () => {
+    const root = makeRepo('spec-deny')
+    try {
+      writeFileAt(root, 'specs/x.spec.md', '# 任务\n\n## 假设\n' + '只有假设没有证伪方式。'.repeat(4) + '\n')
+      const decision = decideQualityGate({
+        toolName: 'write',
+        toolInput: { file_path: 'plugins/demo/src/a.js', content: 'export const a = 1\n' },
+        cwd: root,
+      })
+      assert.equal(decision.decision, 'deny')
+      assert.equal(decision.reason, 'spec-missing-falsifier')
+    } finally {
+      cleanup(root)
+    }
+  })
+
+  test('交付时新增空 catch → deny new-silent-catch', () => {
+    const root = makeRepo('delta-deny')
+    try {
+      writeFileAt(root, 'specs/y.spec.md', PATCH_SPEC_BODY)
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch {}\n}\n')
+      const decision = decideQualityGate({
+        toolName: 'bash',
+        toolInput: { command: 'git commit -m "demo"' },
+        cwd: root,
+      })
+      assert.equal(decision.decision, 'deny')
+      assert.equal(decision.reason, 'new-silent-catch')
+      assert.ok(Array.isArray(decision.hits) && decision.hits.length === 1)
+      assert.equal(decision.hits[0].path, 'plugins/demo/src/a.js')
+    } finally {
+      cleanup(root)
+    }
+  })
+
+  test('既有空 catch 仅行号漂移不误报', () => {
+    const root = makeRepo('delta-shift')
+    try {
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch {}\n}\n')
+      gitIn(root, ['add', '.'])
+      gitIn(root, ['commit', '-m', 'base plugin'])
+      const base = String(gitIn(root, ['rev-parse', 'HEAD']).stdout).trim()
+      gitIn(root, ['update-ref', 'refs/remotes/origin/main', base])
+      writeFileAt(root, 'plugins/demo/src/a.js', '\n\n\nexport function a() {\n  try { run() } catch {}\n}\n')
+      const result = newSilentCatchHits(root, { changedFiles: ['plugins/demo/src/a.js'] })
+      assert.equal(result.error, null)
+      assert.deepEqual(result.hits, [])
+    } finally {
+      cleanup(root)
+    }
+  })
+
+  test('基线 ref 不可解析 → 返回 error（由调用方 fail-open）', () => {
+    const root = makeRepo('delta-bad-ref')
+    try {
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch {}\n}\n')
+      const result = newSilentCatchHits(root, { baseRef: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef', changedFiles: ['plugins/demo/src/a.js'] })
+      assert.equal(result.error, 'invalid-base-ref')
+      assert.deepEqual(result.hits, [])
+    } finally {
+      cleanup(root)
+    }
+  })
+
+  test('非扫描范围文件不参与增量', () => {
+    const root = makeRepo('delta-scope')
+    try {
+      writeFileAt(root, 'docs/demo.js', 'try { x() } catch {}\n')
+      const result = newSilentCatchHits(root, { changedFiles: ['docs/demo.js'] })
+      assert.equal(result.scanned, 0)
+      assert.deepEqual(result.hits, [])
+    } finally {
+      cleanup(root)
+    }
+  })
 })
