@@ -95,21 +95,45 @@ export function localMediaPath(post, kind) {
 }
 
 /**
- * Reveal the conversation column: uncollapse + split focus, nothing else.
+ * Reveal the conversation column: exit host fullscreen + uncollapse + split.
  *
- * This is the same "enter conversation" gesture the replicate CTA uses, so the
- * workbench contract stays single-sourced; the tab set and the canvas are left
- * exactly as they were.
- * @param {{ setConversationCollapsed?: Function, setFocus?: Function } | undefined} workbench
+ * The host right-sidebar fullscreen state lives outside the plugin collapse key:
+ * in fullscreen the collapse key is already `false`, so the old collapse/focus
+ * pair did nothing and the user saw "clicked, nothing happened". The official
+ * `ensureConversationVisible()` is the one entry that also exits host fullscreen;
+ * it is preferred, with the legacy pair kept as a fallback for older hosts.
+ * A reveal failure must never undo a successful attachment.
+ * @param {{ ensureConversationVisible?: Function, setConversationCollapsed?: Function, setFocus?: Function } | undefined} workbench
+ * @param {Window | undefined} [windowObject]
  */
-export function revealConversation(workbench) {
-  if (!workbench) return
-  try {
-    if (typeof workbench.setConversationCollapsed === 'function') workbench.setConversationCollapsed(false)
-  } catch { /* a reveal failure must not undo a successful attachment */ }
-  try {
-    if (typeof workbench.setFocus === 'function') workbench.setFocus('split')
-  } catch { /* same */ }
+export function revealConversation(workbench, windowObject) {
+  const wb = workbench || windowObject?.__omnimuxWorkbench
+  if (!wb) return
+  const revealOnce = () => {
+    if (typeof wb.ensureConversationVisible === 'function') {
+      try {
+        wb.ensureConversationVisible()
+        return
+      } catch (error) {
+        console.warn('omnimux-inspiration: ensureConversationVisible failed; falling back to collapse+split', error)
+      }
+    }
+    try {
+      if (typeof wb.setConversationCollapsed === 'function') wb.setConversationCollapsed(false)
+    } catch (error) {
+      console.warn('omnimux-inspiration: setConversationCollapsed failed during reveal', error)
+    }
+    try {
+      if (typeof wb.setFocus === 'function') wb.setFocus('split')
+    } catch (error) {
+      console.warn('omnimux-inspiration: setFocus failed during reveal', error)
+    }
+  }
+  revealOnce()
+  if (typeof setTimeout === 'function') {
+    setTimeout(revealOnce, 0)
+    setTimeout(revealOnce, 50)
+  }
 }
 
 /**
@@ -170,7 +194,7 @@ export async function addRivalPostToSession(post, account, io = {}) {
         if (!store || typeof store.addAttachment !== 'function') return { ok: false, reason: 'invalid-payload' }
         return store.addAttachment(sessionId, payload)
       }
-    const reveal = typeof io.reveal === 'function' ? io.reveal : () => revealConversation(workbenchFrom(win))
+    const reveal = typeof io.reveal === 'function' ? io.reveal : () => revealConversation(workbenchFrom(win), win)
 
     const wantVideo = io.preferVideo === true
     let media
