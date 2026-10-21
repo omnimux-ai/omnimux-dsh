@@ -89,7 +89,7 @@ export async function startFixture(evidenceDir) {
         }
         json(res, 200, { ok: true }); return;
       }
-      if (url.pathname === '/omnimux/assets/state') { json(res, 200, { assets: [{ id: 'local-broken-3054', name: '读取失败参考图', type: 'image', cover: { id: 'cover' } }] }); return; }
+      if (url.pathname === '/omnimux/assets/state') { json(res, 200, { assets: [{ id: 'local-broken-3054', name: '读取失败参考图', type: 'image', cover: { id: 'cover', kind: 'image', original_name: 'broken.png' } }] }); return; }
       if (url.pathname === '/omnimux/assets/library/preview') { json(res, 503, { error: 'synthetic local asset read failure' }); return; }
       if (url.pathname === '/omnimux/api/media/generate' && req.method === 'POST') {
         const chunks = []; for await (const chunk of req) chunks.push(chunk);

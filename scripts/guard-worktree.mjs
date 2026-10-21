@@ -294,6 +294,45 @@ function rawCommandSegments(command) {
     .filter(Boolean)
 }
 
+/**
+ * Remove shell redirection tokens before argument classification so they are
+ * never mistaken for command arguments (`pnpm install > log` is a dependency
+ * restore, not `pnpm install log`).
+ */
+function stripShellRedirection(segment) {
+  return String(segment || '')
+    // descriptor duplication: 2>&1, 1>&2
+    .replace(/(?:^|\s)\d*>&\d+(?=\s|$)/g, ' ')
+    // file redirects: >file, >>file, 2>file, &>file, > "file with spaces"
+    .replace(/(?:^|\s)(?:\d*>>?|&>)\s*(?:"[^"]*"|'[^']*'|[^\s;&|<>]+)/g, ' ')
+    // input redirects: <file, <<<word
+    .replace(/(?:^|\s)(?:<<<|<<|<)\s*(?:"[^"]*"|'[^']*'|[^\s;&|<>]+)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/** Flags whose next token is a value, not a positional/package argument. */
+const VALUE_TAKING_FLAGS = new Set([
+  '--filter', '-F', '--prefix', '-C', '--dir', '--registry', '--reporter',
+  '--loglevel', '--depth', '--network-concurrency', '--store-dir',
+  '--virtual-store-dir', '--modules-dir', '--config-dir', '--workspace-concurrency',
+  '--use-node-version', '--fetch-retries', '--fetch-timeout',
+  '--fetch-retry-mintimeout', '--fetch-retry-maxtimeout', '--child-concurrency',
+])
+
+function positionalArgs(words) {
+  const positional = []
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i]
+    if (word.startsWith('-')) {
+      if (VALUE_TAKING_FLAGS.has(word)) i += 1
+      continue
+    }
+    positional.push(word)
+  }
+  return positional
+}
+
 function looksLikeGitInvocation(segment) {
   return /(?:^|\s)git(?:\s|$)/i.test(segment)
 }
@@ -733,7 +772,7 @@ export function decideMainCheckoutBuildCommand(command, cwd) {
 
   const segments = rawCommandSegments(command)
   for (const seg of segments) {
-    const words = tokenizeCommandLine(seg)
+    const words = tokenizeCommandLine(stripShellRedirection(seg))
     if (words.length === 0) continue
 
     const verb = words[0].toLowerCase()
@@ -815,8 +854,8 @@ export function decideMainCheckoutBuildCommand(command, cwd) {
       }
       if (['install', 'i', 'ci'].includes(subcommand)) {
         // 依赖恢复（primary 维护 / node_modules 修复）：只允许无位置包名的
-        // install/ci；flags 可带值，任何非 flag 位置参数按 add 语义保守拒绝。
-        const positional = cleanWords.slice(2).filter((w) => !w.startsWith('-'))
+        // install/ci；带值 flag 的值不算位置参数，其余非 flag 参数按 add 语义保守拒绝。
+        const positional = positionalArgs(cleanWords.slice(2))
         if (positional.length > 0) {
           return {
             decision: 'deny',

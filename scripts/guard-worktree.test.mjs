@@ -824,6 +824,23 @@ describe('guard-worktree bash command write safety guard (防命令行绕过篡�
       decideBashCommand({ command: 'npm install left-pad', cwd: mainRepoRoot }).decision,
       'deny',
     )
+    // shell 重定向与带值 flag 不应被误判为包名参数。
+    assert.equal(
+      decideBashCommand({ command: 'pnpm install --frozen-lockfile > /tmp/install.log 2>&1', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'pnpm install --filter omnimux > /tmp/install.log', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'npm install left-pad > /tmp/x.log', cwd: mainRepoRoot }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'pnpm build > /tmp/x.log 2>&1', cwd: mainRepoRoot }).decision,
+      'deny',
+    )
     assert.equal(
       decideBashCommand({ command: 'touch -r package.json .tmp/out.txt', cwd: mainRepoRoot }).decision,
       'allow',
