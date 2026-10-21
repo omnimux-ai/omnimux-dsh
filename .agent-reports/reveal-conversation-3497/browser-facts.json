@@ -1,0 +1,22 @@
+{
+  "task": "3497",
+  "base": "51b7e470a4c8e55c696bbf6ec321db2667fe7131",
+  "harness": "real RivalTimelineRow + real revealConversation + fake host workbench fullscreen/collapsed conversation; localhost",
+  "before": {
+    "fullscreen": "true",
+    "conversationWidth": 1,
+    "calls": []
+  },
+  "after": {
+    "fullscreen": "false",
+    "conversationWidth": 41,
+    "attachmentText": "已添加：Kitchen hack 的参考附件",
+    "calls": [
+      "ensure",
+      "ensure",
+      "ensure"
+    ]
+  },
+  "failures": [],
+  "screenshot": "browser-reveal-conversation-3497.png"
+}

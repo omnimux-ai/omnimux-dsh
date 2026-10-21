@@ -152,6 +152,24 @@ describe('G6: mounting into the active session', () => {
     assert.deepEqual(win.calls.workbench.find(([name]) => name === 'setFocus'), ['setFocus', 'split'])
   })
 
+  it('prefers the official ensureConversationVisible entry (host fullscreen fix)', async () => {
+    const win = makeWindow()
+    const calls = []
+    win.__omnimuxWorkbench.ensureConversationVisible = () => calls.push('ensure')
+    await addRivalPostToSession(POST, ACCOUNT, { window: win })
+    assert.ok(calls.length >= 1, 'the official entry must be called')
+    assert.deepEqual(win.calls.workbench, [], 'the legacy pair must not run when the official entry succeeds')
+  })
+
+  it('falls back to collapse + split when ensureConversationVisible throws', async () => {
+    const win = makeWindow()
+    win.__omnimuxWorkbench.ensureConversationVisible = () => { throw new Error('host not ready') }
+    await addRivalPostToSession(POST, ACCOUNT, { window: win })
+    const methods = win.calls.workbench.map(([name]) => name)
+    assert.ok(methods.includes('setConversationCollapsed'))
+    assert.ok(methods.includes('setFocus'))
+  })
+
   it('downloads the cover first when no local file exists', async () => {
     const win = makeWindow()
     const calls = []

@@ -401,6 +401,31 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
     assert.equal(row.querySelector('.omnimux-rival-timeline-media img'), null, 'the undecodable HEIC <img> must be gone')
   })
 
+  it('reveals the conversation through the official host entry after 立即复刻 (#3497)', async () => {
+    const { addRivalPostToSession } = await import('./rival-add-to-chat.js')
+    const calls = []
+    const win = {
+      __omnimuxAttachments: { addAttachment() { return { ok: true } } },
+      __omnimuxWorkbench: {
+        ensureConversationVisible() { calls.push('ensure') },
+        setConversationCollapsed(value) { calls.push(`collapse:${value}`) },
+        setFocus(mode) { calls.push(`focus:${mode}`) },
+      },
+    }
+    const result = await addRivalPostToSession({
+      id: 'p1',
+      title: 'Kitchen hack',
+      url: 'https://www.tiktok.com/@foo/video/1',
+      cover_local_path: '/tmp/cover.jpg',
+      cover_http_url: '/m/cover.jpg',
+      stats: {},
+    }, { id: 'riv_1', platform: 'tiktok' }, { window: win })
+    await new Promise((resolve) => setTimeout(resolve, 60))
+    assert.equal(result.ok, true)
+    assert.ok(calls.filter((call) => call === 'ensure').length >= 3, 'the official reveal must run on click + 0/50ms replays')
+    assert.equal(calls.some((call) => call.startsWith('collapse') || call.startsWith('focus')), false, 'the fallback must not run when the official entry works')
+  })
+
   it('renders the timeline at the X-like centred reading width (#3486)', async () => {
     const mounted = await mountStageOnAccounts()
     open.push(mounted)
