@@ -38,8 +38,31 @@ export function createStaticRoutes(opts: {
       }
       return { status: 200, file };
     }
+    if (method === 'GET' && path === `${WORKFLOW_ROUTE_PREFIX}/director.js`) {
+      const file = join(pluginRoot, 'lib', 'director.js');
+      if (!existsSync(file)) return { status: 404, body: { error: 'director-not-built' } };
+      return { status: 200, file };
+    }
+    const assetName = path.startsWith(`${WORKFLOW_ROUTE_PREFIX}/director-assets/`)
+      ? path.slice(`${WORKFLOW_ROUTE_PREFIX}/director-assets/`.length) : '';
+    const directorAssets = ['quaternius-standard-male.glb', 'quaternius-standard-female.glb', 'quaternius-standard-male.LICENSE.md', 'quaternius-standard-female.LICENSE.md'];
+    if (method === 'GET' && directorAssets.includes(assetName)) {
+      const file = join(pluginRoot, 'assets', 'director', 'models', assetName);
+      if (!existsSync(file)) return { status: 404, body: { error: 'director-asset-not-found' } };
+      return { status: 200, file };
+    }
+    if (method === 'GET' && path.startsWith(`${WORKFLOW_ROUTE_PREFIX}/director-assets/licenses/`)) {
+      const licenseName = path.slice(`${WORKFLOW_ROUTE_PREFIX}/director-assets/licenses/`.length);
+      const licenses = new Set(['fix-webm-duration-MIT.txt', 'react-three-fiber-MIT.txt', 'cc0-1.0-legalcode.txt']);
+      if (!licenses.has(licenseName)) return { status: 404, body: { error: 'director-asset-not-found' } };
+      const file = join(pluginRoot, 'assets', 'director', 'licenses', licenseName);
+      if (!existsSync(file)) return { status: 404, body: { error: 'director-asset-not-found' } };
+      return { status: 200, file };
+    }
     if (method === 'GET' && path === manifestPath) {
-      return { status: 200, body: { canvasHash: canvasJsHash() } };
+      const directorFile = join(pluginRoot, 'lib', 'director.js');
+      const directorHash = existsSync(directorFile) ? createHash('sha256').update(readFileSync(directorFile)).digest('hex').slice(0, 16) : null;
+      return { status: 200, body: { canvasHash: canvasJsHash(), directorHash, directorAbi: 1 } };
     }
     return null;
   };

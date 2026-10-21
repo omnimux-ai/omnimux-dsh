@@ -6,6 +6,7 @@
 import { memo, useMemo, type ComponentType, type FC, type MouseEvent } from 'react';
 import {
   AudioLines,
+  Box,
   ChevronLeft,
   Film,
   ImagePlus,
@@ -28,6 +29,7 @@ const ICON_MAP: Record<AddNodePaletteIcon, ComponentType<{ size?: number }>> = {
   ImagePlus,
   Video,
   AudioLines,
+  Box,
   Film,
   UploadCloud,
 };

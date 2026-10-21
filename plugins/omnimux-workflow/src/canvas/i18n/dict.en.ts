@@ -98,6 +98,7 @@ const en: Record<DictKey, string> = {
   'node.type.audio': 'Audio',
   'node.type.table': 'Table',
   'node.type.video_composition': 'Video Composition',
+  'node.type.director': '3D Director',
   'node.type.import_asset': 'Import Asset',
   'node.type.group': 'Group',
   'node.renameHint': 'Double-click to rename',

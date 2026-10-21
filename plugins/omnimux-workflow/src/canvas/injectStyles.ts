@@ -11,6 +11,7 @@ import xyflowCss from '@xyflow/react/dist/style.css';
 import themeCss from './theme/workbench-theme.css';
 import componentsCss from './theme/components.css';
 import tableNodeCss from './theme/table-node.css';
+import directorCss from './theme/director.css';
 import textStageCss from './components/text-stage/text-stage.css';
 import promptTokenEditorCss from './editor/components/PromptTokenEditor/promptTokenEditor.css';
 
@@ -19,6 +20,7 @@ const STYLESHEETS: Array<{ id: string; css: string }> = [
   { id: 'omnimux-workflow-theme', css: themeCss },
   { id: 'omnimux-workflow-components', css: componentsCss },
   { id: 'omnimux-workflow-table-node', css: tableNodeCss },
+  { id: 'omnimux-workflow-director-node', css: directorCss },
   { id: 'omnimux-workflow-text-stage', css: textStageCss },
   { id: 'omnimux-workflow-prompt-token-editor', css: promptTokenEditorCss },
 ];

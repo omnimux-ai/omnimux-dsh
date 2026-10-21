@@ -203,6 +203,7 @@
     "dev-replay.test.mjs",
     "dev-smoke.mjs",
     "dev-smoke.test.mjs",
+    "director-acceptance-3289.mjs",
     "doc-index-gen.mjs",
     "doc-lint.mjs",
     "docked-slot-position-qa.mjs",

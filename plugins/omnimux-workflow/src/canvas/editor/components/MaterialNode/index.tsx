@@ -50,6 +50,7 @@ import {
   shouldShowNodeToolbar,
 } from '../../utils/nodeToolbarLogic';
 import { extractSocialVideoUrl } from '../../utils/socialMediaVideoUrl.ts';
+import { applyPreviewMediaDuration } from '../../utils/directorConfirmedMediaDuration.ts';
 import { planVideoExtractionDownstream } from '../../utils/planVideoExtractionDownstream.ts';
 import {
   planAudioExtractProvisioning,
@@ -195,15 +196,12 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     [nodeData.nodeHeight, nodeWidth, updateNodeData],
   );
 
-  // 媒体素材时长自愈回填（修复视频节点 durationSec 恒为 null 导致下游模型校验拦截）
+  // 预览补充未知时长；已确认素材沿用检查器元信息。
   const handleDurationChange = useCallback(
     (duration: number) => {
-      if (!Number.isFinite(duration) || duration <= 0) return;
-      if (nodeData.durationSec !== duration || nodeData.duration !== duration) {
-        updateNodeData({ durationSec: duration, duration });
-      }
+      applyPreviewMediaDuration(nodeData, duration, updateNodeData);
     },
-    [nodeData.duration, nodeData.durationSec, updateNodeData],
+    [nodeData, updateNodeData],
   );
 
   const handleGenerate = useCallback(() => {

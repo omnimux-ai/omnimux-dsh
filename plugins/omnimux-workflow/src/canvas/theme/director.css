@@ -1,0 +1,8 @@
+.wf-director-card { display: flex; flex-direction: column; gap: 12px; padding: 16px; width: 350px; box-sizing: border-box; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); border-radius: 12px; }
+.wf-director-card__cover { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 8px; background: var(--dsw-alias-bg-base); }
+.wf-director-card__empty { min-height: 240px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 16px; color: var(--dsw-alias-label-secondary); }
+.wf-director-card__description { width: 100%; min-height: 64px; box-sizing: border-box; resize: vertical; font: inherit; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--dsw-alias-border); color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-base); }
+.wf-canvas-main { position: relative; }
+.wf-director-panel { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; overflow: hidden; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); }
+.wf-director-panel__loading { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.wf-director-panel__mount { flex: 1; min-height: 0; position: relative; overflow: hidden; }

@@ -8,7 +8,7 @@
 
 import type { MaterialType } from '../../types/materialNode';
 
-export type CanvasAddNodeType = MaterialType | 'table' | 'video_composition' | 'import_asset';
+export type CanvasAddNodeType = MaterialType | 'table' | 'video_composition' | 'import_asset' | 'director';
 
 export type AddNodePaletteScope = 'dock' | 'context';
 
@@ -20,7 +20,8 @@ export type AddNodePaletteIcon =
   | 'Video'
   | 'AudioLines'
   | 'Film'
-  | 'UploadCloud';
+  | 'UploadCloud'
+  | 'Box';
 
 export type AddNodeBadgeVariant = 'primary' | 'new';
 
@@ -39,7 +40,7 @@ export interface AddNodePaletteItem {
 }
 
 /**
- * 7 项固定顺序（图标键名即顺序）：Type → Table → ImagePlus → Video → AudioLines → Film → UploadCloud。
+ * 固定顺序：Type → Table → ImagePlus → Video → AudioLines → Film → Box → UploadCloud。
  * 导入素材仅出现在 Dock（Context pane 主菜单已有独立「导入素材」项）。
  */
 export const ADD_NODE_PALETTE: readonly AddNodePaletteItem[] = [
@@ -80,6 +81,12 @@ export const ADD_NODE_PALETTE: readonly AddNodePaletteItem[] = [
     icon: 'Film',
     labelKey: 'node.type.video_composition',
     badge: { text: 'Clip', variant: 'new' },
+    scopes: ['dock', 'context'],
+  },
+  {
+    type: 'director',
+    icon: 'Box',
+    labelKey: 'node.type.director',
     scopes: ['dock', 'context'],
   },
   {

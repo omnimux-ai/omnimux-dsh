@@ -2,7 +2,7 @@
  * Unit test suite for Phase 1: Node Specification Registry SSOT.
  *
  * Verifies:
- * 1. NodeSpecRegistry contains all built-in node types (material, table, video_composition, group).
+ * 1. NodeSpecRegistry contains all built-in node types (material, table, video_composition, group, director).
  * 2. MATERIAL_TOOL_INPUT_TYPES is 100% equivalent to legacy behavior across all 16 tools.
  * 3. getNodeInputRequirements returns exact inputs for specified tools and union inputs for material types.
  * 4. Safe fallback for unknown/invalid node types and tool identifiers.
@@ -20,10 +20,10 @@ import {
 
 test('Test 1: NodeSpecRegistry contains all built-in node specifications', () => {
   const allSpecs = NodeSpecRegistry.getAll();
-  assert.equal(allSpecs.length, 4, 'Should contain exactly 4 built-in node specifications');
+  assert.equal(allSpecs.length, 5, 'Should contain exactly 5 built-in node specifications');
 
   const types = allSpecs.map((s) => s.type).sort();
-  assert.deepEqual(types, ['group', 'material', 'table', 'video_composition']);
+  assert.deepEqual(types, ['director', 'group', 'material', 'table', 'video_composition']);
 
   // Check material spec
   const materialSpec = NodeSpecRegistry.get('material');
@@ -66,6 +66,17 @@ test('Test 1: NodeSpecRegistry contains all built-in node specifications', () =>
   assert.equal(groupSpec.defaultTool, 'group');
   assert.equal(groupSpec.executorKey, 'group');
   assert.deepEqual(groupSpec.ports, []);
+
+  // Check director spec
+  const directorSpec = NodeSpecRegistry.get('director');
+  assert.ok(directorSpec, 'Director spec should exist');
+  assert.deepEqual(directorSpec, {
+    type: 'director',
+    ports: [{ side: 'in', acceptedTypes: ['text', 'image'], multi: true }],
+    tools: {},
+    defaultTool: 'director',
+    executorKey: 'director',
+  });
 });
 
 test('Test 2: MATERIAL_TOOL_INPUT_TYPES is 100% equivalent to legacy behavior across all 16 tools', () => {
@@ -208,6 +219,9 @@ test('Test 3: getNodeInputRequirements returns union for material types and exac
 
   const groupReq = NodeSpecRegistry.getNodeInputRequirements('group');
   assert.deepEqual(groupReq.acceptedTypes, []);
+
+  const directorReq = NodeSpecRegistry.getNodeInputRequirements('director');
+  assert.deepEqual(directorReq.acceptedTypes, ['text', 'image']);
 });
 
 test('Test 4: Safe fallback for unknown/invalid node types and tool identifiers', () => {

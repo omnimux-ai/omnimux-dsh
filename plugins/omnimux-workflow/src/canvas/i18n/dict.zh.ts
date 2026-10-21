@@ -100,6 +100,7 @@ const zh = {
   'node.type.audio': '音频',
   'node.type.table': '表格',
   'node.type.video_composition': '视频合成',
+  'node.type.director': '3D 导演台',
   'node.type.import_asset': '导入素材',
   'node.type.group': '组',
   // 节点头

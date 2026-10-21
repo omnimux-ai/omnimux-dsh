@@ -21,15 +21,104 @@ import { injectWorkflowStyles } from './styles.js'
 const CANVAS_GLOBAL = '__omnimuxWorkflowCanvas'
 const SCRIPT_ID = 'omnimux-workflow-canvas-island'
 
+// Detached parents cannot await React cleanup. Keep failed children reachable outside React.
+const retainedCanvasLifetimes = new Set()
+
+const usesConfirmedLifecycle = api => ['registerDirectorCloseGuard', 'prepareDirectorClose', 'closeActiveCanvas', 'settleCanvas', 'getCanvasState']
+  .some(name => typeof api[name] === 'function')
+
+async function confirmCanvasOperation(api, element, operation, mounted, props) {
+  const receipt = operation()
+  const confirmed = await receipt
+  if (confirmed === true) return true
+  if (confirmed !== undefined || receipt !== undefined) return false
+  if (!usesConfirmedLifecycle(api)) return true
+  if (typeof api.settleCanvas === 'function' && await api.settleCanvas(element) !== true) return false
+  if (typeof api.getCanvasState !== 'function') return false
+  const state = api.getCanvasState(element)
+  return state?.mounted === mounted && (!mounted || state.workspaceId === props?.workspaceId)
+}
+
+export function createCanvasBridgeLifecycle(onError = () => {}) {
+  let owner = null
+  let stopped = false
+  let tail = Promise.resolve()
+  const serialize = action => {
+    const pending = tail.then(action)
+    tail = pending.catch(() => undefined)
+    return pending
+  }
+  const closeOwner = async () => {
+    if (!owner) return true
+    const current = owner
+    try {
+      if (!await confirmCanvasOperation(current.api, current.element, () => current.api.unmountCanvas(current.element), false)) {
+        retainedCanvasLifetimes.add(lifecycle)
+        onError(new Error('导演台修改未保存，原画布已保留，请重试关闭'))
+        return false
+      }
+      if (owner === current) owner = null
+      retainedCanvasLifetimes.delete(lifecycle)
+      return true
+    } catch (error) {
+      retainedCanvasLifetimes.add(lifecycle)
+      onError(error)
+      return false
+    }
+  }
+  const lifecycle = {
+    mount: (api, element, props) => serialize(async () => {
+      if (stopped) return false
+      if (owner?.api === api && owner.element === element) {
+        return confirmCanvasOperation(owner.api, element, () => owner.api.updateCanvas(element, props), true, props)
+      }
+      if (owner && !await closeOwner()) return false
+      owner = { api, element }
+      try {
+        const confirmed = await confirmCanvasOperation(api, element, () => api.mountCanvas(element, props), true, props)
+        if (!confirmed) { await closeOwner(); return false }
+        if (stopped) { await closeOwner(); return false }
+        return true
+      } catch (error) {
+        await closeOwner()
+        onError(error)
+        return false
+      }
+    }),
+    update: props => serialize(async () => {
+      if (stopped) return false
+      if (!owner) return true
+      return confirmCanvasOperation(owner.api, owner.element, () => owner.api.updateCanvas(owner.element, props), true, props)
+    }),
+    close: () => serialize(closeOwner),
+    cleanup: () => {
+      stopped = true
+      return serialize(closeOwner)
+    },
+  }
+  return lifecycle
+}
+
+/** Explicit recovery retry; no polling, hidden DOM, or global mutable state. */
+export async function retryRetainedCanvasCleanup() {
+  const results = await Promise.all([...retainedCanvasLifetimes].map(lifetime => lifetime.cleanup()))
+  return results.every(result => result === true)
+}
+
 /**
  * Inject the island script once; resolves when the global API is ready.
  * @param {string} hash
  * @returns {Promise<void>}
  */
-function ensureCanvasScript(hash) {
+async function ensureCanvasScript(hash) {
   const expectedSrc = `/omnimux-workflow/canvas.js?v=${encodeURIComponent(hash)}`
   const existing = document.getElementById(SCRIPT_ID)
   if (existing instanceof HTMLScriptElement && existing.getAttribute('src') !== expectedSrc) {
+    const previousApi = window[CANVAS_GLOBAL]
+    if (previousApi && (typeof previousApi.closeActiveCanvas !== 'function' || await previousApi.closeActiveCanvas() !== true)) {
+      throw new Error('原画布尚未确认保存，不能替换画布版本')
+    }
+    if (!await retryRetainedCanvasCleanup()) throw new Error('原导演台关闭未完成，保留原版本')
     existing.remove()
     if (typeof window !== 'undefined') {
       try {
@@ -96,9 +185,7 @@ function ensureCanvasScript(hash) {
 export function CanvasBridge({ onClose, t, locale, workspaceId, focusGroupId }) {
   useEffect(() => { injectWorkflowStyles() }, [])
   const containerRef = useRef(null)
-  const mountedRef = useRef(false)
   const lifetimeRef = useRef(null)
-  const mountedApiRef = useRef(null)
   const [status, setStatus] = useState('loading') // loading | ready | error
   // 最新 props 快照：load 完成挂载与 locale/onClose/workspaceId/focusGroupId live
   // 切换共用（island 边界纯数据 + 回调，一律走 mountCanvas/updateCanvas，
@@ -122,11 +209,14 @@ export function CanvasBridge({ onClose, t, locale, workspaceId, focusGroupId }) 
         throw new Error('canvas island global missing')
       }
       const el = containerRef.current
-      if (el && !mountedRef.current) {
-        api.mountCanvas(el, propsRef.current)
-        mountedApiRef.current = api
-        mountedRef.current = true
-        setStatus('ready')
+      if (el) {
+        const confirmed = await lifetime.mount(api, el, {
+          ...propsRef.current,
+          onClose: () => propsRef.current.onClose?.(),
+          onError: error => lifetime.reportError(error),
+        })
+        if (lifetimeRef.current !== lifetime) return
+        setStatus(confirmed ? 'ready' : 'error')
       }
     } catch {
       if (lifetimeRef.current === lifetime) setStatus('error')
@@ -134,27 +224,32 @@ export function CanvasBridge({ onClose, t, locale, workspaceId, focusGroupId }) 
   }, [])
 
   useEffect(() => {
-    const el = containerRef.current
-    lifetimeRef.current = {}
+    const reportError = error => {
+      console.error('画布关闭未完成，保留原编辑引用', error)
+      if (lifetimeRef.current === lifetime) setStatus('error')
+    }
+    const lifetime = createCanvasBridgeLifecycle(reportError)
+    lifetime.reportError = reportError
+    lifetimeRef.current = lifetime
     void load()
     return () => {
-      lifetimeRef.current = null
-      const api = mountedApiRef.current
-      if (api && typeof api.unmountCanvas === 'function' && el && mountedRef.current) {
-        api.unmountCanvas(el)
-      }
-      mountedRef.current = false
-      mountedApiRef.current = null
+      if (lifetimeRef.current === lifetime) lifetimeRef.current = null
+      void lifetime.cleanup()
     }
   }, [load])
 
   // W4 T4.1：宿主切语言 / 关闭回调换人 / 切换会话与画布 / 卡片「编辑」定位目标变化
   // → island updateCanvas 同 root 重 render（不可 unmount/remount，会丢画布状态）。
   useEffect(() => {
-    const api = mountedApiRef.current
-    const el = containerRef.current
-    if (mountedRef.current && el && api && typeof api.updateCanvas === 'function') {
-      api.updateCanvas(el, propsRef.current)
+    const lifetime = lifetimeRef.current
+    if (lifetime) {
+      void lifetime.update({
+        ...propsRef.current,
+        onClose: () => propsRef.current.onClose?.(),
+        onError: error => lifetime.reportError(error),
+      }).then(confirmed => {
+        if (lifetimeRef.current === lifetime && !confirmed) setStatus('error')
+      }).catch(error => lifetime.reportError(error))
     }
   }, [locale, onClose, workspaceId, focusGroupId])
 

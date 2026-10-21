@@ -1,3 +1,4 @@
+import { readFileSync, statSync } from 'node:fs'
 import { OmnimuxError } from '../media/errors.js'
 import { fetchSelf, publicStatus, resolveSiteBaseUrl } from './omnimux-auth.js'
 
@@ -104,7 +105,45 @@ export function createIdentity(deps) {
     return body
   }
 
-  return { load, status, require }
+  /**
+   * Canonical local account only. Env/credential-only identity remains unknown.
+   * @returns {{ logged_in: boolean, verified: null, base_url: string, id?: string | number }}
+   */
+  function getSnapshot() {
+    const unknown = { logged_in: false, verified: null, base_url: siteBaseUrl }
+    try {
+      if (process.env.OMNIMUX_ACCESS_TOKEN?.trim() || deps.store.isExpired?.() !== false) return unknown
+      const secretsStat = statSync(deps.store.secretsPath)
+      const secrets = JSON.parse(readFileSync(deps.store.secretsPath, 'utf8'))
+      const active = ownValue(ownValue(secrets, 'slots'), ownValue(secrets, 'active_slot'))
+      const tokenPresent = [ownValue(secrets, 'access_token'), ownValue(active, 'access_token')]
+        .some(value => typeof value === 'string' && value.trim() !== '')
+      if (!tokenPresent) return unknown
+      const profileStat = statSync(deps.store.profilePath)
+      if (!secretsStat.isFile() || !profileStat.isFile() || profileStat.mtimeMs < secretsStat.mtimeMs) return unknown
+      const id = ownValue(deps.store.readProfileCache(), 'id')
+      const userId = ownValue(deps.store.readConfig(), 'user_id')
+      if (!stableId(id) || !stableId(userId) || String(id).trim() !== String(userId).trim()) return unknown
+      return { logged_in: true, verified: null, base_url: siteBaseUrl, id }
+    } catch {
+      // Missing, unreadable or malformed canonical evidence is not an authenticated account.
+      return unknown
+    }
+  }
+
+  return { load, status, require, getSnapshot }
+}
+
+/** @param {unknown} row @param {unknown} key */
+function ownValue(row, key) {
+  if (!row || typeof row !== 'object' || typeof key !== 'string') return undefined
+  return Object.getOwnPropertyDescriptor(row, key)?.value
+}
+
+/** @param {unknown} value @returns {value is string | number} */
+function stableId(value) {
+  return (typeof value === 'string' && value.trim() !== '') ||
+    (typeof value === 'number' && Number.isFinite(value))
 }
 
 /**

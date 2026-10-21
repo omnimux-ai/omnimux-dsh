@@ -25,6 +25,7 @@
  * tool exceptions.
  */
 
+import { createDirectorTools } from './directorTools.ts';
 import {
   createCanvasWriteTableNodeTool,
   createCanvasGetTableNodeTool,
@@ -101,6 +102,7 @@ export function registerWorkflowAgentSeats(
       createWorkflowExecutionControlTool(deps),
       createCanvasWriteTableNodeTool(deps),
       createCanvasGetTableNodeTool(deps),
+      ...(deps.directorHost ? createDirectorTools({ ...deps, host: deps.directorHost, operations: deps.directorOperations }) : []),
     ];
     for (const spec of specs) {
       const origExecute = spec.execute;

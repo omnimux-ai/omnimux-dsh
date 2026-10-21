@@ -5,7 +5,7 @@ type: "index"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-10-08"
+updated: "2026-10-14"
 authors: ["x", "agent-architect"]
 subsystem: "global"
 tags: ["portal", "index", "docs-root", "navigation"]
@@ -18,6 +18,10 @@ tags: ["portal", "index", "docs-root", "navigation"]
 ## 产品方向先读
 
 [产品定位：角色生成与视频复刻](contracts/product-positioning.md)是当前定位与对外描述的唯一归属。落地页、旧研究和既有插件目录不能扩大默认范围，也不能证明功能完成。角色旅程见[制作指南](guides/ecommerce-video-replication.md)，本轮来源见[核验记录](evidence/2026-10-08-landing-positioning-sources.md)。
+
+## 当前任务规格
+
+[三维导演台迁移需求](../specs/beeftv-3d-director-migration.spec.md)与[后续执行目标](specs/2026-10-14-beeftv-director-goal.md)：2026-10-14 研究规划稿，包含功能范围、安全隔离前置及真实媒体验收；不是迁移实现或运行通过声明。
 
 ## 核心活文档
 
