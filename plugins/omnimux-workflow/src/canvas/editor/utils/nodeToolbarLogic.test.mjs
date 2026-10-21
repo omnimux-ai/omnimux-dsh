@@ -8,7 +8,7 @@ import {
   EMPTY_AUDIO_PILL_ACTION_ID,
   EMPTY_IMAGE_PILL_ACTION_ID,
   EMPTY_VIDEO_PILL_ACTION_ID,
-  PILL_NODE_GUTTER,
+  PILL_NODE_OVERHANG,
   buildConversationPayloadFromNode,
   buildEmptyImagePillActionSpec,
   buildEmptyMediaPillActionSpec,
@@ -84,9 +84,10 @@ test('shouldShowNodeToolbar：空素材 / 多选 / hover / selected', () => {
   assert.equal(shouldShowNodeToolbar({ hasMaterial: true }), false);
 });
 
-test('pillMaxWidthForNode：受节点宽度与 280 上限约束', () => {
+test('pillMaxWidthForNode：标准视频节点可容纳 4 主胶囊（胶囊允许略宽于节点）', () => {
   assert.equal(pillMaxWidthForNode(350), DEFAULT_PILL_MAX_WIDTH);
-  assert.equal(pillMaxWidthForNode(200), 200 - PILL_NODE_GUTTER);
+  assert.equal(pillMaxWidthForNode(450), DEFAULT_PILL_MAX_WIDTH);
+  assert.equal(pillMaxWidthForNode(200), 200 + PILL_NODE_OVERHANG * 2);
   assert.equal(pillMaxWidthForNode(0), DEFAULT_PILL_MAX_WIDTH);
 });
 
@@ -139,15 +140,100 @@ test('partitionToolbarActions：仅主区时不计入 divider / more', () => {
   assert.deepEqual(result.overflow, []);
 });
 
-test('partitionToolbarActions：主区超宽也不折主区', () => {
+test('partitionToolbarActions：350px 视频节点 4 主胶囊 + 聊天图标全部可见', () => {
+  const actions = [
+    spec('deconstruct-video', 'primary', 82),
+    spec('storyboard-video', 'primary', 70),
+    spec('extract-audio', 'primary', 82),
+    spec('depth-video', 'primary', 82),
+    spec('chat', 'secondary', 29),
+  ];
+  const result = partitionToolbarActions(actions, {
+    maxWidth: pillMaxWidthForNode(350),
+    moreWidth: 58,
+    dividerWidth: 1,
+    gap: 0,
+  });
+  assert.deepEqual(result.visible.map((item) => item.id), [
+    'deconstruct-video',
+    'storyboard-video',
+    'extract-audio',
+    'depth-video',
+    'chat',
+  ]);
+  assert.deepEqual(result.overflow.map((item) => item.id), []);
+});
+
+test('partitionToolbarActions：窄节点主区自身超宽时折叠尾部，不再撑破容器', () => {
   const actions = [
     spec('chat', 'primary', 150),
     spec('edit', 'primary', 150),
     spec('copy', 'secondary', 40),
   ];
   const result = partitionToolbarActions(actions, { ...OPTS, maxWidth: 100 });
-  assert.deepEqual(result.visible.map((item) => item.id), ['chat', 'edit']);
-  assert.deepEqual(result.overflow.map((item) => item.id), ['copy']);
+  assert.deepEqual(result.visible.map((item) => item.id), ['chat']);
+  assert.deepEqual(result.overflow.map((item) => item.id), ['edit', 'copy']);
+});
+
+test('partitionToolbarActions：200px 窄视频节点只保留放得下的主胶囊，其余进更多', () => {
+  const actions = [
+    spec('deconstruct-video', 'primary', 82),
+    spec('storyboard-video', 'primary', 70),
+    spec('extract-audio', 'primary', 82),
+    spec('depth-video', 'primary', 82),
+    spec('chat', 'secondary', 70),
+  ];
+  const result = partitionToolbarActions(actions, {
+    maxWidth: pillMaxWidthForNode(200),
+    moreWidth: 58,
+    dividerWidth: 1,
+    gap: 0,
+  });
+  assert.ok(result.visible.every((item) => item.section === 'primary'));
+  assert.ok(result.overflow.length >= 1);
+  assert.ok(result.overflow.some((item) => item.id === 'depth-video'));
+  assert.equal(result.visible.filter((item) => item.section === 'primary').length, 2);
+});
+
+test('partitionToolbarActions：只有次区动作时先按次区排布，预算不足才整体进更多', () => {
+  const only = [spec('chat', 'secondary', 40)];
+  const single = partitionToolbarActions(only, OPTS);
+  assert.deepEqual(single.visible.map((item) => item.id), ['chat']);
+  assert.deepEqual(single.overflow, []);
+
+  const many = [
+    spec('chat', 'secondary', 60),
+    spec('copy', 'secondary', 60),
+    spec('more', 'secondary', 60),
+    spec('share', 'secondary', 60),
+  ];
+  const overflowed = partitionToolbarActions(many, { ...OPTS, maxWidth: 200 });
+  assert.ok(overflowed.visible.length >= 1);
+  assert.ok(overflowed.overflow.length >= 1);
+
+  // 预算紧到放不下「次区 + 更多」时，整体折入更多（入口仍是「更多」按钮）。
+  const cramped = partitionToolbarActions(
+    [spec('a', 'secondary', 80), spec('b', 'secondary', 80)],
+    { maxWidth: 100, moreWidth: 58, dividerWidth: 1, gap: 0 },
+  );
+  assert.deepEqual(cramped.visible, []);
+  assert.deepEqual(cramped.overflow.map((item) => item.id), ['a', 'b']);
+});
+
+test('partitionToolbarActions：visible + overflow 恰好覆盖全部动作，不丢不重', () => {
+  const combos = [
+    [spec('a', 'primary', 82), spec('b', 'primary', 70), spec('c', 'secondary', 40)],
+    [spec('a', 'secondary', 40), spec('b', 'secondary', 40), spec('c', 'secondary', 40)],
+    [spec('a', 'primary', 200), spec('b', 'secondary', 40)],
+    [spec('a', 'primary', 10)],
+  ];
+  for (const actions of combos) {
+    const result = partitionToolbarActions(actions, OPTS);
+    const ids = result.visible.concat(result.overflow).map((item) => item.id).sort();
+    const expected = actions.map((item) => item.id).sort();
+    assert.deepEqual(ids, expected);
+    assert.equal(new Set(ids).size, expected.length);
+  }
 });
 
 test('buildConversationPayloadFromNode：文本 / 表格 / 合成 fallback 路径', () => {

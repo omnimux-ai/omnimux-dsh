@@ -7,8 +7,15 @@ import { resolveNodeLifecycle } from './nodeMaterialLifecycle.ts';
 import { localFilePathFromUrl, projectFileMediaUrl } from '../../../shared/localMedia.ts';
 import { isSupportedSocialVideoUrl } from './socialMediaVideoUrl.ts';
 
-export const DEFAULT_PILL_MAX_WIDTH = 280;
+export const DEFAULT_PILL_MAX_WIDTH = 380;
+/**
+ * 旧版「胶囊最多与节点同宽再留白」的约束值。当前口径改为按节点宽度 + 两侧
+ * PILL_NODE_OVERHANG 计算，本常量仅为兼容既有导出保留，新代码不要使用。
+ * @deprecated use pillMaxWidthForNode()
+ */
 export const PILL_NODE_GUTTER = 24;
+/** 胶囊浮在节点上方，允许左右各超出节点这么宽，容纳 4 个主胶囊而不被夹断。 */
+export const PILL_NODE_OVERHANG = 24;
 
 export type ToolbarSection = 'primary' | 'secondary';
 
@@ -449,12 +456,15 @@ export function shouldShowNodeToolbar(input: {
 
 export function pillMaxWidthForNode(nodeWidth: number): number {
   if (!Number.isFinite(nodeWidth) || nodeWidth <= 0) return DEFAULT_PILL_MAX_WIDTH;
-  return Math.min(Math.max(0, nodeWidth - PILL_NODE_GUTTER), DEFAULT_PILL_MAX_WIDTH);
+  // 胶囊允许略宽于节点：只按节点宽度夹取会把第 4 个主胶囊挤出圆角容器。
+  return Math.min(Math.max(0, nodeWidth) + PILL_NODE_OVERHANG * 2, DEFAULT_PILL_MAX_WIDTH);
 }
 
 /**
- * 主区全部保留；次区从左到右能放下的留下，其余进 overflow。
- * 主区即使超宽也不折。overflow 非空时次区若只剩 1 项，并入更多。
+ * 先尽量保留主区、再从左到右塞次区；overflow 非空时次区若只剩 1 项，并入更多。
+ * 主区自身也放不下时（窄节点 + 多个主胶囊），按从右到左折叠主区尾部进 overflow，
+ * 正常路径下可见内容不超过预算；预算小到连「一个主胶囊 + 更多」都放不下时只保留
+ * 首个主胶囊（容器由内容决定，不会被裁断）。
  */
 export function partitionToolbarActions(
   actions: ToolbarActionSpec[],
@@ -464,32 +474,60 @@ export function partitionToolbarActions(
   const primary = actions.filter((action) => action.section === 'primary');
   const secondary = actions.filter((action) => action.section !== 'primary');
 
-  if (secondary.length === 0) {
-    return { visible: primary, overflow: [] };
+  if (primary.length === 0 && secondary.length === 0) {
+    return { visible: [], overflow: [] };
   }
 
-  const primaryWidth = sumSectionWidth(primary, gap);
+  // 无主区（例如只有「对话」一个次区动作）：先按次区自身宽度排布；预算确实放不下时
+  // 才会整体折进更多（此时仍保留「更多」入口与菜单，不丢动作）。
+  if (primary.length === 0) {
+    for (let k = secondary.length; k >= 0; k -= 1) {
+      const visibleSecondary = secondary.slice(0, k);
+      const overflow = secondary.slice(k);
+      if (k === 1 && overflow.length > 0) continue;
+      const secWidth = sumSectionWidth(visibleSecondary, gap);
+      const morePart = overflow.length > 0
+        ? moreWidth + (visibleSecondary.length > 0 ? gap : 0)
+        : 0;
+      if (secWidth + morePart <= maxWidth) {
+        return { visible: visibleSecondary, overflow };
+      }
+    }
+    return { visible: secondary.slice(0, 1), overflow: secondary.slice(1) };
+  }
+
   const hasDivider = primary.length > 0;
-  const base = primaryWidth + (hasDivider ? dividerWidth : 0);
 
-  for (let k = secondary.length; k >= 0; k -= 1) {
-    const overflowCount = secondary.length - k;
-    if (k === 1 && overflowCount > 0) continue;
+  for (let p = primary.length; p >= 1; p -= 1) {
+    const visiblePrimary = primary.slice(0, p);
+    const primaryOverflow = primary.slice(p);
+    const primaryWidth = sumSectionWidth(visiblePrimary, gap);
 
-    const visibleSecondary = secondary.slice(0, k);
-    const overflow = secondary.slice(k);
-    const needMore = overflow.length > 0;
-    const secWidth = sumSectionWidth(visibleSecondary, gap);
-    const morePart = needMore
-      ? moreWidth + (visibleSecondary.length > 0 ? gap : 0)
-      : 0;
-    const total = base + secWidth + morePart;
-    if (total <= maxWidth) {
-      return { visible: [...primary, ...visibleSecondary], overflow };
+    for (let k = secondary.length; k >= 0; k -= 1) {
+      const visibleSecondary = secondary.slice(0, k);
+      const secondaryOverflow = secondary.slice(k);
+      const overflowCount = primaryOverflow.length + secondaryOverflow.length;
+      if (k === 1 && overflowCount > 0) continue;
+
+      const secWidth = sumSectionWidth(visibleSecondary, gap);
+      const needMore = overflowCount > 0;
+      const morePart = needMore
+        ? moreWidth + (visibleSecondary.length > 0 || visiblePrimary.length > 0 ? gap : 0)
+        : 0;
+      // 分割线只在主区与右侧内容（次区或更多）同时存在时渲染。
+      const needDivider = hasDivider && (visibleSecondary.length > 0 || overflowCount > 0);
+      const total = primaryWidth + (needDivider ? dividerWidth : 0) + secWidth + morePart;
+      if (total <= maxWidth) {
+        return {
+          visible: [...visiblePrimary, ...visibleSecondary],
+          overflow: [...primaryOverflow, ...secondaryOverflow],
+        };
+      }
     }
   }
 
-  return { visible: primary, overflow: secondary };
+  // 连一个主胶囊 + 更多都放不下：保留首个主胶囊，其余全部进更多。
+  return { visible: primary.slice(0, 1), overflow: [...primary.slice(1), ...secondary] };
 }
 
 function mediaFileMeta(materialType: string | undefined): { ext: string; extension: string } {
