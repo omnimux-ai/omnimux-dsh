@@ -35,7 +35,7 @@ import {
   snapshotGraph,
   type PersistCause,
 } from './persistPolicy';
-import { decideRemoteVersionAdvance } from './persistConflict';
+import { decideRemoteVersionAdvance, type GraphReconcileDecision } from './persistConflict';
 import { sanitizeEdges, sanitizeNodes, signatureOf } from './persistSanitize';
 
 const AUTOSAVE_DEBOUNCE_MS = 1000;
@@ -196,56 +196,79 @@ export function useWorkspacePersistence(
     }
   };
 
+  const performSaveRef = useRef<
+    ((capture: GraphCapture, cause: PersistCause, force?: boolean, resolveConflict?: boolean) => Promise<SaveOutcome>) | null
+  >(null);
+
+  /** 1s 去抖后保存钉死的 capture（冲突期间由 performSave 自己拒绝）。 */
+  const armAutosave = useCallback((capture: GraphCapture, cause: PersistCause = 'autosave') => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    const scheduled: GraphCapture = { nodes: capture.nodes, edges: capture.edges };
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      void performSaveRef.current?.(scheduled, cause);
+    }, AUTOSAVE_DEBOUNCE_MS);
+  }, []);
+
   /**
-   * 远端 version 超前：先拉快照比签名。同图只 adopt version，不弹冲突条。
+   * 远端 version 超前：先拉快照比签名。
+   *
+   * 判定必须用 await 之后的**当前** store 快照：版本探测与本地捕获不同源，
+   * 沿用探测前的旧快照会把探测窗口内的编辑（典型：导入素材插入节点）
+   * 误判成真分叉并冻结自动保存（Issue #3595）。四态见 persistConflict。
    */
-  const resolveRemoteAdvance = useCallback(async (input: {
-    localNodes: SerializedCanvasNode[];
-    localEdges: SerializedCanvasEdge[];
-  }): Promise<boolean> => {
+  const resolveRemoteAdvance = useCallback(async (): Promise<GraphReconcileDecision | 'unavailable'> => {
     const ws = workspaceRef.current;
     const scope = scopeRef.current;
     if (!ws) {
       setStatus('error');
-      return false;
+      return 'unavailable';
     }
     const latest = await getWorkspace(ws.id);
-    if (!isCurrentScope(scope)) return false;
+    if (!isCurrentScope(scope)) return 'unavailable';
     if (!latest.ok || !latest.body.workspace) {
       setStatus('error');
-      return false;
+      return 'unavailable';
     }
     const snapshot = latest.body.workspace;
     serverVersionRef.current = snapshot.version;
     // Only the explicit resolution controls may release an existing conflict.
-    if (conflictRef.current) return false;
+    if (conflictRef.current) return 'conflict';
     const current = readStoreCapture();
-    // A late conflict response must not reload over edits made during the PUT.
-    if (graphSig(current.nodes, current.edges) !== graphSig(input.localNodes, input.localEdges)) {
-      setIsDirty(true);
-      conflictRef.current = true;
-      setStatus('conflict');
-      return false;
-    }
+    const currentSignature = graphSig(current.nodes, current.edges);
+    const remoteSignature = graphSig(snapshot.nodes, snapshot.edges);
     const decision = decideRemoteVersionAdvance({
-      localSignature: graphSig(input.localNodes, input.localEdges),
+      localSignature: currentSignature,
       lastSavedSignature: lastSavedSigRef.current,
-      remoteSignature: graphSig(snapshot.nodes, snapshot.edges),
+      remoteSignature,
     });
+    currentSigRef.current = currentSignature;
     if (decision === 'conflict') {
       conflictRef.current = true;
+      setIsDirty(true);
       setStatus('conflict');
-      return false;
+      return 'conflict';
     }
-    lastSavedSigRef.current = graphSig(snapshot.nodes, snapshot.edges);
+    lastSavedSigRef.current = remoteSignature;
     lastSavedNodeCountRef.current = snapshot.nodes.length;
     if (decision === 'reload') {
       useCanvasStore.getState().hydrateGraph(snapshot.nodes, snapshot.edges);
+      setIsDirty(false);
+      setStatus('idle');
+      onSavedRef.current?.(snapshot);
+      return 'reload';
+    }
+    if (decision === 'resave') {
+      // 远端没有本地尚未拥有的内容：本地领先，续存即可，不弹条。
+      setIsDirty(true);
+      setStatus((prev) => (prev === 'saving' ? prev : 'pending'));
+      onSavedRef.current?.(snapshot);
+      return 'resave';
     }
     setIsDirty(false);
     setStatus('idle');
     onSavedRef.current?.(snapshot);
-    return true;
+    return 'adopt';
   }, []);
 
   /**
@@ -305,21 +328,27 @@ export function useWorkspacePersistence(
       const { nodes, edges } = decision.snapshot;
       if (current) setStatus('saving');
       try {
-        const result = await saveWorkspace(ws.id, {
+        const payload = {
           name: ws.name,
           nodes: sanitizeNodes(nodes, { workspaceId: ws.id }),
           edges: sanitizeEdges(edges),
-          expectedVersion: saved.version,
-        });
+        };
+        let result = await saveWorkspace(ws.id, { ...payload, expectedVersion: saved.version });
         if (result.status === 409) {
           if (!isCurrentScope(scope)) return { error: '画布版本冲突，未保存离开前的修改' };
-          const reconciled = await resolveRemoteAdvance({ localNodes: nodes, localEdges: edges });
+          const decision = await resolveRemoteAdvance();
           if (!isCurrentScope(scope)) return { error: '画布已切换，请重新发起生成' };
-          if (!reconciled) {
+          // 远端只是落后于本地（不含任何别人的新内容）：带最新版本重试一次，
+          // 不把「自己的保存推进了版本」误报成内容冲突（Issue #3595）。
+          if (decision === 'resave') {
+            result = await saveWorkspace(ws.id, { ...payload, expectedVersion: serverVersionRef.current });
+            if (!isCurrentScope(scope)) return { error: '画布已切换，请重新发起生成' };
+          }
+          if (result.status === 409 || decision === 'conflict') {
             conflictRef.current = true;
             setStatus('conflict');
+            return { error: '画布版本冲突，请确认最新内容后重新生成' };
           }
-          return { error: '画布版本冲突，请确认最新内容后重新生成' };
         }
         if (!result.ok || !result.body.workspace) {
           if (isCurrentScope(scope)) setStatus(conflictRef.current ? 'conflict' : 'error');
@@ -353,6 +382,8 @@ export function useWorkspacePersistence(
     });
     return pending;
   }, [resolveRemoteAdvance]);
+  // armAutosave / 冲突恢复都要能在 performSave 之外排程同一份保存逻辑。
+  performSaveRef.current = performSave;
 
   // Core subscription: debounce store changes, skip no-op notifications.
   // hydrate 完成前不订阅。
@@ -393,14 +424,8 @@ export function useWorkspacePersistence(
         return;
       }
       setStatus((prev) => (prev === 'saving' || prev === 'conflict' ? prev : 'pending'));
-      if (timerRef.current) clearTimeout(timerRef.current);
       // 决定保存的瞬间钉死 capture；1s 后只用这份，禁止再读 store
-      const scheduled: GraphCapture = { nodes: capture.nodes, edges: capture.edges };
-      const scheduledCause = inferred;
-      timerRef.current = setTimeout(() => {
-        timerRef.current = null;
-        void performSave(scheduled, scheduledCause);
-      }, AUTOSAVE_DEBOUNCE_MS);
+      armAutosave({ nodes: capture.nodes, edges: capture.edges }, inferred);
     };
 
     const unsubscribe = useCanvasStore.subscribe(() => {
@@ -413,7 +438,7 @@ export function useWorkspacePersistence(
         timerRef.current = null;
       }
     };
-  }, [performSave, enabled]);
+  }, [armAutosave, enabled]);
 
   // Best-effort flush on unmount / pagehide.
   // 先同步签名+拷贝，再交给 save（禁止 void performSave() 无快照）。
@@ -555,11 +580,10 @@ export function useWorkspacePersistence(
         if (!isCurrentScope(scope)) return;
         if (!probe.ok || typeof probe.body.version !== 'number') return;
         if (probe.body.version <= serverVersionRef.current) return;
-        const capture = readStoreCapture();
-        await resolveRemoteAdvance({
-          localNodes: capture.nodes,
-          localEdges: capture.edges,
-        });
+        const decision = await resolveRemoteAdvance();
+        if (!isCurrentScope(scope)) return;
+        // 远端只是落后于本地：立即续存，不弹冲突条（Issue #3595）。
+        if (decision === 'resave') armAutosave(readStoreCapture());
       } catch {
         // Probe failures are silent — the next tick retries.
       } finally {
@@ -570,7 +594,7 @@ export function useWorkspacePersistence(
       void tick();
     }, EXTERNAL_WATCH_INTERVAL_MS);
     return () => clearInterval(timer);
-  }, [enabled, resolveRemoteAdvance]);
+  }, [armAutosave, enabled, resolveRemoteAdvance]);
 
   return { status, isDirty, saveNow, flushPendingSave, resolveConflict, reloadFromServer };
 }
