@@ -128,6 +128,17 @@ describe('media URL vs thumbnail separation', () => {
       ],
     });
     assert.equal(audioOnly.mediaByKind.audio, undefined, 'preview route cannot serve audio');
+
+    // Real `/omnimux/assets/state` viewOf sets the audio file itself as cover.
+    const audioAsCover = mapLocalAsset({
+      id: 'voice2',
+      name: '纯音频2',
+      type: 'custom',
+      cover: { id: 'voice2', kind: 'audio', original_name: 'voice2.mp3' },
+      files: [{ id: 'voice2', kind: 'audio', original_name: 'voice2.mp3' }],
+    });
+    assert.equal(audioAsCover.url, '');
+    assert.equal(audioAsCover.mime, undefined);
   });
 
   it('reads mime_type and meta.source_media_url', () => {
