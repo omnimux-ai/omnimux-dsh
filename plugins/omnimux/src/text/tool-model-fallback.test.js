@@ -28,7 +28,25 @@ function llmStub(calls) {
   }
 }
 
-test('tool model without a registered provider falls back to the default text route', async () => {
+test('tool model without a registered provider retries with the live catalog default', async () => {
+  const calls = []
+  const result = await executeOmnimuxText({
+    prompt: '写一句测试',
+    text: parseTextConfig(undefined),
+    settings: settingsWithToolModel('cpa:gpt-6.1-sol'),
+    llm: llmStub(calls),
+    env: {},
+    modelCatalog: () => ({ default: { provider: 'deepseek-official', model: 'deepseek-flash' } }),
+  })
+
+  strictEqual(calls.at(0).provider, 'cpa')
+  strictEqual(calls.length, 2, 'the catalog default must run exactly once')
+  strictEqual(calls.at(1).provider, 'deepseek-official')
+  strictEqual(calls.at(1).model, 'deepseek-flash')
+  strictEqual(result.text, '回退后的正文')
+})
+
+test('without a catalog the stale tool model still falls back to the default text route', async () => {
   const calls = []
   const result = await executeOmnimuxText({
     prompt: '写一句测试',
@@ -38,8 +56,6 @@ test('tool model without a registered provider falls back to the default text ro
     env: {},
   })
 
-  strictEqual(calls.at(0).provider, 'cpa')
-  strictEqual(calls.length, 2, 'the fallback route must run exactly once')
   strictEqual(calls.at(1).provider, 'omnimux')
   strictEqual(result.text, '回退后的正文')
 })

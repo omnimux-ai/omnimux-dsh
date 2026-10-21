@@ -40,6 +40,10 @@ export function mountTextComplete(ctx, hub, jsonOut, onError, deps = {}) {
         attachments: ctx.get?.('attachments'),
         credentials: ctx.get?.('credentials'),
         settings: ctx.get?.('settings'),
+        modelCatalog: () => {
+          const catalog = ctx.get?.('modelCatalog')
+          return typeof catalog?.list === 'function' ? catalog.list() : undefined
+        },
         resolveOfficialApiKey: deps.resolveOfficialApiKey,
         env: finalReq.env ?? process.env,
       })
