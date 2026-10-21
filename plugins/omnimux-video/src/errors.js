@@ -20,6 +20,7 @@ export class VideoError extends Error {
       if (extra.hint !== undefined) this.hint = extra.hint
       if (extra.stderrTail !== undefined) this.stderrTail = extra.stderrTail
       if (extra.upstreamCode !== undefined) this.upstreamCode = extra.upstreamCode
+      if (Array.isArray(extra.tried)) this.tried = extra.tried
     }
   }
 }

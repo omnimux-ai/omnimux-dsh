@@ -81,6 +81,16 @@ test('mapVideoDepthExecutionError: 能力错误映射为可行动的路由码', 
   assert.equal(deps.upstream.code, 'video-depth-deps-missing');
   assert.match(deps.upstream.detail, /pip install onnxruntime/);
 
+  const withTried = mapVideoDepthExecutionError(
+    Object.assign(new Error('cannot import'), {
+      code: 'video-depth-deps-missing',
+      hint: 'Install them',
+      tried: ['python3.16', 'python3.15', 'python3.14'],
+    }),
+  );
+  assert.equal(withTried.code, 'deps-missing');
+  assert.match(withTried.message, /已尝试：python3\.16 \/ python3\.15 \/ python3\.14/);
+
   assert.equal(mapVideoDepthExecutionError(Object.assign(new Error('x'), { code: 'ffmpeg-missing' })).status, 503);
   assert.equal(mapVideoDepthExecutionError(Object.assign(new Error('x'), { code: 'video-timeout' })).status, 504);
   const unknown = mapVideoDepthExecutionError(new Error('boom'));

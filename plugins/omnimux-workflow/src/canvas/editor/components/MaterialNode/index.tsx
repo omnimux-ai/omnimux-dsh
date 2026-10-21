@@ -1292,7 +1292,87 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       />
     );
 
+  // 深度视频节点失败后重试：就地重跑深度转换，绝不落到普通视频生成
+  const handleRetryDepthVideo = useCallback(async () => {
+    if (isConvertingDepth) return;
+    const workspaceId = typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '';
+    if (!workspaceId) {
+      toast.error(t('depthVideo.noWorkspace'));
+      return;
+    }
+    const sourceNodeId = typeof nodeData.sourceVideoNodeId === 'string' ? nodeData.sourceVideoNodeId : '';
+    // 先按当前源节点实时解析（用户可能已替换/重链源视频），失败再退回建节点时的快照路径。
+    let videoPath = '';
+    if (sourceNodeId) {
+      const source = useCanvasStore.getState().nodes.find((n) => n.id === sourceNodeId);
+      if (source?.data) {
+        const sourceData = source.data as Record<string, unknown>;
+        videoPath = resolveVideoAudioExtractPath(
+          {
+            realPath: typeof sourceData.realPath === 'string' ? sourceData.realPath : undefined,
+            relativePath: typeof sourceData.relativePath === 'string' ? sourceData.relativePath : undefined,
+            mediaUrl: typeof sourceData.mediaUrl === 'string' ? sourceData.mediaUrl : undefined,
+            previewUrl: typeof sourceData.previewUrl === 'string' ? sourceData.previewUrl : undefined,
+            workspaceId,
+          },
+          { baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined },
+        ) || '';
+      }
+    }
+    if (!videoPath && typeof nodeData.sourceVideoPath === 'string') {
+      videoPath = nodeData.sourceVideoPath;
+    }
+    if (!videoPath) {
+      toast.error(t('depthVideo.noVideo'));
+      return;
+    }
+
+    const title = label || t('depthVideo.nodeLabel');
+    updateNodeData({
+      executionStatus: 'running',
+      executionError: undefined,
+      status: 'generating',
+      realPath: undefined,
+      mediaUrl: undefined,
+      previewUrl: undefined,
+    });
+    setIsConvertingDepth(true);
+    try {
+      const result = await convertVideoToDepth(workspaceId, {
+        nodeId: sourceNodeId || id,
+        videoPath,
+        title,
+      });
+      if (!result.ok || !result.body?.data) {
+        const message = result.body?.message || result.body?.error || t('depthVideo.toast.failed');
+        updateNodeData({ executionStatus: 'error', executionError: message, status: 'failed' });
+        toast.error(message);
+        return;
+      }
+      updateNodeData({
+        executionStatus: 'completed',
+        executionError: undefined,
+        status: 'ready',
+        realPath: result.body.data.depthPath,
+        mediaUrl: result.body.data.mediaUrl,
+        previewUrl: result.body.data.previewUrl,
+        title: result.body.data.title || title,
+      });
+      toast.success(t('depthVideo.toast.success'));
+    } catch (error) {
+      const message = error instanceof Error && error.message ? error.message : t('depthVideo.toast.failed');
+      updateNodeData({ executionStatus: 'error', executionError: message, status: 'failed' });
+      toast.error(message);
+    } finally {
+      setIsConvertingDepth(false);
+    }
+  }, [id, isConvertingDepth, label, nodeData, t, updateNodeData]);
+
   const handleMediaRetry = useCallback(() => {
+    if (materialType === 'video' && nodeData.origin === 'video_depth') {
+      void handleRetryDepthVideo();
+      return;
+    }
     const isAudioExtract = materialType === 'audio' && (nodeData.origin === 'audio_extract' || nodeData.audioExtractActive === true);
     if (isAudioExtract) {
       void handleRetryAudioExtract();
@@ -1311,7 +1391,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       return;
     }
     handleGenerate();
-  }, [handleDeconstructVideo, handleGenerate, handleRetryAudioExtract, handleSpeechToText, handleStoryboardVideo, materialType, nodeData]);
+  }, [handleDeconstructVideo, handleGenerate, handleRetryAudioExtract, handleRetryDepthVideo, handleSpeechToText, handleStoryboardVideo, materialType, nodeData]);
 
   const handleOpenResourcePicker = useCallback(
     (requestOrMode?: SlotPickRequest | 'add' | 'replace', targetSlotIndex?: number) => {

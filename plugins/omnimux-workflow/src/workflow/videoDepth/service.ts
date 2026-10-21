@@ -46,10 +46,18 @@ export function mapVideoDepthExecutionError(error: unknown): VideoDepthError {
       ? (error as { code: string }).code
       : '';
   const detail = upstreamDetail(error);
+  const tried = Array.isArray((error as { tried?: unknown })?.tried)
+    ? ((error as { tried: string[] }).tried)
+    : [];
   const mapped = UPSTREAM_CODE_MAP[code];
   if (mapped) {
     const [routeCode, status] = mapped;
-    return new VideoDepthError(routeCode, FAILURE_MESSAGES[routeCode] ?? '深度视频生成失败', status, {
+    const baseMessage = FAILURE_MESSAGES[routeCode] ?? '深度视频生成失败';
+    // 自动发现失败时把尝试过的解释器带到用户可见的 message，而不是只留在 detail。
+    const triedSuffix = routeCode === 'deps-missing' && tried.length > 0
+      ? `（已尝试：${tried.join(' / ')}）`
+      : '';
+    return new VideoDepthError(routeCode, `${baseMessage}${triedSuffix}`, status, {
       code,
       detail,
     });
