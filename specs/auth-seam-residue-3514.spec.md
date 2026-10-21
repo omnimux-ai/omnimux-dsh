@@ -59,7 +59,7 @@
 
 1. 构造「无 env 登录写 seam → 开启 env → 登出 → 检查 marker」：若没有 marker、或 marker 含 token、或登出变成 reject，假设 1 被证伪。命令：`pnpm --filter omnimux test`（`store.test.js` 新用例）。
 2. env 撤销后新建 store（同一 configDir/credentials mock，且 canonical 无 token）：若 `seamCleanup` 未调用官方 `unset`、或 marker 仍在、或 `resolve()` 仍返回旧 token，假设 1/2 被证伪。（canonical token 存在时按 S1 保留 marker 属预期，下一次正常登出收敛。）
-3. 构造「marker 存在 + canonical token 存在」：若清理调用 seam `unset`（删除新登录态）或 marker 未清，假设 2 被证伪。
+3. 构造「marker 存在 + canonical token 存在」：若清理调用 seam `unset`（删除当前登录态）或 marker 被删除，假设 2 被证伪（S1 预期：marker 保留到下一次正常登出收敛）。
 
 ## 验收（评审 B1/S1/S2/N1/N2 修订后）
 

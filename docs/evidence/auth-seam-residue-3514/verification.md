@@ -16,7 +16,7 @@
 
 ## 修复
 
-1. env 遮蔽导致登出 seam `unset` 被拒、且官方 `describe` 显示 seam 确实存有值时：写 **home 专属** marker `$DSH_HOME/omnimux/seam-cleanup-pending.json`（0600，严格校验 `version/ref/reason`，仅元数据、**不含 token**），保留 warn，登出仍 200。官方 `describe()` 在 env 遮蔽下只报告 env 层（`source:'env'`），插件无法探测文件层是否确有镜像，因此遮蔽被拒即写 marker；env-only 场景最多收敛为一次无害 no-op unset（评审 B2）。
+1. env 遮蔽导致登出 seam `unset` 被拒时：写 **home 专属** marker `$DSH_HOME/omnimux/seam-cleanup-pending.json`（0600，严格校验 `version/ref/reason`，仅元数据、**不含 token**），保留 warn，登出仍 200。官方 `describe()` 在 env 遮蔽下只报告 env 层（`source:'env'`），插件无法探测文件层是否确有镜像，因此遮蔽被拒即写 marker；env-only 场景最多收敛为一次无害 no-op unset（评审 B2）。
 2. 下次 token store 创建（env 已撤销、无 canonical token）时：通过**本 home 的**官方 `credentials.unset(CREDENTIAL_REF)` 清理残留并删除 marker；失败则 warn 并保留 marker 重试。
 3. canonical token 存在（仍处于登录态）：**保留 marker、不删除 seam**（避免误删当前登录态的合法镜像）；正常登出（无 env）会经官方 seam unset 清理 seam 并删除 marker；`set` 镜像成功或 seam 清理成功时也清 marker。
 4. marker 作用域与官方 seam 一致（per `$DSH_HOME`），Dev/Prod 共享 `configDir` 时互不消费/清除（评审 B1）；无法解析/形状不符的 marker 保留并 warn，不静默失效（S2）。
