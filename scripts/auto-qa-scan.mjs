@@ -48,6 +48,9 @@ const ENCODED_SECRET_LITERAL_PATTERNS = [
 export const EXTENSION_CONNECT_SRC_ALLOWED_HOSTS = [
   // 扩展分发资源的唯一公开来源（更新检查与静态资源）。
   'raw.githubusercontent.com',
+  // #3592：X 视频真实直链的公开 variant JSON（后台 worker 读取，只返回
+  // progressive mp4 地址；视频本身由 chrome.downloads 在浏览器层下载，不经扩展 fetch）。
+  'cdn.syndication.twimg.com',
 ]
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1'])

@@ -35,6 +35,8 @@ const ALLOWED_CONNECT_HOSTS = new Set([
   'ws://127.0.0.1:*',
   'http://127.0.0.1:*',
   'https://raw.githubusercontent.com',
+  // #3592: the worker reads X video variants from the public syndication JSON.
+  'https://cdn.syndication.twimg.com',
 ])
 
 /** Model vendor endpoints that must never appear in shipped extension source. */
@@ -448,5 +450,46 @@ describe('the X video variant lookup', () => {
     // `11111` fell out of the bounded cache, so asking for it fetches again.
     await lookup('11111')
     expect(fetch).toHaveBeenCalledTimes(4)
+  })
+})
+/**
+ * #3592: X video variants are read from the public syndication endpoint by the
+ * worker. MV3's `extension_pages` CSP also governs the worker's `fetch`, so the
+ * host must be allowlisted explicitly; a missing entry turns every real X video
+ * download into "only plays in its page" while unit fixtures still pass.
+ */
+describe('X video syndication is reachable from the extension itself (#3592)', () => {
+  const SYNDICATION_HOST = 'https://cdn.syndication.twimg.com'
+  const root = join(__dirname, '..')
+
+  function connectSources(manifestPath: string): string {
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+      content_security_policy?: { extension_pages?: string }
+    }
+    const policy = manifest.content_security_policy?.extension_pages ?? ''
+    const match = /(?:^|;)\s*connect-src\s+([^;]+)/.exec(policy)
+    return match === null ? '' : match[1].trim()
+  }
+
+  it('allowlists the syndication host in both manifests', () => {
+    for (const name of ['manifest.json', 'manifest.firefox.json']) {
+      const sources = connectSources(join(root, name))
+      expect(sources.split(/\s+/)).toContain(SYNDICATION_HOST)
+    }
+  })
+
+  it('keeps the allowlist host-scoped instead of widening it', () => {
+    for (const name of ['manifest.json', 'manifest.firefox.json']) {
+      const sources = connectSources(join(root, name))
+      const entries = sources.split(/\s+/)
+      expect(entries).not.toContain('*')
+      expect(entries.some((entry) => entry.startsWith('https://*'))).toBe(false)
+      expect(sources).not.toContain('https://video.twimg.com')
+    }
+  })
+
+  it('keeps the worker request pointed at the allowlisted endpoint', () => {
+    const source = readFileSync(join(root, 'src/background/x-video-variants.ts'), 'utf8')
+    expect(source).toContain("const SYNDICATION_ENDPOINT = 'https://cdn.syndication.twimg.com/tweet-result'")
   })
 })
