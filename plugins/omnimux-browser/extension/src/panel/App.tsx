@@ -88,6 +88,7 @@ import { imageErrorMessage } from './image-errors.ts'
 import {
   saveButtonLabel,
   saveFailureToast,
+  saveFallbackToast,
   saveSuccessToast,
   type SaveTarget,
 } from './save-target-copy.ts'
@@ -1432,6 +1433,8 @@ export function App(): React.JSX.Element {
     let savedTarget: SaveTarget = 'inspiration'
     let savedHandle: string | undefined
     let savedExisting = false
+    // 页面内采集失败时的回退原因；有值时成功 toast 必须把「已转云端解析」说出来。
+    let savedFallback: string | undefined
     // 431 means the request header block exceeded the host's 16 KiB budget, not
     // that the host is absent. The real reason must reach the user, or they will
     // keep checking a process that is already running.
@@ -1446,6 +1449,7 @@ export function App(): React.JSX.Element {
           target?: string
           handle?: string
           existing?: boolean
+          fallback?: string
         }>((resolve) => {
           chrome.runtime.sendMessage(
             {
@@ -1469,6 +1473,7 @@ export function App(): React.JSX.Element {
                   target?: string
                   handle?: string
                   existing?: boolean
+                  fallback?: string
                 })
               }
             },
@@ -1479,6 +1484,7 @@ export function App(): React.JSX.Element {
           if (bgRes.target === 'account') savedTarget = 'account'
           if (typeof bgRes.handle === 'string' && bgRes.handle.trim() !== '') savedHandle = bgRes.handle
           savedExisting = bgRes.existing === true
+          if (savedTarget === 'inspiration' && typeof bgRes.fallback === 'string') savedFallback = bgRes.fallback
         } else if (bgRes?.code === 'local-header-overflow') {
           headerOverflow = true
         }
@@ -1527,15 +1533,18 @@ export function App(): React.JSX.Element {
     if (saved) {
       setSavedSaveTarget(savedTarget)
       setSaveInspirationStatus('saved')
-      setToastMessage(saveSuccessToast(
-        {
-          target: savedTarget,
-          handle: savedHandle,
-          existing: savedExisting,
-          platform: classifiedSavePlatform,
-        },
-        locale,
-      ))
+      // 回退到云端解析时说清原因；否则「已保存」会掩盖页面内采集失败。
+      setToastMessage(savedFallback !== undefined && savedTarget === 'inspiration'
+        ? saveFallbackToast(savedFallback, locale)
+        : saveSuccessToast(
+          {
+            target: savedTarget,
+            handle: savedHandle,
+            existing: savedExisting,
+            platform: classifiedSavePlatform,
+          },
+          locale,
+        ))
       setTimeout(() => {
         setSaveInspirationStatus('idle')
         setToastMessage(null)

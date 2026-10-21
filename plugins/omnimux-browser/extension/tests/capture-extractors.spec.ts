@@ -434,7 +434,7 @@ describe('通用兜底（og / JSON-LD / DOM）', () => {
     })
   }
 
-  it('未知站点拼装 meta/JSON-LD/video/正文图片', () => {
+  it('未知站点只拼 og/JSON-LD 素材与主视频，不收正文全部图片', () => {
     mountGeneric()
     const post = requirePost(capture('https://example.com/work/42'))
     assert.equal(post.platform, 'web')
@@ -444,12 +444,13 @@ describe('通用兜底（og / JSON-LD / DOM）', () => {
     assert.equal(post.content_shape, 'video')
     assert.equal(post.cover_url, 'https://cdn.example.com/cover.jpg')
     assert.equal(post.posted_at, '2026-10-01T00:00:00.000Z')
-    // 顺序：<video> 内联播放地址 → JSON-LD contentUrl → 正文大图；48px 头像不算作品媒体。
+    // 顺序：<video> 内联播放地址 → JSON-LD contentUrl → og 图 → JSON-LD 缩略图；
+    // 正文 photo-1/photo-2 不再被当成作品素材。
     assert.deepEqual(post.media, [
       { type: 'video', url: 'https://cdn.example.com/inline.mp4' },
       { type: 'video', url: 'https://cdn.example.com/jsonld.mp4' },
-      { type: 'image', url: 'https://cdn.example.com/photo-1.jpg' },
-      { type: 'image', url: 'https://cdn.example.com/photo-2.jpg' },
+      { type: 'image', url: 'https://cdn.example.com/cover.jpg' },
+      { type: 'image', url: 'https://cdn.example.com/thumb.jpg' },
     ])
   })
 
@@ -466,7 +467,7 @@ describe('通用兜底（og / JSON-LD / DOM）', () => {
     assert.equal(capture('https://example.com/empty'), null)
   })
 
-  it('media 按契约上限截断到 20 条', () => {
+  it('无 og 的正文页只取第一张主图（不再收录 20 张正文图）', () => {
     const images = Array.from({ length: 25 }, (_, index) =>
       `<img src="https://cdn.example.com/cap-${index + 1}.jpg" width="800" height="600">`).join('')
     mountPage({
@@ -474,10 +475,9 @@ describe('通用兜底（og / JSON-LD / DOM）', () => {
       body: `<article>${images}</article>`,
     })
     const post = requirePost(capture('https://example.com/work/many'))
-    assert.equal(post.media.length, 20)
-    assert.equal(post.content_shape, 'gallery')
+    assert.equal(post.media.length, 1)
+    assert.equal(post.content_shape, 'photo')
     assert.equal(post.media[0].url, 'https://cdn.example.com/cap-1.jpg')
-    assert.equal(post.media[19].url, 'https://cdn.example.com/cap-20.jpg')
   })
 
   it('cookie 来自 document.cookie，随作品一起回传', () => {

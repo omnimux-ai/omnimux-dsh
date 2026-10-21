@@ -1,0 +1,34 @@
+CDP_PORT 54880 EXT_ID okckcppnhjaaamfopgplhkabnlkgoljf
+ACTIVE_TAB {"url":"https://en.wikipedia.org/wiki/Cat","title":"Cat - Wikipedia"}
+CLEANUP wikipedia status=200
+ACTIVE_TAB {"url":"https://www.youtube.com/watch?v=dQw4w9WgXcQ","title":"Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster) - YouTube"}
+CLEANUP youtube status=200
+RESULTS [
+  {
+    "name": "wikipedia",
+    "pageTitle": true,
+    "clicked": "clicked",
+    "toast": "已保存到 OmniMux 灵感素材库！",
+    "rowId": "insp_839f9486",
+    "rowStatus": "ready",
+    "mediaCount": 2,
+    "rowType": "image",
+    "localFiles": 3,
+    "importError": null,
+    "screenshot": "/tmp/omnimux-ext-e2e/panel-wikipedia.png"
+  },
+  {
+    "name": "youtube",
+    "pageTitle": true,
+    "clicked": "clicked",
+    "toast": "已保存到灵感库（页面未提取到作品，已转云端解析）",
+    "rowId": "insp_973465aa",
+    "rowStatus": "degraded",
+    "mediaCount": 0,
+    "rowType": "link",
+    "localFiles": 1,
+    "importError": null,
+    "screenshot": "/tmp/omnimux-ext-e2e/panel-youtube.png"
+  }
+]
+E2E_RESULT PASS
