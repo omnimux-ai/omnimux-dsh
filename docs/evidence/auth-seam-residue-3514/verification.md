@@ -16,7 +16,7 @@
 
 ## 修复
 
-1. env 遮蔽导致登出 seam `unset` 被拒、且官方 `describe` 显示 seam 确实存有值时：写 **home 专属** marker `$DSH_HOME/omnimux/seam-cleanup-pending.json`（0600，严格校验 `version/ref/reason`，仅元数据、**不含 token**），保留 warn，登出仍 200；seam 只继承 env 时不写 marker（N2）。
+1. env 遮蔽导致登出 seam `unset` 被拒、且官方 `describe` 显示 seam 确实存有值时：写 **home 专属** marker `$DSH_HOME/omnimux/seam-cleanup-pending.json`（0600，严格校验 `version/ref/reason`，仅元数据、**不含 token**），保留 warn，登出仍 200。官方 `describe()` 在 env 遮蔽下只报告 env 层（`source:'env'`），插件无法探测文件层是否确有镜像，因此遮蔽被拒即写 marker；env-only 场景最多收敛为一次无害 no-op unset（评审 B2）。
 2. 下次 token store 创建（env 已撤销、无 canonical token）时：通过**本 home 的**官方 `credentials.unset(CREDENTIAL_REF)` 清理残留并删除 marker；失败则 warn 并保留 marker 重试。
 3. canonical token 存在（仍处于登录态）：**保留 marker、不删除 seam**（避免误删当前登录态的合法镜像）；正常登出（无 env）会经官方 seam unset 清理 seam 并删除 marker；`set` 镜像成功或 seam 清理成功时也清 marker。
 4. marker 作用域与官方 seam 一致（per `$DSH_HOME`），Dev/Prod 共享 `configDir` 时互不消费/清除（评审 B1）；无法解析/形状不符的 marker 保留并 warn，不静默失效（S2）。
@@ -27,10 +27,13 @@
 ```text
 1) login (no env): seam = pat-seam-old
 2) logout under env: seam = pat-seam-old | marker = true | markerPath = $DSH_HOME/omnimux/seam-cleanup-pending.json
+   describe during shadow = {"configured":true,"source":"env","writable":false}
    warn = "[omnimux-auth] credentials.unset failed: credentials-local: OMNIMUX_ACCESS_TOKEN is supplied read-only by the launching environment"
 3) env removed, restart: cleanup = true | seam = undefined | marker = false
    resolve = undefined | describe = {"configured":false,"writable":true} | seam unset calls = 2
 ```
+
+> mock seam 的 `describe()` 按官方 `@deepseek-ai/dsh-credentials-local@0.1.5-rc.2` 顺序实现（先 `inherited` 后文件层），确保 B2 场景可复现。
 
 命令（worktree 根，使用 mock seam 复刻官方「env 遮蔽时 set/unset 均拒绝」语义；不接触真实凭据）：
 
@@ -46,7 +49,7 @@ node --input-type=module -e "…见 PR 描述/测试 store.test.js 同构脚本�
 | `pnpm --config.verify-deps-before-run=false --filter omnimux test` | exit 0；**3617 pass / 0 fail**（386 文件：2 + 3526 + 89） |
 | `pnpm --config.verify-deps-before-run=false check:boundaries` | ✅ 4289 source files |
 | `pnpm --config.verify-deps-before-run=false verify:product-baseline` | exit 0 |
-| `node scripts/verify-silent-catch.mjs --json` + delta | 改动文件新增 SC1/SC2 = 0；net +6 SC3：5 处带 `logCleanupFailure` 的失败可见路径 + 1 处 `seamHoldsStoredValue` 的显式保守降级（`catch { return true }`，意为「无法判断则按存有值处理」） |
+| `node scripts/verify-silent-catch.mjs --json` + delta | 改动文件新增 SC1/SC2 = 0；net +5 SC3，均为含 `logCleanupFailure(...)` 的失败可见路径（扫描器启发式只识别 console/logger 前缀，未识别本仓 helper；非静默吞错） |
 | `git diff --check` | exit 0 |
 
 > 备注：worktree 依赖通过软链复用主检出 `node_modules`；`pnpm` 的依赖状态检查在软链工作树会尝试重装，因此按仓库 CI 惯例加 `--config.verify-deps-before-run=false`；同时 `pnpm --filter omnimux build` 生成了被 git 忽略的 `lib/client.js`（materialized-pack 用例需要），未进入 diff。

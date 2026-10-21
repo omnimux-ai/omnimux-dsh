@@ -631,8 +631,9 @@ describe('env-shadowed seam mirror residue (Issue #3514)', () => {
         return state.value ? { value: state.value, source: 'file' } : undefined
       },
       async describe() {
+        // Official credentials-local order: inherited env first, then the file layer.
+        if (state.shadowed) return { configured: true, source: 'env', writable: false }
         if (state.value !== undefined) return { configured: true, source: 'file', writable: true }
-        if (state.shadowed) return { configured: true, source: 'env', writable: true }
         return { configured: false, writable: true }
       },
       async set(ref, value) {
@@ -803,11 +804,13 @@ describe('env-shadowed seam mirror residue (Issue #3514)', () => {
     }
   })
 
-  it('does not write a marker when the seam only inherits the env token', async () => {
+  it('records a marker even when only the env layer is visible, then converges as a harmless no-op', async () => {
     const dirs = makeDirs()
     const { state, seam } = createSeam()
     state.shadowed = true
     try {
+      // Official seam describe() reports only the env layer while shadowed, so the
+      // plugin cannot know whether a file copy exists: record a marker optimistically.
       const store = createTokenStore({
         homeDir: dirs.homeDir,
         configDir: dirs.configDir,
@@ -815,7 +818,14 @@ describe('env-shadowed seam mirror residue (Issue #3514)', () => {
         env: { OMNIMUX_ACCESS_TOKEN: 'pat-env-only' },
       })
       await store.unset()
-      assert.equal(existsSync(store.seamCleanupMarkerPath), false, 'nothing stored in the seam, nothing to clean later')
+      assert.equal(existsSync(store.seamCleanupMarkerPath), true)
+
+      // Env removed: the deferred cleanup is a no-op unset, and the marker is dropped.
+      state.shadowed = false
+      const clean = createTokenStore({ homeDir: dirs.homeDir, configDir: dirs.configDir, credentials: seam })
+      assert.equal(await clean.seamCleanup, true)
+      assert.equal(state.value, undefined)
+      assert.equal(existsSync(clean.seamCleanupMarkerPath), false)
     } finally {
       cleanupDirs(dirs)
     }

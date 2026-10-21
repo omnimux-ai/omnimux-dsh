@@ -161,7 +161,7 @@ export function createTokenStore(opts = {}) {
     try {
       const raw = JSON.parse(readFileSync(seamCleanupMarkerPath, 'utf8'))
       if (!raw || typeof raw !== 'object' || raw.version !== 1 || raw.ref !== CREDENTIAL_REF || raw.reason !== 'env-shadowed-logout') {
-        logCleanupFailure('seam cleanup marker', new Error('unexpected marker shape; leaving it for inspection'))
+        logCleanupFailure('seam cleanup marker', new Error('unexpected marker shape; leaving it for inspection (delete it after confirming no resident token)'))
         return INVALID_SEAM_MARKER
       }
       return raw
@@ -169,22 +169,6 @@ export function createTokenStore(opts = {}) {
       if (/** @type {NodeJS.ErrnoException} */ (error)?.code === 'ENOENT') return null
       logCleanupFailure('seam cleanup marker', error)
       return INVALID_SEAM_MARKER
-    }
-  }
-
-  /**
-   * Whether the seam actually stores a value for our ref (vs. only inheriting the
-   * env). Avoids writing a marker when there is nothing to clean (review N2).
-   * Unknown seam capability/describe failures are treated as "may hold a value".
-   * @returns {Promise<boolean>}
-   */
-  async function seamHoldsStoredValue() {
-    if (!credentials || typeof credentials.describe !== 'function') return true
-    try {
-      const info = await credentials.describe(CREDENTIAL_REF)
-      return Boolean(info && info.configured && info.source !== 'env')
-    } catch {
-      return true
     }
   }
 
@@ -563,8 +547,11 @@ export function createTokenStore(opts = {}) {
           logCleanupFailure('credentials.unset', error)
           // Defer the seam deletion until the env override is gone (official seam
           // refuses writes while shadowed); do not turn this logout into a 5xx.
-          // Only record a marker when the seam actually stored a copy (review N2).
-          if (await seamHoldsStoredValue()) writeSeamCleanupMarker('env-shadowed-logout')
+          // Always record a marker: while the env shadows the seam, the official
+          // describe()/resolve() report only the env layer, so there is no public
+          // way to tell whether a file copy exists. A marker for an env-only setup
+          // converges into one harmless no-op unset on the next start (review B2).
+          writeSeamCleanupMarker('env-shadowed-logout')
         }
       }],
       // 4. Profile cache
