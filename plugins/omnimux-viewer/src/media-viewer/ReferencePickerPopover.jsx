@@ -147,7 +147,9 @@ export function ReferencePickerPopover({
   const usePresetFallback = !hasItems && tabSnapshot.status === 'error';
   const showSkeleton = !hasItems && !usePresetFallback;
   const currentList = hasItems ? tabSnapshot.items : (usePresetFallback ? (PRESET_REFERENCE_ASSETS[activeTab] || PRESET_REFERENCE_ASSETS.upload || []) : []);
-  const displayList = onlyMine ? currentList.filter((item) => item.isMine ?? true) : currentList;
+  const wantedType = targetSlot?.type;
+  const byTarget = wantedType ? currentList.filter((item) => item.type === wantedType) : currentList;
+  const displayList = onlyMine ? byTarget.filter((item) => item.isMine ?? true) : byTarget;
   const isSquareRatio = activeTab === 'local' || activeTab === 'generations';
 
   const handleLocalUpload = async (e) => {
@@ -331,7 +333,7 @@ export function ReferencePickerPopover({
                   }
                 }}
               >
-                <ReferenceAssetThumb url={asset.url} square={isSquareRatio} />
+                <ReferenceAssetThumb url={asset.thumbUrl || asset.url} square={isSquareRatio} />
               </div>
             ))}
 

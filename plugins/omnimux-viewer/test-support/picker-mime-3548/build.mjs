@@ -41,6 +41,7 @@ writeFileSync(join(outDir, 'target.json'), JSON.stringify({
     slot: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/media-slot.js'),
     harness: join(here, 'harness.jsx'),
     capture: join(here, 'capture.mjs'),
+    build: join(here, 'build.mjs'),
   },
 }, null, 2));
 console.log('built', join(outDir, 'harness.html'));

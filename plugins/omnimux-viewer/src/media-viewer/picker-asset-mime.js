@@ -45,19 +45,24 @@ export function pickerKindOf(mime, category) {
 const localPreviewUrl = (id, fileId) => (
   fileId ? `/omnimux/assets/library/preview?id=${encodeURIComponent(id)}&file=${encodeURIComponent(fileId)}` : ''
 );
-const cloudPreviewUrl = (c) => c.meta?.source_cover_url || `/omnimux/assets/cloud/media?id=${encodeURIComponent(c.id)}&which=cover`;
+const cloudPreviewUrl = (c) => c.meta?.source_cover_url || c.cover_url || `/omnimux/assets/cloud/media?id=${encodeURIComponent(c.id)}&which=cover`;
 
 /** Map one `/omnimux/assets/state` asset row. */
 export function mapLocalAsset(a) {
-  const coverFile = a.cover?.id ? a.cover : (Array.isArray(a.files) ? a.files.find((file) => file?.kind === 'image') || a.files[0] : null);
+  const files = Array.isArray(a.files) ? a.files : [];
+  const coverFile = a.cover?.id ? a.cover : (files.find((file) => file?.kind === 'image') || files[0] || null);
+  const preferredKind = a.type === 'video' ? 'video' : (a.type === 'audio' ? 'audio' : null);
+  const mediaFile = (preferredKind && files.find((file) => file?.kind === preferredKind)) || coverFile;
   const coverUrl = coverFile?.id ? localPreviewUrl(a.id, coverFile.id) : '';
-  const mime = pickerMimeOf(coverFile) || pickerMimeOf(a);
+  const mediaUrl = mediaFile?.id ? localPreviewUrl(a.id, mediaFile.id) : coverUrl;
+  const mime = pickerMimeOf(mediaFile) || pickerMimeOf(a);
   return {
     id: a.id,
     title: a.name || a.handle || a.id,
     name: a.name || a.handle || a.id,
-    filename: coverFile?.original_name,
-    url: coverUrl,
+    filename: mediaFile?.original_name,
+    url: mediaUrl,
+    thumbUrl: coverUrl || mediaUrl,
     type: pickerKindOf(mime, a.type),
     mime: mime || undefined,
     isMine: true,
@@ -68,6 +73,7 @@ export function mapLocalAsset(a) {
 /** Map one `/omnimux/assets/cloud/search` row. Media MIME must come from the media file, never the cover. */
 export function mapCloudAsset(c) {
   const coverUrl = cloudPreviewUrl(c);
+  const mediaUrl = c.media_url || c.meta?.source_media_url || `/omnimux/assets/cloud/media?id=${encodeURIComponent(c.id)}&which=media`;
   const mediaMime = pickerMimeOf(c.media_url) || pickerMimeOf(c.meta?.source_media_url) || pickerMimeOf({ mime: c.mime || c.mime_type });
   const coverMime = pickerMimeOf(c.cover_url) || pickerMimeOf(coverUrl);
   // A static image can legitimately be represented by its cover; a video/audio
@@ -77,7 +83,8 @@ export function mapCloudAsset(c) {
     id: c.id,
     title: c.name || c.id,
     name: c.name || c.id,
-    url: coverUrl,
+    url: mediaUrl,
+    thumbUrl: coverUrl || mediaUrl,
     type: pickerKindOf(mime, c.media_type),
     mime: mime || undefined,
     isMine: false,
@@ -95,6 +102,7 @@ export function mapProductAsset(p) {
     title: p.name || p.id,
     name: p.name || p.id,
     url: coverUrl,
+    thumbUrl: coverUrl,
     type: pickerKindOf(mime, 'image'),
     mime: mime || undefined,
     isMine: true,
@@ -111,6 +119,7 @@ export function mapArtifactAsset(art) {
     title: art.title || art.id,
     name: art.title || art.id,
     url: coverUrl,
+    thumbUrl: coverUrl,
     type: pickerKindOf(mime, art.type),
     mime: mime || undefined,
     isMine: true,

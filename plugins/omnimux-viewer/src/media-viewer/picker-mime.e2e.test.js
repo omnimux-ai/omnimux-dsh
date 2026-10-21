@@ -51,6 +51,7 @@ test('证据哈希覆盖 picker 映射、MIME helper 与 harness', () => {
     slot: join(here, 'media-slot.js'),
     harness: join(here, '../../test-support/picker-mime-3548/harness.jsx'),
     capture: join(here, '../../test-support/picker-mime-3548/capture.mjs'),
+    build: join(here, '../../test-support/picker-mime-3548/build.mjs'),
   };
   for (const key of Object.keys(files)) {
     assert.match(report.sources[key] || '', /^[0-9a-f]{64}$/, `证据缺少 ${key} 哈希`);
