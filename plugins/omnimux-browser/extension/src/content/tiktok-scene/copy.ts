@@ -42,7 +42,7 @@ const ZH: TiktokCopy = {
   brand: 'OmniMux 快捷操作',
   menu: {
     video: '下载视频',
-    audio: '保存原声',
+    audio: '下载音频',
     save: '收藏到灵感库',
   },
   busy: {
@@ -62,7 +62,7 @@ const EN: TiktokCopy = {
   brand: 'OmniMux shortcuts',
   menu: {
     video: 'Download video',
-    audio: 'Save audio',
+    audio: 'Download audio',
     save: 'Save to library',
   },
   busy: {
