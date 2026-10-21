@@ -46,7 +46,8 @@ base: f02a22135
 - 新增 `rival-timeline-embed.jsx`：
   - `loadTwitterWidgets()` 单例注入 `https://platform.twitter.com/widgets.js`；`twttr.ready` 后 `createTweet(id, host, { theme, dnt: true, lang, conversation: 'none', align: 'center' })`。
   - Instagram/TikTok/YouTube 用官方 iframe（`instagram.com/.../embed/`、`tiktok.com/player/v1/<id>`、`youtube.com/embed/<id>`），`loading="lazy"`、`allow="encrypted-media; picture-in-picture; fullscreen"`。
-  - 10 秒超时、脚本 error、`createTweet` 空结果 → `failed`，行回退现有卡片。
+  - iframe 类嵌入先发 `no-cors` HEAD 可达性探测（5 秒上限，无凭据、无 referrer）：Chromium 对错误页同样触发 `load`，只靠 iframe 事件无法区分成功/被墙；探测失败即回退。探测不可用的环境（jsdom 无 `window.fetch`）跳过探测。
+  - 10 秒超时、脚本 error、`createTweet` 空结果、iframe `error` → `failed`，行回退现有卡片。
   - 主题取 `documentElement[data-theme]`；语言取 `rivalLocaleOf(t)` 映射 X 的 `lang`。
   - Instagram 卡片高度按宿主宽度与帖子 `ratio` 估算，随 `ResizeObserver` 重算，避免内部滚动。
 - `RivalTimelineRow.jsx`：
@@ -68,7 +69,7 @@ base: f02a22135
 
 ## 验证
 
-- 单测：`rival-embed-target.test.js`（目标解析/回退）、`rival-timeline-embed-loader.test.js`（X 单例加载/缓存失败、主题/语言、各平台 iframe、iframe load/error 回退、Instagram 高度）。
+- 单测：`rival-embed-target.test.js`（目标解析/回退）、`rival-timeline-embed-loader.test.js`（X 单例加载/缓存失败、主题/语言、各平台 iframe、可达性探测、iframe load/error 回退、Instagram 高度）。
 - 真实浏览器：隔离 worktree 内以真实网络加载一条 X 帖与一条 TikTok 帖，断言 iframe 存在、X 卡片高度 > 0、视口外行无 iframe；保留 PNG 与结构化报告到 `docs/evidence/3542/`。
 - e2e：`rival-cards.e2e.test.js` 增加懒挂载、X 失败回退、主题/语言切换不叠卡、嵌入区点击守卫 4 项。
 - 仓库检查：`pnpm --filter omnimux-inspiration test`、`node scripts/scan-ui-gates.mjs`、`node scripts/verify-stage-contracts.mjs`（如触及 stage）。

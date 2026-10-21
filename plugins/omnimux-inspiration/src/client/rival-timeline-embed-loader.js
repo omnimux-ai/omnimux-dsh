@@ -77,6 +77,44 @@ export function embedWidgetLang(locale) {
   return locale === 'en' ? 'en' : 'zh-cn'
 }
 
+/** How long the reachability probe may take before the row keeps its card. */
+export const EMBED_PROBE_TIMEOUT_MS = 5_000
+
+/**
+ * Can a cross-origin embed page be reached at all?
+ *
+ * Chromium renders its own error page and still fires `load` for a refused,
+ * DNS-blocked or offline iframe, so the frame alone cannot tell success from
+ * failure. A `no-cors` HEAD probe can: CORS never blocks it, any HTTP answer
+ * resolves (opaque), and only a transport failure rejects. jsdom has no
+ * `window.fetch`, so unit tests keep the documented lazy iframe path.
+ *
+ * @param {string} url allowlisted https embed URL
+ * @returns {Promise<boolean>}
+ */
+export async function probeEmbedReachable(url) {
+  const fetcher = typeof window !== 'undefined' && typeof window.fetch === 'function' ? window.fetch : null
+  if (!fetcher || !url) return true
+  const controller = typeof AbortController === 'function' ? new AbortController() : null
+  const timer = setTimeout(() => controller?.abort(), EMBED_PROBE_TIMEOUT_MS)
+  if (timer && typeof timer.unref === 'function') timer.unref()
+  try {
+    await fetcher(url, {
+      mode: 'no-cors',
+      method: 'HEAD',
+      cache: 'no-store',
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer',
+      signal: controller?.signal,
+    })
+    return true
+  } catch {
+    return false
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 /**
  * Create the official embed inside `host`.
  *
@@ -103,6 +141,11 @@ export async function createTimelineEmbed(target, host, options = {}) {
     return Boolean(created && host.querySelector('iframe'))
   }
   if (target.platform === 'instagram' || target.platform === 'tiktok' || target.platform === 'youtube') {
+    // Probe only where a browser can: jsdom (unit tests) has no window.fetch and
+    // must keep the synchronous iframe path the render tests pin.
+    if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+      if (!(await probeEmbedReachable(target.url))) return false
+    }
     const frame = document.createElement('iframe')
     frame.className = `omnimux-rival-embed-frame is-${target.platform}`
     frame.src = target.url
@@ -113,9 +156,9 @@ export async function createTimelineEmbed(target, host, options = {}) {
     frame.setAttribute('allowfullscreen', 'true')
     if (target.platform === 'youtube') frame.setAttribute('scrolling', 'no')
     host.appendChild(frame)
-    // The component's 10s race is the watchdog: a blocked/offline domain never
-    // fires `load`, so the row must keep its own card until the frame proves it
-    // loaded (a public embed cannot be inspected cross-origin).
+    // The probe above rejects a dead domain before this point; the `load`/`error`
+    // pair still covers a frame that fails after its page answered. The
+    // component's 10s race remains the watchdog for a hanging connection.
     return new Promise((resolve) => {
       frame.addEventListener('load', () => resolve(true), { once: true })
       frame.addEventListener('error', () => resolve(false), { once: true })

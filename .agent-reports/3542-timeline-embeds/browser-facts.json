@@ -72,11 +72,28 @@
   },
   "failures": [],
   "screenshots": [
-    "timeline-top.png",
-    "timeline-x-playing.png",
+    "timeline-douyin-fallback.png",
+    "timeline-offline-fallback.png",
     "timeline-tiktok-player.png",
     "timeline-tiktok-playing.png",
-    "timeline-youtube-player.png",
-    "timeline-douyin-fallback.png"
-  ]
+    "timeline-top.png",
+    "timeline-x-playing.png",
+    "timeline-youtube-player.png"
+  ],
+  "offlineFallback": {
+    "method": "CDP Network.emulateNetworkConditions offline=true after a normal load, then scroll to an un-mounted Instagram row",
+    "row": "ig-1",
+    "mounted": false,
+    "frames": 0,
+    "embedHost": false,
+    "keptHeader": true,
+    "keptActions": [
+      "original",
+      "replicate",
+      "deconstruct",
+      "markDone"
+    ],
+    "note": "no-cors HEAD reachability probe rejects a dead domain before the iframe is mounted; the row keeps its hand-written card instead of showing the browser error page",
+    "screenshot": "timeline-offline-fallback.png"
+  }
 }

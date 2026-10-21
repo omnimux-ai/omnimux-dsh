@@ -7,6 +7,7 @@ import {
   embedWidgetLang,
   instagramCardHeight,
   loadTwitterWidgets,
+  probeEmbedReachable,
   resetTwitterWidgetsLoader,
   TWITTER_WIDGETS_SRC,
 } from './rival-timeline-embed-loader.js'
@@ -186,6 +187,36 @@ describe('createTimelineEmbed — 各平台官方嵌入（#3542）', () => {
     }, host, {})
     host.querySelector('iframe').dispatchEvent(new window.Event('error'))
     assert.equal(await pending, false, 'a blocked/failed iframe must release the row fallback')
+  })
+
+  it('skips the reachability probe where fetch is unavailable (jsdom)', async () => {
+    assert.equal(await probeEmbedReachable('https://www.youtube.com/embed/abc123'), true)
+  })
+
+  it('drops the iframe path when the embed domain is unreachable', async () => {
+    window.fetch = async () => { throw new TypeError('Failed to fetch') }
+    const ok = await createTimelineEmbed({
+      platform: 'tiktok',
+      kind: 'player',
+      id: '7698442056158465',
+      url: 'https://www.tiktok.com/player/v1/7698442056158465',
+    }, host, {})
+    assert.equal(ok, false, 'a blocked domain must keep the hand-written card')
+    assert.equal(host.querySelector('iframe'), null, 'a blocked domain must not leave an error-page frame')
+    delete window.fetch
+  })
+
+  it('probes the exact embed URL with no referrer or credentials', async () => {
+    const seen = []
+    window.fetch = async (url, options) => { seen.push({ url, options }); return {} }
+    assert.equal(await probeEmbedReachable('https://www.instagram.com/p/CqX0YyYvZzZ/embed/'), true)
+    assert.equal(seen.length, 1)
+    assert.equal(seen[0].url, 'https://www.instagram.com/p/CqX0YyYvZzZ/embed/')
+    assert.equal(seen[0].options.mode, 'no-cors')
+    assert.equal(seen[0].options.method, 'HEAD')
+    assert.equal(seen[0].options.credentials, 'omit')
+    assert.equal(seen[0].options.referrerPolicy, 'no-referrer')
+    delete window.fetch
   })
 
   it('refuses platforms without an official embed', async () => {
