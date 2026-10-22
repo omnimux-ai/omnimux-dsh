@@ -25,7 +25,7 @@
 | 入口 | 类型 | 覆盖 |
 | --- | --- | --- |
 | [omnimux-repo-workflow](skills/omnimux-repo-workflow/SKILL.md) | 原生 | Issue、隔离 worktree、规格、最小命令集、PR、收尾 |
-| [dsh-plugin-dev](skills/dsh-plugin-dev) | 资产库软链 | OmniMux 插件与一级页实现 |
+| [dsh-plugin-dev](skills/dsh-plugin-dev/SKILL.md) | 资产库软链 | OmniMux 插件与一级页实现 |
 | [omnimux-form-authoring](skills/omnimux-form-authoring/SKILL.md) | 原生 | 配置式任务表单 |
 | [omnimux-rc-upgrade](skills/omnimux-rc-upgrade/SKILL.md) | 原生 | Harness pin/RC 升级与漂移诊断 |
 | `minimax-design-reference-router`（本机软链，未纳入版本管理） | 资产库软链 | 桌面端画布/多进程设计真源路由 |
@@ -58,8 +58,8 @@
 
 ## 验收
 
-- 7 个入口均保留：3 个软链第一跳为资产库 `skills/<catalog-id>`（其中 2 个按 `.gitignore` 仅存在于本机），4 个原生目录未被替换，`SKILL.md` 均可读。
-- 本轮未新增入口，因此无重复源、无新断链；技能改动需新会话才能观察到目录刷新。
+- 7 个入口均保留（在主检出处核对）：3 个软链第一跳为资产库 `skills/<catalog-id>`（其中 2 个按 `.gitignore` / `.git/info/exclude` 仅存在于本机），4 个原生目录未被替换，`SKILL.md` 均可读。
+- 本轮未新增入口，因此无重复源、无新断链；目录刷新需新会话，属本次会话观察，不是仓库可验证结论。
 - 未改动用户级技能目录，未安装插件，未执行发布、付费或生产写入。
 - 依赖状态：`ocr` CLI 可用；ego-browser 由用户级提供。
 
