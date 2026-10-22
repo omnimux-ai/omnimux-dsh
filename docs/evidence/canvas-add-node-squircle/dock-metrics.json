@@ -1,0 +1,91 @@
+{
+  "url": "http://127.0.0.1:4817/",
+  "spaceId": 211,
+  "light": {
+    "darkTheme": false,
+    "button": {
+      "borderRadius": "12px",
+      "width": "36px",
+      "height": "36px",
+      "background": "rgb(24, 25, 28)",
+      "color": "rgb(255, 255, 255)",
+      "iconStroke": "rgb(255, 255, 255)",
+      "rect": {
+        "x": 750,
+        "y": 818,
+        "w": 36,
+        "h": 36
+      }
+    },
+    "dock": {
+      "rect": {
+        "x": 741,
+        "y": 813,
+        "w": 246,
+        "h": 46
+      },
+      "radius": "28px"
+    },
+    "items": [
+      {
+        "cls": "wf-canvas-toolbar__item wf-canvas-toolbar__item--primary-add ",
+        "title": "添加节点（N）",
+        "borderRadius": "12px",
+        "width": "36px",
+        "height": "36px",
+        "background": "rgb(24, 25, 28)",
+        "color": "rgb(255, 255, 255)"
+      },
+      {
+        "cls": "wf-canvas-toolbar__item wf-canvas-toolbar__item--icon-only",
+        "title": "插入工作流模板",
+        "borderRadius": "50%",
+        "width": "36px",
+        "height": "36px",
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(95, 100, 114)"
+      },
+      {
+        "cls": "wf-canvas-toolbar__item",
+        "title": "选择模式（V）",
+        "borderRadius": "18px",
+        "width": "54px",
+        "height": "36px",
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(95, 100, 114)"
+      },
+      {
+        "cls": "wf-canvas-toolbar__item wf-canvas-toolbar__item--icon-only ",
+        "title": "项目资产",
+        "borderRadius": "50%",
+        "width": "36px",
+        "height": "36px",
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(95, 100, 114)"
+      },
+      {
+        "cls": "wf-canvas-toolbar__item wf-canvas-toolbar__item--icon-only",
+        "title": "快捷键帮助",
+        "borderRadius": "50%",
+        "width": "36px",
+        "height": "36px",
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(95, 100, 114)"
+      }
+    ]
+  },
+  "dark": {
+    "darkTheme": true,
+    "borderRadius": "12px",
+    "width": "36px",
+    "height": "36px",
+    "background": "rgb(255, 255, 255)",
+    "color": "rgb(24, 25, 28)",
+    "dockBackground": "rgba(26, 27, 30, 0.88)"
+  },
+  "hover": {
+    "borderRadius": "12px",
+    "background": "rgb(228, 228, 231)",
+    "transform": "matrix(1.05, 0, 0, 1.05, 0, 0)"
+  }
+}

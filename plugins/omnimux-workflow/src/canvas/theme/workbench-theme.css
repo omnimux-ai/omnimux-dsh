@@ -397,13 +397,15 @@ body[data-ds-dark-theme] .wf-canvas-root {
   font-weight: 500;
 }
 
+/* 主「+（添加节点）」按钮：保留深色白底 / 浅色黑底的高对比，
+   形状统一为圆角方形（squircle），与 --wb-pill-radius 同档，不再是纯圆。 */
 .wf-canvas-toolbar__item--primary-add {
   background: #18191c;
   color: #ffffff;
   width: 36px;
   height: 36px;
   padding: 0;
-  border-radius: 50%;
+  border-radius: var(--wb-pill-radius, 12px);
   display: flex;
   align-items: center;
   justify-content: center;
