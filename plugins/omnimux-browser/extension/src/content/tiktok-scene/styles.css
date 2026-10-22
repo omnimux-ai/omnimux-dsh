@@ -241,22 +241,13 @@
   white-space: nowrap;
 }
 
-/* The column's own progress line, under or beside its words */
-.omx-item-state {
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 12px;
-  color: rgba(255, 255, 255, 0.55);
-}
-
 .omx-item.is-busy {
   pointer-events: none;
   color: rgba(255, 255, 255, 0.45);
 }
 
 .omx-item.is-error,
-.omx-item.is-error svg,
-.omx-item.is-error .omx-item-state {
+.omx-item.is-error svg {
   color: #ff9d9d;
 }
 

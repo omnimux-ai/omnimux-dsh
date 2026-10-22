@@ -1,0 +1,114 @@
+{
+  "issue": 3606,
+  "startedAt": "2026-10-22T03:09:30.310Z",
+  "chromePath": "/Users/x/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "extensionId": "kjodhhhanphchnjikecejbfbnohmhhlo",
+  "before": {
+    "sceneGone": false,
+    "rows": [
+      {
+        "action": "video",
+        "text": "下载视频",
+        "busy": false,
+        "ariaBusy": null,
+        "spinner": false,
+        "stateNode": false
+      },
+      {
+        "action": "audio",
+        "text": "下载音频",
+        "busy": false,
+        "ariaBusy": null,
+        "spinner": false,
+        "stateNode": false
+      },
+      {
+        "action": "save",
+        "text": "收藏到灵感库",
+        "busy": false,
+        "ariaBusy": null,
+        "spinner": false,
+        "stateNode": false
+      }
+    ],
+    "detail": ""
+  },
+  "during": {
+    "sceneGone": false,
+    "rows": [
+      {
+        "action": "video",
+        "text": "下载视频",
+        "busy": false,
+        "ariaBusy": null,
+        "spinner": false,
+        "stateNode": false
+      },
+      {
+        "action": "audio",
+        "text": "下载音频",
+        "busy": true,
+        "ariaBusy": "true",
+        "spinner": true,
+        "stateNode": false
+      },
+      {
+        "action": "save",
+        "text": "收藏到灵感库",
+        "busy": false,
+        "ariaBusy": null,
+        "spinner": false,
+        "stateNode": false
+      }
+    ],
+    "detail": ""
+  },
+  "after": {
+    "sceneGone": false,
+    "rows": [
+      {
+        "action": "video",
+        "text": "下载视频",
+        "busy": false,
+        "ariaBusy": null,
+        "spinner": false,
+        "stateNode": false
+      },
+      {
+        "action": "audio",
+        "text": "下载音频",
+        "busy": false,
+        "ariaBusy": "false",
+        "spinner": false,
+        "stateNode": false
+      },
+      {
+        "action": "save",
+        "text": "收藏到灵感库",
+        "busy": false,
+        "ariaBusy": null,
+        "spinner": false,
+        "stateNode": false
+      }
+    ],
+    "detail": ""
+  },
+  "downloadedFiles": [
+    "alana7bernal-#sanjose #Soccer #thingstodo #SJ.m4a"
+  ],
+  "runningHasSpinnerOnly": true,
+  "noStateNodeAnywhere": true,
+  "downloadCleanup": [
+    {
+      "name": "alana7bernal-#sanjose #Soccer #thingstodo #SJ.m4a",
+      "removed": true
+    }
+  ],
+  "downloadsCleaned": true,
+  "screenshots": [
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-tiktok-spinner-only-issue-3606/.agent-reports/tiktok-spinner-only-3606/01-menu-default.png",
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-tiktok-spinner-only-issue-3606/.agent-reports/tiktok-spinner-only-3606/02-menu-running-spinner.png",
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-tiktok-spinner-only-issue-3606/.agent-reports/tiktok-spinner-only-3606/03-menu-settled.png"
+  ],
+  "finishedAt": "2026-10-22T03:09:57.636Z"
+}

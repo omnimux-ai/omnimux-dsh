@@ -30,8 +30,6 @@ export interface TiktokCopy {
   brand: string
   /** Menu row labels. */
   menu: Record<TiktokAction, string>
-  /** Row label while the host works. */
-  busy: Record<TiktokAction, string>
   /** Explanation shown under a failed row. */
   failed: (outcome: ExportOutcome) => string
   /** Shown when the page offers no post to act on. */
@@ -44,11 +42,6 @@ const ZH: TiktokCopy = {
     video: '下载视频',
     audio: '下载音频',
     save: '收藏到灵感库',
-  },
-  busy: {
-    video: '解析下载中',
-    audio: '提取音轨中',
-    save: '解析入库中',
   },
   failed: (outcome) => {
     if (outcome.code === 'unreachable') return '未连接 OmniMux 主程序，请先启动后再试'
@@ -64,11 +57,6 @@ const EN: TiktokCopy = {
     video: 'Download video',
     audio: 'Download audio',
     save: 'Save to library',
-  },
-  busy: {
-    video: 'Resolving',
-    audio: 'Extracting audio',
-    save: 'Importing',
   },
   failed: (outcome) => {
     if (outcome.code === 'unreachable') return 'OmniMux is not running — start it and retry'
