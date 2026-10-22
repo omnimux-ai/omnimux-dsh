@@ -978,3 +978,26 @@ describe('F. two-stage hover expansion', () => {
     )
   })
 })
+/**
+ * #3612: a busy slot must read as "working". The rotation is CSS on the glyph so
+ * the hit box, colour and pointer rules stay untouched, and reduced-motion
+ * readers get the same ring without movement.
+ */
+describe('busy spinner (#3612)', () => {
+  it('spins the in-flight glyph and leaves the hit box alone', () => {
+    const busy = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-icon.is-busy')
+    expect(busy).toContain('opacity:0.8')
+    expect(busy).toContain('pointer-events:none')
+    const glyph = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-icon.is-busy svg')
+    expect(glyph).toContain('animation:omnimux-capsule-spin')
+    expect(glyph).toContain('stroke-width:2.2')
+    expect(glyph).toContain('linear')
+    expect(glyph).toContain('infinite')
+    expect(OVERLAY_STYLES).toContain('@keyframes omnimux-capsule-spin')
+    expect(OVERLAY_STYLES).toContain('rotate(360deg)')
+  })
+
+  it('keeps the ring static for prefers-reduced-motion', () => {
+    expect(OVERLAY_STYLES).toMatch(/@media\s*\(prefers-reduced-motion: reduce\)[\s\S]{0,400}animation: none/)
+  })
+})
