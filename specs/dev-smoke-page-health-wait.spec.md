@@ -2,17 +2,18 @@
 
 ## 目标与成功标准
 
-`scripts/dev-smoke.mjs` 的 `page-health` 断言不再对"页面仍在加载"做单点判负：在默认 20 s / 250 ms 的有界预算内轮询，一旦 `document.readyState === 'complete' && bodyLen > 0` 即 PASS；超时才 FAIL；调试连接本身失败（`ok:false`）仍立即 FAIL。报告 detail 记录 `attempts` 与 `waitedMs`。
+`scripts/dev-smoke.mjs` 的 `page-health` 断言不再对"页面仍在加载"做单点判负：在默认 **30 s / 250 ms**（均可用环境变量覆盖）的有界预算内轮询，一旦 `document.readyState === 'complete' && bodyLen > 0` 即 PASS。失败分类处理：`kind === 'timeout'`（渲染进程忙/未响应）在预算内继续等；`transport` / `decode` / `protocol`（连接、协议、目标消失）立即 FAIL；预算耗尽仍不就绪才 FAIL。报告 detail 记录 `attempts`、`waitedMs` 与失败 `kind`。
 
 同时把 `scripts/reload-dev-app.mjs` 的就绪文案与注释改为「页面目标已可达」，不再暗示页面可绘制。
 
 可观察标准：
 
 1. 首次采样 `loading`、后续采样 `complete` → `page-health` PASS，`detail.attempts === 2`，整体 `status === 'pass'`。
-2. 始终 `loading` 且预算耗尽 → `page-health` FAIL，detail 带 `error`（含"未就绪"），整体 `status === 'fail'`（不允许静默通过）。
-3. 调试连接错误（`ok:false`）→ 只调用一次即 FAIL（不把"连不上"当成"还在加载"）。
-4. 既有 6 条 `scripts/dev-smoke.test.mjs` 用例全部保持通过，断言文本不变。
-5. `node --test scripts/dev-smoke.test.mjs scripts/verify-dev-smoke.test.mjs` 与 `pnpm test:gates` 通过。
+2. 始终 `loading` 且预算耗尽 → `page-health` FAIL，detail 带 `error`（含"未就绪"）与 `attempts > 1`，整体 `status === 'fail'`（不允许静默通过）。
+3. 连接 / 协议错误（`kind` 为 `transport` / `decode` / `protocol`）→ 只调用一次即 FAIL（不把"连不上"当成"还在加载"）。
+4. 预算与轮询间隔接受空串 / 非数字 / `NaN` / `Infinity` / 负数时回退默认值并告警，任何输入都不会让等待变成无界循环，也不会把等待悄悄关成 0。
+5. 既有 6 条 `scripts/dev-smoke.test.mjs` 用例全部保持通过，断言文本不变。
+6. `node --test scripts/dev-smoke.test.mjs scripts/verify-dev-smoke.test.mjs` 通过（本机 `pnpm test:gates` 的失败与本改动无关，见交付报告）。
 
 ## 新用户基线
 
@@ -21,7 +22,7 @@
 ## 计划与项目结构
 
 - `scripts/dev-smoke.mjs`：新增 `waitForPageHealth(evalPage, wsUrl, { timeoutMs, pollMs, wait })` 纯异步函数并导出；`createDevSmoke` 注入 `wait` / `healthTimeoutMs` / `healthPollMs` 三个可选依赖（默认真实 sleep 与 env 覆盖）；把单次 `evaluateInPage` 换成调用它。
-- `scripts/dev-smoke.test.mjs`：追加 3 条用例（不改既有断言）。
+- `scripts/dev-smoke.test.mjs`：追加 7 条用例（不改既有断言）：有界等待、预算耗尽、传输错误不重试、预算解析、超时重试、多轮耗尽、非 JSON 载荷。
 - `scripts/reload-dev-app.mjs`：2 行文案/注释。
 
 ## 命令

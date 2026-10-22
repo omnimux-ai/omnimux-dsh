@@ -66,10 +66,18 @@ function evaluateInPage(wsUrl, expression, timeoutMs = 5000) {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(String(event.data));
+          if (data.error) {
+            // 协议层错误回复（目标消失、上下文失效等）：重试无意义，别把它拖到预算耗尽。
+            finish({ ok: false, kind: 'protocol', error: `CDP error: ${JSON.stringify(data.error).slice(0, 200)}` });
+            return;
+          }
           if (data.id === 1) finish({ ok: true, result: data?.result?.result?.value });
         } catch (e) { finish({ ok: false, kind: 'decode', error: e.message }); }
       };
       ws.onerror = (e) => finish({ ok: false, kind: 'transport', error: e?.message || 'WebSocket error' });
+      // 页面目标在等待期间被销毁时只会触发 close：按 transport 立即判负，而不是等 5 s
+      // 超时再被误标成「渲染进程忙」。
+      ws.onclose = () => finish({ ok: false, kind: 'transport', error: 'CDP socket closed' });
     } catch (e) { resolve({ ok: false, kind: 'transport', error: e?.message || String(e) }); }
   });
 }
@@ -138,17 +146,17 @@ function pluginMaterializedMtimeSec(plugin, profilePlugins = DEV_PROFILE_PLUGINS
  * 白屏帧全部落在启动后 9.6–10.6 s，即 `reload-dev-app` 只确认到「page 目标可达」
  * 就报就绪的那一刻）。单点采样会把健康的应用判成 FAIL，所以改成有界轮询。
  *
- * 预算从探针开始计时，而探针可能在 page 目标出现后才启动（暖启动更早），
- * 因此默认给 30 s，覆盖「启动后 25 s 才首帧」的长尾。
- * 可用 `OMNIMUX_SMOKE_HEALTH_TIMEOUT_MS` 覆盖；非有限数或负数会被忽略并告警，
- * 绝不允许 NaN 让 `for(;;)` 变成无界循环（那会卡死 worktree.sh ship）。
+ * 预算从探针开始计时；探针通常在 page 目标出现后才启动，所以默认给 30 s，
+ * 覆盖「启动后 25 s 才首帧」的长尾。可用 `OMNIMUX_SMOKE_HEALTH_TIMEOUT_MS` 覆盖；
+ * 空串 / 非有限数 / 负数一律回退默认值并告警——空串绝不能当成 0（那会把等待关掉，
+ * 等于退回单点采样），NaN 也绝不能让它变成无界循环（那会卡死 worktree.sh ship）。
  */
 export function finiteNonNegative(value, fallback, label = 'value') {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === 'string' && value.trim() === '') return fallback;
   const n = Number(value);
   if (Number.isFinite(n) && n >= 0) return n;
-  if (value !== undefined && value !== null && value !== '') {
-    console.warn(`[dev-smoke] 忽略非法 ${label}=${String(value)}，回退 ${fallback}`);
-  }
+  console.warn(`[dev-smoke] 忽略非法 ${label}=${String(value)}，回退 ${fallback}`);
   return fallback;
 }
 
@@ -167,6 +175,10 @@ const EVALUATE_TIMEOUT_MS = 5000;
  * - 预算耗尽仍不就绪 → 判负，detail 保留最后一次观测与 attempts/waitedMs。
  *
  * `timeoutMs: 0` 是合法值：只采样一次（测试与显式 opt-in 用）。
+ *
+ * 预算耗尽只在一次 evaluate 之后判定，因此实际耗时最多超出预算 `pollMs` + 单次
+ * evaluate 上限：这是有意取舍（不中途截断等待，保持「一就绪就通过」），默认预算下
+ * 最坏约 30.3 s，且 dev-smoke 失败只告警、不阻断 ship。
  *
  * @returns {Promise<{ pass: boolean, detail: Record<string, unknown> }>}
  */
