@@ -12,8 +12,11 @@ import {
   MIN_MEDIA_SIZE_PX,
   findMediaElement,
   isEligibleMediaSize,
+  isXVideoPosterSource,
   mediaIdOf,
+  mediaKindOf,
   normalizeMedia,
+  siblingMediaOf,
   toAbsoluteUrl,
 } from '../src/content/media-hover/payload.ts'
 
@@ -303,5 +306,73 @@ describe('candidate cache', () => {
     document.dispatchEvent(new MouseEvent('pointermove', { clientX: 200, clientY: 200 }))
     expect(onCandidate).toHaveBeenCalled()
     detector.dispose()
+  })
+})
+/**
+ * #3607: on the home timeline a video is painted as its poster <img>, with the
+ * real <video> mounted under the same box and the image first in DOM order. The
+ * pointer must resolve to the video (or to a video-kind poster identity), never
+ * to a still image.
+ */
+describe('X video poster images (#3607)', () => {
+  const POSTER = 'https://pbs.twimg.com/amplify_video_thumb/2113045941498306560/img/PrGRmSujF2R7yDqY.jpg'
+  const PHOTO = 'https://pbs.twimg.com/media/HVHSaTQWMAA1D4T.jpg'
+
+  function mountCard(options: { withVideo: boolean }): {
+    image: HTMLImageElement
+    video: HTMLVideoElement | null
+  } {
+    document.body.innerHTML = `
+      <article data-testid="tweet">
+        <a href="/dotey/status/2113046543007641942"><time>now</time></a>
+        <div id="media-box">
+          <img id="poster" src="${POSTER}" width="520" height="290">
+          ${options.withVideo ? `<video id="player" poster="${POSTER}" width="520" height="290"></video>` : ''}
+        </div>
+      </article>`
+    const image = document.getElementById('poster') as HTMLImageElement
+    const video = document.getElementById('player') as HTMLVideoElement | null
+    // jsdom has no layout engine: give the card and its media one identical box
+    // so a hit test and the sibling probe see what a real page would.
+    const box = { x: 0, y: 0, width: 520, height: 290, top: 0, left: 0, right: 520, bottom: 290 } as DOMRect
+    const boxed = [document.querySelector('article'), document.getElementById('media-box'), image, video]
+    for (const element of boxed) {
+      if (element) vi.spyOn(element, 'getBoundingClientRect').mockReturnValue(box)
+    }
+    return { image, video }
+  }
+
+  it('treats a video poster as video and a media image as a photo', () => {
+    expect(isXVideoPosterSource(POSTER)).toBe(true)
+    expect(isXVideoPosterSource(PHOTO)).toBe(false)
+    const poster = document.createElement('img')
+    poster.setAttribute('src', POSTER)
+    expect(mediaKindOf(poster)).toBe('video')
+    const photo = document.createElement('img')
+    photo.setAttribute('src', PHOTO)
+    expect(mediaKindOf(photo)).toBe('image')
+  })
+
+  it('resolves a pointer on the poster to the card video', () => {
+    const card = mountCard({ withVideo: true })
+    expect(findMediaElement(card.image, { x: 100, y: 100 })).toBe(card.video)
+  })
+
+  it('keeps a poster-only card as a video identity', () => {
+    const card = mountCard({ withVideo: false })
+    expect(card.video).toBeNull()
+    expect(findMediaElement(card.image, { x: 100, y: 100 })).toBe(card.image)
+    const kind = mediaKindOf(card.image)
+    expect(kind).toBe('video')
+    const payload = normalizeMedia(card.image, kind as 'video', 'https://x.com/home')
+    expect(payload?.type).toBe('video')
+    expect(payload?.src).toBe(POSTER)
+    expect(payload?.sourceKind).toBe('poster')
+  })
+
+  it('prefers a video over its poster when both sit under the pointer', () => {
+    const card = mountCard({ withVideo: true })
+    const box = document.getElementById('media-box') as HTMLElement
+    expect(siblingMediaOf(box, { x: 100, y: 100 })).toBe(card.video)
   })
 })

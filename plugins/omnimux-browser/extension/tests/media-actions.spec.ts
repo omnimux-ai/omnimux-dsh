@@ -605,3 +605,95 @@ describe('one window, one conversation', () => {
     }
   })
 })
+/**
+ * #3607: the home timeline paints a video as its poster <img>, and `pageUrl` is
+ * the feed (no /status/ id). The press must still resolve the real mp4 through
+ * the poster's media id plus the tweet id in the enclosing article, and never
+ * send the jpg to the download channel.
+ */
+describe('X download from a poster image (#3607)', () => {
+  const TWEET_ID = '2113046543007641942'
+  const POSTER = 'https://pbs.twimg.com/amplify_video_thumb/2113045941498306560/img/PrGRmSujF2R7yDqY.jpg'
+  const MP4 = 'https://video.twimg.com/amplify_video/2113045941498306560/vid/avc1/720x1280/clip.mp4'
+  const HLS = 'https://video.twimg.com/amplify_video/2113045941498306560/pl/playlist.m3u8'
+
+  const POSTER_PAYLOAD: HoveredMedia = {
+    id: `video:${POSTER}`,
+    type: 'video',
+    src: POSTER,
+    previewSrc: POSTER,
+    pageUrl: 'https://x.com/home',
+    pageTitle: '主页 / X',
+    width: 520,
+    height: 290,
+    naturalWidth: 520,
+    naturalHeight: 290,
+    alt: '视频素材',
+    capturedAt: 0,
+    sourceKind: 'poster',
+    attachable: true,
+  }
+
+  function mountPosterOnlyCard(): HTMLImageElement {
+    document.body.innerHTML = `
+      <article data-testid="tweet">
+        <a href="/dotey/status/${TWEET_ID}"></a>
+        <img id="poster" src="${POSTER}" width="520" height="290">
+      </article>`
+    const image = document.getElementById('poster') as HTMLImageElement
+    // jsdom has no layout: an identical box keeps the poster match and the
+    // eligibility rule working exactly as on the real timeline.
+    const box = { x: 0, y: 0, width: 520, height: 290, top: 0, left: 0, right: 520, bottom: 290 } as DOMRect
+    vi.spyOn(image, 'getBoundingClientRect').mockReturnValue(box)
+    vi.spyOn(document.querySelector('article') as Element, 'getBoundingClientRect').mockReturnValue(box)
+    return image
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('downloads the real mp4 instead of the poster', async () => {
+    mountPosterOnlyCard()
+    const postToBackground = vi.fn(async (message: Record<string, unknown>) => {
+      if (message.type === RUNTIME_MESSAGE.xVideoVariants) {
+        return {
+          ok: true,
+          result: {
+            mediaDetails: [{
+              media_url_https: POSTER,
+              video_info: {
+                variants: [
+                  { url: HLS, content_type: 'application/x-mpegURL', bitrate: 0 },
+                  { url: `${MP4}?tag=12`, content_type: 'video/mp4', bitrate: 2_176_000 },
+                ],
+              },
+            }],
+          },
+        }
+      }
+      return { ok: true, downloadId: 9 }
+    })
+    const bridge = new MediaActionBridge(transport({ postToBackground }))
+
+    const outcome = await bridge.downloadMedia(POSTER_PAYLOAD)
+
+    expect(outcome.ok).toBe(true)
+    expect(outcome.message).toBe('已开始下载')
+    // The feed address has no tweet id, so the enclosing article must supply it.
+    expect(postToBackground).toHaveBeenNthCalledWith(1, {
+      type: RUNTIME_MESSAGE.xVideoVariants,
+      tweetId: TWEET_ID,
+    })
+    expect(postToBackground).toHaveBeenNthCalledWith(2, {
+      type: RUNTIME_MESSAGE.mediaDownload,
+      request: {
+        url: `${MP4}?tag=12`,
+        filename: `x-${TWEET_ID}-720x1280.mp4`,
+        pageUrl: 'https://x.com/home',
+        pageTitle: '主页 / X',
+        type: 'video',
+      },
+    })
+  })
+})

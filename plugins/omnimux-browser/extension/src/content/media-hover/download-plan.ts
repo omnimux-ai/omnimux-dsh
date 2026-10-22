@@ -88,6 +88,14 @@ export function mediaElementFor(payload: HoveredMedia, root: ParentNode | null):
     const source = video.currentSrc || video.getAttribute('src') || ''
     if (source !== '' && (source === payload.src || source === payload.previewSrc)) return video
   }
+
+  // A timeline video may be mounted only as its poster <img> (#3607): that image
+  // is the element the press came from and the one whose enclosing article
+  // carries the tweet id, so it stands in for the missing <video>.
+  for (const image of root.querySelectorAll('img')) {
+    const src = image.currentSrc || image.getAttribute('src') || ''
+    if (src !== '' && (src === payload.src || src === payload.previewSrc)) return image
+  }
   return null
 }
 
