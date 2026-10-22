@@ -70,7 +70,7 @@ function directorConflictFieldLabel(field: string): string {
     return labels[field] ?? "其他场景内容";
 }
 
-export function CanvasDirectorWorkbench({ open, scene, projectId, imageNodes, onboardingScope, onClose, onChange, onApply, onDeleteImageNode, onAddCanvasImage, onFlush, onRecoverSaveConflict, onShouldCaptureCover, onCaptureCover, onRuntime, onRequestClose, generatePanorama = generateDirectorPanorama }: { open: boolean; scene: DirectorScene | null; projectId?: string; imageNodes: CanvasNodeData[]; onboardingScope: string; onClose: () => void; onChange: (scene: DirectorScene) => void; onApply: (output: DirectorSceneOutput, command?: DirectorCommand) => Promise<DirectorExportResult>; onRuntime?: (runtime: DirectorWorkbenchRuntime | null) => void; onRequestClose?: () => void; onDeleteImageNode: (nodeId: string) => void; onAddCanvasImage?: (image: Awaited<ReturnType<typeof uploadImage>>, title: string, signal: AbortSignal, expectedScope: CapturedUserScope) => void | Promise<void | DirectorCanvasImageHandoff>; onFlush?: () => void | Promise<void>; onRecoverSaveConflict?: (confirm: DirectorConflictRecoveryContext["confirmReplacement"]) => Promise<boolean>; onShouldCaptureCover?: (scene: DirectorScene, shotId: string) => boolean; onCaptureCover?: (input: { scene: DirectorScene; shotId: string; beauty: Blob }) => Promise<void>; generatePanorama?: typeof generateDirectorPanorama }) {
+export function CanvasDirectorWorkbench({ open, scene, projectId, imageNodes, onboardingScope, onClose, onChange, onApply, onDeleteImageNode, onAddCanvasImage, onAddScreenshotNode, onFlush, onRecoverSaveConflict, onRuntime, onRequestClose, generatePanorama = generateDirectorPanorama }: { open: boolean; scene: DirectorScene | null; projectId?: string; imageNodes: CanvasNodeData[]; onboardingScope: string; onClose: () => void; onChange: (scene: DirectorScene) => void; onApply: (output: DirectorSceneOutput, command?: DirectorCommand) => Promise<DirectorExportResult>; onRuntime?: (runtime: DirectorWorkbenchRuntime | null) => void; onRequestClose?: () => void; onDeleteImageNode: (nodeId: string) => void; onAddCanvasImage?: (image: Awaited<ReturnType<typeof uploadImage>>, title: string, signal: AbortSignal, expectedScope: CapturedUserScope) => void | Promise<void | DirectorCanvasImageHandoff>; onAddScreenshotNode?: (input: { scene: DirectorScene; shotId: string; screenshotId: string; title: string; image: Awaited<ReturnType<typeof uploadImage>> }, signal: AbortSignal, expectedScope: CapturedUserScope) => Promise<{ confirmed: true; nodeId: string }>; onFlush?: () => void | Promise<void>; onRecoverSaveConflict?: (confirm: DirectorConflictRecoveryContext["confirmReplacement"]) => Promise<boolean>; generatePanorama?: typeof generateDirectorPanorama }) {
     const { message, modal } = App.useApp();
     const theme = directorTheme;
     const serviceProps = directorServices().props;
@@ -619,22 +619,7 @@ export function CanvasDirectorWorkbench({ open, scene, projectId, imageNodes, on
             }
 
             if (decision.kind === "close") {
-                const current = draftRef.current;
-                const shot = current?.shots.find((item) => item.id === current.activeShotId) || current?.shots[0];
-                if (current && shot && onCaptureCover && (onShouldCaptureCover?.(current, shot.id) ?? true) && viewportRef.current) {
-                    const session = directorAsyncSession(sessionRef.current.signal);
-                    try {
-                        const beauty = await viewportRef.current.captureShot(playhead);
-                        session.assertCurrent();
-                        await onCaptureCover({ scene: current, shotId: shot.id, beauty });
-                        session.assertCurrent();
-                    } catch (error) {
-                        if (isUserScopeAbandonedError(error) || (error instanceof DOMException && error.name === "AbortError")) return;
-                        message.error("封面保存失败，已留在导演台，请重试关闭");
-                        closingRef.current = false;
-                        return;
-                    }
-                }
+                // 关闭不再截图回写节点：图片只经显式「截图」进入独立画布节点。
                 sessionRef.current.abort();
                 onClose();
                 return;
@@ -1614,12 +1599,31 @@ export function CanvasDirectorWorkbench({ open, scene, projectId, imageNodes, on
             const committed = draftRef.current;
             const committedShot = committed?.shots.find((item) => item.id === shot.id);
             if (!openRef.current || !committed || committed.id !== current.id || !committedShot || directorSceneFingerprint(committed) !== sourceFingerprint) throw new Error("截图期间场景或镜头已变化，请重试");
+            // 每次截图都落一个独立画布图片节点；节点写入失败时截图本身仍保留在镜头里。
+            let nodeId: string | null = null;
+            let nodeError: string | null = null;
+            if (onAddScreenshotNode) {
+                try {
+                    const receipt = await onAddScreenshotNode({
+                        scene: current, shotId: shot.id, screenshotId: screenshot.id, title: name,
+                        image: { ...uploaded, assetId: persist.assetId },
+                    }, session.signal, session.expectedScope);
+                    if (receipt.confirmed !== true || !receipt.nodeId) throw new Error('画布节点未收到持久化确认');
+                    nodeId = receipt.nodeId;
+                } catch (error) {
+                    if (isUserScopeAbandonedError(error) || (error instanceof DOMException && error.name === "AbortError")) throw error;
+                    nodeError = error instanceof Error ? error.message : '画布节点创建失败';
+                }
+            }
+            session.assertCurrent();
             commit((scene) => appendDirectorScreenshot(scene, { sceneId: current.id, shotId: shot.id, screenshot }));
             setSelectedObjectId(null);
             setSelectedLightId(null);
             setSceneInspectorView("shot");
             setCameraInspectorTab("screenshots");
-            message[persist.confirmed ? "success" : "warning"](persist.confirmed ? "截图已保存到素材库" : "截图已保存在这台设备");
+            if (nodeError) message.error(`截图已保存到镜头，但画布图片节点未创建：${nodeError}`);
+            else if (nodeId) message.success("截图已保存，并在画布生成独立图片节点");
+            else message[persist.confirmed ? "success" : "warning"](persist.confirmed ? "截图已保存到素材库" : "截图已保存在这台设备");
         } catch (error) {
             if (session.current()) message.error(error instanceof Error ? error.message : "截图失败，请重试");
         } finally {
@@ -1661,15 +1665,6 @@ export function CanvasDirectorWorkbench({ open, scene, projectId, imageNodes, on
                 return false;
             }
             session.assertCurrent();
-            const current = draftRef.current;
-            const shot = current?.shots.find(item => item.id === current.activeShotId);
-            if (current && shot && onCaptureCover && (onShouldCaptureCover?.(current, shot.id) ?? true)) {
-                if (!viewportRef.current) throw new Error("关闭前视口不可用，请重试");
-                const beauty = await viewportRef.current.captureShot(useDirectorWorkbenchStore.getState().playhead);
-                session.assertCurrent();
-                await onCaptureCover({ scene: current, shotId: shot.id, beauty });
-                session.assertCurrent();
-            }
             return true;
         } catch (error) {
             if (session.current()) message.error(error instanceof Error ? error.message : "关闭前的保存检查失败");

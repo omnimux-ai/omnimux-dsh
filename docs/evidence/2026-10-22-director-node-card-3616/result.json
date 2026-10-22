@@ -1,0 +1,34 @@
+{
+  "passed": true,
+  "scope": "director-entry-card-and-per-screenshot-image-nodes",
+  "evidenceLevel": "task-source-installed",
+  "taskPluginsInstalled": true,
+  "taskPluginsCount": 3,
+  "taskPlugins": [
+    "omnimux-workflow",
+    "omnimux-automation"
+  ],
+  "runId": "evidence-mvjtexdm-cp6181",
+  "base": "60deb4be954ff4bd1f0a051ec1a27fccf63af7f6",
+  "head": "fa53080ab0552a0d9f3fac63c5c5bb9d9d789b33",
+  "assertions": [
+    "node-card-entry-guide",
+    "screenshot-a-creates-image-node",
+    "screenshot-b-creates-second-node",
+    "close-director-keeps-card-image-free"
+  ],
+  "realModelRequest": false,
+  "artifacts": [
+    {
+      "name": "node-card.png",
+      "bytes": 13866,
+      "sha256": "4d217ca9f8323da1ebf21db67fa0c45c2454e912c28b1f740b2eb579703b426c"
+    },
+    {
+      "name": "canvas-screenshot-nodes.png",
+      "bytes": 109627,
+      "sha256": "9ee791eeb25bb7bf6ad09b880ed3e2ee641286ada1692aa5004470da873ae9e8"
+    }
+  ],
+  "finishedAt": "2026-10-22T17:30:07.061Z"
+}

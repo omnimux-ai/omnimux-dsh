@@ -1,0 +1,105 @@
+{
+  "origin": "http://127.0.0.1:64015",
+  "projectTitle": "Director Entry Card QA 1792690125178",
+  "firstRunNoticeDismissed": true,
+  "newProjectLabel": "New Project",
+  "namePlaceholder": "Project name",
+  "fullscreenControl": null,
+  "menuLabel": "3D Director",
+  "nodeLabel": "3D Director",
+  "fitView": "button[title=\"Fit View\"]",
+  "cardFacts": {
+    "present": true,
+    "text": "3D 导演台在 3D 空间中搭建场景并进行多视角截图。打开导演台",
+    "imgCount": 0,
+    "textareaCount": 0,
+    "hasCaption": true,
+    "hasOpenCta": true,
+    "hasIcon": true,
+    "hasRightHandle": true,
+    "rightHandleClass": "react-flow__handle react-flow__handle-right nodrag nopan wf-handle wf-handle--plain wf-handle--right source connectable connectablestart connectableend connectionindicator",
+    "rightHandleId": null,
+    "nodeRect": {
+      "x": 1040,
+      "y": 275,
+      "width": 350,
+      "height": 374
+    }
+  },
+  "afterClose": {
+    "present": true,
+    "imgCount": 0,
+    "textareaCount": 0,
+    "text": "3D 导演台在 3D 空间中搭建场景并进行多视角截图。打开导演台",
+    "hasCaption": true
+  },
+  "screenshotA": {
+    "edgeCount": 1,
+    "nodeTitles": [
+      "主摄影机-shot-01"
+    ],
+    "captureActionable": {
+      "marked": true,
+      "actionable": 1,
+      "total": 1
+    }
+  },
+  "screenshotB": {
+    "edgeCount": 2,
+    "nodeTitles": [
+      "主摄影机-shot-01",
+      "主摄影机-shot-02"
+    ],
+    "captureActionable": {
+      "marked": true,
+      "actionable": 1,
+      "total": 1
+    }
+  },
+  "finalCanvas": {
+    "edgeCount": 2,
+    "edges": [
+      "director-screenshot-80ec6c77-8f2a-411d-a7d5-62e99961e357",
+      "director-screenshot-fa33b68b-aa40-481b-ae58-832922c4904e"
+    ],
+    "nodes": [
+      {
+        "id": "node_director_1792690200610",
+        "nodeType": "director",
+        "isMaterial": true,
+        "text": "3D 导演台3D 导演台在 3D 空间中搭建场景并进行多视角截图。打开导演台",
+        "rect": {
+          "x": 920,
+          "y": 80,
+          "width": 268,
+          "height": 286
+        }
+      },
+      {
+        "id": "80ec6c77-8f2a-411d-a7d5-62e99961e357",
+        "nodeType": null,
+        "isMaterial": true,
+        "text": "主摄影机-shot-01",
+        "rect": {
+          "x": 1241,
+          "y": 80,
+          "width": 268,
+          "height": 483
+        }
+      },
+      {
+        "id": "fa33b68b-aa40-481b-ae58-832922c4904e",
+        "nodeType": null,
+        "isMaterial": true,
+        "text": "主摄影机-shot-02",
+        "rect": {
+          "x": 1241,
+          "y": 363,
+          "width": 268,
+          "height": 483
+        }
+      }
+    ]
+  },
+  "toastsObserved": []
+}

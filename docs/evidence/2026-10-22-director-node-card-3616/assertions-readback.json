@@ -1,0 +1,15 @@
+{
+  "expected": [
+    "node-card-entry-guide",
+    "screenshot-a-creates-image-node",
+    "screenshot-b-creates-second-node",
+    "close-director-keeps-card-image-free"
+  ],
+  "actual": [
+    "node-card-entry-guide",
+    "screenshot-a-creates-image-node",
+    "screenshot-b-creates-second-node",
+    "close-director-keeps-card-image-free"
+  ],
+  "allPassed": true
+}
