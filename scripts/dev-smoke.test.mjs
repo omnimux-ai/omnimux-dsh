@@ -86,3 +86,51 @@ test('evaluateInPage 失败 → page-health FAIL，整体 fail', async () => {
   const r = await run({});
   assert.equal(r.status, 'fail');
 });
+
+// --- Issue #3610：重启窗口内页面仍在 loading 时不得判负 ---------------------
+
+const LOADING = () => ({ ok: true, result: JSON.stringify({ title: '', bodyLen: 0, readyState: 'loading' }) });
+const READY = () => ({ ok: true, result: JSON.stringify({ title: 'OmniMux', bodyLen: 500, readyState: 'complete' }) });
+
+test('page-health 有界等待：首次 loading、随后 complete → PASS 且记录 attempts/waitedMs', async () => {
+  let calls = 0;
+  const { run } = makeRunner({
+    evaluateInPage: async () => (++calls === 1 ? LOADING() : READY()),
+    wait: async () => {},
+    healthTimeoutMs: 5000,
+    healthPollMs: 10,
+  });
+  const r = await run({ plugins: [] });
+  const health = r.assertions.find((a) => a.name === 'page-health');
+  assert.equal(health.pass, true);
+  assert.equal(health.detail.attempts, 2);
+  assert.equal(typeof health.detail.waitedMs, 'number');
+  assert.equal(r.status, 'pass');
+});
+
+test('page-health 预算耗尽仍 loading → FAIL，不静默通过', async () => {
+  const { run } = makeRunner({
+    evaluateInPage: async () => LOADING(),
+    wait: async () => {},
+    healthTimeoutMs: 0,
+    healthPollMs: 10,
+  });
+  const r = await run({ plugins: [] });
+  const health = r.assertions.find((a) => a.name === 'page-health');
+  assert.equal(health.pass, false);
+  assert.match(String(health.detail.error), /未就绪/);
+  assert.equal(r.status, 'fail');
+});
+
+test('page-health 传输错误不重试：连不上不等于页面在加载', async () => {
+  let calls = 0;
+  const { run } = makeRunner({
+    evaluateInPage: async () => { calls += 1; return { ok: false, error: 'ws closed' }; },
+    wait: async () => {},
+    healthTimeoutMs: 5000,
+    healthPollMs: 10,
+  });
+  const r = await run({ plugins: [] });
+  assert.equal(calls, 1);
+  assert.equal(r.assertions.find((a) => a.name === 'page-health').pass, false);
+});

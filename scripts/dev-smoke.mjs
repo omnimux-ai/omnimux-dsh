@@ -125,6 +125,70 @@ function pluginMaterializedMtimeSec(plugin, profilePlugins = DEV_PROFILE_PLUGINS
   return newest ? Math.floor(newest / 1000) : null;
 }
 
+/**
+ * 页面首帧的有界等待预算。
+ *
+ * dev 模式从进程启动到首帧约 10–25 s（Issue #3610：166 份历史截图中 4.2% 的
+ * 白屏帧全部落在启动后 9.6–10.6 s，即 `reload-dev-app` 只确认到「page 目标可达」
+ * 就报就绪的那一刻）。单点采样会把健康的应用判成 FAIL，所以改成有界轮询。
+ */
+const HEALTH_TIMEOUT_MS = Number(process.env.OMNIMUX_SMOKE_HEALTH_TIMEOUT_MS || 20000);
+const HEALTH_POLL_MS = 250;
+const PAGE_HEALTH_EXPR = 'JSON.stringify({title:document.title, bodyLen:(document.body?.innerText||\'\').length, readyState:document.readyState})';
+
+/**
+ * 有界等待页面首帧。
+ *
+ * - `ok:false`（调试连接失败）立即判负：连不上不等于页面还在加载；
+ * - 连接正常但 `readyState !== 'complete'` 或正文为空 → 继续轮询，直到预算耗尽；
+ * - 预算耗尽仍不就绪 → 判负，并在 detail 里保留最后一次观测与 attempts/waitedMs。
+ *
+ * @returns {Promise<{ pass: boolean, detail: Record<string, unknown> }>}
+ */
+export async function waitForPageHealth(evalPage, wsUrl, opts = {}) {
+  const timeoutMs = opts.timeoutMs ?? HEALTH_TIMEOUT_MS;
+  const pollMs = opts.pollMs ?? HEALTH_POLL_MS;
+  const wait = opts.wait ?? sleep;
+  const started = Date.now();
+  let attempts = 0;
+  let last = { title: '', bodyLen: 0, readyState: 'unknown' };
+  for (;;) {
+    attempts += 1;
+    const geo = await evalPage(wsUrl, PAGE_HEALTH_EXPR);
+    if (!geo || geo.ok !== true) {
+      return {
+        pass: false,
+        detail: {
+          ...last, attempts, waitedMs: Date.now() - started,
+          error: (geo && geo.error) || 'page evaluate failed',
+        },
+      };
+    }
+    try {
+      last = JSON.parse(geo.result || '{}');
+    } catch {
+      return {
+        pass: false,
+        detail: { attempts, waitedMs: Date.now() - started, error: 'page geometry payload is not JSON' },
+      };
+    }
+    const waitedMs = Date.now() - started;
+    if (last.readyState === 'complete' && last.bodyLen > 0) {
+      return { pass: true, detail: { ...last, attempts, waitedMs } };
+    }
+    if (waitedMs >= timeoutMs) {
+      return {
+        pass: false,
+        detail: {
+          ...last, attempts, waitedMs,
+          error: `页面在 ${timeoutMs}ms 内未就绪（readyState=${String(last.readyState)}, bodyLen=${String(last.bodyLen)}）`,
+        },
+      };
+    }
+    await wait(pollMs);
+  }
+}
+
 export function createDevSmoke(deps = {}) {
   const io = deps.io ?? { statSync, readdirSync, existsSync, mkdirSync, writeFileSync };
   const fetchTargets = deps.probeCdp ?? probeCdpTargets;
@@ -134,6 +198,9 @@ export function createDevSmoke(deps = {}) {
   const mtimeOf = deps.pluginMtime ?? pluginMaterializedMtimeSec;
   const uuid = deps.uuid ?? randomUUID;
   const now = deps.now ?? (() => new Date());
+  const wait = deps.wait ?? sleep;
+  const healthTimeoutMs = deps.healthTimeoutMs ?? HEALTH_TIMEOUT_MS;
+  const healthPollMs = deps.healthPollMs ?? HEALTH_POLL_MS;
 
   return async function runDevSmoke({ plugins = [], evidenceRoot = sourceRoot } = {}) {
     const runId = uuid();
@@ -166,13 +233,10 @@ export function createDevSmoke(deps = {}) {
       }
       report.pageUrl = page.url;
 
-      const geo = await evalPage(page.webSocketDebuggerUrl,
-        `JSON.stringify({title:document.title, bodyLen:(document.body?.innerText||'').length, readyState:document.readyState})`);
-      if (!geo.ok) { push('page-health', false, geo.error); }
-      else {
-        const g = JSON.parse(geo.result || '{}');
-        push('page-health', g.readyState === 'complete' && g.bodyLen > 0, g);
-      }
+      const health = await waitForPageHealth(evalPage, page.webSocketDebuggerUrl, {
+        timeoutMs: healthTimeoutMs, pollMs: healthPollMs, wait,
+      });
+      push('page-health', health.pass, health.detail);
 
       const shot = await shoot(page.webSocketDebuggerUrl);
       if (shot.ok && shot.data) {

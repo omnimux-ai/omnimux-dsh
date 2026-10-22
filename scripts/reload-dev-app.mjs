@@ -13,7 +13,9 @@
  * 重启按 docs/contracts/plugin-git-pr.md 与 docs/contracts/dev-pipeline.md 的边界执行：
  * 目标必须同时是「被核实的开发版主进程」与「CDP 端口上的监听进程」，且不得存在第二个开发版
  * 实例（可能有其他任务或人工在并发使用同一 App 二进制）。核实通过后只请求优雅退出；超时即
- * 放弃并如实报告，绝不补发强杀信号。重新拉起后等到页面目标就绪才报告成功。
+ * 放弃并如实报告，绝不补发强杀信号。重新拉起后等到「调试口出现 page 目标」才报告成功；
+ * 这只证明页面目标可达，**不**证明页面已可绘制（首帧判定见 dev-smoke.mjs 的 waitForPageHealth，
+ * 启动后 9–25 s 内仍可能是白屏，Issue #3610）。
  *
  * 拉起环境会剔除 `ELECTRON_RUN_AS_NODE`：Agent 常运行在 Electron 宿主（DeepSeek Harness /
  * 其他 Electron 应用）里，该变量会让 `open` 拉起的 Dev 以 Node 模式启动后立即退出；2026-10-20
@@ -259,7 +261,7 @@ if (process.argv[1] && process.argv[1].endsWith('reload-dev-app.mjs')) {
   if (process.argv.includes('--restart')) {
     const result = await restartDevApp();
     if (result.restarted) {
-      console.log(`🔁 [Host Reload] 宿主插件有变更，已受控重启开发版并确认就绪 (${result.waitedMs}ms)`);
+      console.log(`🔁 [Host Reload] 宿主插件有变更，已受控重启开发版，页面目标已可达 (${result.waitedMs}ms；页面可绘制由 dev-smoke 判定)`);
     } else if (result.reason === 'not-running') {
       console.log(`ℹ️ [Host Reload] 无需重启 (${result.detail})`);
     } else {
