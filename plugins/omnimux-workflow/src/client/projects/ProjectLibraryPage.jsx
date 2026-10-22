@@ -606,7 +606,7 @@ export function ProjectLibraryPage(props) {
             </div>
           </div>
 
-          {/* 创作页 / 项目资产 选项卡栏 (左侧 Tabs：创作页 + 矢量信息图标 / 项目资产 + 矢量信息图标，右侧规范 Button「+ 新建创作页」) */}
+          {/* 创作页 / 项目资产 选项卡栏 (左侧 Tabs：创作页 + 矢量信息图标 / 项目资产 + 矢量信息图标，右侧规范 Button「新建创作页」，矢量加号由 leadingIcon 提供) */}
           <div className="omnimux-project-detail-tabs-bar">
             <Tabs
               variant="underline"
@@ -642,7 +642,7 @@ export function ProjectLibraryPage(props) {
                 onClick={handleCreatePageInProject}
                 title="新建创作页"
               >
-                + 新建创作页
+                新建创作页
               </Button>
             )}
           </div>
