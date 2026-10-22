@@ -42,6 +42,21 @@ const ID_MAX_LENGTH = 180
 /** Elements that carry a thumbnail inside a larger clickable card. */
 const MEDIA_SELECTOR = 'img, video'
 
+/**
+ * Poster paths that name an X video, never a still photo.
+ *
+ * `amplify_video_thumb` covers uploaded videos and `ext_tw_video_thumb` legacy
+ * uploads; a real photo lives under `pbs.twimg.com/media/<id>.<ext>` and matches
+ * neither. The distinction lets a timeline's poster `<img>` be treated as the
+ * video it depicts.
+ */
+const X_VIDEO_POSTER_PATTERN = /(?:amplify_video_thumb|ext_tw_video_thumb)\/\d+(?:\/|$)/
+
+/** Whether an image address is a poster of an X video rather than a still photo. */
+export function isXVideoPosterSource(url: string): boolean {
+  return X_VIDEO_POSTER_PATTERN.test(String(url ?? '').trim())
+}
+
 /** Longest edge of a frame captured from a playing video. */
 const FRAME_MAX_EDGE = 640
 
@@ -321,6 +336,17 @@ export function resolveMediaSource(
   if (kind === 'video' && element instanceof HTMLVideoElement) {
     return resolveVideoSource(element, baseUrl, captureFrame)
   }
+  // A timeline video can be rendered as its poster <img> only: the element is a
+  // picture, the media is a video. Its poster is the identity the worker resolves
+  // the real stream from, so it keeps the `poster` rung instead of `direct`
+  // (which would let the jpg be treated as a progressive video candidate).
+  if (kind === 'video') {
+    const posterSrc = imageSourceOf(element, baseUrl)
+    if (posterSrc === '' || !isFetchableUrl(posterSrc)) {
+      return { src: '', previewSrc: '', kind: 'page', attachable: false }
+    }
+    return { src: posterSrc, previewSrc: posterSrc, kind: 'poster', attachable: true }
+  }
   // Images keep the strict rule: an inline or object URL is not an address the
   // workbench can re-fetch, and an image has no frame worth carrying instead.
   const src = imageSourceOf(element, baseUrl)
@@ -423,17 +449,27 @@ export function normalizeMedia(
 export function siblingMediaOf(container: Element, point?: PointerPoint): Element | null {
   if (isSkippable(container)) return null
   let fallback: Element | null = null
+  // A timeline video card paints its poster <img> and its <video> at the same
+  // box, with the image first in DOM order. A video is the media; the poster only
+  // pictures it, so a containing <video> answers immediately while any other
+  // containing media waits as the fallback.
   for (const candidate of container.querySelectorAll(MEDIA_SELECTOR)) {
     if (!candidate.isConnected) continue
     const metric = measureElement(candidate)
     if (!isEligibleMediaSize(metric.width, metric.height)) continue
-    if (point === undefined) return candidate
-    if (containsPoint(candidate, point)) return candidate
+    const isVideo = candidate.localName === 'video'
+    if (point === undefined) {
+      if (isVideo) return candidate
+      if (fallback === null) fallback = candidate
+      continue
+    }
+    if (!containsPoint(candidate, point)) continue
+    if (isVideo) return candidate
     if (fallback === null) fallback = candidate
   }
   // With a pointer position only a containing box is trustworthy; without one
   // (the jsdom fallback path) the first eligible media is the best available.
-  return point === undefined ? fallback : null
+  return fallback
 }
 
 function containsPoint(element: Element, point: PointerPoint): boolean {
@@ -458,7 +494,13 @@ export function findMediaElement(target: EventTarget | null, point?: PointerPoin
   if (!(target instanceof Element)) return null
   let node: Element | null = target
   for (let depth = 0; node !== null && depth < 20; depth += 1) {
-    if (node.localName === 'img' || node.localName === 'video') return node
+    if (node.localName === 'video') return node
+    if (node.localName === 'img') {
+      // A video poster is the media's own <img> in the timeline; hand back the
+      // matching <video> when the card mounts one, otherwise the image itself
+      // (its kind still resolves to `video`).
+      return posterVideoOf(node) ?? node
+    }
     if (isSkippable(node)) return null
     const parent: Element | null = node.parentElement
     if (parent !== null) {
@@ -471,17 +513,45 @@ export function findMediaElement(target: EventTarget | null, point?: PointerPoin
   return null
 }
 
+/**
+ * The `<video>` a poster `<img>` depicts, when the card renders both.
+ *
+ * Scope is the enclosing tweet article (or the image's own parent outside a
+ * tweet); matching is by poster address, so a feed with several videos never
+ * hands back the wrong player.
+ */
+function posterVideoOf(image: Element): HTMLVideoElement | null {
+  const poster = (image as HTMLImageElement).currentSrc || image.getAttribute('src') || ''
+  if (!isXVideoPosterSource(poster)) return null
+  const scope = image.closest('article') ?? image.parentElement
+  if (scope === null) return null
+  for (const video of scope.querySelectorAll('video')) {
+    if (video.getAttribute('poster') === poster) return video
+  }
+  return null
+}
+
 /** Resolves the media kind from an element tag, or `null` for other tags. */
 export function mediaKindOf(element: Element): MediaKind | null {
-  if (element.localName === 'img') return 'image'
   if (element.localName === 'video') return 'video'
+  if (element.localName === 'img') {
+    // X paints a timeline video's poster as a real <img>; it names the video, not
+    // a still photo. Stills live under `pbs.twimg.com/media/...` and stay images.
+    const src = (element as HTMLImageElement).currentSrc || element.getAttribute('src') || ''
+    return isXVideoPosterSource(src) ? 'video' : 'image'
+  }
   return null
 }
 
 /** Queries the nearest media descendant of a node (light DOM only). */
 export function queryMediaElement(root: Element): Element | null {
   if (root.localName === 'img' || root.localName === 'video') return root
-  return root.querySelector(MEDIA_SELECTOR)
+  let fallback: Element | null = null
+  for (const candidate of root.querySelectorAll(MEDIA_SELECTOR)) {
+    if (candidate.localName === 'video') return candidate
+    if (fallback === null) fallback = candidate
+  }
+  return fallback
 }
 
 function isSkippable(node: Element): boolean {
