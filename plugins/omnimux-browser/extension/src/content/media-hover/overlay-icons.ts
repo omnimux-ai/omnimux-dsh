@@ -12,7 +12,7 @@
  */
 
 /** Marks drawn as outlines; the checked/active look is a CSS fill. */
-export type CapsuleIcon = 'brand' | 'bulb' | 'download' | 'bubble' | 'plus' | 'check' | 'external' | 'star' | 'asset'
+export type CapsuleIcon = 'brand' | 'bulb' | 'download' | 'bubble' | 'spinner' | 'check' | 'external' | 'star' | 'asset'
 
 /**
  * The asset-library glyph approved for the image primary action.
@@ -118,8 +118,9 @@ const ICON_PATHS: Record<CapsuleIcon, string> = {
     '<path d="M20.5 12.25a8.5 8.5 0 0 0-4.06-7.29"/>',
     '<path d="M12 3.75a8.5 8.5 0 1 0 4.44 15.75"/>',
   ].join(''),
-  // Plus: the in-flight mark an action wears while it runs.
-  plus: '<path d="M12 4.5v15"/><path d="M4.5 12h15"/>',
+  // Three-quarter ring: the in-flight mark an action wears while it runs. The
+  // gap makes the rotation readable at 11px; the stylesheet spins this glyph.
+  spinner: '<path d="M12 3.5A8.5 8.5 0 1 1 20.5 12"/>',
   // Check: saved / downloaded / attached confirmation.
   check: '<path d="M20.5 6.5 9.8 17.5 3.8 11.6"/>',
   // Open elsewhere: used when the attach falls back to the side panel.
@@ -154,7 +155,7 @@ export const ICON_BY_ACTION = {
 
 /** Marks drawn only while an action is running or settled. */
 export const STATE_ICON = {
-  busy: 'plus',
+  busy: 'spinner',
   done: 'check',
   fallback: 'external',
 } as const

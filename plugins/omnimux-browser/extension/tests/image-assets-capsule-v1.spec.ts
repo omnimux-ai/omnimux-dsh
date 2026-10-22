@@ -93,6 +93,9 @@ describe('capsule primary slot: image', () => {
     const primary = primaryButton(capsule)
     expect(primary.getAttribute('aria-busy')).toBe('true')
     expect(primary.getAttribute('aria-label')).toBe('正在加入资产库')
+    // #3612: the in-flight slot wears a spinning ring, not the old static plus.
+    expect(iconName(primary)).toBe('spinner')
+    expect(primary.classList.contains('is-busy')).toBe(true)
   })
 
   it('syncs the title channel with the aria-label across idle, busy and done', () => {

@@ -278,9 +278,35 @@
   background: rgba(126, 224, 168, 0.16);
 }
 
+/* In-flight: the slot wears a spinning ring until the real receipt lands. The
+   rotation lives on the glyph so the 24px hit box, colour and pointer rules stay
+   exactly as they were; the ring itself is drawn by `overlay-icons.ts`. */
+@keyframes omnimux-capsule-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .omnimux-capsule-icon.is-busy {
-  opacity: 0.55;
+  /* The ring is the only "working" signal at 11px, so it reads at near-full
+     contrast; the slot is already inert, the motion carries the state. */
+  opacity: 0.8;
   pointer-events: none;
+}
+
+.omnimux-capsule-icon.is-busy svg {
+  transform-origin: 50% 50%;
+  animation: omnimux-capsule-spin 0.8s linear infinite;
+  /* A hair thicker than the shared 1.9 stroke: the arc must survive the
+     capsule's small glyph box and the frosted backdrop behind it. */
+  stroke-width: 2.2;
+}
+
+/* A reduced-motion reader gets the static ring: still "working", never spinning. */
+@media (prefers-reduced-motion: reduce) {
+  .omnimux-capsule-icon.is-busy svg {
+    animation: none;
+  }
 }
 
 .omnimux-capsule-icon.is-error {
