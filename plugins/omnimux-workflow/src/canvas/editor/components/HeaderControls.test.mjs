@@ -36,3 +36,16 @@ test('useExecutionController 拦截 mode: full 执行并阻断全画布运行', 
   assert.match(controllerSrc, /if\s*\(\s*opts\.mode\s*===\s*'full'\s*\)/);
   assert.match(controllerSrc, /创作画布不支持全画布一键运行/);
 });
+
+test('HeaderControls 不再渲染「检查生成输入」临时预检入口', () => {
+  assert.equal(headerControlsSrc.includes('wf-generation-draft-entry'), false);
+  assert.equal(headerControlsSrc.includes('GenerationProductDraft'), false);
+  assert.equal(headerControlsSrc.includes('generationProductPreview'), false);
+  assert.equal(headerControlsSrc.includes("generationDraft.entry"), false);
+  assert.equal(headerControlsSrc.includes('draftOpen'), false);
+});
+
+test('画布主题不再保留生成草稿弹窗样式', () => {
+  const themeSrc = readFileSync(join(here, '../../theme/components.css'), 'utf8');
+  assert.equal(themeSrc.includes('wf-generation-draft'), false);
+});
