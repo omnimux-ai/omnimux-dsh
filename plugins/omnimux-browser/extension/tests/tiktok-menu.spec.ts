@@ -123,7 +123,8 @@ describe("TikTok 场景工具栏 — 形态", () => {
     assert.match(body, /align-items:\s*center/);
     assert.match(body, /white-space:\s*nowrap/);
     assert.match(rule(".omx-item svg {"), /width:\s*18px/);
-    assert.match(rule(".omx-item-state {"), /font-size:\s*10px/);
+    // 行里没有状态文案节点：进行中只靠图标位的 spinner 表达 (#3606)。
+    assert.equal(inlineStyles.includes(".omx-item-state"), false);
   });
   it("默认不可见且不可点击命中 (AC-112)", () => {
     mount();
@@ -355,7 +356,7 @@ describe("TikTok 场景菜单 — 执行与反馈", () => {
     assert.deepEqual(calls, ["save"]);
     await settle();
   });
-  it("执行期间这一行进入等待态并显示进度文案", async () => {
+  it("执行期间这一行只换 spinner，不追加状态文案", async () => {
     const gate = {};
     const { handle } = mount(() => new Promise((resolve2) => {
       gate.release = () => resolve2(exported());
@@ -363,7 +364,10 @@ describe("TikTok 场景菜单 — 执行与反馈", () => {
     pointer(anchor(), "pointerenter", "mouse");
     row("video").click();
     assert.equal(row("video").classList.contains("is-busy"), true);
-    assert.ok(String(row("video").textContent).includes(COPY.busy.video));
+    assert.equal(row("video").getAttribute("aria-busy"), "true");
+    assert.notEqual(row("video").querySelector(".omx-spinner"), null);
+    assert.equal(row("video").querySelector(".omx-item-state"), null);
+    assert.equal(row("video").textContent.trim(), COPY.menu.video);
     gate.release?.();
     await settle();
     assert.equal(row("video").classList.contains("is-busy"), false);

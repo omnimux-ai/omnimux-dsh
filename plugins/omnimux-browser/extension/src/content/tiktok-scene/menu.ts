@@ -19,10 +19,11 @@
  * avatar lives in the right-hand action bar, where a rightward toolbar would run
  * off the screen.
  *
- * The toolbar is a small state machine over three columns. A column reports its
- * own progress in place — waiting, done, or the host's reason for failing —
- * because the user pressed a menu item and is looking at it; a toast somewhere
- * else would make them look away from what they just touched.
+ * The toolbar is a small state machine over three columns. A column shows its own
+ * state in place — the icon slot becomes a spinner while the host works, and a
+ * failure reason appears under the rows — because the user pressed a menu item and
+ * is looking at it; a toast somewhere else would make them look away from what
+ * they just touched.
  *
  * @module
  */
@@ -152,7 +153,6 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
   menu.setAttribute('aria-label', copy.brand)
 
   const rows = new Map<TiktokAction, HTMLElement>()
-  const stateLabels = new Map<TiktokAction, HTMLElement>()
   const iconSlots = new Map<TiktokAction, HTMLElement>()
 
   for (const action of ACTION_ORDER) {
@@ -170,14 +170,10 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
     label.className = 'omx-item-label'
     label.textContent = copy.menu[action]
 
-    const state = doc.createElement('span')
-    state.className = 'omx-item-state'
-
-    row.append(iconSlot, label, state)
+    row.append(iconSlot, label)
     menu.appendChild(row)
 
     rows.set(action, row)
-    stateLabels.set(action, state)
     iconSlots.set(action, iconSlot)
   }
 
@@ -293,14 +289,22 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
     menu.classList.toggle('is-left', side.side === 'left')
   }
 
-  const setRowState = (action: TiktokAction, state: RowState, text: string): void => {
+  /**
+   * Paint one row's state.
+   *
+   * A row has no status text: the icon slot swaps to a spinner while the host
+   * works, which says "running" without repeating it in words. `aria-busy` carries
+   * the same fact to a screen reader, because the spinner itself cannot.
+   * @param action the row
+   * @param state idle, running, or failed
+   */
+  const setRowState = (action: TiktokAction, state: RowState): void => {
     const row = rows.get(action)
-    const stateLabel = stateLabels.get(action)
     const iconSlot = iconSlots.get(action)
-    if (row === undefined || stateLabel === undefined || iconSlot === undefined) return
+    if (row === undefined || iconSlot === undefined) return
     row.classList.toggle('is-busy', state === 'busy')
     row.classList.toggle('is-error', state === 'error')
-    stateLabel.textContent = text
+    row.setAttribute('aria-busy', state === 'busy' ? 'true' : 'false')
     if (state === 'busy') iconSlot.innerHTML = '<span class="omx-spinner"></span>'
     else iconSlot.innerHTML = actionIcon(action, ROW_ICON_PX)
   }
@@ -345,7 +349,7 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
     pending.add(action)
     // Retrying this row clears its own stale reason; another row's reason stays.
     if (detailOwner === action) hideDetail()
-    setRowState(action, 'busy', copy.busy[action])
+    setRowState(action, 'busy')
     let outcome: ExportOutcome
     try {
       outcome = await options.run(action)
@@ -360,13 +364,13 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
       // line stays shut. The menu is the tool the user just used, not a log —
       // a permanent "saved" line outlives the moment it was useful and pushes
       // the rest of the menu around.
-      setRowState(action, 'idle', '')
+      setRowState(action, 'idle')
       if (detailOwner === action) hideDetail()
-      // The row's text changed, and a wide label can change the panel's width;
-      // re-place even when no detail line moved.
+      // The row's icon changed back; re-place so a width change from the label
+      // still gets a fresh side decision.
       else reposition()
     } else {
-      setRowState(action, 'error', '')
+      setRowState(action, 'error')
       showDetail(copy.failed(outcome), action)
     }
   }
