@@ -1,0 +1,237 @@
+[
+  {
+    "name": "node-card-entry-guide",
+    "passed": true,
+    "detail": {
+      "present": true,
+      "text": "3D 导演台在 3D 空间中搭建场景并进行多视角截图。打开导演台",
+      "imgCount": 0,
+      "textareaCount": 0,
+      "hasCaption": true,
+      "hasOpenCta": true,
+      "hasIcon": true,
+      "hasRightHandle": true,
+      "rightHandleClass": "react-flow__handle react-flow__handle-right nodrag nopan wf-handle wf-handle--plain wf-handle--right source connectable connectablestart connectableend connectionindicator",
+      "rightHandleId": null,
+      "nodeRect": {
+        "x": 1040,
+        "y": 275,
+        "width": 350,
+        "height": 374
+      },
+      "firstRunNoticeDismissed": true,
+      "newProjectLabel": "New Project",
+      "fullscreenControl": null,
+      "menuLabel": "3D Director",
+      "nodeLabel": "3D Director",
+      "canvas": {
+        "nodes": [
+          {
+            "id": "node_director_1792690200610",
+            "nodeType": "director",
+            "isMaterial": true,
+            "text": "3D 导演台3D 导演台在 3D 空间中搭建场景并进行多视角截图。打开导演台",
+            "rect": {
+              "x": 1040,
+              "y": 275,
+              "width": 350,
+              "height": 374
+            }
+          }
+        ],
+        "edges": [],
+        "edgeCount": 0
+      }
+    }
+  },
+  {
+    "name": "screenshot-a-creates-image-node",
+    "passed": true,
+    "detail": {
+      "rendererReady": true,
+      "captureMark": {
+        "marked": true,
+        "actionable": 1,
+        "total": 1
+      },
+      "toasts": [],
+      "nodeTitles": [
+        "主摄影机-shot-01"
+      ],
+      "edgeCount": 1,
+      "edges": [
+        "director-screenshot-80ec6c77-8f2a-411d-a7d5-62e99961e357"
+      ],
+      "nodes": [
+        {
+          "id": "node_director_1792690200610",
+          "nodeType": "director",
+          "isMaterial": true,
+          "text": "3D 导演台3D 导演台在 3D 空间中搭建场景并进行多视角截图。打开导演台",
+          "rect": {
+            "x": 1040,
+            "y": 275,
+            "width": 350,
+            "height": 374
+          }
+        },
+        {
+          "id": "80ec6c77-8f2a-411d-a7d5-62e99961e357",
+          "nodeType": null,
+          "isMaterial": true,
+          "text": "主摄影机-shot-01",
+          "rect": {
+            "x": 1460,
+            "y": 275,
+            "width": 350,
+            "height": 632
+          }
+        }
+      ],
+      "nodesBefore": 1
+    }
+  },
+  {
+    "name": "screenshot-b-creates-second-node",
+    "passed": true,
+    "detail": {
+      "captureMark": {
+        "marked": true,
+        "actionable": 1,
+        "total": 1
+      },
+      "toasts": [],
+      "nodeTitles": [
+        "主摄影机-shot-01",
+        "主摄影机-shot-02"
+      ],
+      "edgeCount": 2,
+      "edges": [
+        "director-screenshot-80ec6c77-8f2a-411d-a7d5-62e99961e357",
+        "director-screenshot-fa33b68b-aa40-481b-ae58-832922c4904e"
+      ],
+      "shot01": {
+        "id": "80ec6c77-8f2a-411d-a7d5-62e99961e357",
+        "nodeType": null,
+        "isMaterial": true,
+        "text": "主摄影机-shot-01",
+        "rect": {
+          "x": 1460,
+          "y": 275,
+          "width": 350,
+          "height": 632
+        }
+      },
+      "shot02": {
+        "id": "fa33b68b-aa40-481b-ae58-832922c4904e",
+        "nodeType": null,
+        "isMaterial": true,
+        "text": "主摄影机-shot-02",
+        "rect": {
+          "x": 1460,
+          "y": 645,
+          "width": 350,
+          "height": 632
+        }
+      },
+      "nodes": [
+        {
+          "id": "node_director_1792690200610",
+          "nodeType": "director",
+          "isMaterial": true,
+          "text": "3D 导演台3D 导演台在 3D 空间中搭建场景并进行多视角截图。打开导演台",
+          "rect": {
+            "x": 1040,
+            "y": 275,
+            "width": 350,
+            "height": 374
+          }
+        },
+        {
+          "id": "80ec6c77-8f2a-411d-a7d5-62e99961e357",
+          "nodeType": null,
+          "isMaterial": true,
+          "text": "主摄影机-shot-01",
+          "rect": {
+            "x": 1460,
+            "y": 275,
+            "width": 350,
+            "height": 632
+          }
+        },
+        {
+          "id": "fa33b68b-aa40-481b-ae58-832922c4904e",
+          "nodeType": null,
+          "isMaterial": true,
+          "text": "主摄影机-shot-02",
+          "rect": {
+            "x": 1460,
+            "y": 645,
+            "width": 350,
+            "height": 632
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "close-director-keeps-card-image-free",
+    "passed": true,
+    "detail": {
+      "present": true,
+      "imgCount": 0,
+      "textareaCount": 0,
+      "text": "3D 导演台在 3D 空间中搭建场景并进行多视角截图。打开导演台",
+      "hasCaption": true,
+      "fitView": "button[title=\"Fit View\"]",
+      "closeMode": "click",
+      "nodeTitles": [
+        "主摄影机-shot-01",
+        "主摄影机-shot-02"
+      ],
+      "edgeCount": 2,
+      "edges": [
+        "director-screenshot-80ec6c77-8f2a-411d-a7d5-62e99961e357",
+        "director-screenshot-fa33b68b-aa40-481b-ae58-832922c4904e"
+      ],
+      "nodes": [
+        {
+          "id": "node_director_1792690200610",
+          "nodeType": "director",
+          "isMaterial": true,
+          "text": "3D 导演台3D 导演台在 3D 空间中搭建场景并进行多视角截图。打开导演台",
+          "rect": {
+            "x": 920,
+            "y": 80,
+            "width": 268,
+            "height": 286
+          }
+        },
+        {
+          "id": "80ec6c77-8f2a-411d-a7d5-62e99961e357",
+          "nodeType": null,
+          "isMaterial": true,
+          "text": "主摄影机-shot-01",
+          "rect": {
+            "x": 1241,
+            "y": 80,
+            "width": 268,
+            "height": 483
+          }
+        },
+        {
+          "id": "fa33b68b-aa40-481b-ae58-832922c4904e",
+          "nodeType": null,
+          "isMaterial": true,
+          "text": "主摄影机-shot-02",
+          "rect": {
+            "x": 1241,
+            "y": 363,
+            "width": 268,
+            "height": 483
+          }
+        }
+      ]
+    }
+  }
+]

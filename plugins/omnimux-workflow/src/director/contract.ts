@@ -65,8 +65,11 @@ export interface DirectorAdapters {
   persistAsset(asset: DirectorNewAsset, context: DirectorOperationContext & { existingAssetId?: string; existingPersisted?: boolean }): Promise<{ assetId: string; created: boolean; confirmed: true }>;
   exportOutput(output: DirectorSceneOutput, context: DirectorOperationContext & { revision: number; operationId?: string }): Promise<DirectorExportResult>;
   exportScreenshot?(input: { scene: DirectorScene; shotId: string; screenshotId: string }, context: DirectorOperationContext & { revision: number }): Promise<{ confirmed: true }>;
-  captureCover?(input: { scene: DirectorScene; shotId: string; beauty: Blob }, context: DirectorOperationContext): Promise<void>;
-  shouldCaptureCover?(scene: DirectorScene, shotId: string): boolean;
+  /**
+   * 「截图」出口：每次捕获都新建一个独立图片节点并连到导演台节点。
+   * 关闭导演台不再回写当前节点，节点只保留打开导演台所需信息。
+   */
+  addScreenshotNode?(input: { scene: DirectorScene; shotId: string; screenshotId: string; title: string; image: DirectorImageResource }, context: DirectorOperationContext & { revision: number }): Promise<{ confirmed: true; nodeId: string }>;
   addCanvasImage?(image: DirectorImageResource, title: string, context: DirectorOperationContext): Promise<{ assetId?: string; persisted?: boolean } | void>;
   deleteImageNode?(nodeId: string, context: DirectorOperationContext): void;
   analyzeImage?(input: { imageUrl: string; prompt: string; maxElements: 16 }, context: DirectorOperationContext): Promise<string>;

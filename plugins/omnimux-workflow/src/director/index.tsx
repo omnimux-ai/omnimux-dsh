@@ -133,7 +133,7 @@ export function mount(container: HTMLElement, initial: DirectorSceneProps): Dire
       if (receipt.confirmed !== true) throw new Error('媒体未收到主机持久化确认');
       if (command) requireResource(receipt.resource, command, output.shot.duration);
       return receipt;
-    }} onDeleteImageNode={id => props.adapters.deleteImageNode?.(id, operationContext(expected))} onAddCanvasImage={props.adapters.addCanvasImage ? (image, title, signal, identity) => props.adapters.addCanvasImage!(image, title, operationContext(identity, signal)) : undefined} onShouldCaptureCover={props.adapters.shouldCaptureCover} onCaptureCover={props.adapters.captureCover ? input => props.adapters.captureCover!(input, operationContext(expected)) : undefined} /></ControlsProvider>);
+    }} onDeleteImageNode={id => props.adapters.deleteImageNode?.(id, operationContext(expected))} onAddCanvasImage={props.adapters.addCanvasImage ? (image, title, signal, identity) => props.adapters.addCanvasImage!(image, title, operationContext(identity, signal)) : undefined} onAddScreenshotNode={props.adapters.addScreenshotNode ? (input, signal, identity) => props.adapters.addScreenshotNode!({ ...input }, { ...operationContext(identity, signal), revision: props.revision }) : undefined} /></ControlsProvider>);
   };
   const cancel = (operationId?: string) => { if (pending && (!operationId || pending.command.operationId === operationId)) pending.controller.abort(); };
   render();

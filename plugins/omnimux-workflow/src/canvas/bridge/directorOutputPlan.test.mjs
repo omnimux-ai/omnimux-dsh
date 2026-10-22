@@ -287,3 +287,57 @@ test('rollback of a new output leaves a user-edited new node intact', () => {
   assert.deepEqual(result.conflicts, [{ nodeId: edited.id, reason: 'changed' }]);
   assert.equal(result.nodes.some(node => node.id === plan.outputNodeIds.image), false);
 });
+
+test('each screenshot capture projects a fresh node with its own id, label and position', () => {
+  const resource = Object.assign({}, image, { confirmed: true, capturedSource: { sceneId: 'scene-a', shotId: 'shot-a', revision: 7 } });
+  const first = planDirectorOutput(input({ resources: { image: resource }, freshNodeId: 'shot-node-1', label: '机位-shot-01', position: { x: 520, y: 200 } }));
+  assert.equal(first.outputNodeIds.image, 'shot-node-1');
+  const created = first.nodes.find(node => node.id === 'shot-node-1');
+  assert.equal(created.data.label, '机位-shot-01');
+  assert.deepEqual(created.position, { x: 520, y: 200 });
+  assert.equal(created.data.directorSourceNodeId, 'director-a');
+  assert.equal(created.data.directorSourceRevision, 7);
+  assert.equal(created.data.directorCaptureRevision, 7);
+  assert.equal(created.data.directorCaptureShotId, 'shot-a');
+  assert.equal(created.data.assetId, 'asset-image-1');
+  assert.equal(created.data.materialType, 'image');
+  assert.equal(created.data.nodeKind, 'import');
+
+  const nextResource = Object.assign({}, resource, { assetId: 'asset-image-2', storageKey: 'artifacts/director/workspace-a/director-a/image-2.png', url: '/omnimux-workflow/api/workspaces/workspace-a/file?rel=image-2.png' });
+  const second = planDirectorOutput(input({ nodes: first.nodes, resources: { image: nextResource }, freshNodeId: 'shot-node-2', label: '机位-shot-02', position: { x: 520, y: 570 } }));
+  assert.equal(second.outputNodeIds.image, 'shot-node-2');
+  assert.equal(second.nodes.length, first.nodes.length + 1);
+  assert.equal(second.nodes.find(node => node.id === 'shot-node-1'), first.nodes.find(node => node.id === 'shot-node-1'));
+  assert.equal(second.nodes.find(node => node.id === 'shot-node-2').data.assetId, 'asset-image-2');
+  assert.deepEqual(second.nodes.find(node => node.id === 'shot-node-2').position, { x: 520, y: 570 });
+});
+
+test('fresh screenshot identity refuses collisions, video, malformed ids and invalid labels atomically', () => {
+  for (const freshNodeId of [source.id, '', 'node with space', 'node\u0000', 'x'.repeat(121), 7, null, {}]) {
+    const args = input({ freshNodeId });
+    const before = structuredClone(args);
+    assert.throws(() => planDirectorOutput(args), `fresh id must be rejected: ${String(freshNodeId)}`);
+    assert.deepEqual(args, before);
+  }
+  for (const patch of [
+    { resources: { image, video }, freshNodeId: 'fresh-1' },
+    { freshNodeId: 'fresh-1', label: '   ' },
+    { freshNodeId: 'fresh-1', label: 'x'.repeat(121) },
+    { freshNodeId: 'fresh-1', position: { x: Number.NaN, y: 0 } },
+    { freshNodeId: 'fresh-1', position: { x: 0, y: Number.POSITIVE_INFINITY } },
+  ]) {
+    const args = input(patch);
+    const before = structuredClone(args);
+    assert.throws(() => planDirectorOutput(args));
+    assert.deepEqual(args, before);
+  }
+  const fallback = planDirectorOutput(input({ resources: { image }, freshNodeId: 'fresh-1' }));
+  assert.equal(fallback.nodes.find(node => node.id === 'fresh-1').data.label, '导演构图');
+});
+
+test('omitting freshNodeId keeps the historical per-shot reuse projection', () => {
+  const first = planDirectorOutput(input());
+  const second = planDirectorOutput(input({ nodes: first.nodes }));
+  assert.equal(second.outputNodeIds.image, first.outputNodeIds.image);
+  assert.equal(second.nodes.length, first.nodes.length);
+});
