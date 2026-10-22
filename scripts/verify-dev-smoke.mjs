@@ -73,10 +73,15 @@ function evaluateInPage(wsUrl, expression, timeoutMs = 5000) {
 }
 
 /**
- * Read-only page-health check through the desktop window's CDP port (same
- * mechanism as scripts/dev-smoke.mjs). Used when HTTP is auth-gated (401):
- * the probe cannot obtain the token `dsh web` prints, but the live window is
- * already authenticated and can report its real DOM state.
+ * Read-only page-health check through the desktop window's CDP port. Used when
+ * HTTP is auth-gated (401): the probe cannot obtain the token `dsh web` prints,
+ * but the live window is already authenticated and can report its real DOM state.
+ *
+ * 注意：这里仍是**单点采样**（一次 evaluate、固定超时）。它服务的是
+ * `pnpm verify:smoke` 的人工即时检查，不在合并收尾的自动链路里；重启窗口内的
+ * 「页面还在 loading」假失败由 scripts/dev-smoke.mjs 的 waitForPageHealth 承担，
+ * 本文件暂不复用（Issue #3610 明确把收敛范围限定在 dev-smoke）。
+ * 若将来把它接进自动收尾流程，应改为复用 waitForPageHealth。
  * @param {{ cdpPort?: number }} [opts]
  */
 export async function probeDevCdpHealth(opts = {}) {

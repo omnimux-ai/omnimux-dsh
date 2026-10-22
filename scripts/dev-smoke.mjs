@@ -13,6 +13,10 @@
  *   node scripts/dev-smoke.mjs --plugins omnimux-assets
  *   node scripts/dev-smoke.mjs --plugins a,b --expect-restart
  *
+ * 环境变量（都可选，非法值会被忽略并告警，不会变成无界等待）：
+ *   OMNIMUX_SMOKE_HEALTH_TIMEOUT_MS  页面首帧等待预算，默认 30000
+ *   OMNIMUX_SMOKE_HEALTH_POLL_MS     轮询间隔，默认 250
+ *
  * 退出码：0=PASS / 1=FAIL / 0 且 needsRestart=true=待人工重启 / 2=BLOCKED（应用未运行或调试口不可达）
  */
 import http from 'node:http';
@@ -55,16 +59,18 @@ function evaluateInPage(wsUrl, expression, timeoutMs = 5000) {
       const ws = new WebSocket(wsUrl);
       let settled = false;
       const finish = (value) => { if (!settled) { settled = true; clearTimeout(timer); try { ws.close(); } catch {} resolve(value); } };
-      const timer = setTimeout(() => finish({ ok: false, error: 'CDP evaluate timed out' }), timeoutMs);
+      // kind 决定调用方能否重试：'timeout' 可能是渲染进程忙着解析/执行（正是重启窗口的
+      // 典型症状），可以继续等；'transport'/'decode' 属于连接或协议坏了，重试无意义。
+      const timer = setTimeout(() => finish({ ok: false, kind: 'timeout', error: 'CDP evaluate timed out' }), timeoutMs);
       ws.onopen = () => ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression, returnByValue: true } }));
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(String(event.data));
           if (data.id === 1) finish({ ok: true, result: data?.result?.result?.value });
-        } catch (e) { finish({ ok: false, error: e.message }); }
+        } catch (e) { finish({ ok: false, kind: 'decode', error: e.message }); }
       };
-      ws.onerror = (e) => finish({ ok: false, error: e?.message || 'WebSocket error' });
-    } catch (e) { resolve({ ok: false, error: e?.message || String(e) }); }
+      ws.onerror = (e) => finish({ ok: false, kind: 'transport', error: e?.message || 'WebSocket error' });
+    } catch (e) { resolve({ ok: false, kind: 'transport', error: e?.message || String(e) }); }
   });
 }
 
@@ -131,37 +137,60 @@ function pluginMaterializedMtimeSec(plugin, profilePlugins = DEV_PROFILE_PLUGINS
  * dev 模式从进程启动到首帧约 10–25 s（Issue #3610：166 份历史截图中 4.2% 的
  * 白屏帧全部落在启动后 9.6–10.6 s，即 `reload-dev-app` 只确认到「page 目标可达」
  * 就报就绪的那一刻）。单点采样会把健康的应用判成 FAIL，所以改成有界轮询。
+ *
+ * 预算从探针开始计时，而探针可能在 page 目标出现后才启动（暖启动更早），
+ * 因此默认给 30 s，覆盖「启动后 25 s 才首帧」的长尾。
+ * 可用 `OMNIMUX_SMOKE_HEALTH_TIMEOUT_MS` 覆盖；非有限数或负数会被忽略并告警，
+ * 绝不允许 NaN 让 `for(;;)` 变成无界循环（那会卡死 worktree.sh ship）。
  */
-const HEALTH_TIMEOUT_MS = Number(process.env.OMNIMUX_SMOKE_HEALTH_TIMEOUT_MS || 20000);
-const HEALTH_POLL_MS = 250;
+export function finiteNonNegative(value, fallback, label = 'value') {
+  const n = Number(value);
+  if (Number.isFinite(n) && n >= 0) return n;
+  if (value !== undefined && value !== null && value !== '') {
+    console.warn(`[dev-smoke] 忽略非法 ${label}=${String(value)}，回退 ${fallback}`);
+  }
+  return fallback;
+}
+
+const HEALTH_TIMEOUT_MS = finiteNonNegative(process.env.OMNIMUX_SMOKE_HEALTH_TIMEOUT_MS, 30000, 'OMNIMUX_SMOKE_HEALTH_TIMEOUT_MS');
+const HEALTH_POLL_MS = finiteNonNegative(process.env.OMNIMUX_SMOKE_HEALTH_POLL_MS, 250, 'OMNIMUX_SMOKE_HEALTH_POLL_MS');
 const PAGE_HEALTH_EXPR = 'JSON.stringify({title:document.title, bodyLen:(document.body?.innerText||\'\').length, readyState:document.readyState})';
+/** 单次 evaluate 的上限；等待预算更小时按剩余预算收窄，避免超出预算。 */
+const EVALUATE_TIMEOUT_MS = 5000;
 
 /**
  * 有界等待页面首帧。
  *
- * - `ok:false`（调试连接失败）立即判负：连不上不等于页面还在加载；
- * - 连接正常但 `readyState !== 'complete'` 或正文为空 → 继续轮询，直到预算耗尽；
- * - 预算耗尽仍不就绪 → 判负，并在 detail 里保留最后一次观测与 attempts/waitedMs。
+ * - `ok:false` 且 `kind === 'timeout'`（渲染进程忙/未响应）→ 在预算内继续等；
+ * - `ok:false` 其它情况（连接断开、协议解码失败）→ 立即判负，重试没有意义；
+ * - 连接正常但 `readyState !== 'complete'` 或正文为空 → 继续轮询；
+ * - 预算耗尽仍不就绪 → 判负，detail 保留最后一次观测与 attempts/waitedMs。
+ *
+ * `timeoutMs: 0` 是合法值：只采样一次（测试与显式 opt-in 用）。
  *
  * @returns {Promise<{ pass: boolean, detail: Record<string, unknown> }>}
  */
 export async function waitForPageHealth(evalPage, wsUrl, opts = {}) {
-  const timeoutMs = opts.timeoutMs ?? HEALTH_TIMEOUT_MS;
-  const pollMs = opts.pollMs ?? HEALTH_POLL_MS;
+  const timeoutMs = finiteNonNegative(opts.timeoutMs, HEALTH_TIMEOUT_MS, 'timeoutMs');
+  const pollMs = finiteNonNegative(opts.pollMs, HEALTH_POLL_MS, 'pollMs');
   const wait = opts.wait ?? sleep;
   const started = Date.now();
   let attempts = 0;
   let last = { title: '', bodyLen: 0, readyState: 'unknown' };
   for (;;) {
     attempts += 1;
-    const geo = await evalPage(wsUrl, PAGE_HEALTH_EXPR);
+    const remainingMs = Math.max(1, timeoutMs - (Date.now() - started));
+    const geo = await evalPage(wsUrl, PAGE_HEALTH_EXPR, Math.min(EVALUATE_TIMEOUT_MS, remainingMs));
     if (!geo || geo.ok !== true) {
+      const waitedMs = Date.now() - started;
+      const kind = (geo && geo.kind) || 'unknown';
+      if (kind === 'timeout' && waitedMs < timeoutMs) {
+        await wait(pollMs);
+        continue;
+      }
       return {
         pass: false,
-        detail: {
-          ...last, attempts, waitedMs: Date.now() - started,
-          error: (geo && geo.error) || 'page evaluate failed',
-        },
+        detail: { ...last, attempts, waitedMs, kind, error: (geo && geo.error) || 'page evaluate failed' },
       };
     }
     try {
@@ -169,7 +198,7 @@ export async function waitForPageHealth(evalPage, wsUrl, opts = {}) {
     } catch {
       return {
         pass: false,
-        detail: { attempts, waitedMs: Date.now() - started, error: 'page geometry payload is not JSON' },
+        detail: { attempts, waitedMs: Date.now() - started, kind: 'decode', error: 'page geometry payload is not JSON' },
       };
     }
     const waitedMs = Date.now() - started;
