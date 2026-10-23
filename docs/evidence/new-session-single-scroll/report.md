@@ -60,6 +60,13 @@ node scripts/worktree-app-qa.mjs --request .workbuddy/qa-3628/request.json
 
 上述两处只影响**验收环境**，不改变被测产品代码；产品源码、样式与测试断言均按仓库规范提交。
 
+**披露：本轮 QA 运行期间，工作树内曾临时修改过 `scripts/worktree-app-qa.mjs`（加 `--use-mock-keychain`）与
+`scripts/materialize-graph.mjs`（临时诊断日志），两者均在提交前完整回退。** 因此 sealed 快照的
+`candidate.head.resolvedSha` 记录为基线 SHA（`8f312e7…`），且快照中包含这两处未提交改动与当时尚未回退的
+`specs/tab-sticky-top-min-height.spec.md`；但三个产品面文件（`styles.js`、`ExploreTemplatesSection.jsx`、
+`picker-sticky-docking.test.js`）在快照 after 摘要与提交 HEAD 的 blob 摘要**逐字节一致**，即真机证据覆盖的
+正是本 PR 提交的生产代码。`scripts/` 侧的环境规避应通过 #3632 修复或提交为显式开关后再跑，届时证据可与提交 SHA 绑定。
+
 ## 五、待维护者授权的历史标准清理
 
 `plugins/omnimux-inspiration/src/explore/picker-sticky-docking.test.js` 中的两条断言

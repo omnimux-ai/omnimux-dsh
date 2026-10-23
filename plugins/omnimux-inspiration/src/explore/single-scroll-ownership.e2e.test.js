@@ -6,6 +6,10 @@
  *
  * 素材取自真实实现：真实样式表（plugins/omnimux/src/client/session-guide/styles.js）的真实规则
  * + 真实组件源码里的三个网格视图分支容器；断言落在 jsdom 计算样式与源码契约上。
+ *
+ * 边界说明：本文件是**样式/结构契约级**回归门（jsdom 无真实布局，证明不了真实滚轮与滚动条像素）；
+ * 真实浏览器验收证据在同任务的 sealed 运行 `.workbuddy/evidence/contract/3628/<runId>/`
+ * （见 docs/evidence/new-session-single-scroll/report.md），两者互补、不可互相替代。
  */
 import test from 'node:test'
 import assert from 'node:assert/strict'
