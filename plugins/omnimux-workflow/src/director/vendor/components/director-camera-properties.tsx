@@ -1,4 +1,4 @@
-import { Input, InputNumber, Modal, Select } from "../../controls";
+import { Input, InputNumber, Modal, Select, Slider } from "../../controls";
 import { Camera as CameraIcon, Expand } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
@@ -27,7 +27,7 @@ type Props = {
 
 export function DirectorCameraProperties({ scene, camera, cameras, shot, objects, onUpdateCamera, onUpdateAnimated, onUpdateRotation, onToggleTrack, onChangeLookAtMode, playhead = 0, onSelectCamera, onFollowObject, children, previewUrl = null }: Props & { previewUrl?: string | null }) {
     const [previewOpen, setPreviewOpen] = useState(false);
-    if (!camera) return <div className="p-4 text-sm opacity-60">无可用机位</div>;
+    if (!camera) return <div className="px-4 pt-3 pb-4 text-[13px] opacity-60">无可用机位</div>;
     const renderedTransform = resolveDirectorCameraTransform(camera, playhead);
     const renderedOptics = resolveDirectorCameraTrackValues(camera, playhead);
     const displayedRotation = resolveDirectorCameraInspectorRotation(scene, camera, playhead);
@@ -62,7 +62,7 @@ export function DirectorCameraProperties({ scene, camera, cameras, shot, objects
     const lookAtValue = camera.lookAtMode === "rotation" ? "rotation"
         : camera.lookAtMode !== "coordinates" && objects.some((item) => item.id === camera.lookAtObjectId) ? `object:${camera.lookAtObjectId}` : "coordinates";
     const followValue = objects.some((item) => item.id === camera.followObjectId) ? camera.followObjectId : "";
-    return <div className="space-y-4 px-3 py-4">
+    return <div className="space-y-3 px-4 pt-3 pb-4">
         <div aria-label="摄影机预览" className="relative mb-4 aspect-video overflow-hidden rounded-xl border bg-[#090a0c]" style={{ borderColor: "var(--director-sequencer-border)" }}>
             {previewUrl ? <img src={previewUrl} alt="" className="absolute inset-0 size-full object-cover" draggable={false} /> : <div className="absolute inset-0 grid place-items-center text-xs text-white/45"><span className="flex items-center gap-2"><CameraIcon className="size-4" />正在生成机位预览</span></div>}
             <span className="absolute left-3 top-3 rounded bg-black/45 px-2 py-1 text-xs text-white/80">FOV {Math.round(renderedOptics.fov)}°</span>
@@ -78,17 +78,17 @@ export function DirectorCameraProperties({ scene, camera, cameras, shot, objects
         <AxisField label="旋转" value={displayedRotation} onChange={changeRotation} keyed={rotationKeyed} onToggle={onToggleTrack ? () => onToggleTrack("rotation") : undefined} step={1} />
         <Field label="注视目标"><Select size="small" variant="filled" className="w-full" value={lookAtValue} options={[{ label: "手动坐标", value: "coordinates" }, { label: "手动旋转", value: "rotation" }, ...objects.map((item) => ({ label: item.name, value: `object:${item.id}` }))]} onChange={(value) => onChangeLookAtMode ? onChangeLookAtMode(value as "coordinates" | "rotation" | `object:${string}`) : onUpdateCamera(value.startsWith("object:") ? { lookAtMode: "object", lookAtObjectId: value.slice(7) } : { lookAtMode: value as "coordinates" | "rotation", lookAtObjectId: undefined })} /></Field>
         {lookAtValue === "coordinates" ? <AxisField label="注视坐标" value={renderedOptics.target} onChange={changeTarget} keyed={focusKeyed} onToggle={onToggleTrack ? () => onToggleTrack("focus") : undefined} /> : null}
-        <div><div className="mb-1 text-xs opacity-55">视野角度 (FOV)</div><div className="flex items-center gap-2"><input aria-label="视野角度 (FOV)" className="min-w-0 flex-1 accent-cyan-500" type="range" min={15} max={90} step={1} value={Math.min(90, Math.max(15, renderedOptics.fov))} onChange={(event) => changeFov(Number(event.target.value))} /><InputNumber aria-label="FOV 数值" size="small" variant="filled" controls={false} min={15} max={90} step={1} className="w-16" value={Number(renderedOptics.fov.toFixed(1))} onChange={(value) => { if (value !== null) changeFov(value); }} />{onToggleTrack ? <TrackKeyButton keyed={fovKeyed} onToggle={() => onToggleTrack("fov")} /> : null}</div></div>
+        <div><div className="mb-1.5 text-[11px] opacity-55">视野角度 (FOV)</div><div className="flex items-center gap-2"><Slider ariaLabelForHandle="视野角度 (FOV)" className="min-w-0 flex-1" min={15} max={90} step={1} value={Math.min(90, Math.max(15, renderedOptics.fov))} onChange={changeFov} /><InputNumber aria-label="FOV 数值" size="small" variant="filled" controls={false} min={15} max={90} step={1} className="w-[58px] shrink-0" value={Number(renderedOptics.fov.toFixed(1))} onChange={(value) => { if (value !== null) changeFov(value); }} />{onToggleTrack ? <TrackKeyButton keyed={fovKeyed} onToggle={() => onToggleTrack("fov")} /> : null}</div></div>
         <details className="border-t pt-3 text-xs" style={{ borderColor: "var(--director-sequencer-border)" }}><summary className="cursor-pointer opacity-65">镜头高级参数</summary>{children}</details>
     </div>;
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
-    return <label className="block"><span className="mb-1 block text-xs opacity-55">{label}</span>{children}</label>;
+    return <label className="block"><span className="mb-1.5 block text-[11px] opacity-55">{label}</span>{children}</label>;
 }
 
 function AxisField({ label, value, onChange, keyed = false, onToggle, step = 0.1 }: { label: string; value: DirectorVec3; onChange: (axis: number, value: number | null) => void; keyed?: boolean; onToggle?: () => void; step?: number }) {
-    return <div><div className="mb-1 text-xs opacity-55">{label}</div><div className="grid grid-cols-3 gap-1">{value.map((entry, axis) => <div key={axis} className="flex min-w-0 items-center rounded-md bg-white/5"><span className="pl-2 text-[10px] opacity-45">{["X", "Y", "Z"][axis]}</span><InputNumber aria-label={`${label} ${["X", "Y", "Z"][axis]}`} size="small" variant="borderless" controls={false} className="min-w-0 flex-1" step={step} value={Number(entry.toFixed(2))} onChange={(next) => onChange(axis, next)} />{onToggle ? <TrackKeyButton keyed={keyed} onToggle={onToggle} /> : null}</div>)}</div></div>;
+    return <div><div className="mb-1.5 text-[11px] opacity-55">{label}</div><div className="grid grid-cols-3 gap-1">{value.map((entry, axis) => <div key={axis} className="flex min-w-0 items-center rounded-md bg-white/5"><span className="pl-2 text-[11px] opacity-45">{["X", "Y", "Z"][axis]}</span><InputNumber aria-label={`${label} ${["X", "Y", "Z"][axis]}`} size="small" variant="borderless" controls={false} className="min-w-0 flex-1" step={step} value={Number(entry.toFixed(2))} onChange={(next) => onChange(axis, next)} />{onToggle ? <TrackKeyButton keyed={keyed} onToggle={onToggle} /> : null}</div>)}</div></div>;
 }
 
 function TrackKeyButton({ keyed, onToggle }: { keyed: boolean; onToggle: () => void }) {

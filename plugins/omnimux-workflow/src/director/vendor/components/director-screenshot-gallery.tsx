@@ -4,7 +4,7 @@ import { resolveImageUrl, directorServices } from '../../services';
 import type { DirectorScreenshot } from '../../scene-types';
 export function DirectorScreenshotGallery({ screenshots, title = '相机截图', compact = false, onSelect, onDelete }: { screenshots: DirectorScreenshot[]; title?: string; compact?: boolean; onSelect?: (screenshot: DirectorScreenshot) => void | Promise<void>; onDelete?: (screenshotId: string) => void }) {
   return <section aria-label="相机截图" className={compact ? 'space-y-2' : 'space-y-2 border-t pt-3'} style={compact ? undefined : { borderColor: 'var(--director-sequencer-border)' }}>
-    <h3 className="text-sm font-medium">{title}</h3>
+    <h3 className="text-[13px] font-medium">{title}</h3>
     {screenshots.length ? <div className="grid grid-cols-2 gap-2">{screenshots.map(screenshot => <ScreenshotCard key={screenshot.id} screenshot={screenshot} compact={compact} onSelect={onSelect} onDelete={onDelete} />)}</div> : <p className="text-xs opacity-55">暂无截图</p>}
   </section>;
 }

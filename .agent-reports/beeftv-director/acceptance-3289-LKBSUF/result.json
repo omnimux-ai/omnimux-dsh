@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "acceptanceScope": "normal-ui-portrait-save-reopen-moving-media",
+  "completeMigrationAcceptance": false,
+  "evidenceLevel": "task-source-installed",
+  "taskSourceInstalled": true,
+  "taskPluginsInstalled": true,
+  "taskPluginsCount": 3,
+  "taskPlugins": [
+    "omnimux-workflow",
+    "omnimux-automation"
+  ],
+  "runId": "accept-mvll6g8q-90wdmj",
+  "base": "8e42dc961508faebab75e12bfec0a4123cc155c2",
+  "independentDecode": "passed",
+  "assertions": [
+    "normal-project-entry",
+    "portrait-selected",
+    "managed-media-decoded",
+    "saved-scene",
+    "play-seek",
+    "decoded-motion",
+    "scene-reopened",
+    "aspect-reopened"
+  ],
+  "realModelRequest": false,
+  "head": "d33743c46133de8dd322ea1bd152a63d72132630",
+  "finishedAt": "2026-10-23T23:15:32.899Z"
+}

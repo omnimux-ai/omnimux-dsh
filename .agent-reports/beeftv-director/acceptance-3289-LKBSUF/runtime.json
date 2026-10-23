@@ -1,0 +1,2889 @@
+{
+  "startedAt": "2026-10-23T23:13:45.146Z",
+  "head": "d33743c46133de8dd322ea1bd152a63d72132630",
+  "base": "8e42dc961508faebab75e12bfec0a4123cc155c2",
+  "runId": "accept-mvll6g8q-90wdmj",
+  "contract": "task-source-installed",
+  "taskPlugins": [
+    "omnimux-workflow",
+    "omnimux-automation"
+  ],
+  "python": {
+    "path": "/usr/local/bin/python3",
+    "version": "3.12"
+  },
+  "summary": {
+    "mode": "ui",
+    "origin": "http://127.0.0.1:64160",
+    "evidenceLevel": "task-source-installed",
+    "taskPluginsInstalled": true,
+    "taskPluginsCount": 3,
+    "seededDataDomains": [
+      "synthetic-workspace"
+    ],
+    "realModelRequest": false,
+    "modelConfiguration": "QA模拟",
+    "seededWorkspace": "ws_qa_media"
+  },
+  "installation": {
+    "taskId": "3289",
+    "runId": "accept-mvll6g8q-90wdmj",
+    "base": "8e42dc961508faebab75e12bfec0a4123cc155c2",
+    "head": "d33743c46133de8dd322ea1bd152a63d72132630",
+    "candidateDigest": "39914c641d3f49241300ceae183fc23bdb0ef265876ffd4c1c8000cbe3a3d421",
+    "inputsDigest": "abf4d19b6c63303c26e2d4b010a1110925cfc8f4873c8fc4d6ae02e74723412c",
+    "packages": [
+      {
+        "name": "dsh-ui-kit",
+        "version": "0.1.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": {
+          "sha256": "87c69d8997e7d539e4f107ccf2621ba5412c80de8327ca7d438a9efb35219e4b",
+          "payloadDigest": "a183f2198ef5fd82085643564a230113def9d93286528c3a72798fff0828f865"
+        }
+      },
+      {
+        "name": "omnimux",
+        "version": "0.1.2",
+        "role": "task-plugin",
+        "serverEntry": {
+          "path": "src/index.js",
+          "sha256": "c223512ae1042d1010328fa94e9fe15680ecc2ceb59033ba6160781bbbfbcef7"
+        },
+        "clientBundle": {
+          "path": "lib/client.js",
+          "sha256": "9b6931cbabb78508737c1368dc53bd9216cfcee25b36bfed6bc903b32f54781e",
+          "bytes": 1435945
+        },
+        "archive": {
+          "sha256": "a76ce0fdfb29b97217e03907d5e30af00acf25f323064297ffabffd17729cc11",
+          "payloadDigest": "4ed1e5684b999c5d73aff191899ffef72ca5a9d432a49362b662a9758a18717f"
+        }
+      },
+      {
+        "name": "@aws-crypto/sha256-js",
+        "version": "5.2.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@aws-crypto/util",
+        "version": "5.2.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@aws-sdk/types",
+        "version": "3.974.6",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@smithy/types",
+        "version": "4.19.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "tslib",
+        "version": "2.8.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@smithy/util-utf8",
+        "version": "2.3.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@smithy/util-buffer-from",
+        "version": "2.2.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@smithy/is-array-buffer",
+        "version": "2.2.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@deepseek-ai/schemastery",
+        "version": "3.18.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@standard-schema/spec",
+        "version": "1.1.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@deepseek-ai/cosmokit",
+        "version": "1.8.6",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@jsquash/webp",
+        "version": "1.5.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "wasm-feature-detect",
+        "version": "1.9.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@smithy/signature-v4",
+        "version": "5.7.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@smithy/core",
+        "version": "3.35.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "aigc-provider-runtime-kit",
+        "version": "0.2.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "blobatar",
+        "version": "0.2.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "exif-reader",
+        "version": "2.0.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "image-size",
+        "version": "2.0.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "ipaddr.js",
+        "version": "2.5.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "jpeg-js",
+        "version": "0.4.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "pngjs",
+        "version": "7.0.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "ws",
+        "version": "8.21.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "yaml",
+        "version": "2.9.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "omnimux-automation",
+        "version": "0.1.0",
+        "role": "task-plugin",
+        "serverEntry": {
+          "path": "src/index.js",
+          "sha256": "e2d8139dfde9fc95e0e462716ea4906b4b7f1bfedb0b298b007922b4e26bd56e"
+        },
+        "clientBundle": {
+          "path": "lib/client.js",
+          "sha256": "2a7d0fcbfe7316735b3fbdf12c5ce1ae5acdee226eb17670f6a704586ff87a43",
+          "bytes": 320007
+        },
+        "archive": {
+          "sha256": "f87d398fa30586d5fa7ba99994a7409b842f6558e15c7263a6b611770ea186fb",
+          "payloadDigest": "e6a0857b474f3837b54dc98f3413d5d155c59939c7029f9082909a5f5613fab0"
+        }
+      },
+      {
+        "name": "luxon",
+        "version": "3.7.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "zod",
+        "version": "4.4.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "omnimux-workflow",
+        "version": "1.0.0-rc.1",
+        "role": "task-plugin",
+        "serverEntry": {
+          "path": "dist/index.js",
+          "sha256": "63335e7a7cce073bcbb5ec7ab68103b8afd1fa122bfb061b2e877e90427ee918"
+        },
+        "clientBundle": {
+          "path": "lib/client.js",
+          "sha256": "5bd3e9d17db360a249a0e2be3dab40faf0e321b03337965e5d8e0aff380063e9",
+          "bytes": 549322
+        },
+        "archive": {
+          "sha256": "6b00e0ad2bfde21c772d1ed21dca9085e38b3ca50d2ee67bc261e40dc92f02b6",
+          "payloadDigest": "2ffd58fedb9eae74631a57d07998a0c4ba0b17112d8f6f7540f1b4f899c27904"
+        }
+      },
+      {
+        "name": "@codemirror/commands",
+        "version": "6.11.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/language",
+        "version": "6.12.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/state",
+        "version": "6.7.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@marijn/find-cluster-break",
+        "version": "1.0.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/view",
+        "version": "6.43.9",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "crelt",
+        "version": "1.0.7",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "style-mod",
+        "version": "4.1.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "w3c-keyname",
+        "version": "2.2.8",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/common",
+        "version": "1.5.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/highlight",
+        "version": "1.2.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/lr",
+        "version": "1.4.10",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-markdown",
+        "version": "6.5.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/autocomplete",
+        "version": "6.20.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-html",
+        "version": "6.4.12",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-css",
+        "version": "6.3.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/css",
+        "version": "1.3.6",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-javascript",
+        "version": "6.2.5",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lint",
+        "version": "6.9.7",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/javascript",
+        "version": "1.5.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/html",
+        "version": "1.3.13",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/markdown",
+        "version": "1.7.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/merge",
+        "version": "6.12.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/marked",
+        "version": "6.0.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "marked",
+        "version": "18.0.11",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@xyflow/react",
+        "version": "12.11.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "classcat",
+        "version": "5.0.5",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "zustand",
+        "version": "4.5.7",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "use-sync-external-store",
+        "version": "1.6.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@xyflow/system",
+        "version": "0.0.80",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-drag",
+        "version": "3.0.7",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-selection",
+        "version": "3.0.11",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-interpolate",
+        "version": "3.0.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-color",
+        "version": "3.1.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-transition",
+        "version": "3.0.9",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-zoom",
+        "version": "3.0.8",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-drag",
+        "version": "3.0.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-dispatch",
+        "version": "3.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-selection",
+        "version": "3.0.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-interpolate",
+        "version": "3.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-color",
+        "version": "3.1.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-zoom",
+        "version": "3.0.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-transition",
+        "version": "3.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-ease",
+        "version": "3.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-timer",
+        "version": "3.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "lucide-react",
+        "version": "1.33.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "uuid",
+        "version": "13.0.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "zustand",
+        "version": "5.0.15",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "dsh-better-sidebar",
+        "version": "0.18.0",
+        "role": "packaged-support",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-cpp",
+        "version": "6.0.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/cpp",
+        "version": "1.1.6",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-go",
+        "version": "6.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/go",
+        "version": "1.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-java",
+        "version": "6.0.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/java",
+        "version": "1.1.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-json",
+        "version": "6.0.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/json",
+        "version": "1.0.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-php",
+        "version": "6.0.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/php",
+        "version": "1.0.6",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-python",
+        "version": "6.2.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/python",
+        "version": "1.1.19",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-rust",
+        "version": "6.0.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/rust",
+        "version": "1.0.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-sql",
+        "version": "6.10.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-vue",
+        "version": "0.1.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-xml",
+        "version": "6.1.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/xml",
+        "version": "1.0.6",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/lang-yaml",
+        "version": "6.1.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@lezer/yaml",
+        "version": "1.0.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/legacy-modes",
+        "version": "6.5.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@codemirror/search",
+        "version": "6.7.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "clsx",
+        "version": "2.1.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "dompurify",
+        "version": "3.4.15",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/trusted-types",
+        "version": "2.0.7",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "mermaid",
+        "version": "11.17.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@braintree/sanitize-url",
+        "version": "7.1.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@iconify/utils",
+        "version": "3.1.7",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@antfu/install-pkg",
+        "version": "2.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "package-manager-detector",
+        "version": "1.8.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "tinyexec",
+        "version": "1.3.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@iconify/types",
+        "version": "2.0.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "import-meta-resolve",
+        "version": "4.2.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3",
+        "version": "7.4.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-array",
+        "version": "3.2.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-axis",
+        "version": "3.0.6",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-brush",
+        "version": "3.0.6",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-chord",
+        "version": "3.0.6",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-contour",
+        "version": "3.0.6",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/geojson",
+        "version": "7946.0.16",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-delaunay",
+        "version": "6.0.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-dispatch",
+        "version": "3.0.7",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-dsv",
+        "version": "3.0.7",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-ease",
+        "version": "3.0.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-fetch",
+        "version": "3.0.7",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-force",
+        "version": "3.0.10",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-format",
+        "version": "3.0.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-geo",
+        "version": "3.1.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-hierarchy",
+        "version": "3.1.7",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-path",
+        "version": "3.1.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-polygon",
+        "version": "3.0.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-quadtree",
+        "version": "3.0.6",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-random",
+        "version": "3.0.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-scale",
+        "version": "4.0.9",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-time",
+        "version": "3.0.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-scale-chromatic",
+        "version": "3.1.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-shape",
+        "version": "3.2.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-time-format",
+        "version": "4.0.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@types/d3-timer",
+        "version": "3.0.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@upsetjs/venn.js",
+        "version": "2.0.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "cytoscape",
+        "version": "3.34.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "cytoscape-cose-bilkent",
+        "version": "4.1.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "cose-base",
+        "version": "1.0.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "layout-base",
+        "version": "1.0.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "cytoscape-fcose",
+        "version": "2.2.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "cose-base",
+        "version": "2.2.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "layout-base",
+        "version": "2.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3",
+        "version": "7.9.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-array",
+        "version": "3.2.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "internmap",
+        "version": "2.0.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-axis",
+        "version": "3.0.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-brush",
+        "version": "3.0.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-chord",
+        "version": "3.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-path",
+        "version": "3.1.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-contour",
+        "version": "4.0.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-delaunay",
+        "version": "6.0.4",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "delaunator",
+        "version": "5.1.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "robust-predicates",
+        "version": "3.0.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-dsv",
+        "version": "3.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "commander",
+        "version": "7.2.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "iconv-lite",
+        "version": "0.6.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "safer-buffer",
+        "version": "2.1.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "rw",
+        "version": "1.3.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-fetch",
+        "version": "3.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-force",
+        "version": "3.0.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-quadtree",
+        "version": "3.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-format",
+        "version": "3.1.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-geo",
+        "version": "3.1.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-hierarchy",
+        "version": "3.1.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-polygon",
+        "version": "3.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-random",
+        "version": "3.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-scale",
+        "version": "4.0.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-time",
+        "version": "3.1.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-time-format",
+        "version": "4.1.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-scale-chromatic",
+        "version": "3.1.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-shape",
+        "version": "3.2.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-sankey",
+        "version": "0.12.3",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-array",
+        "version": "2.12.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "internmap",
+        "version": "1.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-shape",
+        "version": "1.3.7",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "d3-path",
+        "version": "1.0.9",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "dagre-d3-es",
+        "version": "7.0.14",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "lodash-es",
+        "version": "4.18.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "dayjs",
+        "version": "1.11.23",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "es-toolkit",
+        "version": "1.52.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "fastdom",
+        "version": "1.0.12",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "strictdom",
+        "version": "1.0.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "katex",
+        "version": "0.16.47",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "commander",
+        "version": "8.3.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "khroma",
+        "version": "2.1.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "marked",
+        "version": "16.4.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "roughjs",
+        "version": "4.6.6",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "hachure-fill",
+        "version": "0.5.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "path-data-parser",
+        "version": "0.1.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "points-on-curve",
+        "version": "0.2.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "points-on-path",
+        "version": "0.2.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "stylis",
+        "version": "4.4.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "ts-dedent",
+        "version": "2.3.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@mermaid-js/parser",
+        "version": "1.2.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "@chevrotain/types",
+        "version": "11.1.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "node-pty",
+        "version": "1.1.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "node-addon-api",
+        "version": "7.1.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "react-icons",
+        "version": "5.7.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "rxjs",
+        "version": "7.8.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "schemastery",
+        "version": "3.18.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "cosmokit",
+        "version": "1.8.1",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "react-dom",
+        "version": "18.3.1",
+        "role": "local-peer-support",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "loose-envify",
+        "version": "1.4.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "js-tokens",
+        "version": "4.0.0",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      },
+      {
+        "name": "scheduler",
+        "version": "0.23.2",
+        "role": "task-plugin",
+        "serverEntry": null,
+        "clientBundle": null,
+        "archive": null
+      }
+    ]
+  },
+  "serverLoading": {
+    "kind": "task-server-loading",
+    "taskId": "3289",
+    "runId": "accept-mvll6g8q-90wdmj",
+    "origin": "http://127.0.0.1:64160",
+    "pid": 74948,
+    "sourceRoot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/3d-ui-minimax-3646",
+    "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT",
+    "profile": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/dsh/profiles/web",
+    "base": "8e42dc961508faebab75e12bfec0a4123cc155c2",
+    "head": "d33743c46133de8dd322ea1bd152a63d72132630",
+    "candidateDigest": "39914c641d3f49241300ceae183fc23bdb0ef265876ffd4c1c8000cbe3a3d421",
+    "inputsDigest": "abf4d19b6c63303c26e2d4b010a1110925cfc8f4873c8fc4d6ae02e74723412c",
+    "runtimeExecutable": "/Applications/OmniMux Dev.app/Contents/MacOS/OmniMux",
+    "modules": [
+      {
+        "name": "omnimux",
+        "path": "src/index.js",
+        "sha256": "c223512ae1042d1010328fa94e9fe15680ecc2ceb59033ba6160781bbbfbcef7",
+        "bytes": 198,
+        "loadedScriptUrl": "file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/1/src/index.js",
+        "loadedScriptSha256": "c223512ae1042d1010328fa94e9fe15680ecc2ceb59033ba6160781bbbfbcef7",
+        "matchingScriptCount": 1
+      },
+      {
+        "name": "omnimux-automation",
+        "path": "src/index.js",
+        "sha256": "e2d8139dfde9fc95e0e462716ea4906b4b7f1bfedb0b298b007922b4e26bd56e",
+        "bytes": 7201,
+        "loadedScriptUrl": "file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/26/src/index.js",
+        "loadedScriptSha256": "e2d8139dfde9fc95e0e462716ea4906b4b7f1bfedb0b298b007922b4e26bd56e",
+        "matchingScriptCount": 1
+      },
+      {
+        "name": "omnimux-workflow",
+        "path": "dist/index.js",
+        "sha256": "63335e7a7cce073bcbb5ec7ab68103b8afd1fa122bfb061b2e877e90427ee918",
+        "bytes": 1873256,
+        "loadedScriptUrl": "file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/29/dist/index.js",
+        "loadedScriptSha256": "63335e7a7cce073bcbb5ec7ab68103b8afd1fa122bfb061b2e877e90427ee918",
+        "matchingScriptCount": 1
+      }
+    ],
+    "peers": [
+      {
+        "parentName": "dsh-ui-kit",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/0",
+        "name": "@deepseek-ai/dsh-client-ui-primitives",
+        "spec": ">=0.1.0-rc.6",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+        "manifestSha256": "971f734ac325db114f34542e5cf4da4f5549bb040a161ddd47fca200524beb44",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+        "entrySha256": "cd55c03145232b49894dc7d9719b66ded954c4f0ae6ac70f3df759cdf7c36804",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+          "manifestSha256": "971f734ac325db114f34542e5cf4da4f5549bb040a161ddd47fca200524beb44",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+          "entrySha256": "cd55c03145232b49894dc7d9719b66ded954c4f0ae6ac70f3df759cdf7c36804"
+        }
+      },
+      {
+        "parentName": "dsh-ui-kit",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/0",
+        "name": "react",
+        "spec": ">=18.2.0",
+        "optional": false,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+        "version": "18.3.1",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+        "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+        "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+        }
+      },
+      {
+        "parentName": "dsh-ui-kit",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/0",
+        "name": "react-dom",
+        "spec": ">=18.2.0",
+        "optional": false,
+        "versionPolicy": "semver",
+        "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204",
+        "packageRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204",
+        "version": "18.3.1",
+        "manifestPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204/package.json",
+        "manifestSha256": "c68b3b95bc20af68b1b413379c655452a3eca551828152c360af37c5b3763b9d",
+        "entryPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204/index.js",
+        "entrySha256": "f26fcb81b5d1dc32c6edea34645c75b60d259916293d3208c8be48ac33e882e4",
+        "status": "resolved",
+        "scope": "private",
+        "anchorResolution": null
+      },
+      {
+        "parentName": "omnimux",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/1",
+        "name": "@deepseek-ai/dsh-client-ui-primitives",
+        "spec": ">=0.1.0-rc.6",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+        "manifestSha256": "971f734ac325db114f34542e5cf4da4f5549bb040a161ddd47fca200524beb44",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+        "entrySha256": "cd55c03145232b49894dc7d9719b66ded954c4f0ae6ac70f3df759cdf7c36804",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+          "manifestSha256": "971f734ac325db114f34542e5cf4da4f5549bb040a161ddd47fca200524beb44",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+          "entrySha256": "cd55c03145232b49894dc7d9719b66ded954c4f0ae6ac70f3df759cdf7c36804"
+        }
+      },
+      {
+        "parentName": "omnimux",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/1",
+        "name": "react",
+        "spec": "^18.2.0",
+        "optional": true,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+        "version": "18.3.1",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+        "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+        "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+        }
+      },
+      {
+        "parentName": "omnimux",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/1",
+        "name": "react-dom",
+        "spec": "^18.2.0",
+        "optional": true,
+        "versionPolicy": "semver",
+        "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204",
+        "packageRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204",
+        "version": "18.3.1",
+        "manifestPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204/package.json",
+        "manifestSha256": "c68b3b95bc20af68b1b413379c655452a3eca551828152c360af37c5b3763b9d",
+        "entryPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204/index.js",
+        "entrySha256": "f26fcb81b5d1dc32c6edea34645c75b60d259916293d3208c8be48ac33e882e4",
+        "status": "resolved",
+        "scope": "private",
+        "anchorResolution": null
+      },
+      {
+        "parentName": "blobatar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/18",
+        "name": "react",
+        "spec": ">=18",
+        "optional": true,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+        "version": "18.3.1",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+        "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+        "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+        }
+      },
+      {
+        "parentName": "ws",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/24",
+        "name": "bufferutil",
+        "spec": "^4.0.1",
+        "optional": true,
+        "versionPolicy": "semver",
+        "status": "missing",
+        "scope": null,
+        "version": null,
+        "packageRoot": null,
+        "manifestPath": null,
+        "manifestSha256": null,
+        "entryPath": null,
+        "entrySha256": null,
+        "anchorResolution": null
+      },
+      {
+        "parentName": "ws",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/24",
+        "name": "utf-8-validate",
+        "spec": ">=5.0.2",
+        "optional": true,
+        "versionPolicy": "semver",
+        "status": "missing",
+        "scope": null,
+        "version": null,
+        "packageRoot": null,
+        "manifestPath": null,
+        "manifestSha256": null,
+        "entryPath": null,
+        "entrySha256": null,
+        "anchorResolution": null
+      },
+      {
+        "parentName": "omnimux-automation",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/26",
+        "name": "@deepseek-ai/cordis",
+        "spec": ">=4.0.1",
+        "optional": false,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/cordis",
+        "version": "4.0.2",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/cordis/package.json",
+        "manifestSha256": "1cb01e8234e0131450504f80e3ecb869b0f6b643cc1ab9e778ca91fed4378ebc",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/cordis/lib/index.js",
+        "entrySha256": "1729cdbf8ee40b17c8839e06bf96491490548559e11ef7e411271e0754e751c5",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/cordis",
+          "version": "4.0.2",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/cordis/package.json",
+          "manifestSha256": "1cb01e8234e0131450504f80e3ecb869b0f6b643cc1ab9e778ca91fed4378ebc",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/cordis/lib/index.js",
+          "entrySha256": "1729cdbf8ee40b17c8839e06bf96491490548559e11ef7e411271e0754e751c5"
+        }
+      },
+      {
+        "parentName": "omnimux-automation",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/26",
+        "name": "@deepseek-ai/dsh-client-ui-primitives",
+        "spec": ">=0.1.0-rc.6",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+        "manifestSha256": "971f734ac325db114f34542e5cf4da4f5549bb040a161ddd47fca200524beb44",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+        "entrySha256": "cd55c03145232b49894dc7d9719b66ded954c4f0ae6ac70f3df759cdf7c36804",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+          "manifestSha256": "971f734ac325db114f34542e5cf4da4f5549bb040a161ddd47fca200524beb44",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+          "entrySha256": "cd55c03145232b49894dc7d9719b66ded954c4f0ae6ac70f3df759cdf7c36804"
+        }
+      },
+      {
+        "parentName": "omnimux-automation",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/26",
+        "name": "react",
+        "spec": "^18.2.0",
+        "optional": true,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+        "version": "18.3.1",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+        "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+        "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+        }
+      },
+      {
+        "parentName": "omnimux-automation",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/26",
+        "name": "react-dom",
+        "spec": "^18.2.0",
+        "optional": true,
+        "versionPolicy": "semver",
+        "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204",
+        "packageRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204",
+        "version": "18.3.1",
+        "manifestPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204/package.json",
+        "manifestSha256": "c68b3b95bc20af68b1b413379c655452a3eca551828152c360af37c5b3763b9d",
+        "entryPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204/index.js",
+        "entrySha256": "f26fcb81b5d1dc32c6edea34645c75b60d259916293d3208c8be48ac33e882e4",
+        "status": "resolved",
+        "scope": "private",
+        "anchorResolution": null
+      },
+      {
+        "parentName": "omnimux-workflow",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/29",
+        "name": "@deepseek-ai/dsh-client-ui-primitives",
+        "spec": ">=0.1.0-rc.6",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+        "manifestSha256": "971f734ac325db114f34542e5cf4da4f5549bb040a161ddd47fca200524beb44",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+        "entrySha256": "cd55c03145232b49894dc7d9719b66ded954c4f0ae6ac70f3df759cdf7c36804",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+          "manifestSha256": "971f734ac325db114f34542e5cf4da4f5549bb040a161ddd47fca200524beb44",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+          "entrySha256": "cd55c03145232b49894dc7d9719b66ded954c4f0ae6ac70f3df759cdf7c36804"
+        }
+      },
+      {
+        "parentName": "omnimux-workflow",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/29",
+        "name": "react",
+        "spec": "^18.2.0 || ^19.2.8",
+        "optional": true,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+        "version": "18.3.1",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+        "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+        "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+        }
+      },
+      {
+        "parentName": "omnimux-workflow",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/29",
+        "name": "react-dom",
+        "spec": "^18.2.0 || ^19.2.8",
+        "optional": true,
+        "versionPolicy": "semver",
+        "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204",
+        "packageRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204",
+        "version": "18.3.1",
+        "manifestPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204/package.json",
+        "manifestSha256": "c68b3b95bc20af68b1b413379c655452a3eca551828152c360af37c5b3763b9d",
+        "entryPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204/index.js",
+        "entrySha256": "f26fcb81b5d1dc32c6edea34645c75b60d259916293d3208c8be48ac33e882e4",
+        "status": "resolved",
+        "scope": "private",
+        "anchorResolution": null
+      },
+      {
+        "parentName": "@xyflow/react",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/54",
+        "name": "@types/react",
+        "spec": ">=17",
+        "optional": true,
+        "versionPolicy": "semver",
+        "status": "missing",
+        "scope": null,
+        "version": null,
+        "packageRoot": null,
+        "manifestPath": null,
+        "manifestSha256": null,
+        "entryPath": null,
+        "entrySha256": null,
+        "anchorResolution": null
+      },
+      {
+        "parentName": "@xyflow/react",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/54",
+        "name": "@types/react-dom",
+        "spec": ">=17",
+        "optional": true,
+        "versionPolicy": "semver",
+        "status": "missing",
+        "scope": null,
+        "version": null,
+        "packageRoot": null,
+        "manifestPath": null,
+        "manifestSha256": null,
+        "entryPath": null,
+        "entrySha256": null,
+        "anchorResolution": null
+      },
+      {
+        "parentName": "@xyflow/react",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/54",
+        "name": "react",
+        "spec": ">=17",
+        "optional": false,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+        "version": "18.3.1",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+        "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+        "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+        }
+      },
+      {
+        "parentName": "@xyflow/react",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/54",
+        "name": "react-dom",
+        "spec": ">=17",
+        "optional": false,
+        "versionPolicy": "semver",
+        "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204",
+        "packageRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204",
+        "version": "18.3.1",
+        "manifestPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204/package.json",
+        "manifestSha256": "c68b3b95bc20af68b1b413379c655452a3eca551828152c360af37c5b3763b9d",
+        "entryPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204/index.js",
+        "entrySha256": "f26fcb81b5d1dc32c6edea34645c75b60d259916293d3208c8be48ac33e882e4",
+        "status": "resolved",
+        "scope": "private",
+        "anchorResolution": null
+      },
+      {
+        "parentName": "zustand",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/56",
+        "name": "@types/react",
+        "spec": ">=16.8",
+        "optional": true,
+        "versionPolicy": "semver",
+        "status": "missing",
+        "scope": null,
+        "version": null,
+        "packageRoot": null,
+        "manifestPath": null,
+        "manifestSha256": null,
+        "entryPath": null,
+        "entrySha256": null,
+        "anchorResolution": null
+      },
+      {
+        "parentName": "zustand",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/56",
+        "name": "immer",
+        "spec": ">=9.0.6",
+        "optional": true,
+        "versionPolicy": "semver",
+        "status": "missing",
+        "scope": null,
+        "version": null,
+        "packageRoot": null,
+        "manifestPath": null,
+        "manifestSha256": null,
+        "entryPath": null,
+        "entrySha256": null,
+        "anchorResolution": null
+      },
+      {
+        "parentName": "zustand",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/56",
+        "name": "react",
+        "spec": ">=16.8",
+        "optional": true,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+        "version": "18.3.1",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+        "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+        "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+        }
+      },
+      {
+        "parentName": "use-sync-external-store",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/57",
+        "name": "react",
+        "spec": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
+        "optional": false,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+        "version": "18.3.1",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+        "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+        "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+        }
+      },
+      {
+        "parentName": "d3-transition",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/71",
+        "name": "d3-selection",
+        "spec": "2 - 3",
+        "optional": false,
+        "versionPolicy": "semver",
+        "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/67",
+        "packageRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/67",
+        "version": "3.0.0",
+        "manifestPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/67/package.json",
+        "manifestSha256": "263b6352c390fd3d939f42e0e4cd5e79a34f2d842509586315c116e2f3d108fe",
+        "entryPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/67/src/index.js",
+        "entrySha256": "fd959eeb0c92170461869de82837476e011044f7ac4a87bfe859623de3ec94b9",
+        "status": "resolved",
+        "scope": "private",
+        "anchorResolution": null
+      },
+      {
+        "parentName": "lucide-react",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/74",
+        "name": "react",
+        "spec": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0",
+        "optional": false,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+        "version": "18.3.1",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+        "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+        "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+        }
+      },
+      {
+        "parentName": "zustand",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/76",
+        "name": "@types/react",
+        "spec": ">=18.0.0",
+        "optional": true,
+        "versionPolicy": "semver",
+        "status": "missing",
+        "scope": null,
+        "version": null,
+        "packageRoot": null,
+        "manifestPath": null,
+        "manifestSha256": null,
+        "entryPath": null,
+        "entrySha256": null,
+        "anchorResolution": null
+      },
+      {
+        "parentName": "zustand",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/76",
+        "name": "immer",
+        "spec": ">=9.0.6",
+        "optional": true,
+        "versionPolicy": "semver",
+        "status": "missing",
+        "scope": null,
+        "version": null,
+        "packageRoot": null,
+        "manifestPath": null,
+        "manifestSha256": null,
+        "entryPath": null,
+        "entrySha256": null,
+        "anchorResolution": null
+      },
+      {
+        "parentName": "zustand",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/76",
+        "name": "react",
+        "spec": ">=18.0.0",
+        "optional": true,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+        "version": "18.3.1",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+        "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+        "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+        }
+      },
+      {
+        "parentName": "zustand",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/76",
+        "name": "use-sync-external-store",
+        "spec": ">=1.2.0",
+        "optional": true,
+        "versionPolicy": "semver",
+        "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/57",
+        "packageRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/57",
+        "version": "1.6.0",
+        "manifestPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/57/package.json",
+        "manifestSha256": "df9f5ce4ebe9420de20a2bcbbfce4e1059f43e272c1e7c7fb1d6923eacfdaa17",
+        "entryPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/57/index.js",
+        "entrySha256": "d21888099b46792f16d5a540623cda49d270a7346ffe3878435cc312abb17682",
+        "status": "resolved",
+        "scope": "private",
+        "anchorResolution": null
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@deepseek-ai/cordis",
+        "spec": "^4.0.2",
+        "optional": false,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/cordis",
+        "version": "4.0.2",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/cordis/package.json",
+        "manifestSha256": "1cb01e8234e0131450504f80e3ecb869b0f6b643cc1ab9e778ca91fed4378ebc",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/cordis/lib/index.js",
+        "entrySha256": "1729cdbf8ee40b17c8839e06bf96491490548559e11ef7e411271e0754e751c5",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/cordis",
+          "version": "4.0.2",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/cordis/package.json",
+          "manifestSha256": "1cb01e8234e0131450504f80e3ecb869b0f6b643cc1ab9e778ca91fed4378ebc",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/cordis/lib/index.js",
+          "entrySha256": "1729cdbf8ee40b17c8839e06bf96491490548559e11ef7e411271e0754e751c5"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@deepseek-ai/dsh-agent",
+        "spec": "^0.1.2-rc.1",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-agent",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-agent/package.json",
+        "manifestSha256": "ca0ecc5dcde5151e3f69a6fba7d365b4e14fb276e67e9f3a327652bf4c5445a3",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-agent/lib/index.js",
+        "entrySha256": "b05aa36fce8e2f910596a682fb1d2b461eac2549e344360c92711a557d06b0bb",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-agent",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-agent/package.json",
+          "manifestSha256": "ca0ecc5dcde5151e3f69a6fba7d365b4e14fb276e67e9f3a327652bf4c5445a3",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-agent/lib/index.js",
+          "entrySha256": "b05aa36fce8e2f910596a682fb1d2b461eac2549e344360c92711a557d06b0bb"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@deepseek-ai/dsh-client-locale",
+        "spec": "^0.1.2-rc.1",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-locale",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-locale/package.json",
+        "manifestSha256": "eba90917a55b08a28f56905e28daf0d53b194ee0bfcacd5100e84181110531ee",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-locale/lib/index.js",
+        "entrySha256": "8feea464ae0f7249d7c10e49f8cdb1aed8f80a09da5a8bf98c1ccd6ef2f957b3",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-locale",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-locale/package.json",
+          "manifestSha256": "eba90917a55b08a28f56905e28daf0d53b194ee0bfcacd5100e84181110531ee",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-locale/lib/index.js",
+          "entrySha256": "8feea464ae0f7249d7c10e49f8cdb1aed8f80a09da5a8bf98c1ccd6ef2f957b3"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@deepseek-ai/dsh-client-ui-conversation",
+        "spec": "^0.1.2-rc.1",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-conversation",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-conversation/package.json",
+        "manifestSha256": "1c6cd9ca0f27ecb40d4d2b09c3f2e4518c900bc6671333d97dce80e771601f07",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/index.js",
+        "entrySha256": "10ff8bedfbf8330edc502fce831650405bd1bb74a0215222b385fb68a85c45c5",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-conversation",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-conversation/package.json",
+          "manifestSha256": "1c6cd9ca0f27ecb40d4d2b09c3f2e4518c900bc6671333d97dce80e771601f07",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/index.js",
+          "entrySha256": "10ff8bedfbf8330edc502fce831650405bd1bb74a0215222b385fb68a85c45c5"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@deepseek-ai/dsh-client-ui-primitives",
+        "spec": "^0.1.2-rc.1",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+        "manifestSha256": "971f734ac325db114f34542e5cf4da4f5549bb040a161ddd47fca200524beb44",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+        "entrySha256": "cd55c03145232b49894dc7d9719b66ded954c4f0ae6ac70f3df759cdf7c36804",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+          "manifestSha256": "971f734ac325db114f34542e5cf4da4f5549bb040a161ddd47fca200524beb44",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+          "entrySha256": "cd55c03145232b49894dc7d9719b66ded954c4f0ae6ac70f3df759cdf7c36804"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@deepseek-ai/dsh-client-ui-settings",
+        "spec": "^0.1.2-rc.1",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-settings",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-settings/package.json",
+        "manifestSha256": "a8918db738ce3c02a70a7b1ae6bbb69f091e4cfda1f406e4ce8161f456013e25",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-settings/lib/index.js",
+        "entrySha256": "958bde60278c1f867e477e6c1a6146059980260acb2e0f7fbc62dcb29d946d42",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-settings",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-settings/package.json",
+          "manifestSha256": "a8918db738ce3c02a70a7b1ae6bbb69f091e4cfda1f406e4ce8161f456013e25",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-settings/lib/index.js",
+          "entrySha256": "958bde60278c1f867e477e6c1a6146059980260acb2e0f7fbc62dcb29d946d42"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@deepseek-ai/dsh-client-ui-slots",
+        "spec": "^0.1.2-rc.1",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-slots",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-slots/package.json",
+        "manifestSha256": "f0fa698bea73ac0cd36aea18694dd5614e082d6d7c835ee95f8aad9e16eebf02",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-slots/lib/index.js",
+        "entrySha256": "5433ef2cb74699a59000052c4b1899808c83544f45ba6176f297efc68414c588",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-slots",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-slots/package.json",
+          "manifestSha256": "f0fa698bea73ac0cd36aea18694dd5614e082d6d7c835ee95f8aad9e16eebf02",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-slots/lib/index.js",
+          "entrySha256": "5433ef2cb74699a59000052c4b1899808c83544f45ba6176f297efc68414c588"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@deepseek-ai/dsh-host-webserver",
+        "spec": "^0.1.2-rc.1",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-host-webserver",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-host-webserver/package.json",
+        "manifestSha256": "b41e9b9e38d1deaa73de5053568a3f7e716baa09a61d655b43a942cb2823b60d",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-host-webserver/lib/index.js",
+        "entrySha256": "040500dc252b5c0f1e8f577af873e1ac4a38a554d2e6dc2f8c5a4c8d2245be4d",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-host-webserver",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-host-webserver/package.json",
+          "manifestSha256": "b41e9b9e38d1deaa73de5053568a3f7e716baa09a61d655b43a942cb2823b60d",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-host-webserver/lib/index.js",
+          "entrySha256": "040500dc252b5c0f1e8f577af873e1ac4a38a554d2e6dc2f8c5a4c8d2245be4d"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@deepseek-ai/dsh-invariants",
+        "spec": "^0.1.2-rc.1",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-invariants",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-invariants/package.json",
+        "manifestSha256": "fbdd1a31c85eb9dba9462de63a31295403155004c3605a1013886f1d7a37b617",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-invariants/lib/index.js",
+        "entrySha256": "1847721f505b1cb1a04000d5590a4675c20b6e9ab6c827c20a01c32c2317d68c",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-invariants",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-invariants/package.json",
+          "manifestSha256": "fbdd1a31c85eb9dba9462de63a31295403155004c3605a1013886f1d7a37b617",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-invariants/lib/index.js",
+          "entrySha256": "1847721f505b1cb1a04000d5590a4675c20b6e9ab6c827c20a01c32c2317d68c"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@deepseek-ai/dsh-llm",
+        "spec": "^0.1.2-rc.1",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-llm",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-llm/package.json",
+        "manifestSha256": "6e3bad56aeba4537bcf6f61a8b31a474522b1b99b19bf8a12089bce415e1abd7",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-llm/lib/index.js",
+        "entrySha256": "f54d86572d4c0e8d9348cdc65e4c4684a4956a91162815d3c52ee7c0c58225ed",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-llm",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-llm/package.json",
+          "manifestSha256": "6e3bad56aeba4537bcf6f61a8b31a474522b1b99b19bf8a12089bce415e1abd7",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-llm/lib/index.js",
+          "entrySha256": "f54d86572d4c0e8d9348cdc65e4c4684a4956a91162815d3c52ee7c0c58225ed"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@deepseek-ai/dsh-session",
+        "spec": "^0.1.2-rc.1",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-session",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-session/package.json",
+        "manifestSha256": "f0e9647350e5bbf0fbe10a8a2c6a60b4f1d6c5f3e9f10f8b8c93c866773bd109",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-session/lib/index.js",
+        "entrySha256": "05e94f57d96e7979670a5b51024c8591572eb0051ce793613dbdec35cf2c47bf",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-session",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-session/package.json",
+          "manifestSha256": "f0e9647350e5bbf0fbe10a8a2c6a60b4f1d6c5f3e9f10f8b8c93c866773bd109",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-session/lib/index.js",
+          "entrySha256": "05e94f57d96e7979670a5b51024c8591572eb0051ce793613dbdec35cf2c47bf"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@deepseek-ai/dsh-settings",
+        "spec": "^0.1.2-rc.1",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-settings",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-settings/package.json",
+        "manifestSha256": "86b1cbc46a3a36a7a1f4a765e18d659ce5266c9b1b9bda1b53f289ea8ef3a688",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-settings/lib/index.js",
+        "entrySha256": "aa4d47910f89bf2a6511470c82a08534ae4ae6f1675d9170ce3b30296b482566",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-settings",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-settings/package.json",
+          "manifestSha256": "86b1cbc46a3a36a7a1f4a765e18d659ce5266c9b1b9bda1b53f289ea8ef3a688",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-settings/lib/index.js",
+          "entrySha256": "aa4d47910f89bf2a6511470c82a08534ae4ae6f1675d9170ce3b30296b482566"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@deepseek-ai/dsh-subagent",
+        "spec": "^0.1.2-rc.1",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-subagent",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-subagent/package.json",
+        "manifestSha256": "1e8644d85e913e3016ed014d7d10e8915d8c5c691da127c4c82a226dbfdb97bc",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-subagent/lib/index.js",
+        "entrySha256": "b8ea0e37bd6f1d9c4bd870c4ca03839f6d0e42f648a83578e31a448f6dffe4ef",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-subagent",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-subagent/package.json",
+          "manifestSha256": "1e8644d85e913e3016ed014d7d10e8915d8c5c691da127c4c82a226dbfdb97bc",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-subagent/lib/index.js",
+          "entrySha256": "b8ea0e37bd6f1d9c4bd870c4ca03839f6d0e42f648a83578e31a448f6dffe4ef"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@deepseek-ai/dsh-tools",
+        "spec": "^0.1.2-rc.1",
+        "optional": false,
+        "versionPolicy": "explicit-prerelease-bounds",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-tools",
+        "version": "0.1.5-rc.3",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-tools/package.json",
+        "manifestSha256": "ef53d0da2b401e4f9f62e55a3cdca767c9f441bbac7329fa6abe63a2bd0ec9c9",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-tools/lib/index.js",
+        "entrySha256": "aaba52bf5d0149355407642b3965c06977d1e9143f5c61bc19429abbe6a11c5d",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-tools",
+          "version": "0.1.5-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-tools/package.json",
+          "manifestSha256": "ef53d0da2b401e4f9f62e55a3cdca767c9f441bbac7329fa6abe63a2bd0ec9c9",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-tools/lib/index.js",
+          "entrySha256": "aaba52bf5d0149355407642b3965c06977d1e9143f5c61bc19429abbe6a11c5d"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "@huanlin/dsh-plugin-better-locale",
+        "spec": "^0.1.0",
+        "optional": true,
+        "versionPolicy": "semver",
+        "status": "missing",
+        "scope": null,
+        "version": null,
+        "packageRoot": null,
+        "manifestPath": null,
+        "manifestSha256": null,
+        "entryPath": null,
+        "entrySha256": null,
+        "anchorResolution": null
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "react",
+        "spec": "^18.2.0",
+        "optional": false,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+        "version": "18.3.1",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+        "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+        "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+        }
+      },
+      {
+        "parentName": "dsh-better-sidebar",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/77",
+        "name": "react-dom",
+        "spec": "^18.2.0",
+        "optional": false,
+        "versionPolicy": "semver",
+        "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204",
+        "packageRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204",
+        "version": "18.3.1",
+        "manifestPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204/package.json",
+        "manifestSha256": "c68b3b95bc20af68b1b413379c655452a3eca551828152c360af37c5b3763b9d",
+        "entryPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204/index.js",
+        "entrySha256": "f26fcb81b5d1dc32c6edea34645c75b60d259916293d3208c8be48ac33e882e4",
+        "status": "resolved",
+        "scope": "private",
+        "anchorResolution": null
+      },
+      {
+        "parentName": "cytoscape-cose-bilkent",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/139",
+        "name": "cytoscape",
+        "spec": "^3.2.0",
+        "optional": false,
+        "versionPolicy": "semver",
+        "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/138",
+        "packageRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/138",
+        "version": "3.34.3",
+        "manifestPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/138/package.json",
+        "manifestSha256": "b3bc3f05d732c7e269f4cbd29be5e23f8ea04c4091a536b5a5219b2384025e26",
+        "entryPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/138/dist/cytoscape.cjs.js",
+        "entrySha256": "27b88998b793657b895aea595bd8112480070cf66b8440c77f917612919d8371",
+        "status": "resolved",
+        "scope": "private",
+        "anchorResolution": null
+      },
+      {
+        "parentName": "cytoscape-fcose",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/142",
+        "name": "cytoscape",
+        "spec": "^3.2.0",
+        "optional": false,
+        "versionPolicy": "semver",
+        "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/138",
+        "packageRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/138",
+        "version": "3.34.3",
+        "manifestPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/138/package.json",
+        "manifestSha256": "b3bc3f05d732c7e269f4cbd29be5e23f8ea04c4091a536b5a5219b2384025e26",
+        "entryPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/138/dist/cytoscape.cjs.js",
+        "entrySha256": "27b88998b793657b895aea595bd8112480070cf66b8440c77f917612919d8371",
+        "status": "resolved",
+        "scope": "private",
+        "anchorResolution": null
+      },
+      {
+        "parentName": "react-icons",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/200",
+        "name": "react",
+        "spec": "*",
+        "optional": false,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+        "version": "18.3.1",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+        "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+        "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+        }
+      },
+      {
+        "parentName": "react-dom",
+        "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/task-packages/204",
+        "name": "react",
+        "spec": "^18.3.1",
+        "optional": false,
+        "versionPolicy": "semver",
+        "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+        "version": "18.3.1",
+        "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+        "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+        "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+        "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+        "status": "resolved",
+        "scope": "shipping-app",
+        "anchorResolution": {
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+        }
+      }
+    ],
+    "peerObserver": {
+      "path": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/dsh/profiles/web/task-peer-probe.mjs",
+      "sha256": "a1e85df7884150a0fc6cb1aec10e06d043df332ac2a9cf4969f58581dfb8e3c5",
+      "loadedScriptUrl": "file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-3289-accept-mvll6g8q-90wdmj-6E3iAT/dsh/profiles/web/task-peer-probe.mjs",
+      "loadedScriptSha256": "a1e85df7884150a0fc6cb1aec10e06d043df332ac2a9cf4969f58581dfb8e3c5",
+      "matchingScriptCount": 1
+    }
+  }
+}
