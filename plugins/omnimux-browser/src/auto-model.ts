@@ -7,7 +7,9 @@
  * `session.selectModel` before the prompt is forwarded. Routing is fail-open:
  * a missing seam, a thrown evaluation, an exhausted timeout, a decision outside
  * the candidate set, or a failed selectModel never blocks the prompt — the call
- * passes through on the session's current model.
+ * passes through on the session's current model. Sessions pinned by
+ * `bridge.textGeneration` (Issue #3629) are exempt from routing: they already
+ * carry an explicit model and are forwarded untouched.
  *
  * @module @yuxianglin/dsh-bridge-browser/src/auto-model
  */
@@ -63,6 +65,18 @@ export interface AutoModelRoutingDeps {
   readonly candidates: () => readonly AutoModelCandidate[]
   /** Current panel mode; anything other than `{auto: true}` passes through. */
   readonly getMode: () => { readonly auto: boolean }
+  /**
+   * Sessions already pinned to an explicit model (Issue #3629): the panel's
+   * text-generation sessions. A pinned session skips Jev routing entirely —
+   * the pin already chose the model, so a second implicit choice would
+   * silently override the user's text-generation setting.
+   */
+  readonly isPinned?: (sessionId: string) => boolean
+  /**
+   * Trace sink for a pin predicate that threw (Issue #3629). Routing continues
+   * either way, but a broken registry must be observable instead of silent.
+   */
+  readonly warn?: (message: string) => void
   /** Post-pass notification for the host log; never blocks routing. */
   readonly onRouted?: (info: AutoModelRouteInfo) => void
   /** Evaluation budget override; defaults to {@link AUTO_MODEL_EVALUATE_TIMEOUT_MS}. */
@@ -166,6 +180,18 @@ export function withAutoModelRouting(
         ? call.payload.sessionId
         : undefined
       if (sessionId === undefined) return api.call(call)
+      // A pinned session already carries an explicit model: forward without a
+      // routing pass, so neither Jev nor selectModel runs. A broken predicate
+      // must never block a prompt, but it must not be silent either: the trace
+      // names the session and the failure stays visible in the host log.
+      let pinned = false
+      try {
+        pinned = deps.isPinned?.(sessionId) === true
+      } catch (error: unknown) {
+        deps.warn?.(`browser bridge: text-generation pin check failed for session ${sessionId}: ${String(error)}`)
+        pinned = false
+      }
+      if (pinned) return api.call(call)
       if (deps.getMode().auto !== true) return api.call(call)
 
       const info = await route(deps, sessionId, extractPromptText(call.payload), timeoutMs)

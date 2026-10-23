@@ -100,6 +100,91 @@ export const BRIDGE_PRODUCED_MEDIA_METHOD = 'omnimux.producedMedia'
 export const BRIDGE_MODEL_MODE_METHOD = 'bridge.modelMode'
 
 /**
+ * Internal RPC the panel uses to pin ONE temporary session to an explicit
+ * text-generation model (Issue #3629).
+ *
+ * The panel keeps two independent model settings: the conversation model and
+ * the text-generation model. Before a one-shot body generation it pins the
+ * freshly created session here: the host materializes that deferred session,
+ * selects the model (with its provider), then records the session as pinned —
+ * a pinned session is never re-chosen by `bridge.modelMode` auto routing. Set
+ * semantics only, held in process memory like the session model itself: it
+ * never touches durable storage.
+ */
+export const BRIDGE_TEXT_GENERATION_METHOD = 'bridge.textGeneration'
+
+/** Longest accepted `sessionId`/`model` for {@link BRIDGE_TEXT_GENERATION_METHOD}. */
+export const TEXT_GENERATION_MAX_ID_CHARS = 200
+
+/** Longest accepted `provider`/`reasoningEffort` value. */
+export const TEXT_GENERATION_MAX_OPTION_CHARS = 64
+
+/** Payload of {@link BRIDGE_TEXT_GENERATION_METHOD}. */
+export interface TextGenerationRequest {
+  /** Session the pin applies to (the temporary text-generation session). */
+  sessionId: string
+  /** Explicit text-generation model the session must use. */
+  model: string
+  /**
+   * Gateway provider id for that model. Required: the Host's
+   * `session/selectModel` codec lists `provider` as required, so a provider-less
+   * pin would be rejected there instead of failing at this contract boundary.
+   */
+  provider: string
+  /** Optional reasoning effort for that model. */
+  reasoningEffort?: string
+}
+
+/** Sentinel distinguishing "present but illegal" from "absent" in {@link optionalBoundedText}. */
+const INVALID_OPTION = Symbol('invalid-option')
+
+function isBoundedNonEmptyText(value: unknown, max: number): value is string {
+  return typeof value === 'string' && value.trim() !== '' && value.length <= max
+}
+
+/**
+ * Read one optional bounded string. Absent and empty values mean "not set";
+ * a non-string or an over-long value is illegal.
+ */
+function optionalBoundedText(value: unknown, max: number): string | undefined | typeof INVALID_OPTION {
+  if (value === undefined || value === '') return undefined
+  if (typeof value !== 'string' || value.length > max) return INVALID_OPTION
+  return value
+}
+
+/**
+ * Validate a {@link TextGenerationRequest} that arrived over the bridge.
+ *
+ * `sessionId` and `model` must be non-empty and at most
+ * {@link TEXT_GENERATION_MAX_ID_CHARS} characters; `provider` must be non-empty
+ * and at most {@link TEXT_GENERATION_MAX_OPTION_CHARS} characters (the Host's
+ * `session/selectModel` codec requires it); the optional `reasoningEffort` must
+ * be a string of at most {@link TEXT_GENERATION_MAX_OPTION_CHARS} characters
+ * (an empty string is the panel's "not set" value and is dropped). Anything
+ * else is not a pin request, so the carrier answers `bad-request` instead of
+ * pinning a guessed model.
+ * @param payload - the decoded `rpc.payload`.
+ * @returns the request, or `undefined` when the payload is not one.
+ */
+export function parseTextGenerationRequest(payload: unknown): TextGenerationRequest | undefined {
+  if (!isRecord(payload)) return undefined
+  const { sessionId, model, provider } = payload
+  if (!isBoundedNonEmptyText(sessionId, TEXT_GENERATION_MAX_ID_CHARS)) return undefined
+  if (!isBoundedNonEmptyText(model, TEXT_GENERATION_MAX_ID_CHARS)) return undefined
+  // `provider` is required by the Host codec, so a missing or empty value is a
+  // contract violation here rather than a Host-side rejection later.
+  if (!isBoundedNonEmptyText(provider, TEXT_GENERATION_MAX_OPTION_CHARS)) return undefined
+  const reasoningEffort = optionalBoundedText(payload.reasoningEffort, TEXT_GENERATION_MAX_OPTION_CHARS)
+  if (reasoningEffort === INVALID_OPTION) return undefined
+  return {
+    sessionId,
+    model,
+    provider,
+    ...(reasoningEffort === undefined ? {} : { reasoningEffort }),
+  }
+}
+
+/**
  * How one {@link BRIDGE_FETCH_MEDIA_METHOD} call settled.
  *
  * Every outcome is a tagged **success** at the carrier level, because a 404 or a
