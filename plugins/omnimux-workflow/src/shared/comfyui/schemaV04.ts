@@ -9,6 +9,11 @@
  *   [linkId, origin_id, origin_slot, target_id, target_slot, type]
  * and are normalised to objects internally; extra tuple slots are preserved
  * so a decode/encode round-trip stays lossless.
+ *
+ * Lossless policy: `nodes` / `links` must be arrays (structural, loud error);
+ * declared optional root fields with an unexpected shape keep their original
+ * value in `unknown` (re-emitted on encode, reported by the projection as
+ * `field-type-mismatch`) instead of being dropped.
  */
 
 import { fail } from './errors.ts';
@@ -17,8 +22,6 @@ import {
   asRecord,
   collectUnknown,
   isFiniteNumber,
-  readLinkType,
-  readPair,
   isPlainObject,
 } from './structure.ts';
 import {
@@ -26,6 +29,8 @@ import {
   decodeNode,
   encodeGroup,
   encodeNode,
+  readOptionalNumber,
+  readOptionalPair,
 } from './sharedParts.ts';
 import type {
   ComfyGroup,
@@ -35,9 +40,13 @@ import type {
   ComfyWorkflowV04,
 } from './types.ts';
 
-const ROOT_KEYS = [
+export const DECLARED_V04_ROOT_FIELDS: readonly string[] = [
   'last_node_id', 'last_link_id', 'nodes', 'links', 'groups', 'config', 'extra', 'version',
-] as const;
+];
+
+const ROOT_KEYS = DECLARED_V04_ROOT_FIELDS;
+const EXTRA_KEYS: readonly string[] = ['ds'];
+const DS_KEYS: readonly string[] = ['offset', 'scale'];
 
 /** Decode one v0.4 link tuple. */
 export function decodeLinkTuple(raw: unknown, path: string): ComfyLink {
@@ -52,7 +61,7 @@ export function decodeLinkTuple(raw: unknown, path: string): ComfyLink {
   if (!isFiniteNumber(originSlot)) fail('invalid-structure', `${path}[2]`, 'origin_slot must be a finite number');
   if (!isFiniteNumber(targetId)) fail('invalid-structure', `${path}[3]`, 'target_id must be a finite number');
   if (!isFiniteNumber(targetSlot)) fail('invalid-structure', `${path}[4]`, 'target_slot must be a finite number');
-  const linkType = readLinkType(type);
+  const linkType = typeof type === 'string' || isFiniteNumber(type) ? type : null;
   if (linkType === null) fail('invalid-structure', `${path}[5]`, 'link type must be a string or number');
   return {
     id,
@@ -79,42 +88,43 @@ export function encodeLinkTuple(link: ComfyLink): unknown[] {
   ];
 }
 
-function decodeExtra(raw: unknown, path: string): ComfyV04Extra {
-  const record = asRecord(raw);
-  if (!record) fail('invalid-structure', path, 'expected an extra object');
-  const dsRaw = record.ds;
+function decodeExtraRecord(record: Record<string, unknown>): ComfyV04Extra {
+  const unknown = collectUnknown(record, EXTRA_KEYS);
+  const dsValue = record.ds;
   let ds: ComfyV04Extra['ds'];
-  if (dsRaw !== undefined && dsRaw !== null) {
-    const dsRecord = asRecord(dsRaw);
-    if (!dsRecord) fail('invalid-structure', `${path}.ds`, 'expected a ds object');
-    const offsetRaw = dsRecord.offset;
-    let offset: [number, number] | undefined;
-    if (offsetRaw !== undefined && offsetRaw !== null) {
-      offset = readPair(offsetRaw)
-        ?? fail('invalid-structure', `${path}.ds.offset`, 'expected a [x, y] number pair');
+  if (dsValue !== undefined) {
+    const dsRecord = asRecord(dsValue);
+    if (!dsRecord) {
+      // Unexpected shape (incl. null): preserve verbatim.
+      unknown.ds = dsValue;
+    } else {
+      const dsUnknown = collectUnknown(dsRecord, DS_KEYS);
+      const offset = readOptionalPair(dsRecord, 'offset', dsUnknown);
+      const scale = readOptionalNumber(dsRecord, 'scale', dsUnknown);
+      ds = {
+        ...(offset !== undefined ? { offset } : {}),
+        ...(scale !== undefined ? { scale } : {}),
+        unknown: dsUnknown,
+      };
     }
-    const scaleRaw = dsRecord.scale;
-    let scale: number | undefined;
-    if (scaleRaw !== undefined && scaleRaw !== null) {
-      if (!isFiniteNumber(scaleRaw)) fail('invalid-structure', `${path}.ds.scale`, 'scale must be a finite number');
-      scale = scaleRaw;
-    }
-    ds = {
-      ...(offset !== undefined ? { offset } : {}),
-      ...(scale !== undefined ? { scale } : {}),
-      unknown: collectUnknown(dsRecord, ['offset', 'scale']),
-    };
   }
   return {
     ...(ds !== undefined ? { ds } : {}),
-    unknown: collectUnknown(record, ['ds']),
+    unknown,
   };
 }
 
 /** Parse an already-JSON-parsed v0.4 document. Throws `ComfyWorkflowCodecError`. */
 export function decodeV04(raw: Record<string, unknown>): ComfyWorkflowV04 {
+  const unknown = collectUnknown(raw, ROOT_KEYS);
+
   const versionRaw = raw.version;
   const version = isFiniteNumber(versionRaw) ? versionRaw : 0.4;
+  if (versionRaw !== undefined && !isFiniteNumber(versionRaw)) {
+    // A non-numeric version cannot be represented in the typed field; keep it
+    // verbatim so the encoder restores the original token.
+    unknown.version = versionRaw;
+  }
 
   const nodesRaw = raw.nodes;
   if (nodesRaw === undefined) fail('missing-field', 'nodes', 'v0.4 workflow is missing the nodes array');
@@ -131,27 +141,41 @@ export function decodeV04(raw: Record<string, unknown>): ComfyWorkflowV04 {
   if (!groupsArr) fail('invalid-structure', 'groups', 'expected the groups field to be an array');
 
   const configRaw = raw.config;
-  const config = configRaw === undefined || configRaw === null
-    ? {}
-    : asRecord(configRaw) ?? fail('invalid-structure', 'config', 'expected the config field to be an object');
+  let config: Record<string, unknown> = {};
+  if (configRaw !== undefined) {
+    const configRecord = asRecord(configRaw);
+    if (configRecord) config = configRecord;
+    else unknown.config = configRaw;
+  }
 
   const extraRaw = raw.extra;
-  const extra = extraRaw === undefined || extraRaw === null
-    ? { unknown: {} }
-    : decodeExtra(extraRaw, 'extra');
+  let extra: ComfyV04Extra = { unknown: {} };
+  if (extraRaw !== undefined) {
+    const extraRecord = asRecord(extraRaw);
+    if (extraRecord) extra = decodeExtraRecord(extraRecord);
+    else unknown.extra = extraRaw;
+  }
 
   const nodes: ComfyNode[] = nodesArr.map((entry, index) => decodeNode(entry, `nodes[${index}]`));
   const links: ComfyLink[] = linksArr.map((entry, index) => decodeLinkTuple(entry, `links[${index}]`));
   const groups: ComfyGroup[] = groupsArr.map((entry, index) => decodeGroup(entry, `groups[${index}]`));
 
   const lastNodeIdRaw = raw.last_node_id;
-  const lastNodeId = isFiniteNumber(lastNodeIdRaw)
-    ? lastNodeIdRaw
-    : nodes.reduce((max, node) => Math.max(max, node.id), 0);
+  let lastNodeId: number;
+  if (isFiniteNumber(lastNodeIdRaw)) {
+    lastNodeId = lastNodeIdRaw;
+  } else {
+    if (lastNodeIdRaw !== undefined) unknown.last_node_id = lastNodeIdRaw;
+    lastNodeId = nodes.reduce((max, node) => Math.max(max, node.id), 0);
+  }
   const lastLinkIdRaw = raw.last_link_id;
-  const lastLinkId = isFiniteNumber(lastLinkIdRaw)
-    ? lastLinkIdRaw
-    : links.reduce((max, link) => Math.max(max, link.id), 0);
+  let lastLinkId: number;
+  if (isFiniteNumber(lastLinkIdRaw)) {
+    lastLinkId = lastLinkIdRaw;
+  } else {
+    if (lastLinkIdRaw !== undefined) unknown.last_link_id = lastLinkIdRaw;
+    lastLinkId = links.reduce((max, link) => Math.max(max, link.id), 0);
+  }
 
   return {
     format: 'v0.4',
@@ -163,7 +187,7 @@ export function decodeV04(raw: Record<string, unknown>): ComfyWorkflowV04 {
     groups,
     config,
     extra,
-    unknown: collectUnknown(raw, ROOT_KEYS),
+    unknown,
   };
 }
 

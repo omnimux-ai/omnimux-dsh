@@ -9,6 +9,11 @@
  * Links are objects `{ id, origin_id, origin_slot, target_id, target_slot,
  * type, parentId? }`. `definitions` (subgraphs) is preserved verbatim and is
  * never materialised into canvas nodes — the projection reports it explicitly.
+ *
+ * Lossless policy: `state` counters and the `nodes` / `links` arrays are
+ * structural (loud errors when malformed); declared optional root fields with
+ * an unexpected shape keep their original value in `unknown` so nothing is
+ * dropped silently.
  */
 
 import { fail } from './errors.ts';
@@ -38,11 +43,16 @@ import type {
   ComfyWorkflowV1,
 } from './types.ts';
 
-const ROOT_KEYS = [
+export const DECLARED_V1_ROOT_FIELDS: readonly string[] = [
   'version', 'state', 'groups', 'nodes', 'links', 'floatingLinks', 'reroutes', 'extra', 'definitions',
-] as const;
+];
 
-const STATE_KEYS = ['lastGroupId', 'lastNodeId', 'lastLinkId', 'lastRerouteId'] as const;
+export const DECLARED_V1_STATE_FIELDS: readonly string[] = [
+  'lastGroupId', 'lastNodeId', 'lastLinkId', 'lastRerouteId',
+];
+
+const ROOT_KEYS = DECLARED_V1_ROOT_FIELDS;
+const STATE_KEYS = DECLARED_V1_STATE_FIELDS;
 
 function decodeState(raw: unknown, path: string): ComfyV1State {
   const record = asRecord(raw);
@@ -51,6 +61,7 @@ function decodeState(raw: unknown, path: string): ComfyV1State {
   for (const key of STATE_KEYS) {
     const value = record[key];
     if (!isFiniteNumber(value)) {
+      // Counters are structural: a malformed counter is a loud error, not a default.
       fail('missing-field', `${path}.${key}`, `v1 state is missing the numeric ${key} field`);
     }
     numbers[key] = value;
@@ -66,6 +77,15 @@ function decodeState(raw: unknown, path: string): ComfyV1State {
 
 /** Parse an already-JSON-parsed v1 document. Throws `ComfyWorkflowCodecError`. */
 export function decodeV1(raw: Record<string, unknown>): ComfyWorkflowV1 {
+  const unknown = collectUnknown(raw, ROOT_KEYS);
+
+  const versionRaw = raw.version;
+  if (versionRaw !== undefined && versionRaw !== 1) {
+    // Only the discriminator value 1 is representable; keep any other token
+    // verbatim so the encoder restores it.
+    unknown.version = versionRaw;
+  }
+
   const stateRaw = raw.state;
   if (stateRaw === undefined) fail('missing-field', 'state', 'v1 workflow is missing the state block');
   const state = decodeState(stateRaw, 'state');
@@ -93,16 +113,22 @@ export function decodeV1(raw: Record<string, unknown>): ComfyWorkflowV1 {
   if (!reroutesArr) fail('invalid-structure', 'reroutes', 'expected the reroutes field to be an array');
 
   const extraRaw = raw.extra;
-  const extra = extraRaw === undefined || extraRaw === null
-    ? {}
-    : asRecord(extraRaw) ?? fail('invalid-structure', 'extra', 'expected the extra field to be an object');
+  let extra: Record<string, unknown> = {};
+  if (extraRaw !== undefined) {
+    const extraRecord = asRecord(extraRaw);
+    if (extraRecord) extra = extraRecord;
+    else unknown.extra = extraRaw;
+  }
 
   const definitionsRaw = raw.definitions;
-  const definitions = definitionsRaw === undefined || definitionsRaw === null
-    ? undefined
-    : isPlainObject(definitionsRaw) || Array.isArray(definitionsRaw)
-      ? definitionsRaw
-      : fail('invalid-structure', 'definitions', 'expected the definitions field to be an object or array');
+  let definitions: unknown;
+  if (definitionsRaw !== undefined && definitionsRaw !== null) {
+    if (isPlainObject(definitionsRaw) || Array.isArray(definitionsRaw)) {
+      definitions = definitionsRaw;
+    } else {
+      unknown.definitions = definitionsRaw;
+    }
+  }
 
   const nodes: ComfyNode[] = nodesArr.map((entry, index) => decodeNode(entry, `nodes[${index}]`));
   const links: ComfyLink[] = linksArr.map((entry, index) => decodeLinkObject(entry, `links[${index}]`));
@@ -120,7 +146,7 @@ export function decodeV1(raw: Record<string, unknown>): ComfyWorkflowV1 {
     reroutes,
     extra,
     ...(definitions !== undefined ? { definitions } : {}),
-    unknown: collectUnknown(raw, ROOT_KEYS),
+    unknown,
   };
 }
 

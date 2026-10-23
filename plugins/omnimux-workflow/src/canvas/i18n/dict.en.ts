@@ -758,6 +758,9 @@ const en: Record<DictKey, string> = {
   'transfer.reason.viewport-not-carried': 'Viewport state was not carried over',
   'transfer.reason.unknown-document-field': 'Unknown document field was not carried over',
   'transfer.reason.subgraph-definitions-not-materialized': 'Subgraph definitions were not materialized',
+  'transfer.reason.field-type-mismatch': 'Field type mismatch (original value kept in the file)',
+  'transfer.reason.link-field-type-mismatch': 'Link field type mismatch (original value kept in the file)',
+  'transfer.reason.reroute-field-type-mismatch': 'Reroute field type mismatch (original value kept in the file)',
 };
 
 export default en;

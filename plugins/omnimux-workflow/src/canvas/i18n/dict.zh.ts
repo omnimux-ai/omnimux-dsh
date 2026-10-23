@@ -783,6 +783,9 @@ const zh = {
   'transfer.reason.viewport-not-carried': '视口状态未携带',
   'transfer.reason.unknown-document-field': '未知文档字段未携带',
   'transfer.reason.subgraph-definitions-not-materialized': '子图定义未展开',
+  'transfer.reason.field-type-mismatch': '字段类型不符（原值已保留在文件中）',
+  'transfer.reason.link-field-type-mismatch': '连线字段类型不符（原值已保留在文件中）',
+  'transfer.reason.reroute-field-type-mismatch': '中转字段类型不符（原值已保留在文件中）',
 } as const;
 
 export type DictKey = keyof typeof zh;

@@ -7,9 +7,19 @@
  * ComfyUI source, schema file, resource or test fixture is copied into this
  * repository; see `specs/workflow-comfy-replica-3625.spec.md`.
  *
- * The model is intentionally lossless for round-tripping: every object keeps
- * an `unknown` bag for fields this codec does not model, so decode -> encode
- * preserves the original document instead of silently dropping data.
+ * Round-trip policy (bounded, not a blanket "lossless" claim):
+ * - Every object keeps an `unknown` bag for fields this codec does not model,
+ *   and decode -> encode re-emits them, so unmapped fields are never dropped.
+ * - Declared *optional* fields whose value has an unexpected shape (including
+ *   an explicit `null`) are kept verbatim in that same `unknown` bag, so the
+ *   original file is restored and the canvas projection reports each one as
+ *   `field-type-mismatch`.
+ * - Declared *required* structural fields (node `id`/`type`/`pos`, link
+ *   endpoints, v1 `state` counters, the `nodes`/`links` arrays) must be
+ *   well-formed; a violation is a loud parse error, never a silent default.
+ * - One deliberate normalisation: a v1-shaped document that omits `version`
+ *   is re-emitted with the discriminator `version: 1` (an addition, never a
+ *   dropped field).
  */
 
 /** Link payload type token: ComfyUI uses string type names, legacy files may carry numbers. */

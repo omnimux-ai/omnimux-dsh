@@ -15,8 +15,18 @@
 
 import { DEFAULT_MATERIAL_TOOL_BY_TYPE } from '../specs/nodes/materialNodeSpec.ts';
 import type { MaterialType } from '../canvasTypes.ts';
-import { createEmptyV04 } from './schemaV04.ts';
-import { createEmptyV1 } from './schemaV1.ts';
+import { DECLARED_V04_ROOT_FIELDS, createEmptyV04 } from './schemaV04.ts';
+import { DECLARED_V1_ROOT_FIELDS, createEmptyV1 } from './schemaV1.ts';
+import {
+  DECLARED_GROUP_FIELDS,
+  DECLARED_INPUT_FIELDS,
+  DECLARED_LINK_FIELDS,
+  DECLARED_NODE_FIELDS,
+  DECLARED_OUTPUT_FIELDS,
+  DECLARED_REROUTE_FIELDS,
+  describeJsonShape,
+  malformedDeclaredFields,
+} from './sharedParts.ts';
 import type {
   ComfyCanvasEdge,
   ComfyCanvasEncodeResult,
@@ -158,6 +168,29 @@ function report(builder: ProjectionBuilder, entry: ComfyUnsupportedEntry): void 
   builder.unsupported.push(entry);
 }
 
+/**
+ * Report declared fields whose value had an unexpected shape.
+ *
+ * The decoder keeps such values verbatim in the `unknown` bag (so the encoder
+ * restores the original file) instead of dropping them; this makes the loss
+ * explicit in the import inventory.
+ */
+function reportMalformedFields(
+  builder: ProjectionBuilder,
+  ownerId: string,
+  unknown: Record<string, unknown>,
+  declared: readonly string[],
+): void {
+  for (const key of malformedDeclaredFields(unknown, declared)) {
+    report(builder, {
+      kind: 'parameter',
+      id: `${ownerId}.${key}`,
+      reason: 'field-type-mismatch',
+      detail: `received ${describeJsonShape(unknown[key])}`,
+    });
+  }
+}
+
 function buildImportedMaterialData(
   spec: ComfyNodeMappingSpec,
   node: ComfyNode,
@@ -246,12 +279,31 @@ function reportNodeFields(
   }
 }
 
+/**
+ * Synthetic canvas id for an imported group.
+ *
+ * The canvas id is ours, not ComfyUI data: reuse the source group id token
+ * when it is numeric (a numeric string still counts, e.g. `"5"`) so imported
+ * groups stay traceable to their source; otherwise fall back to the array
+ * index. A malformed token is still reported as `field-type-mismatch`.
+ */
+function groupCanvasId(group: ComfyGroup, index: number): string {
+  const raw = group.id ?? group.unknown.id;
+  const numeric = typeof raw === 'number' && Number.isFinite(raw)
+    ? raw
+    : typeof raw === 'string' && raw.trim() !== '' && Number.isFinite(Number(raw))
+      ? Number(raw)
+      : undefined;
+  return `comfy-group-${numeric ?? index}`;
+}
+
 function projectGroup(
   builder: ProjectionBuilder,
   group: ComfyGroup,
   index: number,
 ): ComfyCanvasNode | null {
-  const id = `comfy-group-${group.id ?? index}`;
+  const id = groupCanvasId(group, index);
+  reportMalformedFields(builder, id, group.unknown, DECLARED_GROUP_FIELDS);
   if (!group.bounding) {
     report(builder, {
       kind: 'group',
@@ -297,6 +349,20 @@ function projectDocumentLevelFields(
   builder: ProjectionBuilder,
   document: ComfyWorkflowDocument,
 ): void {
+  // Declared root fields whose value had an unexpected shape are preserved by
+  // the decoder; report them before the per-format inventory.
+  const declaredRootFields = document.format === 'v0.4'
+    ? DECLARED_V04_ROOT_FIELDS
+    : DECLARED_V1_ROOT_FIELDS;
+  for (const key of malformedDeclaredFields(document.unknown, declaredRootFields)) {
+    report(builder, {
+      kind: 'document-field',
+      id: key,
+      reason: 'field-type-mismatch',
+      detail: `received ${describeJsonShape(document.unknown[key])}`,
+    });
+  }
+
   if (document.format === 'v0.4') {
     if (Object.keys(document.config).length > 0) {
       report(builder, {
@@ -343,6 +409,15 @@ function projectDocumentLevelFields(
       id: String(reroute.id),
       reason: 'reroute-not-representable',
     });
+    const malformedRerouteFields = malformedDeclaredFields(reroute.unknown, DECLARED_REROUTE_FIELDS);
+    if (malformedRerouteFields.length > 0) {
+      report(builder, {
+        kind: 'reroute',
+        id: String(reroute.id),
+        reason: 'reroute-field-type-mismatch',
+        detail: malformedRerouteFields.join(','),
+      });
+    }
   }
   for (const key of Object.keys(document.extra)) {
     report(builder, {
@@ -391,6 +466,13 @@ export function projectComfyToCanvas(document: ComfyWorkflowDocument): ComfyCanv
     const data = buildImportedMaterialData(spec, node);
     applyWidgets(builder, spec, node, data);
     reportNodeFields(builder, node);
+    reportMalformedFields(builder, String(node.id), node.unknown, DECLARED_NODE_FIELDS);
+    for (const input of node.inputs ?? []) {
+      reportMalformedFields(builder, `${node.id}.inputs.${input.name}`, input.unknown, DECLARED_INPUT_FIELDS);
+    }
+    for (const output of node.outputs ?? []) {
+      reportMalformedFields(builder, `${node.id}.outputs.${output.name}`, output.unknown, DECLARED_OUTPUT_FIELDS);
+    }
 
     const canvasNode: ComfyCanvasNode = {
       id: canvasNodeIdFor(node.id),
@@ -424,6 +506,17 @@ export function projectComfyToCanvas(document: ComfyWorkflowDocument): ComfyCanv
   }
 
   for (const link of document.links) {
+    // A declared link field with an unexpected shape is preserved by the
+    // decoder (so the file round-trips) and reported here.
+    const malformedLinkFields = malformedDeclaredFields(link.unknown, DECLARED_LINK_FIELDS);
+    if (malformedLinkFields.length > 0) {
+      report(builder, {
+        kind: 'link',
+        id: String(link.id),
+        reason: 'link-field-type-mismatch',
+        detail: malformedLinkFields.join(','),
+      });
+    }
     const originSpec = mappingByNodeId.get(link.originId);
     if (!originSpec || !projectedNodeIds.has(link.originId)) {
       report(builder, {
