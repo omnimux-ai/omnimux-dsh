@@ -218,7 +218,7 @@ jobs:
 
       - name: Verify public evidence core and consumer
         run: |
-          node --test scripts/evidence-contract.test.mjs scripts/worktree-app-qa-journey.test.mjs scripts/test-env-bootstrap.test.mjs scripts/test-env-bootstrap-fresh.test.mjs scripts/task-runtime-install.test.mjs scripts/task-runtime-proof.test.mjs
+          node --test scripts/evidence-contract.test.mjs scripts/worktree-app-qa-journey.test.mjs scripts/test-env-bootstrap.test.mjs scripts/test-env-bootstrap-fresh.test.mjs scripts/test-env-bootstrap-inputs.test.mjs scripts/task-runtime-install.test.mjs scripts/task-runtime-proof.test.mjs
           node --test scripts/guard-quality-loop.test.mjs
 
       # A direct registered task below the original checkout resolves its already locked root dependencies.
