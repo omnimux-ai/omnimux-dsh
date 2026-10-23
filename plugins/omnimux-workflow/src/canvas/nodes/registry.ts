@@ -24,9 +24,26 @@ export interface ConfigSpec {
 }
 
 export interface NodePaletteEntry {
+  /**
+   * Palette group heading, as an i18n key (never a literal).
+   *
+   * This is the node's category in the add-node palette: every node that
+   * declares the same key lands under one collapsible heading. Keys must exist
+   * in both `canvas/i18n/dict.zh.ts` and `dict.en.ts`.
+   */
   group: string;
+  /** Entry label, as an i18n key (never a literal). */
   label: string;
   icon: string;
+  /**
+   * Extra palette search terms, as i18n keys.
+   *
+   * Declared from the node's real capability surface (its tool labelKeys, its
+   * executor contract) so keyword search matches what the node can actually do
+   * — e.g. 「音频转写」 finds the text node because `audio-transcription` is one
+   * of its tools. Never carries user-facing copy of its own.
+   */
+  keywords?: readonly string[];
 }
 
 export interface NodeDefinition {

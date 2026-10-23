@@ -1,0 +1,1046 @@
+{
+  "reportId": "issue-3625-ui-journey",
+  "issue": 3625,
+  "title": "画布工作流复刻（ComfyUI 风格编辑体验）· 4 条功能路径真实浏览器证据",
+  "producedBy": "teammate ui-journey-3625",
+  "producedAt": "2026-10-23T14:45:00+08:00",
+  "sourceBinding": {
+    "worktree": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-workflow-comfy-replica-issue-3625",
+    "branch": "agent/omnimux-workflow-comfy-replica-issue-3625",
+    "head": "dc46e658f6072e396dd14058391b8506378ddfa9",
+    "headSubject": "feat(workflow): 画布工作流复刻——节点分类搜索/执行队列面板/实时进度/工作流导入导出与 ComfyUI 互操作 (#3625)",
+    "note": "harness bundle 于 2026-10-23T13:45(+08:00) 由该 HEAD 的干净工作树构建；此后其他队友对 src/canvas/i18n/*、src/shared/comfyui/* 的编辑不在本次证据覆盖范围内。",
+    "harnessBundle": {
+      "path": "plugins/omnimux-workflow/dist-harness/canvas-harness.js",
+      "bytes": 18030194,
+      "entry": "src/canvas/harness/harness.tsx → CanvasEditor（插件自带 dev harness，非新建夹具）"
+    }
+  },
+  "driver": {
+    "mechanism": "plugin dev harness + 动态端口常驻后台服务 + ego-browser 真实 Chromium 驱动",
+    "detail": "复用插件自带 dev harness entry（scripts/build-canvas.mjs --harness）打包真实 CanvasEditor；自建 runner `.workbuddy/evidence/issue-3625-ui-journey/harness-serve.mjs` 以 listen(0) 动态端口常驻托管，并显式以本地 stub 应答 /omnimux-workflow/api/templates（harness 无后端）。`pnpm test:worktree-web` 是自清理 smoke 且只断言 Stage 挂载，不能交互，故未使用。",
+    "server": {
+      "url": "http://127.0.0.1:57389/",
+      "port": 57389,
+      "portMode": "ephemeral (listen(0))",
+      "bound": "127.0.0.1",
+      "job": "bash-a4333478690640ae"
+    },
+    "browser": {
+      "tool": "ego-browser (ego lite)",
+      "taskSpaceId": 232,
+      "taskSpaceName": "omnimux-3625-ui-journey-20261023-1345",
+      "ownership": "agent（新建，未接管用户空间）",
+      "page": "p1",
+      "viewportCssPx": {
+        "w": 1728,
+        "h": 883,
+        "dpr": 2
+      }
+    },
+    "visibilityRule": "每条断言都取真实几何 + getComputedStyle + document.elementFromPoint 命中测试；不用「隐藏 DOM 存在」代替可见性（队列按钮被面板遮挡即按命中测试判为不可点）。",
+    "stubs": [
+      {
+        "path": "/omnimux-workflow/api/templates",
+        "kind": "local-stub",
+        "why": "harness 无后端；模板面板列表由本地 stub 提供 3 条模板（标签 图像/人像/视频/数据）。卡片渲染/分类/搜索/入口卡为真实组件行为。"
+      },
+      {
+        "path": "其余 /omnimux-workflow/* 路由",
+        "kind": "404-json",
+        "why": "不静默返回 HTML；模板接口之外无后端能力。"
+      }
+    ],
+    "constraints": {
+      "dev45120": "未连接",
+      "prod": "未连接",
+      "secrets": "未读取、未填写任何真实密钥",
+      "commitOrPush": "未执行"
+    }
+  },
+  "paths": [
+    {
+      "id": "path-1",
+      "name": "节点调色板分类 + 搜索",
+      "pass": true,
+      "verdict": "通过",
+      "entry": {
+        "selector": "button[title^=\"添加节点\"]",
+        "text": "添加节点（N）"
+      },
+      "steps": [
+        {
+          "step": "1. 打开「添加节点」菜单",
+          "action": "真实坐标点击底部工具栏 + 按钮",
+          "observed": {
+            "menuVisible": true,
+            "menuBox": {
+              "x": 710,
+              "y": 181,
+              "w": 248,
+              "h": 625
+            },
+            "searchPlaceholder": "搜索节点或能力",
+            "groupCount": 5,
+            "itemTotal": 8,
+            "groups": [
+              {
+                "title": "素材",
+                "count": "4",
+                "items": [
+                  "文本",
+                  "图片",
+                  "视频",
+                  "音频"
+                ]
+              },
+              {
+                "title": "数据",
+                "count": "1",
+                "items": [
+                  "表格"
+                ]
+              },
+              {
+                "title": "合成",
+                "count": "1",
+                "items": [
+                  "视频合成"
+                ]
+              },
+              {
+                "title": "创作",
+                "count": "1",
+                "items": [
+                  "3D 导演台"
+                ]
+              },
+              {
+                "title": "导入",
+                "count": "1",
+                "items": [
+                  "导入素材"
+                ]
+              }
+            ]
+          },
+          "expected": "出现分组，共 5 组",
+          "hit": true,
+          "screenshot": {
+            "file": "01-addnode-groups.png",
+            "bytes": 108109,
+            "capturedAt": "2026-10-23T13:54:15+08:00",
+            "note": "5 个分组标题 + 计数 + 8 个条目"
+          }
+        },
+        {
+          "step": "2. 搜索「视频」",
+          "action": "在 .wf-node-menu__search-input 输入「视频」",
+          "observed": {
+            "searchValue": "视频",
+            "groupCount": 2,
+            "itemTotal": 5,
+            "matched": [
+              "文本",
+              "图片",
+              "视频",
+              "音频",
+              "视频合成"
+            ],
+            "marks": [
+              {
+                "markText": "视频",
+                "labelText": "视频"
+              },
+              {
+                "markText": "视频",
+                "labelText": "视频合成"
+              }
+            ]
+          },
+          "expected": "命中项 <mark> 高亮、非命中被过滤",
+          "hit": true,
+          "note": "观察：四个素材子类型共享 material 节点声明的 keywords（含「视频生成」「视频转音频」），因此「视频」会把 文本/图片/音频 一并命中；高亮只落在标签文本真正包含「视频」的两项上。属真实实现行为，供 lead 判断是否需收窄关键词。",
+          "screenshot": {
+            "file": "02-addnode-search-video.png",
+            "bytes": 95491,
+            "capturedAt": "2026-10-23T13:54:17+08:00",
+            "note": "2 组 5 条，2 处 <mark>"
+          }
+        },
+        {
+          "step": "3. 搜索「文本」",
+          "action": "输入「文本」",
+          "observed": {
+            "searchValue": "文本",
+            "groupCount": 1,
+            "itemTotal": 4,
+            "matched": [
+              "文本",
+              "图片",
+              "视频",
+              "音频"
+            ],
+            "marks": [
+              {
+                "markText": "文本",
+                "labelText": "文本"
+              }
+            ]
+          },
+          "expected": "命中高亮 + 过滤",
+          "hit": true,
+          "screenshot": {
+            "file": "03-addnode-search-text.png",
+            "bytes": 90148,
+            "capturedAt": "2026-10-23T13:54:18+08:00",
+            "note": "仅剩「素材」组 4 条"
+          }
+        },
+        {
+          "step": "4. 搜索「表」",
+          "action": "输入「表」",
+          "observed": {
+            "searchValue": "表",
+            "groupCount": 1,
+            "itemTotal": 1,
+            "matched": [
+              "表格"
+            ],
+            "marks": [
+              {
+                "markText": "表",
+                "labelText": "表格"
+              }
+            ]
+          },
+          "expected": "命中「表格」并高亮子串",
+          "hit": true,
+          "screenshot": {
+            "file": "04-addnode-search-biao.png",
+            "bytes": 84164,
+            "capturedAt": "2026-10-23T13:54:20+08:00",
+            "note": "仅「数据」组 1 条，<mark>表</mark>格"
+          }
+        },
+        {
+          "step": "5. 清空搜索",
+          "action": "输入空串",
+          "observed": {
+            "searchValue": "",
+            "groupCount": 5,
+            "itemTotal": 8,
+            "marks": []
+          },
+          "expected": "恢复全部分组与条目",
+          "hit": true,
+          "screenshot": {
+            "file": "05-addnode-search-cleared.png",
+            "bytes": 108109,
+            "capturedAt": "2026-10-23T13:54:21+08:00",
+            "note": "回到 5 组 8 条，与步骤 1 一致"
+          }
+        },
+        {
+          "step": "6. 输入无结果关键字",
+          "action": "输入「zzzz不存在的关键字」",
+          "observed": {
+            "searchValue": "zzzz不存在的关键字",
+            "groupCount": 0,
+            "itemTotal": 0,
+            "empty": {
+              "title": "没有匹配的节点",
+              "hint": "换个关键字，或清空搜索浏览全部分类。",
+              "box": {
+                "x": 719,
+                "y": 688,
+                "w": 230,
+                "h": 110
+              }
+            }
+          },
+          "expected": "出现空态文案",
+          "hit": true,
+          "screenshot": {
+            "file": "06-addnode-search-empty.png",
+            "bytes": 90032,
+            "capturedAt": "2026-10-23T13:54:22+08:00",
+            "note": "空态「没有匹配的节点」+ 提示"
+          }
+        }
+      ],
+      "keyCopy": [
+        "添加节点",
+        "搜索节点或能力",
+        "素材/数据/合成/创作/导入",
+        "没有匹配的节点",
+        "换个关键字，或清空搜索浏览全部分类。"
+      ]
+    },
+    {
+      "id": "path-2",
+      "name": "队列面板（ListOrdered / 执行队列）",
+      "pass": true,
+      "verdict": "通过（展开 + 四区 + 空态 + 收起）；附 1 项遮挡观察",
+      "entry": {
+        "selector": "button[title=\"执行队列\"]",
+        "icon": "ListOrdered",
+        "ariaLabel": "执行队列"
+      },
+      "steps": [
+        {
+          "step": "1. 点顶部控制栏队列按钮展开面板",
+          "action": "坐标点击 button[title=\"执行队列\"] 中心 (1651,74)",
+          "observed": {
+            "panelPresent": true,
+            "panelRole": "region",
+            "panelAriaLabel": "执行队列",
+            "headerTitle": "执行队列",
+            "closeTitle": "收起执行队列",
+            "buttonAriaExpanded": "true",
+            "panelBox": {
+              "x": 1390,
+              "y": 53,
+              "w": 322,
+              "h": 233
+            },
+            "sectionCount": 4,
+            "sections": [
+              {
+                "title": "队列",
+                "count": "0",
+                "empty": "当前没有排队或运行中的执行"
+              },
+              {
+                "title": "等待中",
+                "count": "0",
+                "empty": "没有等待中的节点"
+              },
+              {
+                "title": "运行中",
+                "count": "0",
+                "empty": "没有运行中的节点"
+              },
+              {
+                "title": "历史",
+                "count": "0",
+                "empty": "暂无历史记录"
+              }
+            ]
+          },
+          "expected": "面板展开，四区可见且各有空态文案",
+          "hit": true,
+          "screenshot": {
+            "file": "07-queue-open.png",
+            "bytes": 85757,
+            "capturedAt": "2026-10-23T13:59:23+08:00",
+            "note": "执行队列面板 + 四区空态"
+          }
+        },
+        {
+          "step": "2. 收起通道 A：面板自带 X",
+          "action": "坐标点击 .wf-exec-queue__close (1687,76)",
+          "observed": {
+            "panelPresent": false,
+            "buttonAriaExpanded": "false",
+            "sectionTitles": []
+          },
+          "expected": "面板收起",
+          "hit": true,
+          "screenshot": {
+            "file": "09-queue-closed-via-panel-x.png",
+            "bytes": 70846,
+            "capturedAt": "2026-10-23T14:03:05+08:00",
+            "note": "面板已收起"
+          }
+        },
+        {
+          "step": "3. 再次用顶部按钮展开",
+          "action": "坐标点击 button[title=\"执行队列\"] (1651,74)",
+          "observed": {
+            "panelPresent": true,
+            "buttonAriaExpanded": "true",
+            "sectionTitles": [
+              "队列",
+              "等待中",
+              "运行中",
+              "历史"
+            ]
+          },
+          "expected": "面板可重复展开（幂等）",
+          "hit": true,
+          "screenshot": {
+            "file": "10-queue-reopened-via-header-button.png",
+            "bytes": 85757,
+            "capturedAt": "2026-10-23T14:03:06+08:00",
+            "note": "与 07 一致"
+          }
+        },
+        {
+          "step": "4. 面板已展开时再点同一个顶部按钮（「再点收起」）",
+          "action": "坐标点击同一按钮中心 (1651,74)",
+          "observed": {
+            "panelPresent": true,
+            "buttonAriaExpanded": "true",
+            "buttonCoveredBy": "span.wf-exec-queue__title",
+            "buttonHitTest": false
+          },
+          "expected": "期望收起；实际未收起",
+          "hit": false,
+          "note": "真实观察（非夹具问题）：.wf-exec-queue 为 position:absolute; top:16px; right:16px; z-index:22，展开后覆盖顶部控制栏胶囊（button 中心点 elementFromPoint 命中面板自身的标题 span），因此「再点顶部按钮收起」在该视口下不可达；实际收起路径是面板 X（步骤 2）。建议 lead 判定：功能路径本身可用，但存在「展开态遮挡开关按钮」的 UX 缺陷候选。",
+          "screenshot": {
+            "file": "11-queue-second-click-while-open.png",
+            "bytes": 85754,
+            "capturedAt": "2026-10-23T14:03:07+08:00",
+            "note": "第二次点击后状态不变"
+          }
+        }
+      ],
+      "keyCopy": [
+        "执行队列",
+        "收起执行队列",
+        "队列",
+        "等待中",
+        "运行中",
+        "历史",
+        "当前没有排队或运行中的执行",
+        "没有等待中的节点",
+        "没有运行中的节点",
+        "暂无历史记录"
+      ]
+    },
+    {
+      "id": "path-3",
+      "name": "模板面板卡片化 + 「新建工作流」入口卡",
+      "pass": true,
+      "verdict": "通过（卡片网格 + 分类过滤 + 空态 + 入口卡打开既有 CreateWorkflowModal）；附 1 项重叠观察",
+      "entry": {
+        "selector": "button[title=\"插入工作流模板\"]",
+        "text": "插入工作流模板"
+      },
+      "steps": [
+        {
+          "step": "1. 打开模板面板",
+          "action": "坐标点击底部工具栏模板入口 (775,836)",
+          "observed": {
+            "panelRole": "dialog",
+            "panelAriaLabel": "工作流模板",
+            "title": "工作流模板",
+            "count": "3 个模板",
+            "searchPlaceholder": "搜索模板...",
+            "panelBox": {
+              "x": 757,
+              "y": 408,
+              "w": 586,
+              "h": 399
+            },
+            "rail": [
+              {
+                "label": "全部",
+                "count": "3",
+                "selected": true,
+                "disabled": false
+              },
+              {
+                "label": "图像",
+                "count": "1",
+                "selected": false,
+                "disabled": false
+              },
+              {
+                "label": "人像",
+                "count": "1",
+                "selected": false,
+                "disabled": false
+              },
+              {
+                "label": "视频",
+                "count": "1",
+                "selected": false,
+                "disabled": false
+              },
+              {
+                "label": "数据",
+                "count": "1",
+                "selected": false,
+                "disabled": false
+              }
+            ],
+            "cards": [
+              {
+                "create": true,
+                "title": "新建工作流",
+                "desc": "把当前画布保存为可复用模板"
+              },
+              {
+                "create": false,
+                "title": "夜景人像精修",
+                "desc": "夜景人像降噪与肤色统一",
+                "meta": "5 个节点"
+              },
+              {
+                "create": false,
+                "title": "短视频分镜成片",
+                "desc": "文案 → 分镜 → 成片",
+                "meta": "7 个节点"
+              },
+              {
+                "create": false,
+                "title": "批量表格数据整理",
+                "desc": "表格结构化与批量记录",
+                "meta": "4 个节点"
+              }
+            ],
+            "coverState": "无封面的卡片走 cover--empty 形态（FileCode 图标），未塞占位图"
+          },
+          "expected": "卡片网格形态 + 「新建工作流」入口卡",
+          "hit": true,
+          "note": "模板列表来源 = 本地 stub（harness 无后端），已在 driver.stubs 声明；卡片/分类/搜索为真实组件渲染。",
+          "screenshot": {
+            "file": "12-template-panel-cards.png",
+            "bytes": 125870,
+            "capturedAt": "2026-10-23T14:11:21+08:00",
+            "note": "左分类卡 + 右卡片网格 + 入口卡"
+          }
+        },
+        {
+          "step": "2. 分类卡过滤（视频）",
+          "action": "点击 rail「视频」",
+          "observed": {
+            "railSelected": "视频",
+            "railSelectedState": "true",
+            "cards": [
+              "新建工作流",
+              "短视频分镜成片"
+            ],
+            "othersHidden": true
+          },
+          "expected": "仅显示该分类模板，入口卡保留",
+          "hit": true,
+          "screenshot": {
+            "file": "13-template-category-video.png",
+            "bytes": 102828,
+            "capturedAt": "2026-10-23T14:11:23+08:00",
+            "note": "仅剩 1 张模板卡"
+          }
+        },
+        {
+          "step": "3. 搜索无结果",
+          "action": "在 .wf-template-panel__search-input 输入「不存在的模板xyz」",
+          "observed": {
+            "empty": {
+              "title": "没有匹配的模板",
+              "hint": "换个分类或清空搜索试试。"
+            },
+            "railDisabled": true,
+            "createCardKept": true
+          },
+          "expected": "空态文案出现",
+          "hit": true,
+          "screenshot": {
+            "file": "14-template-search-no-match.png",
+            "bytes": 102596,
+            "capturedAt": "2026-10-23T14:11:24+08:00",
+            "note": "空态「没有匹配的模板」"
+          }
+        },
+        {
+          "step": "4. 点「新建工作流」入口卡",
+          "action": "坐标点击 .wf-template-panel__card--create (1014,566)",
+          "observed": {
+            "modalPresent": true,
+            "modalOverlayClass": "wf-modal-overlay",
+            "modalTitle": "创建可复用工作流模板",
+            "modalLabels": [
+              "工作流名称",
+              "功能描述",
+              "分类标签"
+            ],
+            "modalInputPlaceholders": [
+              "例如：夜景人像精修工作流",
+              "简要说明该工作流的功能、输入要求与输出效果...",
+              "用逗号分隔标签"
+            ],
+            "modalSubmit": "保存到模板库",
+            "modalCancelWorked": true,
+            "formBox": {
+              "x": 665,
+              "y": 342,
+              "w": 399,
+              "h": 324
+            }
+          },
+          "expected": "打开既有 CreateWorkflowModal",
+          "hit": true,
+          "screenshot": {
+            "file": "15-create-workflow-modal.png",
+            "bytes": 174268,
+            "capturedAt": "2026-10-23T14:11:29+08:00",
+            "note": "CreateWorkflowModal 打开"
+          }
+        },
+        {
+          "step": "5. 模态与模板面板的层叠检查（补充观察）",
+          "action": "模态打开时测量 z-index 与 elementFromPoint",
+          "observed": {
+            "modalOverlay": {
+              "zIndex": "9999",
+              "position": "fixed",
+              "backdropFilter": "blur(12px)",
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1728,
+                "h": 931
+              }
+            },
+            "templatePanel": {
+              "zIndex": "25",
+              "position": "absolute"
+            },
+            "hitAtPanelOnlyPoint_1250_700": "wf-modal-overlay（面板之下）",
+            "panelStillOpenAfterModalOpened": true,
+            "panelStillOpenAfterCancel": true
+          },
+          "expected": "模态打开时背景面板应收起或至少不与之重叠",
+          "hit": false,
+          "note": "真实观察：点「新建工作流」不会关闭模板面板；面板 z-index 25 在模态覆盖层 9999 之下，因此模态打开时面板内容透过遮罩仍可见，二者在视觉上重叠（见截图）。功能上模态可交互、可取消；重叠属 UI 缺陷候选，供 lead 判定。",
+          "screenshot": {
+            "file": "16-create-modal-and-template-panel-stacking.png",
+            "bytes": 150517,
+            "capturedAt": "2026-10-23T14:15:09+08:00",
+            "note": "面板透过模态遮罩可见，二者重叠"
+          }
+        }
+      ],
+      "keyCopy": [
+        "工作流模板",
+        "3 个模板",
+        "搜索模板...",
+        "全部",
+        "新建工作流",
+        "把当前画布保存为可复用模板",
+        "没有匹配的模板",
+        "创建可复用工作流模板",
+        "工作流名称",
+        "功能描述",
+        "分类标签",
+        "保存到模板库"
+      ]
+    },
+    {
+      "id": "path-4",
+      "name": "导入 / 导出入口与结果面板",
+      "pass": true,
+      "verdict": "通过（入口可见 + 导出结果面板 + 真实导出字节 + 导入错误提示 + 自有文件回环 + ComfyUI v0.4 清单）",
+      "entries": [
+        {
+          "selector": "button[title=\"导出工作流\"]",
+          "text": "导出工作流",
+          "box": {
+            "x": 797,
+            "y": 818,
+            "w": 36,
+            "h": 36
+          },
+          "visible": true,
+          "hit": true,
+          "inViewport": true
+        },
+        {
+          "selector": "button[title=\"导入工作流\"]",
+          "text": "导入工作流",
+          "box": {
+            "x": 837,
+            "y": 818,
+            "w": 36,
+            "h": 36
+          },
+          "visible": true,
+          "hit": true,
+          "inViewport": true
+        }
+      ],
+      "fileInput": {
+        "selector": "input.wf-transfer-input",
+        "accept": "application/json,.json",
+        "present": true
+      },
+      "steps": [
+        {
+          "step": "1. 工具栏入口可见性",
+          "action": "几何 + 命中测试",
+          "observed": {
+            "exportVisible": true,
+            "exportHit": true,
+            "importVisible": true,
+            "importHit": true,
+            "inViewport": true
+          },
+          "expected": "导出/导入入口存在且可点",
+          "hit": true,
+          "screenshot": {
+            "file": "17-import-export-entries.png",
+            "bytes": 71162,
+            "capturedAt": "2026-10-23T14:40:33+08:00",
+            "note": "底部工具栏含导出/导入入口"
+          }
+        },
+        {
+          "step": "2. 点「导出工作流」",
+          "action": "坐标点击导出按钮",
+          "observed": {
+            "panelRole": "status",
+            "panelAriaLive": "polite",
+            "title": "已导出工作流",
+            "message": "已导出 5 个节点到 workflow.json",
+            "warning": "7 个运行期字段未能写入文件",
+            "panelBox": {
+              "x": 621,
+              "y": 708,
+              "w": 486,
+              "h": 94
+            }
+          },
+          "expected": "结果面板渲染",
+          "hit": true,
+          "screenshot": {
+            "file": "18-export-workflow-result-panel.png",
+            "bytes": 86792,
+            "capturedAt": "2026-10-23T14:40:33+08:00",
+            "note": "已导出工作流结果面板"
+          }
+        },
+        {
+          "step": "3. 捕获应用真实生成的导出字节（插桩 URL.createObjectURL / anchor.click）",
+          "action": "读取插桩记录",
+          "observed": {
+            "downloadName": "workflow.json",
+            "blobType": "application/json",
+            "blobBytes": 6255,
+            "hrefPrefix": "blob:http://127.0.0.1:57",
+            "parsedMetadata": {
+              "nodeCount": 5,
+              "edgeCount": 2,
+              "embeddedTableDocuments": false
+            },
+            "head": "{\"kind\":\"omnimux-workflow\",\"schemaVersion\":1,\"name\":\"workflow\",\"exportedAt\":\"2026-10-23T06:40:30.947Z\",...}",
+            "savedCopy": ".workbuddy/evidence/issue-3625-ui-journey/imports/exported-workflow.json"
+          },
+          "expected": "导出产物为合法 OmniMux 工作流文件（5 节点 / 2 连线）",
+          "hit": true,
+          "note": "插桩只记录应用自己生成的 Blob 与下载名；未伪造任何字节。浏览器自身的下载落盘未验证（headless 无下载目录），属未覆盖项。"
+        },
+        {
+          "step": "4. 点「导入工作流」是否触发系统文件选择器",
+          "action": "waitForFileChooser + 坐标点击导入按钮",
+          "observed": {
+            "fileChooserAppeared": true,
+            "isMultiple": false
+          },
+          "expected": "触发文件选择器",
+          "hit": true,
+          "note": "系统文件选择器无法由浏览器自动化代为完成（未选择任何文件）；因此后续用 setInputFiles 直接向 input.wf-transfer-input 投递真实文件，等价于用户选文件后的 change 事件。"
+        },
+        {
+          "step": "5. 导入非法 JSON",
+          "action": "setInputFiles(imports/invalid.json)",
+          "observed": {
+            "title": "导入失败",
+            "message": "文件不是合法的 JSON",
+            "detail": "Unexpected token 'h', ...\"odes\": [ this is not\"... is not valid JSON",
+            "panelBox": {
+              "x": 621,
+              "y": 710,
+              "w": 486,
+              "h": 92
+            }
+          },
+          "expected": "可读错误提示渲染",
+          "hit": true,
+          "screenshot": {
+            "file": "19-import-invalid-error.png",
+            "bytes": 86797,
+            "capturedAt": "2026-10-23T14:40:35+08:00",
+            "note": "导入失败 + 原因"
+          }
+        },
+        {
+          "step": "6. 导入应用自己导出的文件（回环）",
+          "action": "setInputFiles(imports/exported-workflow.json)",
+          "observed": {
+            "title": "OmniMux 工作流文件",
+            "message": "workflow：5 个节点、2 条连线",
+            "warning": "导入会替换当前画布内容",
+            "actions": [
+              "导入并替换画布",
+              "取消"
+            ]
+          },
+          "expected": "解析成功且节点/连线数与导出元数据一致（5/2）",
+          "hit": true,
+          "screenshot": {
+            "file": "20-import-own-workflow-roundtrip.png",
+            "bytes": 90874,
+            "capturedAt": "2026-10-23T14:40:36+08:00",
+            "note": "导出→导入回环一致"
+          }
+        },
+        {
+          "step": "7. 导入 ComfyUI v0.4 工作流",
+          "action": "setInputFiles(imports/comfyui-v04-sample.json)",
+          "observed": {
+            "title": "ComfyUI 工作流（v0.4）",
+            "message": "已支持 3 项，不支持 13 项",
+            "sections": [
+              "支持",
+              "不支持 · 13"
+            ],
+            "supportedList": [
+              "1 material",
+              "2 material · 部分语义",
+              "1 link"
+            ],
+            "reasons": [
+              "执行顺序由画布重新推导 2 1.order, 2.order",
+              "节点属性未携带 1 1.properties",
+              "控件值无对应字段 8 2:widgets_values[0..4]",
+              "注释节点无对应实现 1 3",
+              "视口状态未携带 1 extra.ds"
+            ],
+            "actions": [
+              "导入并替换画布",
+              "取消"
+            ]
+          },
+          "expected": "结构被解析且不支持项以清单显式列出（不静默丢弃）",
+          "hit": true,
+          "note": "该步为规格 §用户操作旅程 5 的加分覆盖，不在任务要求的 4 条路径内。",
+          "screenshot": {
+            "file": "21-import-comfyui-v04.png",
+            "bytes": 116196,
+            "capturedAt": "2026-10-23T14:40:38+08:00",
+            "note": "支持/不支持清单"
+          }
+        }
+      ],
+      "keyCopy": [
+        "导出工作流",
+        "导入工作流",
+        "已导出工作流",
+        "已导出 5 个节点到 workflow.json",
+        "7 个运行期字段未能写入文件",
+        "导入失败",
+        "文件不是合法的 JSON",
+        "OmniMux 工作流文件",
+        "workflow：5 个节点、2 条连线",
+        "导入会替换当前画布内容",
+        "导入并替换画布",
+        "ComfyUI 工作流（v0.4）",
+        "已支持 3 项，不支持 13 项"
+      ]
+    }
+  ],
+  "notCovered": [
+    {
+      "item": "导出文件的浏览器实际落盘",
+      "reason": "headless 会话无下载目录；已改为插桩读取应用真实生成的 Blob 字节（6255 bytes, application/json）并落盘到 imports/exported-workflow.json。"
+    },
+    {
+      "item": "系统文件选择器的真实人工选择",
+      "reason": "浏览器自动化不能代替用户操作系统文件对话框；已验证选择器确实被触发（isMultiple=false），文件投递改用 setInputFiles。"
+    },
+    {
+      "item": "「导入并替换画布」的实际替换结果",
+      "reason": "本次只要求入口与结果面板渲染；未点击 apply（会替换 mock 画布，影响后续路径证据）。"
+    },
+    {
+      "item": "队列面板的实时运行条目（Pending/Running/History 非空）",
+      "reason": "harness 的 mock 执行桥只在点击「mock running→completed」后 8s 才完成；本次只验证四区与空态，未驱动执行。"
+    },
+    {
+      "item": "中间帧预览（spec 旅程 3）",
+      "reason": "不在本次 4 条路径范围。"
+    },
+    {
+      "item": "模板面板初始无数据空态（template.panel.empty）",
+      "reason": "stub 始终返回 3 条模板；已覆盖真实用户交互触发的 noMatch 空态。"
+    },
+    {
+      "item": "英文 locale / 暗色主题 / 窄视口",
+      "reason": "本次只覆盖默认 zh + light + 1728x883。"
+    },
+    {
+      "item": "生产 Stage（真实宿主）中的同一路径",
+      "reason": "本次为 worktree 隔离 harness 证据（符合 plugin-qa「隔离 worktree 真实浏览器 Web 验证」）；Dev 45120 属人工验收。"
+    },
+    {
+      "item": "队友在 dc46e658f 之后对 i18n/comfyui 的编辑",
+      "reason": "harness bundle 构建于该 HEAD，后续工作树改动未重新构建。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "observation",
+      "path": "path-2",
+      "title": "队列面板展开后遮挡顶部控制栏开关按钮",
+      "detail": "面板 z-index:22 / absolute top:16px right:16px 覆盖 header 胶囊；命中测试显示按钮中心被 span.wf-exec-queue__title 占据，故「再点按钮收起」不可达，只能经面板 X 收起。"
+    },
+    {
+      "severity": "observation",
+      "path": "path-3",
+      "title": "「新建工作流」打开模态时模板面板不关闭且与模态视觉重叠",
+      "detail": "面板 z-index:25 < 模态覆盖层 9999，面板透过模态遮罩可见，二者空间重叠；模态本身可交互、可取消。"
+    },
+    {
+      "severity": "observation",
+      "path": "path-1",
+      "title": "素材子类型共享 material 节点关键词导致中文关键词过匹配",
+      "detail": "「视频」命中 文本/图片/视频/音频/视频合成；「文本」命中四个素材子类型。因四个子类型都取 material 节点声明的 MATERIAL_KEYWORDS，再叠加子类型工具键。"
+    }
+  ],
+  "artifacts": {
+    "screenshots": [
+      {
+        "file": "00-canvas-initial.png",
+        "bytes": 70595,
+        "capturedAt": "2026-10-23T13:48:34+08:00"
+      },
+      {
+        "file": "01-addnode-groups.png",
+        "bytes": 108109,
+        "capturedAt": "2026-10-23T13:54:15+08:00"
+      },
+      {
+        "file": "02-addnode-search-video.png",
+        "bytes": 95491,
+        "capturedAt": "2026-10-23T13:54:17+08:00"
+      },
+      {
+        "file": "03-addnode-search-text.png",
+        "bytes": 90148,
+        "capturedAt": "2026-10-23T13:54:18+08:00"
+      },
+      {
+        "file": "04-addnode-search-biao.png",
+        "bytes": 84164,
+        "capturedAt": "2026-10-23T13:54:20+08:00"
+      },
+      {
+        "file": "05-addnode-search-cleared.png",
+        "bytes": 108109,
+        "capturedAt": "2026-10-23T13:54:21+08:00"
+      },
+      {
+        "file": "06-addnode-search-empty.png",
+        "bytes": 90032,
+        "capturedAt": "2026-10-23T13:54:22+08:00"
+      },
+      {
+        "file": "07-queue-open.png",
+        "bytes": 85757,
+        "capturedAt": "2026-10-23T13:59:23+08:00"
+      },
+      {
+        "file": "08-queue-closed.png",
+        "bytes": 85754,
+        "capturedAt": "2026-10-23T13:59:24+08:00"
+      },
+      {
+        "file": "09-queue-closed-via-panel-x.png",
+        "bytes": 70846,
+        "capturedAt": "2026-10-23T14:03:05+08:00"
+      },
+      {
+        "file": "10-queue-reopened-via-header-button.png",
+        "bytes": 85757,
+        "capturedAt": "2026-10-23T14:03:06+08:00"
+      },
+      {
+        "file": "11-queue-second-click-while-open.png",
+        "bytes": 85754,
+        "capturedAt": "2026-10-23T14:03:07+08:00"
+      },
+      {
+        "file": "12-template-panel-cards.png",
+        "bytes": 125870,
+        "capturedAt": "2026-10-23T14:11:21+08:00"
+      },
+      {
+        "file": "13-template-category-video.png",
+        "bytes": 102828,
+        "capturedAt": "2026-10-23T14:11:23+08:00"
+      },
+      {
+        "file": "14-template-search-no-match.png",
+        "bytes": 102596,
+        "capturedAt": "2026-10-23T14:11:24+08:00"
+      },
+      {
+        "file": "15-create-workflow-modal.png",
+        "bytes": 174268,
+        "capturedAt": "2026-10-23T14:11:29+08:00"
+      },
+      {
+        "file": "16-create-modal-and-template-panel-stacking.png",
+        "bytes": 150517,
+        "capturedAt": "2026-10-23T14:15:09+08:00"
+      },
+      {
+        "file": "17-import-export-entries.png",
+        "bytes": 71162,
+        "capturedAt": "2026-10-23T14:40:33+08:00"
+      },
+      {
+        "file": "18-export-workflow-result-panel.png",
+        "bytes": 86792,
+        "capturedAt": "2026-10-23T14:40:33+08:00"
+      },
+      {
+        "file": "19-import-invalid-error.png",
+        "bytes": 86797,
+        "capturedAt": "2026-10-23T14:40:35+08:00"
+      },
+      {
+        "file": "20-import-own-workflow-roundtrip.png",
+        "bytes": 90874,
+        "capturedAt": "2026-10-23T14:40:36+08:00"
+      },
+      {
+        "file": "21-import-comfyui-v04.png",
+        "bytes": 116196,
+        "capturedAt": "2026-10-23T14:40:38+08:00"
+      }
+    ],
+    "fixtures": [
+      {
+        "file": "imports/invalid.json",
+        "note": "非法 JSON，用于错误路径"
+      },
+      {
+        "file": "imports/exported-workflow.json",
+        "note": "应用真实导出的字节（插桩捕获，6255 bytes）"
+      },
+      {
+        "file": "imports/comfyui-v04-sample.json",
+        "note": "自建 ComfyUI v0.4 样例（3 节点 1 连线，含 Note/KSampler 以触发不支持清单）"
+      }
+    ],
+    "harness": {
+      "file": "harness-serve.mjs",
+      "note": "动态端口常驻 harness runner（本次驱动机制）"
+    },
+    "screenshotDir": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-workflow-comfy-replica-issue-3625/.workbuddy/evidence/issue-3625-ui-journey",
+    "note": "截图与 fixtures 位于 .workbuddy/evidence/issue-3625-ui-journey/（.gitignore 忽略，本地保留）；本报告为 PR 可引用的结构化证据。"
+  },
+  "summary": {
+    "path1": "pass",
+    "path2": "pass",
+    "path3": "pass",
+    "path4": "pass",
+    "passCount": 4,
+    "totalRequired": 4,
+    "blocked": false,
+    "statement": "4 条功能路径均以真实浏览器交互（真实几何 + 命中测试 + 截图）验证通过；3 项观察项（遮挡/重叠/关键词过匹配）作为缺陷候选上报，不改变路径判定。"
+  }
+}
