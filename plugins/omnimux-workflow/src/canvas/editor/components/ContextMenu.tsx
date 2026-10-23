@@ -67,6 +67,11 @@ const MENU_HEIGHT_ESTIMATE = 260;
  * 锚点偏低时必须按真实高度夹取，否则面板会溢出视口、底部入口卡被裁。
  */
 const ADD_MENU_HEIGHT_ESTIMATE = 600;
+/**
+ * 钻取面板自身的盒模型开销：上下 padding 6+6、border 1+1。
+ * `maxHeight` 只扣视口边距时，这 14px 会把底部入口卡挤出视口 1px（900×560 实测）。
+ */
+const ADD_MENU_BOX_OVERHEAD = 14;
 
 interface MenuItemSpec {
   action: ContextMenuAction | 'open-add-node';
@@ -163,7 +168,11 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   const left = Math.min(x, window.innerWidth - currentWidth - 8);
   const top = Math.min(y, Math.max(8, window.innerHeight - currentHeightEstimate - 8));
   // 小视口兜底：面板可压缩，列表内滚动，底部入口卡始终留在视口内。
-  const maxHeight = view === 'add-node' ? Math.max(200, window.innerHeight - top - 8) : undefined;
+  // 减数含面板自身 padding/border（ADD_MENU_BOX_OVERHEAD），否则底部卡片会被裁掉几个像素。
+  const maxHeight =
+    view === 'add-node'
+      ? Math.max(200, window.innerHeight - top - 8 - ADD_MENU_BOX_OVERHEAD)
+      : undefined;
 
   return createPortal(
     <div
