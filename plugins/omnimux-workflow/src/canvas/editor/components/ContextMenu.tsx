@@ -50,6 +50,8 @@ interface ContextMenuProps {
   onClose: () => void;
   onAction: (action: ContextMenuAction, context: ContextMenuContext) => void;
   onAddNode?: (type: CanvasAddNodeType) => void;
+  /** 钻取面板底部「新建工作流」入口卡（存为模板）；缺省时不渲染。 */
+  onCreateWorkflow?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
   /** Whether the in-island clipboard holds nodes (gates paste). */
@@ -77,6 +79,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   onClose,
   onAction,
   onAddNode,
+  onCreateWorkflow,
   canUndo = false,
   canRedo = false,
   hasClipboard = false,
@@ -212,6 +215,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             onClose();
           }}
           onBack={() => setView('main')}
+          onCreateWorkflow={onCreateWorkflow}
         />
       )}
     </div>,

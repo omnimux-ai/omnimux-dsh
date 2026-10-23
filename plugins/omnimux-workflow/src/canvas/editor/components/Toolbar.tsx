@@ -546,7 +546,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
         </button>
 
         {isAddOpen ? (
-          <AddNodeMenu scope="dock" onSelect={handleSelectNodeType} />
+          <AddNodeMenu scope="dock" onSelect={handleSelectNodeType} onCreateWorkflow={onCreateWorkflow} />
         ) : null}
       </div>
 

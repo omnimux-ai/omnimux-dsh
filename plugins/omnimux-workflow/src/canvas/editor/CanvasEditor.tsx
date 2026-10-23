@@ -1039,6 +1039,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         onClose={closeMenu}
         onAction={handleMenuAction}
         onAddNode={handleAddNodeFromMenu}
+        onCreateWorkflow={() => setCreateWorkflowModalOpen(true)}
         canUndo={canUndo}
         canRedo={canRedo}
         hasClipboard={clipboard.hasClipboard}
