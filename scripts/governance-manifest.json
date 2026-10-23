@@ -91,6 +91,7 @@
     "test-authoring-inspection.test.mjs",
     "test-change-review.mjs",
     "test-change-review.test.mjs",
+    "test-review-provenance.mjs",
     "test-dx-pipeline.mjs",
     "task-runtime-install.mjs",
     "task-runtime-install.test.mjs",
@@ -189,6 +190,7 @@
   ],
   "manual": [
     "automation-alpha-verification.test.mjs",
+    "attest-test-review.mjs",
     "backup-shared.qa.test.py",
     "batch-generate-home-covers.mjs",
     "capture-media-preview-evidence.mjs",

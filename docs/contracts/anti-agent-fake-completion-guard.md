@@ -140,10 +140,20 @@ related:
 
 `intent` / `exemptions` 仅为兼容输入，语义是 `ignored_noauthority`。`handle` 不读取 `DSH_TASK_INTENT` 或 `.tmp/anti-cheat-exemptions.json` 作为放行权限；自写 `status: approved`、全路径匹配、日志或修改参数均不能授权生产规则例外。这里没有派发或验证新审批 token 的服务。
 
+### 4.1.1 独立评审 Agent 来源证明（旧断言期待值改写）
+
+`scripts/guard-anti-cheat.mjs` 判定为 `test-assertion-removed-or-rewritten` 时，向 [`scripts/test-review-provenance.mjs`](../../scripts/test-review-provenance.mjs) 求证来源；规格见 `specs/test-review-provenance.spec.md`。
+
+- **账本**：hook 每次观察到业务源码（`plugins/*/src`、`packages/*/src`）写入，就把 hook 自己读到的 `DSH_SESSION_ID` 追加到 `.dsh/agent-edit-ledger.jsonl`（本机、不入库）。
+- **存证**：独立评审会话运行 `node scripts/attest-test-review.mjs --file <测试> --after <候选内容> --spec <规格> [--evidence <证据>]`。身份只取 `process.env.DSH_SESSION_ID`，**不接受 `--session` 覆盖**，因此行为作者无法伪造成另一个会话。
+- **放行条件**（三者同时成立）：存证的 file/before/after 摘要与本次「文件现状 → 拟写入内容」精确匹配；存证作者会话 == 本次编辑会话；该会话在账本中没有任何业务源码写入记录。
+- **留痕**：每次放行追加一条 `kind: "used"` 记录（含存证 id 与前后摘要），使「谁用哪份存证放行了哪次标准变更」可回放。
+- **边界**：只证明「身份不同 + 内容精确 + 可回放」，不证明评审质量；也挡不住 agent 直接修改 guard 源码——那条只能靠 PR 评审与 `scripts/test-authoring-inspection.test.mjs` 的既有断言兜底。
+
 ### 4.2 反馈与红黑样本回归
 
 1. **路径与意图分离**：真实测试和 fixture 路径使用原有资格判断；生产文件不能因为 `test_authoring`、`frontend_skeleton` 或 `fallback_infra` 自述变成夹具。骨架样例若只是正常占位且未命中原模式，可以继续通过；命中生产假数据模式则拒绝。
-2. **标准更正须可审查**：误杀或漏逃应以需求、原输入、原规则、真实退出码与差异提交独立审查，不能用本地 approved 文件自我批准。旧断言删除、跳过、聚焦或期待变化仍需独审；既有标准风险与来源消费者完整闭环尚未机械接入，本切片不能宣布 #3301 / #3302 阶段 A 全部完成。
+2. **标准更正须可审查**：误杀或漏逃应以需求、原输入、原规则、真实退出码与差异提交独立审查，不能用本地 approved 文件自我批准。删除/跳过/聚焦既有用例、删除具名用例仍需独审；**旧断言期待值改写**自 `specs/test-review-provenance.spec.md` 起已有机械通道（只允许未写过业务源码的另一个 Agent 会话持精确存证放行，见 §4.1.1）。既有标准风险与来源消费者完整闭环仍未机械接入，本切片不能宣布 #3301 / #3302 阶段 A 全部完成。
 3. **红黑样本保留**：`tests/anti-cheat-samples/allowlist/*.json` 与 `blocklist/*.json` 经 `node --test scripts/guard-anti-cheat.test.mjs` 检验各自声明范围。不得删除旧用例或 skip 来刷绿；已批准的权限标准更正须记录前后反证。样本通过只证明实际输入，不能推广为所有误杀和漏逃均消除。
 
 测试候选默认拒绝导入 `apply`；仅由门禁自身检出的共同 Git 目录建立主根身份，核验目标位于主根或其 `.worktrees` 直接子目录且有同共同目录、规范普通 Git 指针、双向登记与精确注册记录（新写入仅允许缺失叶节点），将目标和公开插件 `src/index.js` 的具名函数或固定重导出到 `host/apply.js` 限定同一目标树，以该树一次固定 HEAD 只读核对字节与 AST，并在解析结束后联合复核登记、目标、全部来源、祖先身份与 HEAD，才允许直接调用；绑定值逃逸、立即再次调用安装结果、动态执行、跳过测试、来源跨树、外部仓库、未登记、嵌套仓库、软链接与未确认或变动来源仍拒绝，普通调用结果检查不追踪通用结果流，工具自述目录或事实不产生授权，这些写前事实既不构成完整授权闭环，也不保证后续执行时来源不变。

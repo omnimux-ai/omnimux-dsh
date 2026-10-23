@@ -33,3 +33,7 @@ deliverables/
 /.tmp/*
 !/.tmp/AGENTS.md
 .test-env-*
+
+# 门禁运行时账本与独立评审存证（本机会话级来源证明，不入库）
+.dsh/agent-edit-ledger.jsonl
+.dsh/test-review-attestations.jsonl

@@ -15,6 +15,13 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { parse } from 'acorn';
 import { inspectTestAuthoring, inspectTestAuthoringDelta } from './test-authoring-inspection.mjs';
+import {
+  PROVENANCE_REASONS,
+  recordAttestationUse,
+  recordBusinessEdit,
+  treeRootOf,
+  verifyAttestation,
+} from './test-review-provenance.mjs';
 
 const isTestPath = path => /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(path.replace(/\\/g, '/')) && !/\.md$/i.test(path);
 const isFixturePath = path => /(^|\/)(fixtures?|mocks?|test-data)(\/|$)|(\.|\/)(fixture|mock)\.[a-zA-Z0-9]+$/i.test(path.replace(/\\/g, '/'));
@@ -404,10 +411,49 @@ export function handle(rawInput) {
         } };
         const inspection = typeof source === 'string' ? inspectTestAuthoringDelta(source, content, trustedFacts) : inspectTestAuthoring(content, trustedFacts);
         checkedTarget.verify();
+
+        // 独立评审来源证明：仅当拒绝原因恰为「既有断言被改写」时，才考虑由另一个 Agent 会话放行。
+        // 判定要求：存证精确匹配 (file, before, after)，只能被其作者会话使用，且该作者会话未写过业务源码。
+        if (!unverifiedImport && !inspection.allowed && PROVENANCE_REASONS.has(inspection.reason) && typeof source === 'string') {
+          const treeRoot = treeRootOf(target);
+          const relFile = treeRoot ? relative(treeRoot, target).replace(/\\/g, '/') : null;
+          const sessionId = process.env.DSH_SESSION_ID || null;
+          const proven = verifyAttestation({ root: treeRoot, relFile, beforeText: source, afterText: content, sessionId });
+          if (proven.ok) {
+            recordAttestationUse({ root: treeRoot, relFile, beforeText: source, afterText: content, sessionId, attestationId: proven.attestationId });
+            return formatHookOutput({ permissionDecision: 'allow' }, hookEventName);
+          }
+          const base = testDecision({ allowed: false });
+          return formatHookOutput({
+            permissionDecision: 'deny',
+            ruleId: base.ruleId,
+            reason: `${base.reason}（独立评审来源证明未成立：${proven.reason}）`,
+          }, hookEventName);
+        }
+
         return formatHookOutput(testDecision(unverifiedImport ? { allowed: false } : inspection), hookEventName);
       } catch {
         return formatHookOutput({ permissionDecision: 'deny', reason: 'Cannot inspect canonical test target or source' }, hookEventName);
       } finally { checkedTarget?.close(); }
+    }
+  }
+  // 业务源码写入记账：记录 hook 亲observed 的会话身份，供「作者不得自审」判定。
+  // 记账失败不影响本次判定（缺账本只会让后续存证无法成立，属 fail-closed）。
+  const ledgerSession = process.env.DSH_SESSION_ID || null;
+  if (ledgerSession) {
+    try {
+      const treeRoot = treeRootOf(target);
+      const relPath = treeRoot ? relative(treeRoot, target).replace(/\\/g, '/') : null;
+      if (treeRoot && relPath) {
+        recordBusinessEdit({
+          root: treeRoot,
+          relPath,
+          sessionId: ledgerSession,
+          digest: typeof content === 'string' && content ? createHash('sha256').update(content).digest('hex') : null,
+        });
+      }
+    } catch {
+      // 账本写入失败不阻断判定
     }
   }
   const decision = evaluateWithInspection({

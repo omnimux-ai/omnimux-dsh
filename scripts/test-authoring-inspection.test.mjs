@@ -304,3 +304,223 @@ test('import declaration risk bodies and contexts remain conservative when addin
     assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
   }
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 独立评审 Agent 来源证明（specs/test-review-provenance.spec.md）
+// 旧断言期待值变更只允许由「未写过业务源码的另一个会话」持精确存证放行。
+// ─────────────────────────────────────────────────────────────────────────────
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import {
+  ATTEST_REL,
+  LEDGER_REL,
+  digestText,
+  isBusinessSourceRel,
+  readJsonl,
+  recordAttestationUse,
+  recordBusinessEdit,
+  treeRootOf,
+  verifyAttestation,
+  writeAttestation,
+} from './test-review-provenance.mjs'
+
+const PROVENANCE_TEST_FILE = 'plugins/demo/src/client/thing.test.js'
+const PROVENANCE_BUSINESS_FILE = 'plugins/demo/src/client/thing.js'
+const PROVENANCE_BEFORE = "assert.equal(hookApi.placement, 'inline')\n"
+const PROVENANCE_AFTER = "assert.equal(hookApi.placement, 'docked')\n"
+
+function withProvenanceRepo() {
+  const root = mkdtempSync(join(tmpdir(), 'provenance-'))
+  mkdirSync(join(root, '.git'), { recursive: true })
+  return root
+}
+
+test('来源证明：无存证改写既有断言必须拒绝，且缺会话身份也不得放行', () => {
+  const root = withProvenanceRepo()
+  try {
+    const withoutAttestation = verifyAttestation({
+      root,
+      relFile: PROVENANCE_TEST_FILE,
+      beforeText: PROVENANCE_BEFORE,
+      afterText: PROVENANCE_AFTER,
+      sessionId: 'session-author',
+    })
+    assert.equal(withoutAttestation.ok, false)
+    assert.equal(withoutAttestation.reason, 'no-matching-attestation')
+    writeAttestation({
+      root,
+      reviewerSessionId: 'session-reviewer',
+      relFile: PROVENANCE_TEST_FILE,
+      beforeText: PROVENANCE_BEFORE,
+      afterText: PROVENANCE_AFTER,
+    })
+    const withoutIdentity = verifyAttestation({
+      root,
+      relFile: PROVENANCE_TEST_FILE,
+      beforeText: PROVENANCE_BEFORE,
+      afterText: PROVENANCE_AFTER,
+      sessionId: null,
+    })
+    assert.equal(withoutIdentity.ok, false)
+    assert.equal(withoutIdentity.reason, 'no-session-identity')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('来源证明：写过业务源码的会话属于行为作者，自审与借用他人存证都必须拒绝', () => {
+  const root = withProvenanceRepo()
+  try {
+    assert.equal(recordBusinessEdit({
+      root,
+      relPath: PROVENANCE_BUSINESS_FILE,
+      sessionId: 'session-author',
+      digest: 'ledger-digest',
+    }), true)
+    writeAttestation({
+      root,
+      reviewerSessionId: 'session-author',
+      relFile: PROVENANCE_TEST_FILE,
+      beforeText: PROVENANCE_BEFORE,
+      afterText: PROVENANCE_AFTER,
+    })
+    const selfReview = verifyAttestation({
+      root,
+      relFile: PROVENANCE_TEST_FILE,
+      beforeText: PROVENANCE_BEFORE,
+      afterText: PROVENANCE_AFTER,
+      sessionId: 'session-author',
+    })
+    assert.equal(selfReview.ok, false)
+    assert.equal(selfReview.reason, 'reviewer-authored-business-source')
+
+    writeAttestation({
+      root,
+      reviewerSessionId: 'session-reviewer',
+      relFile: PROVENANCE_TEST_FILE,
+      beforeText: PROVENANCE_BEFORE,
+      afterText: PROVENANCE_AFTER,
+    })
+    const borrowed = verifyAttestation({
+      root,
+      relFile: PROVENANCE_TEST_FILE,
+      beforeText: PROVENANCE_BEFORE,
+      afterText: PROVENANCE_AFTER,
+      sessionId: 'session-other',
+    })
+    assert.equal(borrowed.ok, false)
+    assert.equal(borrowed.reason, 'no-matching-attestation')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('来源证明：独立评审会话持精确存证放行，且只能放行其精确描述的三元组', () => {
+  const root = withProvenanceRepo()
+  try {
+    recordBusinessEdit({ root, relPath: PROVENANCE_BUSINESS_FILE, sessionId: 'session-author', digest: 'ledger-digest' })
+    const written = writeAttestation({
+      root,
+      reviewerSessionId: 'session-reviewer',
+      relFile: PROVENANCE_TEST_FILE,
+      beforeText: PROVENANCE_BEFORE,
+      afterText: PROVENANCE_AFTER,
+      specPath: 'specs/demo.spec.md',
+      specText: '# demo spec',
+    })
+    assert.equal(written.ok, true)
+    assert.match(written.record.id, /^[0-9a-f]{64}$/)
+
+    const allowed = verifyAttestation({
+      root,
+      relFile: PROVENANCE_TEST_FILE,
+      beforeText: PROVENANCE_BEFORE,
+      afterText: PROVENANCE_AFTER,
+      sessionId: 'session-reviewer',
+    })
+    assert.equal(allowed.ok, true)
+    assert.equal(allowed.attestationId, written.record.id)
+
+    const otherFile = verifyAttestation({
+      root,
+      relFile: 'plugins/demo/src/client/other.test.js',
+      beforeText: PROVENANCE_BEFORE,
+      afterText: PROVENANCE_AFTER,
+      sessionId: 'session-reviewer',
+    })
+    assert.equal(otherFile.ok, false)
+    assert.equal(otherFile.reason, 'no-matching-attestation')
+
+    const otherAfter = verifyAttestation({
+      root,
+      relFile: PROVENANCE_TEST_FILE,
+      beforeText: PROVENANCE_BEFORE,
+      afterText: "assert.equal(hookApi.placement, 'inline', '另一份期望')\n",
+      sessionId: 'session-reviewer',
+    })
+    assert.equal(otherAfter.ok, false)
+    assert.equal(otherAfter.reason, 'no-matching-attestation')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('来源证明：每次放行留痕，used 记录含存证 id 与前后摘要', () => {
+  const root = withProvenanceRepo()
+  try {
+    const written = writeAttestation({
+      root,
+      reviewerSessionId: 'session-reviewer',
+      relFile: PROVENANCE_TEST_FILE,
+      beforeText: PROVENANCE_BEFORE,
+      afterText: PROVENANCE_AFTER,
+    })
+    assert.equal(recordAttestationUse({
+      root,
+      relFile: PROVENANCE_TEST_FILE,
+      beforeText: PROVENANCE_BEFORE,
+      afterText: PROVENANCE_AFTER,
+      sessionId: 'session-reviewer',
+      attestationId: written.record.id,
+    }), true)
+    const used = readJsonl(root, ATTEST_REL).filter((entry) => entry.kind === 'used')
+    assert.equal(used.length, 1)
+    assert.equal(used[0].attestationId, written.record.id)
+    assert.equal(used[0].beforeDigest, digestText(PROVENANCE_BEFORE))
+    assert.equal(used[0].afterDigest, digestText(PROVENANCE_AFTER))
+    assert.equal(used[0].sessionId, 'session-reviewer')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('来源证明：账本只记业务源码、坏行跳过，且 treeRootOf 可定位工作树根', () => {
+  const root = withProvenanceRepo()
+  try {
+    assert.equal(isBusinessSourceRel(PROVENANCE_BUSINESS_FILE), true)
+    assert.equal(isBusinessSourceRel('packages/demo/src/a.js'), true)
+    assert.equal(isBusinessSourceRel('plugins/demo/tests/e2e/a.test.js'), false)
+    assert.equal(isBusinessSourceRel('docs/evidence/a.md'), false)
+    assert.equal(recordBusinessEdit({ root, relPath: 'plugins/demo/tests/e2e/a.test.js', sessionId: 'session-x' }), false)
+    assert.equal(readJsonl(root, LEDGER_REL).length, 0)
+    assert.equal(recordBusinessEdit({ root, relPath: PROVENANCE_BUSINESS_FILE, sessionId: 'session-x' }), true)
+    assert.equal(readJsonl(root, LEDGER_REL).length, 1)
+    assert.equal(treeRootOf(join(root, PROVENANCE_BUSINESS_FILE)), root)
+    assert.equal(treeRootOf(join(root, 'plugins/not-created-yet/src/a.js')), root)
+
+    appendFileSync(join(root, LEDGER_REL), '{ 这不是合法 json\n')
+    assert.equal(readJsonl(root, LEDGER_REL).length, 1)
+    const afterCorruption = verifyAttestation({
+      root,
+      relFile: PROVENANCE_TEST_FILE,
+      beforeText: PROVENANCE_BEFORE,
+      afterText: PROVENANCE_AFTER,
+      sessionId: 'session-reviewer',
+    })
+    assert.equal(afterCorruption.ok, false)
+    assert.equal(afterCorruption.reason, 'no-matching-attestation')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
