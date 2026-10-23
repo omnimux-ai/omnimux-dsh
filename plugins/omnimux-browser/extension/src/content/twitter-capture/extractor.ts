@@ -22,6 +22,7 @@
 
 import { TWEET_MEDIA_SELECTOR } from '../media-hover/classifier.ts'
 import { extractTweetIdAndUrl, parseMetricValue } from '../twitter-velocity/extractor.ts'
+import { hasPostBody, readCardText, readTweetBody } from '../tweet-body.ts'
 import type { PollOption, QuotedTweet, TweetAuthor, TweetCapture, TweetPoll, TweetShape, TweetStats } from './types.ts'
 
 /** Matches a permanent post address; anything else is not a capturable post. */
@@ -41,9 +42,6 @@ const AVATAR_SELECTOR = '[data-testid^="UserAvatar-Container"]'
 
 /** Verification badge drawn next to the author's name. */
 const VERIFIED_SELECTOR = '[data-testid="icon-verified"], [data-testid="verificationBadge"]'
-
-/** The post body. */
-const TWEET_TEXT_SELECTOR = '[data-testid="tweetText"]'
 
 /** The quoted post, in the shape the timeline ships. */
 const QUOTE_SELECTOR = '[data-testid="quoteTweet"]'
@@ -101,7 +99,8 @@ function quoteRootOf(article: HTMLElement): HTMLElement | null {
   const direct = article.querySelector<HTMLElement>(QUOTE_SELECTOR)
   if (direct !== null) return direct
   const attachments = article.querySelector<HTMLElement>(ATTACHMENTS_SELECTOR)
-  if (attachments !== null && attachments.querySelector(TWEET_TEXT_SELECTOR) !== null) return attachments
+  // A quoted X Article carries no tweetText, so the body test also accepts article title/body.
+  if (attachments !== null && hasPostBody(attachments)) return attachments
   return null
 }
 
@@ -173,12 +172,9 @@ function authorOf(scope: Element | null, verified: boolean): TweetAuthor {
   return { name: displayNameOf(nameEl, handle), handle, avatar: avatarOf(scope ?? null), verified }
 }
 
-/** The post body, skipping the quoted post's own body. */
+/** The post body, skipping the quoted post's own body; X Articles fall back to their title and body blocks. */
 function bodyOf(article: HTMLElement, quoteRoot: HTMLElement | null): string {
-  for (const el of article.querySelectorAll(TWEET_TEXT_SELECTOR)) {
-    if (!isQuoted(quoteRoot, el)) return (el.textContent || '').trim()
-  }
-  return ''
+  return readTweetBody(article, quoteRoot)
 }
 
 /** Resolves the address a media container stands for. */
@@ -269,7 +265,7 @@ function postedAtOf(article: HTMLElement): string | null {
 /** The quoted post, when the post nests one. */
 function quotedOf(quoteRoot: HTMLElement | null): QuotedTweet | undefined {
   if (quoteRoot === null) return undefined
-  const text = textOf(quoteRoot.querySelector(TWEET_TEXT_SELECTOR))
+  const text = readCardText(quoteRoot)
   const handle = handleOf(quoteRoot.querySelector(USER_NAME_SELECTOR))
   const name = displayNameOf(quoteRoot.querySelector(USER_NAME_SELECTOR), handle)
   if (text === '' && name === '' && handle === '') return undefined
