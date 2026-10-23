@@ -37,10 +37,11 @@ node --test plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/C
 node --test plugins/omnimux/src/media/route.test.js plugins/omnimux/src/media/routing-boundary.test.js plugins/omnimux/src/media/candidate-intent-constraints.test.js plugins/omnimux/src/media/execute-fallback.test.js
 ```
 
-## 5. 合入前必须确认（阻塞）
+## 5. 合入前确认（已由网关侧离线证据解决，见 `docs/evidence/2026-10-23-desktop-channel-groups-gateway.md`）
 
-1. 网关已开通 `desktop-480p` / `desktop-720p` 分组。2026-10-21 漂移审计记录的现役分组仍是 `seedance-2-5-480p/-720p`（渠道 77-80）；若网关无桌面分组，路由会产出无渠道候选，线上生成直接失败。
-2. 6.8 / 9.6 积分与 1.7 折 / 2.4 折已获产品/定价负责人确认（约 3 折属商业决策）。
+1. 网关已开通 `desktop-480p` / `desktop-720p`：网关 `b64f0412b`（2026-10-22 12:49:34 +08:00，已在 origin/main）新增渠道 #88/#89（`status=1`，`model=seedance-2-5`，`group=desktop-480p/desktop-720p`），配置基线 2026-10-22 12:58 自生产 MySQL 拉取。
+2. 定价口径：`GroupRatio` 为 0.17 / 0.24，按「ModelPrice × GroupRatio × 5s × 10 积分/USD」得 6.8 / 9.6，与中枢改动逐字一致；`UserUsableGroups` 已对外标注 ¥0.92/秒、¥1.31/秒，`FORK_CUSTOMIZATIONS.md` 与 `docs/brand/*` 书面记录桌面端独立定价。剩余仅需产品/定价负责人流程性确认（本 spec 不代替商业签字）。
+3. 仍需人工项：桌面端 Token 是否允许请求 desktop-\* 分组（网关令牌配置，离线快照不含）；一次经授权的真实桌面端生成（视频 live 验证需任务级授权）。
 
 ## 假设
 
