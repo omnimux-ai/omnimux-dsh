@@ -1,6 +1,8 @@
 /**
  * 画布「添加节点」菜单：Dock (+) 与 ContextMenu 钻取共用同一份 UI。
- * 数据来自 addNodePalette（单点真源）；零 inline 颜色、零副标题。
+ * 数据来自 addNodePalette（单点真源）；零 inline 颜色。
+ * 调色板行保持单行（无副标题）；底部「新建工作流」入口卡是唯一的例外，
+ * 其副标题来自既有 i18n key，描述真实语义（存为可复用模板）。
  *
  * 分类与检索同样来自 addNodePalette（其分组/检索词取自节点注册表），
  * 本组件不持有第二份分类表；注册表未声明分组的节点不会被安进伪造分类。
@@ -10,8 +12,10 @@ import { memo, useMemo, useState, type ComponentType, type FC, type MouseEvent, 
 import {
   AudioLines,
   Box,
+  Boxes,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   Film,
   ImagePlus,
   Search,
@@ -50,6 +54,11 @@ export interface AddNodeMenuProps {
   onSelect: (type: CanvasAddNodeType) => void;
   /** Context 钻取：返回主菜单 */
   onBack?: () => void;
+  /**
+   * 面板底部「新建工作流」入口卡（存为可复用模板）。
+   * 缺省时不渲染该卡——组件自身不打开任何弹窗，也不伪造入口。
+   */
+  onCreateWorkflow?: () => void;
 }
 
 function stopMenuEvent(event: MouseEvent) {
@@ -77,7 +86,7 @@ function renderLabel(match: AddNodePaletteMatch): ReactNode {
   return parts;
 }
 
-const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack }) => {
+const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack, onCreateWorkflow }) => {
   const t = useT();
   const [query, setQuery] = useState('');
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(() => new Set());
@@ -205,6 +214,28 @@ const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack }) => {
             );
           })}
         </div>
+
+        {onCreateWorkflow ? (
+          <div className="wf-node-menu__footer">
+            <button
+              type="button"
+              className="wf-node-menu__entry"
+              onClick={(event) => {
+                stopMenuEvent(event);
+                onCreateWorkflow();
+              }}
+            >
+              <div className="wf-node-menu__icon-box">
+                <Boxes size={18} />
+              </div>
+              <span className="wf-node-menu__entry-text">
+                <span className="wf-node-menu__entry-title">{t('template.panel.newWorkflow')}</span>
+                <span className="wf-node-menu__entry-hint">{t('template.panel.newWorkflowHint')}</span>
+              </span>
+              <ChevronRight size={16} className="wf-node-menu__entry-arrow" />
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
