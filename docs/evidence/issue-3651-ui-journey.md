@@ -16,7 +16,7 @@
 | 入口 hover | hover 底色 | hover 底色仍在（`rgba(255,255,255,0.08)`） |
 | 入口点击 | 打开「创建可复用工作流模板」 | 仍打开（overlay 1 个，标题一致） |
 
-「默认选中观感」的成因已定位：旧形态用 1px 边框 + footer 分割线把入口行框成卡片；`--wf-menu-surface-hover` 在本主题下解析为 `transparent`，所以真正制造高亮的是边框与分割线，本次以「去边框 + 去分割线」消除，并且不再让 hover token 充当常态底色。
+「默认选中观感」的成因（独立验收方复核后订正过一次）：旧形态的入口行是 `background: var(--wf-menu-surface-hover, transparent)`，该 token 在右键面板作用域（`.wf-context-menu`，`components.css:2229`）解析为 `rgba(255,255,255,0.08)`——只有 Dock 里未定义，所以**旧右键入口行本来就有常态底色**，这才是「像被选中」的主因，1px 边框与 footer 分割线是叠加的第二、第三重。本次以 `background: transparent` + 去边框 + 去分割线消除，并且不再让 hover token 充当常态底色。
 
 面板自然高度从 586px（#3639 记录）降到 **411px**（host 429px），`ADD_MENU_HEIGHT_ESTIMATE` 由 600 校准为 **440**（注释写明来源），锚点不再被高估夹取（1728×883 锚点 y=300 时面板 top 由 275 变为 300）。
 
@@ -40,6 +40,10 @@ Dock (+) 面板不回归：搜索框 1 个（占位「搜索节点或能力」�
 - `pnpm verify:stages` → PASS（14 Stage / 8 sidebar）
 - `node --test scripts/verify-anti-slop.test.mjs` → 3 pass / 0 fail
 - `git diff --check` → clean
+
+## 独立验收（verifier-3651，与实施分离）
+
+自建 TaskSpace 独立复测，结论 **PASS**，并用 `CSS.getMatchedStylesForNode` 确认 12 个样式表无后续规则覆盖；`ADD_MENU_HEIGHT_ESTIMATE=440` 在 12 组视口/锚点（含 1728×883@y860、900×420、760×380、600×340）下溢出与裁剪全为 0；Dock 搜索过滤（「视频」→5 条 + 2 个 `<mark>`、乱码→空态、清空→8 条）正常。6 条证伪尝试均未推翻，并订正了本文件对「默认选中观感」成因的一处不准表述（见上）。未覆盖：Electron/壳层渲染、入口键盘 focus-visible 环、浅色主题。
 
 ## 已知缺口
 
