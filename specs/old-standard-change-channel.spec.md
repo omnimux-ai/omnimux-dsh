@@ -94,15 +94,25 @@
 | 门禁自身测试 | `node --test scripts/guard-anti-cheat.test.mjs` | **24/24 通过** |
 | 语法层评估测试 | `node --test scripts/test-authoring-inspection.test.mjs` | 全绿（含既有 `deepEqual` 契约用例） |
 | 治理登记 | `node --test scripts/verify-governance-registry.test.mjs` | **4/4 通过**（未新增脚本文件，无需登记） |
-| 门禁套件 | `pnpm test:gates` | 470 / 458 通过 / **12 失败，与基线失败集合逐条同名**（见下） |
+| 门禁套件 | `pnpm test:gates` | 446 / 434 通过 / **12 失败，与基线失败集合逐条同名**（见下；该数字在撤回 `package.json` 改动后测得） |
 
 端到端验证方式：向本任务 spec 临时加入 `## 旧标准变更` 声明，用一条削弱该用例断言的编辑调用 `handle()`——有声明时 `allow`，撤销声明后 `deny` 且信息点名缺失用例；spec 事后还原。这条同时证明 root 传递正确：声明是从**被改文件所属的工作树**读到的，而不是门禁自己的检出根（主检出），否则通道在仓库强制的 worktree 工作流下完全失效。
 
 `pnpm test:gates` 的 12 个失败全部为既有环境/内容问题，与本改动无关：9 个直接报 `EVIDENCE_FIXTURE_ENV_REQUIRED`（缺测试环境前置），1 个是 agent 预设内容违规，2 个源于 `plugins/omnimux-forms/assets` 在 git 中无跟踪文件。改动前后失败集合完全相同，用例数 +3 即本任务在 `test-authoring-inspection.test.mjs` 追加的 3 条。
 
-### 附带修复：门禁自身测试此前未接入任何脚本
+### 更正：门禁自身测试的 CI 覆盖
 
-`scripts/guard-anti-cheat.test.mjs` 原先**没有被任何 package.json 脚本引用**，因此该门禁的回归测试从不运行——新加的通道测试也会形同虚设。已把它加入 `test:gates` 列表（该文件本地 24/24 通过，且其中的仓库级断言只校验结构、不依赖具体分支状态，在 CI 的 detached HEAD 下同样安全）。
+本节先前写「`scripts/guard-anti-cheat.test.mjs` 没有被任何 package.json 脚本引用，因此回归测试从不运行」，并据此把它加入 `test:gates`。**该表述是错的**：`origin/main:.github/workflows/quality-gate.yml:109` 已经运行 `node --test scripts/guard-anti-cheat.test.mjs`，该文件本来就在 CI 跑。相应地 `package.json` 的改动已撤回——它无害但多余，且会让 diff 与事实不符。
+
+## 独立评审结论（R1，合入前）
+
+评审对 HEAD `df6023435` 出具「**需修改，不建议按当前形态合入**」。匹配逻辑经 108 组差分模糊测试**未发现严格性回退**（无「不声明即放行」路径；路径/用例名精确匹配；其它拒绝原因不进入通道；符号链接与嵌套仓库 fail-closed）。但**授权来源不成立**：
+
+- **H1（高，已由我复核）** 声明可放在**未跟踪**的 `specs/*.md` 里——`taskSpecs` 走 `git status -uall` 会读到它，而它**不在** `origin/main...HEAD` 的 PR diff 里。于是「改测试 → 写未跟踪声明放行 → 删声明 → 提交测试」全程无声明进入 PR。复核：`specs/zz-probe.spec.md` 出现在 `git status`、不在 `git diff origin/main...HEAD`。本仓 AGENTS.md 明确 spec 未跟踪是常态，所以这不是边缘情形。
+- **M1（中）** `evaluateAntiCheat` 会被攻击者自建的嵌套 `.git` 当作声明来源而放行；同一目标经 `handle()` 会 deny。变更点 5 宣称的「两入口判定一致」因此不成立（该函数目前未接入 hook/CI，属潜在缺口）。
+- **L1/L2/L3/L5** 「≥20 非空白字符」几乎不设防；同名用例一条声明覆盖全部；声明不绑定某次编辑或提交；新增测试**没有**覆盖 `handle()` + 真读磁盘 spec 的放行路径。
+
+**结论：本 PR 在修复 H1 之前不得合入。** 写入时刻的门禁天然只能提供早期反馈；真正闭环需要 CI 侧按 commit range 复核声明（见 `scripts/test-change-review.mjs`，其 `scan` 目前从未被 CI 调用）。该修复属设计变更，需先确认方向。
 
 ## 假设
 
