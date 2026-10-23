@@ -80,10 +80,11 @@
 ### 7.1 宿主 `plugins/omnimux-browser/src`
 
 1. `protocol.ts` 新增 `BRIDGE_TEXT_GENERATION_METHOD = 'bridge.textGeneration'`，并导出 payload 解析器。
-2. 入参：`{ sessionId: string, model: string, provider?: string, reasoningEffort?: string }`；`sessionId` / `model` 非空且 ≤200 字符，`provider` ≤64，`reasoningEffort` ≤64；不合法 → `bad-request`。
+2. 入参：`{ sessionId: string, model: string, provider: string, reasoningEffort?: string }`；`sessionId` / `model` / `provider` 非空且 ≤200 字符（`provider` ≤64），`reasoningEffort` ≤64；不合法 → `bad-request`。
+   **`provider` 必填**：宿主 `session/selectModel` 的 strict codec 把 `provider` 列为 required，缺省必被拒绝，因此插件契约同样要求非空。
 3. 成功应答：`{ pinned: true }`。
 4. `server.ts` 依赖新增 `pinTextGeneration?: (request) => Promise<void>`；未注入 → `internal`（"Text generation pin unavailable"）。
-5. `index.ts` 实现：先 `session.selectModel`（含 provider / reasoningEffort），再登记该会话为文本生成会话；登记**必须早于** prompt 转发。
+5. `index.ts` 实现：**先把该会话 materialize**（`deferSessionCreate` 默认开启时 `session.create` 只铸 provisional id，宿主 `session.selectModel` 对未持久化会话返回 `session/not-found`），再 `session.selectModel`（含 provider / reasoningEffort），最后登记该会话为文本生成会话；登记**必须早于** prompt 转发。materialize 由 `session-deferral` 暴露的按需物化能力提供，禁用 deferral 时为 no-op。
 6. `purgeSession` 同步注销该会话的钉定；注销失败不得影响 purge 结果。
 7. `withAutoModelRouting` 新增依赖 `isPinned?: (sessionId: string) => boolean`；`isPinned(sessionId) === true` 时**跳过 Jev 路由**直接转发（不调用 `selectModel`）。
 8. `bridge.completeText` payload 增加可选 `model`（≤200 字符），转发为 `completeText({ prompt, system, model, maxTokens, signal })`。
@@ -93,7 +94,7 @@
 9. `Settings` 新增：`textModel: string`（空串 = 跟随对话模型 / 宿主默认）、`textProvider: string`、`textEffort: string`；默认值为空串。
 10. 设置面板：原字段文案改为「对话模型与推理等级」；新增「文本生成模型与推理等级」；两者各自独立读写设置对象，不共享存储键。
 11. 文本生成选择器提供「跟随对话模型」空值选项；选择后 `textModel` 为空串。
-12. 生成主路径 `completeTextWithSession`：创建临时会话后，若 `textModel` 非空 → 调用 `bridge.textGeneration` 钉定并选择模型；**钉定失败必须抛错**（对用户可见），不得静默改用对话模型或继续用宿主默认。
+12. 生成主路径 `completeTextWithSession`：创建临时会话后，若 `textModel` 非空 → **先解析 provider**（优先用已保存的 `textProvider`，为空时按 model id 回查实时目录 `session.modelCatalog` 的 group provider / id / 名称映射），再调用 `bridge.textGeneration` 钉定并选择模型；provider 解析不到或钉定失败都必须**显式抛错**（对用户可见），不得静默改用对话模型或继续用宿主默认。
 13. 兜底 `bridge.completeText`：`textModel` 非空时携带 `model`。
 14. 未设置 `textModel` 时，主路径与兜底均保持今天的行为（不调用钉定、不携带 model）。
 
@@ -111,7 +112,8 @@
 - **A2 auto 隔离**：`bridge.modelMode = auto` 时，钉定的文本生成会话不被路由（宿主单测断言 `selectModel` 不被路由调用、prompt 仍转发）；对话会话仍被路由。
 - **A3 未设置回退**：`textModel` 为空时不调用 `bridge.textGeneration`，`bridge.completeText` 不带 `model`。
 - **A4 失败显式**：钉定失败（模型不可用）时生成返回显式错误信息，不产生正文。
-- **A5 真实浏览器**：设置面板两个选择器可分别切换并持久化；Copilot 生成请求携带所选模型。
+- **A5 真实浏览器**：设置面板两个选择器可分别切换并持久化；未打包扩展 + 本机桩宿主（模拟宿主 strict codec：缺 provider 的 `session.selectModel` 一律拒绝）下触发一次 Copilot 生成，断言帧序 `session.create → bridge.textGeneration → session.prompt → bridge.session.purge` 且钉定 payload 精确等于所选 `{model, provider, reasoningEffort}`。
+- **A6 deferral 物化**：`deferSessionCreate` 开启（`session.create` 只返回 provisional id，宿主对未持久化会话的 `session.selectModel` 返回 `session/not-found`）时，钉定必须先 materialize 再 `selectModel`，否则配置了文本模型的生成会 100% 失败。宿主单测用「拒绝未知会话的严格 gateway 桩」覆盖。
 
 ## 10. 新用户基线
 
@@ -122,7 +124,8 @@
 1. 宿主新建会话（`session.create` 不带模型）使用 `agent-default-model` 设置值；因此「跟随对话模型」等价于今天的行为。
 2. auto 路由由 `withAutoModelRouting` 包装 `session.prompt` 实现，是插件内唯一的隐式改选点；因此钉定集合足以隔离文本生成。
 3. 扩展 background 与 panel 共享 `chrome.storage.local` 的 `dshSettings` 对象，文本模型可在两个上下文一致读取。
-4. `session.selectModel` 支持 `provider` / `reasoningEffort` 可选字段（现有对话路径已按此调用）。
+4. 宿主 `session/selectModel` 的 request schema（strict codec）要求 `sessionId` / `provider` / `model` 三者齐备，`provider` 缺省会被 codec 拒绝；`reasoningEffort` 可选。
+5. `deferSessionCreate` 默认开启：`session.create` 只铸本地 provisional id（不落库），宿主 `session.selectModel` 对未 materialize 的会话返回 `session/not-found`；因此钉定前必须物化。
 
 ## 证伪方式
 
@@ -130,6 +133,8 @@
 2. 若 background 读取不到 panel 写入的文本模型（设置面板显示已选、生成仍用宿主默认），则假设 3 错误，需要改为经 `chrome.runtime.sendMessage` 显式同步设置。
 3. 若 `session.create` 后的会话模型并非 `agent-default-model`（例如被实例配置覆盖），则「未设置文本模型时行为与现状一致」的验收 A3 需按实际继承来源重写。
 4. 若钉定失败被证明不影响用户可见结果（例如用户仍得到正确模型的正文），则验收 A4 的前提不成立，应删除该断言而不是保留空断言。
+5. 若 provisional 会话上的 `session.selectModel` 实际被宿主接受（宿主自行 resume/创建），则假设 5 与验收 A6 不成立，可删除物化步骤——但必须在真实宿主或严格桩上复现「未物化会话 + selectModel 成功」的证据，不能靠桩一律成功来推断。
+6. 若宿主 strict codec 实际接受缺失 `provider` 的 `session/selectModel`，则假设 4 与 §7.1(2) 的必填要求应放宽回可选；反之若真实请求被拒绝，则必须保持必填并让扩展显式报错。
 
 ## 12. 文档影响
 

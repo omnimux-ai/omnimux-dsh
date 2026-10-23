@@ -105,17 +105,18 @@ export const BRIDGE_MODEL_MODE_METHOD = 'bridge.modelMode'
  *
  * The panel keeps two independent model settings: the conversation model and
  * the text-generation model. Before a one-shot body generation it pins the
- * freshly created session here, which selects that model and records the
- * session as pinned — a pinned session is never re-chosen by `bridge.modelMode`
- * auto routing. Set semantics only, held in process memory like the session
- * model itself: it never touches durable storage.
+ * freshly created session here: the host materializes that deferred session,
+ * selects the model (with its provider), then records the session as pinned —
+ * a pinned session is never re-chosen by `bridge.modelMode` auto routing. Set
+ * semantics only, held in process memory like the session model itself: it
+ * never touches durable storage.
  */
 export const BRIDGE_TEXT_GENERATION_METHOD = 'bridge.textGeneration'
 
 /** Longest accepted `sessionId`/`model` for {@link BRIDGE_TEXT_GENERATION_METHOD}. */
 export const TEXT_GENERATION_MAX_ID_CHARS = 200
 
-/** Longest accepted optional `provider`/`reasoningEffort` value. */
+/** Longest accepted `provider`/`reasoningEffort` value. */
 export const TEXT_GENERATION_MAX_OPTION_CHARS = 64
 
 /** Payload of {@link BRIDGE_TEXT_GENERATION_METHOD}. */
@@ -124,8 +125,12 @@ export interface TextGenerationRequest {
   sessionId: string
   /** Explicit text-generation model the session must use. */
   model: string
-  /** Optional gateway provider id for that model. */
-  provider?: string
+  /**
+   * Gateway provider id for that model. Required: the Host's
+   * `session/selectModel` codec lists `provider` as required, so a provider-less
+   * pin would be rejected there instead of failing at this contract boundary.
+   */
+  provider: string
   /** Optional reasoning effort for that model. */
   reasoningEffort?: string
 }
@@ -151,27 +156,30 @@ function optionalBoundedText(value: unknown, max: number): string | undefined | 
  * Validate a {@link TextGenerationRequest} that arrived over the bridge.
  *
  * `sessionId` and `model` must be non-empty and at most
- * {@link TEXT_GENERATION_MAX_ID_CHARS} characters; the optional
- * `provider`/`reasoningEffort` must be strings of at most
- * {@link TEXT_GENERATION_MAX_OPTION_CHARS} characters (an empty string is the
- * panel's "not set" value and is dropped). Anything else is not a pin request,
- * so the carrier answers `bad-request` instead of pinning a guessed model.
+ * {@link TEXT_GENERATION_MAX_ID_CHARS} characters; `provider` must be non-empty
+ * and at most {@link TEXT_GENERATION_MAX_OPTION_CHARS} characters (the Host's
+ * `session/selectModel` codec requires it); the optional `reasoningEffort` must
+ * be a string of at most {@link TEXT_GENERATION_MAX_OPTION_CHARS} characters
+ * (an empty string is the panel's "not set" value and is dropped). Anything
+ * else is not a pin request, so the carrier answers `bad-request` instead of
+ * pinning a guessed model.
  * @param payload - the decoded `rpc.payload`.
  * @returns the request, or `undefined` when the payload is not one.
  */
 export function parseTextGenerationRequest(payload: unknown): TextGenerationRequest | undefined {
   if (!isRecord(payload)) return undefined
-  const { sessionId, model } = payload
+  const { sessionId, model, provider } = payload
   if (!isBoundedNonEmptyText(sessionId, TEXT_GENERATION_MAX_ID_CHARS)) return undefined
   if (!isBoundedNonEmptyText(model, TEXT_GENERATION_MAX_ID_CHARS)) return undefined
-  const provider = optionalBoundedText(payload.provider, TEXT_GENERATION_MAX_OPTION_CHARS)
-  if (provider === INVALID_OPTION) return undefined
+  // `provider` is required by the Host codec, so a missing or empty value is a
+  // contract violation here rather than a Host-side rejection later.
+  if (!isBoundedNonEmptyText(provider, TEXT_GENERATION_MAX_OPTION_CHARS)) return undefined
   const reasoningEffort = optionalBoundedText(payload.reasoningEffort, TEXT_GENERATION_MAX_OPTION_CHARS)
   if (reasoningEffort === INVALID_OPTION) return undefined
   return {
     sessionId,
     model,
-    ...(provider === undefined ? {} : { provider }),
+    provider,
     ...(reasoningEffort === undefined ? {} : { reasoningEffort }),
   }
 }

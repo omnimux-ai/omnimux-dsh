@@ -48,7 +48,7 @@ import {
   type AutoModelEvaluate,
   type SubscriptionModelGroup,
 } from './auto-model.ts'
-import { withSessionDeferral } from './session-deferral.ts'
+import { createSessionDeferral } from './session-deferral.ts'
 import { withSessionWorkspace } from './session-workspace.ts'
 import { purgeSessionFiles, type SessionPurgeDeps } from './session-purge.ts'
 import { resolveToken } from './token.ts'
@@ -173,6 +173,11 @@ export function createTextGenerationPinRegistry(): TextGenerationPinRegistry {
 export interface TextGenerationModelSelection {
   readonly sessionId: string
   readonly model: string
+  /**
+   * Gateway provider id. Optional on the shared selectModel seam because auto
+   * routing may pick a candidate without one; the pin path always supplies it
+   * (`bridge.textGeneration` requires a non-empty provider).
+   */
   readonly provider?: string
   readonly reasoningEffort?: string
 }
@@ -180,27 +185,36 @@ export interface TextGenerationModelSelection {
 /**
  * Pin one temporary session to an explicit text-generation model.
  *
- * Order contract (Issue #3629): `selectModel` settles BEFORE the session is
- * registered, and the registration lands before the caller forwards its prompt
- * — the carrier also orders the pin frame ahead of that session's prompts, so
- * the auto router already sees the pin on the first turn. A failed selection
- * registers nothing: the caller must surface the error instead of silently
- * falling back to the conversation model.
+ * Order contract (Issue #3629 §7.1.5): materialize the deferred session →
+ * `selectModel` → register. Materialization comes first because the Host
+ * resolves `session/selectModel` against a persisted session and answers
+ * `session/not-found` for a provisional id. The registration then lands before
+ * the caller forwards its prompt — the carrier also orders the pin frame ahead
+ * of that session's prompts, so the auto router already sees the pin on the
+ * first turn. A failed materialization or selection registers nothing: the
+ * caller must surface the error instead of silently falling back to the
+ * conversation model.
  *
- * @param deps - gateway selection plus the registry write.
+ * @param deps - on-demand materialization, gateway selection, registry write.
  * @param request - validated `bridge.textGeneration` payload.
  */
 export async function pinTextGenerationSession(
   deps: {
+    /**
+     * Materialize a session the panel created provisionally. Absent when
+     * session deferral is disabled, where the create already persisted.
+     */
+    materialize?: (sessionId: string) => Promise<void>
     selectModel: (input: TextGenerationModelSelection) => Promise<void>
     pin: (sessionId: string) => void
   },
   request: TextGenerationRequest,
 ): Promise<void> {
+  await deps.materialize?.(request.sessionId)
   await deps.selectModel({
     sessionId: request.sessionId,
     model: request.model,
-    ...(request.provider === undefined ? {} : { provider: request.provider }),
+    provider: request.provider,
     ...(request.reasoningEffort === undefined ? {} : { reasoningEffort: request.reasoningEffort }),
   })
   deps.pin(request.sessionId)
@@ -288,6 +302,7 @@ function mountBridge(
     candidates: () => flattenModelCandidates(loadSubscriptionModelGroups()),
     getMode,
     isPinned: (sessionId: string) => textGenerationPins.isPinned(sessionId),
+    warn: (message: string) => { ctx.logger.warn(message) },
     onRouted: (info: { sessionId: string; model?: string; outcome: 'routed' | 'fallback'; reason?: string }) => {
       ctx.logger.info(
         info.outcome === 'routed'
@@ -299,16 +314,17 @@ function mountBridge(
 
   // Auto-model routing wraps the gateway adapter directly; session deferral
   // stays outermost so a provisional session materializes before selectModel
-  // runs, and workspace grouping sits between the two.
-  const api = withSessionDeferral(
-    withSessionWorkspace(
-      withAutoModelRouting(hostApi, routerDeps),
-      resolved.sessionWorkspacePath,
-      message => { ctx.logger.warn(message) },
-    ),
-    resolved.deferSessionCreate,
-    ctx.get('attachments')?.imageLimits,
+  // runs, and workspace grouping sits between the two. The deferral handle is
+  // kept because pinning must materialize a provisional session on demand —
+  // the Host answers `session/not-found` for `session.selectModel` on an
+  // unmaterialized id (Issue #3629 B1).
+  const workspaceApi = withSessionWorkspace(
+    withAutoModelRouting(hostApi, routerDeps),
+    resolved.sessionWorkspacePath,
+    message => { ctx.logger.warn(message) },
   )
+  const deferral = createSessionDeferral(workspaceApi, resolved.deferSessionCreate, ctx.get('attachments')?.imageLimits)
+  const api = deferral?.api ?? workspaceApi
   const browserContext = new BrowserContextInjector(ctx.agents)
   ctx.on('agent/session-start', ({ agent }) => {
     browserContext.activate(agent)
@@ -407,7 +423,12 @@ function mountBridge(
     injectBrowserSnapshot: (sessionId, snapshot) => { browserContext.inject(sessionId, snapshot) },
     purgeSession,
     pinTextGeneration: request => pinTextGenerationSession(
-      { selectModel: routerDeps.selectModel, pin: sessionId => { textGenerationPins.pin(sessionId) } },
+      {
+        // Undefined when deferral is off: the create already persisted.
+        ...(deferral === undefined ? {} : { materialize: deferral.materialize }),
+        selectModel: routerDeps.selectModel,
+        pin: sessionId => { textGenerationPins.pin(sessionId) },
+      },
       request,
     ),
     produced,

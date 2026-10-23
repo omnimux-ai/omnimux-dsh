@@ -155,9 +155,23 @@ describe('设置面板的文本生成模型行（#3629 A1）', () => {
   })
 
   it('切换文本生成模型只写 textModel 三元组，对话模型键不变（A1）', async () => {
+    // 实时目录夹具：组 provider 与组名映射给出的值不同（'grok-subscription' vs
+    // 'grok'），所以下面的 provider 断言只能命中目录解析路径，空串或兜底名都算失败。
+    globalThis.fetch = async () => new Response(JSON.stringify({
+      modelGroups: [
+        { group: 'Grok (Subscription)', provider: 'grok-subscription', models: [{ id: 'grok-4.6', name: 'Grok 4.6' }] },
+      ],
+    }), { status: 200, headers: { 'content-type': 'application/json' } })
+
     await openSettings()
     const chatValueBefore = selectIn(LABEL_CHAT).value
     const chatStoredBefore = globalThis.localStorage.getItem('omnimux_default_model')
+
+    // 等目录落地：夹具组替换了离线快照组（'gpt-6-astra' 只存在于快照里）。
+    await vi.waitFor(() => {
+      const values = Array.from(selectIn(LABEL_TEXT).options).map((option) => option.value)
+      assert.equal(values.includes('gpt-6-astra'), false)
+    })
 
     await choose(selectIn(LABEL_TEXT), 'grok-4.6')
     await vi.waitFor(() => { assert.ok(updateSettings.mock.calls.length > 0) })
@@ -166,6 +180,7 @@ describe('设置面板的文本生成模型行（#3629 A1）', () => {
     assert.equal(patch.textModel, 'grok-4.6')
     assert.equal(typeof patch.textEffort, 'string')
     assert.equal(typeof patch.textProvider, 'string')
+    assert.equal(patch.textProvider, 'grok-subscription')
     assert.equal(Object.keys(patch).includes('bridgeUrl'), false)
     assert.equal(Object.keys(patch).includes('token'), false)
 

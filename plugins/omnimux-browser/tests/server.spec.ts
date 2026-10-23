@@ -910,8 +910,8 @@ describe('parseTextGenerationRequest', () => {
       provider: 'anthropic',
       reasoningEffort: 'high',
     })
-    expect(parseTextGenerationRequest({ sessionId: 'session-1', model: 'claude-opus-4-6', provider: '', reasoningEffort: '' }))
-      .toEqual({ sessionId: 'session-1', model: 'claude-opus-4-6' })
+    expect(parseTextGenerationRequest({ sessionId: 'session-1', model: 'claude-opus-4-6', provider: 'anthropic', reasoningEffort: '' }))
+      .toEqual({ sessionId: 'session-1', model: 'claude-opus-4-6', provider: 'anthropic' })
   })
 
   it('accepts the exact frozen boundaries', () => {
@@ -943,6 +943,9 @@ describe('parseTextGenerationRequest', () => {
       { sessionId: 'session-1', model: '   ' },
       { sessionId: overlongId, model: 'claude-opus-4-6' },
       { sessionId: 'session-1', model: overlongId },
+      { sessionId: 'session-1', model: 'claude-opus-4-6' },
+      { sessionId: 'session-1', model: 'claude-opus-4-6', provider: '' },
+      { sessionId: 'session-1', model: 'claude-opus-4-6', provider: '   ' },
       { sessionId: 'session-1', model: 'claude-opus-4-6', provider: 7 },
       { sessionId: 'session-1', model: 'claude-opus-4-6', provider: overlongOption },
       { sessionId: 'session-1', model: 'claude-opus-4-6', reasoningEffort: overlongOption },
@@ -995,6 +998,8 @@ describe('bridge.textGeneration', () => {
       { sessionId: '', model: 'claude-opus-4-6' },
       { sessionId: 'session-1', model: '' },
       { sessionId: 'x'.repeat(TEXT_GENERATION_MAX_ID_CHARS + 1), model: 'claude-opus-4-6' },
+      { sessionId: 'session-1', model: 'claude-opus-4-6' },
+      { sessionId: 'session-1', model: 'claude-opus-4-6', provider: '' },
       { sessionId: 'session-1', model: 'claude-opus-4-6', provider: 'x'.repeat(TEXT_GENERATION_MAX_OPTION_CHARS + 1) },
       null,
     ]
@@ -1022,7 +1027,7 @@ describe('bridge.textGeneration', () => {
       t: 'rpc',
       id: 'pin-missing',
       method: BRIDGE_TEXT_GENERATION_METHOD,
-      payload: { sessionId: 'session-1', model: 'claude-opus-4-6' },
+      payload: { sessionId: 'session-1', model: 'claude-opus-4-6', provider: 'anthropic' },
     })
     await waitFor(() => rpcResult(frames, 'pin-missing') !== undefined)
 
@@ -1047,7 +1052,7 @@ describe('bridge.textGeneration', () => {
       t: 'rpc',
       id: 'pin-failed',
       method: BRIDGE_TEXT_GENERATION_METHOD,
-      payload: { sessionId: 'session-1', model: 'claude-opus-4-6' },
+      payload: { sessionId: 'session-1', model: 'claude-opus-4-6', provider: 'anthropic' },
     })
     await waitFor(() => rpcResult(frames, 'pin-failed') !== undefined)
 
@@ -1083,7 +1088,7 @@ describe('bridge.textGeneration', () => {
       t: 'rpc',
       id: 'pin-ordered',
       method: BRIDGE_TEXT_GENERATION_METHOD,
-      payload: { sessionId: 'session-ordered', model: 'claude-opus-4-6' },
+      payload: { sessionId: 'session-ordered', model: 'claude-opus-4-6', provider: 'anthropic' },
     })
     send(ws, {
       t: 'rpc',

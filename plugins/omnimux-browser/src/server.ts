@@ -658,7 +658,8 @@ export class BridgeServer {
           error: {
             code: 'bad-request',
             message: `sessionId and model must be non-empty strings of at most ${TEXT_GENERATION_MAX_ID_CHARS} characters; `
-              + `optional provider and reasoningEffort must be strings of at most ${TEXT_GENERATION_MAX_OPTION_CHARS} characters`,
+              + `provider must be a non-empty string of at most ${TEXT_GENERATION_MAX_OPTION_CHARS} characters; `
+              + `optional reasoningEffort must be a string of at most ${TEXT_GENERATION_MAX_OPTION_CHARS} characters`,
           },
         })
         return

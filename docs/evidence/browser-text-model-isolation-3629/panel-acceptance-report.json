@@ -1,6 +1,6 @@
 {
   "mode": "accept",
-  "stamp": "2026-10-23T07-39-45-318Z",
+  "stamp": "2026-10-23T10-29-01-302Z",
   "assertions": [
     {
       "name": "A1 对话模型行存在",
@@ -28,8 +28,8 @@
     }
   ],
   "screenshots": [
-    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-text-model-isolation-issue-3629/.workbuddy/evidence/text-model-e2e/2026-10-23T07-39-45-318Z-settings-before.png",
-    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-text-model-isolation-issue-3629/.workbuddy/evidence/text-model-e2e/2026-10-23T07-39-45-318Z-settings-after.png"
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-text-model-isolation-issue-3629/.workbuddy/evidence/text-model-e2e/2026-10-23T10-29-01-302Z-settings-before.png",
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-text-model-isolation-issue-3629/.workbuddy/evidence/text-model-e2e/2026-10-23T10-29-01-302Z-settings-after.png"
   ],
   "pass": true,
   "extensionId": "lknofogppglmkjppnmglcnkdlmcjgmef",

@@ -283,13 +283,15 @@ describe('Copilot 正文生成与文本生成模型（#3629）', () => {
 
   it('钉定失败返回显式错误、不产生正文、不静默兜底（A4）', async () => {
     const socket = await connectedSocket()
-    await configureTextModel('claude-opus-4-6', '', '')
+    // 已保存 provider：钉定帧直接发出（provider 解析失败是另一条用例）。
+    await configureTextModel('claude-opus-4-6', 'anthropic', '')
     const respond = vi.fn()
     const from = await startGeneration(socket, respond, 'session-pin-failed')
 
     await vi.waitFor(() => { assert.ok(rpcFrames(socket).length > from + 1) })
     const pin = framesFrom(socket, from).at(1)
     assert.equal(pin.method, 'bridge.textGeneration')
+    assert.equal(pin.payload.provider, 'anthropic')
     replyError(socket, pin, 'model unavailable')
 
     await vi.waitFor(() => { assert.ok(respond.mock.calls.length > 0) })
@@ -349,5 +351,90 @@ describe('Copilot 正文生成与文本生成模型（#3629）', () => {
     reply(socket, fallback, { text: '兜底正文' })
     await vi.waitFor(() => { assert.equal(firstResponse(respond).text, '兜底正文') })
     assert.equal(firstResponse(respond).ok, true)
+  })
+
+  it('已保存 provider 时直接用，不回查目录', async () => {
+    const socket = await connectedSocket()
+    await configureTextModel('claude-opus-4-6', 'anthropic', 'high')
+    const respond = vi.fn()
+    const from = await startGeneration(socket, respond, 'session-provider-saved')
+
+    await vi.waitFor(() => { assert.ok(rpcFrames(socket).length > from + 1) })
+    const frames = framesFrom(socket, from)
+    const pin = frames.at(1)
+    assert.equal(pin.method, 'bridge.textGeneration')
+    assert.equal(pin.payload.provider, 'anthropic')
+    assert.equal(frames.some((frame) => frame.method === 'session.modelCatalog'), false)
+
+    reply(socket, pin, { pinned: true })
+    await vi.waitFor(() => { assert.ok(rpcFrames(socket).length > from + 2) })
+    const prompt = framesFrom(socket, from).at(2)
+    assert.equal(prompt.method, 'session.prompt')
+    reply(socket, prompt, { ok: true })
+    completeTurn(socket, 'session-provider-saved', '保存 provider 正文')
+    await vi.waitFor(() => { assert.equal(firstResponse(respond).text, '保存 provider 正文') })
+    assert.equal(firstResponse(respond).ok, true)
+  })
+
+  it('provider 为空时按 model id 回查目录，钉定带上解析出的 provider', async () => {
+    const socket = await connectedSocket()
+    await configureTextModel('grok-4.6', '', '')
+    const respond = vi.fn()
+    const from = await startGeneration(socket, respond, 'session-provider-lookup')
+
+    // 目录组 id 与组名映射给出的值不同：断言必须命中 id 路径。
+    await vi.waitFor(() => { assert.ok(frameWith(framesFrom(socket, from), 'session.modelCatalog')) })
+    const lookup = frameWith(framesFrom(socket, from), 'session.modelCatalog')
+    reply(socket, lookup, {
+      groups: [
+        { id: 'grok-subscription', name: 'Grok (Subscription)', models: [{ id: 'grok-4.6', name: 'Grok 4.6' }] },
+      ],
+    })
+
+    await vi.waitFor(() => { assert.ok(frameWith(framesFrom(socket, from), 'bridge.textGeneration')) })
+    const frames = framesFrom(socket, from)
+    const pin = frameWith(frames, 'bridge.textGeneration')
+    assert.deepStrictEqual(pin.payload, {
+      sessionId: 'session-provider-lookup',
+      model: 'grok-4.6',
+      provider: 'grok-subscription',
+    })
+    assert.ok(frames.indexOf(pin) > frames.indexOf(lookup))
+
+    reply(socket, pin, { pinned: true })
+    await vi.waitFor(() => { assert.ok(frameWith(framesFrom(socket, from), 'session.prompt')) })
+    reply(socket, frameWith(framesFrom(socket, from), 'session.prompt'), { ok: true })
+    completeTurn(socket, 'session-provider-lookup', '目录解析正文')
+    await vi.waitFor(() => { assert.equal(firstResponse(respond).text, '目录解析正文') })
+    assert.equal(firstResponse(respond).ok, true)
+  })
+
+  it('provider 为空且目录查不到时不发钉定、显式报错、仍 purge', async () => {
+    const socket = await connectedSocket()
+    await configureTextModel('ghost-model-9', '', '')
+    const respond = vi.fn()
+    const from = await startGeneration(socket, respond, 'session-provider-missing')
+
+    await vi.waitFor(() => { assert.ok(frameWith(framesFrom(socket, from), 'session.modelCatalog')) })
+    const lookup = frameWith(framesFrom(socket, from), 'session.modelCatalog')
+    reply(socket, lookup, {
+      groups: [
+        { id: 'grok-subscription', name: 'Grok (Subscription)', models: [{ id: 'grok-4.6', name: 'Grok 4.6' }] },
+      ],
+    })
+
+    await vi.waitFor(() => { assert.ok(respond.mock.calls.length > 0) })
+    const response = firstResponse(respond)
+    assert.equal(response.ok, false)
+    assert.ok(response.message.includes('ghost-model-9'))
+    assert.equal(response.text, undefined)
+
+    const frames = framesFrom(socket, from)
+    assert.equal(frames.some((frame) => frame.method === 'bridge.textGeneration'), false)
+    assert.equal(frames.some((frame) => frame.method === 'session.prompt'), false)
+    assert.equal(frames.some((frame) => frame.method === 'bridge.completeText'), false)
+
+    await vi.waitFor(() => { assert.ok(frameWith(framesFrom(socket, from), 'bridge.session.purge')) })
+    assert.equal(frameWith(framesFrom(socket, from), 'bridge.session.purge').payload.sessionId, 'session-provider-missing')
   })
 })

@@ -72,6 +72,11 @@ export interface AutoModelRoutingDeps {
    * silently override the user's text-generation setting.
    */
   readonly isPinned?: (sessionId: string) => boolean
+  /**
+   * Trace sink for a pin predicate that threw (Issue #3629). Routing continues
+   * either way, but a broken registry must be observable instead of silent.
+   */
+  readonly warn?: (message: string) => void
   /** Post-pass notification for the host log; never blocks routing. */
   readonly onRouted?: (info: AutoModelRouteInfo) => void
   /** Evaluation budget override; defaults to {@link AUTO_MODEL_EVALUATE_TIMEOUT_MS}. */
@@ -176,13 +181,14 @@ export function withAutoModelRouting(
         : undefined
       if (sessionId === undefined) return api.call(call)
       // A pinned session already carries an explicit model: forward without a
-      // routing pass, so neither Jev nor selectModel runs. The predicate is a
-      // local registry read, but a broken one must never block a prompt, so a
-      // throw is treated as "not pinned" and the normal path continues.
+      // routing pass, so neither Jev nor selectModel runs. A broken predicate
+      // must never block a prompt, but it must not be silent either: the trace
+      // names the session and the failure stays visible in the host log.
       let pinned = false
       try {
         pinned = deps.isPinned?.(sessionId) === true
-      } catch {
+      } catch (error: unknown) {
+        deps.warn?.(`browser bridge: text-generation pin check failed for session ${sessionId}: ${String(error)}`)
         pinned = false
       }
       if (pinned) return api.call(call)

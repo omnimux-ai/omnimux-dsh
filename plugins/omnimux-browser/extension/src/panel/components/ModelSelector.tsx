@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from 'react'
 import { loopbackFetch } from '../../shared/loopback-fetch.ts'
+import { providerFromCatalogGroup } from '../../shared/model-catalog.ts'
 import type { PanelApi } from '../api.ts'
 
 export interface EffortOption {
@@ -447,8 +448,9 @@ export const ModelSelector = memo(function ModelSelector({
     }
 
     const group = modelGroups.find((candidate) => candidate.models.some((model) => model.id === val))
-    const matchedProvider = group?.provider
-      || (group?.group === 'ChatGPT (Codex)' ? 'chatgpt' : group?.group === 'Grok (Subscription)' ? 'grok' : group?.group === 'OmniMux' ? 'omnimux' : undefined)
+    // provider 解析规则与 background 的钉定路径共用同一实现（#3629）：目录组 id
+    // 优先，组名映射兜底；两处若各写一份就会漂移。
+    const matchedProvider = providerFromCatalogGroup(group)
     onSelectModel?.(val, newEffort === '' ? undefined : newEffort, matchedProvider)
   }
 

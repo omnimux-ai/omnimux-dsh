@@ -313,3 +313,22 @@ describe('withAutoModelRouting pinned sessions', () => {
     expect(selectModel).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('withAutoModelRouting pin-check observability', () => {
+  it('warns about a throwing pin predicate and still routes', async () => {
+    const warn = vi.fn()
+    const { deps, evaluate, selectModel } = routerDeps({
+      isPinned: () => { throw new Error('broken registry') },
+      warn,
+    })
+    const wrapped = withAutoModelRouting(hostApi(), deps)
+
+    const result = await wrapped.call(call('session.prompt', PROMPT))
+    expect(result).toEqual({ ok: true, value: { accepted: true } })
+    // Not silent: the trace names the session, and routing continues.
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('text-generation pin check failed for session session-1'))
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('broken registry'))
+    expect(evaluate).toHaveBeenCalledTimes(1)
+    expect(selectModel).toHaveBeenCalledTimes(1)
+  })
+})
