@@ -1,10 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { evaluateAntiCheat } from './guard-anti-cheat.mjs';
+import { evaluateAntiCheat, decideOldStandardDeclaration, collectOldStandardDeclarations, handle } from './guard-anti-cheat.mjs';
+import { inspectTestStandardChange } from './test-authoring-inspection.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = resolve(__dirname, '..');
@@ -213,6 +214,91 @@ describe('AI Agent 防造假与自适应门禁系统测试 (guard-anti-cheat.tes
         'deny',
         '畸变输入或异常情况下必须 Fail-Closed 判定为 deny，严禁静默 allow！'
       );
+    });
+  });
+
+  describe('4. 旧标准变更通道 (spec 点名后放行)', () => {
+    const FILE = 'plugins/demo/tests/a.test.mjs';
+    const BEFORE = "test('keeps contract', () => { assert.equal(actual(), 1) })";
+    const AFTER = "test('keeps contract', () => { assert.equal(actual(), 2) })";
+
+    it('未声明时，削弱既有断言仍然拒绝（通道不是后门）', () => {
+      const inspection = inspectTestStandardChange(BEFORE, AFTER);
+      assert.equal(inspection.allowed, false);
+      const decision = decideOldStandardDeclaration({ filePath: FILE, inspection, declarations: [] });
+      assert.equal(decision.permissionDecision, 'deny');
+      assert.ok(decision.reason.includes('硬门禁拦截'), '拒绝信息必须保留硬门禁标记');
+      assert.ok(decision.reason.includes('keeps contract'), '拒绝信息必须点名缺失的用例');
+    });
+
+    it('逐条点名后放行', () => {
+      const inspection = inspectTestStandardChange(BEFORE, AFTER);
+      const decision = decideOldStandardDeclaration({
+        filePath: FILE,
+        inspection,
+        declarations: [{ path: FILE, caseName: 'keeps contract' }],
+      });
+      assert.deepEqual(decision, { permissionDecision: 'allow' });
+    });
+
+    it('同名但不同文件不算声明', () => {
+      const inspection = inspectTestStandardChange(BEFORE, AFTER);
+      const decision = decideOldStandardDeclaration({
+        filePath: FILE,
+        inspection,
+        declarations: [{ path: 'plugins/demo/tests/other.test.mjs', caseName: 'keeps contract' }],
+      });
+      assert.equal(decision.permissionDecision, 'deny');
+    });
+
+    it('只声明一部分时，点名缺失的那条', () => {
+      const before = "test('keeps contract', () => { assert.equal(actual(), 1) }); test('stays put', () => { assert.equal(other(), 2) })";
+      const after = "test('keeps contract', () => { assert.equal(actual(), 2) }); test('stays put', () => { assert.equal(other(), 3) })";
+      const inspection = inspectTestStandardChange(before, after);
+      assert.deepEqual(inspection.changedCases, ['keeps contract', 'stays put']);
+      const decision = decideOldStandardDeclaration({
+        filePath: FILE,
+        inspection,
+        declarations: [{ path: FILE, caseName: 'keeps contract' }],
+      });
+      assert.equal(decision.permissionDecision, 'deny');
+      assert.ok(decision.reason.includes('stays put'));
+      assert.ok(!decision.reason.includes('缺声明：`keeps contract`'), '已声明的用例不应出现在缺失列表');
+    });
+
+    it('通道只覆盖旧标准类原因，其它拒绝原因不进入', () => {
+      // 跳过/聚焦类风险与「旧标准更正」无关，必须保持硬拒绝且不给通道。
+      const inspection = { allowed: false, reason: 'test-execution-option-needs-review', changedCases: ['keeps contract'] };
+      assert.equal(decideOldStandardDeclaration({ filePath: FILE, inspection, declarations: [{ path: FILE, caseName: 'keeps contract' }] }), null);
+      // 无可点名对象时同样不开放通道。
+      const unnamed = { allowed: false, reason: 'test-assertion-removed-or-rewritten', changedCases: [] };
+      assert.equal(decideOldStandardDeclaration({ filePath: FILE, inspection: unnamed, declarations: [{ path: FILE, caseName: 'keeps contract' }] }), null);
+      // 已放行的编辑不需要通道。
+      const allowed = { allowed: true, reason: null, changedCases: [] };
+      assert.equal(decideOldStandardDeclaration({ filePath: FILE, inspection: allowed, declarations: [] }), null);
+    });
+
+    it('声明汇总返回结构化条目（当前任务规格未声明时为空数组）', () => {
+      const declarations = collectOldStandardDeclarations();
+      assert.ok(Array.isArray(declarations), '声明汇总必须是数组');
+      for (const entry of declarations) {
+        assert.equal(typeof entry.path, 'string');
+        assert.equal(typeof entry.caseName, 'string');
+      }
+    });
+
+    it('端到端：未声明的断言改写经 evaluateAntiCheat 仍为 deny', () => {
+      // 需要一个磁盘上真实存在的测试文件，门禁才会走「前后对比」而不是「新增检查」。
+      const dir = resolve(SAMPLES_DIR, 'old-standard-channel');
+      const target = resolve(dir, 'e2e-probe.test.mjs');
+      mkdirSync(dir, { recursive: true });
+      try {
+        writeFileSync(target, BEFORE);
+        const result = evaluateAntiCheat({ tool: 'write', filePath: target, content: AFTER });
+        assert.equal(result.permissionDecision, 'deny');
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
     });
   });
 
