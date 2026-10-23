@@ -63,10 +63,12 @@ const MENU_WIDTH = 210;
 const ADD_MENU_WIDTH = 230;
 const MENU_HEIGHT_ESTIMATE = 260;
 /**
- * 「添加节点」钻取面板比主菜单高得多（搜索框 + 分组列表 + 底部入口卡）。
- * 锚点偏低时必须按真实高度夹取，否则面板会溢出视口、底部入口卡被裁。
+ * 「添加节点」钻取面板的高度估算（锚点偏低时按它夹取 `top`，避免溢出视口）。
+ *
+ * Issue 3651 去掉搜索框与分割线后实测自然高度 429px（1728×883、7 个条目 + 平铺入口行），
+ * 取 440 留余量：估算偏大只会让面板略微上移，偏小则要等 `maxHeight` 兜底。
  */
-const ADD_MENU_HEIGHT_ESTIMATE = 600;
+const ADD_MENU_HEIGHT_ESTIMATE = 440;
 /**
  * 钻取面板自身的盒模型开销：上下 padding 6+6、border 1+1。
  * `maxHeight` 只扣视口边距时，这 14px 会把底部入口卡挤出视口 1px（900×560 实测）。

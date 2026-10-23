@@ -7,6 +7,11 @@
  * 面板是**无分类平铺列表**（Issue 3640）：条目按 addNodePalette 的声明顺序渲染，
  * 不渲染分类标题 / 计数 / 折叠态；检索词同样来自 addNodePalette（取自节点注册表），
  * 本组件不持有第二份清单。
+ *
+ * 两个入口共用清单，但形态按 scope 分叉（Issue 3651）：Dock 面板有搜索框与命中高亮；
+ * 右键钻取面板**不渲染搜索框**（该浮层不做检索，输入框只会是死入口），列表直接平铺，
+ * 底部工作流入口在右键下是平铺行（无分割线、无常态底色），样式见 components.css 的
+ * `wf-node-menu--context` 规则。
  */
 
 import { memo, useMemo, useState, type ComponentType, type FC, type MouseEvent, type ReactNode } from 'react';
@@ -85,9 +90,14 @@ function renderLabel(match: AddNodePaletteMatch): ReactNode {
 const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack, onCreateWorkflow }) => {
   const t = useT();
   const [query, setQuery] = useState('');
+  /** 搜索只属于 Dock 面板：右键浮层不做检索（Issue 3651）。 */
+  const showSearch = scope === 'dock';
 
   const items = useMemo(() => getAddNodePalette(scope), [scope]);
-  const matches = useMemo(() => matchAddNodePalette(items, query, t), [items, query, t]);
+  const matches = useMemo(
+    () => matchAddNodePalette(items, showSearch ? query : '', t),
+    [items, query, showSearch, t],
+  );
 
   return (
     <div
@@ -113,21 +123,23 @@ const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack, onCreateWo
           {scope === 'dock' ? <kbd className="wf-node-menu__kbd">N</kbd> : null}
         </div>
 
-        <div className="wf-node-menu__search">
-          <Search size={14} className="wf-node-menu__search-icon" />
-          <input
-            type="text"
-            className="wf-node-menu__search-input"
-            value={query}
-            placeholder={t('palette.searchPlaceholder')}
-            aria-label={t('palette.searchLabel')}
-            onChange={(event) => setQuery(event.target.value)}
-            onClick={(event) => event.stopPropagation()}
-          />
-        </div>
+        {showSearch ? (
+          <div className="wf-node-menu__search">
+            <Search size={14} className="wf-node-menu__search-icon" />
+            <input
+              type="text"
+              className="wf-node-menu__search-input"
+              value={query}
+              placeholder={t('palette.searchPlaceholder')}
+              aria-label={t('palette.searchLabel')}
+              onChange={(event) => setQuery(event.target.value)}
+              onClick={(event) => event.stopPropagation()}
+            />
+          </div>
+        ) : null}
 
         <div className="wf-node-menu__list">
-          {matches.length === 0 ? (
+          {showSearch && matches.length === 0 ? (
             <div className="wf-node-menu__empty" role="status">
               <p className="wf-node-menu__empty-title">{t('palette.searchEmpty')}</p>
               <p className="wf-node-menu__empty-hint">{t('palette.searchEmptyHint')}</p>
