@@ -25,11 +25,12 @@ export interface ConfigSpec {
 
 export interface NodePaletteEntry {
   /**
-   * Palette group heading, as an i18n key (never a literal).
+   * Palette category key, as an i18n key (never a literal).
    *
-   * This is the node's category in the add-node palette: every node that
-   * declares the same key lands under one collapsible heading. Keys must exist
-   * in both `canvas/i18n/dict.zh.ts` and `dict.en.ts`.
+   * Nodes declaring the same key share one category. Since Issue #3640 the
+   * add-node panel renders a flat, uncategorised list: the key is no longer a
+   * heading — it stays the palette's category search alias. Keys must exist in
+   * both `canvas/i18n/dict.zh.ts` and `dict.en.ts`.
    */
   group: string;
   /** Entry label, as an i18n key (never a literal). */
