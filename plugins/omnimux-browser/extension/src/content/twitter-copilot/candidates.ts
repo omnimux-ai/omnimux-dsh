@@ -7,6 +7,7 @@
 
 import { extractCreatedAtMs, extractReplies } from '../twitter-velocity/extractor.ts'
 import { toHoursAlive } from '../twitter-velocity/algorithm.ts'
+import { readCardText, readTweetBody, findQuoteContainer } from '../tweet-body.ts'
 import type { CandidateSource, ScoredCandidate } from './types.ts'
 
 export const MAX_CANDIDATES = 50
@@ -59,22 +60,24 @@ function authorHandle(article: Element): string {
 
 type RawCandidate = Omit<ScoredCandidate, 'scores' | 'total' | 'heat'>
 
-/** The embedded quoted-post card of a quote tweet, if any. */
-function quoteCard(article: Element): Element | null {
-  const name = article.querySelector('div[role="link"] [data-testid="User-Name"]')
-  return name ? name.closest('div[role="link"]') : null
+/**
+ * The embedded quoted-post card of a quote tweet, if any (`quoteTweet` card or a
+ * link-wrapped card that carries another post's header). A wrapper holding this
+ * post's own header is the post itself, not a quote.
+ */
+export function findQuoteCard(article: Element): Element | null {
+  return findQuoteContainer(article)
 }
 
 function clean(text: string | null | undefined): string {
   return (text || '').replace(/\s+/g, ' ').trim()
 }
 
-/** Quoted author + text; X Article cards have no tweetText, so fall back to the card's own text. */
+/** Quoted author + text; X Article cards have no tweetText, so the card's article body stands in. */
 function readQuote(card: Element): { quotedAuthor: string; quotedText: string } {
   const nameEl = card.querySelector('[data-testid="User-Name"]')
   const quotedAuthor = (clean(nameEl?.textContent).match(/@([A-Za-z0-9_]{1,15})/) || [])[1] || ''
-  const textEl = card.querySelector('[data-testid="tweetText"]')
-  let quotedText = clean(textEl?.textContent)
+  let quotedText = clean(readCardText(card))
   if (!quotedText) quotedText = clean((card.textContent || '').replace(nameEl?.textContent || '', '')).slice(0, 280)
   return { quotedAuthor, quotedText }
 }
@@ -97,9 +100,9 @@ export function collectFeedCandidates(
     // 只排除「发帖框本身所在的推文」；发帖框的外层容器可能很宽（整列），不能用它反向排除信息流
     if (exclude && article.contains(exclude)) continue
     if (isPromoted(article)) continue
-    const card = quoteCard(article)
-    const ownTextEl = Array.from(article.querySelectorAll('[data-testid="tweetText"]')).find((el) => !card?.contains(el))
-    const text = clean(ownTextEl?.textContent)
+    const card = findQuoteCard(article)
+    // 长文章卡片没有 tweetText，正文由文章标题 + 正文块提供；引用卡片自身正文始终排除
+    const text = clean(readTweetBody(article, card))
     const quote = card ? readQuote(card) : null
     if (quote) {
       if (text.length < MIN_QUOTE_COMMENT_LENGTH || text.length + quote.quotedText.length < MIN_TEXT_LENGTH) continue
