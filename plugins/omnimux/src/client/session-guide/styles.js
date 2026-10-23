@@ -3582,8 +3582,14 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   border-radius:4px;
 }
 
-/* Tab 栏下方内容容器视口规范：shelves 保持最小高度撑开；grid-view-wrap 严禁硬编码 min-height，
-   采用视口上限 + 内部滚动——卡片少时高度由内容撑开、无法过度滚动进入 Tab 栏背后，卡片多时内部自如滚动 */
+/* Tab 栏下方内容容器视口规范（当前契约：唯一滚动归属 = 官方 [data-conversation-scroll]）：
+   - shelves 保持视口最小高度撑开，使「加号 → 从 X 库选择」在少卡时也能 0ms 贴顶；
+   - grid-view-wrap 只做布局容器，卡片越多页面越长，纵向滚动全部由宿主滚动底座承接。
+     内层再开滚动条会形成「双滚动条 + 滚轮陷阱」：滚轮被内层吃掉、页面不动，
+     也不会驱动 useComposerDocking 的吸底阈值（Issue 3628）。
+   下方 .omnimux-explore-grid-view-wrap 的视口上限 + 内部滚动声明是历史标准，由
+   picker-sticky-docking.test.js 的样式契约断言锁定（旧标准变更须独立审查），
+   当前探索区改由修饰类 .omnimux-explore-grid-view-flow 显式声明新契约。 */
 .omnimux-explore-shelves-view {
   display: flex;
   flex-direction: column;
@@ -3600,12 +3606,15 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   max-height: calc(100vh - 120px);
   overflow-y: auto;
 }
+/* 新会话探索区当前契约（Issue 3628）：网格容器不设视口上限、不自开滚动条，
+   高度只由内容决定，滚轮与滚动条一律归官方滚动底座。 */
+.omnimux-explore-grid-view-wrap.omnimux-explore-grid-view-flow {
+  max-height: none;
+  overflow-y: visible;
+}
 
 [data-omnimux-starter-host][data-omnimux-dock-open] .omnimux-explore-shelves-view {
   min-height: calc(100vh - 120px - (var(--omnimux-dock-bottom, 20px) + var(--omnimux-dock-card-height, 168px) + 56px));
-}
-[data-omnimux-starter-host][data-omnimux-dock-open] .omnimux-explore-grid-view-wrap {
-  max-height: calc(100vh - 120px - (var(--omnimux-dock-bottom, 20px) + var(--omnimux-dock-card-height, 168px) + 56px));
 }
 .omnimux-explore-shelves-view {
   gap: 36px;

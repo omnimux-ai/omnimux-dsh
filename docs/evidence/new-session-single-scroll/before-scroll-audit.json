@@ -1,0 +1,144 @@
+{
+  "origin": "http://127.0.0.1:57553",
+  "capturedAt": "2026-10-23T06:53:33.156Z",
+  "before": {
+    "viewport": {
+      "w": 1280,
+      "h": 713
+    },
+    "guidePresent": true,
+    "guideCompact": false,
+    "explorePresent": true,
+    "hasConversation": true,
+    "conversationScrollTop": 265,
+    "conversationRect": {
+      "top": 0,
+      "left": 280,
+      "width": 998,
+      "height": 713
+    },
+    "filterBarRect": {
+      "top": 382,
+      "left": 304,
+      "width": 950,
+      "height": 107
+    },
+    "filterBarPosition": "sticky",
+    "gridWrapPresent": true,
+    "gridWrapRect": {
+      "top": 521,
+      "left": 304,
+      "width": 950,
+      "height": 593
+    },
+    "gridWrapOverflowY": "auto",
+    "gridWrapMaxHeight": "593px",
+    "gridWrapScrollTop": 0,
+    "gridRenderedCount": 16,
+    "scrollers": [
+      {
+        "tag": "DIV",
+        "cls": "_R2kOW_scrollBody",
+        "isConversation": true,
+        "scrollTop": 265,
+        "scrollHeight": 1411,
+        "clientHeight": 713
+      },
+      {
+        "tag": "DIV",
+        "cls": "omnimux-explore-grid-view-wrap",
+        "isConversation": false,
+        "scrollTop": 0,
+        "scrollHeight": 645,
+        "clientHeight": 585
+      }
+    ],
+    "scrollerCount": 2,
+    "nonConversationScrollerCount": 1
+  },
+  "after": {
+    "viewport": {
+      "w": 1280,
+      "h": 713
+    },
+    "guidePresent": true,
+    "guideCompact": false,
+    "explorePresent": true,
+    "hasConversation": true,
+    "conversationScrollTop": 685,
+    "conversationRect": {
+      "top": 0,
+      "left": 280,
+      "width": 998,
+      "height": 713
+    },
+    "filterBarRect": {
+      "top": 0,
+      "left": 304,
+      "width": 950,
+      "height": 107
+    },
+    "filterBarPosition": "sticky",
+    "gridWrapPresent": true,
+    "gridWrapRect": {
+      "top": 101,
+      "left": 304,
+      "width": 950,
+      "height": 593
+    },
+    "gridWrapOverflowY": "auto",
+    "gridWrapMaxHeight": "593px",
+    "gridWrapScrollTop": 60,
+    "gridRenderedCount": 32,
+    "scrollers": [
+      {
+        "tag": "DIV",
+        "cls": "_R2kOW_scrollBody",
+        "isConversation": true,
+        "scrollTop": 685,
+        "scrollHeight": 1411,
+        "clientHeight": 713
+      },
+      {
+        "tag": "DIV",
+        "cls": "omnimux-explore-grid-view-wrap",
+        "isConversation": false,
+        "scrollTop": 60,
+        "scrollHeight": 1028,
+        "clientHeight": 585
+      }
+    ],
+    "scrollerCount": 2,
+    "nonConversationScrollerCount": 1
+  },
+  "assertions": [
+    {
+      "name": "explore-view-ready",
+      "pass": true
+    },
+    {
+      "name": "explore-grid-rendered",
+      "pass": true
+    },
+    {
+      "name": "single-vertical-scroll-owner",
+      "pass": false
+    },
+    {
+      "name": "explore-grid-not-a-scrollport",
+      "pass": false
+    },
+    {
+      "name": "wheel-scrolls-conversation",
+      "pass": true
+    },
+    {
+      "name": "grid-wrap-scroll-top-stays-zero",
+      "pass": false
+    },
+    {
+      "name": "tab-bar-sticks-to-scrollport-top",
+      "pass": true
+    }
+  ]
+}
