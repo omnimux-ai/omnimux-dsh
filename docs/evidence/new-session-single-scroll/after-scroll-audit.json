@@ -1,0 +1,128 @@
+{
+  "origin": "http://127.0.0.1:60831",
+  "capturedAt": "2026-10-23T09:11:04.763Z",
+  "before": {
+    "viewport": {
+      "w": 1280,
+      "h": 713
+    },
+    "guidePresent": true,
+    "guideCompact": false,
+    "explorePresent": true,
+    "hasConversation": true,
+    "conversationScrollTop": 265,
+    "conversationRect": {
+      "top": 0,
+      "left": 280,
+      "width": 998,
+      "height": 713
+    },
+    "filterBarRect": {
+      "top": 382,
+      "left": 304,
+      "width": 950,
+      "height": 107
+    },
+    "filterBarPosition": "sticky",
+    "gridWrapPresent": true,
+    "gridWrapRect": {
+      "top": 521,
+      "left": 304,
+      "width": 950,
+      "height": 649
+    },
+    "gridWrapOverflowY": "visible",
+    "gridWrapMaxHeight": "none",
+    "gridWrapScrollTop": 0,
+    "gridRenderedCount": 16,
+    "scrollers": [
+      {
+        "tag": "DIV",
+        "cls": "_R2kOW_scrollBody",
+        "isConversation": true,
+        "scrollTop": 265,
+        "scrollHeight": 1467,
+        "clientHeight": 713
+      }
+    ],
+    "scrollerCount": 1,
+    "nonConversationScrollerCount": 0
+  },
+  "after": {
+    "viewport": {
+      "w": 1280,
+      "h": 713
+    },
+    "guidePresent": true,
+    "guideCompact": false,
+    "explorePresent": true,
+    "hasConversation": true,
+    "conversationScrollTop": 685,
+    "conversationRect": {
+      "top": 0,
+      "left": 280,
+      "width": 998,
+      "height": 713
+    },
+    "filterBarRect": {
+      "top": 0,
+      "left": 304,
+      "width": 950,
+      "height": 107
+    },
+    "filterBarPosition": "sticky",
+    "gridWrapPresent": true,
+    "gridWrapRect": {
+      "top": 101,
+      "left": 304,
+      "width": 950,
+      "height": 1035
+    },
+    "gridWrapOverflowY": "visible",
+    "gridWrapMaxHeight": "none",
+    "gridWrapScrollTop": 0,
+    "gridRenderedCount": 32,
+    "scrollers": [
+      {
+        "tag": "DIV",
+        "cls": "_R2kOW_scrollBody",
+        "isConversation": true,
+        "scrollTop": 685,
+        "scrollHeight": 1853,
+        "clientHeight": 713
+      }
+    ],
+    "scrollerCount": 1,
+    "nonConversationScrollerCount": 0
+  },
+  "assertions": [
+    {
+      "name": "explore-view-ready",
+      "pass": true
+    },
+    {
+      "name": "explore-grid-rendered",
+      "pass": true
+    },
+    {
+      "name": "single-vertical-scroll-owner",
+      "pass": true
+    },
+    {
+      "name": "explore-grid-not-a-scrollport",
+      "pass": true
+    },
+    {
+      "name": "wheel-scrolls-conversation",
+      "pass": true
+    },
+    {
+      "name": "grid-wrap-scroll-top-stays-zero",
+      "pass": true
+    },
+    {
+      "name": "tab-bar-sticks-to-scrollport-top",
+      "pass": true
+    }
+  ]
+}

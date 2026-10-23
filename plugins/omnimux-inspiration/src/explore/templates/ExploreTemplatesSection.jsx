@@ -628,7 +628,7 @@ export function ExploreTemplatesSection({
       )}
 
       {activePrimaryTab === 'featured' && selectedSubCategory !== 'all' && (
-        <div className="omnimux-explore-grid-view-wrap">
+        <div className="omnimux-explore-grid-view-wrap omnimux-explore-grid-view-flow">
           <TemplatesGridView
             category={currentCategoryObj}
             items={featuredGridItems}
@@ -641,7 +641,7 @@ export function ExploreTemplatesSection({
       )}
 
       {activePrimaryTab === 'skills' && (
-        <div className="omnimux-explore-grid-view-wrap">
+        <div className="omnimux-explore-grid-view-wrap omnimux-explore-grid-view-flow">
           <TemplatesGridView
             category={currentCategoryObj}
             items={filteredSkills}
@@ -654,7 +654,7 @@ export function ExploreTemplatesSection({
       )}
 
       {activePrimaryTab !== 'featured' && activePrimaryTab !== 'skills' && (
-        <div className="omnimux-explore-grid-view-wrap">
+        <div className="omnimux-explore-grid-view-wrap omnimux-explore-grid-view-flow">
           <UnifiedLibraryGrid
             items={filteredLibraryCards}
             loading={libraryData.loading}
