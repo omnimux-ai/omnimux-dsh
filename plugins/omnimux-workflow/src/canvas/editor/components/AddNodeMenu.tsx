@@ -4,8 +4,9 @@
  * 调色板行保持单行（无副标题）；底部「新建工作流」入口卡是唯一的例外，
  * 其副标题来自既有 i18n key，描述真实语义（存为可复用模板）。
  *
- * 分类与检索同样来自 addNodePalette（其分组/检索词取自节点注册表），
- * 本组件不持有第二份分类表；注册表未声明分组的节点不会被安进伪造分类。
+ * 面板是**无分类平铺列表**（Issue 3640）：条目按 addNodePalette 的声明顺序渲染，
+ * 不渲染分类标题 / 计数 / 折叠态；检索词同样来自 addNodePalette（取自节点注册表），
+ * 本组件不持有第二份清单。
  */
 
 import { memo, useMemo, useState, type ComponentType, type FC, type MouseEvent, type ReactNode } from 'react';
@@ -13,7 +14,6 @@ import {
   AudioLines,
   Box,
   Boxes,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Film,
@@ -27,7 +27,6 @@ import {
 import { useT } from '../../i18n';
 import {
   getAddNodePalette,
-  groupAddNodePalette,
   matchAddNodePalette,
   type AddNodePaletteIcon,
   type AddNodePaletteMatch,
@@ -45,9 +44,6 @@ const ICON_MAP: Record<AddNodePaletteIcon, ComponentType<{ size?: number }>> = {
   Film,
   UploadCloud,
 };
-
-/** 折叠态在组件内的键：注册表未声明分组的行使用此哨兵（不是用户可见文案）。 */
-const UNGROUPED_KEY = '\u0000ungrouped';
 
 export interface AddNodeMenuProps {
   scope: AddNodePaletteScope;
@@ -89,25 +85,9 @@ function renderLabel(match: AddNodePaletteMatch): ReactNode {
 const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack, onCreateWorkflow }) => {
   const t = useT();
   const [query, setQuery] = useState('');
-  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(() => new Set());
 
   const items = useMemo(() => getAddNodePalette(scope), [scope]);
   const matches = useMemo(() => matchAddNodePalette(items, query, t), [items, query, t]);
-  const groups = useMemo(
-    () => groupAddNodePalette(matches, (match) => match.item.type),
-    [matches],
-  );
-
-  const searching = query.trim().length > 0;
-
-  const toggleGroup = (groupKey: string) => {
-    setCollapsedGroups((current) => {
-      const next = new Set(current);
-      if (next.has(groupKey)) next.delete(groupKey);
-      else next.add(groupKey);
-      return next;
-    });
-  };
 
   return (
     <div
@@ -147,70 +127,38 @@ const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack, onCreateWo
         </div>
 
         <div className="wf-node-menu__list">
-          {groups.length === 0 ? (
+          {matches.length === 0 ? (
             <div className="wf-node-menu__empty" role="status">
               <p className="wf-node-menu__empty-title">{t('palette.searchEmpty')}</p>
               <p className="wf-node-menu__empty-hint">{t('palette.searchEmptyHint')}</p>
             </div>
           ) : null}
 
-          {groups.map((group) => {
-            const groupKey = group.groupKey ?? UNGROUPED_KEY;
-            // 检索时强制展开：命中项必须可见，折叠态不得藏住搜索结果。
-            const isCollapsed = !searching && collapsedGroups.has(groupKey);
+          {matches.map((match) => {
+            const { item } = match;
+            const Icon = ICON_MAP[item.icon];
             return (
-              <div key={groupKey} className="wf-node-menu__group">
-                {group.groupKey ? (
-                  <button
-                    type="button"
-                    className="wf-node-menu__group-header"
-                    aria-expanded={!isCollapsed}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      toggleGroup(groupKey);
-                    }}
+              <button
+                key={item.type}
+                type="button"
+                className="wf-node-menu__item"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelect(item.type);
+                }}
+              >
+                <div className="wf-node-menu__icon-box">
+                  <Icon size={18} />
+                </div>
+                <span className="wf-node-menu__label">{renderLabel(match)}</span>
+                {item.badge ? (
+                  <span
+                    className={`wf-node-menu__badge wf-node-menu__badge--${item.badge.variant}`}
                   >
-                    <ChevronDown
-                      size={14}
-                      className={`wf-node-menu__group-caret${
-                        isCollapsed ? ' wf-node-menu__group-caret--collapsed' : ''
-                      }`}
-                    />
-                    <span className="wf-node-menu__group-title">{t(group.groupKey)}</span>
-                    <span className="wf-node-menu__group-count">{group.items.length}</span>
-                  </button>
+                    {item.badge.text}
+                  </span>
                 ) : null}
-
-                {isCollapsed
-                  ? null
-                  : group.items.map((match) => {
-                      const { item } = match;
-                      const Icon = ICON_MAP[item.icon];
-                      return (
-                        <button
-                          key={item.type}
-                          type="button"
-                          className="wf-node-menu__item"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onSelect(item.type);
-                          }}
-                        >
-                          <div className="wf-node-menu__icon-box">
-                            <Icon size={18} />
-                          </div>
-                          <span className="wf-node-menu__label">{renderLabel(match)}</span>
-                          {item.badge ? (
-                            <span
-                              className={`wf-node-menu__badge wf-node-menu__badge--${item.badge.variant}`}
-                            >
-                              {item.badge.text}
-                            </span>
-                          ) : null}
-                        </button>
-                      );
-                    })}
-              </div>
+              </button>
             );
           })}
         </div>
