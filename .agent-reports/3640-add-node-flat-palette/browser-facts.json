@@ -137,6 +137,36 @@
         "containsImportAsset": false,
         "hasBackButton": true
       }
+    },
+    {
+      "id": "A6",
+      "claim": "点调色板「视频剪辑」后，画布上新节点的标题仍是「视频合成」，不是「视频剪辑」",
+      "result": "pass",
+      "round": 2,
+      "evidence": {
+        "clickedPaletteRow": { "index": 6, "label": "视频剪辑" },
+        "paletteLabelsInSameRound": ["文本", "表格", "图片", "视频", "音频", "导演台", "视频剪辑", "导入素材"],
+        "createdNodeId": "node_video_composition_1792761587845",
+        "nodeType": "video_composition",
+        "cardDataNodeType": "video_composition",
+        "titleSelector": ".wf-node-shell[data-node-id] .wf-node-header__label",
+        "titleTag": "SPAN",
+        "titleClass": "wf-node-header__label",
+        "titleText": "视频合成",
+        "headerText": "视频合成",
+        "titleTitleAttr": "双击重命名",
+        "editingInputValue": null,
+        "storeDataTitle": "视频合成",
+        "storeDataLabel": "视频合成",
+        "titleEqualsVideoCompose": true,
+        "titleEqualsVideoClip": false,
+        "titleContainsVideoClip": false,
+        "videoCompositionCardCountBefore": 0,
+        "videoCompositionCardCountAfter": 1,
+        "labelBoxAfterDrag": { "x": 765, "y": 212, "w": 56, "h": 20 },
+        "labelInViewport": true,
+        "note": "The node title comes from createDefaultVideoCompositionData() (title/label hardcoded to 视频合成); the palette row copy comes from palette.item.video_composition (视频剪辑). The two are independent, as required."
+      }
     }
   ],
   "artifacts": [

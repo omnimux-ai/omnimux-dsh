@@ -171,3 +171,75 @@ add '.agent-reports/3640-add-node-flat-palette/search-director.png'
 ```
 
 即：**交付时需 `git add -f .agent-reports/3640-add-node-flat-palette/`**，普通 `git add` 或 `git add .` 不会拾取该目录。索引未被我改动（`git diff --cached` 为空），Git 状态仍由 Lead 掌握。
+
+---
+
+## 10. 补充验收（第二轮）：点「视频剪辑」后，新节点标题仍是「视频合成」
+
+补齐「菜单文案改了、节点名不改」的最后一公里：从调色板点「视频剪辑」真的建出节点后，画布上该节点的标题必须是「视频合成」，不能是「视频剪辑」。
+
+### 10.1 断言 A6 — **PASS**
+
+> 新节点标题文本 == 「视频合成」，且不等于「视频剪辑」。
+
+DOM 读数（节点创建后、拖入视口后读取）：
+
+| 探针 | 读数 |
+| --- | --- |
+| 新建节点 id | `node_video_composition_1792761587845` |
+| 节点 type | `video_composition` |
+| 卡片 `data-node-type` | `video_composition` |
+| 标题元素 | `SPAN.wf-node-header__label`（标题栏 `.wf-node-header` 是卡片的**兄弟**节点，挂在 `.wf-node-shell[data-node-id]` 下） |
+| **`titleText`（DOM）** | **`视频合成`** |
+| 标题栏整行文本 | `视频合成` |
+| `title` 属性 | `双击重命名` |
+| 编辑态 input | 不存在（`editingInputValue = null`，是静态标签，不是正在编辑的输入框） |
+| **store `data.title`** | **`视频合成`**（第二来源） |
+| store `data.label` | `视频合成` |
+| `titleEqualsVideoCompose` | `true` |
+| `titleEqualsVideoClip` | `false` |
+| `titleContainsVideoClip` | `false` |
+| 创建前 `video_composition` 卡片数 | `0` |
+| 创建后 `video_composition` 卡片数 | `1` |
+
+点的是哪个条目（同一轮实测的面板条目文案，确认没有点错）：
+
+```
+0 文本 / 1 表格 / 2 图片 / 3 视频 / 4 音频 / 5 导演台 / 6 视频剪辑 / 7 导入素材
+```
+
+本轮点击的是 **index 6「视频剪辑」**；建出的节点标题是 **「视频合成」**。
+
+补充确认：建出的节点是 `video_composition` 类型的 Launcher Card（标题带 Film 图标、卡片内是「打开视频剪辑」入口），与 `createDefaultVideoCompositionData()` 里硬编码的 `title: '视频合成'` 一致——菜单文案走 `palette.item.video_composition`，节点名走 `node.type.video_composition`，两者确实是两个事实，未互相污染。
+
+### 10.2 本轮执行信息
+
+| 项 | 值 |
+| --- | --- |
+| HEAD | `70439270bd278276c0dd85fecf256d8d86881b5c`（与第一轮相同，未变） |
+| 工作树额外改动 | 本轮开始时 `addNodePalette.ts` 比第一轮多约 6 行（Lead 提到的检索 haystack 改动，节点名/类型 key 也可检索）；HEAD 未变，属未提交的工作区改动 |
+| harness 命令 | `node plugins/omnimux-workflow/scripts/canvas-harness.mjs --port 58654`（端口重新由 OS `listen(0)` 随机分配） |
+| URL | `http://localhost:58654/`、`http://127.0.0.1:58654/` |
+| ego 空间 | id `252`，名 `omnimux-3640-created-node-title-20261023-2117`，ownership `agent`（新建） |
+| 空间收尾 | `finish({ keep: [] })`，未保留页面 |
+| 视口 | `innerWidth 1728 / innerHeight 883 / DPR 2` — **与截图像素尺寸 1728x883 完全一致** |
+| harness 收尾 | 已停止，端口已释放 |
+
+> 第 8 节曾记录「视口与截图尺寸不一致」；本轮实测两者一致（1728x883），说明第一轮的差异是窗口尺寸在取证期间变化，不是缩放假象。
+
+### 10.3 新增证据文件
+
+| 文件 | 像素 | 字节 | sha256 | 内容 |
+| --- | --- | --- | --- | --- |
+| `created-node-title.png` | 1728x883 | 80162 | `42ff60c4…b76937e` | 点「视频剪辑」后画布上出现的新节点，标题栏显示「视频合成」 |
+| `created-node-title-zoom.png` | 850x1050 | 111943 | `1414389a…604d6a7` | 上述截图 5x 放大裁剪，标题「视频合成」清晰可读 |
+
+两张均通过 Pillow `Image.verify()`，并已逐张目视核对。
+
+### 10.4 本轮限制
+
+1. 节点最初建在流坐标 `(120, 120)`，其标题栏落在视口上方被裁掉；为让标题可见，用鼠标把节点从 `(781, 38)` 拖到 `(781, 298)`（纯位置/视口操作，未改标题相关状态）。拖动后 `position` 由 `(120,120)` 变为 `(120, 1097.7)`，标题栏落在屏幕 `y=210`，可见。
+2. 本轮只验「视频剪辑」这一条路径；「导演台」条目点下去后节点名是否仍为「3D 导演台」未实测（机制相同）。
+3. 未验证双击标题重命名后标题与 `node.type` 的关系（超出本次范围）。
+4. 未验证英文 locale 下点「Video Clip」建出的节点标题是否为「Video Composition」。
+5. 与第一轮相同：harness 是 dev-only 入口，构建 skip 生产 bundle，不覆盖 Dev app / Electron shell。
