@@ -311,7 +311,8 @@ function isSameItem(a, b) {
  * 2. 向下滚动自动迁移到底部（Docked）：顶部输入框完全滚出视口（不可见）时自动吸底；
  * 3. 向上滚动自动归位到顶部（Inline）：顶部原位重新进入视口（可见）时自动归还原位；
  * 4. 功能按钮触发一键吸底：点击使用、复刻、对标或快捷入口，输入框在底部就位并聚焦；
- * 5. 零抖动保障：滚动触发切态绝不执行 380ms 物理位移动画，原位恒定占位，切断几何死循环。
+ * 5. 主动收起后静默：用户点过收起（undock）后，纯上下滚动绝不再弹起，唯有滑回页面最顶部才复位；
+ * 6. 零抖动保障：滚动触发切态绝不执行 380ms 物理位移动画，原位恒定占位，切断几何死循环。
  */
 export function useComposerDocking({ hostRef, onUndock } = {}) {
   const [dockedItem, setDockedItem] = useState(null)
@@ -322,7 +323,6 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
   const primedFlipRef = useRef(null)
   const pinnedRef = useRef(false)
   const isScrollTransitionRef = useRef(false)
-  const isIntentDrivenRef = useRef(false)
   const isCollapsedRef = useRef(false)
   const isJumpingRef = useRef(false)
   const jumpingTimerRef = useRef(null)
@@ -336,7 +336,6 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     primedFlipRef.current = null
     pinnedRef.current = false
     isScrollTransitionRef.current = false
-    isIntentDrivenRef.current = false
     isCollapsedRef.current = true
     isJumpingRef.current = false
     onUndock?.()
@@ -350,7 +349,6 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     const onDocked = typeof onDockedOrOptions === 'function' ? onDockedOrOptions : options.onDocked
     const force = options.force === true
 
-    isIntentDrivenRef.current = true
     isCollapsedRef.current = false
     // 再次点击同一张卡片：作为反悔动作解除吸底并清空已选项
     if (!pinnedRef.current && dockedItem && isSameItem(dockedItem, item)) {
@@ -675,28 +673,19 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
         return
       }
 
-      // 未显式触发输入框（纯向下滚动浏览）：
-      // 绝对不自动吸底！保持 inline 随页面自然滚出视口，底部保持纯净开阔
-      if (!isIntentDrivenRef.current) {
-        if (scrollTop <= revealThreshold) {
-          leftTop = false
-          setPlacement('inline')
-        }
-        return
-      }
-
+      // 纯向下滚动浏览即自动吸底：无需任何点击意图，顶部输入框滚出视口就迁移到底部。
+      // 唯一的静默闸门是上面的 isCollapsedRef（用户主动收起后才静默）。
       if (scrollTop > leaveThreshold) leftTop = true
 
       setPlacement((prev) => {
         // 向上滚动至顶部原位露头可见（<= revealThreshold），且此前确实曾滑离过顶部 → 归还原位
-        // 交互激活标记必须持久保留：滑回顶部只切换摆位，绝不抹除意图；
-        // 再次下滑时仍能吸底。意图只在 undock()/收起时清零。
+        // 收起静默标记不在此处清零：滑回顶部只切换摆位，收起态只在滑到最顶部时复位。
         if (scrollTop <= revealThreshold && leftTop) {
           isScrollTransitionRef.current = true
           leftTop = false
           return 'inline'
         }
-        // 向下滚动完全滑离顶部不可见（> leaveThreshold）且存在显式意图 → 自动吸底
+        // 向下滚动完全滑离顶部不可见（> leaveThreshold）→ 自动吸底（无需显式意图）
         if (scrollTop > leaveThreshold) {
           isScrollTransitionRef.current = true
           return 'docked'
