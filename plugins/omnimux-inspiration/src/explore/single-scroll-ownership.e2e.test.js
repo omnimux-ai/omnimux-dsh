@@ -58,4 +58,22 @@ test('e2e: 新会话探索区单一滚动归属 —— 网格容器不再自开�
   }
 
   dom.window.close()
+
+  // 吸底态（[data-omnimux-dock-open]）是历史网格视口上限变体所在的状态：该变体特异性高于
+  // 修饰类（0,3,0 > 0,2,0），一旦被重新引入就会让双滚动条在吸底态回归而其他断言仍为绿。
+  assert.doesNotMatch(
+    styles,
+    /\[data-omnimux-dock-open\][^{]*\.omnimux-explore-grid-view-wrap\s*\{[^}]*max-height/i,
+    '吸底态严禁重新引入网格容器视口上限（会让双滚动条在吸底态回归）',
+  )
+
+  const docked = new JSDOM(`<!doctype html><head><style>${baseRule}\n${flowRule}</style></head><body>
+    <div data-omnimux-starter-host="" data-omnimux-dock-open="">
+      <div class="omnimux-explore-grid-view-wrap omnimux-explore-grid-view-flow" id="docked-grid"></div>
+    </div>
+  </body>`)
+  const dockedComputed = docked.window.getComputedStyle(docked.window.document.getElementById('docked-grid'))
+  assert.equal(dockedComputed.overflowY, 'visible', '吸底态下网格容器仍不得成为滚动容器')
+  assert.equal(dockedComputed.maxHeight, 'none', '吸底态下网格容器仍不得设视口上限')
+  docked.window.close()
 })

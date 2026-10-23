@@ -19,7 +19,7 @@
 
 1. **单一滚动归属**：探索区在任意一级 Tab（精选 / 资产库 / 灵感库 / 商品库 / 爆款趋势 / Skills）下，纵向滚动容器恰好一个，且必须是官方 `[data-conversation-scroll]`；`.omnimux-explore-grid-view-wrap` 不再是滚动容器，按内容自然展开。
 2. **保留既有正确行为**：Tab 栏 `position: sticky; top: 0` 吸顶与实心底色、吸底输入框停靠与底部安全垫高（`[data-composer-seat]` 的 dock padding）、无限滚动 Sentinel 仍能触发。
-3. **规格归属不冲突**：修正锁死旧行为的样式契约测试，并在旧规格中标注被本规格取代的条款，避免两处真源。
+3. **规格归属不冲突（部分延后）**：在旧规格关系中登记被本规格取代的条款、避免两处真源（已完成）；「修正锁死旧行为的样式契约测试」需维护者就精确用例授权，本轮**未执行**（见「历史标准的处置」）。
 
 ## 三、非目标（Non-Goals）
 
@@ -44,7 +44,7 @@
 
 在同一工作树内先对未修复代码（`origin/main` 基线）运行同一条真实浏览器旅程，预期 `journey:single-vertical-scroll-owner`、`journey:wheel-scrolls-conversation` 为 false（可复现双滚动条与滚轮陷阱）；应用修复后同一旅程全部为 true，且截图显示仅一个滚动条。若基线运行即全部为 true，则本规格的前提被证伪，必须重新定位滚动归属。
 
-## 七、影响面与风险
+## 五、影响面与风险
 
 | 面 | 影响 |
 | --- | --- |
@@ -55,12 +55,13 @@
 
 - 触及 hub 侧共享样式 + 下游插件测试，按跨包处理，风险等级 R1。
 
-## 九、历史标准的处置（待授权）
+## 六、历史标准的处置（待授权）
 
 `.omnimux-explore-grid-view-wrap` 的「视口上限 + 内部滚动」是 Issue 2726/2914 拍板、并由
-`picker-sticky-docking.test.js` 样式契约断言锁定的历史标准。仓库硬门禁
-（`scripts/guard-anti-cheat.mjs` RULE-01）禁止 Agent 改写既有测试断言，`docs/plans/unified-upstream-input-2848.md`
-规定冲突时的正确动作是「保留红证据 + 就精确文件/用例请求授权，未获批准前停止该修改」。
+`picker-sticky-docking.test.js` 样式契约断言锁定的历史标准。全仓权威是 `scripts/guard-anti-cheat.mjs`
+（RULE-01：禁止删除/改写既有测试用例与断言，只放行新增）与
+[`docs/contracts/anti-agent-fake-completion-guard.md`](../docs/contracts/anti-agent-fake-completion-guard.md)；
+任务级先例见 `docs/plans/unified-upstream-input-2848.md`（「保留红证据 + 就精确文件/用例请求授权，未获批准前停止该修改」）。
 
 因此本次交付采取**只增不改**路径：历史基类声明保留、当前契约由修饰类表达，行为按 AC-1~AC-4 修复。
 遗留清理（删除历史基类声明 + 用新断言替换锁定的旧断言）需要维护者就
@@ -68,7 +69,7 @@
 「样式契约验证：.omnimux-explore-grid-view-wrap 视口上限内滚，.omnimux-explore-shelves-view 视口撑开」
 与「视口几何仿真断言：网格容器上限 100vh-120px 内部滚动…」两个用例给出明确授权后再执行。
 
-## 十、文档影响
+## 七、文档影响
 
 - 新增本规格，作为「新会话探索区滚动归属」的单一真源。
 - `specs/tab-sticky-top-min-height.spec.md`（历史已签发 PRD）中「网格容器 `.omnimux-explore-grid-view-wrap`

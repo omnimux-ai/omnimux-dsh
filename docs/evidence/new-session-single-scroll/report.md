@@ -64,9 +64,22 @@ node scripts/worktree-app-qa.mjs --request .workbuddy/qa-3628/request.json
 
 `plugins/omnimux-inspiration/src/explore/picker-sticky-docking.test.js` 中的两条断言
 （「样式契约验证：.omnimux-explore-grid-view-wrap 视口上限内滚…」与「视口几何仿真断言：网格容器上限 100vh-120px 内部滚动…」）
-锁定的是 Issue 2726/2914 的历史标准。仓库硬门禁 RULE-01 禁止 Agent 改写既有断言，
-`docs/plans/unified-upstream-input-2848.md` 要求「保留红证据 + 就精确文件/用例请求授权」。
+锁定的是 Issue 2726/2914 的历史标准。全仓权威是 `scripts/guard-anti-cheat.mjs` RULE-01（禁止改写既有断言，只放行新增）
+与 `docs/contracts/anti-agent-fake-completion-guard.md`；任务级先例见 `docs/plans/unified-upstream-input-2848.md`
+（「保留红证据 + 就精确文件/用例请求授权」）。
 
 本轮采取**只增不改**：历史基类声明原样保留，当前契约由修饰类 `.omnimux-explore-grid-view-flow` 表达，
 并追加新用例锁定新契约。删除历史声明并把旧断言替换为新标准，需维护者就上述两个用例明确授权后再执行
-（见 `specs/new-session-single-scroll.spec.md` §九）。
+（见 `specs/new-session-single-scroll.spec.md` §六）。
+
+## 六、独立评审与补测
+
+- 独立评审 Agent（与实现方无共享上下文）对本 PR 给出 **APPROVE**：真机 computed style 由
+  `overflow-y: auto / max-height: 593px` 变为 `visible / none`；sealed evidence 中
+  `styles.js` / `ExploreTemplatesSection.jsx` / `picker-sticky-docking.test.js` 的 blob 摘要与提交 HEAD 完全一致
+  （即真机证据覆盖的正是本 PR 生产代码）；既有断言零改动。
+- 评审提出的非阻塞项已处理：**吸底态覆盖缺口**（被删的 `[data-omnimux-dock-open]` 网格上限规则特异性 0,3,0
+  高于修饰类 0,2,0，一旦回归两个测试仍会绿）已在 `single-scroll-ownership.e2e.test.js` 补上两条断言：
+  禁止重新引入该规则 + 吸底态 DOM 计算样式仍为 `visible/none`；并用临时重新引入该规则的方式验证过断言会失败（非空转）。
+- 其余非阻塞项（历史仿真用例 stale-green、`#3632` 环境缺陷、Dev 真机验收归人工）见上文与 Issue 记录。
+
