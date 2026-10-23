@@ -9658,7 +9658,34 @@ body:has(.wf-voice-picker-modal) > .wf-custom-select-dropdown .wf-custom-select-
 /* comfyui-codec block end */
 
 /* addnode-new-workflow entry card start (Issue 3639) */
+.wf-node-menu-host {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 内层根节点也必须是可压缩的 flex 子项，否则 maxHeight 只压到外层、footer 仍被挤出视口。 */
+.wf-node-menu-host .wf-node-menu {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.wf-node-menu-host .wf-node-menu__container {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.wf-node-menu-host .wf-node-menu__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .wf-node-menu__footer {
+  flex: 0 0 auto;
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid var(--wf-node-icon-border);

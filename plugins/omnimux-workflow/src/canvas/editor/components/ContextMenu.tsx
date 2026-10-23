@@ -62,6 +62,11 @@ interface ContextMenuProps {
 const MENU_WIDTH = 210;
 const ADD_MENU_WIDTH = 230;
 const MENU_HEIGHT_ESTIMATE = 260;
+/**
+ * 「添加节点」钻取面板比主菜单高得多（搜索框 + 分组列表 + 底部入口卡）。
+ * 锚点偏低时必须按真实高度夹取，否则面板会溢出视口、底部入口卡被裁。
+ */
+const ADD_MENU_HEIGHT_ESTIMATE = 600;
 
 interface MenuItemSpec {
   action: ContextMenuAction | 'open-add-node';
@@ -154,14 +159,17 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   if (!visible) return null;
 
   const currentWidth = view === 'add-node' ? ADD_MENU_WIDTH : MENU_WIDTH;
+  const currentHeightEstimate = view === 'add-node' ? ADD_MENU_HEIGHT_ESTIMATE : MENU_HEIGHT_ESTIMATE;
   const left = Math.min(x, window.innerWidth - currentWidth - 8);
-  const top = Math.min(y, window.innerHeight - MENU_HEIGHT_ESTIMATE - 8);
+  const top = Math.min(y, Math.max(8, window.innerHeight - currentHeightEstimate - 8));
+  // 小视口兜底：面板可压缩，列表内滚动，底部入口卡始终留在视口内。
+  const maxHeight = view === 'add-node' ? Math.max(200, window.innerHeight - top - 8) : undefined;
 
   return createPortal(
     <div
       ref={menuRef}
       className={`wf-context-menu ${view === 'add-node' ? 'wf-node-menu-host' : ''}`}
-      style={{ left, top }}
+      style={{ left, top, ...(maxHeight ? { maxHeight } : {}) }}
       onContextMenu={(e) => e.preventDefault()}
     >
       {view === 'main' ? (
