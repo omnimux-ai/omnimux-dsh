@@ -1,5 +1,5 @@
 {
-  "stamp": "2026-10-23T10-29-05-764Z",
+  "stamp": "2026-10-23T10-43-48-541Z",
   "assertions": [
     {
       "name": "A5 连接设置已下发扩展",
@@ -35,8 +35,8 @@
     }
   ],
   "screenshots": [
-    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-text-model-isolation-issue-3629/.workbuddy/evidence/text-model-e2e/2026-10-23T10-29-05-764Z-generation-settings.png",
-    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-text-model-isolation-issue-3629/.workbuddy/evidence/text-model-e2e/2026-10-23T10-29-05-764Z-generation-after.png"
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-text-model-isolation-issue-3629/.workbuddy/evidence/text-model-e2e/2026-10-23T10-43-48-541Z-generation-settings.png",
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-text-model-isolation-issue-3629/.workbuddy/evidence/text-model-e2e/2026-10-23T10-43-48-541Z-generation-after.png"
   ],
   "pass": true,
   "panelState": {

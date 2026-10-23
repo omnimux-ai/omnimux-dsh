@@ -58,7 +58,7 @@
 | 命令 | 结果 |
 | --- | --- |
 | `cd plugins/omnimux-browser && node node_modules/vitest/vitest.mjs run` | 20 passed / 3 skipped（26 文件）；**338 passed / 6 skipped**；3 个套件加载失败（`composition`、`session-purge`、`tests/e2e/bridge-extension.e2e`）——缺 `@deepseek-ai/cordis-*`、`playwright-core` 等未安装依赖，**base（主检出 main）同命令同样失败**，与本次改动无关 |
-| `cd plugins/omnimux-browser/extension && ./node_modules/.bin/vitest run` | 158 passed（158 文件）；**1717 passed | 1 expected fail**，0 失败 |
+| `cd plugins/omnimux-browser/extension && ./node_modules/.bin/vitest run` | 158 passed（158 文件）；**1740 passed | 1 expected fail**，0 失败 |
 | `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`（extension） | 105 行错误，与主检出同命令逐条一致（仅行号位移），无新增 |
 | `node node_modules/typescript/bin/tsc -b` + `tsdown`（宿主） | 成功 |
 | `node scripts/build.mjs`（扩展） | 成功（`dist/background.js` 222.11 kB、`dist/panel/assets/index.js` 546.47 kB） |
