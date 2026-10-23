@@ -138,7 +138,7 @@ test('3312: the delisted H3 series exposes no channel groups while the listed mu
     { fixed: '480p' }, { fixed: '720p' },
   ])
   assert.deepEqual(resolveChannelPlan('seedance-2-5@720p', { allowedGroups: ['480p', '720p'] }).candidates,
-    ['seedance-2-5@seedance-2-5-720p', 'seedance-2-5@seedance-2-5-480p'])
+    ['seedance-2-5@desktop-720p', 'seedance-2-5@desktop-480p'])
   const calls = []
   const input = videoInput(home, 'legal-first-head')
   input.allowedGroups = ['720p']
@@ -151,7 +151,7 @@ test('3312: the delisted H3 series exposes no channel groups while the listed mu
   assert.equal(calls.length, 1)
   assertVideoCall(calls[0], 'seedance-2-5', 5)
   assert.equal(getMediaTaskRecord(result.taskRef).wireModel, 'seedance-2-5')
-  assert.equal(getMediaTaskRecord(result.taskRef).group, 'seedance-2-5-720p')
+  assert.equal(getMediaTaskRecord(result.taskRef).group, 'desktop-720p')
 }))
 
 test('3312: a 720p request refuses the allowed 480p tail fixed at 480p before a second runtime call rather than rewriting the user resolution', async () => isolated(async (home) => {
@@ -207,7 +207,7 @@ test('3312: the default 720p tier keeps a legal submission with the original log
   const record = getMediaTaskRecord(result.taskRef)
   assert.equal(record.model, 'seedance-2-5')
   assert.equal(record.wireModel, 'seedance-2-5')
-  assert.equal(record.group, 'seedance-2-5-720p')
+  assert.equal(record.group, 'desktop-720p')
   assert.equal(record.status, 'submitted')
   assert.equal(record.upstreamTaskId, result.taskId)
 }))
@@ -230,7 +230,7 @@ test('3312: the explicitly selected 480p economy tier stays usable with its own 
   assert.equal(calls[0].input.resolution, '480p')
   const record = getMediaTaskRecord(result.taskRef)
   assert.equal(record.wireModel, 'seedance-2-5')
-  assert.equal(record.group, 'seedance-2-5-480p')
+  assert.equal(record.group, 'desktop-480p')
 }))
 
 test('3312: each explicit tier sends the exact bare wire model and its own group header with unchanged resolution through synthetic HTTP', async () => isolated(async (home) => {
@@ -251,11 +251,11 @@ test('3312: each explicit tier sends the exact bare wire model and its own group
   assert.equal(posts.length, 1)
   // 模型 ID 保持裸产品 ID；分组头与分辨率都来自所选档位。
   assert.equal(posts[0].body.model, 'seedance-2-5')
-  assert.equal(posts[0].group, 'seedance-2-5-480p')
+  assert.equal(posts[0].group, 'desktop-480p')
   assert.equal(posts[0].body.duration, 5)
   assert.equal(posts[0].body.resolution, '480p')
   assert.equal(getMediaTaskRecord(result.taskRef).wireModel, 'seedance-2-5')
-  assert.equal(getMediaTaskRecord(result.taskRef).group, 'seedance-2-5-480p')
+  assert.equal(getMediaTaskRecord(result.taskRef).group, 'desktop-480p')
 }))
 
 test('3312: an accepted task followed by channel failure never submits a second candidate and keeps its original handle', async () => isolated(async (home) => {

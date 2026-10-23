@@ -244,10 +244,10 @@ export const DEFAULT_FALLBACK_CATALOG = {
           "label": "标准版",
           "default": true,
           "badge": "480p 档 · 经济走量",
-          "wireGroup": "seedance-2-5-480p",
+          "wireGroup": "desktop-480p",
           "pricing": {
-            "pointsEstimate": 21,
-            "discountRate": 0.524,
+            "pointsEstimate": 6.8,
+            "discountRate": 0.17,
             "billingMode": "per_second"
           }
         },
@@ -255,10 +255,10 @@ export const DEFAULT_FALLBACK_CATALOG = {
           "id": "720p",
           "label": "高清版",
           "badge": "720p 档 · 稳定满血",
-          "wireGroup": "seedance-2-5-720p",
+          "wireGroup": "desktop-720p",
           "pricing": {
-            "pointsEstimate": 29,
-            "discountRate": 0.7206,
+            "pointsEstimate": 9.6,
+            "discountRate": 0.24,
             "billingMode": "per_second"
           }
         }
