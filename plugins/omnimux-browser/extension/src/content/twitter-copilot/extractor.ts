@@ -4,8 +4,9 @@
  */
 
 import type { FeedHotTweet, ScoredCandidate, TwitterContext, TwitterCopilotScene } from './types.ts'
-import { collectFeedCandidates, mergeCandidatePools, normalizeKeywords, scoreCandidate, selectSeeds, shortlistForPick } from './candidates.ts'
+import { collectFeedCandidates, findQuoteCard, mergeCandidatePools, normalizeKeywords, scoreCandidate, selectSeeds, shortlistForPick } from './candidates.ts'
 import { collectSourcePools } from './feed-sources.ts'
+import { hasPostBody, readCardText, readTweetBody } from '../tweet-body.ts'
 
 function findComposerContainer(el: HTMLElement): HTMLElement | null {
   let cur: HTMLElement | null = el
@@ -34,16 +35,18 @@ export function detectTwitterScene(anchorButton: HTMLElement): TwitterCopilotSce
   // 1. Is this inside a tweet compose modal? (e.g. url includes /compose/post or inside modal role="dialog")
   const dialog = anchorButton.closest('[role="dialog"]')
   if (dialog) {
-    // 引用转发弹窗：被引用原推内嵌在 attachments 容器中，并带 tweetText（线上实测结构）
-    const hasQuotedCard = !!dialog.querySelector('[data-testid="attachments"] [data-testid="tweetText"]')
-    if (hasQuotedCard) {
-      return 'POST_QUOTE'
-    }
     // 回帖弹窗：被回复的原推以 article[data-testid="tweet"] 内嵌；详情页入口 → 回帖菜单，
-    // 其余入口（信息流、个人页、通知等）→ 快捷互动菜单
+    // 其余入口（信息流、个人页、通知等）→ 快捷互动菜单。
+    // 先判内嵌原推：回帖弹窗的 attachments 也可能包着原推（含长文章），不能落成引用转发。
     const hasEmbeddedTweet = !!dialog.querySelector('article[data-testid="tweet"]')
     if (hasEmbeddedTweet) {
       return hasFocalTweetBehind() ? 'REPLY_DETAIL' : 'REPLY_FEED'
+    }
+    // 引用转发弹窗：被引用原推内嵌在 attachments 容器中（线上实测结构）。
+    // 长文章被引用时没有 tweetText，正文以文章标题/正文块呈现，同样算作被引卡片。
+    const hasQuotedCard = hasPostBody(dialog.querySelector('[data-testid="attachments"]'))
+    if (hasQuotedCard) {
+      return 'POST_QUOTE'
     }
     return 'POST_NEW'
   }
@@ -145,8 +148,8 @@ export function extractTwitterContext(
         dialog.querySelector('[data-testid="attachments"]')
 
       if (quoteCard) {
-        const textEl = quoteCard.querySelector('[data-testid="tweetText"]')
-        context.quotedTweetText = (textEl?.textContent || quoteCard.textContent || '').trim()
+        // 普通推文取 tweetText；长文章卡片没有该节点，回退到文章标题 + 正文
+        context.quotedTweetText = readCardText(quoteCard) || (quoteCard.textContent || '').trim()
 
         const userEl = quoteCard.querySelector('[data-testid="User-Name"]')
         const userLink =
@@ -180,8 +183,9 @@ export function extractTwitterContext(
     // 绝对不向 document.querySelector('main article') 兜底，避免对着下面的推文点神评却抓了顶部的推文
 
     if (targetTweet) {
-      const tweetTextEl = targetTweet.querySelector('[data-testid="tweetText"]')
-      context.targetTweetText = (tweetTextEl?.textContent || '').trim()
+      // 普通推文取 tweetText；长文章帖没有该节点，回退到文章标题 + 正文块。
+      // 被引卡片（含长文章被引卡）必须排除，否则会把引用内容当成原帖正文。
+      context.targetTweetText = readTweetBody(targetTweet, findQuoteCard(targetTweet))
 
       const userLink = targetTweet.querySelector('div[data-testid="User-Name"] a[role="link"]')
       if (userLink) {
@@ -202,13 +206,27 @@ export function extractTwitterContext(
 
 type SeedPools = Parameters<typeof mergeCandidatePools>[0]
 
+/**
+ * Longest seed body handed to the prompt.
+ *
+ * A long-form card now reaches the candidate pool, and up to three seeds plus a
+ * quoted article would otherwise exceed the local model's context; the reply
+ * scene reads the whole post, the inspiration scene only needs the hook.
+ */
+export const MAX_SEED_TEXT_CHARS = 1200
+
+function seedText(text: string | undefined): string {
+  const value = (text || '').trim()
+  return value.length <= MAX_SEED_TEXT_CHARS ? value : `${value.slice(0, MAX_SEED_TEXT_CHARS - 1)}…`
+}
+
 /** Prompt-facing view of one seed. */
 function toFeedHotTweet(s: ScoredCandidate): FeedHotTweet {
   return {
     author: s.author,
-    text: s.text,
+    text: seedText(s.text),
     stat: `${s.replies} replies, ${s.reposts} reposts, ${s.likes} likes`,
-    ...(s.isQuote ? { quotedAuthor: s.quotedAuthor || '', quotedText: s.quotedText || '' } : {}),
+    ...(s.isQuote ? { quotedAuthor: s.quotedAuthor || '', quotedText: seedText(s.quotedText) } : {}),
   }
 }
 
