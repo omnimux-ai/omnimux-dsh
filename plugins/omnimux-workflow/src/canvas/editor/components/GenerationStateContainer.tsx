@@ -18,6 +18,13 @@ import { resolveUpstreamReason } from '../../i18n/upstreamReason.ts';
 import type { ApiUpstream } from '../../../shared/api.ts';
 import type { GenerationStatus } from '../utils/nodeVisualMath';
 import { OrganicShimmerOverlay } from './OrganicShimmer';
+import IntermediateFramePreview from './MaterialNode/IntermediateFramePreview';
+import {
+  shouldRenderIntermediateFrame,
+  hasLiveProgress,
+  resolveProgressLabel,
+  resolveProgressPercentText,
+} from './intermediateFrame.ts';
 
 export type { GenerationStatus };
 
@@ -48,6 +55,21 @@ export interface GenerationStateContainerProps {
   className?: string;
   /** 过渡动画时长（毫秒），默认 400ms */
   transitionDuration?: number;
+  /**
+   * 实时进度百分比（0-100），来自 SSE `node_progress`（Issue #3625 工作流 3）。
+   * 缺失时不显示百分比与进度条——不补 0、不伪造。
+   */
+  progress?: number;
+  /** 实时状态文案（`node_progress.message`）。 */
+  progressMessage?: string;
+  /**
+   * 真实中间帧地址（可选）。
+   *
+   * 上游当前**不产生增量帧**（`node_progress` 只有 progress/message，网关
+   * `awaitTask` 是终态一次性轮询），因此这里通常为 undefined；此时生成中只显示
+   * 真实进度骨架。有帧才渲染中间帧预览层，绝不用占位图冒充。
+   */
+  intermediateFrameUrl?: string;
 }
 
 /** 供应商错误串 → 用户可读文案（Gxgen getUserFacingErrorMessage 原样逻辑） */
@@ -133,6 +155,9 @@ const GenerationStateContainer: React.FC<GenerationStateContainerProps> = ({
   children,
   className = '',
   transitionDuration = 400,
+  progress,
+  progressMessage,
+  intermediateFrameUrl,
 }) => {
   const t = useT();
   const prevStatusRef = useRef<GenerationStatus>(status);
@@ -233,17 +258,46 @@ const GenerationStateContainer: React.FC<GenerationStateContainerProps> = ({
   const aspectClass = `wf-gsc__box--${loadingAspectRatio}`;
 
   // 加载骨架屏（升级为 OrganicShimmerOverlay 有机流体微光动效 + 进度文字呼吸）
-  const renderSkeleton = () => (
-    <div className="wf-gsc__skeleton" style={{ ...transitionStyle(), opacity: skeletonOpacity }}>
-      <div className={`wf-gsc__box wf-gsc__skeleton-card ${aspectClass}`}>
-        <OrganicShimmerOverlay borderRadius="inherit">
-          <div className="wf-gsc__skeleton-body">
-            <span className="wf-gsc__progress-text">{defaultLoadingText}</span>
-          </div>
-        </OrganicShimmerOverlay>
+  //
+  // Issue #3625 工作流 3：生成中若有**真实**中间帧地址就渲染中间帧预览层；
+  // 否则保持微光骨架，并把**真实**进度（百分比 + node_progress.message）显示出来。
+  // 中间帧层只挂在本函数内，而本函数只由 `isLoading || showSkeleton` 调用——
+  // 完成态走 renderCompleted（只渲染 children），因此中间帧不可能覆盖最终产物。
+  const renderSkeleton = () => {
+    const showFrame = shouldRenderIntermediateFrame({
+      isLoading,
+      hasFrame: Boolean(intermediateFrameUrl),
+    });
+    const showProgressDetail = hasLiveProgress(progress, progressMessage);
+    const progressText = showProgressDetail
+      ? resolveProgressLabel(progressMessage, defaultLoadingText)
+      : defaultLoadingText;
+    const percentText = showProgressDetail ? resolveProgressPercentText(progress) : undefined;
+
+    return (
+      <div className="wf-gsc__skeleton" style={{ ...transitionStyle(), opacity: skeletonOpacity }}>
+        <div className={`wf-gsc__box wf-gsc__skeleton-card ${aspectClass}`}>
+          {showFrame ? (
+            <IntermediateFramePreview
+              src={intermediateFrameUrl as string}
+              progress={progress}
+              message={progressMessage}
+              fallbackLabel={defaultLoadingText}
+            />
+          ) : (
+            <OrganicShimmerOverlay borderRadius="inherit">
+              <div className="wf-gsc__skeleton-body">
+                <span className="wf-gsc__progress-text">{progressText}</span>
+                {percentText ? (
+                  <span className="wf-gsc__progress-percent">{percentText}</span>
+                ) : null}
+              </div>
+            </OrganicShimmerOverlay>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // 失败状态（与骨架同尺寸，红色系全走 --wb-danger* token）
   const renderFailed = () => (

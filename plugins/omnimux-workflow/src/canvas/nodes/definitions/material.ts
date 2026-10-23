@@ -10,8 +10,18 @@ import type { NodeDefinition } from '../registry';
 import { createDefaultMaterialNodeData } from '../../types/materialNode';
 import { getDefaultNodeWidth } from '../../editor/utils/nodeSizeConfig';
 import { NodeSpecRegistry } from '../../../shared/specs/registry.ts';
+import { materialTools } from '../../../shared/specs/nodes/materialNodeSpec.ts';
 
 const materialSpec = NodeSpecRegistry.get('material');
+
+/**
+ * Palette search terms for the material node: the labelKeys of every tool the
+ * node actually exposes (SSOT: `materialNodeSpec`). Derived, never hand-listed,
+ * so a new tool automatically becomes searchable.
+ */
+const MATERIAL_KEYWORDS: readonly string[] = Object.values(materialTools).map(
+  (tool) => tool.labelKey,
+);
 
 export const materialNodeDefinition: NodeDefinition = {
   type: 'material',
@@ -41,5 +51,6 @@ export const materialNodeDefinition: NodeDefinition = {
     group: 'palette.group.material',
     label: 'palette.node.material',
     icon: 'box',
+    keywords: MATERIAL_KEYWORDS,
   },
 };

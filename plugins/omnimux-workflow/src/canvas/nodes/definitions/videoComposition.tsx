@@ -451,9 +451,10 @@ export const videoCompositionNodeDefinition: NodeDefinition = {
   },
   executorKey: 'video_composition',
   palette: {
-    group: 'palette.group.material',
+    group: 'palette.group.composition',
     label: 'palette.node.video_composition',
     icon: 'film',
+    keywords: ['palette.keyword.videoComposition'],
   },
 };
 

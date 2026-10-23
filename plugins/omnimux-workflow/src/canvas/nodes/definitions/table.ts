@@ -22,7 +22,8 @@ export const tableNodeDefinition: NodeDefinition = {
   }),
   palette: {
     group: 'palette.group.data',
-    label: '表格',
+    label: 'palette.node.table',
     icon: 'table',
+    keywords: ['palette.keyword.table'],
   },
 };

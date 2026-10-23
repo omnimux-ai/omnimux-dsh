@@ -36,6 +36,7 @@ import type { MaterialType } from '../types/materialNode';
 import AnimatedEdge from './components/AnimatedEdge';
 import Toolbar, { type CanvasPointerMode } from './components/Toolbar';
 import HeaderControls from './components/HeaderControls';
+import ExecutionQueuePanel from './components/ExecutionQueuePanel';
 import { CanvasPageHeader } from './components/CanvasPageHeader';
 import AssetsDrawer, { type AssetRecord } from './components/AssetsDrawer';
 import ShortcutsModal from './components/ShortcutsModal';
@@ -221,7 +222,9 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   const [batchAssetItems, setBatchAssetItems] = useState<MediaAssetItem[]>([]);
   const [createWorkflowModalOpen, setCreateWorkflowModalOpen] = useState(false);
   const [targetGroupForWorkflow, setTargetGroupForWorkflow] = useState<{ id: string; title: string; nodeCount: number } | null>(null);
-  const [workflowTemplates, setWorkflowTemplates] = useState<Array<{ id: string; name: string; nodeCount: number }>>([]);
+  const [workflowTemplates, setWorkflowTemplates] = useState<Array<{ id: string; name: string; nodeCount: number; description?: string; tags?: string[] }>>([]);
+  // 执行队列面板开关（Issue 3625）：面板为纯只读消费，不参与调度。
+  const [isQueueOpen, setIsQueueOpen] = useState(false);
   const nodeCreateCounter = useRef(0);
 
   const hasSelection = useMemo(() => nodes.some((node) => node.selected), [nodes]);
@@ -253,6 +256,8 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
       id: template.id,
       name: template.name,
       nodeCount: template.nodeCount,
+      description: template.description,
+      tags: template.tags,
     })));
   }, []);
 
@@ -939,7 +944,12 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         onResumeExecution={onResumeExecution}
         onCancelExecution={onCancelExecution}
         onResetExecution={onResetExecution}
+        isQueueOpen={isQueueOpen}
+        onToggleQueue={() => setIsQueueOpen((prev) => !prev)}
       />
+
+      {/* 执行队列面板：纯只读消费调度状态（Issue 3625） */}
+      <ExecutionQueuePanel open={isQueueOpen} onClose={() => setIsQueueOpen(false)} />
 
       {/* 浮动小地图 Popover */}
       {isMinimapOpen && (
@@ -960,6 +970,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         onToggleAddMenu={() => setIsAddMenuOpen((prev) => !prev)}
         templates={workflowTemplates}
         onInsertTemplate={(id) => { void handleInsertTemplate(id); }}
+        onCreateWorkflow={() => setCreateWorkflowModalOpen(true)}
       />
 
       {/* 项目资产抽屉 (带防护隔离，保证画布永远不黑屏) */}

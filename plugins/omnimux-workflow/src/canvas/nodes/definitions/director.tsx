@@ -52,6 +52,12 @@ export const directorNodeDefinition: NodeDefinition = {
     { side: 'out', acceptedTypes: ['image'] },
   ],
   defaultData: () => ({ title: '3D 导演台', label: '3D 导演台', directorRevision: 0, status: 'idle' }),
-  palette: { group: '创作', label: '3D 导演台', icon: 'box' },
+  // palette 元数据以 i18n key 存放（原为字面中文，en 界面无法解析）。
+  palette: {
+    group: 'palette.group.creation',
+    label: 'palette.node.director',
+    icon: 'box',
+    keywords: ['palette.keyword.director'],
+  },
   executorKey: 'director',
 };

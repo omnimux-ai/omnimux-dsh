@@ -26,6 +26,7 @@ import {
   Pause,
   X,
   RotateCcw,
+  ListOrdered,
 } from 'lucide-react';
 import { useExecutionStore, type ExecutionUiStatus } from '../../store/executionStore';
 import { useT, type DictKey } from '../../i18n';
@@ -44,6 +45,9 @@ export interface HeaderControlsProps {
   onResumeExecution?: () => void;
   onCancelExecution?: () => void;
   onResetExecution?: () => void;
+  /** 执行队列面板是否展开（Issue 3625）。 */
+  isQueueOpen?: boolean;
+  onToggleQueue?: () => void;
 }
 
 const STATUS_LABEL_KEYS: Record<ExecutionUiStatus, DictKey> = {
@@ -68,6 +72,8 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
   onResumeExecution,
   onCancelExecution,
   onResetExecution,
+  isQueueOpen = false,
+  onToggleQueue,
 }) => {
   const t = useT();
   const { zoomIn, zoomOut, fitView } = useReactFlow();
@@ -231,6 +237,18 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
             title={t('header.alignGrid')}
           >
             <LayoutGrid size={15} />
+          </button>
+        )}
+
+        {onToggleQueue && (
+          <button
+            type="button"
+            className={`wf-header-capsule__btn ${isQueueOpen ? 'wf-header-capsule__btn--active' : ''}`}
+            onClick={onToggleQueue}
+            title={t('queue.title')}
+            aria-expanded={isQueueOpen}
+          >
+            <ListOrdered size={15} />
           </button>
         )}
 
