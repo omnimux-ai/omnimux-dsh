@@ -9151,8 +9151,9 @@ body:has(.wf-voice-picker-modal) > .wf-custom-select-dropdown .wf-custom-select-
 
 /* preview-cards block end */
 
-/* ==================== palette-groups block start ====================
- * Issue 3625 工作流 1：添加节点调色板的分组 / 搜索 / 命中高亮 / 空态。
+/* ==================== palette block start ====================
+ * Issue 3625 工作流 1 / Issue 3640：添加节点调色板（无分类平铺）/ 搜索 /
+ * 命中高亮 / 空态。
  * 零裸色，全部走既有 token；几何属性显式声明（同 .wf-node-menu__item 的
  * 「不依赖外部默认值」约定）。 */
 
@@ -9187,61 +9188,6 @@ body:has(.wf-voice-picker-modal) > .wf-custom-select-dropdown .wf-custom-select-
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
 }
 
-.wf-node-menu__group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.wf-node-menu__group + .wf-node-menu__group {
-  margin-top: 6px;
-}
-
-.wf-node-menu__group-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 4px 6px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
-  cursor: pointer;
-  text-align: left;
-}
-
-.wf-node-menu__group-header:hover {
-  background: var(--dsw-alias-interactive-bg-hover, var(--wb-dock-item-hover));
-}
-
-.wf-node-menu__group-caret {
-  flex-shrink: 0;
-  transition: transform 120ms ease;
-}
-
-.wf-node-menu__group-caret--collapsed {
-  transform: rotate(-90deg);
-}
-
-.wf-node-menu__group-title {
-  flex: 1 1 auto;
-  min-width: 0;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.wf-node-menu__group-count {
-  flex-shrink: 0;
-  font-size: 11px;
-  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
-}
-
 .wf-node-menu__match {
   background: var(--dsw-alias-bg-layer-2, var(--wb-surface-raised));
   color: var(--dsw-alias-label-primary, var(--wb-text-primary));
@@ -9267,7 +9213,7 @@ body:has(.wf-voice-picker-modal) > .wf-custom-select-dropdown .wf-custom-select-
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
 }
 
-/* palette-groups block end */
+/* palette block end */
 
 /* ==================== exec-queue block start ====================
  * Issue 3625 工作流 2：执行队列面板四区（Queue / Pending / Running / History）。
