@@ -267,3 +267,49 @@ describe('withAutoModelRouting', () => {
     expect(order).toEqual(['api:session.create', 'selectModel', 'api:session.prompt'])
   })
 })
+
+// --- Issue #3629: text-generation pins are exempt from Jev auto routing ---
+
+describe('withAutoModelRouting pinned sessions', () => {
+  it('forwards a pinned session without routing it', async () => {
+    const { deps, evaluate, selectModel, onRouted } = routerDeps({ isPinned: (sessionId) => sessionId === 'session-1' })
+    const order: string[] = []
+    const api = hostApi({
+      call: async (request) => {
+        order.push(`api:${request.method}`)
+        return { ok: true, value: { accepted: true } }
+      },
+    })
+    const wrapped = withAutoModelRouting(api, deps)
+
+    const result = await wrapped.call(call('session.prompt', PROMPT))
+    expect(result).toEqual({ ok: true, value: { accepted: true } })
+    expect(evaluate).not.toHaveBeenCalled()
+    expect(selectModel).not.toHaveBeenCalled()
+    expect(onRouted).not.toHaveBeenCalled()
+    expect(order).toEqual(['api:session.prompt'])
+  })
+
+  it('still routes an unpinned session when a pin predicate is installed', async () => {
+    const { deps, evaluate, selectModel } = routerDeps({ isPinned: () => false })
+    const wrapped = withAutoModelRouting(hostApi(), deps)
+
+    const result = await wrapped.call(call('session.prompt', PROMPT))
+    expect(result).toEqual({ ok: true, value: { accepted: true } })
+    expect(evaluate).toHaveBeenCalledTimes(1)
+    expect(selectModel).toHaveBeenCalledWith({ sessionId: 'session-1', model: 'gpt-5.5', provider: 'chatgpt' })
+  })
+
+  it('forwards the prompt when the pin predicate throws', async () => {
+    const { deps, evaluate, selectModel } = routerDeps({
+      isPinned: () => { throw new Error('broken registry') },
+    })
+    const wrapped = withAutoModelRouting(hostApi(), deps)
+
+    const result = await wrapped.call(call('session.prompt', PROMPT))
+    expect(result).toEqual({ ok: true, value: { accepted: true } })
+    // Fail-open: an unreadable pin registry is treated as "not pinned".
+    expect(evaluate).toHaveBeenCalledTimes(1)
+    expect(selectModel).toHaveBeenCalledTimes(1)
+  })
+})

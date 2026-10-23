@@ -33,9 +33,13 @@ import {
   BRIDGE_PRODUCED_MEDIA_METHOD,
   BRIDGE_SAVE_IMAGE_ASSET_METHOD,
   BRIDGE_SESSION_PURGE_METHOD,
+  BRIDGE_TEXT_GENERATION_METHOD,
   HELLO_TIMEOUT_MS,
   PING_INTERVAL_MS,
+  TEXT_GENERATION_MAX_ID_CHARS,
+  TEXT_GENERATION_MAX_OPTION_CHARS,
   parseBridgeFrame,
+  parseTextGenerationRequest,
   type BridgeFrame,
   type BridgeCaps,
   type ClientFrame,
@@ -44,6 +48,7 @@ import {
   type MediaFetchOutcome,
   type ProducedMediaOutcome,
   type ProducedMediaRequest,
+  type TextGenerationRequest,
   type ToolErrorCode,
 } from './protocol.ts'
 import { fetchMediaBytes } from './media-fetch.ts'
@@ -74,6 +79,9 @@ const PRIVILEGED_METHODS = new Set([
 /** Session mutations whose WebSocket arrival order is behaviorally significant. */
 const ORDERED_SESSION_METHODS = new Set([
   BRIDGE_INJECT_BROWSER_SNAPSHOT_METHOD,
+  // The text-generation pin must be recorded before a prompt for the same
+  // session is routed, so the auto router already sees it on the first turn.
+  BRIDGE_TEXT_GENERATION_METHOD,
   'session.prompt',
   'session.cancel',
   'session.updateQueue',
@@ -138,8 +146,15 @@ export interface BridgeServerDeps {
    * be exercised without a live filesystem.
    */
   readProduced?: (request: ProducedMediaRequest) => Promise<ProducedMediaOutcome>
+  /**
+   * Pin one temporary session to an explicit text-generation model, for
+   * {@link BRIDGE_TEXT_GENERATION_METHOD} (Issue #3629). Absent, the RPC
+   * answers `internal` so the panel fails loudly instead of generating with an
+   * unconfirmed model.
+   */
+  pinTextGeneration?: (request: TextGenerationRequest) => Promise<void>
   /** Unary Hub text completion; never a session submission receipt. */
-  completeText?: (request: { prompt: string; system: string; maxTokens: number; signal: AbortSignal }) => Promise<unknown>
+  completeText?: (request: { prompt: string; system: string; model?: string; maxTokens: number; signal: AbortSignal }) => Promise<unknown>
   /** One Jev choice decision for {@link BRIDGE_EVALUATE_DECISION_METHOD}. */
   evaluateDecision?: (
     args: { state: string; choices: Record<string, string>; instructions: string },
@@ -512,10 +527,19 @@ export class BridgeServer {
       return
     }
     if (frame.method === BRIDGE_COMPLETE_TEXT_METHOD) {
-      const payload = frame.payload as { prompt?: unknown; system?: unknown } | null
+      const payload = frame.payload as { prompt?: unknown; system?: unknown; model?: unknown } | null
       if (!payload || typeof payload.prompt !== 'string' || !payload.prompt.trim()
         || payload.prompt.length > 32_768 || (payload.system !== undefined && (typeof payload.system !== 'string' || payload.system.length > 32_768))) {
         sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: false, error: { code: 'bad-request', message: 'prompt and optional system must be bounded strings' } })
+        return
+      }
+      // Issue #3629: the fallback completion carries the panel's explicit
+      // text-generation model so the hub serves the same model the session pin
+      // selected. An empty string is the panel's "follow the conversation
+      // model" value and is dropped rather than forwarded.
+      const model = optionalCompletionModel(payload.model)
+      if (model === null) {
+        sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: false, error: { code: 'bad-request', message: `optional model must be a string of at most ${TEXT_GENERATION_MAX_ID_CHARS} characters` } })
         return
       }
       const deadline = new AbortController()
@@ -530,7 +554,13 @@ export class BridgeServer {
           if (signal.aborted) onAbort()
         })
         signal.throwIfAborted()
-        const value = await Promise.race([this.deps.completeText({ prompt: payload.prompt, system: typeof payload.system === 'string' ? payload.system : '', maxTokens: 1000, signal }), aborted])
+        const value = await Promise.race([this.deps.completeText({
+          prompt: payload.prompt,
+          system: typeof payload.system === 'string' ? payload.system : '',
+          ...(model === undefined ? {} : { model }),
+          maxTokens: 1000,
+          signal,
+        }), aborted])
         const text = typeof value === 'string' ? value : (value as { text?: unknown })?.text
         if (typeof text !== 'string' || !text.trim()) throw new Error('Text completion returned no text')
         sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: true, result: { text: text.trim() } })
@@ -612,6 +642,46 @@ export class BridgeServer {
           id: frame.id,
           ok: false,
           error: { code: 'internal', message: String(error) },
+        })
+      }
+      return
+    }
+    if (frame.method === BRIDGE_TEXT_GENERATION_METHOD) {
+      // Panel-local control RPC (like modelMode): it never reaches the gateway
+      // itself — the injected pin performs the one `session.selectModel` call.
+      const request = parseTextGenerationRequest(frame.payload)
+      if (request === undefined) {
+        sendFrame(conn.ws, {
+          t: 'rpc.result',
+          id: frame.id,
+          ok: false,
+          error: {
+            code: 'bad-request',
+            message: `sessionId and model must be non-empty strings of at most ${TEXT_GENERATION_MAX_ID_CHARS} characters; `
+              + `optional provider and reasoningEffort must be strings of at most ${TEXT_GENERATION_MAX_OPTION_CHARS} characters`,
+          },
+        })
+        return
+      }
+      const pin = this.deps.pinTextGeneration
+      if (pin === undefined) {
+        sendFrame(conn.ws, {
+          t: 'rpc.result',
+          id: frame.id,
+          ok: false,
+          error: { code: 'internal', message: 'Text generation pin unavailable' },
+        })
+        return
+      }
+      try {
+        await pin(request)
+        sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: true, result: { pinned: true } })
+      } catch (error: unknown) {
+        sendFrame(conn.ws, {
+          t: 'rpc.result',
+          id: frame.id,
+          ok: false,
+          error: { code: 'internal', message: error instanceof Error ? error.message : String(error) },
         })
       }
       return
@@ -768,6 +838,17 @@ function modelModePayload(payload: unknown): { auto: boolean } | undefined {
   const { auto } = payload as Record<string, unknown>
   if (typeof auto !== 'boolean') return undefined
   return { auto }
+}
+
+/**
+ * The optional `model` out of a {@link BRIDGE_COMPLETE_TEXT_METHOD} payload:
+ * `undefined` when absent or empty (the panel's "follow the conversation
+ * model" value), `null` when present but not a bounded string.
+ */
+function optionalCompletionModel(value: unknown): string | undefined | null {
+  if (value === undefined || value === '') return undefined
+  if (typeof value !== 'string' || value.length > TEXT_GENERATION_MAX_ID_CHARS) return null
+  return value
 }
 
 /** Decision budget for {@link BRIDGE_EVALUATE_DECISION_METHOD}; callers fall back to rules past it. */

@@ -38,6 +38,7 @@ import {
   BRIDGE_PATH,
   DEFAULT_SNAPSHOT_MAX_CHARS,
   MIN_SNAPSHOT_MAX_CHARS,
+  type TextGenerationRequest,
 } from './protocol.ts'
 import { createPairingRoutes } from './pairing-routes.ts'
 import {
@@ -142,6 +143,92 @@ export function resolveConfig(config: Config): ResolvedConfig {
 
 
 /**
+ * Sessions whose model the panel pinned for one-shot text generation
+ * (Issue #3629). Process-level state, like the composer model mode: a pin lives
+ * only as long as the mount that recorded it and never touches durable storage.
+ */
+export interface TextGenerationPinRegistry {
+  /** Whether `sessionId` currently carries a text-generation pin. */
+  isPinned(sessionId: string): boolean
+  /** Record one session as pinned; idempotent. */
+  pin(sessionId: string): void
+  /** Drop one session's pin; unknown ids are ignored. */
+  unpin(sessionId: string): void
+}
+
+/**
+ * Create an empty pin registry for one bridge mount.
+ * @returns a registry the auto router and the purge path share.
+ */
+export function createTextGenerationPinRegistry(): TextGenerationPinRegistry {
+  const pinned = new Set<string>()
+  return {
+    isPinned: sessionId => pinned.has(sessionId),
+    pin: sessionId => { pinned.add(sessionId) },
+    unpin: sessionId => { pinned.delete(sessionId) },
+  }
+}
+
+/** Model selection input one pin performs through the gateway. */
+export interface TextGenerationModelSelection {
+  readonly sessionId: string
+  readonly model: string
+  readonly provider?: string
+  readonly reasoningEffort?: string
+}
+
+/**
+ * Pin one temporary session to an explicit text-generation model.
+ *
+ * Order contract (Issue #3629): `selectModel` settles BEFORE the session is
+ * registered, and the registration lands before the caller forwards its prompt
+ * — the carrier also orders the pin frame ahead of that session's prompts, so
+ * the auto router already sees the pin on the first turn. A failed selection
+ * registers nothing: the caller must surface the error instead of silently
+ * falling back to the conversation model.
+ *
+ * @param deps - gateway selection plus the registry write.
+ * @param request - validated `bridge.textGeneration` payload.
+ */
+export async function pinTextGenerationSession(
+  deps: {
+    selectModel: (input: TextGenerationModelSelection) => Promise<void>
+    pin: (sessionId: string) => void
+  },
+  request: TextGenerationRequest,
+): Promise<void> {
+  await deps.selectModel({
+    sessionId: request.sessionId,
+    model: request.model,
+    ...(request.provider === undefined ? {} : { provider: request.provider }),
+    ...(request.reasoningEffort === undefined ? {} : { reasoningEffort: request.reasoningEffort }),
+  })
+  deps.pin(request.sessionId)
+}
+
+/**
+ * Drop one session's pin without ever failing the caller: `purgeSession` must
+ * keep its own result even when the registry cannot forget the id. The
+ * optional `warn` keeps a broken registry observable instead of silent.
+ *
+ * @param pins - registry to forget the id in.
+ * @param sessionId - session whose pin is being dropped.
+ * @param warn - trace sink; omitted in tests that only assert the contract.
+ */
+export function unpinTextGenerationSession(
+  pins: Pick<TextGenerationPinRegistry, 'unpin'>,
+  sessionId: string,
+  warn?: (message: string) => void,
+): void {
+  try {
+    pins.unpin(sessionId)
+  } catch (error: unknown) {
+    warn?.(`browser bridge: could not drop the text-generation pin for ${sessionId}: ${String(error)}`)
+  }
+}
+
+
+/**
  * Mount the bridge: resolve the token, register the upgrade route, the tool
  * set, and an optional system-prompt section, all effect-scoped for HMR.
  *
@@ -182,12 +269,16 @@ function mountBridge(
     modelMode = normalizeMode(mode)
   }
 
+  // Issue #3629: text-generation sessions the panel pinned to an explicit
+  // model. Shared by the auto router (skip routing) and the purge path (drop).
+  const textGenerationPins = createTextGenerationPinRegistry()
+
   const routerDeps = {
     // Resolved per call: the hub's `decisions` seam may mount after this
     // plugin, and a missing seam must degrade to passthrough, not an error.
     evaluate: (args: Parameters<AutoModelEvaluate>[0], options?: { signal?: AbortSignal }) =>
       ctx.get('decisions')?.evaluate?.(args, options) as ReturnType<AutoModelEvaluate>,
-    selectModel: async (input: { sessionId: string; model: string; provider?: string }) => {
+    selectModel: async (input: TextGenerationModelSelection) => {
       await gateway.invoke({
         namespace: 'session',
         method: 'selectModel',
@@ -196,6 +287,7 @@ function mountBridge(
     },
     candidates: () => flattenModelCandidates(loadSubscriptionModelGroups()),
     getMode,
+    isPinned: (sessionId: string) => textGenerationPins.isPinned(sessionId),
     onRouted: (info: { sessionId: string; model?: string; outcome: 'routed' | 'fallback'; reason?: string }) => {
       ctx.logger.info(
         info.outcome === 'routed'
@@ -262,7 +354,14 @@ function mountBridge(
         if (!archived.ok) throw new Error(archived.error.message)
       },
     }
-    await purgeSessionFiles(deps, sessionId)
+    try {
+      await purgeSessionFiles(deps, sessionId)
+    } finally {
+      // The pin must not outlive the purge attempt that named the session, so
+      // it is dropped on both outcomes. Deregistration stays best-effort: a
+      // registry that cannot forget the id never changes the purge result.
+      unpinTextGenerationSession(textGenerationPins, sessionId, message => { ctx.logger.warn(message) })
+    }
   }
 
   function getDshHostLocale(): 'zh' | 'en' {
@@ -307,6 +406,10 @@ function mountBridge(
     },
     injectBrowserSnapshot: (sessionId, snapshot) => { browserContext.inject(sessionId, snapshot) },
     purgeSession,
+    pinTextGeneration: request => pinTextGenerationSession(
+      { selectModel: routerDeps.selectModel, pin: sessionId => { textGenerationPins.pin(sessionId) } },
+      request,
+    ),
     produced,
     saveImageAsset: (request, { signal }) => saveImageAsset(request, imageSaveDeps, signal),
     completeText: async (request) => {

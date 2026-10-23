@@ -790,6 +790,10 @@ function defaultPanelSettings(targetPort: number): PanelSettings {
     trustedActionOrigins: [],
     approvalNotifications: true,
     autoResumeSession: true,
+    // 文本生成模型独立于对话模型：空串 = 跟随对话模型（宿主默认）。
+    textModel: '',
+    textProvider: '',
+    textEffort: '',
   }
 }
 
@@ -939,6 +943,37 @@ export function App(): React.JSX.Element {
         reasoningEffort: effort,
       }).catch(() => {})
     }
+  }
+
+  /**
+   * 文本生成模型行的持久化（#3629）。
+   *
+   * 只写 textModel / textProvider / textEffort，绝不触碰对话键；立即写回
+   * dshSettings，因为文本模型是生成时读取的运行时配置，用户改完不一定再点
+   * 「保存并连接」。写失败必须可见：静默失败会让生成悄悄回到宿主默认。
+   */
+  const persistTextModel = (patch: { textModel: string; textProvider: string; textEffort: string }): void => {
+    setSettings((prev) => ({ ...prev, ...patch }))
+    void api.updateSettings(patch).catch((cause: unknown) => {
+      setSettingsSave({ kind: 'error', message: cause instanceof Error ? cause.message : String(cause) })
+    })
+  }
+
+  /**
+   * 文本生成行选择回调。
+   *
+   * 同一模型内改推理等级时（onSelectModel(selectedModel, effort)）不会带
+   * provider；只有真正切换模型才允许改写 provider，避免改等级时丢掉它。
+   */
+  const handleSelectTextModel = (modelId: string, effort?: string, provider?: string) => {
+    const modelChanged = settings.textModel !== modelId
+    const textEffort = modelId === ''
+      ? ''
+      : modelChanged ? (effort ?? '') : (effort ?? settings.textEffort)
+    const textProvider = modelId === ''
+      ? ''
+      : modelChanged ? (provider ?? '') : settings.textProvider
+    persistTextModel({ textModel: modelId, textProvider, textEffort })
   }
 
   const [selectedWorkspace, setSelectedWorkspace] = useState<SessionWorkspaceItem | null>(() => {
@@ -1847,6 +1882,9 @@ export function App(): React.JSX.Element {
           trustedActionOrigins: raw?.trustedActionOrigins ?? [],
           approvalNotifications: raw?.approvalNotifications ?? true,
           autoResumeSession: raw?.autoResumeSession ?? true,
+          textModel: raw?.textModel ?? '',
+          textProvider: raw?.textProvider ?? '',
+          textEffort: raw?.textEffort ?? '',
         })
       })
       .catch(() => { /* defaults already loaded; the form stays usable */ })
@@ -3250,7 +3288,7 @@ export function App(): React.JSX.Element {
             </div>
           </label>
           <label>
-            <span>{locale === 'en' ? 'Default Model & Reasoning' : '默认模型与推理等级'}</span>
+            <span>{locale === 'en' ? 'Chat Model & Reasoning' : '对话模型与推理等级'}</span>
             <small>{locale === 'en' ? 'Match models and reasoning effort supported by the active instance' : '跟随当前实例匹配可用模型与思考推理等级'}</small>
             <div style={{ gridColumn: '1 / -1', width: '100%', marginTop: '7px' }}>
               <ModelSelector
@@ -3262,6 +3300,25 @@ export function App(): React.JSX.Element {
                 dynamicModels={dynamicModels}
                 onSelectModel={handleSelectModel}
                 onSelectEffort={handleSelectEffort}
+              />
+            </div>
+          </label>
+          <label>
+            <span>{locale === 'en' ? 'Text Generation Model & Reasoning' : '文本生成模型与推理等级'}</span>
+            <small>{locale === 'en' ? 'Model used for one-shot Copilot text generation; leave on Follow Chat Model to inherit the chat model' : '页面 Copilot 一次性正文生成使用的模型；保持「跟随对话模型」即继承对话模型'}</small>
+            <div style={{ gridColumn: '1 / -1', width: '100%', marginTop: '7px' }}>
+              <ModelSelector
+                locale={locale}
+                activePort={targetPort}
+                api={api}
+                storageScope="text"
+                allowEmptyOption
+                selectedModel={settings.textModel}
+                selectedEffort={settings.textEffort}
+                hostDefaultModel={hostDefaultModel}
+                hostDefaultEffort={hostDefaultEffort}
+                dynamicModels={dynamicModels}
+                onSelectModel={handleSelectTextModel}
               />
             </div>
           </label>

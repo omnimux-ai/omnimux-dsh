@@ -48,6 +48,7 @@ import {
   BRIDGE_COMPLETE_TEXT_METHOD,
   BRIDGE_EVALUATE_DECISION_METHOD,
   BRIDGE_APPEND_COPILOT_LOG_METHOD,
+  BRIDGE_TEXT_GENERATION_METHOD,
 } from 'omnimux-browser/src/protocol.ts'
 import { BridgeClient, type BridgeState } from './bridge.ts'
 import { createRpc } from './rpc.ts'
@@ -150,6 +151,19 @@ export interface Settings {
   approvalNotifications: boolean
   /** Restore the current tab and page path's conversation when the panel reopens. */
   autoResumeSession: boolean
+  /**
+   * Model the one-shot text generation (page Copilot bodies) is pinned to.
+   *
+   * An empty string is the documented "follow the chat model" choice: the
+   * temporary session then inherits the host default exactly as it did before
+   * this setting existed. It is never inferred from the chat model here —
+   * the two consumption scenarios stay independently configurable (#3629).
+   */
+  textModel: string
+  /** Provider that owns {@link textModel}; empty when the model id is enough. */
+  textProvider: string
+  /** Reasoning effort for {@link textModel}; empty when it has no reasoning. */
+  textEffort: string
 }
 
 const SETTINGS_DEFAULTS: Settings = {
@@ -161,6 +175,10 @@ const SETTINGS_DEFAULTS: Settings = {
   trustedActionOrigins: [],
   approvalNotifications: true,
   autoResumeSession: true,
+  // 空串 = 跟随对话模型 / 宿主默认；文本生成用途独立于对话模型配置。
+  textModel: '',
+  textProvider: '',
+  textEffort: '',
 }
 
 /**
@@ -441,6 +459,11 @@ function normalizeSettings(candidate: Settings): Settings {
   const sharePageContent = candidate.sharePageContent === 'auto' || candidate.sharePageContent === 'off'
     ? candidate.sharePageContent
     : candidate.sharePageContent === 'ask' ? 'ask' : 'auto'
+  // The text-generation trio is part of the persisted settings object: a
+  // normalizer that dropped them would silently reset the user's choice on
+  // every worker restart, so a non-string (corrupt store) becomes the
+  // documented "follow the chat model" empty value instead.
+  const textString = (value: unknown): string => (typeof value === 'string' ? value : '')
   return {
     ...candidate,
     sharePageContent,
@@ -448,6 +471,9 @@ function normalizeSettings(candidate: Settings): Settings {
     trustedActionOrigins: trusted,
     approvalNotifications: candidate.approvalNotifications !== false,
     autoResumeSession: candidate.autoResumeSession !== false,
+    textModel: textString(candidate.textModel),
+    textProvider: textString(candidate.textProvider),
+    textEffort: textString(candidate.textEffort),
   }
 }
 
@@ -1588,27 +1614,83 @@ function unwrapHostValue(raw: unknown): unknown {
 }
 
 /**
+ * A failed pin is the user's explicit text model being unusable.
+ *
+ * It is a distinct error type because the caller must NOT paper over it with
+ * the `bridge.completeText` fallback: that would silently generate the body
+ * with a different model than the user chose.
+ */
+export class TextGenerationPinError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'TextGenerationPinError'
+  }
+}
+
+/** Pin the temporary generation session to the configured text model. */
+async function pinTextGeneration(sessionId: string): Promise<void> {
+  const payload: Record<string, unknown> = { sessionId, model: settings.textModel }
+  if (settings.textProvider !== '') payload.provider = settings.textProvider
+  if (settings.textEffort !== '') payload.reasoningEffort = settings.textEffort
+  try {
+    await gatewayRpc(BRIDGE_TEXT_GENERATION_METHOD, payload)
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+    const zh = getUiLocale() === 'zh'
+    throw new TextGenerationPinError(zh
+      ? `文本生成模型不可用（${settings.textModel}）：${reason}`
+      : `Text generation model unavailable (${settings.textModel}): ${reason}`)
+  }
+}
+
+/**
+ * Fallback completion RPC (#3629).
+ *
+ * A configured text model rides along, so the fallback cannot quietly answer
+ * with the host default or the chat model. With no text model configured the
+ * payload is byte-for-byte the historical one — the "unset means today's
+ * behavior" half of the contract, kept as its own call site on purpose.
+ */
+function completeTextFallbackRpc(systemPrompt: string, userMessage: string): Promise<unknown> {
+  if (settings.textModel === '') {
+    return gatewayRpc(BRIDGE_COMPLETE_TEXT_METHOD, { prompt: userMessage, system: systemPrompt })
+  }
+  return gatewayRpc(BRIDGE_COMPLETE_TEXT_METHOD, {
+    prompt: userMessage,
+    system: systemPrompt,
+    model: settings.textModel,
+  })
+}
+
+/**
  * Generate one opinion through a temporary chat session.
  *
  * The host creates the session lazily on the first prompt; the turn is then
  * read from assistant/message and turn/end events. Purge runs in `finally` so
  * a failed turn never leaves the temporary session behind.
+ *
+ * When a text model is configured the session is pinned to it before the
+ * prompt is forwarded (#3629). The pin is awaited on purpose: the host applies
+ * frames in order, and a body generated by an unpinned session would be the
+ * exact silent fallback this setting exists to prevent.
  */
 async function completeTextWithSession(system: string, user: string): Promise<string> {
   const created = unwrapHostValue(await gatewayRpc('session.create', {})) as { sessionId?: unknown } | undefined
   const sessionId = typeof created?.sessionId === 'string' ? created.sessionId : ''
   if (sessionId === '') throw new Error('会话创建失败')
 
-  const prompt = [system.trim(), user.trim()].filter((part) => part !== '').join('\n\n')
-  const collector = new SessionTextCollector(sessionId)
-  const textPromise = new Promise<string>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      pendingSessionCompletions.delete(sessionId)
-      reject(new Error('会话生成超时'))
-    }, 90_000)
-    pendingSessionCompletions.set(sessionId, { collector, resolve, reject, timer })
-  })
   try {
+    if (settings.textModel !== '') await pinTextGeneration(sessionId)
+
+    const prompt = [system.trim(), user.trim()].filter((part) => part !== '').join('\n\n')
+    const collector = new SessionTextCollector(sessionId)
+    const textPromise = new Promise<string>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        pendingSessionCompletions.delete(sessionId)
+        reject(new Error('会话生成超时'))
+      }, 90_000)
+      pendingSessionCompletions.set(sessionId, { collector, resolve, reject, timer })
+    })
     await gatewayRpc('session.prompt', {
       sessionId,
       mode: 'queue',
@@ -1616,6 +1698,8 @@ async function completeTextWithSession(system: string, user: string): Promise<st
     })
     return await textPromise
   } finally {
+    // A session created for generation is purged whatever happened — including
+    // a pin that failed before any prompt was sent.
     const pending = pendingSessionCompletions.get(sessionId)
     if (pending !== undefined) {
       clearTimeout(pending.timer)
@@ -3050,8 +3134,15 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
       } catch (error) {
         sessionError = error
       }
+      // The user's explicit text model could not be pinned: report it instead
+      // of falling back, which would produce a body from another model while
+      // the failure stayed invisible (#3629).
+      if (sessionError instanceof TextGenerationPinError) {
+        sendResponse({ ok: false, message: sessionError.message })
+        return
+      }
       try {
-        const result = await gatewayRpc(BRIDGE_COMPLETE_TEXT_METHOD, { prompt: userMessage, system: systemPrompt }) as { text?: unknown }
+        const result = await completeTextFallbackRpc(systemPrompt, userMessage) as { text?: unknown }
         if (typeof result?.text !== 'string' || !result.text.trim()) throw new Error('模型没有返回正文')
         sendResponse({ ok: true, text: result.text.trim() })
       } catch (fallbackError) {
