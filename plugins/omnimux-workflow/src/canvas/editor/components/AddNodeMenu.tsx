@@ -25,6 +25,7 @@ import {
   ChevronRight,
   Film,
   ImagePlus,
+  MonitorPlay,
   Search,
   Table,
   Type,
@@ -52,6 +53,7 @@ const ICON_MAP: Record<AddNodePaletteIcon, ComponentType<{ size?: number }>> = {
   Box,
   Film,
   UploadCloud,
+  MonitorPlay,
 };
 
 /** 底部 ComfyUI 工作流入口需要的数据与动作（由调用方注入，组件不读 store）。 */

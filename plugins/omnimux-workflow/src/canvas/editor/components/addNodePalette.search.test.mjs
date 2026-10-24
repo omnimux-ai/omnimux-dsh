@@ -17,7 +17,7 @@ test('未声明分组时归入 null 组，不伪造分类', () => {
   const groups = groupAddNodePalette(getAddNodePalette('dock'), (item) => item.type, () => null);
   assert.equal(groups.length, 1);
   assert.equal(groups[0].groupKey, null);
-  assert.equal(groups[0].items.length, 8, '分组不得丢项');
+  assert.equal(groups[0].items.length, 9, '分组不得丢项');
 });
 
 test('检索词按 MATERIAL_TOOLS_BY_TYPE 真实工具键收窄到子类型', () => {
@@ -30,8 +30,8 @@ test('检索词按 MATERIAL_TOOLS_BY_TYPE 真实工具键收窄到子类型', ()
 
 test('检索：空查询返回全部，标签/类型 id 命中，无命中返回空数组', () => {
   const items = getAddNodePalette('dock');
-  assert.equal(matchAddNodePalette(items, '', resolve).length, 8);
-  assert.equal(matchAddNodePalette(items, '  ', resolve).length, 8);
+  assert.equal(matchAddNodePalette(items, '', resolve).length, 9);
+  assert.equal(matchAddNodePalette(items, '  ', resolve).length, 9);
   assert.ok(matchAddNodePalette(items, 'table', resolve).some((match) => match.item.type === 'table'));
   assert.deepEqual(matchAddNodePalette(items, 'zzz-no-such-node', resolve), []);
 });

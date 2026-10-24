@@ -21,7 +21,7 @@ const paletteSrc = readFileSync(join(here, 'addNodePalette.ts'), 'utf8');
 const cssSrc = readFileSync(join(here, '../../theme/components.css'), 'utf8');
 
 // Issue #3640：顺序对齐参考截图（导演台在视频剪辑之前）
-const REQUIRED_ICONS = ['Type', 'Table', 'ImagePlus', 'Video', 'AudioLines', 'Box', 'Film', 'UploadCloud'];
+const REQUIRED_ICONS = ['Type', 'Table', 'ImagePlus', 'Video', 'AudioLines', 'Box', 'Film', 'UploadCloud', 'MonitorPlay'];
 const REQUIRED_ORDER = [
   'text',
   'table',
@@ -31,12 +31,13 @@ const REQUIRED_ORDER = [
   'director',
   'video_composition',
   'import_asset',
+  'comfy-page',
 ];
 const FORBIDDEN_ICON_ALIASES = ['FileText', 'Music', "Image as ImageIcon", 'ImageIcon'];
 const RAINBOW_HEX = ['#38bdf8', '#60a5fa', '#c084fc', '#fb923c', '#34d399', '#10b981', '#f472b6', '#5B68F6'];
 
 test('ADD_NODE_PALETTE 固定 8 项顺序与强符号图标键名', () => {
-  assert.equal(ADD_NODE_PALETTE.length, 8);
+  assert.equal(ADD_NODE_PALETTE.length, 9);
   assert.deepEqual(ADD_NODE_PALETTE.map((item) => item.type), REQUIRED_ORDER);
   assert.deepEqual(
     ADD_NODE_PALETTE.map((item) => item.icon),
@@ -72,9 +73,9 @@ test('Badge 定义：video/table primary，video_composition new', () => {
 test('getAddNodePalette 按作用域过滤：dock 8 项、context 7 项且不含导入素材', () => {
   const dock = getAddNodePalette('dock');
   const context = getAddNodePalette('context');
-  assert.equal(dock.length, 8);
+  assert.equal(dock.length, 9);
   assert.deepEqual(dock.map((item) => item.type), REQUIRED_ORDER);
-  assert.equal(context.length, 7);
+  assert.equal(context.length, 8);
   assert.equal(dock.some((item) => item.type === 'director'), true);
   assert.equal(context.some((item) => item.type === 'director'), true);
   assert.equal(context.some((item) => item.type === 'import_asset'), false);

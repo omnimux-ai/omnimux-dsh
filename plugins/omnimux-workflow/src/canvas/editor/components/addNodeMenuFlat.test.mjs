@@ -46,11 +46,11 @@ test('3640：面板源码与样式不再渲染分类标题 / 折叠态', () => {
 test('3640：固定顺序 文本→表格→图片→视频→音频→导演台→视频剪辑→导入素材', () => {
   assert.deepEqual(
     ADD_NODE_PALETTE.map((item) => item.type),
-    ['text', 'table', 'image', 'video', 'audio', 'director', 'video_composition', 'import_asset'],
+    ['text', 'table', 'image', 'video', 'audio', 'director', 'video_composition', 'import_asset', 'comfy-page'],
   );
   assert.deepEqual(
     getAddNodePalette('context').map((item) => item.type),
-    ['text', 'table', 'image', 'video', 'audio', 'director', 'video_composition'],
+    ['text', 'table', 'image', 'video', 'audio', 'director', 'video_composition', 'comfy-page'],
   );
 });
 
