@@ -43,6 +43,8 @@ export interface WorkflowDispatcherDeps {
    * 用于按会话解析/登记所属项目（Issue #2104）；不可用时路由降级为 unknown-session。
    */
   resolveSessionWorkspaceDir?: (sessionId: string) => string | undefined;
+  /** ComfyUI 托管后端（Issue #3690 M2a）：安装/启动/状态。缺省即不挂该组路由。 */
+  comfyBackend?: import('../comfyBackend/service.ts').ComfyBackendService;
 }
 
 export interface WorkflowDispatchRequest {

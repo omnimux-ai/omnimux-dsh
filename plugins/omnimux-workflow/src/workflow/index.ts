@@ -24,6 +24,7 @@ import { join } from 'node:path';
 import type { ServerResponse, IncomingMessage } from 'node:http';
 import type { WorkflowPaths } from './paths';
 import { resolveWorkflowPaths } from './paths';
+import { createComfyBackendService } from './comfyBackend/service.ts';
 import { createWorkspaceStore } from './workspace/WorkspaceStore';
 import { createGenerationPreferencesStore } from './workspace/GenerationPreferencesStore';
 import { createProjectAssetsStore } from './workspace/ProjectAssetsStore';
@@ -160,6 +161,8 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
     // Issue #2104：客户端打开创作画布前按会话问「这个工作区属于哪个项目」，
     // 缺失即登记，保证工作区始终有项目。
     resolveSessionWorkspaceDir: readSessionWorkspaceDir,
+    // Issue #3690 M2a：ComfyUI 托管后端（安装/启动/状态）挂在同一 dispatcher 上。
+    comfyBackend: createComfyBackendService({ dataRoot: paths.root }),
   });
 
   // Issue #3237: dev-only failure recorder behind one-command replay. Off

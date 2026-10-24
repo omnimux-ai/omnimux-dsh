@@ -23,7 +23,7 @@
 1. 纯函数计划器 `src/workflow/comfyBackend/plan.ts`：平台/架构 → 目标描述（Python 运行时 URL+sha256+体积、PyTorch 版本与 wheel URL+sha256、ComfyUI 仓库+tag+commit、安装根、端口、预计体积）；状态机取值与进度归一化；平台不支持时明确拒绝。
 2. 宿主服务 `src/workflow/comfyBackend/service.ts`：安装根（默认插件数据目录下 `comfyui-backend/`）、`install-state.json`（阶段 + 百分比 + 心跳 + 错误码）、日志文件、并发锁；`install()`（异步任务，重活交给子进程）、`start()`、`stop()`、`state()`、`probeReady()`。
 3. 路由 `src/workflow/comfyBackend/routes.ts`：`GET /omnimux-workflow/api/comfy-backend/state`、`POST .../install`、`POST .../start`、`POST .../stop`，并入既有 dispatcher（同一 prefix，不二次 register）。
-4. GPL 合规产物：`licenses/ComfyUI-GPL-3.0.txt`（上游 LICENSE 原文）+ `THIRD-PARTY-NOTICES-comfyui.md`（固定 tag/commit、源码获取方式、未修改声明、可分离说明）。
+4. GPL 合规产物：`THIRD-PARTY-NOTICES-comfyui.md`（固定 tag/commit、源码获取链接、未修改声明、可分离说明、用户数据边界）。**不随包附带 GPL 全文**：我们不分发 ComfyUI，仓库里没有它的代码，源码与许可证原文都在上游同一处（安装器按固定 commit 拉取），需要全文时从该链接获取。
 5. 启动参数与目录布局对齐逆向事实：端口 18188、`--base-directory <installRoot>/userdata`、`--enable-cors-header "*"`（浏览器直连，不经网关代理）；ComfyUI 独立目录（升级整目录替换，userdata 保留）。
 
 ## 非目标
@@ -62,7 +62,7 @@
 5. 真实浏览器：ComfyUI 页面节点指向 `http://127.0.0.1:18188`，打开全屏层后里面是**真 ComfyUI 编辑器**（截图证据）。
 6. 安装根之外无新增文件（不污染源码树与用户目录）；`userdata/` 在重复安装/升级时保留。
 7. 纯函数计划器单测覆盖：mac arm64 命中固定目标、不支持的平台显式拒绝、进度归一化边界、状态机取值；`pnpm --filter omnimux-workflow test` / typecheck / `pnpm verify:stages` / anti-slop 全绿。
-8. GPL 合规产物就位：上游 LICENSE 原文 + NOTICE（固定 tag/commit + 源码获取方式 + 未修改声明）。
+8. GPL 合规产物就位：`THIRD-PARTY-NOTICES-comfyui.md`（固定 tag/commit + 源码获取链接 + 未修改声明 + 可分离说明）；仓库内不含 ComfyUI 代码（不分发 → 不需要附带全文）。
 
 ## 文档影响
 

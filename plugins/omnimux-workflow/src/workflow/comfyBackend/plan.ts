@@ -133,7 +133,9 @@ export function installPercent(stage: unknown, stageRatio = 0): number {
   const index = INSTALL_STAGES.findIndex((item) => item.id === stage);
   if (index < 0) return 0;
   const before = INSTALL_STAGES.slice(0, index).reduce((sum, item) => sum + item.weight, 0);
-  const current = INSTALL_STAGES[index].weight;
+  const stageSpec = INSTALL_STAGES[index];
+  if (!stageSpec) return 0;
+  const current = stageSpec.weight;
   const ratio = Number.isFinite(stageRatio) ? Math.min(Math.max(stageRatio, 0), 1) : 0;
   return Math.min(99, Math.round((before + current * ratio) * 100));
 }

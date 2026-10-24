@@ -81,6 +81,7 @@ import { createVideoDeconstructRoutes } from './videoDeconstructRoutes';
 import { createVideoStoryboardRoutes } from './videoStoryboardRoutes';
 import { createAudioExtractRoutes } from './audioExtractRoutes';
 import { createVideoDepthRoutes } from './videoDepthRoutes';
+import { createComfyBackendRoutes } from '../comfyBackend/routes.ts';
 import { resolveVideoAbsolutePath } from '../videoDeconstruct/service';
 import { createDirectorRoutes } from './directorRoutes.ts';
 import { createDirectorAssistantRoutes } from './directorAssistantRoutes.ts';
@@ -210,6 +211,9 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
     getTool: deps.getTool,
     resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
   });
+  const comfyBackendRoutes = deps.comfyBackend
+    ? createComfyBackendRoutes(deps.comfyBackend)
+    : { tryHandle: async () => null };
   const videoDepthRoutes = createVideoDepthRoutes({
     store,
     mediaDir,
@@ -283,6 +287,9 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
       // workspaces, SSE/control/item/collection, capabilities, media.
       const fromBundle = await Promise.resolve(staticRoutes.tryBundle(method, path, req));
       if (fromBundle) return fromBundle;
+      // ComfyUI 托管后端（Issue #3690 M2a）：写请求已过上面的本地来源校验。
+      const fromComfyBackend = await comfyBackendRoutes.tryHandle(method, path, req);
+      if (fromComfyBackend) return fromComfyBackend;
       const fromPreferences = await preferenceRoutes?.tryHandle(method, path, req);
       if (fromPreferences) return fromPreferences;
       const fromDirectorOperation = await directorOperationRoutes.tryHandle(method, path, req);
