@@ -89,11 +89,14 @@
 
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
+| CI 声明校验（真实范围） | `node scripts/verify-test-standard-declarations.mjs . origin/main` | 退出码 0；`declarationCount: 0`，无违规 |
+| 声明校验测试 | `node --test scripts/verify-test-standard-declarations.test.mjs` | **9/9 通过** |
 | 通道端到端（真实 `handle()`） | 有声明 → allow；撤声明 → deny 并点名缺失用例 | **符合预期** |
 | 门禁自身测试 | `node --test scripts/guard-anti-cheat.test.mjs` | **24/24 通过** |
 | 语法层评估测试 | `node --test scripts/test-authoring-inspection.test.mjs` | 全绿（含既有 `deepEqual` 契约用例） |
-| 治理登记 | `node --test scripts/verify-governance-registry.test.mjs` | **4/4 通过**（未新增脚本文件，无需登记） |
-| 门禁套件 | `pnpm test:gates` | 446 / 434 通过 / **12 失败，与基线失败集合逐条同名**（见下；该数字在撤回 `package.json` 改动后测得） |
+| 评估域清单 | `node --test scripts/test-change-review.test.mjs` | **4/4 通过**（抽取 `readEvaluationChanges` 后行为不变） |
+| 治理登记 | `node --test scripts/verify-governance-registry.test.mjs` | **4/4 通过** |
+| 门禁套件 | `pnpm test:gates` | 455 / 443 通过 / **12 失败，与基线失败集合逐条同名**（用例数 446 → 455 即本次新增的 9 条） |
 
 端到端验证方式：向本任务 spec 临时加入 `## 旧标准变更` 声明，用一条削弱该用例断言的编辑调用 `handle()`——有声明时 `allow`，撤销声明后 `deny` 且信息点名缺失用例；spec 事后还原。这条同时证明 root 传递正确：声明是从**被改文件所属的工作树**读到的，而不是门禁自己的检出根（主检出），否则通道在仓库强制的 worktree 工作流下完全失效。
 
