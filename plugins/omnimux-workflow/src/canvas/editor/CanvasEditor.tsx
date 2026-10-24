@@ -68,7 +68,7 @@ import { FloatingSelectionToolbar } from './components/FloatingSelectionToolbar'
 import { BatchCreateAssetModal, type MediaAssetItem } from './components/BatchCreateAssetModal';
 import { CreateWorkflowModal } from './components/CreateWorkflowModal';
 import { calculateGroupBounds, childIdsOfGroup, planAlignLayout } from './utils/nodeVisualMath';
-import { resolveWorkflowTemplateScope } from './utils/workflowTemplateScope';
+import { resolveWorkflowTemplateScope, toFlatTemplateSnapshot } from './utils/workflowTemplateScope';
 import { createTemplate, getTemplate, listTemplates } from '../bridge/templateApi';
 import { sanitizeEdges, sanitizeNodes } from '../bridge/persistSanitize';
 import { planInstantiateTemplate } from './utils/planInstantiateTemplate';
@@ -1097,7 +1097,8 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
             name: payload.name,
             description: payload.description,
             tags: payload.tags,
-            nodes: sanitizeNodes(scope.nodes),
+            // 模板是扁平快照：组容器不在 payload 里，落库前统一丢掉悬空父引用（Issue 3662）。
+            nodes: sanitizeNodes(toFlatTemplateSnapshot(scope.nodes)),
             edges: sanitizeEdges(scope.edges),
           });
           if (!result.ok || !result.body.template) {

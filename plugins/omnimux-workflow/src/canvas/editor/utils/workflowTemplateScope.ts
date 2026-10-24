@@ -1,15 +1,15 @@
 /**
- * 「创建可复用工作流模板」的范围解析（Issue 3659）。
+ * 「创建可复用工作流模板」的范围解析与落库扁平化（Issue 3659 / 3662）。
  *
  * 模板范围有两个来源：
  *  1. 组右键「保存工作流」：范围 = 该组（直接子节点 + 组内连线），沿用既有语义；
  *  2. 「添加节点」面板底部入口卡（Dock / 右键钻取）：范围 = **整块画布** —— 该入口的
- *     文案就是「把当前画布保存为可复用模板」，而它此前从不设置范围，导致保存抛
- *     `template.missingGroup`（「缺少分组」）。
+ *     文案就是「把当前画布保存为可复用模板」，它此前从不设置范围，保存会报「缺少分组」。
  *
  * 模板是**扁平快照**：插入路径 `planInstantiateTemplate` 会剥掉 `parentId`/`extent`
- * 并按包围盒重排坐标。因此画布范围在落库前就把组内子节点的相对坐标还原为绝对坐标、
- * 并丢掉父引用，避免模板 JSON 里留下指向「不在模板内的组」的悬空引用。
+ * 并按包围盒重排坐标。所以落库前统一走 `toFlatTemplateSnapshot` 丢掉父引用——
+ * 两个范围都只把子节点放进 payload，组容器不在模板内，留着 `parentId` 就是指向
+ * 「不在模板内的组」的悬空引用。画布范围另需把组内子节点的相对坐标还原为绝对坐标。
  *
  * 纯函数：不读 React、不读 store，可在 node --test 里直接验证。
  */
@@ -91,4 +91,21 @@ export function resolveWorkflowTemplateScope<
   const scopedEdges = edges.filter((edge) => scopedIds.has(edge.source) && scopedIds.has(edge.target));
 
   return { nodes: scopedNodes, edges: scopedEdges, nodeCount: scopedNodes.length };
+}
+
+/**
+ * 落库前的扁平化：丢掉 `parentId`/`extent`，其余字段与顺序不动。
+ *
+ * 模板里没有组容器，所以任何父引用都是悬空的；插入路径虽然也会剥一次，但模板 JSON
+ * 自身应当自洽。幂等：对已扁平化的节点再调一次结果不变。
+ *
+ * `sanitizeNodes` 只在 `typeof parentId === 'string'` / `extent === 'parent'` 时保留
+ * 这两个字段，因此置 `undefined` 即可，不必改动持久化共用的 `sanitizeNodes`。
+ */
+export function toFlatTemplateSnapshot<N extends TemplateScopeNode>(nodes: N[]): N[] {
+  return nodes.map((node): N => {
+    if (node.parentId === undefined && node.extent === undefined) return node;
+    const { parentId: _parentId, extent: _extent, ...rest } = node;
+    return rest as N;
+  });
 }

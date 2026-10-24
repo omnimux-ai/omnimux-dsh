@@ -528,7 +528,6 @@ const en: Record<DictKey, string> = {
   'template.modal.nameRequired': 'Enter a workflow name',
   'template.modal.saved': 'Workflow “{name}” saved to the template library',
   'template.modal.failed': 'Failed to create workflow',
-  'template.missingGroup': 'Missing group',
   'template.emptyCanvas': 'Add nodes to the canvas before saving a template',
   'template.toast.inserted': 'Inserted template “{name}”',
   'template.toast.loadFailed': 'Failed to load template',
