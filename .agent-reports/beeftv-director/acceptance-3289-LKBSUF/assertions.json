@@ -1,0 +1,90 @@
+[
+  {
+    "name": "normal-project-entry",
+    "passed": true,
+    "detail": {
+      "normalUI": true,
+      "rendererReady": true,
+      "firstRunNoticeDismissed": true,
+      "newProjectLabel": "New Project",
+      "namePlaceholder": "Project name",
+      "fullscreenControl": null,
+      "nodeLabel": "3D Director"
+    }
+  },
+  {
+    "name": "portrait-selected",
+    "passed": true,
+    "detail": {
+      "aspectRatio": "9:16",
+      "skipOnboarding": "跳过引导"
+    }
+  },
+  {
+    "name": "managed-media-decoded",
+    "passed": true,
+    "detail": {
+      "src": "http://127.0.0.1:64160/omnimux-workflow/api/workspaces/ws_ad0d2b37e892/file?rel=artifacts%2Fdirector%2Fws_ad0d2b37e892%2Fnode_director_1792797302803%2Fb3245d5109ff38739ec5c687defd95379f4d89058d438467fedc5841d5f89643.webm",
+      "duration": 5.1222,
+      "width": 481,
+      "height": 855,
+      "image": "http://127.0.0.1:64160/omnimux-workflow/api/workspaces/ws_ad0d2b37e892/file?rel=artifacts%2Fdirector%2Fws_ad0d2b37e892%2Fnode_director_1792797302803%2Fdd2e6b96b1e24770e20d448400dba71d007dd08a54599a6affe10465d0e5ffcb.png",
+      "error": null,
+      "imageDecoded": {
+        "width": 481,
+        "height": 855
+      }
+    }
+  },
+  {
+    "name": "saved-scene",
+    "passed": true,
+    "detail": {
+      "revision": 5,
+      "sceneId": "2ddea467-d80b-43dd-b8ff-85482ff19e42"
+    }
+  },
+  {
+    "name": "play-seek",
+    "passed": true,
+    "detail": {
+      "currentTime": 2.5,
+      "duration": 5.1222,
+      "readyState": 4,
+      "error": null
+    }
+  },
+  {
+    "name": "decoded-motion",
+    "passed": true,
+    "detail": [
+      {
+        "time": 0.1,
+        "sha256": "109864d5eb2886c101a073d3d8e12a058e36518d41efacb6b47c82c26ef546f8"
+      },
+      {
+        "time": 2.5,
+        "sha256": "9e093b12239e8b84490597701044cae5ecab37df9cc76c6f4ca31d8cbd4b5e23"
+      },
+      {
+        "time": 4.7,
+        "sha256": "c9188b0e9582de25126935f51b26e0e6bdab3f29b992907462bc2b2e89ca3229"
+      }
+    ]
+  },
+  {
+    "name": "scene-reopened",
+    "passed": true,
+    "detail": {
+      "sceneId": "2ddea467-d80b-43dd-b8ff-85482ff19e42",
+      "revision": 5
+    }
+  },
+  {
+    "name": "aspect-reopened",
+    "passed": true,
+    "detail": {
+      "aspectRatio": "9:16"
+    }
+  }
+]

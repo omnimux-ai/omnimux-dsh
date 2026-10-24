@@ -1,0 +1,250 @@
+{
+  "schemaVersion": 1,
+  "workspaceId": "ws_ad0d2b37e892",
+  "nodeId": "node_director_1792797302803",
+  "revision": 5,
+  "scene": {
+    "id": "2ddea467-d80b-43dd-b8ff-85482ff19e42",
+    "version": 1,
+    "title": "3D 导演台",
+    "background": "#060608",
+    "environmentIntensity": 0.7,
+    "gridVisible": true,
+    "aspectRatio": "9:16",
+    "objects": [
+      {
+        "id": "IM65SyJQ3H4gOk4JzjM21",
+        "name": "标准女性 1",
+        "kind": "actor",
+        "transform": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "color": "#4f8ef7",
+        "visible": true,
+        "castShadow": true,
+        "receiveShadow": true,
+        "pose": "stand",
+        "actorPreset": "standard_female",
+        "rig": {
+          "status": "ready",
+          "boneMap": {
+            "root": "root",
+            "hips": "pelvis",
+            "spine": "spine_01",
+            "chest": "spine_02",
+            "neck": "neck_01",
+            "head": "Head",
+            "leftUpperArm": "upperarm_l",
+            "leftLowerArm": "lowerarm_l",
+            "leftHand": "hand_l",
+            "leftThumb1": "thumb_01_l",
+            "leftThumb2": "thumb_02_l",
+            "leftThumb3": "thumb_03_l",
+            "leftIndex1": "index_01_l",
+            "leftIndex2": "index_02_l",
+            "leftIndex3": "index_03_l",
+            "leftMiddle1": "middle_01_l",
+            "leftMiddle2": "middle_02_l",
+            "leftMiddle3": "middle_03_l",
+            "leftRing1": "ring_01_l",
+            "leftRing2": "ring_02_l",
+            "leftRing3": "ring_03_l",
+            "leftPinky1": "pinky_01_l",
+            "leftPinky2": "pinky_02_l",
+            "leftPinky3": "pinky_03_l",
+            "rightUpperArm": "upperarm_r",
+            "rightLowerArm": "lowerarm_r",
+            "rightHand": "hand_r",
+            "rightThumb1": "thumb_01_r",
+            "rightThumb2": "thumb_02_r",
+            "rightThumb3": "thumb_03_r",
+            "rightIndex1": "index_01_r",
+            "rightIndex2": "index_02_r",
+            "rightIndex3": "index_03_r",
+            "rightMiddle1": "middle_01_r",
+            "rightMiddle2": "middle_02_r",
+            "rightMiddle3": "middle_03_r",
+            "rightRing1": "ring_01_r",
+            "rightRing2": "ring_02_r",
+            "rightRing3": "ring_03_r",
+            "rightPinky1": "pinky_01_r",
+            "rightPinky2": "pinky_02_r",
+            "rightPinky3": "pinky_03_r",
+            "leftUpperLeg": "thigh_l",
+            "leftLowerLeg": "calf_l",
+            "leftFoot": "foot_l",
+            "rightUpperLeg": "thigh_r",
+            "rightLowerLeg": "calf_r",
+            "rightFoot": "foot_r"
+          },
+          "animationNames": []
+        },
+        "motionClips": [],
+        "boneOverrides": {},
+        "boneTracks": [],
+        "url": "/omnimux-workflow/director-assets/quaternius-standard-female.glb",
+        "mimeType": "model/gltf-binary",
+        "keyframes": []
+      }
+    ],
+    "cameras": [
+      {
+        "id": "7435e0d0-6a8e-4b65-a4b3-9a5fe4d858dc",
+        "name": "主摄影机",
+        "transform": {
+          "position": [
+            3,
+            2,
+            5
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "target": [
+          0,
+          1,
+          0
+        ],
+        "focalLength": 35,
+        "fov": 50,
+        "aperture": 2.8,
+        "focusDistance": 5,
+        "near": 0.1,
+        "far": 1000,
+        "keyframes": [
+          {
+            "id": "VgzSD2E9Bb-NoHb0lCMeB",
+            "time": 0,
+            "transform": {
+              "position": [
+                3,
+                2,
+                5
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "TE74HJMXRH8dLoChaDbIC",
+            "time": 5,
+            "transform": {
+              "position": [
+                1.98581489432578,
+                1.6619382981085935,
+                3.309691490542967
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "lights": [
+      {
+        "id": "fc0c3f41-6688-4f6b-9a81-639cdeb1d5cb",
+        "name": "主光",
+        "type": "directional",
+        "transform": {
+          "position": [
+            4,
+            6,
+            4
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "color": "#ffffff",
+        "intensity": 2.4,
+        "castShadow": true
+      },
+      {
+        "id": "e73094e1-cc49-4f37-8980-3fb41ac4a462",
+        "name": "环境光",
+        "type": "ambient",
+        "transform": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "color": "#ffffff",
+        "intensity": 0.65,
+        "castShadow": false
+      }
+    ],
+    "shots": [
+      {
+        "id": "b5dadf46-cce6-4391-811a-aff17f46b424",
+        "name": "镜头 1",
+        "cameraId": "7435e0d0-6a8e-4b65-a4b3-9a5fe4d858dc",
+        "duration": 5,
+        "fps": 30,
+        "shotSize": "medium",
+        "cameraMove": "push_in",
+        "prompt": ""
+      }
+    ],
+    "activeShotId": "b5dadf46-cce6-4391-811a-aff17f46b424",
+    "createdAt": "2026-10-23T23:15:04.827Z",
+    "updatedAt": "2026-10-23T23:15:16.134Z"
+  }
+}

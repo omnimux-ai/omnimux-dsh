@@ -68,6 +68,7 @@ import { FloatingSelectionToolbar } from './components/FloatingSelectionToolbar'
 import { BatchCreateAssetModal, type MediaAssetItem } from './components/BatchCreateAssetModal';
 import { CreateWorkflowModal } from './components/CreateWorkflowModal';
 import { calculateGroupBounds, childIdsOfGroup, planAlignLayout } from './utils/nodeVisualMath';
+import { resolveWorkflowTemplateScope, toFlatTemplateSnapshot } from './utils/workflowTemplateScope';
 import { createTemplate, getTemplate, listTemplates } from '../bridge/templateApi';
 import { sanitizeEdges, sanitizeNodes } from '../bridge/persistSanitize';
 import { planInstantiateTemplate } from './utils/planInstantiateTemplate';
@@ -232,6 +233,15 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   const selectedRegularNodes = useMemo(
     () => nodes.filter((node) => node.selected && node.type !== 'group'),
     [nodes],
+  );
+
+  /**
+   * 入口卡路径（未指定分组）的模板范围 = 整块画布（Issue 3659）。
+   * 模态提示与提交取同一份，避免「提示 0 个节点」与真实范围不一致。
+   */
+  const canvasTemplateScope = useMemo(
+    () => resolveWorkflowTemplateScope(nodes, edges, null),
+    [nodes, edges],
   );
 
   const multiSelectToolbarPosition = useMemo(() => {
@@ -1078,19 +1088,18 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         }}
         groupId={targetGroupForWorkflow?.id}
         defaultTitle={targetGroupForWorkflow?.title}
-        nodeCount={targetGroupForWorkflow?.nodeCount}
+        nodeCount={targetGroupForWorkflow?.nodeCount ?? canvasTemplateScope.nodeCount}
         onConfirm={async (payload) => {
-          const groupId = targetGroupForWorkflow?.id;
-          if (!groupId) throw new Error(t('template.missingGroup'));
-          const childIds = new Set(childIdsOfGroup(nodes, groupId));
-          const childNodes = nodes.filter((n) => childIds.has(n.id));
-          const childEdges = edges.filter((edge) => childIds.has(edge.source) && childIds.has(edge.target));
+          // 组右键入口 = 该组范围；入口卡入口 = 整块画布（Issue 3659）。
+          const scope = resolveWorkflowTemplateScope(nodes, edges, targetGroupForWorkflow?.id ?? null);
+          if (scope.nodeCount === 0) throw new Error(t('template.emptyCanvas'));
           const result = await createTemplate({
             name: payload.name,
             description: payload.description,
             tags: payload.tags,
-            nodes: sanitizeNodes(childNodes),
-            edges: sanitizeEdges(childEdges),
+            // 模板是扁平快照：组容器不在 payload 里，落库前统一丢掉悬空父引用（Issue 3662）。
+            nodes: sanitizeNodes(toFlatTemplateSnapshot(scope.nodes)),
+            edges: sanitizeEdges(scope.edges),
           });
           if (!result.ok || !result.body.template) {
             throw new Error(result.body.message || result.body.error || t('template.modal.failed'));

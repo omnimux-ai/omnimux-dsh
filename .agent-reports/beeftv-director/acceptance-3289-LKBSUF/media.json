@@ -1,0 +1,13 @@
+{
+  "src": "http://127.0.0.1:64160/omnimux-workflow/api/workspaces/ws_ad0d2b37e892/file?rel=artifacts%2Fdirector%2Fws_ad0d2b37e892%2Fnode_director_1792797302803%2Fb3245d5109ff38739ec5c687defd95379f4d89058d438467fedc5841d5f89643.webm",
+  "duration": 5.1222,
+  "width": 481,
+  "height": 855,
+  "image": "http://127.0.0.1:64160/omnimux-workflow/api/workspaces/ws_ad0d2b37e892/file?rel=artifacts%2Fdirector%2Fws_ad0d2b37e892%2Fnode_director_1792797302803%2Fdd2e6b96b1e24770e20d448400dba71d007dd08a54599a6affe10465d0e5ffcb.png",
+  "error": null,
+  "imageDecoded": {
+    "width": 481,
+    "height": 855
+  },
+  "scenePath": "/omnimux-workflow/api/workspaces/ws_ad0d2b37e892/director/node_director_1792797302803"
+}

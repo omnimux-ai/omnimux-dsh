@@ -1108,6 +1108,11 @@ export function createAppQaRunner(deps = {}) {
       env.assertAlive?.();
     } catch (error) {
       report.errors.push(typeof error?.code === 'string' && /^(?:TEST_ENV|TEST_APP_QA)_[A-Z_]+$/.test(error.code) ? error.code : 'TEST_APP_QA_EXECUTION');
+      // Preparation failures carry an actionable hint (missing install command, archive stderr).
+      // Dropping it left the standard entry point with a bare code, so keep a sanitized copy that
+      // the CLI and report readers can act on. Never persist credential-shaped text.
+      const hint = typeof error?.hint === 'string' ? error.hint.replace(/\s+/g, ' ').trim().slice(0, 800) : '';
+      if (hint && !/token|bearer|api[-_]?key|password|secret/i.test(hint)) report.hint = hint;
       if (error?.code === 'TEST_ENV_NOT_USER_FRESH_TASK_UNKNOWN') report.userFresh = false;
       if (!env && error?.cleanup) envCleanup = error.cleanup;
       if (!env && error?.observations) prepareObservations = error.observations;
@@ -1249,7 +1254,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     }
   } catch (error) {
     console.error(`❌ 无法开始：${typeof error?.code === 'string' && /^(?:TEST_APP_QA|TEST_ENV)_[A-Z_]+$/.test(error.code) ? error.code : 'TEST_APP_QA_REQUEST_FAILED'}`);
-    if (error?.code === 'TEST_ENV_ROOT_UNSAFE' && error.hint) console.error(`   ${error.hint}`);
+    if (typeof error?.hint === 'string' && error.hint && !/token|bearer|api[-_]?key|password|secret/i.test(error.hint)) console.error(`   原因: ${error.hint.replace(/\s+/g, ' ').trim().slice(0, 800)}`);
     process.exitCode = 1;
   }
 }

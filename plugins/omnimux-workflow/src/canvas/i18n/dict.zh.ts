@@ -553,7 +553,7 @@ const zh = {
   'template.modal.nameRequired': '请输入工作流名称',
   'template.modal.saved': '工作流「{name}」已保存到模板库',
   'template.modal.failed': '创建工作流失败',
-  'template.missingGroup': '缺少分组',
+  'template.emptyCanvas': '画布还没有节点，先添加节点再保存',
   'template.toast.inserted': '已插入模板「{name}」',
   'template.toast.loadFailed': '读取模板失败',
   'asset.modal.title': '批量保存到资产库',
