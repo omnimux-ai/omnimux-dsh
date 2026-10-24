@@ -13,9 +13,10 @@
  */
 
 import { createHash } from 'node:crypto';
-import { closeSync, createWriteStream, existsSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { accessSync, closeSync, constants as fsConstants, createWriteStream, existsSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, rmSync, statfsSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 
@@ -24,11 +25,22 @@ import {
   installPercent,
   resolveLocalComfyBackendTarget,
   stageLabel,
+  versionMatches,
+  type ComfyBackendFailure,
   type ComfyBackendState,
   type ComfyBackendStatus,
   type ComfyBackendTarget,
   type InstallStageId,
 } from './plan.ts';
+import { runPreflight, type DriverStatus } from './preflight.ts';
+import {
+  EMPTY_SETTINGS,
+  modelsConfigYaml,
+  parseSettings,
+  resolveInstallRoot,
+  validateDirectory,
+  type ComfyBackendSettings,
+} from './settings.ts';
 
 export interface ComfyBackendServiceOptions {
   /** 插件数据目录（安装根 `<root>/comfyui-backend` 建在这里）。 */
@@ -43,16 +55,19 @@ export interface ComfyBackendServiceOptions {
 }
 
 export interface ComfyBackendService {
-  paths: { root: string; state: string; log: string; userdata: string; comfyui: string; venv: string };
+  paths: { root: string; state: string; log: string; userdata: string; comfyui: string; venv: string; settings: string };
   status: () => Promise<ComfyBackendStatus>;
   install: () => Promise<ComfyBackendStatus>;
   start: () => Promise<ComfyBackendStatus>;
   stop: () => Promise<ComfyBackendStatus>;
   probeReady: () => Promise<boolean>;
+  settings: () => ComfyBackendSettings;
+  updateSettings: (patch: Partial<ComfyBackendSettings>) => { ok: boolean; code: string | null; settings: ComfyBackendSettings };
 }
 
 const READY_TIMEOUT_MS = 120_000;
 const PROBE_TIMEOUT_MS = 2_000;
+const MODELS_CONFIG_FILE = 'local-models.yaml';
 
 function sha256OfFile(path: string): string {
   const hash = createHash('sha256');
@@ -60,9 +75,61 @@ function sha256OfFile(path: string): string {
   return hash.digest('hex');
 }
 
+/** 读文本文件，缺失/不可读返回 null（设置文件缺失就是「用默认值」）。 */
+function readTextOrNull(path: string): string | null {
+  try {
+    return readFileSync(path, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+/** 目录可写探测：不存在时看父目录是否可写（安装根会被创建）。 */
+function isWritableDir(path: string): boolean {
+  try {
+    if (existsSync(path)) {
+      if (!statSync(path).isDirectory()) return false;
+      accessSync(path, fsConstants.W_OK);
+      return true;
+    }
+    const parent = dirname(path);
+    if (!existsSync(parent)) return false;
+    accessSync(parent, fsConstants.W_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 卷可用空间；探测失败返回 null（不因为探测不到就拒绝安装）。 */
+function freeBytesAt(path: string): number | null {
+  try {
+    const info = statfsSync(existsSync(path) ? path : dirname(path));
+    const free = Number(info.bavail) * Number(info.bsize);
+    return Number.isFinite(free) ? free : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 端口是否空闲（尝试监听一次，立刻释放）。 */
+function portIsFree(port: number): Promise<boolean> {
+  return new Promise((resolvePromise) => {
+    const server = createServer();
+    server.once('error', () => resolvePromise(false));
+    server.once('listening', () => {
+      server.close(() => resolvePromise(true));
+    });
+    server.listen(port, '127.0.0.1');
+  });
+}
+
 export function createComfyBackendService(options: ComfyBackendServiceOptions): ComfyBackendService {
   const dataRoot = options.dataRoot;
-  const root = join(dataRoot, 'comfyui-backend');
+  // 设置文件固定在默认根下（它是「用户把根改到哪」的唯一记录，不能跟着根一起搬走）。
+  const settingsPath = join(dataRoot, 'comfyui-backend', 'settings.json');
+  let settings = parseSettings(readTextOrNull(settingsPath));
+  let root = resolveInstallRoot(dataRoot, settings);
   const paths = {
     root,
     state: join(root, 'install-state.json'),
@@ -70,8 +137,9 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     userdata: join(root, 'userdata'),
     comfyui: join(root, 'ComfyUI'),
     venv: join(root, 'venv'),
+    settings: settingsPath,
   };
-  const downloads = join(root, 'downloads');
+  const downloads = () => join(paths.root, 'downloads');
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
   const spawnImpl = options.spawnImpl ?? spawn;
   const now = options.now ?? Date.now;
@@ -81,13 +149,24 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     : resolveLocalComfyBackendTarget();
   const target = targetResult.ok ? targetResult.target : null;
 
-  mkdirSync(dirname(paths.log), { recursive: true });
-  mkdirSync(downloads, { recursive: true });
-  // `--base-directory` 指向 userdata；ComfyUI 启动时会直接 os.listdir 这些子目录，
-  // 缺一个就 FileNotFoundError 起不来（实测 custom_nodes 缺失即崩）。
-  for (const name of ['custom_nodes', 'models', 'input', 'output', 'temp']) {
-    mkdirSync(join(paths.userdata, name), { recursive: true });
-  }
+  /** 安装根变了：把 paths 整体指过去并建骨架（用户数据目录不搬，就地新建）。 */
+  const applyRoot = (nextRoot: string) => {
+    root = nextRoot;
+    paths.root = nextRoot;
+    paths.state = join(nextRoot, 'install-state.json');
+    paths.log = join(nextRoot, 'logs', 'install.log');
+    paths.userdata = join(nextRoot, 'userdata');
+    paths.comfyui = join(nextRoot, 'ComfyUI');
+    paths.venv = join(nextRoot, 'venv');
+    mkdirSync(dirname(paths.log), { recursive: true });
+    mkdirSync(downloads(), { recursive: true });
+    // `--base-directory` 指向 userdata；ComfyUI 启动时会直接 os.listdir 这些子目录，
+    // 缺一个就 FileNotFoundError 起不来（实测 custom_nodes 缺失即崩）。
+    for (const name of ['custom_nodes', 'models', 'input', 'output', 'temp']) {
+      mkdirSync(join(paths.userdata, name), { recursive: true });
+    }
+  };
+  applyRoot(root);
 
   const log = (line: string) => {
     const stamped = `[${new Date(now()).toISOString()}] ${line}\n`;
@@ -111,6 +190,7 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
       updatedAt: now(),
       target,
       installRoot: root,
+      failure: null,
     };
     if (!existsSync(paths.state)) return base;
     try {
@@ -133,7 +213,7 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
   };
 
   const progress = (stage: InstallStageId | 'done', message: string, ratio = 0) =>
-    writeState({ state: stage === 'done' ? 'installed' : 'installing', stage, percent: installPercent(stage, ratio), message, error: null });
+    writeState({ state: stage === 'done' ? 'installed' : 'installing', stage, percent: installPercent(stage, ratio), message, error: null, failure: null });
 
   const run = (command: string, args: string[], cwd = root): Promise<void> =>
     new Promise((resolvePromise, rejectPromise) => {
@@ -219,7 +299,7 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     }
     try {
       progress('runtime', '下载 Python 运行时', 0);
-      const runtimeArchive = join(downloads, target.python.asset);
+      const runtimeArchive = join(downloads(), target.python.asset);
       if (!existsSync(runtimeArchive)) await download(target.python.url, runtimeArchive, target.python.sha256);
 
       progress('extract', '解压运行时');
@@ -236,7 +316,7 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
       await run(venvPython(), ['-m', 'pip', 'install', '--disable-pip-version-check', `${target.torch.url}#sha256=${target.torch.sha256}`]);
 
       progress('source', `下载 ComfyUI ${target.comfyui.tag}`);
-      const sourceArchive = join(downloads, `comfyui-${target.comfyui.commit}.tar.gz`);
+      const sourceArchive = join(downloads(), `comfyui-${target.comfyui.commit}.tar.gz`);
       if (!existsSync(sourceArchive)) await download(target.comfyui.tarball, sourceArchive, '', 'source');
       if (!existsSync(paths.comfyui)) {
         const staging = join(root, 'source-staging');
@@ -261,7 +341,7 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       log(`安装失败：${message}`);
-      writeState({ state: 'failed', error: 'install-failed', message: '安装失败', stage: null, percent: 0 });
+      writeState({ state: 'failed', error: 'install-failed', message: '安装失败', stage: null, percent: 0, failure: 'install-failed' });
     } finally {
       installing = false;
     }
@@ -282,6 +362,17 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     if (!existsSync(join(root, '.ready'))) {
       return current.state === 'not-installed' ? current : writeState({ state: 'not-installed', stage: null, percent: 0, pid: null });
     }
+    // 已装版本与当前固定目标不一致 → 需要更新，不能当成正常就绪继续跑（M3）。
+    if (target && !versionMatches(readReady(), target)) {
+      return writeState({
+        state: 'failed',
+        failure: 'version-mismatch',
+        error: 'version-mismatch',
+        message: '已安装的后端版本与当前固定版本不一致，需要更新',
+        stage: null,
+        percent: 0,
+      });
+    }
     const alive = current.pid !== null && isProcessAlive(current.pid);
     if (alive && (await probeReady())) return writeState({ state: 'ready', message: 'ComfyUI 已就绪', error: null });
     if (alive) return writeState({ state: 'starting', message: '正在启动 ComfyUI' });
@@ -290,6 +381,19 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
 
   const install = async (): Promise<ComfyBackendStatus> => {
     if (installing) return readState();
+    const pre = await preflightFor(target, true);
+    if (!pre.ok) {
+      const failure = pre.failures[0] ?? 'install-failed';
+      log(`安装前预检未通过：${failure}（需要 ${pre.requiredBytes} 字节，可用 ${String(pre.freeBytes)}）`);
+      return writeState({
+        state: 'failed',
+        failure,
+        error: failure,
+        message: preflightMessage(failure, pre.requiredBytes, pre.freeBytes),
+        stage: null,
+        percent: 0,
+      });
+    }
     installing = true;
     progress('runtime', '准备安装', 0);
     void installTask();
@@ -300,6 +404,17 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     if (!target) return writeState({ state: 'failed', error: 'unsupported-platform', message: '当前设备暂不支持托管后端' });
     if (!existsSync(join(root, '.ready'))) return writeState({ state: 'not-installed', message: '尚未安装托管后端' });
     if (await probeReady()) return writeState({ state: 'ready', message: 'ComfyUI 已就绪' });
+    const portFree = await portIsFree(target.port);
+    if (!portFree) {
+      return writeState({
+        state: 'failed',
+        failure: 'port-occupied',
+        error: 'port-occupied',
+        message: `端口 ${target.port} 被其它程序占用`,
+        stage: null,
+        percent: 0,
+      });
+    }
     writeState({ state: 'starting', message: '正在启动 ComfyUI' });
     // 用同步 fd 交给子进程（直接传 WriteStream 会因为 fd 还没打开而报 stdio 非法）。
     const logFd = openSync(join(root, 'logs', 'backend.log'), 'a');
@@ -310,6 +425,7 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
         '--port', String(target.port),
         '--base-directory', paths.userdata,
         '--enable-cors-header', '*',
+        ...(modelsConfigArgs().length > 0 ? modelsConfigArgs() : []),
       ],
       { cwd: paths.comfyui, detached: true, stdio: ['ignore', logFd, logFd] },
     );
@@ -322,7 +438,75 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
       if (await probeReady()) return writeState({ state: 'ready', message: 'ComfyUI 已就绪', error: null });
       await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000));
     }
-    return writeState({ state: 'failed', error: 'start-timeout', message: '启动超时，请看后端日志' });
+    return writeState({ state: 'failed', error: 'start-timeout', message: '启动超时，请看后端日志', failure: 'start-timeout' });
+  };
+
+  /** 预检输入取自真实文件系统与端口；`forInstall` 决定是否检查磁盘空间。 */
+  const preflightFor = async (t: ComfyBackendTarget | null, forInstall: boolean) => {
+    const writable = isWritableDir(paths.root);
+    const free = forInstall ? freeBytesAt(paths.root) : null;
+    const freePort = t ? await portIsFree(t.port) : true;
+    const owned = !freePort && (await probeReady());
+    return runPreflight({
+      target: t,
+      writable,
+      freeBytes: free,
+      portFree: freePort,
+      portOwnedByBackend: owned,
+    });
+  };
+
+  /** 模型目录：设置后写配置文件并把它交给 ComfyUI（不复制用户文件）。 */
+  const modelsConfigArgs = (): string[] => {
+    const yaml = modelsConfigYaml(settings.modelsPath);
+    if (yaml === '') return [];
+    const file = join(paths.root, MODELS_CONFIG_FILE);
+    try {
+      writeFileSync(file, yaml);
+    } catch (error) {
+      log(`模型目录配置写入失败：${error instanceof Error ? error.message : String(error)}`);
+      return [];
+    }
+    return ['--extra-model-paths-config', file];
+  };
+
+  const readReady = (): { comfyui?: { commit?: string }; python?: string; torch?: string } | null => {
+    const text = readTextOrNull(join(paths.root, '.ready'));
+    if (!text) return null;
+    try {
+      return JSON.parse(text) as { comfyui?: { commit?: string }; python?: string; torch?: string };
+    } catch {
+      return null;
+    }
+  };
+
+  const settingsApi = () => ({ ...settings });
+  const updateSettings = (patch: Partial<ComfyBackendSettings>) => {
+    const next: ComfyBackendSettings = { ...settings, ...patch };
+    const checks: Array<{ field: keyof ComfyBackendSettings; path: string }> = [];
+    if (typeof patch.installRoot === 'string') checks.push({ field: 'installRoot', path: patch.installRoot });
+    if (typeof patch.modelsPath === 'string') checks.push({ field: 'modelsPath', path: patch.modelsPath });
+    for (const check of checks) {
+      if (check.path.trim() === '') continue;
+      const verdict = validateDirectory({
+        path: check.path,
+        exists: existsSync(check.path),
+        isDirectory: existsSync(check.path) ? statSync(check.path).isDirectory() : false,
+        writable: isWritableDir(check.path),
+        installRoot: check.field === 'modelsPath' ? paths.root : undefined,
+      });
+      if (!verdict.ok) return { ok: false, code: verdict.code, settings: settingsApi() };
+      next[check.field] = verdict.path;
+    }
+    settings = next;
+    try {
+      writeFileSync(paths.settings, JSON.stringify(settings, null, 2));
+    } catch (error) {
+      log(`设置写入失败：${error instanceof Error ? error.message : String(error)}`);
+      return { ok: false, code: 'settings-write-failed', settings: settingsApi() };
+    }
+    applyRoot(resolveInstallRoot(dataRoot, settings));
+    return { ok: true, code: null, settings: settingsApi() };
   };
 
   const stop = async (): Promise<ComfyBackendStatus> => {
@@ -339,7 +523,21 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     return readState();
   };
 
-  return { paths, status, install, start, stop, probeReady };
+  return { paths, status, install, start, stop, probeReady, settings: settingsApi, updateSettings };
+}
+
+function preflightMessage(failure: ComfyBackendFailure, requiredBytes: number, freeBytes: number | null): string {
+  if (failure === 'unsupported-platform') return '当前设备暂不支持托管后端';
+  if (failure === 'install-dir-not-writable') return '安装目录不可写，请换一个目录';
+  if (failure === 'insufficient-disk') {
+    const need = Math.round(requiredBytes / (1024 * 1024));
+    const free = freeBytes === null ? null : Math.round(freeBytes / (1024 * 1024));
+    return free === null ? `磁盘空间不足，需要约 ${need} MB` : `磁盘空间不足：需要约 ${need} MB，可用 ${free} MB`;
+  }
+  if (failure === 'port-occupied') return '端口 18188 被其它程序占用';
+  if (failure === 'version-mismatch') return '已安装的后端版本与当前固定版本不一致，需要更新';
+  if (failure === 'start-timeout') return '启动超时，请看后端日志';
+  return '安装失败';
 }
 
 function readdirSyncSafe(path: string): string[] {
