@@ -80,3 +80,9 @@ test('failure report keeps the stderr tail, redacts secrets and drops unsupporte
   assert.equal(sanitizeFailureText('Authorization: Bearer abc'), '[redacted]')
   assert.equal(sanitizeFailureReport('TEST_ENV_RUNTIME_EXIT', null, null).detail, null)
 })
+
+test('redaction decides on the full value so tail truncation cannot strip the keyword', () => {
+  const value = `Authorization: Bearer sk-live-ABCDEF1234567890 ${'z'.repeat(1170)}`
+  assert.equal(sanitizeFailureText(value, { tail: true, limit: 1200 }), '[redacted]')
+  assert.equal(sanitizeFailureReport('TEST_ENV_RUNTIME_EXIT', 'RUNTIME_EXIT', { stderrTail: value }).detail.stderrTail, '[redacted]')
+})

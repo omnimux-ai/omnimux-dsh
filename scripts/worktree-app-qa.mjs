@@ -552,8 +552,10 @@ const FAILURE_SECRET = /token|bearer|api[-_]?key|password|secret/i;
 export function sanitizeFailureText(value, { tail = false, limit = 400 } = {}) {
   if (typeof value !== 'string') return value;
   const flat = value.replace(/\s+/g, ' ').trim();
-  const bounded = tail ? flat.slice(-limit) : flat.slice(0, limit);
-  return FAILURE_SECRET.test(bounded) ? '[redacted]' : bounded;
+  // Decide on the full value before truncating: a cut inside a keyword could otherwise strip
+  // `Bearer` and leave the credential value itself in the report.
+  if (FAILURE_SECRET.test(flat)) return '[redacted]';
+  return tail ? flat.slice(-limit) : flat.slice(0, limit);
 }
 
 /** Bound and sanitize a structured failure so reports stay machine-readable without leaking.

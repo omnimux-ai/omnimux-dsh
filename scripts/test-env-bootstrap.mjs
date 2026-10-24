@@ -468,8 +468,13 @@ async function runTaskPreparation({ options, io, deps }) {
         }
         linkedTools++;
       }
-      catch { throw detailFailure('PREPARE_DEPENDENCY_REQUIRED', 'DEPENDENCY_LINK_FAILED', { path: rel },
-        `无法在装配暂存区链接依赖：${rel}。请先在该工作树执行 pnpm install --frozen-lockfile。`); }
+      catch (linkError) {
+        // Keep the underlying errno: a bare path made a real link failure indistinguishable from a
+        // policy rejection.
+        throw detailFailure('PREPARE_DEPENDENCY_REQUIRED', 'DEPENDENCY_LINK_FAILED',
+          { path: rel, cause: String(linkError?.code ?? linkError?.message ?? 'unknown').slice(0, 200) },
+          `无法在装配暂存区链接依赖：${rel}。请先在该工作树执行 pnpm install --frozen-lockfile。`);
+      }
     }
     if (!linkedTools) throw detailFailure('PREPARE_DEPENDENCY_REQUIRED', 'DEPENDENCY_NOT_LINKED', { packages: packagePaths },
       '任务工作树没有可复用的依赖链接。请先在该工作树执行 pnpm install --frozen-lockfile。');
