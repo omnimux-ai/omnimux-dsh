@@ -2,8 +2,9 @@ import { useId, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import * as primitives from "@deepseek-ai/dsh-client-ui-primitives";
 
+import { IconChevronDownOutline14 as ChevronDown } from "../icons/compat-icons.tsx";
+
 const Menu = primitives.Menu;
-const ChevronDown = (primitives as unknown as Record<string, typeof primitives.IconChevronDownOutline14>).IconChevronDownOutlineRegular ?? primitives.IconChevronDownOutline14;
 import type { MenuItem } from "@deepseek-ai/dsh-client-ui-primitives";
 
 import { cx } from "../internal/cx.ts";

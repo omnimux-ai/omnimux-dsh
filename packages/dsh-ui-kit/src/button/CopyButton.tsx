@@ -3,7 +3,7 @@ import type { MouseEvent } from "react";
 import {
   IconCheckOutline16,
   IconCopyOutline16,
-} from "@deepseek-ai/dsh-client-ui-primitives";
+} from "../icons/compat-icons.tsx";
 
 import { copyToClipboard } from "../internal/clipboard.ts";
 import { cssClass } from "../internal/cssClass.ts";

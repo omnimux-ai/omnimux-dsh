@@ -1,8 +1,35 @@
-import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import * as primitives from "@deepseek-ai/dsh-client-ui-primitives";
-import { IconCheckOutline16, IconChevronDownOutline14, IconChevronUpOutline14, IconCloseFill14, IconCloseOutline16, IconCopyOutline16, IconLoadingOutline16, IconRefreshOutline16, IconSearchOutline16, Modal, Tooltip } from "@deepseek-ai/dsh-client-ui-primitives";
+import { Modal, Tooltip } from "@deepseek-ai/dsh-client-ui-primitives";
+import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 import { createPortal } from "react-dom";
+//#region src/icons/compat-icons.tsx
+/** Renders nothing when neither generation provides the glyph. */
+const MissingIcon = () => null;
+const registry = primitives;
+function resolve(legacy, modern) {
+	return registry[legacy] ?? registry[modern] ?? MissingIcon;
+}
+const IconCheckOutline16 = resolve("IconCheckOutline16", "IconCheckOutlineRegular");
+const IconChevronDownOutline14 = resolve("IconChevronDownOutline14", "IconChevronDownOutlineRegular");
+const IconChevronUpOutline14 = resolve("IconChevronUpOutline14", "IconChevronUpOutlineRegular");
+const IconChevronLeftOutline14 = resolve("IconChevronLeftOutline14", "IconChevronLeftOutlineRegular");
+const IconCloseFill14 = resolve("IconCloseFill14", "IconCloseFillRegular");
+const IconCloseOutline16 = resolve("IconCloseOutline16", "IconCloseOutlineRegular");
+const IconCopyOutline16 = resolve("IconCopyOutline16", "IconCopyOutlineRegular");
+const IconDownloadOutline16 = resolve("IconDownloadOutline16", "IconDownloadOutlineRegular");
+const IconEditOutline16 = resolve("IconEditOutline16", "IconEditOutlineRegular");
+const IconEllipsisOutline16 = resolve("IconEllipsisOutline16", "IconEllipsisOutlineRegular");
+const IconLoadingOutline16 = resolve("IconLoadingOutline16", "IconLoadingOutlineRegular");
+const IconPaperclipOutline16 = resolve("IconPaperclipOutline16", "IconPaperclipOutlineRegular");
+const IconPlayOutline16 = resolve("IconPlayOutline16", "IconPlayOutlineRegular");
+const IconPlusOutline16 = resolve("IconPlusOutline16", "IconPlusOutlineRegular");
+const IconRefreshOutline14 = resolve("IconRefreshOutline14", "IconRefreshOutlineRegular");
+const IconRefreshOutline16 = resolve("IconRefreshOutline16", "IconRefreshOutlineRegular");
+const IconRightUpOutline14 = resolve("IconRightUpOutline14", "IconRightUpOutlineRegular");
+const IconSearchOutline16 = resolve("IconSearchOutline16", "IconSearchOutlineRegular");
+const IconTrashOutline16 = resolve("IconTrashOutline16", "IconTrashOutlineRegular");
+//#endregion
 //#region src/internal/cssClass.ts
 /** CSS Modules values are `string | undefined` under `noUncheckedIndexedAccess`. */
 function cssClass(value, name) {
@@ -1364,7 +1391,6 @@ var DropdownSelect_module_css_default = {
 //#endregion
 //#region src/field/DropdownSelect.tsx
 const Menu = primitives.Menu;
-const ChevronDown = primitives.IconChevronDownOutlineRegular ?? primitives.IconChevronDownOutline14;
 /**
 * 32px select built on the official Menu. Never renders a native `<select>`.
 */
@@ -1415,7 +1441,7 @@ function DropdownSelect({ value, options, onChange, placeholder = "Select", disa
 			}), /* @__PURE__ */ jsx("span", {
 				className: cx(DropdownSelect_module_css_default.chevron, open && DropdownSelect_module_css_default.chevronOpen),
 				"aria-hidden": "true",
-				children: /* @__PURE__ */ jsx(ChevronDown, { size: 14 })
+				children: /* @__PURE__ */ jsx(IconChevronDownOutline14, { size: 14 })
 			})]
 		})
 	});
@@ -2416,6 +2442,6 @@ function createSidebarEntry(options) {
 	};
 }
 //#endregion
-export { ActionRow, Badge, Button, CardGrid, ConfirmModal, CopyButton, DataTable, Divider, Drawer, DrawerPortal, DropdownSelect, EmptyState, FilterBar, GenWaveCard, IconButton, InputField, MediaCard, ModalDialog, PageHeader, SearchField, SelectableTile, StageContainer, StageHeader, StatBar, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, Toolbar, copyToClipboard, createPortalSafe, createSidebarEntry, createStageStore, focusFirstDescendant, resolvePortalContainer, trapFocus };
+export { ActionRow, Badge, Button, CardGrid, ConfirmModal, CopyButton, DataTable, Divider, Drawer, DrawerPortal, DropdownSelect, EmptyState, FilterBar, GenWaveCard, IconButton, IconCheckOutline16, IconChevronDownOutline14, IconChevronLeftOutline14, IconChevronUpOutline14, IconCloseFill14, IconCloseOutline16, IconCopyOutline16, IconDownloadOutline16, IconEditOutline16, IconEllipsisOutline16, IconLoadingOutline16, IconPaperclipOutline16, IconPlayOutline16, IconPlusOutline16, IconRefreshOutline14, IconRefreshOutline16, IconRightUpOutline14, IconSearchOutline16, IconTrashOutline16, InputField, MediaCard, ModalDialog, PageHeader, SearchField, SelectableTile, StageContainer, StageHeader, StatBar, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, Toolbar, copyToClipboard, createPortalSafe, createSidebarEntry, createStageStore, focusFirstDescendant, resolvePortalContainer, trapFocus };
 
 //# sourceMappingURL=index.js.map

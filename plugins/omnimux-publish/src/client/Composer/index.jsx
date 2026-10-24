@@ -6,7 +6,7 @@ import {
   IconPlayOutline16,
   IconPlusOutline16,
   IconTrashOutline16,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from 'dsh-ui-kit'
 import { Button, InputField, Toolbar } from 'dsh-ui-kit'
 import { createDraft, errorText, getCapabilities, mediaContentUrl, recordDetail, submitRecord, updateDraft, uploadMedia } from '../api.js'
 import { formCapabilities, parseTopics } from '../capabilities.js'
@@ -184,7 +184,7 @@ export function Composer({ t, draftId, onBack, onSubmitted, onSaved }) {
     return (
       <div className="omnimux-publish-type-page">
         <div className="omnimux-publish-type-toolbar">
-          <Button variant="ghost" size="sm" leadingIcon={<IconChevronLeftOutline14 />} onClick={onBack}>
+          <Button variant="ghost" size="sm" leadingIcon={<IconChevronLeftOutline14 size={14} />} onClick={onBack}>
             {t('form.back')}
           </Button>
         </div>
@@ -214,7 +214,7 @@ export function Composer({ t, draftId, onBack, onSubmitted, onSaved }) {
           compact
           left={(
             <>
-              <Button variant="ghost" size="sm" leadingIcon={<IconChevronLeftOutline14 />} onClick={onBack}>
+              <Button variant="ghost" size="sm" leadingIcon={<IconChevronLeftOutline14 size={14} />} onClick={onBack}>
                 {t('form.back')}
               </Button>
               <span>{t(`type.${type}`)}</span>

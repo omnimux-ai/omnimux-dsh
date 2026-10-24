@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useId, useImperativeHandle, useRef, useState } from "react";
 import type { ChangeEvent, InputHTMLAttributes, KeyboardEvent } from "react";
-import { IconCloseFill14, IconSearchOutline16 } from "@deepseek-ai/dsh-client-ui-primitives";
+import { IconCloseFill14, IconSearchOutline16 } from "../icons/compat-icons.tsx";
 
 import { cx } from "../internal/cx.ts";
 import css from "./SearchField.module.css";

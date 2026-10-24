@@ -566,7 +566,7 @@ describe('Cloud card opens the preview', () => {
   it('swaps the glyph and the label when the row is saved', () => {
     assert.match(viewJsx, /saved \? t\('card\.savedToLocal'\) : t\('card\.saveToLocal'\)/)
     assert.match(viewJsx, /saved \? <CheckIcon size=\{16\} \/> : <IconDownloadOutline16 size=\{16\} \/>/)
-    assert.match(viewJsx, /import \{ IconDownloadOutline16 \} from '@deepseek-ai\/dsh-client-ui-primitives'/)
+    assert.match(viewJsx, /import \{ Button, EmptyState, IconButton, IconDownloadOutline16 \} from 'dsh-ui-kit'/)
   })
 
   it('keeps the corner cluster bounded to the two product actions', () => {
