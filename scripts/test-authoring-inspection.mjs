@@ -174,6 +174,11 @@ export function inspectTestAuthoring(code, trustedFacts = {}) {
  * Extract the evaluation contract at syntax level: assertion fingerprints and
  * named runner cases. Used to reject weakening (removed/rewritten assertions
  * or cases) while letting additive coverage through.
+ *
+ * `caseAssertions` attributes each assertion to its nearest named `test`/`it`;
+ * `describe` groups but never names a case. `unattributedAssertions` holds
+ * assertions that no named case owns — those stay outside the declaration
+ * channel because there is no stable name to point at.
  */
 function collectAssertionFacts(code) {
   let ast
@@ -181,58 +186,133 @@ function collectAssertionFacts(code) {
   catch { return null }
   const assertions = new Map()
   const cases = new Set()
+  const caseAssertions = new Map()
+  const unattributedAssertions = new Map()
   const runners = new Set(['test', 'it', 'describe'])
+  const caseRunners = new Set(['test', 'it'])
+  const bump = (map, key) => map.set(key, (map.get(key) || 0) + 1)
   function calleeRoot(node) {
     let current = node
     while (current && current.type === 'MemberExpression' && !current.computed) current = current.object
     if (current?.type === 'CallExpression') return calleeRoot(current.callee)
     return current?.type === 'Identifier' ? current.name : null
   }
-  function visit(node) {
+  function visit(node, caseName) {
     if (!node || typeof node !== 'object') return
-    if (Array.isArray(node)) { node.forEach(visit); return }
+    if (Array.isArray(node)) { node.forEach(child => visit(child, caseName)); return }
     if (!node.type) return
+    let childCase = caseName
     if (node.type === 'CallExpression') {
       const root = calleeRoot(node.callee)
       if (root === 'assert' || root === 'expect') {
         const fingerprint = JSON.stringify(canonical({ callee: node.callee, arguments: node.arguments }))
-        assertions.set(fingerprint, (assertions.get(fingerprint) || 0) + 1)
+        bump(assertions, fingerprint)
+        if (caseName === null) bump(unattributedAssertions, fingerprint)
+        else {
+          let own = caseAssertions.get(caseName)
+          if (!own) caseAssertions.set(caseName, own = new Map())
+          bump(own, fingerprint)
+        }
       }
       const directRunner = node.callee.type === 'Identifier' && runners.has(node.callee.name)
       const first = node.arguments[0]
-      if (directRunner && first?.type === 'Literal' && typeof first.value === 'string') cases.add(first.value)
+      if (directRunner && first?.type === 'Literal' && typeof first.value === 'string') {
+        cases.add(first.value)
+        if (caseRunners.has(node.callee.name)) childCase = first.value
+      }
     }
     for (const value of Object.values(node)) {
-      if (Array.isArray(value)) value.forEach(visit)
-      else if (value && typeof value === 'object') visit(value)
+      if (Array.isArray(value)) value.forEach(child => visit(child, childCase))
+      else if (value && typeof value === 'object') visit(value, childCase)
     }
   }
-  visit(ast)
-  return { assertions, cases }
+  visit(ast, null)
+  return { assertions, cases, caseAssertions, unattributedAssertions }
 }
 
-/** Pure comparison; the guard, never tool-supplied metadata, owns the actual before source. */
-export function inspectTestAuthoringDelta(before, after, trustedFacts = {}) {
+/**
+ * Evaluation-contract comparison that also names the cases it would reject.
+ *
+ * Same decision as `inspectTestAuthoringDelta`, plus `changedCases`: the named
+ * cases whose assertions were weakened or that were removed outright. The
+ * declaration channel can only open for named cases — an unnamed assertion
+ * weakening stays a hard rejection.
+ */
+export function inspectTestStandardChange(before, after, trustedFacts = {}) {
   const old = collectRisks(before, trustedFacts)
   const candidate = collectRisks(after, trustedFacts)
-  if (old.reason || candidate.reason) return { allowed: false, reason: old.reason || candidate.reason, scope }
+  if (old.reason || candidate.reason) return { allowed: false, reason: old.reason || candidate.reason, scope, changedCases: [] }
   const remaining = new Map()
   for (const risk of old.risks) remaining.set(risk.fingerprint, (remaining.get(risk.fingerprint) || 0) + 1)
   for (const risk of candidate.risks) {
     const count = remaining.get(risk.fingerprint) || 0
-    if (!count) return { allowed: false, reason: risk.reason, scope }
+    if (!count) return { allowed: false, reason: risk.reason, scope, changedCases: [] }
     remaining.set(risk.fingerprint, count - 1)
   }
   const beforeFacts = collectAssertionFacts(before)
   const afterFacts = collectAssertionFacts(after)
-  if (!beforeFacts || !afterFacts) return { allowed: false, reason: 'unsupported-or-incomplete-test-syntax', scope }
-  for (const [fingerprint, count] of beforeFacts.assertions) {
-    if ((afterFacts.assertions.get(fingerprint) || 0) < count) {
-      return { allowed: false, reason: 'test-assertion-removed-or-rewritten', scope }
+  if (!beforeFacts || !afterFacts) return { allowed: false, reason: 'unsupported-or-incomplete-test-syntax', scope, changedCases: [] }
+  // Assertions no named case owns: reject without naming anything declarable.
+  for (const [fingerprint, count] of beforeFacts.unattributedAssertions) {
+    if ((afterFacts.unattributedAssertions.get(fingerprint) || 0) < count) {
+      return { allowed: false, reason: 'test-assertion-removed-or-rewritten', scope, changedCases: [] }
+    }
+  }
+  const removedCases = []
+  const weakenedCases = []
+  for (const [name, beforeAssertions] of beforeFacts.caseAssertions) {
+    const afterAssertions = afterFacts.caseAssertions.get(name)
+    if (!afterAssertions) { removedCases.push(name); continue }
+    for (const [fingerprint, count] of beforeAssertions) {
+      if ((afterAssertions.get(fingerprint) || 0) < count) { weakenedCases.push(name); break }
     }
   }
   for (const name of beforeFacts.cases) {
-    if (!afterFacts.cases.has(name)) return { allowed: false, reason: 'test-case-removed-or-renamed', scope }
+    if (!afterFacts.cases.has(name) && !removedCases.includes(name)) removedCases.push(name)
   }
-  return { allowed: true, reason: null, scope }
+  if (removedCases.length || weakenedCases.length) {
+    return {
+      allowed: false,
+      reason: removedCases.length ? 'test-case-removed-or-renamed' : 'test-assertion-removed-or-rewritten',
+      scope,
+      changedCases: [...removedCases, ...weakenedCases].sort(),
+    }
+  }
+  return { allowed: true, reason: null, scope, changedCases: [] }
+}
+
+/** Pure comparison; the guard, never tool-supplied metadata, owns the actual before source. */
+export function inspectTestAuthoringDelta(before, after, trustedFacts = {}) {
+  const { allowed, reason } = inspectTestStandardChange(before, after, trustedFacts)
+  return { allowed, reason, scope }
+}
+
+/**
+ * `## 旧标准变更` declaration lines: `- `<repo-relative path>` :: `<case name>``.
+ * A strict single-line shape keeps matching unambiguous; anything else is not a declaration.
+ */
+const OLD_STANDARD_DECLARATION = /^\s*[-*]\s+`([^`]+)`\s*::\s*`([^`]+)`\s*$/
+
+/** Parse the `## 旧标准变更` section body into declarations. Pure; no filesystem access. */
+export function parseOldStandardDeclarations(sectionText) {
+  const out = []
+  for (const line of String(sectionText ?? '').split(/\r?\n/)) {
+    const match = OLD_STANDARD_DECLARATION.exec(line)
+    if (match) out.push({ path: match[1].trim(), caseName: match[2].trim() })
+  }
+  return out
+}
+
+/**
+ * Every changed case of this file must be declared, path and name both exact.
+ * Returns the names still missing so a rejection can name what to declare.
+ */
+export function matchOldStandardDeclarations({ declarations, filePath, changedCases } = {}) {
+  const declared = new Set(
+    (Array.isArray(declarations) ? declarations : [])
+      .filter(entry => entry && entry.path === filePath)
+      .map(entry => entry.caseName),
+  )
+  const missing = (Array.isArray(changedCases) ? changedCases : []).filter(name => !declared.has(name))
+  return { ok: missing.length === 0, missing }
 }

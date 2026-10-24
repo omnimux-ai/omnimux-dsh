@@ -14,10 +14,19 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { parse } from 'acorn';
-import { inspectTestAuthoring, inspectTestAuthoringDelta } from './test-authoring-inspection.mjs';
+import { inspectTestAuthoring, inspectTestStandardChange, parseOldStandardDeclarations, matchOldStandardDeclarations } from './test-authoring-inspection.mjs';
+import { taskSpecs, readSpecSections, SPEC_SECTION_MIN_CHARS } from './guard-quality-loop.mjs';
 
 const isTestPath = path => /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(path.replace(/\\/g, '/')) && !/\.md$/i.test(path);
 const isFixturePath = path => /(^|\/)(fixtures?|mocks?|test-data)(\/|$)|(\.|\/)(fixture|mock)\.[a-zA-Z0-9]+$/i.test(path.replace(/\\/g, '/'));
+
+/**
+ * 受评估契约保护的路径：测试文件且非夹具。
+ * hook 与 CI 侧声明校验共用同一判定，避免两处口径漂移。
+ */
+export function isProtectedTestPath(path) {
+  return isTestPath(path) && !isFixturePath(path);
+}
 function testDecision(inspection) {
   return inspection.allowed ? { permissionDecision: 'allow' } : {
     permissionDecision: 'deny',
@@ -26,8 +35,85 @@ function testDecision(inspection) {
   };
 }
 
+/** `## 旧标准变更` 声明节；只有具名用例的削弱才可进入该通道。 */
+export const OLD_STANDARD_SECTION = '旧标准变更';
+/**
+ * 唯一可经 spec 声明放行的拒绝原因。其余（跳过、聚焦、动态执行、公共绑定逃逸、
+ * 解析失败等）恒为硬拒绝。CI 侧校验复用本集合，避免两处各写一份而漂移。
+ */
+export const DECLARABLE_TEST_STANDARD_REASONS = new Set(['test-assertion-removed-or-rewritten', 'test-case-removed-or-renamed']);
+
+/**
+ * 汇总本任务 spec 中「## 旧标准变更」的声明条目。
+ *
+ * 复用 `guard-quality-loop.mjs` 的 `taskSpecs` / `readSpecSections`，不引入第二套
+ * 「什么算任务规格」的判定。声明节必须实质存在（≥20 非空白字符），避免空标题占位。
+ */
+export function collectOldStandardDeclarations(root = REPO_ROOT) {
+  const declarations = [];
+  for (const spec of taskSpecs(root)) {
+    let text = '';
+    try { text = readFileSync(spec.path, 'utf8'); } catch { continue; }
+    const section = readSpecSections(text).get(OLD_STANDARD_SECTION) ?? '';
+    if (section.replace(/\s+/g, '').length < SPEC_SECTION_MIN_CHARS) continue;
+    declarations.push(...parseOldStandardDeclarations(section));
+  }
+  return declarations;
+}
+
+/**
+ * 旧标准变更通道：被 spec 逐条点名的既有用例削弱可放行。
+ *
+ * 通道只判定「是否被点名」，不判定理由是否成立——后者交给审查者。痕迹由三处承载：
+ * spec 声明（受版本管理）、diff、以及 `scripts/test-change-review.mjs` 的评估域清单
+ * （该清单目前是独立工具，其 `scan` 尚未接入 CI）。
+ * 未命中声明时返回 null，调用方沿用原拒绝信息，行为与开启通道前完全一致。
+ *
+ * 不落在具名 `test`/`it` 内的断言削弱（`changedCases` 为空）不开放通道：
+ * 没有可点名的稳定对象，就没有可审查的声明。
+ */
+export function decideOldStandardDeclaration({ filePath, inspection, declarations, root = REPO_ROOT }) {
+  if (!inspection || inspection.allowed) return null;
+  if (!DECLARABLE_TEST_STANDARD_REASONS.has(inspection.reason)) return null;
+  const changedCases = Array.isArray(inspection.changedCases) ? inspection.changedCases : [];
+  if (changedCases.length === 0) return null;
+  const declared = Array.isArray(declarations) ? declarations : collectOldStandardDeclarations(root);
+  const { ok, missing } = matchOldStandardDeclarations({ declarations: declared, filePath, changedCases });
+  if (ok) return { permissionDecision: 'allow' };
+  return {
+    permissionDecision: 'deny',
+    ruleId: 'RULE-01-TEST-IMMUTABLE',
+    reason: `【硬门禁拦截】测试用例与断言属于只读评估契约：${filePath} 的既有用例被削弱，但本任务 spec 的「## ${OLD_STANDARD_SECTION}」未逐条点名。缺声明：${missing.map(name => `\`${name}\``).join('、')}。请按 \`- \\\`${filePath}\\\` :: \\\`<用例名>\\\`\` 逐条声明，并写明原断言、必须改的理由与新期望证据。`
+  };
+}
+
 // Repository identity starts at this guard's checkout, never at tool-supplied cwd.
 const REPO_ROOT = realpathSync(fileURLToPath(new URL('../', import.meta.url)));
+
+/** 包含该路径的仓库/工作树根；找不到 `.git` 时返回 null。 */
+function repoRootOf(path) {
+  let root = dirname(path);
+  while (dirname(root) !== root) {
+    if (existsSync(resolve(root, '.git'))) return root;
+    root = dirname(root);
+  }
+  return null;
+}
+
+/** 仓库相对路径；找不到 `.git` 时原样返回（声明匹配因此不会误命中）。 */
+function repoRelativePath(path) {
+  const root = repoRootOf(path);
+  return root === null ? path : relative(root, path).replace(/\\/g, '/');
+}
+
+/** 目标已存在时的磁盘现状；缺失、目录或符号链接一律视为「没有可比对的 before」。 */
+function readExistingSource(path) {
+  try {
+    const stat = lstatSync(path);
+    if (!stat.isFile() || stat.isSymbolicLink()) return null;
+    return readFileSync(path, 'utf8');
+  } catch { return null; }
+}
 
 // Trusted in-process I/O seam; tool input never supplies this object or its facts.
 export const sourceInspectionIO = { readFileSync, lstatSync, realpathSync, openSync, closeSync, fstatSync, spawnSync };
@@ -277,23 +363,37 @@ function evaluateWithInspection({ tool, filePath, content, cwd = process.cwd() }
 
   const isTestFile = isTestPath(normalizedPath);
   const isFixtureFile = isFixturePath(normalizedPath);
-  // Pure candidates have no trusted before; test intent and approval metadata are not authority.
+  // 目标已存在时必须与磁盘现状比较：否则导出的评估入口看不出断言被削弱，
+  // 会对同一份候选内容给出比 hook 路径更宽松的结论（两处判定必须一致）。
   if (isTestFile && !isFixtureFile) {
     let snapshot;
     let inspection;
     let unverifiedImport = false;
+    let target;
     try {
-      const target = resolve(cwd, normalizedPath);
-      inspection = inspectTestAuthoring(code, { resolveImport: source => {
-        snapshot ??= createSourceInspection(target, tool === 'write');
-        const fact = resolvePublicPluginImport(target, source, snapshot);
-        if (!fact) unverifiedImport = true;
-        return fact;
-      } });
+      target = resolve(cwd, normalizedPath);
+      const before = readExistingSource(target);
+      inspection = before === null
+        ? inspectTestAuthoring(code, { resolveImport: source => {
+          snapshot ??= createSourceInspection(target, tool === 'write');
+          const fact = resolvePublicPluginImport(target, source, snapshot);
+          if (!fact) unverifiedImport = true;
+          return fact;
+        } })
+        : inspectTestStandardChange(before, code, { resolveImport: source => {
+          snapshot ??= createSourceInspection(target, tool === 'write');
+          const fact = resolvePublicPluginImport(target, source, snapshot);
+          if (!fact) unverifiedImport = true;
+          return fact;
+        } });
       snapshot?.verify();
       if (unverifiedImport) inspection = { allowed: false };
     } catch { inspection = { allowed: false }; }
     finally { snapshot?.close(); }
+    if (inspection.allowed !== true && target) {
+      const declared = decideOldStandardDeclaration({ filePath: repoRelativePath(target), inspection, root: repoRootOf(target) ?? REPO_ROOT });
+      if (declared) return declared;
+    }
     return testDecision(inspection);
   }
 
@@ -366,15 +466,8 @@ export function handle(rawInput) {
     const cwd = resolve(input.cwd || process.cwd(), toolInput.workdir || '.');
     const target = resolve(cwd, filePath.replace(/\\/g, '/'));
     if (target === REPO_ROOT) return formatHookOutput({ permissionDecision: 'deny', reason: 'Repository root is not a file target' }, hookEventName);
-    const repoPath = path => {
-      let root = dirname(path);
-      while (dirname(root) !== root) {
-        if (existsSync(resolve(root, '.git'))) return relative(root, path).replace(/\\/g, '/');
-        root = dirname(root);
-      }
-      return path;
-    };
-    const protectedPath = path => { const ownedPath = repoPath(path); return isTestPath(ownedPath) && !isFixturePath(ownedPath); };
+    const repoPath = repoRelativePath;
+    const protectedPath = path => isProtectedTestPath(repoPath(path));
     let actualTarget = target;
     if (!protectedPath(target)) {
       try { actualTarget = realpathSync(target); }
@@ -402,9 +495,14 @@ export function handle(rawInput) {
           if (!fact) unverifiedImport = true;
           return fact;
         } };
-        const inspection = typeof source === 'string' ? inspectTestAuthoringDelta(source, content, trustedFacts) : inspectTestAuthoring(content, trustedFacts);
+        const inspection = typeof source === 'string' ? inspectTestStandardChange(source, content, trustedFacts) : inspectTestAuthoring(content, trustedFacts);
         checkedTarget.verify();
-        return formatHookOutput(testDecision(unverifiedImport ? { allowed: false } : inspection), hookEventName);
+        if (unverifiedImport) return formatHookOutput(testDecision({ allowed: false }), hookEventName);
+        if (inspection.allowed) return formatHookOutput({ permissionDecision: 'allow' }, hookEventName);
+        // 旧标准变更通道：仅对「被 spec 逐条点名的具名用例削弱」放行。
+        // 规格在被改文件所属的工作树里，不能用门禁自己的检出根去找。
+        const declared = decideOldStandardDeclaration({ filePath: repoPath(target), inspection, root: repoRootOf(target) ?? REPO_ROOT });
+        return formatHookOutput(declared ?? testDecision(inspection), hookEventName);
       } catch {
         return formatHookOutput({ permissionDecision: 'deny', reason: 'Cannot inspect canonical test target or source' }, hookEventName);
       } finally { checkedTarget?.close(); }

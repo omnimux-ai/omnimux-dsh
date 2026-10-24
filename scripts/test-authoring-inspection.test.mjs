@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { inspectTestAuthoring, inspectTestAuthoringDelta } from './test-authoring-inspection.mjs'
+import { inspectTestAuthoring, inspectTestAuthoringDelta, inspectTestStandardChange, parseOldStandardDeclarations, matchOldStandardDeclarations } from './test-authoring-inspection.mjs'
 import './public-plugin-apply.test.mjs'
 
 test('normal complete assertion and literal runner candidates are writable', () => {
@@ -303,4 +303,74 @@ test('import declaration risk bodies and contexts remain conservative when addin
     assert.equal(inspectTestAuthoringDelta(before, before).allowed, true)
     assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
   }
+})
+
+test('standard-change inspection names the weakened cases without changing the delta shape', () => {
+  const before = "test('keeps contract', () => { assert.equal(actual(), 1) }); test('stays put', () => { assert.equal(other(), 2) })"
+
+  // 用例仍在、断言被改写：只点名被改写的那个用例。
+  const weakened = "test('keeps contract', () => { assert.equal(actual(), 2) }); test('stays put', () => { assert.equal(other(), 2) })"
+  const weakenedResult = inspectTestStandardChange(before, weakened)
+  assert.equal(weakenedResult.allowed, false)
+  assert.equal(weakenedResult.reason, 'test-assertion-removed-or-rewritten')
+  assert.deepEqual(weakenedResult.changedCases, ['keeps contract'])
+
+  // 整条用例被删：原因是用例移除，并点名该用例。
+  const removed = "test('stays put', () => { assert.equal(other(), 2) })"
+  const removedResult = inspectTestStandardChange(before, removed)
+  assert.equal(removedResult.allowed, false)
+  assert.equal(removedResult.reason, 'test-case-removed-or-renamed')
+  assert.deepEqual(removedResult.changedCases, ['keeps contract'])
+
+  // 纯新增覆盖：无被削弱的用例。
+  const additive = before + "; test('adds coverage', () => { assert.equal(extra(), 3) })"
+  const additiveResult = inspectTestStandardChange(before, additive)
+  assert.equal(additiveResult.allowed, true)
+  assert.deepEqual(additiveResult.changedCases, [])
+
+  // 不可点名的断言削弱（不在任何具名 test/it 内）：仍然拒绝，且不给出可声明对象。
+  const unnamedBefore = "assert.equal(topLevel(), 1)"
+  const unnamedAfter = "assert.equal(topLevel(), 2)"
+  const unnamedResult = inspectTestStandardChange(unnamedBefore, unnamedAfter)
+  assert.equal(unnamedResult.allowed, false)
+  assert.equal(unnamedResult.reason, 'test-assertion-removed-or-rewritten')
+  assert.deepEqual(unnamedResult.changedCases, [])
+
+  // 原函数形状不变：只有 allowed / reason / scope 三个字段。
+  assert.deepEqual(Object.keys(inspectTestAuthoringDelta(before, weakened)).sort(), ['allowed', 'reason', 'scope'])
+})
+
+test('old-standard declarations parse only the strict single-line form', () => {
+  const section = [
+    '说明文字不构成声明。',
+    '- `plugins/demo/tests/a.test.mjs` :: `keeps contract`',
+    '* `plugins/demo/tests/b.test.mjs` :: `stays put`',
+    '- `plugins/demo/tests/c.test.mjs` :: `no closing backtick',
+    '- 缺少路径 :: `only a name`',
+  ].join('\n')
+  assert.deepEqual(parseOldStandardDeclarations(section), [
+    { path: 'plugins/demo/tests/a.test.mjs', caseName: 'keeps contract' },
+    { path: 'plugins/demo/tests/b.test.mjs', caseName: 'stays put' },
+  ])
+  assert.deepEqual(parseOldStandardDeclarations(''), [])
+})
+
+test('old-standard declarations must match both path and case name', () => {
+  const declarations = [
+    { path: 'plugins/demo/tests/a.test.mjs', caseName: 'keeps contract' },
+    { path: 'plugins/demo/tests/other.test.mjs', caseName: 'keeps contract' },
+  ]
+  // 路径与用例名同时命中才算声明；同名但不同文件不算。
+  assert.deepEqual(
+    matchOldStandardDeclarations({ declarations, filePath: 'plugins/demo/tests/a.test.mjs', changedCases: ['keeps contract'] }),
+    { ok: true, missing: [] },
+  )
+  assert.deepEqual(
+    matchOldStandardDeclarations({ declarations, filePath: 'plugins/demo/tests/a.test.mjs', changedCases: ['keeps contract', 'stays put'] }),
+    { ok: false, missing: ['stays put'] },
+  )
+  assert.deepEqual(
+    matchOldStandardDeclarations({ declarations, filePath: 'plugins/demo/tests/unknown.test.mjs', changedCases: ['keeps contract'] }),
+    { ok: false, missing: ['keeps contract'] },
+  )
 })
