@@ -832,6 +832,7 @@ test('ship 物化失败时横幅如实说明开发版未更新（Issue #3700）'
     assert.equal(result.status, 0, `合并已确认时 ship 仍应返回 0：\n${result.stdout}\n${result.stderr}`)
     assert.match(result.stdout, /交付全链路闭环完成/i, '收尾框架句保留，但分句必须是真话')
     assert.match(result.stdout, /开发版未更新/, '失败路径必须说明开发版未更新')
+    assert.match(result.stdout, /materialize=failed/, '默认横幅必须给出机器可读的物化状态')
     assert.doesNotMatch(result.stdout, /开发版已物化/, '失败路径不得宣称开发版已物化')
     assert.match(result.stdout, /sync-to-app\.sh/, '失败路径必须给出补救命令')
   } finally { rmSync(fixture, { recursive: true, force: true }) }

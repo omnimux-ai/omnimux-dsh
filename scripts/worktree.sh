@@ -554,7 +554,7 @@ cmd_ship() {
       git branch -d "${branch}" 2>/dev/null || git branch -D "${branch}" 2>/dev/null || true
     fi
     git worktree prune
-    say "✅ 交付全链路闭环完成：PR 已合入、主干已同步、$(materialize_dev_state)（materialize=${MATERIALIZE_STATUS}）、临时工作树 [${task}] 与分支已清理。"
+    say "✅ 交付全链路闭环完成：PR 已合入、主干已同步、$(materialize_dev_state)、临时工作树 [${task}] 与分支已清理。[materialize=${MATERIALIZE_STATUS}]"
   fi
   if [ "${MATERIALIZE_STATUS}" = "failed" ]; then
     say "⚠️ 开发版仍是旧版本：请在主检出运行 ./scripts/sync-to-app.sh（无插件参数=完整同步，可覆盖 shared kit）后自行确认。"
