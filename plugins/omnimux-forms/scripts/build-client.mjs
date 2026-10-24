@@ -10,7 +10,7 @@ const result = await build({
   format: 'cjs', platform: 'browser', jsx: 'automatic', write: false,
   alias: { '@omnimux/form-contract': `${contract}/src/index.ts` },
   define: { 'process.env.NODE_ENV': '"production"' },
-  external: ['react', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'react-dom', 'react-dom/client', '@deepseek-ai/cordis', '@deepseek-ai/dsh-client-runtime', '@deepseek-ai/dsh-client-ui-primitives', '@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-client-locale'],
+  external: ['react', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'react-dom', 'react-dom/client', '@deepseek-ai/cordis', '@deepseek-ai/dsh-client-ui-primitives', '@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-client-locale'],
 })
 await mkdir(resolve(root, 'lib'), { recursive: true })
 await writeFile(resolve(root, 'lib/client.js'), `window.__ModuleLoader__.load({id:"omnimux-forms",factory:(require)=>{var module={exports:{}};var exports=module.exports;\n${result.outputFiles[0].text}\nreturn module.exports;}});`)
