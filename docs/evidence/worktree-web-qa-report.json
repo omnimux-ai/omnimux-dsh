@@ -1,12 +1,12 @@
 {
-  "runId": "91485250-c820-462a-98e8-3114ebe1c081",
+  "runId": "c947bdea-12ee-4de0-9384-2d65a3dba60c",
   "stage": "analytics",
   "plugin": "omnimux-analytics",
-  "startedAt": "2026-10-24T02:43:29.217Z",
-  "completedAt": "2026-10-24T02:43:30.836Z",
+  "startedAt": "2026-10-24T06:01:39.007Z",
+  "completedAt": "2026-10-24T06:01:40.570Z",
   "pass": true,
-  "serverPort": 56921,
-  "cdpPort": 56922,
+  "serverPort": 55335,
+  "cdpPort": 55336,
   "assertions": [
     {
       "name": "bundle-client-code",
@@ -16,12 +16,12 @@
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 56921
+      "port": 55335
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 56922
+      "port": 55336
     },
     {
       "name": "runner-page-ready",
@@ -52,7 +52,7 @@
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-settings-value-reader-issue-3666/.workbuddy/evidence/worktree-qa/91485250-c820-462a-98e8-3114ebe1c081/analytics.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/common-settings-plugin-item-migration-issue-3665/.workbuddy/evidence/worktree-qa/c947bdea-12ee-4de0-9384-2d65a3dba60c/analytics.png",
     "width": 1280,
     "height": 713,
     "bytes": 37555

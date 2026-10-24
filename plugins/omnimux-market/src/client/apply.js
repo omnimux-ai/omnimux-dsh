@@ -102,6 +102,15 @@
         { name: "settings.plugin.item", key: "omnimux-market", locale: "omnimux-market" },
         ConfigCard,
       ));
+      // DSH 0.2.x moved a bundle's own configuration from `settings.plugin.item`
+      // (keyed by settings namespace) to `plugins.bundle.config` (keyed by the
+      // bundle package name) on the bundle's Plugins page. Keep both seats: the
+      // retired one is inert on 0.2.x, the new one is inert on 0.1.5.
+      slots.inject("plugins.bundle.config", () => registerSlot(
+        slots,
+        { name: "plugins.bundle.config", key: "omnimux-market", locale: "omnimux-market" },
+        ConfigCard,
+      ));
       slots.inject("conversation.input.left", () => registerSlot(
         slots,
         {
