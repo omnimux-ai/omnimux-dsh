@@ -1,10 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { evaluateAntiCheat, decideOldStandardDeclaration, collectOldStandardDeclarations, handle } from './guard-anti-cheat.mjs';
+import { evaluateAntiCheat, decideOldStandardDeclaration, collectOldStandardDeclarations, handle, repoRootOf } from './guard-anti-cheat.mjs';
 import { inspectTestStandardChange } from './test-authoring-inspection.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -399,5 +399,68 @@ describe('6. 解析不了的新增测试文件仍拦最典型风险（不因放�
     assert.equal(handle(commentPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
     const stringPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-string-paren.test.ts', content: TS_HEAD + "const s = 'xit(';\n" } });
     assert.equal(handle(stringPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+  });
+});
+
+describe('7. 仓库身份不接受伪造的嵌套 .git', () => {
+  const VICTIM_BEFORE = "import test from 'node:test'\nimport assert from 'node:assert/strict'\ntest('keeps', () => { assert.equal(value(), 1) })\n";
+
+  function withForgedRoot(forgery, run) {
+    const dir = resolve(ROOT_DIR, 'scripts/__probe-root');
+    try {
+      mkdirSync(resolve(dir, 'specs'), { recursive: true });
+      writeFileSync(resolve(dir, 'victim.test.mjs'), VICTIM_BEFORE);
+      // 伪造根相对路径的声明：如果门禁把这个目录当成仓库根，声明就会命中。
+      writeFileSync(resolve(dir, 'specs/forged.spec.md'), "# forged\n\n## 旧标准变更\n\n- `victim.test.mjs` :: `keeps`\n");
+      forgery(resolve(dir, '.git'));
+      run(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  // 这些断言必须有区分力：只断言 `handle()` 是 deny 不算——伪造目录在 `scripts/` 下时
+  // `createSourceInspection` 会先以 nested-repo 为由拒绝，新旧实现都 deny。
+  // 真正的行为差异在 `repoRootOf` 的返回值上。
+  const resolvesToWorktree = dir => assert.equal(repoRootOf(resolve(dir, 'victim.test.mjs')), ROOT_DIR);
+
+  it('空 .git 目录不被当成仓库根', () => {
+    withForgedRoot(gitDir => mkdirSync(gitDir, { recursive: true }), resolvesToWorktree);
+  });
+
+  it('嵌套的真仓库不被当成仓库根', () => {
+    withForgedRoot(gitDir => spawnSync('git', ['init', '-q', gitDir], { encoding: 'utf8' }), resolvesToWorktree);
+  });
+
+  it('.git 文件指向门禁自己的 .git 时同样不被当成仓库根', () => {
+    withForgedRoot(gitDir => writeFileSync(gitDir, `gitdir: ${resolve(ROOT_DIR, '.git')}\n`), resolvesToWorktree);
+  });
+
+  it('.git 符号链接指向门禁自己的 .git 时同样不被当成仓库根', () => {
+    withForgedRoot(gitDir => symlinkSync(resolve(ROOT_DIR, '.git'), gitDir), resolvesToWorktree);
+  });
+
+  it('悬空 .git 链接不被当成仓库根', () => {
+    withForgedRoot(gitDir => writeFileSync(gitDir, 'gitdir: /nonexistent-repository\n'), resolvesToWorktree);
+  });
+
+  // 指向「另一个已注册工作树」的 gitdir：位置与公共目录都成立，只有 back-pointer
+  // （`<gitDir>/gitdir` 必须指回本候选的 `.git`）能排除它。在链接工作树里取本工作树
+  // 的 gitdir；在主检出里退化为公共目录，等价于上面已覆盖的形态。
+  const registeredGitDir = (() => {
+    try { return readFileSync(resolve(ROOT_DIR, '.git'), 'utf8').trim().replace(/^gitdir:\s*/, ''); }
+    catch { return resolve(ROOT_DIR, '.git'); }
+  })();
+
+  it('.git 文件指向已注册工作树的 gitdir 时不被当成仓库根', () => {
+    withForgedRoot(gitDir => writeFileSync(gitDir, `gitdir: ${registeredGitDir}\n`), resolvesToWorktree);
+  });
+
+  it('.git 符号链接指向已注册工作树的 gitdir 时不被当成仓库根', () => {
+    withForgedRoot(gitDir => symlinkSync(registeredGitDir, gitDir), resolvesToWorktree);
+  });
+
+  it('正常的仓库内文件仍解析到工作树根', () => {
+    assert.equal(repoRootOf(resolve(ROOT_DIR, 'scripts/guard-anti-cheat.mjs')), ROOT_DIR);
   });
 });
