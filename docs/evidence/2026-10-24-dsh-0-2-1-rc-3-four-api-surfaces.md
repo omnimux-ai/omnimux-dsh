@@ -78,7 +78,7 @@ DSH 标准 slot 的条目定义在 0.1.5 与 rc.3 之间**未变**（kind/scope/
 | `sidebar.footer.action` | `client-ui-sidebar/contract/slots.d.ts:69`（list/root） | `:83`（list/root） | 无变 |
 | `tool.call.toolview` | `client-ui-tool/contract/slots.d.ts:22`（keyed/session） | `:19`（keyed/session） | 无变 |
 | `shell.overlay` | `client-ui-layout/client/index.d.ts:80`（list/root） | `:95`（list/root） | 无变 |
-| `plugins.item` | 无声明 | `client-ui-plugin-manager/client/slot-contract.d.ts:143`（新增包） | 有变但不影响：我方 hub 已提前注册（`plugins/omnimux/src/client/index.js:121`），迁移后自动生效 |
+| `plugins.item` | 无声明 | `client-ui-plugin-manager/client/slot-contract.d.ts:143`（新增包） | 有变但不影响：我方 hub 已提前注册（`plugins/omnimux/src/client/index.js:121`），该注册在 rc.3 下才会命中（生效未做运行验证） |
 | `plugins.detail.section` | 无声明 | 同上 `:195` | 同上（`index.js:108`） |
 | `settings.plugin.item` | `client-ui-settings-plugins/client/slot-contract.d.ts:19-23`（keyed/root） | **全仓无声明**（仅 `client-ui-settings-models` 注释提及） | **有变且影响**（见 3.3） |
 
@@ -142,10 +142,10 @@ DSH 标准 slot 的条目定义在 0.1.5 与 rc.3 之间**未变**（kind/scope/
 
 | 插件 | 不兼容声明（示例） | 文件:行 | 说明 |
 | --- | --- | --- | --- |
-| `omnimux-viewer` | `dsh-tools`、`dsh-agent`、`dsh-attachment`、`dsh-fs`、`dsh-home-paths`、`dsh-host-webserver`、`dsh-llm`、`dsh-sandbox`、`dsh-settings`、`dsh-system-prompt` 全部为 `>=0.1.0-rc.1 <0.1.1-0 \|\| >=0.1.1-rc.0 <0.1.2-0` | `plugins/omnimux-viewer/package.json:8-19` | 范围上限 `<0.1.2-0`，不含任何 `0.2.x` |
-| `omnimux-browser` | 13 条 `^0.1.5-rc.3`（含已删除的 `dsh-invariants`） | `plugins/omnimux-browser/package.json:52-73` | 同上；`dsh-invariants` 已是死包 |
-| `omnimux-intercept` | `dsh-base: ^0.1.5-rc.3` | `plugins/omnimux-intercept/package.json` | 同上 |
-| `omnimux` | `schemastery: 3.18.4`（精确 pin） | `plugins/omnimux/package.json` | 不满足 Host 的 `~3.18.5`（见 §6） |
+| `omnimux-viewer` | `dsh-tools`、`dsh-agent`、`dsh-attachment`、`dsh-fs`、`dsh-home-paths`、`dsh-host-webserver`、`dsh-llm`、`dsh-sandbox`、`dsh-settings`、`dsh-system-prompt` 全部为 `>=0.1.0-rc.1 <0.1.1-0 \|\| >=0.1.1-rc.0 <0.1.2-0` | `plugins/omnimux-viewer/package.json:84-93` | 范围上限 `<0.1.2-0`，不含任何 `0.2.x` |
+| `omnimux-browser` | 13 条 `^0.1.5-rc.3`（含已删除的 `dsh-invariants`） | `plugins/omnimux-browser/package.json:62-77` | 同上；`dsh-invariants` 已是死包 |
+| `omnimux-intercept` | `dsh-base: ^0.1.5-rc.3` | `plugins/omnimux-intercept/package.json:29` | 同上 |
+| `omnimux` | `schemastery: 3.18.4`（精确 pin） | `plugins/omnimux/package.json:33` | 不满足 Host 的 `~3.18.5`（见 §6） |
 
 其余插件对 cordis 的声明（`omnimux-automation: >=4.0.1`、`omnimux-browser: ^4.0.2`）都能容纳 4.0.5，无需改。`omnimux-device` 另有一条未加 scope 的 `"cordis": "^3.18.1"` 陈旧 peer（该插件并不导入 cordis），建议另开 issue 清理。
 
