@@ -10,8 +10,7 @@
  * Maintains .nodrag .nopan and pointer event guards to prevent xyflow mouse capture.
  */
 
-import { memo, useCallback, useRef, useState } from 'react';
-import type { Edge } from '@xyflow/react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Plus,
   MousePointer,
@@ -28,22 +27,12 @@ import {
 import { useT } from '../../i18n';
 import { CustomDropdown, type DropdownMenuItem } from '../../ui';
 import { useClickOutside } from '../hooks/useClickOutside';
-import { useCanvasStore } from '../../store/canvasStore';
-import type { CanvasNode } from '../../../shared/graph/canvasInputMutationGateway.ts';
-import {
-  buildOmnimuxWorkflowFile,
-  parseComfyWorkflow,
-  parseOmnimuxWorkflowFile,
-  projectComfyToCanvas,
-  serializeOmnimuxWorkflowFile,
-  type ComfyCanvasProjection,
-  type OmnimuxWorkflowFile,
-} from '../../../shared/comfyui/index.ts';
+import { useWorkflowTransferStore, type TransferState } from '../../store/workflowTransferStore';
 import {
   preventToolbarAddContextMenu,
   stopToolbarNativeEvent,
 } from './toolbarPointerGuard';
-import AddNodeMenu from './AddNodeMenu';
+import AddNodeMenu, { type AddNodeComfyProps } from './AddNodeMenu';
 import WorkflowTemplatePanel from './WorkflowTemplatePanel';
 import type { CanvasAddNodeType } from './addNodePalette';
 
@@ -54,45 +43,10 @@ export type { CanvasAddNodeType };
 /**
  * Inline import/export feedback. Every failure is surfaced here with its
  * codec error code; nothing is swallowed and no success is faked.
+ *
+ * 状态本体在 `useWorkflowTransferStore`（Issue 3669）：工具栏按钮与「添加节点」面板
+ * 入口共用同一份预览状态与同一套动作，这里只负责渲染。
  */
-type TransferState =
-  | { kind: 'error'; code: string; path: string; message: string }
-  | { kind: 'exported'; fileName: string; nodeCount: number; droppedCount: number }
-  | { kind: 'own'; file: OmnimuxWorkflowFile; applied: boolean }
-  | { kind: 'comfy'; fileName: string; format: string; projection: ComfyCanvasProjection; applied: boolean };
-
-function transferError(code: string, path: string, message: string): TransferState {
-  return { kind: 'error', code, path, message };
-}
-
-function describeThrown(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-/** ASCII-safe file name for the downloaded workflow. */
-function workflowFileName(name: string): string {
-  const base = name
-    .trim()
-    .replace(/[\\/:*?"<>|\s]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  return `${base.length > 0 ? base : 'workflow'}.json`;
-}
-
-/** Local download via an object URL; no network request is made. */
-function downloadTextFile(fileName: string, text: string): void {
-  const blob = new Blob([text], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = fileName;
-  anchor.rel = 'noopener';
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
 export interface ToolbarProps {
   onAddNode: (type: CanvasAddNodeType) => void;
   pointerMode?: CanvasPointerMode;
@@ -339,7 +293,18 @@ const Toolbar: React.FC<ToolbarProps> = ({
   const t = useT();
   const [internalIsAddMenuOpen, setInternalIsAddMenuOpen] = useState(false);
   const [isTemplateMenuOpen, setIsTemplateMenuOpen] = useState(false);
-  const [transfer, setTransfer] = useState<TransferState | null>(null);
+  // 导入/导出状态本体（Issue 3669）：工具栏按钮与「添加节点」面板入口共用。
+  const transfer = useWorkflowTransferStore((state) => state.transfer);
+  const recents = useWorkflowTransferStore((state) => state.recents);
+  const importNonce = useWorkflowTransferStore((state) => state.importNonce);
+  const exportWorkflow = useWorkflowTransferStore((state) => state.exportWorkflow);
+  const importText = useWorkflowTransferStore((state) => state.importText);
+  const failImport = useWorkflowTransferStore((state) => state.failImport);
+  const requestImport = useWorkflowTransferStore((state) => state.requestImport);
+  const applyComfy = useWorkflowTransferStore((state) => state.applyComfy);
+  const applyOwn = useWorkflowTransferStore((state) => state.applyOwn);
+  const dismissTransfer = useWorkflowTransferStore((state) => state.dismiss);
+  const applyRecent = useWorkflowTransferStore((state) => state.applyRecent);
   const addMenuRef = useRef<HTMLDivElement>(null);
   const templateMenuRef = useRef<HTMLDivElement>(null);
   const transferRef = useRef<HTMLDivElement>(null);
@@ -363,134 +328,40 @@ const Toolbar: React.FC<ToolbarProps> = ({
     [onAddNode, closeAdd],
   );
 
-  /** Replace the canvas graph with an imported workflow (history reseeded). */
-  const applyGraph = useCallback((nodes: CanvasNode[], edges: Edge[]) => {
-    useCanvasStore.getState().hydrateGraph(nodes, edges);
-  }, []);
-
-  const handleExportWorkflow = useCallback(() => {
-    const { nodes, edges } = useCanvasStore.getState();
-    try {
-      const built = buildOmnimuxWorkflowFile({ name: workflowName, nodes, edges });
-      const fileName = workflowFileName(workflowName);
-      downloadTextFile(fileName, serializeOmnimuxWorkflowFile(built.file));
-      setTransfer({
-        kind: 'exported',
-        fileName,
-        nodeCount: built.file.nodes.length,
-        droppedCount: built.dropped.length,
-      });
-    } catch (error) {
-      setTransfer(transferError('export-failed', '', describeThrown(error)));
-    }
-  }, [workflowName]);
-
-  const handleImportFile = useCallback(async (file: File) => {
-    let text: string;
-    try {
-      text = await file.text();
-    } catch (error) {
-      setTransfer(transferError('read-failed', '', describeThrown(error)));
-      return;
-    }
-
-    const comfy = parseComfyWorkflow(text);
-    if (comfy.ok) {
-      setTransfer({
-        kind: 'comfy',
-        fileName: file.name,
-        format: comfy.format,
-        projection: projectComfyToCanvas(comfy.document),
-        applied: false,
-      });
-      return;
-    }
-
-    const own = parseOmnimuxWorkflowFile(text);
-    if (own.ok) {
-      setTransfer({ kind: 'own', file: own.file, applied: false });
-      return;
-    }
-
-    // Prefer the parser that got further: a file that declared the OmniMux
-    // kind is reported by the workflow-file parser, a file that looked like a
-    // ComfyUI document is reported by the codec.
-    if (own.error.code !== 'not-a-workflow-file') {
-      setTransfer(transferError(own.error.code, own.error.path, own.error.message));
-      return;
-    }
-    if (comfy.error.code !== 'unsupported-version') {
-      setTransfer(transferError(comfy.error.code, comfy.error.path, comfy.error.message));
-      return;
-    }
-    setTransfer(transferError(
-      'unrecognized-file',
-      'kind',
-      'not an OmniMux workflow file and not a supported ComfyUI workflow',
-    ));
-  }, []);
-
+  /** 读文件并把文本交给共享状态机（解析顺序与错误码在 store 里，只有一份）。 */
   const handleFileInputChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       // Reset so picking the same file again still fires a change event.
       event.target.value = '';
       if (!file) return;
-      void handleImportFile(file);
+      void file.text()
+        .then((text) => importText(text, file.name))
+        .catch((error: unknown) => {
+          failImport('read-failed', error instanceof Error ? error.message : String(error));
+        });
     },
-    [handleImportFile],
+    [failImport, importText],
   );
 
-  const openImportPicker = useCallback(() => {
-    setTransfer(null);
+  /** 「添加节点」面板与工具栏按钮共用同一个文件选择器：只认 nonce 递增。 */
+  useEffect(() => {
+    if (importNonce === 0) return;
     fileInputRef.current?.click();
-  }, []);
+  }, [importNonce]);
 
-  const handleApplyComfy = useCallback(() => {
-    if (transfer?.kind !== 'comfy') return;
-    const nodes: CanvasNode[] = transfer.projection.nodes.map((node) => ({
-      id: node.id,
-      type: node.type,
-      position: node.position,
-      data: node.data,
-      ...(node.width !== undefined ? { width: node.width } : {}),
-      ...(node.height !== undefined ? { height: node.height } : {}),
-    }));
-    const edges: Edge[] = transfer.projection.edges.map((edge) => ({
-      id: edge.id,
-      source: edge.source,
-      target: edge.target,
-      sourceHandle: edge.sourceHandle,
-      targetHandle: edge.targetHandle,
-    }));
-    applyGraph(nodes, edges);
-    setTransfer({ ...transfer, applied: true });
-  }, [applyGraph, transfer]);
-
-  const handleApplyOwn = useCallback(() => {
-    if (transfer?.kind !== 'own') return;
-    const nodes: CanvasNode[] = transfer.file.nodes.map((node) => ({
-      id: node.id,
-      type: node.type,
-      position: node.position,
-      data: node.data,
-      ...(node.width !== undefined ? { width: node.width } : {}),
-      ...(node.height !== undefined ? { height: node.height } : {}),
-      ...(node.parentId !== undefined ? { parentId: node.parentId } : {}),
-      ...(node.extent !== undefined ? { extent: node.extent } : {}),
-      ...(node.zIndex !== undefined ? { zIndex: node.zIndex } : {}),
-      ...(node.style !== undefined ? { style: node.style } : {}),
-    }));
-    const edges: Edge[] = transfer.file.edges.map((edge) => ({
-      id: edge.id,
-      source: edge.source,
-      target: edge.target,
-      sourceHandle: edge.sourceHandle,
-      targetHandle: edge.targetHandle,
-    }));
-    applyGraph(nodes, edges);
-    setTransfer({ ...transfer, applied: true });
-  }, [applyGraph, transfer]);
+  /** 底部 ComfyUI 工作流入口的数据与动作（Issue 3669）；点完关面板，避免与预览面板叠在一起。 */
+  const comfyMenu = useMemo<AddNodeComfyProps>(() => ({
+    recents,
+    onImport: () => {
+      requestImport();
+      closeAdd();
+    },
+    onApplyRecent: (name: string) => {
+      applyRecent(name);
+      closeAdd();
+    },
+  }), [recents, requestImport, applyRecent, closeAdd]);
 
   useClickOutside({
     refs: addMenuRef,
@@ -506,7 +377,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
   useClickOutside({
     refs: transferRef,
-    onClose: () => setTransfer(null),
+    onClose: dismissTransfer,
     enabled: transfer !== null,
   });
 
@@ -546,7 +417,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
         </button>
 
         {isAddOpen ? (
-          <AddNodeMenu scope="dock" onSelect={handleSelectNodeType} onCreateWorkflow={onCreateWorkflow} />
+          <AddNodeMenu scope="dock" onSelect={handleSelectNodeType} comfy={comfyMenu} />
         ) : null}
       </div>
 
@@ -585,7 +456,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
       <button
         type="button"
         className="wf-canvas-toolbar__item wf-canvas-toolbar__item--icon-only"
-        onClick={handleExportWorkflow}
+        onClick={() => exportWorkflow(workflowName)}
         title={t('toolbar.exportWorkflow')}
       >
         <span className="wf-canvas-toolbar__icon">
@@ -597,7 +468,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
       <button
         type="button"
         className={`wf-canvas-toolbar__item wf-canvas-toolbar__item--icon-only ${transfer ? 'wf-canvas-toolbar__item--active' : ''}`}
-        onClick={openImportPicker}
+        onClick={requestImport}
         title={t('toolbar.importWorkflow')}
       >
         <span className="wf-canvas-toolbar__icon">
@@ -668,9 +539,9 @@ const Toolbar: React.FC<ToolbarProps> = ({
         <div ref={transferRef} className="wf-transfer-panel-anchor">
           <TransferPanel
             state={transfer}
-            onClose={() => setTransfer(null)}
-            onApplyOwn={handleApplyOwn}
-            onApplyComfy={handleApplyComfy}
+            onClose={dismissTransfer}
+            onApplyOwn={applyOwn}
+            onApplyComfy={applyComfy}
           />
         </div>
       ) : null}

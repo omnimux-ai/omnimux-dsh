@@ -69,6 +69,8 @@ import { BatchCreateAssetModal, type MediaAssetItem } from './components/BatchCr
 import { CreateWorkflowModal } from './components/CreateWorkflowModal';
 import { calculateGroupBounds, childIdsOfGroup, planAlignLayout } from './utils/nodeVisualMath';
 import { resolveWorkflowTemplateScope, toFlatTemplateSnapshot } from './utils/workflowTemplateScope';
+import { useWorkflowTransferStore } from '../store/workflowTransferStore';
+import type { AddNodeComfyProps } from './components/AddNodeMenu';
 import { createTemplate, getTemplate, listTemplates } from '../bridge/templateApi';
 import { sanitizeEdges, sanitizeNodes } from '../bridge/persistSanitize';
 import { planInstantiateTemplate } from './utils/planInstantiateTemplate';
@@ -192,6 +194,10 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   const { screenToFlowPosition, fitView, zoomTo, setCenter } = useReactFlow();
   const reactFlowInstance = useReactFlow();
   const { nodes, edges, onNodesChange, onEdgesChange } = useGraphStore();
+  // 右键钻取面板底部的 ComfyUI 工作流入口（Issue 3669）读同一份 transfer store。
+  const transferRecents = useWorkflowTransferStore((state) => state.recents);
+  const requestImport = useWorkflowTransferStore((state) => state.requestImport);
+  const applyRecent = useWorkflowTransferStore((state) => state.applyRecent);
   const applyCanvasInputMutation = useCanvasStore((state) => state.applyCanvasInputMutation);
   const setNodes = useCanvasStore((state) => state.setNodes);
   const setSelectedElement = useCanvasStore((state) => state.setSelectedElement);
@@ -759,6 +765,22 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
     setSelectedElement,
   });
 
+  /**
+   * 右键钻取面板底部的 ComfyUI 工作流入口（Issue 3669）：数据与动作来自共享
+   * transfer store，点完关菜单，避免菜单与导入预览面板叠在一起。
+   */
+  const contextComfyMenu = useMemo<AddNodeComfyProps>(() => ({
+    recents: transferRecents,
+    onImport: () => {
+      requestImport();
+      closeMenu();
+    },
+    onApplyRecent: (name: string) => {
+      applyRecent(name);
+      closeMenu();
+    },
+  }), [transferRecents, requestImport, applyRecent, closeMenu]);
+
   // 项目资产按所属工作区解析相对路径；原生导入仍使用绝对路径。
   const mountImportFromAsset = useCallback(
     (asset: AssetRecord | Record<string, unknown>, position: { x: number; y: number }) => {
@@ -1049,7 +1071,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         onClose={closeMenu}
         onAction={handleMenuAction}
         onAddNode={handleAddNodeFromMenu}
-        onCreateWorkflow={() => setCreateWorkflowModalOpen(true)}
+        comfy={contextComfyMenu}
         canUndo={canUndo}
         canRedo={canRedo}
         hasClipboard={clipboard.hasClipboard}

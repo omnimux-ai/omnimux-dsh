@@ -9217,6 +9217,14 @@ body:has(.wf-voice-picker-modal) > .wf-custom-select-dropdown .wf-custom-select-
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
 }
 
+/* ComfyUI 工作流视图里的「最近导入」分组标题（Issue 3669）。
+ * 只做分组，不加副标题与说明句；层级交给间距表达。 */
+.wf-node-menu__section {
+  padding: 10px 12px 4px;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+}
+
 /* palette block end */
 
 /* ==================== exec-queue block start ====================
