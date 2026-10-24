@@ -34,6 +34,19 @@ export function registerGenerationProductRoutes(webServer, deps) {
   return () => { for (const dispose of disposers) dispose() }
 }
 
+/**
+ * The model catalog, and its read-only gateway diagnostics.
+ *
+ * `GET /omnimux/model-catalog` returns the catalog unchanged.
+ * `GET /omnimux/model-catalog?view=diagnostics` returns where the current
+ * gateway snapshot came from, whether it is stale, and how the gateway view
+ * differs from the catalog the hub serves (P1a). Diagnostics ride the same
+ * protected resource as a view instead of a second path: no extra route to keep
+ * in sync, and the catalog body is byte-for-byte what it was before.
+ *
+ * @param {{register: (route: {kind: string, path: string, handler: (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => Promise<void>}) => () => void}} webServer
+ * @param {{list?: () => object|null, diagnostics?: () => object|null}} deps
+ */
 export function registerCatalogRoutes(webServer, deps) {
   return webServer.register({
     kind: 'exact',
@@ -45,7 +58,9 @@ export function registerCatalogRoutes(webServer, deps) {
         return
       }
       try {
-        const body = typeof deps.list === 'function' ? deps.list() : null
+        const view = new URL(req.url || '/', 'http://localhost').searchParams.get('view')
+        const read = view === 'diagnostics' ? deps.diagnostics : deps.list
+        const body = typeof read === 'function' ? read() : null
         if (!body || typeof body !== 'object') {
           sendJson(res, 503, { error: 'catalog unavailable' })
           return

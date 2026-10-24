@@ -35,6 +35,10 @@ import { mountAudioVoices } from '../media/voices-mount.js'
 import { executeOmnimuxSpeechToText } from '../media/stt.js'
 import { mountTextComplete } from '../text/mount.js'
 import { buildModelCatalog } from '../catalog/list.js'
+import { createLiveCatalog } from '../catalog/cloud/live.js'
+import { createCatalogRefresher } from '../catalog/cloud/refresh.js'
+import { resolvePricingUrl } from '../catalog/cloud/config.js'
+import { createCatalogDiagnostics } from '../catalog/cloud/diagnostics.js'
 import { createGenerationProducts } from '../catalog/generation-products.js'
 import { createGenerationMapping } from '../media/generation-mapping.js'
 import { listSessionModels } from '../catalog/session-models.js'
@@ -51,6 +55,12 @@ import { mountPresetsTools } from '../presets/tools.js'
 import { mountTemplatesTools } from '../templates/tools.js'
 import { mountDecisions } from '../decisions/mount.js'
 import { createNativeFilePicker } from './native-picker.js'
+
+/**
+ * How often the process checks whether the gateway snapshot is due. The TTL
+ * decides whether a check actually fetches, so this only bounds reaction time.
+ */
+const CATALOG_REFRESH_TICK_MS = 60 * 60 * 1000
 
 /**
  * @param {{
@@ -89,6 +99,38 @@ export function apply(ctx, config = {}) {
     ctx.effect(() => () => appsStore.dispose(), 'omnimux: apps catalog')
   }
   appsStore.maybeRefresh()
+  // Gateway snapshot (P1a): resolved for diagnostics only — membership still
+  // comes from the contract index, so the served catalog is unchanged.
+  const liveCatalog = createLiveCatalog({
+    home: homeDir,
+    bundledDir: hub.catalog.bundledDir || undefined,
+  })
+  const catalogRefresher = createCatalogRefresher({
+    live: liveCatalog,
+    url: resolvePricingUrl(hub.catalog, siteBaseUrl),
+    ttlSeconds: hub.catalog.ttlSeconds,
+    timeoutMs: hub.catalog.timeoutMs,
+    origin: siteBaseUrl,
+    onChanged: () => {
+      ctx.emit?.('omnimux/model-catalog-updated')
+    },
+  })
+  let catalogTimer
+  const kickCatalogRefresh = () => {
+    catalogRefresher.maybeRefresh().catch((error) => {
+      console.error('[omnimux] gateway catalog refresh failed:', String(error?.message ?? error))
+    })
+  }
+  if (hub.catalog.remote) {
+    kickCatalogRefresh()
+    catalogTimer = setInterval(kickCatalogRefresh, CATALOG_REFRESH_TICK_MS)
+    catalogTimer.unref?.()
+  }
+  if (typeof ctx.effect === 'function') {
+    ctx.effect(() => () => {
+      if (catalogTimer) clearInterval(catalogTimer)
+    }, 'omnimux: gateway catalog')
+  }
   const avatarStore = createAvatarStore({ home: homeDir })
   const accountMetaStore = createAccountMetaStore({ home: homeDir })
   const accountAvatarStore = createAccountAvatarStore({
@@ -125,6 +167,12 @@ export function apply(ctx, config = {}) {
     }
   }
 
+  const catalogDiagnostics = createCatalogDiagnostics({
+    live: liveCatalog,
+    refresher: catalogRefresher,
+    listCatalog,
+  })
+
   const generationProducts = createGenerationProducts({ readMapping: createGenerationMapping(hub.media) })
   const httpDeps = {
     products: generationProducts,
@@ -143,6 +191,7 @@ export function apply(ctx, config = {}) {
     accountAvatarStore,
     avatarStore,
     listCatalog,
+    catalogDiagnostics,
     hubEvents,
     mailbox,
     sessionQuery: null,

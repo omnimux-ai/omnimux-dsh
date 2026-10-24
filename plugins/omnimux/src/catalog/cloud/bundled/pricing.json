@@ -1,0 +1,790 @@
+{
+  "schemaVersion": 1,
+  "source": "pricing",
+  "generatedAt": "2026-10-24T12:23:12.114Z",
+  "groups": {
+    "ratio": {
+      "cheap": 0.5,
+      "default": 1,
+      "desktop-480p": 0.17,
+      "desktop-720p": 0.24,
+      "gemini-4-argon-multimodal": 1,
+      "gemini-cheap": 1.12,
+      "gemini-omni-1.1-flash-task-pro": 6.042857,
+      "gpt-image-2.5-economy": 0.0049,
+      "minimax-h3-video-fast": 0.9,
+      "minimax-h3-video-pro": 1.15,
+      "nano-banana-2-pro": 1.714286,
+      "nanobanana-economy": 1,
+      "pool": 0.285714,
+      "seedance-2-5-480p": 0.524,
+      "seedance-2-5-720p": 0.7206,
+      "seedance-standard": 1.178,
+      "wan-3.0-1080p": 1.5,
+      "wan-3.0-720p": 0.5
+    },
+    "usable": {
+      "Omni-Beta": "Omni 专属（仅 tokens-flow omni 模型）",
+      "auto": "自动（推荐：一把密钥全模型，按顺序选组计费）",
+      "cheap": "特惠版（三方特惠 / 经济走量）",
+      "claude-max-cc": "Claude Max（仅限CC）",
+      "claude-max-open": "Claude Max（外接版）",
+      "claude-plus": "Claude Plus（精品）",
+      "codex-pro-cli": "Codex Pro（仅限Codex）",
+      "codex-pro-open": "Codex Pro（外接版）",
+      "deepseek-official": "DeepSeek（官方满血）",
+      "default": "标准版（主流高品质专线）",
+      "desktop-480p": "桌面端 480p 档（¥0.92/秒）",
+      "desktop-720p": "桌面端 720p 档（¥1.31/秒）",
+      "gemini-4-argon-multimodal": "Gemini 4 Argon（多模态文本）",
+      "gemini-cheap": "Gemini 特惠版（经济走量）",
+      "gemini-omni-1.1-flash-task-pro": "Gemini Omni 按次 · 优选中转 (1080p 档)",
+      "gpt-image-2.5-economy": "GPT Image 2.5 特惠档（¥0.01/张）",
+      "grok-cheap": "Grok 特惠版（轻量走量）",
+      "grok-enterprise": "Grok 企业版",
+      "grok-standard": "Grok 标准版（主流专线）",
+      "kimi-official": "Kimi（官方满血K3）",
+      "kling-pro": "可灵 Kling 进阶版（企业独享）",
+      "kling-standard": "可灵 Kling 标准版（商业专线）",
+      "minimax-h3-video-fast": "H3 视频·高速档",
+      "minimax-h3-video-pro": "H3 视频·升级画质档",
+      "minimax-official": "MiniMax（官方满血）",
+      "minimax-pro": "海螺 MiniMax 进阶版（企业独享）",
+      "minimax-standard": "海螺 MiniMax 标准版（商业专线）",
+      "nano-banana-2-pro": "Nano Banana 2 高价档",
+      "nanobanana-economy": "Nano Banana 2 Lite 低价版（经济跑量）",
+      "official": "官转版（官方原厂直签 / 极稳高画质）",
+      "pool": "畅享版（自建账号池 / 随心用）",
+      "pro": "进阶版（企业独享 / 私有专线）",
+      "seedance-2-5-480p": "Seedance 2.5 480p 档（¥2.85/秒）",
+      "seedance-2-5-720p": "Seedance 2.5 720p 档（¥3.92/秒）",
+      "seedance-2-5-task-pro": "Seedance 2.5 按次高价档",
+      "seedance-pro": "即梦 Seedance 进阶版",
+      "seedance-standard": "即梦 Seedance 标准版",
+      "standard": "标准版（主流高品质专线）",
+      "wan-3.0-1080p": "Wan 3.0 1080p 档（¥1.80/秒）",
+      "wan-3.0-720p": "Wan 3.0 720p 档（¥0.60/秒）",
+      "zhipu-official": "智谱 Zhipu（官方满血）"
+    },
+    "auto": [
+      "pool",
+      "cheap",
+      "gemini-cheap",
+      "default",
+      "nano-banana-2-pro",
+      "gemini-omni-1.1-flash-task-pro",
+      "gpt-image-2.5-economy",
+      "seedance-2-5-480p",
+      "seedance-2-5-720p",
+      "wan-3.0-720p",
+      "wan-3.0-1080p",
+      "gemini-4-argon-multimodal"
+    ]
+  },
+  "coverage": {
+    "models": 11,
+    "channels": null,
+    "limitations": []
+  },
+  "models": [
+    {
+      "id": "gemini-3.1-flash-lite-image",
+      "displayName": "gemini-3.1-flash-lite-image",
+      "enableGroups": [
+        "default",
+        "nanobanana-economy"
+      ],
+      "supportedEndpointTypes": [
+        "openai"
+      ],
+      "billing": {
+        "mode": null,
+        "modelPrice": 0.0336,
+        "modelRatio": 0,
+        "quotaType": 1,
+        "expr": null
+      },
+      "contract": {
+        "model_id": "gemini-3.1-flash-lite-image",
+        "family": "image",
+        "status": "documented",
+        "operations": [
+          "text_to_image",
+          "image_to_image"
+        ],
+        "output_sizes": [
+          "1K"
+        ],
+        "reference_images": {
+          "min": 0,
+          "max": 14,
+          "formats": [
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/heic",
+            "image/heif"
+          ],
+          "max_bytes_each": 7340032
+        }
+      },
+      "contractPresent": true
+    },
+    {
+      "id": "gemini-3.8-flash",
+      "displayName": "gemini-3.8-flash",
+      "enableGroups": [
+        "default"
+      ],
+      "supportedEndpointTypes": [
+        "openai"
+      ],
+      "billing": {
+        "mode": "tiered_expr",
+        "modelPrice": 0,
+        "modelRatio": 0.375,
+        "quotaType": 0,
+        "expr": "tier(\"base\", p * 0.75 + c * 0.75)"
+      },
+      "contract": {
+        "model_id": "gemini-3.8-flash",
+        "family": "llm",
+        "status": "documented",
+        "operations": [
+          "chat"
+        ],
+        "input_modalities": [
+          "text",
+          "image",
+          "video",
+          "audio",
+          "pdf"
+        ],
+        "reference_images": {
+          "formats": [
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/heic",
+            "image/heif"
+          ]
+        },
+        "reference_videos": {
+          "formats": [
+            "video/mp4",
+            "video/mov",
+            "video/mpeg",
+            "video/avi",
+            "video/wmv",
+            "video/flv"
+          ]
+        },
+        "reference_audios": {
+          "formats": [
+            "audio/mp3",
+            "audio/wav",
+            "audio/mpeg"
+          ]
+        },
+        "context_window_tokens": 1048576,
+        "max_output_tokens": 65536,
+        "billing": {
+          "unit": "per_token",
+          "unit_label": {
+            "en": "per 1M tokens",
+            "zh": "每百万词元"
+          },
+          "unit_price_usd": 0.75,
+          "model_ratio": 0.375,
+          "pricing_basis": "reported_tokens",
+          "notes": {
+            "en": "Charged by reported token usage; price is USD per 1M tokens",
+            "zh": "按上游返回的词元用量计费，单价为每百万词元美元价"
+          }
+        }
+      },
+      "contractPresent": true
+    },
+    {
+      "id": "gemini-4-argon",
+      "displayName": "gemini-4-argon",
+      "enableGroups": [
+        "gemini-4-argon-multimodal"
+      ],
+      "supportedEndpointTypes": [
+        "anthropic",
+        "gemini",
+        "openai",
+        "openai-alpha-search",
+        "openai-response",
+        "openai-response-compact"
+      ],
+      "billing": {
+        "mode": "tiered_expr",
+        "modelPrice": 0,
+        "modelRatio": 2,
+        "quotaType": 0,
+        "expr": "p * 1.7 + c * 8.5 + cr * 0.086 < 10000.0 / 68 ? tier(\"evolink_minimum\", fixed(0.00014705882352941177)) : tier(\"evolink_token\", p * 1.7 + c * 8.5 + cr * 0.086)"
+      },
+      "contract": {
+        "model_id": "gemini-4-argon",
+        "family": "llm",
+        "status": "partial",
+        "basis": "line_restricted",
+        "service_notes": "使用 Gemini 原生内容接口，输出为文字或结构化结果。支持独立系统指令、PNG 单图与多图、MP4 视频、视频与图片联合输入、PDF、结构化结果、流式返回、低思考档和单轮函数调用请求。函数调用结果由调用方执行。短素材示例不代表最大容量；音频准确性、其他格式、长素材、最大上下文和最大输出未建立服务承诺。",
+        "operations": [
+          "chat"
+        ],
+        "input_modalities": [
+          "text",
+          "image",
+          "video",
+          "pdf"
+        ],
+        "reference_images": {
+          "formats": [
+            "image/png"
+          ]
+        },
+        "reference_videos": {
+          "formats": [
+            "video/mp4"
+          ]
+        },
+        "billing": {
+          "unit": "per_token",
+          "unit_label": {
+            "en": "per 1M tokens",
+            "zh": "每百万词元"
+          },
+          "model_ratio": 2,
+          "pricing_basis": "reported_tokens",
+          "notes": {
+            "en": "Charges use reported usage: USD 1.7 per 1M input tokens, USD 8.5 per 1M output tokens and USD 0.086 per 1M cached input tokens, with a USD 0.01/68 minimum per request rounded to the gateway billing unit. The official input anchor is USD 4 per 1M tokens; model-specific billing rules determine the effective selling price. Input includes reported tool-use input; output includes reported thinking. Cached tokens are an input subset, counted once.",
+            "zh": "按实际报告用量结算，每百万词元输入 1.7 美元、输出 8.5 美元、缓存读取 0.086 美元；每次最低 0.01/68 美元，按本站最小计费单位取整。官方输入基准为每百万词元 4 美元，实际售价由模型专属计费规则确定。输入包含已报告的工具输入，输出包含已报告的思考；缓存是输入子集，各计一次。"
+          }
+        }
+      },
+      "contractPresent": true
+    },
+    {
+      "id": "gpt-image-2.5",
+      "displayName": "gpt-image-2.5",
+      "enableGroups": [
+        "default",
+        "gpt-image-2.5-economy",
+        "nanobanana-economy"
+      ],
+      "supportedEndpointTypes": [
+        "image-generation",
+        "openai"
+      ],
+      "billing": {
+        "mode": "tiered_expr",
+        "modelPrice": 0.3,
+        "modelRatio": 0,
+        "quotaType": 1,
+        "expr": "tier(\"image\", fixed(0.3)) * image_count"
+      },
+      "contract": {
+        "model_id": "gpt-image-2.5",
+        "family": "image",
+        "status": "documented",
+        "basis": "line_restricted",
+        "service_notes": "标准服务使用 JSON 提交，每次生成一张中等质量 PNG 图片，数量省略或为 1，质量省略或为 medium。仅支持合同列明的七种精确像素尺寸，3:4 与 4:3 使用 1360 像素边。最多一张 JPEG、PNG 或 WebP 参考图，不超过 5MiB、4000 万像素，任一边不超过 23170 像素。完整提示词（包括角色附加说明）须同时不超过 8192 个 Unicode 字符、16384 个 UTF-8 字节和按本服务 o200k_base 计数的 5000 个提示词 token；超出明确拒绝，不截断、不缩写，部分较长描述也可能被拒绝。角色双视图及多视角功能保留。更高质量、多张输出、多参考、透明背景、遮罩及其他未审规格明确拒绝。",
+        "operations": [
+          "text_to_image",
+          "image_to_image"
+        ],
+        "output_formats": [
+          "png"
+        ],
+        "output_sizes": [
+          "1024x1024",
+          "1024x1536",
+          "1536x1024",
+          "1024x1360",
+          "1360x1024",
+          "1088x1920",
+          "1920x1088"
+        ],
+        "reference_images": {
+          "min": 0,
+          "max": 1,
+          "formats": [
+            "jpeg",
+            "png",
+            "webp"
+          ],
+          "max_bytes_each": 5242880
+        },
+        "prompt_max_chars": 8192,
+        "prompt_max_utf8_bytes": 16384,
+        "prompt_max_tokens": 5000,
+        "billing": {
+          "unit": "per_image",
+          "unit_label": {
+            "en": "per image",
+            "zh": "每张"
+          },
+          "unit_price_usd": 0.3,
+          "pricing_basis": "image_count",
+          "notes": {
+            "en": "Charged per image. This amount is the per-image service base (3 OmniMux points); the final quote includes the dedicated group and membership multipliers; use the platform quote before submission.",
+            "zh": "按图片张数计费。此金额为每张的服务基准价（对应 3 积分）；实际每张费用受专属分组和会员倍率影响，以平台提交前报价为准。"
+          }
+        }
+      },
+      "contractPresent": true
+    },
+    {
+      "id": "indextts-2",
+      "displayName": "indextts-2",
+      "enableGroups": [
+        "auto",
+        "default"
+      ],
+      "supportedEndpointTypes": [
+        "openai"
+      ],
+      "billing": {
+        "mode": null,
+        "modelPrice": 0.005,
+        "modelRatio": 0,
+        "quotaType": 1,
+        "expr": null
+      },
+      "contract": {
+        "model_id": "indextts-2",
+        "family": "audio",
+        "status": "documented",
+        "operations": [
+          "text_to_speech",
+          "voice_clone",
+          "emotion_control"
+        ],
+        "output_formats": [
+          "wav"
+        ],
+        "reference_audios": {
+          "max": 2,
+          "formats": [
+            "wav",
+            "mp3"
+          ]
+        },
+        "prompt_max_chars": 2048,
+        "billing": {
+          "unit": "per_second",
+          "unit_label": {
+            "en": "per second",
+            "zh": "每秒"
+          },
+          "unit_price_usd": 0.005,
+          "pricing_basis": "duration_seconds",
+          "notes": {
+            "en": "Charged by audio duration, 10s minimum",
+            "zh": "按生成的音频时长计费，最低 10 秒起步"
+          }
+        }
+      },
+      "contractPresent": true
+    },
+    {
+      "id": "minimax-h3-video",
+      "displayName": "minimax-h3-video",
+      "enableGroups": [
+        "auto",
+        "default",
+        "minimax-h3-video-fast",
+        "minimax-h3-video-pro"
+      ],
+      "supportedEndpointTypes": [
+        "openai"
+      ],
+      "billing": {
+        "mode": null,
+        "modelPrice": 0.025,
+        "modelRatio": 0,
+        "quotaType": 1,
+        "expr": null
+      },
+      "contract": {
+        "model_id": "minimax-h3-video",
+        "family": "video",
+        "status": "documented",
+        "basis": "line_restricted",
+        "operations": [
+          "text_to_video",
+          "first_last_frame",
+          "video_multi_ref",
+          "digital_human"
+        ],
+        "durations_seconds": {
+          "min": 1,
+          "max": 15
+        },
+        "resolutions": [
+          "480p",
+          "736p",
+          "768p",
+          "1088p",
+          "1440p"
+        ],
+        "aspect_ratios": [
+          "16:9",
+          "9:16",
+          "1:1"
+        ],
+        "reference_images": {
+          "min": 0,
+          "max": 9
+        },
+        "reference_audios": {
+          "min": 0,
+          "max": 3
+        },
+        "billing": {
+          "unit": "per_second",
+          "unit_label": {
+            "en": "per second",
+            "zh": "每秒"
+          },
+          "unit_price_usd": 0.025,
+          "pricing_basis": "duration_seconds",
+          "notes": {
+            "en": "Charged by the requested video duration; the per-second rate varies with resolution: $0.025 for 480p/736p/768p, $0.030 for 1088p, $0.035 for 1440p (priced by resolution in the task billing expression; group ratios still apply)",
+            "zh": "按请求的视频时长计费；每秒单价随分辨率变化：480p/736p/768p 为 $0.025，1088p 为 $0.030，1440p 为 $0.035（由任务计费表达式按 resolution 定价，分组倍率仍叠加）"
+          }
+        }
+      },
+      "contractPresent": true
+    },
+    {
+      "id": "seedance-2-0",
+      "displayName": "seedance-2-0",
+      "enableGroups": [
+        "default"
+      ],
+      "supportedEndpointTypes": [
+        "openai"
+      ],
+      "billing": {
+        "mode": null,
+        "modelPrice": 0.0971,
+        "modelRatio": 0,
+        "quotaType": 1,
+        "expr": null
+      },
+      "contract": {
+        "model_id": "seedance-2-0",
+        "family": "video",
+        "status": "documented",
+        "operations": [
+          "text_to_video",
+          "first_frame",
+          "first_last_frame",
+          "video_multi_ref",
+          "video_edit",
+          "video_extend"
+        ],
+        "durations_seconds": {
+          "min": 4,
+          "max": 30
+        },
+        "resolutions": [
+          "480p",
+          "720p",
+          "1080p",
+          "4k"
+        ],
+        "aspect_ratios": [
+          "21:9",
+          "16:9",
+          "4:3",
+          "1:1",
+          "3:4",
+          "9:16"
+        ],
+        "audio_supported": true,
+        "reference_images": {
+          "min": 0,
+          "max": 9
+        },
+        "reference_videos": {
+          "min": 0,
+          "max": 3
+        },
+        "reference_audios": {
+          "min": 0,
+          "max": 3
+        },
+        "billing": {
+          "unit": "per_second",
+          "unit_label": {
+            "en": "per second",
+            "zh": "每秒"
+          },
+          "unit_price_usd": 0.0971,
+          "pricing_basis": "duration_seconds",
+          "notes": {
+            "en": "Charged by the requested video duration",
+            "zh": "按请求的视频时长计费"
+          }
+        }
+      },
+      "contractPresent": true
+    },
+    {
+      "id": "seedance-2-5",
+      "displayName": "seedance-2-5",
+      "enableGroups": [
+        "desktop-480p",
+        "desktop-720p",
+        "seedance-2-5-480p",
+        "seedance-2-5-720p"
+      ],
+      "supportedEndpointTypes": [
+        "openai"
+      ],
+      "billing": {
+        "mode": null,
+        "modelPrice": 0.8,
+        "modelRatio": 0,
+        "quotaType": 1,
+        "expr": null
+      },
+      "contract": {
+        "model_id": "seedance-2-5",
+        "family": "video",
+        "status": "documented",
+        "operations": [
+          "text_to_video",
+          "image_to_video",
+          "first_last_frame_to_video",
+          "reference_to_video",
+          "video_edit",
+          "video_extend"
+        ],
+        "durations_seconds": {
+          "min": 4,
+          "max": 30
+        },
+        "resolutions": [
+          "480p",
+          "720p",
+          "1080p"
+        ],
+        "aspect_ratios": [
+          "16:9",
+          "4:3",
+          "1:1",
+          "3:4",
+          "9:16",
+          "21:9",
+          "adaptive"
+        ],
+        "audio_supported": true,
+        "reference_images": {
+          "min": 1,
+          "max": 30,
+          "formats": [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/bmp",
+            "image/tiff",
+            "image/gif",
+            "image/heic",
+            "image/heif"
+          ],
+          "max_bytes_each": 31457280
+        },
+        "reference_videos": {
+          "min": 0,
+          "max": 10,
+          "formats": [
+            "video/mp4",
+            "video/quicktime"
+          ],
+          "max_bytes_each": 209715200
+        },
+        "reference_audios": {
+          "min": 0,
+          "max": 10,
+          "formats": [
+            "audio/wav",
+            "audio/mpeg"
+          ],
+          "max_bytes_each": 15728640
+        },
+        "billing": {
+          "unit": "per_second",
+          "unit_label": {
+            "en": "per second",
+            "zh": "每秒"
+          },
+          "unit_price_usd": 0.8,
+          "pricing_basis": "duration_seconds",
+          "notes": {
+            "en": "Charged by the requested video duration. This amount is the per-second service base; the final quote includes group and membership multipliers; use the platform quote before submission.",
+            "zh": "按请求的视频时长计费，此金额为每秒钟的服务基准价；实际每秒费用受分组和会员倍率影响，以平台提交前报价为准。"
+          }
+        }
+      },
+      "contractPresent": true
+    },
+    {
+      "id": "suno",
+      "displayName": "suno",
+      "enableGroups": [
+        "default"
+      ],
+      "supportedEndpointTypes": [
+        "openai"
+      ],
+      "billing": {
+        "mode": null,
+        "modelPrice": 0.075556,
+        "modelRatio": 0,
+        "quotaType": 1,
+        "expr": null
+      },
+      "contract": {
+        "model_id": "suno",
+        "family": "audio",
+        "status": "documented",
+        "operations": [
+          "music_generation"
+        ],
+        "output_formats": [
+          "mp3",
+          "wav"
+        ]
+      },
+      "contractPresent": true
+    },
+    {
+      "id": "suno-sounds",
+      "displayName": "suno-sounds",
+      "enableGroups": [
+        "default"
+      ],
+      "supportedEndpointTypes": [
+        "openai"
+      ],
+      "billing": {
+        "mode": null,
+        "modelPrice": 0.010667,
+        "modelRatio": 0,
+        "quotaType": 1,
+        "expr": null
+      },
+      "contract": {
+        "model_id": "suno-sounds",
+        "family": "audio",
+        "status": "documented",
+        "operations": [
+          "sound_effect_generation"
+        ],
+        "output_formats": [
+          "mp3"
+        ]
+      },
+      "contractPresent": true
+    },
+    {
+      "id": "wan-3.0",
+      "displayName": "wan-3.0",
+      "enableGroups": [
+        "wan-3.0-1080p",
+        "wan-3.0-720p"
+      ],
+      "supportedEndpointTypes": [
+        "openai"
+      ],
+      "billing": {
+        "mode": null,
+        "modelPrice": 0.176471,
+        "modelRatio": 0,
+        "quotaType": 1,
+        "expr": null
+      },
+      "contract": {
+        "model_id": "wan-3.0",
+        "family": "video",
+        "status": "documented",
+        "operations": [
+          "text_to_video",
+          "image_to_video",
+          "first_last_frame_to_video",
+          "reference_to_video",
+          "video_edit",
+          "video_extend"
+        ],
+        "durations_seconds": {
+          "min": 4,
+          "max": 30
+        },
+        "resolutions": [
+          "480P",
+          "720P",
+          "1080P"
+        ],
+        "aspect_ratios": [
+          "16:9",
+          "4:3",
+          "1:1",
+          "3:4",
+          "9:16",
+          "adaptive"
+        ],
+        "audio_supported": true,
+        "reference_images": {
+          "min": 0,
+          "max": 10,
+          "formats": [
+            "image/jpeg",
+            "image/png",
+            "image/bmp",
+            "image/webp"
+          ],
+          "max_bytes_each": 20971520
+        },
+        "reference_videos": {
+          "min": 0,
+          "max": 5,
+          "formats": [
+            "video/mp4",
+            "video/quicktime"
+          ],
+          "max_bytes_each": 104857600
+        },
+        "reference_audios": {
+          "min": 0,
+          "max": 5,
+          "formats": [
+            "audio/wav",
+            "audio/mpeg"
+          ],
+          "max_bytes_each": 15728640
+        },
+        "prompt_max_chars": 20000,
+        "billing": {
+          "unit": "per_second",
+          "unit_label": {
+            "en": "per second",
+            "zh": "每秒"
+          },
+          "unit_price_usd": 0.176471,
+          "pricing_basis": "duration_seconds",
+          "notes": {
+            "en": "Charged by the requested video duration. This amount is the per-second service base: 0.176471 USD/s = official wan3.0-video (standard) 1080P list price ¥1.20/s ÷ 6.8 (canonical FX). The final per-second price includes the group ratio: wan-3.0-720p ×0.5 = 0.0882355 USD/s = ¥0.60/s; wan-3.0-1080p ×1.5 = 0.2647065 USD/s = ¥1.80/s; use the platform quote before submission. Official list prices: standard https://help.aliyun.com/zh/model-studio/wan3-0-video (480P/720P/1080P = 0.3/0.6/1.2 CNY/s) and prime https://help.aliyun.com/zh/model-studio/wan3-0-video-prime (480P/720P/1080P = 0.45/0.9/1.8 CNY/s), cn-beijing list price excluding limited-time discounts.",
+            "zh": "按请求的视频时长计费，此金额为每秒钟的服务基准价：0.176471 USD/秒 = 官方 wan3.0-video（标准版）1080P 原价 ¥1.20/秒 ÷ 6.8（canonical FX）。实际每秒费用受分组倍率影响：wan-3.0-720p 档 ×0.5 = 0.0882355 USD/秒 = ¥0.60/秒；wan-3.0-1080p 档 ×1.5 = 0.2647065 USD/秒 = ¥1.80/秒；以平台提交前报价为准。【官方价格来源】标准版 https://help.aliyun.com/zh/model-studio/wan3-0-video（480P/720P/1080P = 0.3/0.6/1.2 元/秒）、高速版 https://help.aliyun.com/zh/model-studio/wan3-0-video-prime（480P/720P/1080P = 0.45/0.9/1.8 元/秒），均为华北2（北京）官方原价、不含限时优惠。"
+          }
+        }
+      },
+      "contractPresent": true
+    }
+  ]
+}

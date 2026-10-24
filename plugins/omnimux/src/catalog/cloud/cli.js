@@ -9,7 +9,7 @@
 import { readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { detectSnapshotSource, normalizeChannelBaseline, normalizePricingPayload } from './snapshot.js'
+import { CLOUD_SNAPSHOT_SCHEMA_VERSION, detectSnapshotSource, normalizeChannelBaseline, normalizePricingPayload } from './snapshot.js'
 import { diffGatewayAgainstHub } from './diff.js'
 import { diffReportDocument, formatDiffReport } from './report.js'
 
@@ -78,6 +78,12 @@ export function loadGatewayView(path) {
   if (source === 'channel-baseline') {
     const { snapshot, issues } = normalizeChannelBaseline(document)
     return { snapshot, issues, label: path }
+  }
+  // An already-normalized snapshot: the bundled floor and the disk cache are
+  // stored in this shape, and the runtime diagnostics diff them directly.
+  if (document && typeof document === 'object' && !Array.isArray(document)
+    && document.schemaVersion === CLOUD_SNAPSHOT_SCHEMA_VERSION && Array.isArray(document.models)) {
+    return { snapshot: document, issues: [], label: path }
   }
   return { snapshot: null, issues: [{ code: 'gateway-input-unrecognized', detail: path }], label: path }
 }

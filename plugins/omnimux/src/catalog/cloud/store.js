@@ -15,7 +15,7 @@ import { createHash } from 'node:crypto'
 import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { CLOUD_SNAPSHOT_SCHEMA_VERSION, isSnapshotEmpty, snapshotDigest } from './snapshot.js'
+import { CLOUD_SNAPSHOT_SCHEMA_VERSION, isSnapshotEmpty, snapshotContentDigest } from './snapshot.js'
 
 export const CLOUD_CATALOG_DIR = 'catalog'
 export const ANONYMOUS_VIEW = 'anonymous'
@@ -115,7 +115,7 @@ export function createCloudCatalogStore(home, opts = {}) {
         return { accepted: false, reason: 'schema-mismatch' }
       }
       if (isSnapshotEmpty(snapshot)) return { accepted: false, reason: 'empty' }
-      const digest = snapshotDigest(snapshot)
+      const digest = snapshotContentDigest(snapshot)
       const previous = readJson(metaPath)
       if (previous && previous.digest === digest) return { accepted: false, reason: 'unchanged', digest }
       if (!dir) return { accepted: false, reason: 'no-home' }
@@ -142,11 +142,38 @@ export function createCloudCatalogStore(home, opts = {}) {
      * refresh attempt failed and the previous snapshot is still serving).
      *
      * @param {string} reason
+     * @param {string} [at] attempt timestamp; defaults to now (callers with an
+     *   injected clock pass their own so the mark stays deterministic in tests)
      */
-    markStale(reason) {
+    markStale(reason, at) {
       const meta = readJson(metaPath)
       if (!meta || !dir) return { updated: false }
-      writeJson(metaPath, { ...meta, stale: true, staleReason: reason, staleAt: new Date().toISOString() })
+      const stamp = typeof at === 'string' && at ? at : new Date().toISOString()
+      writeJson(metaPath, { ...meta, stale: true, staleReason: reason, staleAt: stamp })
+      return { updated: true }
+    },
+
+    /**
+     * Record a successful refresh attempt whose content did not change.
+     *
+     * The snapshot body stays as it is, but the attempt time moves forward and
+     * any stale mark is cleared. Without this the TTL clock would never advance
+     * for an unchanged gateway (so every tick refetches) and a snapshot that
+     * once failed would stay marked stale forever.
+     *
+     * @param {{ fetchedAt?: string }} [meta]
+     */
+    markFresh(meta = {}) {
+      const current = readJson(metaPath)
+      if (!current || !dir) return { updated: false }
+      const next = {
+        ...current,
+        stale: false,
+        fetchedAt: typeof meta.fetchedAt === 'string' && meta.fetchedAt ? meta.fetchedAt : new Date().toISOString(),
+      }
+      delete next.staleReason
+      delete next.staleAt
+      writeJson(metaPath, next)
       return { updated: true }
     },
 

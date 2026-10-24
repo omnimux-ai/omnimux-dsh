@@ -174,7 +174,11 @@ export function normalizePricingPayload(payload, opts = {}) {
   const models = new Map()
   for (const raw of rows) {
     const row = objectOrEmpty(raw)
-    const id = text(row.id ?? row.model_name)
+    // The live `/api/pricing` payload carries the numeric database id in `id`
+    // and the canonical model identifier in `model_name`; the synthetic
+    // fixtures carry the identifier in `id`. Prefer a string `id` when the
+    // upstream provides one, otherwise fall back to `model_name`.
+    const id = text(row.id) || text(row.model_name)
     if (!id) {
       issues.push({ code: 'skipped-model-without-id' })
       continue
@@ -182,7 +186,7 @@ export function normalizePricingPayload(payload, opts = {}) {
     if (models.has(id)) issues.push({ code: 'duplicate-model-row', detail: id })
     models.set(id, {
       id,
-      displayName: text(row.model_name ?? row.display_name) || id,
+      displayName: text(row.model_name) === id ? text(row.display_name) || id : text(row.model_name) || id,
       // Sorted so the content digest depends on membership, not on upstream
       // array ordering (the gateway has no usable version field).
       enableGroups: stringList(row.enable_groups ?? row.enableGroups).sort(),
@@ -357,6 +361,24 @@ function sortDeep(value) {
 /** Content digest of the normalized snapshot (the gateway has no usable ETag). */
 export function snapshotDigest(snapshot) {
   return createHash('sha256').update(serializeSnapshot(snapshot)).digest('hex')
+}
+
+/**
+ * Digest of what the snapshot *says*, ignoring when it was fetched.
+ *
+ * Change detection must not treat "fetched again a minute later" as new
+ * content: `generatedAt` moves on every refresh, so the full identity digest
+ * would make every refresh look changed. Runtime paths use this one.
+ *
+ * @param {unknown} snapshot
+ */
+export function snapshotContentDigest(snapshot) {
+  const record = snapshot && typeof snapshot === 'object' && !Array.isArray(snapshot)
+    ? /** @type {Record<string, unknown>} */ (snapshot)
+    : {}
+  const content = { ...record }
+  delete content.generatedAt
+  return createHash('sha256').update(JSON.stringify(sortDeep(content))).digest('hex')
 }
 
 /**

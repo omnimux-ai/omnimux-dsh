@@ -97,6 +97,31 @@ export function hubCatalogView(hub) {
 }
 
 /**
+ * The counts a caller may surface, read from the diff document's own `summary`.
+ *
+ * Mapping lives here, next to the category names it reads, so a rename cannot
+ * silently become zero in a caller that guessed a key (that is exactly how the
+ * P1a diagnostics first reported "0 unregistered groups" while the diff said 3).
+ * `groupUnregistered` is the reader-facing name for the diff's `groupExtra`.
+ *
+ * @param {object|undefined} drift output of `diffGatewayAgainstHub`
+ */
+export function driftSummaryCounts(drift) {
+  const summary = objectOrEmpty(drift?.summary)
+  const count = (key) => {
+    const value = summary[key]
+    return typeof value === 'number' && Number.isFinite(value) ? value : 0
+  }
+  return {
+    unreachable: count('unreachable'),
+    groupMissing: count('groupMissing'),
+    gatewayOnly: count('gatewayOnly'),
+    groupUnregistered: count('groupExtra'),
+    priceChanged: count('priceChanged'),
+  }
+}
+
+/**
  * @param {{ gateway: object, hub: object, baselineSeconds?: number }} input
  */
 export function diffGatewayAgainstHub(input) {

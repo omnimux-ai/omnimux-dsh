@@ -99,6 +99,8 @@
     "hub:interfaces": "node scripts/generate-hub-interfaces-html.mjs",
     "models:console": "node scripts/generate-model-console.mjs",
     "models:console:serve": "node scripts/serve-model-console.mjs",
+    "catalog:snapshot": "node plugins/omnimux/scripts/catalog-snapshot.mjs",
+    "catalog:snapshot:check": "node plugins/omnimux/scripts/catalog-snapshot.mjs --check",
     "dev:unlock": "node scripts/dev-app-unlock.mjs",
     "verify:app": "node scripts/worktree-app-qa.mjs",
     "verify:plugin-load": "node scripts/verify-plugin-load.mjs",
