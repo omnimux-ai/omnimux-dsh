@@ -206,7 +206,7 @@ export function createWorkspaceStore(opts: {
       const snapshot: CanvasWorkspaceSnapshot = {
         schemaVersion: SNAPSHOT_SCHEMA_VERSION,
         id,
-        name: (name && name.trim()) || '未命名工作流',
+        name: (name && name.trim()) || '未命名模板',
         version: 0,
         nodes: [],
         edges: [],

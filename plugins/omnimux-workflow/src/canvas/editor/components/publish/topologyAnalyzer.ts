@@ -298,7 +298,7 @@ export function analyzeWorkflowInputs(
           group: 'text',
           isRecommended: true,
           recommendedRequired: true,
-          rationale: '工作流的起始输入，交给用户填写',
+          rationale: '模板的起始输入，交给用户填写',
           fixedDisplay: describeFixedValue(data.value ?? ''),
           isInternal: false,
         });

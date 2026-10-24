@@ -105,7 +105,7 @@ const DEFAULT_CATEGORY_MEDIA_URLS: Record<ApplicationCategory, string> = {
 
 /**
  * 分类未判定（文本 / 表格产物）时没有默认封面。
- * 返回空串而不是伪造一个视频封面 —— 伪造封面会掩盖「该工作流尚不支持发布」的事实。
+ * 返回空串而不是伪造一个视频封面 —— 伪造封面会掩盖「该模板尚不支持发布」的事实。
  */
 function defaultCoverFor(category: ApplicationCategory | null): string {
   return category ? DEFAULT_CATEGORY_COVERS[category] : '';
@@ -814,7 +814,7 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
                     color: 'var(--dsw-alias-label-secondary, #a1a1aa)',
                   }}
                 >
-                  当前工作流的产物为文本 / 表格，暂不支持发布为 AI 应用。请先在工作流中产出视频、图片或音频素材，再重新发布。
+                  当前模板的产物为文本 / 表格，暂不支持发布为 AI 应用。请先在模板中产出视频、图片或音频素材，再重新发布。
                 </div>
               )}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
@@ -1012,7 +1012,7 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
 
             {inputs.length === 0 && (
               <div style={{ fontSize: '12px', color: 'var(--dsw-alias-label-tertiary, #71717a)', padding: '12px 0' }}>
-                当前工作流没有可配置的输入项或生成参数。
+                当前模板没有可配置的输入项或生成参数。
               </div>
             )}
           </div>
@@ -1146,7 +1146,7 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
         width={460}
       >
         <div style={{ padding: '8px 0', fontSize: '13px', lineHeight: '1.6', color: 'var(--dsw-alias-label-secondary, #a1a1aa)' }}>
-          已存在同名应用「{overrideConflict.targetApp.name}」。继续发布将覆盖原应用的所有配置与工作流，后续将优先使用当前版本。
+          已存在同名应用「{overrideConflict.targetApp.name}」。继续发布将覆盖原应用的所有配置与模板，后续将优先使用当前版本。
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
           <button

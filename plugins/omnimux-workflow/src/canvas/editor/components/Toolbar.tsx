@@ -65,13 +65,13 @@ export interface ToolbarProps {
     coverUrl?: string;
   }>;
   onInsertTemplate?: (id: string) => void;
-  /** 新建工作流入口；缺省时不渲染入口卡（不伪造入口）。 */
+  /** 新建模板入口；缺省时不渲染入口卡（不伪造入口）。 */
   onCreateWorkflow?: () => void;
   /** 模板列表真实加载态（透传模板面板）。 */
   isTemplateLoading?: boolean;
   /** 模板列表真实错误文案（透传模板面板，可读、不静默）。 */
   templateError?: string;
-  /** 导出文件使用的当前工作流名称。 */
+  /** 导出文件使用的当前画布名称。 */
   workflowName?: string;
 }
 
