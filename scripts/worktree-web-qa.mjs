@@ -1211,6 +1211,219 @@ export async function runRightbarSeatQa(options = {}) {
   return report;
 }
 
+/* ------------------------------------------------- viewer 工具卡片场景 */
+
+/** 场景名：viewer 工具卡片（Issue #3715 的 rc.3 客户端迁移面）。 */
+export const VIEWER_CARD_SCENARIO = 'viewer-card';
+
+/**
+ * 与 `scripts/viewer-card-qa-entry.mjs` 中的常量保持一致。
+ * 入口在浏览器里跑（导入即执行 React 渲染），Node 侧不能 import 它，所以字面量在此复述。
+ */
+export const VIEWER_CARD_EXPECTED_PATH = '/tmp/qa-viewer-card.mp4';
+export const VIEWER_CARD_EXPECTED_KEYS = Object.freeze(['display_file', 'read_image']);
+
+/** 把验收入口编译成单文件 IIFE（React 一并打包，页面无需模块表）。 */
+export async function bundleViewerCardPage(root = REPO_ROOT) {
+  const entryPath = join(root, 'scripts', 'viewer-card-qa-entry.mjs');
+  assert.ok(existsSync(entryPath), `viewer 卡片验收入口不存在: ${entryPath}`);
+
+  const hubRequire = createRequire(join(root, 'plugins/omnimux/package.json'));
+  const { build } = hubRequire('esbuild');
+
+  const buildResult = await build({
+    absWorkingDir: root,
+    entryPoints: [entryPath],
+    bundle: true,
+    format: 'iife',
+    // 与插件自己的客户端构建保持一致：JSX 走 automatic runtime，浏览器平台，
+    // 生产态 define。否则源码里的 JSX 会退化成对全局 React 的引用。
+    jsx: 'automatic',
+    platform: 'browser',
+    define: { 'process.env.NODE_ENV': '"production"' },
+    write: false,
+    loader: {
+      '.woff': 'empty',
+      '.woff2': 'empty',
+      '.ttf': 'empty',
+      '.css': 'empty',
+      '.svg': 'text',
+      '.png': 'empty',
+    },
+    outdir: 'dist',
+    logLevel: 'silent',
+  });
+
+  assert.ok(buildResult.outputFiles && buildResult.outputFiles.length > 0, 'viewer 卡片验收入口编译产物为空');
+  return buildResult.outputFiles[0].text;
+}
+
+/** viewer 卡片验收页：一个挂载点，脚本自证状态挂到 `window.__viewerCardQa`。 */
+export function generateViewerCardHtml(bundledJs) {
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>OmniMux Worktree QA - viewer 工具卡片</title>
+  <style>
+    body { background: #0f1117; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 24px; }
+    #card-root { width: 560px; }
+  </style>
+</head>
+<body>
+  <div id="card-root"></div>
+  <script>${bundledJs}</script>
+</body>
+</html>`;
+}
+
+/** 运行 viewer 工具卡片验收：真实内核渲染真实客户端半边，DOM 断言 + 截图留证。 */
+export async function runViewerCardQa(options = {}) {
+  const root = options.root || REPO_ROOT;
+  const runId = randomUUID();
+  const evidenceDir = options.evidenceDir || join(root, 'docs', 'evidence');
+  mkdirSync(evidenceDir, { recursive: true });
+
+  const report = {
+    runId,
+    scenario: VIEWER_CARD_SCENARIO,
+    plugin: 'omnimux-viewer',
+    startedAt: new Date().toISOString(),
+    completedAt: null,
+    pass: false,
+    serverPort: null,
+    cdpPort: null,
+    assertions: [],
+    screenshot: null,
+    errors: [],
+  };
+
+  let server = null;
+  let chromeProc = null;
+  let cdpWs = null;
+
+  try {
+    const bundledJs = await bundleViewerCardPage(root);
+    report.assertions.push({ name: 'bundle-viewer-card-page', pass: true, size: bundledJs.length });
+
+    const htmlContent = generateViewerCardHtml(bundledJs);
+    server = http.createServer((req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(htmlContent);
+    });
+    await new Promise((resolveListen) => { server.listen(0, '127.0.0.1', resolveListen); });
+    report.serverPort = server.address().port;
+    report.assertions.push({ name: 'ephemeral-server-listen', pass: true, port: report.serverPort });
+
+    chromeProc = spawn(findChromePath(), [
+      '--headless=new',
+      '--remote-debugging-port=0',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--disable-gpu',
+      '--window-size=1280,800',
+      'about:blank',
+    ]);
+
+    const cdpPort = await new Promise((resolvePort, rejectPort) => {
+      const timeout = setTimeout(() => rejectPort(new Error('启动无头 Chrome 超时（5秒未响应）')), 5000);
+      chromeProc.stderr.on('data', (chunk) => {
+        const match = chunk.toString().match(/DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\//);
+        if (match) { clearTimeout(timeout); resolvePort(Number(match[1])); }
+      });
+      chromeProc.on('error', (error) => { clearTimeout(timeout); rejectPort(error); });
+    });
+    report.cdpPort = cdpPort;
+    report.assertions.push({ name: 'ephemeral-cdp-listen', pass: true, port: cdpPort });
+
+    const targets = await (await fetch(`http://127.0.0.1:${cdpPort}/json/list`)).json();
+    const pageTarget = targets.find((target) => target.type === 'page');
+    assert.ok(pageTarget && pageTarget.webSocketDebuggerUrl, '未找到有效的 Chrome Page 调试目标');
+
+    cdpWs = new WebSocket(pageTarget.webSocketDebuggerUrl);
+    let msgId = 0;
+    const sendCdp = (method, params = {}) =>
+      new Promise((resolveCdp, rejectCdp) => {
+        const id = ++msgId;
+        const onMsg = (event) => {
+          const message = JSON.parse(event.data);
+          if (message.id === id) {
+            cdpWs.removeEventListener('message', onMsg);
+            if (message.error) rejectCdp(new Error(`CDP [${method}] 失败: ${JSON.stringify(message.error)}`));
+            else resolveCdp(message.result || message);
+          }
+        };
+        cdpWs.addEventListener('message', onMsg);
+        cdpWs.send(JSON.stringify({ id, method, params }));
+      });
+
+    await new Promise((resolveWs, rejectWs) => {
+      cdpWs.addEventListener('open', resolveWs);
+      cdpWs.addEventListener('error', rejectWs);
+    });
+    await sendCdp('Page.enable');
+    await sendCdp('Runtime.enable');
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
+
+    const readState = async () => {
+      const result = await sendCdp('Runtime.evaluate', {
+        expression: 'JSON.stringify(window.__viewerCardQa || {})',
+        returnByValue: true,
+      });
+      return JSON.parse(result.result?.value || '{}');
+    };
+
+    let state = {};
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      state = await readState();
+      if (state.done === true || state.ok === true || state.error) break;
+      await new Promise((r) => setTimeout(r, 150));
+    }
+
+    if (state.error) report.errors.push(`viewer 客户端半边执行失败: ${state.error}`);
+    report.assertions.push({ name: 'viewer-client-apply', pass: !state.error });
+    if (Array.isArray(state.consoleErrors) && state.consoleErrors.length > 0) {
+      report.assertions.push({ name: 'viewer-console-clean', pass: false, consoleErrors: state.consoleErrors.slice(0, 3) });
+      report.errors.push(`viewer 客户端半边有 console 错误: ${state.consoleErrors[0]}`);
+    }
+
+    const keys = Array.isArray(state.keys) ? state.keys : [];
+    const keysOk = VIEWER_CARD_EXPECTED_KEYS.every((key) => keys.includes(key));
+    report.assertions.push({ name: 'toolview-registrations', pass: keysOk, keys });
+    if (!keysOk) report.errors.push(`工具卡片注册键不符: ${JSON.stringify(keys)}`);
+
+    report.assertions.push({
+      name: 'running-call-shows-path',
+      pass: state.pathShown === true,
+      expectedPath: VIEWER_CARD_EXPECTED_PATH,
+      text: typeof state.text === 'string' ? state.text.slice(0, 200) : '',
+    });
+    if (state.pathShown !== true) {
+      report.errors.push(`运行中的调用未渲染出路径 ${VIEWER_CARD_EXPECTED_PATH}（rc.3 phase 迁移回归）`);
+    }
+
+    const shotRes = await sendCdp('Page.captureScreenshot', { format: 'png' });
+    const pngBuffer = Buffer.from(shotRes.data, 'base64');
+    const shotPath = join(evidenceDir, 'viewer-card-qa.png');
+    writeFileSync(shotPath, pngBuffer);
+    const { width, height } = assertPng(pngBuffer);
+    report.screenshot = { path: shotPath, width, height, bytes: pngBuffer.length };
+    report.assertions.push({ name: 'screenshot-png-verified', pass: true, dimensions: { width, height }, bytes: pngBuffer.length });
+
+    report.pass = report.errors.length === 0 && report.assertions.every((a) => a.pass);
+  } catch (error) {
+    report.errors.push(String(error?.message || error));
+  } finally {
+    report.completedAt = new Date().toISOString();
+    try { if (cdpWs) cdpWs.close(); } catch { /* 关闭失败不影响结论 */ }
+    try { if (chromeProc) chromeProc.kill('SIGKILL'); } catch { /* 同上 */ }
+    try { if (server) server.close(); } catch { /* 同上 */ }
+    writeFileSync(join(evidenceDir, 'viewer-card-qa-report.json'), JSON.stringify(report, null, 2));
+  }
+
+  return report;
+}
+
 async function main() {
   const { positionals } = parseArgs({
     args: process.argv.slice(2),
@@ -1246,6 +1459,22 @@ async function main() {
       console.log(`✅ PASS (${elapsed}s, 端口: 服务 ${rep.serverPort} / 调试 ${rep.cdpPort}, 修复后间距: ${rep.positive?.gap})`);
       console.log('   反向对照: 顶栏 28 / 被遮挡 / 间距为负 —— 已复现，夹具未失真');
       console.log('   证据归档: .workbuddy/evidence/worktree-qa/<runId>/sidebar-chrome-qa-report.json');
+      return;
+    }
+    console.log(`❌ FAIL (${elapsed}s) -> ${[...rep.errors, ...failed].join('; ')}`);
+    process.exit(1);
+  }
+
+  if (stageArg === VIEWER_CARD_SCENARIO) {
+    console.log('\n🚀 [Worktree Web QA] 启动 viewer 工具卡片验收（真实内核 · 动态端口）...');
+    const started = Date.now();
+    const rep = await runViewerCardQa();
+    const elapsed = ((Date.now() - started) / 1000).toFixed(2);
+    const failed = rep.assertions.filter((a) => !a.pass).map((a) => a.name);
+    if (rep.pass) {
+      console.log(`✅ PASS (${elapsed}s, 端口: 服务 ${rep.serverPort} / 调试 ${rep.cdpPort})`);
+      console.log(`   卡片渲染: 运行中的 display_file 调用显示路径 ${VIEWER_CARD_EXPECTED_PATH}`);
+      console.log('   证据归档: docs/evidence/viewer-card-qa-report.json + viewer-card-qa.png');
       return;
     }
     console.log(`❌ FAIL (${elapsed}s) -> ${[...rep.errors, ...failed].join('; ')}`);

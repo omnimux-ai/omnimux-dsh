@@ -66,6 +66,8 @@
 4. `tests/card-model.test.ts:11` 同一 import（RULE-01 保护，需维护者批准）。
 5. 文档：viewer README / harness-compatibility 里「rc.3 没有替代品」的表述已过期，需改成 `SettingsForms` 语义。
 
+**界面改动的端到端证据（新增）**：viewer 的卡片没有任何页面入口（它经 `ctx.slots.register('tool.call.toolview', …)` 注册），既有工作树 Web 验收只覆盖侧边栏应用页，所以补了一个专用场景 `node scripts/worktree-web-qa.mjs viewer-card`：把插件客户端半边连同 React 编译后在真实 Chrome 内核里 `apply()`、注册、渲染运行中的 `display_file` 调用，读 DOM 断言卡片头部出现路径，并留存截图与报告。裁决文件是 `plugins/omnimux-viewer/tests/e2e/viewer-card-rc3.e2e.test.js`（与 `flow-alignment.e2e.test.js` 同一约定：只裁决证据，不自己起浏览器）。实测：场景 PASS，截图 1280x713 渲染出 `title.video /tmp/qa-viewer-card.mp4 state.running`，e2e 测试 1/1 通过。
+
 ## 残留
 
 - 声明面双代范围（#3725）独立保留，可单独回滚本 issue 的提交。
