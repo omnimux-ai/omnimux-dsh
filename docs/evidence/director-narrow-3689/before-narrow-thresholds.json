@@ -1,0 +1,46 @@
+{
+  "narrowViewport": {
+    "width": 900,
+    "height": 560
+  },
+  "narrowThresholds": {
+    "middleMinHeight": 180,
+    "sequencerMinHeight": 160,
+    "sequencerMaxHeight": 236
+  },
+  "measured": {
+    "viewport": {
+      "width": 900,
+      "height": 560
+    },
+    "topbarHeight": 48,
+    "gridColumns": "220px 59px",
+    "gridRows": "11px 224px 236px",
+    "grid": {
+      "clientHeight": 471,
+      "scrollHeight": 471,
+      "overflowY": "visible"
+    },
+    "middleColumn": {
+      "top": 89,
+      "bottom": 100,
+      "width": 59,
+      "height": 11
+    },
+    "rightDock": {
+      "top": 100,
+      "bottom": 324,
+      "width": 279,
+      "height": 224
+    },
+    "sequencer": {
+      "top": 324,
+      "bottom": 560,
+      "width": 279,
+      "height": 236
+    }
+  },
+  "failures": [
+    "middle column height: 实测 11 vs 期望 >= 180"
+  ]
+}

@@ -1,7 +1,16 @@
 .director-sequencer {
     position: relative;
+    /* max-height 放这里而不是内联样式：内联会压过下面的窄屏断点。 */
+    max-height: 60vh;
     color: var(--dsw-alias-label-secondary);
     font-size: var(--fs-xs);
+}
+
+/* 只有「窄且矮」才收窄：窄而高的窗口空间充足，不能永久限制用户拖高时间轴。 */
+@media (max-width: 1023px) and (max-height: 620px) {
+    .director-sequencer {
+        max-height: min(236px, 30vh);
+    }
 }
 
 .director-viewport-shell {
