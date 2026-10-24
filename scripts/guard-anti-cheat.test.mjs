@@ -303,3 +303,76 @@ describe('AI Agent 防造假与自适应门禁系统测试 (guard-anti-cheat.tes
   });
 
 });
+
+describe('5. 新增测试文件不得被误判为削弱既有标准', () => {
+  const TS_CONTENT = "import { test, expect } from 'vitest'\ntest('adds', () => {\n  const v: number = 1\n  expect(v).toBe(1)\n})\n";
+  const JS_CONTENT = "import test from 'node:test'\ntest('adds', () => {})\n";
+
+  it('新增解析不了的 TypeScript 测试文件放行（acorn 语法层盲区，无既有标准可削弱）', () => {
+    const payload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__new-probe.test.ts', content: TS_CONTENT } });
+    assert.equal(handle(payload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'allow');
+    const tsxPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__new-probe.test.tsx', content: TS_CONTENT } });
+    assert.equal(handle(tsxPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'allow');
+  });
+
+  it('父目录不存在时新建测试文件放行（新建插件测试目录是常规动作）', () => {
+    const jsPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'plugins/__probe-plugin/tests/new.test.mjs', content: JS_CONTENT } });
+    assert.equal(handle(jsPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'allow');
+    const tsPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'plugins/__probe-plugin/tests/new.test.ts', content: TS_CONTENT } });
+    assert.equal(handle(tsPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'allow');
+  });
+
+  it('放宽不溢出：纯新增里含跳过选项仍拒绝', () => {
+    const skipped = "import test from 'node:test'\ntest.skip('adds', () => {})\n";
+    const payload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'plugins/__probe-plugin/tests/skip.test.mjs', content: skipped } });
+    assert.equal(handle(payload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+  });
+
+  it('放宽不溢出：edit 一个不存在的测试文件仍拒绝', () => {
+    const payload = JSON.stringify({ tool_name: 'edit', cwd: ROOT_DIR, tool_input: { file_path: 'plugins/__probe-plugin/tests/missing.test.mjs', old_string: 'x', new_string: 'y' } });
+    assert.equal(handle(payload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+  });
+
+  it('放宽不溢出：改写既有测试断言仍拒绝，不因本次改动放行', () => {
+    const dir = resolve(ROOT_DIR, 'scripts/__probe-existing');
+    mkdirSync(dir, { recursive: true });
+    const file = resolve(dir, 'existing.test.mjs');
+    try {
+      writeFileSync(file, "import test from 'node:test'\nimport assert from 'node:assert/strict'\ntest('keeps', () => { assert.equal(value(), 1) })\n");
+      const payload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: file, content: "import test from 'node:test'\nimport assert from 'node:assert/strict'\ntest('keeps', () => { assert.equal(value(), 2) })\n" } });
+      assert.equal(handle(payload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('6. 解析不了的新增测试文件仍拦最典型风险（不因放宽而失守）', () => {
+  const TS_HEAD = 'const typed: number = 1;\n';
+
+  it('跳过/聚焦选择仍拒绝', () => {
+    const skipPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-skip.test.ts', content: "import { test } from 'vitest'\ntest.skip('a', () => {\n  const v: number = 1\n})\n" } });
+    assert.equal(handle(skipPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    const onlyPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-only.test.ts', content: "import { test } from 'vitest'\ntest.only('a', () => {\n  const v: number = 1\n})\n" } });
+    assert.equal(handle(onlyPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    // vitest 对象选项写法：test('a', { skip: true }, fn)
+    const optionPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-option.test.ts', content: "import { test } from 'vitest'\ntest('a', { skip: true }, () => {\n  const v: number = 1\n})\n" } });
+    assert.equal(handle(optionPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+  });
+
+  it('动态执行与外部执行来源仍拒绝', () => {
+    const evalPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-eval.test.ts', content: TS_HEAD + "eval('1');\n" } });
+    assert.equal(handle(evalPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    const vmPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-vm.test.ts', content: "import vm from 'node:vm'\n" + TS_HEAD } });
+    assert.equal(handle(vmPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    const dynImportPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-import.test.ts', content: TS_HEAD + "import('./x');\n" } });
+    assert.equal(handle(dynImportPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+  });
+
+  it('只匹配调用形态，正常命名与注释不误伤', () => {
+    const namedPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-named.test.ts', content: "import { test } from 'vitest'\ntest('skips invalid input', () => {\n  const v: number = 1\n})\n" } });
+    assert.equal(handle(namedPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'allow');
+    const commentPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-comment.test.ts', content: '// 这个用例 skip 掉重活\n' + TS_HEAD } });
+    assert.equal(handle(commentPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'allow');
+  });
+});

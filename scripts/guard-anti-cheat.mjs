@@ -27,6 +27,27 @@ const isFixturePath = path => /(^|\/)(fixtures?|mocks?|test-data)(\/|$)|(\.|\/)(
 export function isProtectedTestPath(path) {
   return isTestPath(path) && !isFixturePath(path);
 }
+/**
+ * 解析不了的新增测试文件里，仍可用字面模式拦住最典型的三类风险：
+ * 跳过/聚焦选择、动态执行、外部执行来源。只匹配「调用形态」而不是裸关键字，
+ * 避免把 `test('skips invalid input')` 这类正常命名误伤。
+ */
+const UNPARSEABLE_RISK_PATTERNS = [
+  /(?:^|[^.\w$])(?:test|it|describe|suite)\.(?:skip|only|todo)\s*\(/,
+  // vitest 也支持对象选项写法：test('a', { skip: true }, fn)
+  /\{\s*(?:skip|only|todo)\s*:\s*true\b/,
+  /\beval\s*\(/,
+  /\bnew\s+Function\s*\(/,
+  /\brequire\s*\(/,
+  /(?:^|[^.\w$])import\s*\(/,
+  /['"]node:(?:vm|child_process|worker_threads)['"]/,
+  /\bprocess\.binding\s*\(/,
+];
+function unparseableNewFileRisk(content) {
+  const text = String(content ?? '');
+  return UNPARSEABLE_RISK_PATTERNS.some(pattern => pattern.test(text));
+}
+
 function testDecision(inspection) {
   return inspection.allowed ? { permissionDecision: 'allow' } : {
     permissionDecision: 'deny',
@@ -164,9 +185,16 @@ function createSourceInspection(target, allowMissing = true) {
     const parts = path.split(sep).filter(Boolean);
     let current = sep;
     record(current, true);
+    // 中间组件可以整条缺失（新建 `plugins/x/tests/` 这类目录是常规动作），但一旦出现
+    // 缺失组件，其后所有组件必须同样缺失：缺失层之下又出现实体说明是符号链接、并发创建
+    // 或路径构造异常，一律 fail closed。存在的组件仍逐个做 realpath 与类型检查。
+    let missingSeen = false;
     for (let index = 0; index < parts.length; index++) {
       current = resolve(current, parts[index]);
-      record(current, index < parts.length - 1 || directory, index === parts.length - 1 && missingAllowed);
+      const last = index === parts.length - 1;
+      const item = record(current, !last || directory, last ? missingAllowed : true);
+      if (item?.missing) { missingSeen = true; continue; }
+      if (missingSeen) throw new Error('Noncanonical or nonregular inspection path');
     }
     return records.get(path);
   }
@@ -364,7 +392,10 @@ function evaluateWithInspection({ tool, filePath, content, cwd = process.cwd() }
   const isTestFile = isTestPath(normalizedPath);
   const isFixtureFile = isFixturePath(normalizedPath);
   // 目标已存在时必须与磁盘现状比较：否则导出的评估入口看不出断言被削弱，
-  // 会对同一份候选内容给出比 hook 路径更宽松的结论（两处判定必须一致）。
+  // 会对同一份候选内容给出比 hook 路径更宽松的结论。
+  // 注意一致性是**单向**的：本入口比 `handle()` 更保守——它不参与「无 baseline 的
+  // 新增文件解析失败即放行」那条放宽，同一份新增 TS 候选在这里仍然拒绝。
+  // 本入口只被单测使用，hook 与 CI 都走 `handle()` 的 CLI，所以不影响运行路径。
   if (isTestFile && !isFixtureFile) {
     let snapshot;
     let inspection;
@@ -499,6 +530,15 @@ export function handle(rawInput) {
         checkedTarget.verify();
         if (unverifiedImport) return formatHookOutput(testDecision({ allowed: false }), hookEventName);
         if (inspection.allowed) return formatHookOutput({ permissionDecision: 'allow' }, hookEventName);
+        // 无 baseline = 纯新增：磁盘上没有既有文件，就没有既有标准可削弱。此时若唯一原因是
+        // acorn 解析不了候选内容（`source` 为 null 说明目标不存在），放行——与 CI 侧
+        // `change.before === null` 的「纯加法」口径一致。但解析不了就等于放弃了结构化检查，
+        // 所以仍用字面模式拦最典型的风险（跳过/聚焦、动态执行、外部执行来源）；命中即沿用
+        // 拒绝，且这些原因不可经声明放行。
+        if (typeof source !== 'string' && inspection.reason === 'unsupported-or-incomplete-test-syntax'
+          && !unparseableNewFileRisk(content)) {
+          return formatHookOutput({ permissionDecision: 'allow' }, hookEventName);
+        }
         // 旧标准变更通道：仅对「被 spec 逐条点名的具名用例削弱」放行。
         // 规格在被改文件所属的工作树里，不能用门禁自己的检出根去找。
         const declared = decideOldStandardDeclaration({ filePath: repoPath(target), inspection, root: repoRootOf(target) ?? REPO_ROOT });
