@@ -523,7 +523,7 @@ export function normalizeWorkflowTopology(rawNodes = [], rawEdges = []) {
  * @param {string} [title]
  * @returns {{ groupId: string, nodes: Array<object>, edges: Array<object> }}
  */
-export function wrapNodesInGroup(nodes = [], edges = [], title = '工作流 (副本)') {
+export function wrapNodesInGroup(nodes = [], edges = [], title = '模板 (副本)') {
   const { nodes: normNodes, edges: normEdges } = normalizeWorkflowTopology(nodes, edges)
 
   if (!Array.isArray(normNodes) || normNodes.length === 0) {

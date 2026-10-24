@@ -22,7 +22,7 @@ const KIND_LABELS: Record<string, string> = {
   image: '图像',
   audio: '音频',
   document: '文档',
-  canvas: '工作流',
+  canvas: '模板',
   asset: '资产',
   product: '产品',
 };

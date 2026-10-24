@@ -45,11 +45,11 @@ test('i18n: setLocale 幂等且可来回切换', () => {
 test('i18n: 分组 / 模板 / 资产入库 key 中英都有值', () => {
   setLocale('zh');
   assert.equal(t('group.defaultTitle'), '新建组');
-  assert.equal(t('template.modal.defaultName'), '新建工作流模板');
+  assert.equal(t('template.modal.defaultName'), '新建模板');
   assert.equal(t('asset.modal.defaultName'), '画布产物');
   setLocale('en');
   assert.equal(t('group.defaultTitle'), 'New group');
-  assert.equal(t('template.modal.defaultName'), 'New workflow template');
+  assert.equal(t('template.modal.defaultName'), 'New template');
   assert.equal(t('asset.modal.defaultName'), 'Canvas output');
   setLocale('zh');
 });

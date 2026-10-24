@@ -399,9 +399,9 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         return;
       }
 
-      // 空白画布或单节点右键：在当前鼠标坐标处创建空工作流组容器
+      // 空白画布或单节点右键：在当前鼠标坐标处创建空模板组容器
       const existingGroups = nodes.filter((n) => n.type === 'group');
-      const groupTitle = `工作流-${existingGroups.length + 1}`;
+      const groupTitle = `模板-${existingGroups.length + 1}`;
       const groupId = `group_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       const width = 640;
       const height = 360;
@@ -1038,7 +1038,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         onClose={() => setIsShortcutsOpen(false)}
       />
 
-      {/* 发布为 AI 应用向导弹窗 (精准收敛至工作流打组) */}
+      {/* 发布为 AI 应用向导弹窗 (精准收敛至模板打组) */}
       <PublishWizardModal
         isOpen={isPublishModalOpen}
         onClose={() => {
@@ -1107,7 +1107,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         items={batchAssetItems}
       />
 
-      {/* 创建可复用工作流弹窗 */}
+      {/* 创建可复用模板弹窗 */}
       <CreateWorkflowModal
         isOpen={createWorkflowModalOpen}
         onClose={() => {

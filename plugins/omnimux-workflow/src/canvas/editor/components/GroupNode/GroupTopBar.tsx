@@ -105,7 +105,7 @@ export const GroupTopBar: React.FC<GroupTopBarProps> = memo(({
 
         <span className="wf-floating-top-pill__divider" />
 
-        {/* 保存工作流 */}
+        {/* 保存模板 */}
         <button
           type="button"
           className="wf-floating-top-pill__btn"
@@ -184,7 +184,7 @@ export const GroupTopBar: React.FC<GroupTopBarProps> = memo(({
           <span>{t('group.ungroupGroup')}</span>
         </button>
 
-        {/* 删除工作流 */}
+        {/* 删除模板 */}
         {onDeleteWorkflow && (
           <>
             <span className="wf-floating-top-pill__divider" />
