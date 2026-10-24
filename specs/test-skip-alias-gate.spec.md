@@ -25,7 +25,7 @@
 
 ### 1. `scripts/test-authoring-inspection.mjs` — 识别旧式别名
 
-新增 `legacySelectors = new Set(['xit', 'xtest', 'xdescribe', 'fit', 'ftest', 'fdescribe'])`，并在 `inspect` 里加两条判定：
+新增 `legacySelectors = new Set(['xit', 'xtest', 'xdescribe', 'xcontext', 'xspecify', 'fit', 'ftest', 'fdescribe'])`，并在 `inspect` 里加两条判定：
 
 - `CallExpression` 且 `callee` 是 `legacySelectors` 里的标识符 → `test-execution-selector-needs-review`；
 - `MemberExpression` 且 `object` 是 `legacySelectors` 里的标识符（例如 `xit.each(...)`）→ 同上。
@@ -41,7 +41,8 @@
 - 假设 1：仓库现有测试文件里没有任何旧别名调用，因此新增识别不会让任何既有文件突然被拒。依据：`grep -rlE "^[[:space:]]*(fit|xit|xtest|ftest|fdescribe|xdescribe)[[:space:]]*\("` 在全部 `*.test.*` / `*.spec.ts` 上命中 **0** 个文件。
 - 假设 2：`fit` 作为普通函数名在测试文件里出现会误拒。这是**有意的保守**：`it` / `test` 早就是运行器名，同名标识符一律按运行器处理；且仓库里 `fit(` 的命中都在 vendored bundle 的字符串内，不在测试文件里。
 - 假设 3：别名集合取**保守超集**。依据：mocha 公布的 globals 含 `xcontext`/`xdescribe`/`xit`/`xspecify`，jasmine 与 jest 含 `fdescribe`/`fit`/`xdescribe`/`xit`，jest 另有 `xtest`；`ftest` 未必存在于任何框架，但它是聚焦别名的常见拼写，宁可多拒一个不存在的名字。反向地，`context`/`specify` 是 describe/it 别名而非跳过/聚焦，不纳入（实测 `context('c', () => {})` 仍放行）。
-- 假设 4：`skipIf`/`runIf` 纳入 `blocked` 后，任何 `X.skipIf` 成员访问都被拒，因此「条件恰好是对象字面量」的形态不再绕过。依据：原先 `it.skipIf({a:1})('c', () => {})` 被放行——`{a:1}` 看起来像合法 options 对象，绕过了「参数形状」那条检查。仓库里零处使用 `skipIf`/`runIf`，无既有文件受影响。
+- 假设 4：`skipIf`/`runIf` 纳入 `blocked` 后，任何 `X.skipIf` 成员访问都被拒，因此「条件恰好是对象字面量」的形态不再绕过。依据：原先 `it.skipIf({a:1})('c', () => {})` 被放行——`{a:1}` 看起来像合法 options 对象，绕过了「参数形状」那条检查。仓库里确有 4 个文件使用 `describe.skipIf(!runnable)`（`plugins/omnimux-browser/tests/e2e/pairing-page.e2e.spec.ts`、`pairing.e2e.spec.ts`、`pairing-approval.e2e.spec.ts`、`media-lit-transition.e2e.spec.ts`），但它们都是 acorn 解析不了的 TS，改动前后都走 `unsupported-or-incomplete-test-syntax` 硬拒，所以**判定不变**（不是「零处使用」）。代价是 `{ skipIf: … }` / `{ runIf: … }` 对象属性与 `obj.skipIf` 纯成员读取也会被判为选择器——与既有的 `{ skip: … }` 属同一条过宽形状；旧/新两版扫过全部受保护测试路径，判定变化数为 0。
+- 假设 5：字面兜底只在解析失败时运行，而那时结构化检查不执行，所以两层的缺口清单不能互相替代。依据：纯新增的不可解析文件里，`test['skip'](...)`、`test.concurrent.skip(...)`、`it.skipIf(true)(...)`、`describe.skipIf(!runnable)(...)`、`xit.each([1])(...)` 实测全部放行。合同文档已按此改写，不再用「结构化检查能拒」去论证某项不算缺口。
 
 ## 证伪方式
 
@@ -55,7 +56,7 @@
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
 | 语法层评估测试 | `node --test scripts/test-authoring-inspection.test.mjs` | **51/51 通过**（47 → 51，新增 4 条：别名识别、不溢出、不可声明、mocha 别名与 skipIf 对象条件） |
-| 门禁自身测试 | `node --test scripts/guard-anti-cheat.test.mjs` | **34/34 通过**（32 → 34，新增 2 条：纯新增路径的别名兜底、成员调用不误伤） |
+| 门禁自身测试 | `node --test scripts/guard-anti-cheat.test.mjs` | **35/35 通过**（32 → 35，新增 3 条：纯新增路径的别名兜底、成员调用不误伤、注释/字符串里带括号别名会被拒） |
 | 声明校验测试 | `node --test scripts/verify-test-standard-declarations.test.mjs` | **19/19 通过**（未改动） |
 | 门禁套件 | `pnpm test:gates` | 469 / 457 通过；**12 条失败与改动前逐条同名**（既有环境/内容问题） |
 

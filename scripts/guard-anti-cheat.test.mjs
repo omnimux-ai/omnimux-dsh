@@ -391,4 +391,13 @@ describe('6. 解析不了的新增测试文件仍拦最典型风险（不因放�
     const plainPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-plain.test.ts', content: TS_HEAD + "test('adds', () => {});\n" } });
     assert.equal(handle(plainPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'allow');
   });
+
+  // 已知的过宽面，如实固定住而不是假装不存在：字面模式不区分代码与注释/字符串，
+  // 所以带括号的别名出现在注释或字符串里也会被拒。合同 §3.1 已写明这条边界。
+  it('字面兜底不区分代码与注释：带括号的别名在注释/字符串里也会被拒', () => {
+    const commentPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-comment-paren.test.ts', content: '// 不要写 xit(\n' + TS_HEAD } });
+    assert.equal(handle(commentPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    const stringPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-string-paren.test.ts', content: TS_HEAD + "const s = 'xit(';\n" } });
+    assert.equal(handle(stringPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+  });
 });
