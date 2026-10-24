@@ -1,8 +1,7 @@
 /**
  * 画布「添加节点」菜单：Dock (+) 与 ContextMenu 钻取共用同一份 UI。
  * 数据来自 addNodePalette（单点真源）；零 inline 颜色。
- * 调色板行保持单行（无副标题）；底部「新建工作流」入口卡是唯一的例外，
- * 其副标题来自既有 i18n key，描述真实语义（存为可复用模板）。
+ * 调色板行保持单行（无副标题）；底部入口卡是唯一的例外。
  *
  * 面板是**无分类平铺列表**（Issue 3640）：条目按 addNodePalette 的声明顺序渲染，
  * 不渲染分类标题 / 计数 / 折叠态；检索词同样来自 addNodePalette（取自节点注册表），
@@ -10,15 +9,18 @@
  *
  * 两个入口共用清单，但形态按 scope 分叉（Issue 3651）：Dock 面板有搜索框与命中高亮；
  * 右键钻取面板**不渲染搜索框**（该浮层不做检索，输入框只会是死入口），列表直接平铺，
- * 底部工作流入口在右键下是平铺行（无分割线、无常态底色），样式见 components.css 的
+ * 底部入口在右键下是平铺行（无分割线、无常态底色），样式见 components.css 的
  * `wf-node-menu--context` 规则。
+ *
+ * 底部入口是 **ComfyUI 工作流**入口（Issue 3669）：点它把面板内容切成 comfy 视图
+ * （导入动作 + 最近导入列表）。组件自身不打开任何弹窗、不读 store —— 数据与动作都由
+ * 调用方通过 `comfy` prop 注入；缺省时不渲染该入口，也不伪造入口。
  */
 
 import { memo, useMemo, useState, type ComponentType, type FC, type MouseEvent, type ReactNode } from 'react';
 import {
   AudioLines,
   Box,
-  Boxes,
   ChevronLeft,
   ChevronRight,
   Film,
@@ -28,8 +30,10 @@ import {
   Type,
   UploadCloud,
   Video,
+  Workflow,
 } from 'lucide-react';
 import { useT } from '../../i18n';
+import { formatComfyRecentTime, type ComfyRecentEntry } from '../utils/comfyRecents';
 import {
   getAddNodePalette,
   matchAddNodePalette,
@@ -50,16 +54,23 @@ const ICON_MAP: Record<AddNodePaletteIcon, ComponentType<{ size?: number }>> = {
   UploadCloud,
 };
 
+/** 底部 ComfyUI 工作流入口需要的数据与动作（由调用方注入，组件不读 store）。 */
+export interface AddNodeComfyProps {
+  /** 「最近导入」条目，最新在前。 */
+  recents: ComfyRecentEntry[];
+  /** 打开系统文件选择器（选择器实例由调用方持有）。 */
+  onImport: () => void;
+  /** 复现一条最近导入：只进预览，由用户确认后应用。 */
+  onApplyRecent: (name: string) => void;
+}
+
 export interface AddNodeMenuProps {
   scope: AddNodePaletteScope;
   onSelect: (type: CanvasAddNodeType) => void;
   /** Context 钻取：返回主菜单 */
   onBack?: () => void;
-  /**
-   * 面板底部「新建工作流」入口卡（存为可复用模板）。
-   * 缺省时不渲染该卡——组件自身不打开任何弹窗，也不伪造入口。
-   */
-  onCreateWorkflow?: () => void;
+  /** 底部 ComfyUI 工作流入口；缺省时不渲染该入口。 */
+  comfy?: AddNodeComfyProps;
 }
 
 function stopMenuEvent(event: MouseEvent) {
@@ -87,17 +98,20 @@ function renderLabel(match: AddNodePaletteMatch): ReactNode {
   return parts;
 }
 
-const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack, onCreateWorkflow }) => {
+const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack, comfy }) => {
   const t = useT();
   const [query, setQuery] = useState('');
-  /** 搜索只属于 Dock 面板：右键浮层不做检索（Issue 3651）。 */
-  const showSearch = scope === 'dock';
+  const [view, setView] = useState<'palette' | 'comfy'>('palette');
+  /** 搜索只属于 Dock 的调色板视图：右键浮层与 comfy 视图都不做检索（Issue 3651 / 3669）。 */
+  const showSearch = scope === 'dock' && view === 'palette';
 
   const items = useMemo(() => getAddNodePalette(scope), [scope]);
   const matches = useMemo(
     () => matchAddNodePalette(items, showSearch ? query : '', t),
     [items, query, showSearch, t],
   );
+
+  const isComfyView = view === 'comfy' && Boolean(comfy);
 
   return (
     <div
@@ -106,21 +120,24 @@ const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack, onCreateWo
     >
       <div className="wf-node-menu__container">
         <div className="wf-node-menu__header">
-          {scope === 'context' ? (
+          {isComfyView || scope === 'context' ? (
             <button
               type="button"
               className="wf-node-menu__back-btn"
               onClick={(event) => {
                 event.stopPropagation();
-                onBack?.();
+                if (isComfyView) setView('palette');
+                else onBack?.();
               }}
               title={t('menu.back')}
             >
               <ChevronLeft size={16} />
             </button>
           ) : null}
-          <span className="wf-node-menu__title">{t('menu.addNode')}</span>
-          {scope === 'dock' ? <kbd className="wf-node-menu__kbd">N</kbd> : null}
+          <span className="wf-node-menu__title">
+            {isComfyView ? t('comfy.panel.title') : t('menu.addNode')}
+          </span>
+          {scope === 'dock' && !isComfyView ? <kbd className="wf-node-menu__kbd">N</kbd> : null}
         </div>
 
         {showSearch ? (
@@ -139,14 +156,73 @@ const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack, onCreateWo
         ) : null}
 
         <div className="wf-node-menu__list">
-          {showSearch && matches.length === 0 ? (
+          {isComfyView ? (
+            <>
+              <button
+                type="button"
+                className="wf-node-menu__entry"
+                onClick={(event) => {
+                  stopMenuEvent(event);
+                  comfy?.onImport();
+                }}
+              >
+                <div className="wf-node-menu__icon-box">
+                  <UploadCloud size={18} />
+                </div>
+                <span className="wf-node-menu__entry-text">
+                  <span className="wf-node-menu__entry-title">{t('comfy.panel.import')}</span>
+                  <span className="wf-node-menu__entry-hint">{t('comfy.panel.formatHint')}</span>
+                </span>
+                <ChevronRight size={16} className="wf-node-menu__entry-arrow" />
+              </button>
+
+              {comfy && comfy.recents.length > 0 ? (
+                <>
+                  <div className="wf-node-menu__section">{t('comfy.panel.recent')}</div>
+                  {comfy.recents.map((entry) => {
+                    const time = formatComfyRecentTime(entry.savedAt);
+                    const meta = (time ? t('comfy.panel.itemMeta') : t('comfy.panel.itemMetaNoTime'))
+                      .replace('{format}', entry.format)
+                      .replace('{count}', String(entry.nodeCount))
+                      .replace('{time}', time);
+                    return (
+                      <button
+                        key={entry.name}
+                        type="button"
+                        className="wf-node-menu__entry"
+                        onClick={(event) => {
+                          stopMenuEvent(event);
+                          comfy.onApplyRecent(entry.name);
+                        }}
+                      >
+                        <div className="wf-node-menu__icon-box">
+                          <Workflow size={18} />
+                        </div>
+                        <span className="wf-node-menu__entry-text">
+                          <span className="wf-node-menu__entry-title">{entry.name}</span>
+                          <span className="wf-node-menu__entry-hint">{meta}</span>
+                        </span>
+                        <ChevronRight size={16} className="wf-node-menu__entry-arrow" />
+                      </button>
+                    );
+                  })}
+                </>
+              ) : (
+                <div className="wf-node-menu__empty" role="status">
+                  <p className="wf-node-menu__empty-title">{t('comfy.panel.empty')}</p>
+                </div>
+              )}
+            </>
+          ) : null}
+
+          {!isComfyView && showSearch && matches.length === 0 ? (
             <div className="wf-node-menu__empty" role="status">
               <p className="wf-node-menu__empty-title">{t('palette.searchEmpty')}</p>
               <p className="wf-node-menu__empty-hint">{t('palette.searchEmptyHint')}</p>
             </div>
           ) : null}
 
-          {matches.map((match) => {
+          {!isComfyView && matches.map((match) => {
             const { item } = match;
             const Icon = ICON_MAP[item.icon];
             return (
@@ -175,22 +251,22 @@ const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack, onCreateWo
           })}
         </div>
 
-        {onCreateWorkflow ? (
+        {!isComfyView && comfy ? (
           <div className="wf-node-menu__footer">
             <button
               type="button"
               className="wf-node-menu__entry"
               onClick={(event) => {
                 stopMenuEvent(event);
-                onCreateWorkflow();
+                setView('comfy');
               }}
             >
               <div className="wf-node-menu__icon-box">
-                <Boxes size={18} />
+                <Workflow size={18} />
               </div>
               <span className="wf-node-menu__entry-text">
-                <span className="wf-node-menu__entry-title">{t('template.panel.newWorkflow')}</span>
-                <span className="wf-node-menu__entry-hint">{t('template.panel.newWorkflowHint')}</span>
+                <span className="wf-node-menu__entry-title">{t('comfy.entry.title')}</span>
+                <span className="wf-node-menu__entry-hint">{t('comfy.entry.hint')}</span>
               </span>
               <ChevronRight size={16} className="wf-node-menu__entry-arrow" />
             </button>

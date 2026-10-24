@@ -19,7 +19,7 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import { useT } from '../../i18n';
-import AddNodeMenu from './AddNodeMenu';
+import AddNodeMenu, { type AddNodeComfyProps } from './AddNodeMenu';
 import type { CanvasAddNodeType } from './addNodePalette';
 
 export type { CanvasAddNodeType };
@@ -50,8 +50,8 @@ interface ContextMenuProps {
   onClose: () => void;
   onAction: (action: ContextMenuAction, context: ContextMenuContext) => void;
   onAddNode?: (type: CanvasAddNodeType) => void;
-  /** 钻取面板底部「新建工作流」入口卡（存为模板）；缺省时不渲染。 */
-  onCreateWorkflow?: () => void;
+  /** 钻取面板底部 ComfyUI 工作流入口需要的数据与动作；缺省时不渲染该入口。 */
+  comfy?: AddNodeComfyProps;
   canUndo?: boolean;
   canRedo?: boolean;
   /** Whether the in-island clipboard holds nodes (gates paste). */
@@ -91,7 +91,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   onClose,
   onAction,
   onAddNode,
-  onCreateWorkflow,
+  comfy,
   canUndo = false,
   canRedo = false,
   hasClipboard = false,
@@ -234,7 +234,17 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             onClose();
           }}
           onBack={() => setView('main')}
-          onCreateWorkflow={onCreateWorkflow}
+          comfy={comfy ? {
+            recents: comfy.recents,
+            onImport: () => {
+              comfy.onImport();
+              onClose();
+            },
+            onApplyRecent: (name) => {
+              comfy.onApplyRecent(name);
+              onClose();
+            },
+          } : undefined}
         />
       )}
     </div>,
