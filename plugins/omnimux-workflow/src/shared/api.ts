@@ -80,7 +80,7 @@ export const WORKFLOW_API_ROUTES = {
   /** GET: execution SSE event stream (text/event-stream). */
   executionEvents: (workspaceId: string, executionId: string) =>
     `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${workspaceId}/executions/${executionId}/events`,
-  /** POST: speech-to-text transcription (Issue 744; default model doubao-asr-bigmodel, default format srt). */
+  /** POST: speech-to-text transcription (Issue 744; default model whisper-1, default format srt). */
   speechToText: (workspaceId: string) =>
     `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${workspaceId}/speech-to-text`,
   /** POST: extract video from social media URL and download to local media. */

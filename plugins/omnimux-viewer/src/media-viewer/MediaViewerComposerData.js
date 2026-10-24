@@ -107,8 +107,7 @@ export const DEFAULT_FALLBACK_CATALOG = {
     {
       "id": "seedream-5-0-pro",
       "label": "Seedream 5.0 Pro",
-      "badge": "官方",
-      "subtitle": "文生图 / 垫图 · 官方专线",
+      "subtitle": "1K-2K",
       "family": "seedream",
       "parameters": {
         "aspectRatio": {
@@ -241,8 +240,7 @@ export const DEFAULT_FALLBACK_CATALOG = {
       "channelGroups": [
         {
           "id": "480p",
-          "label": "标准版",
-          "default": true,
+          "label": "经济版",
           "badge": "480p 档 · 经济走量",
           "wireGroup": "desktop-480p",
           "pricing": {
@@ -253,7 +251,8 @@ export const DEFAULT_FALLBACK_CATALOG = {
         },
         {
           "id": "720p",
-          "label": "高清版",
+          "label": "标准版",
+          "default": true,
           "badge": "720p 档 · 稳定满血",
           "wireGroup": "desktop-720p",
           "pricing": {

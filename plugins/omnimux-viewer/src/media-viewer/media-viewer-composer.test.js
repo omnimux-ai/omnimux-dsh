@@ -28,7 +28,13 @@ describe('MediaViewerComposer Component Contract', () => {
 
     const hd720 = seedance25.channels.find((c) => c.id === '720p');
     assert.ok(hd720, 'Must include 720p version');
-    assert.equal(hd720.name, '高清版');
+    // #3705：中枢口径下 720p 才是「标准版」且为默认档，480p 是「经济版」。
+    assert.equal(hd720.name, '标准版');
+    assert.equal(defaultMediaChannel(seedance25).id, '720p');
+    const eco480 = seedance25.channels.find((c) => c.id === '480p');
+    assert.ok(eco480, 'Must include 480p version');
+    assert.equal(eco480.name, '经济版');
+    assert.notEqual(eco480.default, true, '480p 是经济档，不是默认档');
   });
 
   it('preserves declared channel identities and selects the authoritative default', () => {

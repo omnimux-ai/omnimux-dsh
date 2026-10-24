@@ -33,7 +33,8 @@ export function parseSpeechToTextRequest(raw: unknown): Required<SpeechToTextReq
   }
   return {
     nodeId: body.nodeId.trim(), audioPath,
-    model: typeof body.model === 'string' && body.model.trim() ? body.model.trim() : 'doubao-asr-bigmodel',
+    // 缺省必须是中枢当前唯一上架的转写模型；doubao-asr-bigmodel 自 #3516 起仅登记不上架。
+    model: typeof body.model === 'string' && body.model.trim() ? body.model.trim() : 'whisper-1',
     responseFormat: responseFormat as TranscriptionFormat,
   };
 }
