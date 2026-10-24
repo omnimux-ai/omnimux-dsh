@@ -49,7 +49,14 @@
 
 ## 旧标准变更
 
-（无：本任务不改动既有测试用例的断言，只新增。）
+- `plugins/omnimux-workflow/tests/director-layout-contract.e2e.test.mjs` :: `窄面板按容器宽度决策，画布列保底 140px（#3702）`
+  - 原断言：用正则逐字匹配 CSS（容器声明、列定义、折叠规则）与 `includes('[data-workspace-view="scene"]')`。
+  - 必须改的理由：独立评审指出这是「复述实现」——CSS 改名即碎，且 `includes` 出现一次即过，不证明类名落在栅格元素上、不证明浏览器真的按容器决策。
+  - 新期望证据：保留一条最小漂移锁（容器查询与 140px 下限存在），其余改为真机事实断言：`containerType === 'inline-size'`、`gridIsDirectChild === true`、每档 `panelWidth <= 520`（确保落在容器区间）、画布列无条件 ≥140。
+- `plugins/omnimux-workflow/tests/director-layout-contract.e2e.test.mjs` :: `真机证据：面板 279px 时画布列可用，折叠态保留轨道（#3702）`
+  - 原断言：只对 `panelWidth <= 320` 的档位校验画布列，其余 `continue` 跳过。
+  - 必须改的理由：这是自我门控——面板一旦变宽（如 340px），runner 与测试会双双静默跳过，59px 回归不再报警；且容器查询真正要覆盖的「宽窗口 + 窄面板」当时没有任何实测。
+  - 新期望证据：画布列断言无条件化；新增「宽窗口 + 窄面板」交叉验证（窗口 1728、面板强制 300px、`containerType` inline-size、时间轴被堆叠到第 3 行、右栏整行、画布列 ≥140）；折叠态保留 48px 轨道与 ≥140px 画布列。
 
 ## 5. 验收
 
@@ -62,7 +69,10 @@
    | 900×400 | 279 | 106 | 165 | 溢出且可滚动 |
    | 900×1400 | 279 | 106 | 173 | 窄而高，时间轴上限不收窄 |
    | 900×560 + 左栏折叠 | 279 | **48** | **231** | 折叠轨道保留，折叠状态未被容器规则吃掉 |
+   | 1728 窗口 + 面板强制 300px | 300 | 114 | **186** | 窗口是宽屏态（视口媒体查询不生效），时间轴被容器规则堆叠到第 3 行、右栏整行——证明是容器查询在接管 |
    | 1728×883（宽屏） | 1027 | 248 | 479 | 与 #3646 规格一致 |
+
+   证据 `after-panel-width.json` 带运行身份（`runIdentity.runId/head/base`），可回溯到具体提交。
 2. 宽屏 `layout-thresholds`（48/248/300/236）仍全绿；#3689 的窄屏高度断言（中列 ≥180、时间轴 ∈[160,236]、无重叠、溢出必可滚动、窄而高上限不收窄）仍全绿。
 3. 默认（不设 `DIRECTOR_MEASURE`）仍是原 8 条、退出码 0。
 4. `pnpm --filter omnimux-workflow test`、`typecheck`、`build-director --check`、`verify:anti-slop`、`verify:stages` 全绿；契约测试补「容器查询 + 画布列保底」断言。
