@@ -374,3 +374,58 @@ test('old-standard declarations must match both path and case name', () => {
     { ok: false, missing: ['keeps contract'] },
   )
 })
+
+// 旧式跳过/聚焦别名与 `test.skip` / `test.only` 语义等价，必须同样被识别。
+test('legacy skip and focus aliases are rejected like test.skip / test.only', () => {
+  const aliasSources = [
+    "xit('case', () => {})",
+    "xtest('case', () => {})",
+    "xdescribe('case', () => {})",
+    "fit('case', () => {})",
+    "ftest('case', () => {})",
+    "fdescribe('case', () => {})",
+    "xit.each([1])('case', () => {})",
+  ]
+  for (const source of aliasSources) {
+    const inspection = inspectTestAuthoring(source)
+    assert.equal(inspection.allowed, false, `${source} 必须被拒绝`)
+    assert.equal(inspection.reason, 'test-execution-selector-needs-review', `${source} 的原因应为选择器审查`)
+  }
+})
+
+test('legacy alias detection does not change the existing selector verdicts', () => {
+  for (const source of [
+    "test.skip('case', () => {})",
+    "it.only('case', () => {})",
+    "test.concurrent.skip('case', () => {})",
+    "describe.only('case', () => {})",
+  ]) {
+    assert.equal(inspectTestAuthoring(source).reason, 'test-execution-selector-needs-review', `${source} 的判定不应变化`)
+  }
+  // 普通用例与普通成员调用不受影响。
+  assert.equal(inspectTestAuthoring("test('case', () => {})").allowed, true)
+  assert.equal(inspectTestAuthoring("describe('group', () => {})").allowed, true)
+  assert.equal(inspectTestAuthoring("import assert from 'node:assert/strict'\nassert.equal(a, b)").allowed, true)
+})
+
+test('legacy aliases are non-declarable, so the old-standard channel cannot open them', () => {
+  const inspection = inspectTestStandardChange("xit('case', () => { assert.equal(a, 1) })", "xit('case', () => { assert.equal(a, 2) })")
+  assert.equal(inspection.allowed, false)
+  assert.notEqual(inspection.reason, 'test-assertion-removed-or-rewritten')
+})
+
+// 独立复核指出：mocha 的 xcontext / xspecify 与 xdescribe / xit 是同一族别名；
+// 另外 `it.skipIf(条件)` 的「条件恰好是对象字面量」形态原先能绕过。
+test('mocha BDD aliases and skipIf-with-object condition are rejected too', () => {
+  for (const source of ["xcontext('case', () => {})", "xspecify('case', () => {})"]) {
+    const inspection = inspectTestAuthoring(source)
+    assert.equal(inspection.allowed, false, `${source} 必须被拒绝`)
+    assert.equal(inspection.reason, 'test-execution-selector-needs-review', `${source} 的原因应为选择器审查`)
+  }
+  // 条件不是回调而是对象字面量时，不能因为「看起来像 options」就放行。
+  for (const source of ["it.skipIf({a:1})('case', () => {})", "test.runIf({a:1})('case', () => {})"]) {
+    assert.equal(inspectTestAuthoring(source).allowed, false, `${source} 必须被拒绝`)
+  }
+  // mocha 的 `context` 是 describe 别名而非跳过/聚焦，不应被拒。
+  assert.equal(inspectTestAuthoring("context('case', () => {})").allowed, true)
+})

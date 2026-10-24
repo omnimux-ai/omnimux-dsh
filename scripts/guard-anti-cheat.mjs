@@ -35,6 +35,10 @@ export function isProtectedTestPath(path) {
 const UNPARSEABLE_RISK_PATTERNS = [
   /(?:^|[^.\w$])(?:test|it|describe|suite)\.(?:skip|only|todo)\s*\(/,
   // vitest 也支持对象选项写法：test('a', { skip: true }, fn)
+  // 旧式跳过/聚焦别名（jasmine / mocha / jest）：与结构化检查保持同一族。前置字符不含 `.`，
+  // 所以 `obj.fit(` 不命中；命名空间前缀另列一条。
+  /(?:^|[^.\w$])(?:xit|xtest|xdescribe|xcontext|xspecify|fit|ftest|fdescribe)\s*\(/,
+  /\b(?:globalThis|window|self|this|jasmine)\s*\.\s*(?:xit|xtest|xdescribe|xcontext|xspecify|fit|ftest|fdescribe)\s*\(/,
   /\{\s*(?:skip|only|todo)\s*:\s*true\b/,
   /\beval\s*\(/,
   /\bnew\s+Function\s*\(/,

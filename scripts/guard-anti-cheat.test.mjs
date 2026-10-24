@@ -375,4 +375,29 @@ describe('6. 解析不了的新增测试文件仍拦最典型风险（不因放�
     const commentPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-comment.test.ts', content: '// 这个用例 skip 掉重活\n' + TS_HEAD } });
     assert.equal(handle(commentPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'allow');
   });
+
+  it('旧式跳过/聚焦别名在纯新增路径上同样被拦', () => {
+    const aliasPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-xit.test.ts', content: TS_HEAD + "xit('skipped', () => {});\n" } });
+    assert.equal(handle(aliasPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    const mochaPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-xcontext.test.ts', content: TS_HEAD + "xcontext('skipped', () => {});\n" } });
+    assert.equal(handle(mochaPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    const namespacePayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-ns.test.ts', content: TS_HEAD + "globalThis.xit('skipped', () => {});\n" } });
+    assert.equal(handle(namespacePayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+  });
+
+  it('别名兜底只认裸调用与命名空间前缀，成员调用不误伤', () => {
+    const memberPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-member.test.ts', content: TS_HEAD + 'obj.fit(3);\n' } });
+    assert.equal(handle(memberPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'allow');
+    const plainPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-plain.test.ts', content: TS_HEAD + "test('adds', () => {});\n" } });
+    assert.equal(handle(plainPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'allow');
+  });
+
+  // 已知的过宽面，如实固定住而不是假装不存在：字面模式不区分代码与注释/字符串，
+  // 所以带括号的别名出现在注释或字符串里也会被拒。合同 §3.1 已写明这条边界。
+  it('字面兜底不区分代码与注释：带括号的别名在注释/字符串里也会被拒', () => {
+    const commentPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-comment-paren.test.ts', content: '// 不要写 xit(\n' + TS_HEAD } });
+    assert.equal(handle(commentPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    const stringPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-string-paren.test.ts', content: TS_HEAD + "const s = 'xit(';\n" } });
+    assert.equal(handle(stringPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+  });
 });
