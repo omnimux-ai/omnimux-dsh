@@ -168,7 +168,7 @@ export async function runCatalogDiff(options) {
   }
 
   const diff = diffGatewayAgainstHub({ gateway: loaded.snapshot, hub: hubCatalog })
-  const context = { gateway: loaded.snapshot, gatewayLabel: loaded.label, hubLabel }
+  const context = { gateway: loaded.snapshot, gatewayLabel: loaded.label, hub: hubCatalog, hubLabel }
   const output = args.json
     ? `${JSON.stringify(diffReportDocument(diff, context), undefined, 2)}\n`
     : formatDiffReport(diff, context)

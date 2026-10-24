@@ -360,6 +360,16 @@ export function snapshotDigest(snapshot) {
 }
 
 /**
+ * Content digest of any JSON value with key-order-independent hashing, so a
+ * report can name the exact hub projection it was computed against.
+ *
+ * @param {unknown} value
+ */
+export function contentDigest(value) {
+  return createHash('sha256').update(JSON.stringify(sortDeep(value))).digest('hex')
+}
+
+/**
  * Detect which input shape a JSON document is, so the CLI can accept either.
  *
  * @param {unknown} document

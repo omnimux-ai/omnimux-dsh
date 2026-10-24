@@ -5,7 +5,7 @@
  * report can be diffed between runs and committed as evidence.
  */
 
-import { CLOUD_SNAPSHOT_SCHEMA_VERSION, snapshotDigest } from './snapshot.js'
+import { CLOUD_SNAPSHOT_SCHEMA_VERSION, contentDigest, snapshotDigest } from './snapshot.js'
 
 /** @param {unknown} value @returns {string[]} */
 function stringList(value) {
@@ -30,7 +30,13 @@ export function diffReportDocument(diff, context = {}) {
           label: context.gatewayLabel ?? null,
         }
       : null,
-    hub: context.hubLabel ? { label: context.hubLabel } : null,
+    // The hub projection digest lets a reader confirm which revision a report
+    // was computed against without re-projecting it.
+    hub: context.hub
+      ? { label: context.hubLabel ?? null, digest: contentDigest(context.hub) }
+      : context.hubLabel
+        ? { label: context.hubLabel, digest: null }
+        : null,
     summary: diff.summary,
     limitations: diff.limitations,
     unreachable: diff.unreachable,

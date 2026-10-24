@@ -99,6 +99,7 @@ describe('runCatalogDiff', () => {
     assert.equal(document.kind, 'omnimux-gateway-catalog-diff')
     assert.equal(document.gateway.source, 'channel-baseline')
     assert.match(document.gateway.digest, /^[0-9a-f]{64}$/)
+    assert.match(document.hub.digest, /^[0-9a-f]{64}$/)
     assert.equal(document.summary.unreachable, 1)
     assert.deepEqual(document.unreachable, [{ id: 'retired-model-1', listedOperations: ['chat_completion'] }])
     assert.equal(document.summary.hubListed, 2)
