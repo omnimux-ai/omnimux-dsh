@@ -22,7 +22,10 @@ export function analyzeTestChanges({ root, baseCommit, comparisonBase, candidate
   const risks = []
   const seen = new Set()
   for (const change of changes) {
-    if (!change || !/^(?:A|M|D|T|[RC](?:100|[1-9]?\d))$/.test(change.status || '')) throw new Error('unsupported-change-status')
+    // git 的 `--name-status -M` 用零填充三位报告相似度（实测 `R073`），也接受未填充的
+    // `R73`；两者都必须放行，否则真实的重命名会被误判成 unsupported-change-status。
+    // 分数范围限定 1–100（`R000` 不会被 git 产出）。
+    if (!change || !/^(?:A|M|D|T|[RC](?:100|0[1-9]\d|00[1-9]|[1-9]\d?))$/.test(change.status || '')) throw new Error('unsupported-change-status')
     const oldPath = change.oldPath || change.path
     if (!safePath(change.path) || !safePath(oldPath)) throw new Error('unsupported-change-path')
     if (!isEvaluationPath(change.path) && !isEvaluationPath(oldPath)) continue
