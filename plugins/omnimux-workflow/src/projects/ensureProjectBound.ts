@@ -10,7 +10,7 @@
 import { MAX_PROJECT_TITLE_LENGTH } from './schema';
 import type { ProjectRecord, ProjectStore } from './ProjectStore';
 
-export const FALLBACK_PROJECT_TITLE = '工作流';
+export const FALLBACK_PROJECT_TITLE = '模板';
 
 export type EnsureProjectBoundFn = (
   workspaceId: string,

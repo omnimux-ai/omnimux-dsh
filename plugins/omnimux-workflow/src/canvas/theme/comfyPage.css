@@ -1,4 +1,4 @@
-/* ComfyUI 页面节点卡 + 全屏层（Issue #3681 M1）：节点只做入口，全屏层承载 iframe。 */
+/* ComfyUI 工作流节点卡 + 全屏层（Issue #3681 M1）：节点只做入口，全屏层承载 iframe。 */
 .wf-comfy-page-card {
   display: flex;
   flex-direction: column;
@@ -67,6 +67,8 @@
   display: flex;
   flex-direction: column;
   background: var(--dsw-alias-bg-layer-0, var(--wb-surface-base, #111));
+  /* 883 高度下「六行方案 + 目录 + 保存」排不下：内容区自己滚，别让用户够不到。 */
+  overflow-y: auto;
 }
 
 .wf-comfy-page-overlay__bar {
@@ -77,6 +79,10 @@
   padding: 8px 12px;
   border-bottom: 1px solid var(--dsw-alias-border-l2, var(--wb-border-subtle));
   background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
+  /* 滚动时头部保持可见（它承载状态与关闭按钮）。 */
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .wf-comfy-page-overlay__title {
@@ -451,6 +457,11 @@
   cursor: pointer;
 }
 
+/* 与节点卡的主行动同款底：深色主题下透明底会让「选择目录」看起来像不可点。 */
+.wf-comfy-page-overlay__setting-pick {
+  background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
+}
+
 .wf-comfy-page-overlay__setting-save {
   background: var(--dsw-alias-brand-primary, var(--wb-accent));
   color: var(--dsw-alias-label-primary-foreground, var(--dsw-alias-label-primary));
@@ -474,4 +485,82 @@
   max-width: 480px;
   color: var(--dsw-alias-state-error, #d9534f);
   font-size: 12px;
+}
+
+/* M4：方案矩阵 + 驱动结论。每行是一个可点的方案，选中态用边框表达（不靠颜色单独承载）。 */
+.wf-comfy-page-overlay__problem {
+  margin: 0;
+  max-width: 480px;
+  color: var(--dsw-alias-state-warning, var(--wb-text-secondary));
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.wf-comfy-page-overlay__variants {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.wf-comfy-page-overlay__variant {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2, var(--wb-border));
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wf-comfy-page-overlay__variant:hover {
+  border-color: var(--dsw-alias-border-l3, var(--wb-border-strong));
+}
+
+.wf-comfy-page-overlay__variant[aria-pressed='true'] {
+  border-color: var(--dsw-alias-brand-primary, var(--wb-accent));
+}
+
+.wf-comfy-page-overlay__variant-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.wf-comfy-page-overlay__variant-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.wf-comfy-page-overlay__variant-support,
+.wf-comfy-page-overlay__variant-current {
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  font-size: 11px;
+}
+
+.wf-comfy-page-overlay__variant-meta {
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+  font-size: 12px;
+}
+
+/* 宿主给的实话（基座差异、未真机验证）原样显示，不藏。 */
+.wf-comfy-page-overlay__variant-notes {
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  font-size: 11px;
+  line-height: 16px;
+}
+
+/* 驱动结论的精确原因（宿主 driverDetail）：行内可见，不能只藏在悬停里。 */
+.wf-comfy-page-overlay__driver-required,
+.wf-comfy-page-overlay__driver-detail {
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+}
+
+.wf-comfy-page-overlay__driver-detail {
+  font-size: 11px;
 }

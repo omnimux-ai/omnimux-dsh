@@ -27,8 +27,11 @@ const NOT_INSTALLED = {
 function serviceWithLog(logPath) {
   return {
     paths: { root: '/tmp/none', state: '/tmp/none/state.json', log: logPath, userdata: '/tmp/none/userdata', comfyui: '/tmp/none/ComfyUI', venv: '/tmp/none/venv', settings: '/tmp/none/settings.json' },
-    settings: () => ({ installRoot: '', modelsPath: '' }),
-    updateSettings: () => ({ ok: true, code: null, settings: { installRoot: '', modelsPath: '' } }),
+    settings: () => ({ installRoot: '', modelsPath: '', variant: '' }),
+    currentTarget: () => null,
+    targetProblem: () => null,
+    driverVerdict: async () => ({ status: 'unknown', detail: '未解析到目标', required: null }),
+    updateSettings: () => ({ ok: true, code: null, settings: { installRoot: '', modelsPath: '', variant: '' } }),
     status: async () => NOT_INSTALLED,
     install: async () => NOT_INSTALLED,
     start: async () => NOT_INSTALLED,

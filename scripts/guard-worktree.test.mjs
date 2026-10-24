@@ -62,7 +62,7 @@ function runHook(payload) {
 
 describe('bash workdir JSON dispatch', () => {
   it('resolves execution workdir while retaining primary commit rejection', () => {
-    const check = (command, workdir, cwd = mainRepoRoot) => runHook({ cwd, tool_name: 'bash', tool_input: { command, workdir } }).hookSpecificOutput.permissionDecision
+    const check = (command, workdir, cwd = mainRepoRoot, ownerRoot = mainRepoRoot) => runHook({ cwd, tool_name: 'bash', tool_input: { command, workdir, ownerRoot } }).hookSpecificOutput.permissionDecision
     assert.equal(check('git commit -m test', worktreeRoot), 'allow')
     assert.equal(check('git commit -m test', '.worktrees/task'), 'allow')
     assert.equal(check('git commit -m test', mainRepoRoot, worktreeRoot), 'deny')
@@ -1048,6 +1048,7 @@ describe('guard-worktree materialization safety guard (多 Agent 物化防覆盖
     const mergeResult = decideBashCommand({
       command: 'git merge feature-branch',
       cwd: mainRepo,
+      ownerRoot: mainRepo,
     })
     assert.equal(mergeResult.decision, 'deny')
     assert.equal(mergeResult.reason, 'forbidden-main-branch-merge')
@@ -1056,9 +1057,58 @@ describe('guard-worktree materialization safety guard (多 Agent 物化防覆盖
     const commitResult = decideBashCommand({
       command: 'git commit -m "direct commit"',
       cwd: mainRepo,
+      ownerRoot: mainRepo,
     })
     assert.equal(commitResult.decision, 'deny')
     assert.equal(commitResult.reason, 'forbidden-main-branch-commit')
+  })
+
+  it('allows git merge and git commit on main branch in a foreign repository', () => {
+    const mainRepo = createRepo('main-branch-owner-repo')
+    const foreignRepo = createRepo('foreign-repo')
+
+    // 外部仓的 main：不属于 guard 所属仓库 → 放行
+    const commitResult = decideBashCommand({
+      command: 'git commit -m "foreign commit"',
+      cwd: foreignRepo,
+      ownerRoot: mainRepo,
+    })
+    assert.equal(commitResult.decision, 'allow')
+
+    const mergeResult = decideBashCommand({
+      command: 'git merge feature-branch',
+      cwd: foreignRepo,
+      ownerRoot: mainRepo,
+    })
+    assert.equal(mergeResult.decision, 'allow')
+
+    // 显式 -C 指向外部仓同样放行
+    const viaC = decideBashCommand({
+      command: `git -C "${foreignRepo}" commit -m "foreign commit via -C"`,
+      cwd: mainRepo,
+      ownerRoot: mainRepo,
+    })
+    assert.equal(viaC.decision, 'allow')
+  })
+
+  it('tracks cd into a foreign repo so commit there is allowed while main stays denied', () => {
+    const mainRepo = createRepo('main-branch-cd-owner')
+    const foreignRepo = createRepo('foreign-repo-cd')
+
+    const foreign = decideBashCommand({
+      command: `cd "${foreignRepo}" && git commit -m "foreign commit"`,
+      cwd: mainRepo,
+      ownerRoot: mainRepo,
+    })
+    assert.equal(foreign.decision, 'allow')
+
+    const owner = decideBashCommand({
+      command: `cd "${mainRepo}" && git commit -m "direct on owner main"`,
+      cwd: '/some/other/dir',
+      ownerRoot: mainRepo,
+    })
+    assert.equal(owner.decision, 'deny')
+    assert.equal(owner.reason, 'forbidden-main-branch-commit')
   })
 
   it('denies git worktree add without origin/main', () => {
@@ -1087,6 +1137,7 @@ describe('guard-worktree materialization safety guard (多 Agent 物化防覆盖
     const allowed = decideBashCommand({
       command: `git -C "${wrt}" commit -m "work inside worktree"`,
       cwd: mainRepoRoot,
+      ownerRoot: mainRepoRoot,
     })
     assert.equal(allowed.decision, 'allow')
 
@@ -1094,6 +1145,7 @@ describe('guard-worktree materialization safety guard (多 Agent 物化防覆盖
     const denied = decideBashCommand({
       command: 'git commit -m "direct on main"',
       cwd: mainRepoRoot,
+      ownerRoot: mainRepoRoot,
     })
     assert.equal(denied.decision, 'deny')
     assert.equal(denied.reason, 'forbidden-main-branch-commit')
@@ -1102,6 +1154,7 @@ describe('guard-worktree materialization safety guard (多 Agent 物化防覆盖
     const deniedExplicit = decideBashCommand({
       command: `git -C "${mainRepoRoot}" commit -m "direct on main via -C"`,
       cwd: '/some/other/dir',
+      ownerRoot: mainRepoRoot,
     })
     assert.equal(deniedExplicit.decision, 'deny')
     assert.equal(deniedExplicit.reason, 'forbidden-main-branch-commit')

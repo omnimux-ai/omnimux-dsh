@@ -64,8 +64,8 @@
 | 检查 | 结果 |
 | --- | --- |
 | `node --test plugins/omnimux/src/catalog/cloud/*.test.js` | 88/88 通过 |
-| `pnpm --filter omnimux test` | 3621/3623（2 项为既有环境依赖失败：`src/agents/local.test.js` 的本机 CLI 探测，在未改动的检出上同样失败） |
-| `pnpm check:boundaries` | 通过（4486 个源文件） |
+| `pnpm --filter omnimux test` | 三组合计 3721/3723；失败 2 项为既有环境依赖（`src/agents/local.test.js` 的本机 CLI 探测，在未改动的检出上同样失败）。另有 1 项并发时序抖动（`native-files-bridge`，与本 PR 无关，单跑通过）。总数随机器与并发略有差异，判定依据是失败项身份而非总数 |
+| `pnpm check:boundaries` | 通过（4493 个源文件） |
 | `pnpm verify:model-contracts` | ok=true；模态矩阵无新增缺口 |
 | `pnpm verify:product-baseline` | 通过（1 项既有豁免） |
 | `pnpm catalog:snapshot:check` | 通过 |

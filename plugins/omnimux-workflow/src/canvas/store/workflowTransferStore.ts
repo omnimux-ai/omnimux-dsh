@@ -1,13 +1,12 @@
 /**
  * 画布工作流文件「导入 / 导出」的唯一状态所有者（Issue 3669）。
  *
- * 这套状态原先长在 `Toolbar` 里，只服务工具栏两个按钮。入口改成 ComfyUI 工作流入口后，
- * 「添加节点」面板也要能触发导入、看到最近导入并复现某一条，于是把它提到 store：
- * 工具栏按钮、预览面板、面板入口共用同一份状态与同一套动作，避免第二份实现。
+ * 这套状态原先长在 `Toolbar` 里，只服务工具栏两个按钮；Issue 3669 把它提到 store，让
+ * 工具栏按钮、拖拽与导入预览面板共用同一份状态与同一套动作，避免第二份实现。
  *
  * 语义与原先逐条一致：解析顺序（ComfyUI → OmniMux 自有文件 → 明确错误）、应用前必须
  * 由用户确认（`hydrateGraph` 会替换整张画布并重置历史）、失败一律带 codec 错误码。
- * 新增的只有「最近导入」缓存，且**只在成功应用之后**写入。
+ * Issue 3741 删掉了「最近导入」缓存与复现动作——它们只服务已移除的面板入口。
  */
 
 import { create } from 'zustand';
@@ -22,12 +21,6 @@ import {
   type ComfyCanvasProjection,
   type OmnimuxWorkflowFile,
 } from '../../shared/comfyui/index.ts';
-import {
-  readComfyRecents,
-  upsertComfyRecent,
-  writeComfyRecents,
-  type ComfyRecentEntry,
-} from '../editor/utils/comfyRecents';
 import { useCanvasStore } from './canvasStore';
 
 export type TransferState =
@@ -36,20 +29,10 @@ export type TransferState =
   | { kind: 'own'; file: OmnimuxWorkflowFile; applied: boolean }
   | { kind: 'comfy'; fileName: string; format: string; projection: ComfyCanvasProjection; applied: boolean };
 
-/** 待写入「最近导入」的一条：只有真的应用过才落缓存。 */
-interface PendingComfyImport {
-  name: string;
-  format: string;
-  nodeCount: number;
-  text: string;
-}
-
 export interface WorkflowTransferState {
   transfer: TransferState | null;
-  recents: ComfyRecentEntry[];
   /** 递增即请求持有 `<input type="file">` 的组件弹出选择器（跨组件唯一入口）。 */
   importNonce: number;
-  pendingComfy: PendingComfyImport | null;
   exportWorkflow: (workflowName: string) => void;
   importText: (text: string, fileName: string) => void;
   /** 读取文件本身失败（权限、IO）等不在 codec 错误码里的失败，如实上报。 */
@@ -58,7 +41,6 @@ export interface WorkflowTransferState {
   applyComfy: () => void;
   applyOwn: () => void;
   dismiss: () => void;
-  applyRecent: (name: string) => void;
 }
 
 function transferError(code: string, path: string, message: string): TransferState {
@@ -93,12 +75,6 @@ function downloadTextFile(fileName: string, text: string): void {
   URL.revokeObjectURL(url);
 }
 
-/** `my-flow.json` → `my-flow`；没有可用名字时退回 `ComfyUI 工作流`。 */
-function recentName(fileName: string): string {
-  const base = fileName.replace(/\.[^.]+$/, '').trim();
-  return base.length > 0 ? base : 'ComfyUI 工作流';
-}
-
 /** Replace the canvas graph with an imported workflow (history reseeded). */
 function applyGraph(nodes: CanvasNode[], edges: Edge[]): void {
   useCanvasStore.getState().hydrateGraph(nodes, edges);
@@ -127,9 +103,7 @@ function comfyEdges(projection: ComfyCanvasProjection): Edge[] {
 
 export const useWorkflowTransferStore = create<WorkflowTransferState>()((set, get) => ({
   transfer: null,
-  recents: readComfyRecents(),
   importNonce: 0,
-  pendingComfy: null,
 
   exportWorkflow: (workflowName) => {
     const { nodes, edges } = useCanvasStore.getState();
@@ -154,21 +128,13 @@ export const useWorkflowTransferStore = create<WorkflowTransferState>()((set, ge
     const comfy = parseComfyWorkflow(text);
     if (comfy.ok) {
       const projection = projectComfyToCanvas(comfy.document);
-      set({
-        transfer: { kind: 'comfy', fileName, format: comfy.format, projection, applied: false },
-        pendingComfy: {
-          name: recentName(fileName),
-          format: comfy.format,
-          nodeCount: projection.nodes.length,
-          text,
-        },
-      });
+      set({ transfer: { kind: 'comfy', fileName, format: comfy.format, projection, applied: false } });
       return;
     }
 
     const own = parseOmnimuxWorkflowFile(text);
     if (own.ok) {
-      set({ transfer: { kind: 'own', file: own.file, applied: false }, pendingComfy: null });
+      set({ transfer: { kind: 'own', file: own.file, applied: false } });
       return;
     }
 
@@ -176,17 +142,11 @@ export const useWorkflowTransferStore = create<WorkflowTransferState>()((set, ge
     // kind is reported by the workflow-file parser, a file that looked like a
     // ComfyUI document is reported by the codec.
     if (own.error.code !== 'not-a-workflow-file') {
-      set({
-        transfer: transferError(own.error.code, own.error.path, own.error.message),
-        pendingComfy: null,
-      });
+      set({ transfer: transferError(own.error.code, own.error.path, own.error.message) });
       return;
     }
     if (comfy.error.code !== 'unsupported-version') {
-      set({
-        transfer: transferError(comfy.error.code, comfy.error.path, comfy.error.message),
-        pendingComfy: null,
-      });
+      set({ transfer: transferError(comfy.error.code, comfy.error.path, comfy.error.message) });
       return;
     }
     set({
@@ -195,7 +155,6 @@ export const useWorkflowTransferStore = create<WorkflowTransferState>()((set, ge
         'kind',
         'not an OmniMux workflow file and not a supported ComfyUI workflow',
       ),
-      pendingComfy: null,
     });
   },
 
@@ -204,28 +163,14 @@ export const useWorkflowTransferStore = create<WorkflowTransferState>()((set, ge
   },
 
   failImport: (code, message) => {
-    set({ transfer: transferError(code, '', message), pendingComfy: null });
+    set({ transfer: transferError(code, '', message) });
   },
 
   applyComfy: () => {
-    const { transfer, pendingComfy, recents } = get();
+    const { transfer } = get();
     if (transfer?.kind !== 'comfy') return;
     applyGraph(comfyNodes(transfer.projection), comfyEdges(transfer.projection));
-
-    if (!pendingComfy) {
-      set({ transfer: { ...transfer, applied: true } });
-      return;
-    }
-    const entry: ComfyRecentEntry = {
-      name: pendingComfy.name,
-      format: pendingComfy.format,
-      nodeCount: pendingComfy.nodeCount,
-      savedAt: new Date().toISOString(),
-      text: pendingComfy.text,
-    };
-    const next = upsertComfyRecent(recents, entry);
-    writeComfyRecents(next);
-    set({ transfer: { ...transfer, applied: true }, recents: next });
+    set({ transfer: { ...transfer, applied: true } });
   },
 
   applyOwn: () => {
@@ -256,38 +201,5 @@ export const useWorkflowTransferStore = create<WorkflowTransferState>()((set, ge
 
   dismiss: () => {
     set({ transfer: null });
-  },
-
-  /**
-   * 复现一条最近导入：只把解析结果放进预览，**不**应用。
-   * 缓存里的文本解析不了时如实报 codec 错误码，不静默吞掉。
-   */
-  applyRecent: (name) => {
-    const entry = get().recents.find((item) => item.name === name);
-    if (!entry) return;
-    const comfy = parseComfyWorkflow(entry.text);
-    if (!comfy.ok) {
-      set({
-        transfer: transferError(comfy.error.code, comfy.error.path, comfy.error.message),
-        pendingComfy: null,
-      });
-      return;
-    }
-    const projection = projectComfyToCanvas(comfy.document);
-    set({
-      transfer: {
-        kind: 'comfy',
-        fileName: `${entry.name}.json`,
-        format: comfy.format,
-        projection,
-        applied: false,
-      },
-      pendingComfy: {
-        name: entry.name,
-        format: comfy.format,
-        nodeCount: projection.nodes.length,
-        text: entry.text,
-      },
-    });
   },
 }));
