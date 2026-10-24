@@ -1,0 +1,23 @@
+{
+  "cleaned": true,
+  "resources": [
+    {
+      "name": "app-child",
+      "owner": "app-environment",
+      "status": "completed",
+      "reason": null
+    },
+    {
+      "name": "mock-server",
+      "owner": "app-environment",
+      "status": "completed",
+      "reason": null
+    },
+    {
+      "name": "app-private-directory",
+      "owner": "app-environment",
+      "status": "completed",
+      "reason": null
+    }
+  ]
+}

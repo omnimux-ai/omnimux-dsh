@@ -1,0 +1,23 @@
+{
+  "names": [
+    "normal-project-entry",
+    "portrait-selected",
+    "managed-media-decoded",
+    "saved-scene",
+    "play-seek",
+    "decoded-motion",
+    "scene-reopened",
+    "aspect-reopened"
+  ],
+  "allPassed": true,
+  "expected": [
+    "normal-project-entry",
+    "portrait-selected",
+    "managed-media-decoded",
+    "saved-scene",
+    "play-seek",
+    "decoded-motion",
+    "scene-reopened",
+    "aspect-reopened"
+  ]
+}
