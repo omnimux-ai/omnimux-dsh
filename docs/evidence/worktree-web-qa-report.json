@@ -1,12 +1,12 @@
 {
-  "runId": "50015300-a602-4c73-ae5b-f8fc5ecfd0ec",
+  "runId": "91485250-c820-462a-98e8-3114ebe1c081",
   "stage": "analytics",
   "plugin": "omnimux-analytics",
-  "startedAt": "2026-10-24T02:33:31.067Z",
-  "completedAt": "2026-10-24T02:33:32.665Z",
+  "startedAt": "2026-10-24T02:43:29.217Z",
+  "completedAt": "2026-10-24T02:43:30.836Z",
   "pass": true,
-  "serverPort": 53983,
-  "cdpPort": 53984,
+  "serverPort": 56921,
+  "cdpPort": 56922,
   "assertions": [
     {
       "name": "bundle-client-code",
@@ -16,12 +16,12 @@
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 53983
+      "port": 56921
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 53984
+      "port": 56922
     },
     {
       "name": "runner-page-ready",
@@ -52,7 +52,7 @@
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-settings-value-reader-issue-3666/.workbuddy/evidence/worktree-qa/50015300-a602-4c73-ae5b-f8fc5ecfd0ec/analytics.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-settings-value-reader-issue-3666/.workbuddy/evidence/worktree-qa/91485250-c820-462a-98e8-3114ebe1c081/analytics.png",
     "width": 1280,
     "height": 713,
     "bytes": 37555
