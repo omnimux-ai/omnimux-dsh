@@ -32,27 +32,34 @@
   - 新增纯函数导出 `candidateDirectoryIndex` / `classifyCandidateEntry` / `missingPackageDependencies`，供回归测试。
   - 归档子进程失败时把 `status`、`signal`、`stderr` 尾部写进错误 `hint`（截断），输出非 JSON 也给出原因。
   - 构建前检查打包目标包的依赖是否已安装；缺失时抛 `PREPARE_DEPENDENCY_REQUIRED` 并点明要执行的安装命令。
-- `scripts/test-env-bootstrap.test.mjs`：新增条目分类与缺失依赖判定的回归用例。
+- `scripts/worktree-app-qa.mjs`：标准入口 `pnpm verify:app` 的 catch 把可操作 `hint`（脱敏、截断 800 字）写进报告并在失败/无法开始时打印；此前只输出裸错误码。
+- `scripts/test-env-bootstrap-inputs.test.mjs`：新增条目分类与缺失依赖判定的回归用例（已注册 governance manifest 与 CI quality-gate）。
 - 既有 `scripts/managed-tarball.test.mjs` 的 inspect/extract 用例本身就是 Python 3.15 归档缺陷的回归（修复前在本机必红），不重复新增。
 
-## 4. 假设
+## 假设
 
-- 候选捕获（`captureCandidate`）给出的 entries 就是本任务允许进入 stage 的完整源码集合；工作树里其余文件都是可重建产物或被策略排除的本地状态，跳过它们不削弱装配的完整性校验（后面的 pack 清单与字节比对仍在）。
+- 候选捕获（`captureCandidate`）给出的 entries 就是本任务允许进入 stage 的完整源码集合；工作树里其余文件都是可重建产物或被策略排除的本地状态，跳过它们不削弱装配的完整性校验（后面的 pack 清单与字节比对仍在）。调用方声明的 `extraInputs` 不在该集合内，若某个 extraInput 恰好被 gitignore 命中又位于被装配包内，行为会从「硬失败」变为「跳过」；这是窄场景，本 Issue 不改变 `captureCandidate` 的候选定义。
 - `gzip.GzipFile(mode='rb')` 在所有受支持解释器（3.12–3.15）上行为一致，且不改变归档校验语义。
-- 任务工作树的依赖安装是既有前置条件而非本脚本职责，因此「缺依赖」只做早期、可操作的拒绝，不自动安装。
+- 任务工作树的依赖安装是既有前置条件而非本脚本职责，因此「缺依赖」只做早期、可操作的拒绝，不自动安装；依赖检查用包内 `node_modules` 是否存在作为代理，隐含 pnpm isolated linker 布局（本仓无 `.npmrc`、无 `node-linker` 覆盖）。
 
-## 5. 证伪方式
+## 证伪方式
 
-- 若「跳过非候选文件」放过了本应拦截的候选漂移：`captureCandidate` 的 candidate-after 比对、pack 清单与归档字节核对会失败；在干净 worktree 内跑 `node --test scripts/test-env-bootstrap.test.mjs` 与端到端 diag 可观测。
+- 若「跳过非候选文件」放过了本应拦截的候选漂移：逐包固定构建与 pack 归档字节核对会失败；在干净 worktree 内跑 `node --test scripts/test-env-bootstrap-inputs.test.mjs`、`node --test scripts/managed-tarball.test.mjs` 与端到端 diag 可观测（`captureCandidate` 的 candidate-after 只是 git 快照，不能单独证明这一点）。
 - 若 Python 模式修复无效：`node --test scripts/managed-tarball.test.mjs` 在 Python 3.15 下重新出现 `read() on write-only GzipFile` 失败。
 - 若端到端装配仍不可用：`diag`（同 #3646 现场脚本）应返回 `RESULT=OK` 且 `summary.evidenceLevel === 'task-source-installed'`；否则按新错误 `hint` 定位。
 
-## 6. 验收
+## 验收
 
 1. 干净任务 worktree（`worktree.sh new` + `pnpm install --frozen-lockfile`）内，`startTestEnvironment({ mode: 'ui', candidate, taskPlugins: ['omnimux-workflow'] })` 返回 `RESULT=OK`、`evidenceLevel=task-source-installed`，`cleanup()` 正常。
 2. Python 3.15 下 `node --test scripts/managed-tarball.test.mjs` 通过。
-3. `node --test scripts/test-env-bootstrap.test.mjs scripts/test-env-bootstrap-fresh.test.mjs scripts/test-env-root-diagnosis.test.mjs` 通过。
+3. `node --test scripts/test-env-bootstrap.test.mjs scripts/test-env-bootstrap-fresh.test.mjs scripts/test-env-bootstrap-inputs.test.mjs` 通过。
 4. 变更只落在 `scripts/`：不含 UI 业务代码、不放宽真机证据门禁、不改 acceptance runner 的既有语义。
+
+## 已知缺口（本 Issue 明确不做）
+
+- `copyTree` 的端到端集成行为没有单测：装配函数与 `prepareFiles` 的 python 子进程耦合，单测只覆盖分类决策；该集成由两次端到端 diag（`RESULT=OK`）与逐包构建/归档核对兜底。
+- `archiveCommandFailure` 的 hint 截断/脱敏没有单测；脱敏规则是保守的（命中 token/bearer/api-key/password/secret 就不写）。
+- `observations.skippedInputs` 最多记 20 条且无总数，当前无消费者，只用于现场排查。
 
 ## 7. 非目标
 
