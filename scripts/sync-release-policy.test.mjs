@@ -22,6 +22,14 @@ import { alphaPluginIds, alphaToolPrefixes } from './plugin-lifecycle.mjs'
 import { assertCorepackOnPath, fakeGitPath, copySyncScripts, syncStablePluginIds } from './sync-fixtures.test.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+// 这些用例为了隔离 git 会把子进程的 HOME 指到临时目录，而 corepack 的缓存目录正好在
+// `$HOME/.cache` 下——于是每次同步都得重新下载被 pin 的 pnpm，检查是绿是红取决于网络
+// 当时的状态，网络一抖就假红。缓存位置本来与 HOME 无关，所以在进程级固定住它并关掉
+// corepack 联网，所有子进程（包括自己拼 env 的那几处）都会继承，结果只取决于本地缓存。
+process.env.COREPACK_ENABLE_NETWORK = '0'
+process.env.COREPACK_HOME ??= `${process.env.HOME}/.cache/node/corepack`
+
 let syncStable
 let gitPath
 const allPlugins = [...new Set([...syncStablePluginIds(), ...alphaPluginIds])]

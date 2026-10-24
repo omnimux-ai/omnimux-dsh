@@ -25,7 +25,11 @@ describe('OmniMux Profile Target Selection Matrix', () => {
       OMNIMUX_SYNC_VIA: 'internal',
       OMNIMUX_PLUGINS_DIR: fixturePlugins,
       HOME: fakeHome,
-      COREPACK_HOME: process.env.COREPACK_HOME,
+      // 重定向 HOME 会把 corepack 的缓存目录一起挪走，于是每次同步都得重新下载被 pin 的
+      // pnpm：网络当时的状态决定了检查是绿是红。缓存位置本来与 HOME 无关，固定住它并
+      // 关掉 corepack 联网，结果就只取决于本地缓存。
+      COREPACK_HOME: process.env.COREPACK_HOME ?? `${process.env.HOME}/.cache/node/corepack`,
+      COREPACK_ENABLE_NETWORK: '0',
       COREPACK_DEFAULT_TO_LATEST: '0',
       COREPACK_ENABLE_AUTO_PIN: '0',
       CI: 'true',
