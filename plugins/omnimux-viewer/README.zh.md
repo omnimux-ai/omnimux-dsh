@@ -140,7 +140,11 @@ dsh 出厂只有 `read_image`：它存在的目的是把图片塞进**模型上�
 
 ## 配置
 
-`crosery-viewer` 命名空间，四个开关，默认值都是「插件该有的行为」：
+设置就是本插件自己的 `Config`（`ViewerSettingsSchema`），由 harness 的设置服务投影成表单。0.2.x 世代按本插件的 profile 条目 id（`viewer`；`omnimux-viewer` 是包名）定位，写进当前 profile patch；0.1.x 世代是 `$DSH_HOME/settings.yaml` 里的 `crosery-viewer` 命名空间。
+
+> **从 0.1.x 升级上来**：宿主会把 `settings.yaml` 改名为 `settings.yaml.imported`，再逐段写进 profile；段的 id 匹配不到可配置条目时会被 warn 跳过（`No configurable plugin entry "<id>"`）。旧的 `crosery-viewer:` 段正属于这种情况——本插件的条目 id 现在是 `viewer`——所以四个开关会回落到默认值，请在设置界面里重新设一次。
+
+四个开关，默认值都是「插件该有的行为」：
 
 | 字段 | 默认 | 关掉之后 |
 | --- | --- | --- |
@@ -196,9 +200,9 @@ npm test              # 66 个用例
 
 ## Harness 版本兼容
 
-构建与测试针对**当前唯一完整**的 harness 序列：`next` = `0.1.1-rc.2`。peer 范围现在按代写明预发布分支——本插件是 `>=0.1.0-rc.1 <0.1.1-0 || >=0.1.1-rc.0 <0.1.2-0 || >=0.2.1-rc.3 <0.3.0-0`——因为单写一个宽范围会把 `major.minor.patch` 元组没有带标签比较符的预发布静默排除。第二个分支表示「宿主可以是 0.2.x」，不代表 0.2.x 的运行时改造已完成（settings/fs 迁移另有任务跟踪）。
+构建与测试针对**当前唯一完整**的 harness 序列：`next` = `0.1.1-rc.2`。peer 范围现在按代写明预发布分支——本插件是 `>=0.1.0-rc.1 <0.1.1-0 || >=0.1.1-rc.0 <0.1.2-0 || >=0.2.1-rc.3 <0.3.0-0`——因为单写一个宽范围会把 `major.minor.patch` 元组没有带标签比较符的预发布静默排除。第二个分支表示「宿主可以是 0.2.x」，而 0.2.x 的运行时改造已经落地：配置席就是插件自己的 `Config`，由 harness 的设置服务投影；持久读取走会话作用域的服务。两代宿主由同一份源码覆盖。
 
-**不声明支持 `0.1.2-alpha.2`。** 那条序列发布不完整（`@deepseek-ai/dsh-client-runtime` 在该 tag 上没有构建，整体装不上），并且从 `@deepseek-ai/dsh-settings` 移除了 `installSettingsSection` 与 `settingsNamespace`，已发布的类型里没有替代品。声明支持只会让用户拿到 `ERESOLVE` 或运行时崩溃，所以它不在范围内。`.github/workflows/harness-compat.yml` 每周对 `next` 和 `alpha` 两条 tag 重跑类型检查与测试，上游一动就自动开 issue——范围按证据放宽，不靠乐观。
+**不声明支持 `0.1.2-alpha.2`。** 那条序列发布不完整（`@deepseek-ai/dsh-client-runtime` 在该 tag 上没有构建，整体装不上），并且从 `@deepseek-ai/dsh-settings` 移除了 `installSettingsSection` 与 `settingsNamespace`，当时没有 `0.2.1-rc.3` 后来引入的替代机制。声明支持只会让用户拿到 `ERESOLVE` 或运行时崩溃，所以它不在范围内。`.github/workflows/harness-compat.yml` 每周对 `next` 和 `alpha` 两条 tag 重跑类型检查与测试，上游一动就自动开 issue——范围按证据放宽，不靠乐观。
 
 ## 已知限制
 

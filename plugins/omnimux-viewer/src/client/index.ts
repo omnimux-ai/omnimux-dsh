@@ -19,7 +19,9 @@ import type { Context as ClientContext } from '@deepseek-ai/cordis'
 // client bundle-purity contract and, at runtime, require a specifier the
 // loader's module table cannot answer.
 import type { SessionId } from '@deepseek-ai/dsh-api-remotes/client'
-import type {} from '@deepseek-ai/dsh-client-runtime/client'
+// rc.3 moved the client Session object layer out of the deleted client-runtime
+// package; this import pulls its `ctx.sessions` Context augmentation.
+import type {} from '@deepseek-ai/dsh-api-session-controller/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
@@ -152,8 +154,13 @@ export function apply(ctx: ClientContext): void {
   // session-scoped, so the framework hands the factory the resolved session id
   // and the loader closes over it — the component never learns which session it
   // belongs to. Ranks live in registration.ts.
-  const injected = (sessionId: SessionId): ViewerCardInjected => ({
-    loadAttachment: attachmentId => urls.resolve(sessionId, attachmentId),
+  // rc.3's slot contract hands the inject factory the raw session id string,
+  // while the session service takes the branded `SessionId`. The brand is
+  // erased at runtime, so this is a type-level admission of the framework's own
+  // value — not a conversion. Calling the brand constructor would need a value
+  // import in the client half, which the bundle-purity contract forbids.
+  const injected = (sessionId: string): ViewerCardInjected => ({
+    loadAttachment: attachmentId => urls.resolve(sessionId as SessionId, attachmentId),
   })
 
   for (const { key, priority } of TOOLVIEW_REGISTRATIONS) {

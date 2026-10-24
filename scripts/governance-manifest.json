@@ -396,6 +396,7 @@
     "verify-video-cdn-fix.mjs",
     "verify-video-thumbnail.mjs",
     "verify-workflow-apptab-browser.mjs",
+    "viewer-card-qa-entry.mjs",
     "watch-plugin.mjs",
     "workflows/evaluation/build-scorecard.mjs",
     "workflows/prepare-args.mjs",
