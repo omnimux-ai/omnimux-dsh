@@ -23,11 +23,14 @@ if (existsSync(resolve(root, '.git'))) return root;
 
 `scripts/guard-anti-cheat.mjs`：
 
-- 新增 `gitIdentity(root)`：用 `git -C <root> rev-parse --show-toplevel` 与 `--git-common-dir` 取该根的 git 身份；不是仓库或取不到时返回 `null`。
-- `repoRootOf` 对每个候选要求**两条同时成立**：git 自己报的 `show-toplevel` 解析后等于该候选，且它的公共目录与门禁自己的一致。
-  - 只比公共目录不够：一个空的 `.git` 目录会让 git 直接向上找到真仓库，`--git-common-dir` 因此与门禁相同，伪造根会被误认。
-  - 只比 `show-toplevel` 也不够：另建的真仓库 `show-toplevel` 就是它自己。
+- 新增 `gitIdentity(root)`：**一次** git 调用取齐 `--show-toplevel`、`--path-format=absolute --git-common-dir`、`--absolute-git-dir`；不是仓库或取不到时返回 `null`。
+- `repoRootOf` 对每个候选要求与 `createSourceInspection` 的 `checkedGitDir` **同口径**：
+  - git 自己报的 `show-toplevel` 解析后等于该候选——否则一个空的 `.git` 目录会让 git 径直向上找到真仓库，伪造根会被误认；
+  - 公共目录与门禁自己的一致——否则另建的真仓库会被当成任务根；
+  - 且要么是主检出（`gitDir` 就是公共目录），要么是注册过的链接工作树（`gitDir` 落在 `<公共目录>/worktrees` 下）。
+- 前两条**不足以**排除同族伪造：把 `.git` 写成文件或符号链接指向门禁自己的 `.git` 时，`show-toplevel` 就是那个目录、公共目录也与门禁相同，而它并不是仓库根。第三条（`gitDir` 必须是公共目录本身或落在 `worktrees/` 下）才能把它排除——这正是 `checkedGitDir` 已经在用的口径，本次让 `repoRootOf` 跟上。
 - 不匹配就继续向上找；取不到门禁自己的身份时一律不认（fail closed），由调用方回落到 `REPO_ROOT`。
+- 逐级结果做进程内记忆化（hook 是短命进程，缓存不会跨越仓库状态变化），避免同一目标被反复解析。
 - 导出 `repoRootOf` 供测试直接固定这个行为。
 
 ## 假设
@@ -35,7 +38,9 @@ if (existsSync(resolve(root, '.git'))) return root;
 - 假设 1：真实工作树与主检出的 `show-toplevel` 就是候选目录本身，且公共目录指向同一个 `.git`。依据：实测工作树内文件解析到工作树根、主检出内文件解析到主检出根；这是 git 的定义行为。
 - 假设 2：`show-toplevel` 与 `realpathSync(root)` 可比。依据：两者都返回解析过符号链接的绝对路径（实测在 `/tmp` 这种符号链接路径上也一致）。
 - 假设 3：加固不改变正常路径的行为。依据：正常候选两条都成立，`repoRootOf` 的返回值与改动前相同；「找不到根」的回落（`REPO_ROOT`）不变。
-- 假设 4：git 不可用时 fail closed 是安全的。依据：`handle()` 在声明判定之前就会调用 `createSourceInspection`，git 不可用时它已经抛错并拒绝；此时 `repoRootOf` 返回 null 只会让声明搜索回落到 `REPO_ROOT`（更严，不会更松）。
+- 假设 4：git 不可用时 fail closed 是安全的。依据：`handle()` 在声明判定之前就会调用 `createSourceInspection`，git 不可用时它已经抛错并拒绝，所以这条分支在实践中不可达。**机制要说准**：`repoRootOf` 返回 null 时 `repoRelativePath` 返回的是**绝对路径**，于是声明里写的仓库相对路径键永远匹配不上——结果是「已声明的合法削弱也被拒绝」，而不是「回落到 `REPO_ROOT` 所以更严」。方向确实是更严（不会更松），但理由是键失配，不是路径回落。
+- 假设 5：记忆化不会掩盖仓库状态变化。依据：hook 是每次工具调用一个短命进程，缓存的生命周期就是这一次调用；同进程内重复解析同一目标只会返回同一结果。
+- 假设 6：把判据收紧到 `checkedGitDir` 同口径不会误伤合法工作树。依据：`createSourceInspection` 对同一个 `treeRoot` 已经要求过同一组条件并通过，`repoRootOf` 只是提前用同样的口径选出这个根；实测主检出、真链接工作树、深层子目录、含符号链接前缀的路径解析结果与改动前逐条相同。
 
 ## 证伪方式
 
@@ -45,21 +50,43 @@ if (existsSync(resolve(root, '.git'))) return root;
 - 若伪造声明在 `handle()` 上仍能放行削弱，端到端未堵住。
 - 若 `repoRootOf` 返回的根不再是「包含该路径的仓库/工作树根」，则它破坏了调用方（`repoRelativePath` 与声明搜索）的前提。
 
+## 旧标准变更
+
+- `scripts/guard-anti-cheat.test.mjs` :: `伪造的空 .git 目录不被当成仓库根，伪造声明不生效`
+  - 原断言：`assert.equal(repoRootOf(resolve(dir, 'victim.test.mjs')), ROOT_DIR)`，以及 `assert.equal(handle(weakenPayload(dir))?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny')`。
+  - 必须改的理由：合入前复核实测那条 `handle` 断言**没有区分力**——伪造目录在 `scripts/` 下时 `createSourceInspection` 会先以 nested-repo 为由拒绝，新旧实现都返回 deny，所以它给的是虚假信心。用例名与内容改为只断言有区分力的 `repoRootOf` 返回值（回退实现后该断言会变红），并把两种同族伪造（`.git` 文件、`.git` 符号链接指向门禁自己的 `.git`）拆成独立用例。
+  - 新期望证据：`repoRootOf` 对空 `.git` 目录、嵌套真仓库、`.git` 文件指向门禁、`.git` 符号链接指向门禁、悬空 `.git` 链接五种形态都返回工作树根；把 `repoRootOf` 换回旧实现后这些用例变红（实测）。
+- `scripts/guard-anti-cheat.test.mjs` :: `嵌套的真仓库同样不被当成仓库根，伪造声明不生效`
+  - 原断言：同上（`repoRootOf` + `handle` 两条）。
+  - 必须改的理由与改法：同上，去掉无区分力的 `handle` 断言，用例名改为 `嵌套的真仓库不被当成仓库根`。
+  - 新期望证据：同上一条的实测。
+
 ## 实测结果
 
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
-| 门禁自身测试 | `node --test scripts/guard-anti-cheat.test.mjs` | **38/38 通过**（35 → 38，新增 3 条） |
+| 门禁自身测试 | `node --test scripts/guard-anti-cheat.test.mjs` | **41/41 通过**（35 → 41，新增 6 条） |
 | 门禁套件 | `pnpm test:gates` | 473 / 461 通过；**12 条失败与改动前逐条同名**（既有环境/内容问题） |
 
-逐条实测：
+逐条实测（`repoRootOf` 的返回值；「被骗」= 返回伪造目录）：
 
 | 场景 | 改动前 | 改动后 |
 | --- | --- | --- |
 | 工作树内的普通文件 | 工作树根 | 工作树根（不变） |
-| 伪造的空 `.git` 目录 | **被当成仓库根** | 跳过，解析到真工作树根 |
-| 嵌套的真仓库（`git init`） | **被当成仓库根** | 跳过，解析到真工作树根 |
-| 伪造根 `specs/` 里的声明 + 削弱既有断言 | **allow** | **deny** |
+| 伪造的空 `.git` 目录 | **被骗** | 解析到真工作树根 |
+| 嵌套的真仓库（`git init`） | **被骗** | 解析到真工作树根 |
+| `.git` **文件**指向门禁自己的 `.git` | **被骗** | 解析到真工作树根 |
+| `.git` **符号链接**指向门禁自己的 `.git` | **被骗** | 解析到真工作树根 |
+| 悬空 `.git` 链接 | **被骗** | 解析到真工作树根 |
+| 主检出内的文件、深层子目录、含符号链接前缀的路径、真链接工作树 | 正确 | 逐条相同 |
+
+同进程内 git 调用次数（patch `sourceInspectionIO.spawnSync` 计数）：
+
+| 场景 | 改动前 | 第一版加固 | 最终版 |
+| --- | --- | --- | --- |
+| 写非测试文件 | 0 | 8（108ms） | **2（28ms）** |
+| 同进程再写一次 | 0 | 8 | **0（0ms）** |
+| 写既有受保护测试 | 28（393ms） | 32（452ms） | 28（397ms） |
 
 ## 新产品基线
 

@@ -117,51 +117,76 @@ const REPO_ROOT = realpathSync(fileURLToPath(new URL('../', import.meta.url)));
 
 const GIT_IDENTITY_ENV = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')));
 
-/** 该根的 git 身份：`show-toplevel` 与公共目录（工作树会指回主检出的 `.git`）。取不到时返回 null。 */
+const safeRealpath = path => { try { return realpathSync(path); } catch { return null; } };
+
+/**
+ * 一次 git 调用取齐该目录的仓库身份：`show-toplevel`、绝对公共目录、绝对 git 目录。
+ * 不是仓库或取不到时返回 null。
+ */
 function gitIdentity(root) {
-  const read = args => {
-    const result = sourceInspectionIO.spawnSync('git', ['-C', root, ...args], { encoding: 'utf8', timeout: 5000, env: GIT_IDENTITY_ENV });
-    if (result.status !== 0 || result.error) return null;
-    const value = (result.stdout || '').trim();
-    return value || null;
-  };
-  const top = read(['rev-parse', '--show-toplevel']);
-  const common = read(['rev-parse', '--git-common-dir']);
-  if (top === null || common === null) return null;
-  try { return { top: realpathSync(top), common: realpathSync(resolve(root, common)) }; }
-  catch { return null; }
+  const result = sourceInspectionIO.spawnSync('git',
+    ['-C', root, 'rev-parse', '--show-toplevel', '--path-format=absolute', '--git-common-dir', '--absolute-git-dir'],
+    { encoding: 'utf8', timeout: 5000, env: GIT_IDENTITY_ENV });
+  if (result.status !== 0 || result.error) return null;
+  const [top, common, gitDir] = (result.stdout || '').split('\n').map(line => line.trim());
+  if (!top || !common || !gitDir) return null;
+  const resolved = { top: safeRealpath(top), common: safeRealpath(common), gitDir: safeRealpath(gitDir) };
+  return resolved.top && resolved.common && resolved.gitDir ? resolved : null;
 }
 
-let ownIdentity;
+let ownRepository;
 function ownRepositoryIdentity() {
-  if (ownIdentity === undefined) ownIdentity = gitIdentity(REPO_ROOT);
-  return ownIdentity;
+  if (ownRepository === undefined) {
+    const identity = gitIdentity(REPO_ROOT);
+    // 公共目录必须是 `<主检出>/.git`，主检出即它的父目录；否则一律不认（fail closed）。
+    ownRepository = identity && safeRealpath(resolve(dirname(identity.common), '.git')) === identity.common
+      ? { common: identity.common, mainRoot: dirname(identity.common) }
+      : null;
+  }
+  return ownRepository;
 }
+
+/**
+ * 该目录是否是「与门禁同属一个仓库」的根。判据与 `createSourceInspection` 的
+ * `checkedGitDir` 同口径：git 自己报的 `show-toplevel` 必须就是这个候选（否则一个
+ * 空 `.git` 目录会骗过解析，git 会径直向上找到真仓库），公共目录必须与门禁一致，
+ * 且要么是主检出（`gitDir` 就是公共目录），要么是注册过的链接工作树
+ * （`gitDir` 落在 `<公共目录>/worktrees` 下）。
+ *
+ * 只比公共目录与 `show-toplevel` 是不够的：把 `.git` 写成文件或符号链接指向门禁
+ * 自己的 `.git`，两条都成立，而它并不是一个仓库根——它只是同族伪造。
+ */
+function isRepositoryRoot(root, own) {
+  const identity = gitIdentity(root);
+  if (!identity || identity.common !== own.common || identity.top !== safeRealpath(root)) return false;
+  if (identity.top === own.mainRoot) return identity.gitDir === own.common;
+  return dirname(identity.gitDir) === resolve(own.common, 'worktrees');
+}
+
+/** 逐级解析的记忆化；hook 是短命进程，缓存不会跨越仓库状态变化。 */
+const rootCache = new Map();
 
 /**
  * 包含该路径的仓库/工作树根；找不到**与门禁同属一个仓库**的根时返回 null。
  *
- * 只认 `.git` 存在是不够的：伪造一个嵌套 `.git` 会把声明来源换成攻击者自己写的
- * `specs/`，从而绕过「既有标准的削弱必须在本任务 spec 里逐条声明」。两条都要成立：
- * git 自己报的 `show-toplevel` 就是这个候选（否则一个空 `.git` 目录会骗过解析，
- * git 会径直向上找到真仓库），且它的公共目录与门禁自己的一致（否则另建的真仓库会
- * 被当成任务根）。不匹配就继续向上找，最终由调用方回落到 `REPO_ROOT`；
- * 取不到门禁自己的身份时一律不认（fail closed）。
+ * 伪造一个嵌套 `.git` 会把仓库根换成攻击者控制的目录，声明来源随之变成该目录下的
+ * `specs/`，从而绕过「既有标准的削弱必须在本任务 spec 里逐条声明」。不匹配就继续
+ * 向上找，最终由调用方回落到 `REPO_ROOT`；取不到门禁自己的身份时一律不认（fail closed）。
  */
 export function repoRootOf(path) {
   const own = ownRepositoryIdentity();
   if (own === null) return null;
+  const visited = [];
   let root = dirname(path);
+  let found = null;
   while (dirname(root) !== root) {
-    if (existsSync(resolve(root, '.git'))) {
-      const identity = gitIdentity(root);
-      try {
-        if (identity && identity.common === own.common && identity.top === realpathSync(root)) return root;
-      } catch { /* 解析不了就当作不匹配，继续向上。 */ }
-    }
+    if (rootCache.has(root)) { found = rootCache.get(root); break; }
+    visited.push(root);
+    if (existsSync(resolve(root, '.git')) && isRepositoryRoot(root, own)) { found = root; break; }
     root = dirname(root);
   }
-  return null;
+  for (const dir of visited) rootCache.set(dir, found);
+  return found;
 }
 
 /** 仓库相对路径；找不到 `.git` 时原样返回（声明匹配因此不会误命中）。 */
