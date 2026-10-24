@@ -29,7 +29,7 @@ test('mac arm64 命中固定目标：Python 3.12 + torch 2.9.1 + ComfyUI 固定 
   assert.equal(result.target.comfyui.commit, COMFYUI_COMMIT);
   assert.equal(result.target.comfyui.tarball.includes(COMFYUI_COMMIT), true);
   assert.equal(result.target.port, COMFY_BACKEND_PORT);
-  assert.equal(COMFY_BACKEND_BASE_URL, 'http://127.0.0.1:18188');
+  assert.equal(COMFY_BACKEND_BASE_URL, 'http://localhost:18188');
   assert.equal(result.target.estimatedBytes > 0, true);
 });
 

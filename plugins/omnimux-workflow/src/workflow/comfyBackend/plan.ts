@@ -10,9 +10,18 @@
  * commit）。升级 = 改这里的常量 + 改单测，不允许在安装时「装最新」。
  */
 
-/** 托管后端端口：固定 18188，避开用户自己装的 ComfyUI 默认 8188。 */
+/**
+ * 托管后端端口：固定 18188，避开用户自己装的 ComfyUI 默认 8188。
+ *
+ * 主机名用 `localhost` 而不是 `127.0.0.1`：DSH 自己的 `dsh-auth` cookie 是 host-only
+ * 绑在 127.0.0.1 上的（很长），浏览器从画布 iframe 请求 127.0.0.1:18188 时会带上它，
+ * 而 ComfyUI 的 aiohttp 请求头上限是 8190 字节 → 直接报
+ * 「Got more than 8190 bytes when reading: b'dsh-auth=…'」，页面打不开。
+ * 换成 `localhost` 属于不同 host，cookie 不带 → 真编辑器正常渲染（已实测，见证据）。
+ * 后端仍只监听回环地址，不对外暴露。
+ */
 export const COMFY_BACKEND_PORT = 18188;
-export const COMFY_BACKEND_HOST = '127.0.0.1';
+export const COMFY_BACKEND_HOST = 'localhost';
 export const COMFY_BACKEND_BASE_URL = `http://${COMFY_BACKEND_HOST}:${COMFY_BACKEND_PORT}`;
 /** 就绪探测路径（ComfyUI 自带，返回 JSON）。 */
 export const COMFY_BACKEND_READY_PATH = '/system_stats';

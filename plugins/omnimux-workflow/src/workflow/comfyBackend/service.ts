@@ -13,7 +13,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, createWriteStream, existsSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { pipeline } from 'node:stream/promises';
@@ -83,7 +83,11 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
 
   mkdirSync(dirname(paths.log), { recursive: true });
   mkdirSync(downloads, { recursive: true });
-  mkdirSync(paths.userdata, { recursive: true });
+  // `--base-directory` 指向 userdata；ComfyUI 启动时会直接 os.listdir 这些子目录，
+  // 缺一个就 FileNotFoundError 起不来（实测 custom_nodes 缺失即崩）。
+  for (const name of ['custom_nodes', 'models', 'input', 'output', 'temp']) {
+    mkdirSync(join(paths.userdata, name), { recursive: true });
+  }
 
   const log = (line: string) => {
     const stamped = `[${new Date(now()).toISOString()}] ${line}\n`;
@@ -264,7 +268,12 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
 
   const status = async (): Promise<ComfyBackendStatus> => {
     const current = readState();
-    if (current.state === 'installing' || current.state === 'starting') return current;
+    // 只有本进程真的在跑安装时才相信文件里的 installing：宿主中途退出后不能永远
+    // 停在「安装中」（实测踩到过）。已下载/已建好的部分会被下一次 install 复用。
+    if (current.state === 'installing') {
+      if (installing) return current;
+      return writeState({ state: 'not-installed', stage: null, percent: 0, pid: null, message: '上次安装未完成，可重试', error: null });
+    }
     if (!existsSync(join(root, '.ready'))) {
       return current.state === 'not-installed' ? current : writeState({ state: 'not-installed', stage: null, percent: 0, pid: null });
     }
@@ -287,7 +296,8 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     if (!existsSync(join(root, '.ready'))) return writeState({ state: 'not-installed', message: '尚未安装托管后端' });
     if (await probeReady()) return writeState({ state: 'ready', message: 'ComfyUI 已就绪' });
     writeState({ state: 'starting', message: '正在启动 ComfyUI' });
-    const out = createWriteStream(join(root, 'logs', 'backend.log'), { flags: 'a' });
+    // 用同步 fd 交给子进程（直接传 WriteStream 会因为 fd 还没打开而报 stdio 非法）。
+    const logFd = openSync(join(root, 'logs', 'backend.log'), 'a');
     const child = spawnImpl(
       venvPython(),
       [
@@ -296,8 +306,9 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
         '--base-directory', paths.userdata,
         '--enable-cors-header', '*',
       ],
-      { cwd: paths.comfyui, detached: true, stdio: ['ignore', out, out] },
+      { cwd: paths.comfyui, detached: true, stdio: ['ignore', logFd, logFd] },
     );
+    closeSync(logFd);
     child.unref?.();
     writeState({ state: 'starting', pid: child.pid ?? null, message: '正在启动 ComfyUI' });
     log(`启动 ComfyUI pid=${child.pid ?? 'unknown'}`);

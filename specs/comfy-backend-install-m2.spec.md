@@ -26,6 +26,31 @@
 4. GPL 合规产物：`THIRD-PARTY-NOTICES-comfyui.md`（固定 tag/commit、源码获取链接、未修改声明、可分离说明、用户数据边界）。**不随包附带 GPL 全文**：我们不分发 ComfyUI，仓库里没有它的代码，源码与许可证原文都在上游同一处（安装器按固定 commit 拉取），需要全文时从该链接获取。
 5. 启动参数与目录布局对齐逆向事实：端口 18188、`--base-directory <installRoot>/userdata`、`--enable-cors-header "*"`（浏览器直连，不经网关代理）；ComfyUI 独立目录（升级整目录替换，userdata 保留）。
 
+## 实测发现（安装后真机跑出来的）
+
+1. **宿主 cookie 会顶掉 ComfyUI 的请求头上限**：DSH 的 `dsh-auth` cookie 是 host-only 绑在
+   `127.0.0.1` 上的长字符串；画布 iframe 请求 `http://127.0.0.1:18188` 时浏览器会带上它，
+   ComfyUI 的 aiohttp 请求头上限 8190 字节 → 页面返回「Got more than 8190 bytes when reading:
+   b'dsh-auth=…'」，编辑器打不开（截图 `issue-3690-00-real-comfyui-in-canvas.png` 即此现象）。
+   换成 `http://localhost:18188`（不同 host，cookie 不带）后真编辑器正常渲染
+   （`issue-3690-01-real-comfyui-localhost.png`）。因此托管后端对外地址定为 `localhost:18188`，
+   后端仍只监听回环。已知缺口：`localhost` 若先解析到 `::1` 需要浏览器回退 IPv4（Chromium 会），
+   M3 失败态矩阵里补一条「地址不可达」提示。
+2. **`--base-directory` 的子目录必须先建**：ComfyUI 启动时直接 `os.listdir(<base>/custom_nodes)`，
+   缺目录即 `FileNotFoundError` 起不来。服务现在预建 `custom_nodes/models/input/output/temp`。
+3. **宿主中途退出会留下 `installing` 假状态**：安装任务在宿主进程内（重活交子进程）。状态读取
+   现在只在「本进程确实在装」时才相信文件里的 `installing`，否则降级为「上次安装未完成，可重试」；
+   已下载/已建好的部分会被下一次安装复用（实测中断后重跑可续）。
+4. **`stdio` 不能直接传 WriteStream**：子进程启动前 fd 还没打开，Node 报 `ERR_INVALID_ARG_VALUE`；
+   改成 `openSync` 传 fd。
+
+## 旧标准变更
+
+- `plugins/omnimux-workflow/src/workflow/comfyBackend/plan.test.mjs` :: `mac arm64 命中固定目标：Python 3.12 + torch 2.9.1 + ComfyUI 固定 commit`
+  - 原断言：`assert.equal(COMFY_BACKEND_BASE_URL, 'http://127.0.0.1:18188')`。
+  - 必须改的理由：真机实测发现 127.0.0.1 会把宿主 `dsh-auth` cookie 带给 ComfyUI，触发 aiohttp 8190 字节请求头上限，编辑器打不开；托管地址改为 `localhost:18188`（见「实测发现」第 1 条）。
+  - 新期望证据：`COMFY_BACKEND_BASE_URL === 'http://localhost:18188'`，端口仍为 18188；其余断言（版本/哈希/commit/体积）原样保留。
+
 ## 非目标
 
 - 不做前端状态 UI / 安装引导（M2c）；不做失败态矩阵全量（M3）；不做 Windows/Linux/AMD/Intel 平台产物（M4，本轮只落 mac arm64 的真实安装，其他平台在计划器里显式拒绝）。
