@@ -18,23 +18,24 @@ TypeError: terminated
   [cause]: SocketError: other side closed
 ```
 
+旁证：修复前正常环境跑 239.7 秒，修复后 142.7 秒——省下的时间就是每次重新下载的耗时。
+
 缓存位置本来与 `HOME` 无关，所以这是检查自身的缺陷，不是环境问题。
 
 ## 变更点
 
-- `scripts/sync-release-policy.test.mjs`：在**进程级**固定 corepack 缓存位置并关掉 corepack 联网。该文件里有几处子进程自己拼环境（不走统一的环境构造函数），进程级设定才能全覆盖。
-- `scripts/sync-targets.test.mjs`、`scripts/sync-refresh-scope.test.mjs`：原有写法是 `COREPACK_HOME: process.env.COREPACK_HOME`——该变量通常**未设置**，等于没生效。改为回落到开发者缓存目录，并加上关联网。
-- `scripts/sync-source-identity.test.mjs`：原本完全没设，补上。
+- `scripts/sync-release-policy.test.mjs`：在**进程级**固定 corepack 缓存位置。该文件里有几处子进程自己拼环境（不走统一的环境构造函数），进程级设定才能全覆盖。
+- `scripts/sync-targets.test.mjs`、`scripts/sync-refresh-scope.test.mjs`：原有写法是 `COREPACK_HOME: process.env.COREPACK_HOME`——该变量通常**未设置**，等于没生效。改为回落到开发者缓存目录。
 
 写法与仓库里已经正确的 `scripts/sync-repeat-install.test.mjs` 一致。
 
-**为什么三个文件在环境构造函数里修、一个在进程级修**：前三个所有子进程都走同一个环境构造函数，在那里修是它天然的家；出问题那个有几处内联 spawn，只能在进程级兜住。
+**刻意不设 `COREPACK_ENABLE_NETWORK=0`**：复核实测证明，关掉联网会把「网络抖动时偶发红」换成「缓存不在时**必然红**」——干净机器上第一次跑就是红的，比原来的偶发红更糟。只固定缓存位置就能在死代理下全绿，缺缓存时也还能靠联网自愈。仓库里 CI 的 managed-tarball 步骤用的是「先 `corepack prepare` 预热、再关网」范式，那是另一种可选路线，本改动不采用。
 
 ## 假设
 
-- 假设 1：`COREPACK_HOME` 默认落在 `$HOME/.cache/node/corepack`。依据：本机实测缓存确实在该路径，且 `ls` 到 `11.7.0` 版本目录。
-- 假设 2：关掉 corepack 联网后，本地缓存足以解析被 pin 的版本。依据：见下方证伪实验——在**代理指向死端口**的情况下，修复后 12/12 通过。
-- 假设 3：固定缓存位置不影响检查要验证的东西（它验的是同步脚本对 Alpha 插件的物化策略，与包管理器从哪拿无关）。依据：修复前后正常环境下都是 12/12 通过，断言一条没动。
+- 假设 1：`COREPACK_HOME` 默认落在 `$HOME/.cache/node/corepack`。依据：本机实测缓存确实在该路径，且能看到 `11.7.0` 版本目录。
+- 假设 2：固定缓存位置后，corepack 会命中本地缓存而不再碰网络。依据：见下方证伪实验——代理指向死端口时修复后全绿。
+- 假设 3：固定缓存位置不影响检查要验证的东西（它验的是同步脚本对 Alpha 插件的物化策略，与包管理器从哪拿无关）。依据：修复前后正常环境都全绿，断言一条没动。
 
 ## 证伪方式
 
@@ -51,14 +52,16 @@ TypeError: terminated
 | --- | --- |
 | 死代理下 `sync-release-policy` | 修复前必红 → 修复后 **12/12** |
 | 死代理下 `sync-targets` | **23/23** |
-| 死代理下 `sync-refresh-scope` | **1/1** |
-| 死代理下 `sync-source-identity` | **15/15** |
-| 正常环境 `sync-release-policy` | **12/12** |
+| 正常环境 `sync-release-policy` | **12/12**（修复前 239.7s → 修复后 142.7s） |
 | `pnpm test:gates` | **485/485 全绿** |
+| 冷缓存（`COREPACK_HOME` 指向空目录） | 联网保留 → 自动下载并自愈；若关掉联网则会必然红——这就是不采用关网方案的原因 |
 
 ## 已知边界
 
-- `scripts/sync-plugin-scope.test.mjs` 有同一缺口，但**改不动**：仓库自己的防造假门禁把它判为「改写既有测试用例」，纯新增两行环境变量也被拒。该文件确实会走真实的 `sync-to-app.sh`，理论上同样暴露。未修，在此记录。
+- **`scripts/sync-plugin-scope.test.mjs` 不需要修**，不是漏修：它把 corepack 也桩掉了（把假 corepack 写进 `bin` 并前置到 PATH），整个文件没有任何网络依赖，本来就不可能因此偶发红。仓库自己的防造假门禁确实拒绝改它（连纯新增两行环境变量也拒），但挡住的是一个**不必做**的改动。
+  - 该门禁的确切触发条件（复核定位）：`scripts/test-authoring-inspection.mjs` 的 `contextOf(CallExpression)` 把调用的**实参 AST** 嵌进风险指纹，于是「改动的对象字面量是某个调用的实参、且内部含 `...spread`」就会被判成新风险。改函数体语句、或改 `return` 的对象都不触发——这与另外三个文件能改、它不能改完全自洽。
+- `scripts/sync-source-identity.test.mjs` **不改**：它把 `sync-stable.sh` 换成桩脚本、且只拷不触发构建的脚本，全文件从不调用 pnpm/corepack。曾经加过的两行环境变量属死代码，已回退。
+- `scripts/sync-refresh-scope.test.mjs` **不在 `pnpm test:gates` 的执行链里**（只被 `governance-manifest.json` 收录）。它那处属同类的正确性修补，与本次报的偶发红无关。
 - 检查的断言、覆盖范围、执行时间预算均未改动——这次只改「它从哪里拿包管理器」，没有放宽任何判断。
 
 ## 新产品基线

@@ -17,11 +17,6 @@ function fixture(t) {
   const linked = join(primary, '.worktrees/task')
   const home = join(temp, 'home')
   const env = { ...process.env, HOME: home, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null', GIT_CEILING_DIRECTORIES: temp }
-  // 重定向 HOME 会把 corepack 的缓存目录一起挪走，于是每次同步都得重新下载被 pin 的
-  // pnpm：网络当时的状态决定了检查是绿是红。缓存位置本来与 HOME 无关，固定住它并
-  // 关掉 corepack 联网，结果就只取决于本地缓存。
-  env.COREPACK_HOME = process.env.COREPACK_HOME ?? `${process.env.HOME}/.cache/node/corepack`
-  env.COREPACK_ENABLE_NETWORK = '0'
   for (const key of Object.keys(env)) {
     if (key.startsWith('OMNIMUX_') || key.startsWith('GIT_DIR') || key.startsWith('GIT_WORK_TREE')) delete env[key]
   }
