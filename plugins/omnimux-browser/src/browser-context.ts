@@ -13,6 +13,7 @@
 
 import type { Agent, AgentRegistry } from '@deepseek-ai/dsh-agent'
 import type { UserMessage } from '@deepseek-ai/dsh-llm'
+import './message-source.ts'
 import * as dshLlm from '@deepseek-ai/dsh-llm'
 
 /** Provenance key used for snapshot supersession and transcript presentation. */
@@ -32,7 +33,7 @@ export function createBrowserSnapshotMessage(snapshot: string): UserMessage {
   const payload = {
     content: [{ type: 'text' as const, text }],
     source: {
-      kind: 'plugin' as const,
+      kind: 'omnimux-browser-context' as const,
       plugin: BROWSER_CONTEXT_PLUGIN,
       form: 'snapshot' as const,
       sections: [{ name: 'browser-page', text }],
@@ -48,7 +49,7 @@ export function createBrowserSnapshotMessage(snapshot: string): UserMessage {
 /** Supersede pending tab context through the durable Inbox command surface. */
 function injectLatestSnapshot(agent: Agent, snapshot: string): void {
   for (const message of agent.inbox.nextStep) {
-    if (message.source.kind === 'plugin'
+    if (message.source.kind === 'omnimux-browser-context'
       && message.source.plugin === BROWSER_CONTEXT_PLUGIN
       && message.source.form === 'snapshot') {
       agent.inbox.remove(message.id)

@@ -30,6 +30,7 @@ import {
   DISPLAY_TOOL, classifyPath, formatDisplayOutput, modelImageMediaTypeForPath,
   type DisplayValue, type ModelImage, type ModelImageMediaType,
 } from './contract.ts'
+import './message-source.ts'
 import { assetUrlFor } from './asset-token.ts'
 import { CONVERTED_MEDIA_TYPE, convertDocument } from './convert.ts'
 import { resolveDisplayTarget } from './read-target.ts'
@@ -289,7 +290,7 @@ export function applyDisplayTool(ctx: Context, options: DisplayToolOptions): () 
           id: MessageId(randomUUID()),
           role: 'user',
           content,
-          source: { kind: 'plugin', plugin: PLUGIN },
+          source: { kind: 'omnimux-viewer', plugin: PLUGIN },
         })
       }
       return value
