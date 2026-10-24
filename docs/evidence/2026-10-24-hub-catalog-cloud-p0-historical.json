@@ -1,0 +1,276 @@
+{
+  "kind": "omnimux-gateway-catalog-diff",
+  "schemaVersion": 1,
+  "gateway": {
+    "source": "channel-baseline",
+    "generatedAt": null,
+    "digest": "758e833ca91ab8877215b8c2cb621cd49db3839b268a22c8885546af9374e4ec",
+    "coverage": {
+      "models": 21,
+      "channels": {
+        "total": 64,
+        "enabled": 17
+      },
+      "limitations": [
+        "channel-baseline lacks supported_endpoint_types",
+        "channel-baseline lacks per-model contract"
+      ]
+    },
+    "label": "/tmp/gw-baseline-20261020"
+  },
+  "hub": {
+    "label": "/tmp/hub-catalog-471206b64.json",
+    "digest": "971486ae2f42576e4b49dd91689e946ef7421ab072901c8926d207518d5a7490"
+  },
+  "summary": {
+    "gatewayModels": 21,
+    "hubModels": 44,
+    "hubListed": 16,
+    "unreachable": 9,
+    "gatewayOnly": 14,
+    "groupMissing": 8,
+    "groupExtra": 5,
+    "priceChanged": 0,
+    "comparablePrices": 0,
+    "uncomparablePrices": 0
+  },
+  "limitations": [
+    "channel-baseline lacks supported_endpoint_types",
+    "channel-baseline lacks per-model contract"
+  ],
+  "unreachable": [
+    {
+      "id": "claude-sonnet-4-6",
+      "listedOperations": [
+        "claude-sonnet-4-6#chat",
+        "claude-sonnet-4-6#vision_chat"
+      ]
+    },
+    {
+      "id": "doubao-asr-bigmodel",
+      "listedOperations": [
+        "doubao-asr-bigmodel#speech_to_text"
+      ]
+    },
+    {
+      "id": "gemini-3.8-flash-tts",
+      "listedOperations": [
+        "gemini-3.8-flash-tts#text_to_speech"
+      ]
+    },
+    {
+      "id": "gpt-image-2.5-flare",
+      "listedOperations": [
+        "gpt-image-2.5-flare#text_to_image"
+      ]
+    },
+    {
+      "id": "gpt-image-2.5-sunburst",
+      "listedOperations": [
+        "gpt-image-2.5-sunburst#text_to_image"
+      ]
+    },
+    {
+      "id": "indextts-2",
+      "listedOperations": [
+        "indextts-2#voice_clone"
+      ]
+    },
+    {
+      "id": "minimax-h3",
+      "listedOperations": [
+        "minimax-h3#digital_human",
+        "minimax-h3#end_frame",
+        "minimax-h3#first_frame",
+        "minimax-h3#first_last_frame",
+        "minimax-h3#text_to_video",
+        "minimax-h3#video_multi_ref"
+      ]
+    },
+    {
+      "id": "seed-audio-1.0",
+      "listedOperations": [
+        "seed-audio-1.0#text_to_speech"
+      ]
+    },
+    {
+      "id": "seedasr-auc",
+      "listedOperations": [
+        "seedasr-auc#speech_to_text"
+      ]
+    }
+  ],
+  "gatewayOnly": [
+    {
+      "id": "gemini-3.1-flash-lite-image",
+      "enableGroups": [
+        "default",
+        "nanobanana-economy"
+      ]
+    },
+    {
+      "id": "gemini-4-argon",
+      "enableGroups": [
+        "gemini-4-argon-multimodal"
+      ]
+    },
+    {
+      "id": "kling-v2-6",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "kling-v3",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "nano-banana-2",
+      "enableGroups": [
+        "nano-banana-2-pro"
+      ]
+    },
+    {
+      "id": "nano-banana-pro",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "qwen-image-3-0",
+      "enableGroups": [
+        "default",
+        "nanobanana-economy"
+      ]
+    },
+    {
+      "id": "suno",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "suno-sounds",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "tiktok-posts",
+      "enableGroups": [
+        "social-data-tikhub"
+      ]
+    },
+    {
+      "id": "tiktok-user",
+      "enableGroups": [
+        "social-data-tikhub"
+      ]
+    },
+    {
+      "id": "whisper-1",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "x-posts",
+      "enableGroups": [
+        "social-data-tikhub"
+      ]
+    },
+    {
+      "id": "x-user",
+      "enableGroups": [
+        "social-data-tikhub"
+      ]
+    }
+  ],
+  "groupMissing": [
+    {
+      "id": "gemini-3.8-flash",
+      "wireGroup": "gemini-cheap",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "gemini-3.8-flash",
+      "wireGroup": "pool",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "gpt-image-2.5",
+      "wireGroup": "gpt-image-2.5-pro",
+      "enableGroups": [
+        "default",
+        "gpt-image-2.5-economy",
+        "nanobanana-economy"
+      ]
+    },
+    {
+      "id": "seedance-2-0",
+      "wireGroup": "seedance-2-0-task-pro",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "seedance-2-0",
+      "wireGroup": "seedance-standard",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "seedance-2-0",
+      "wireGroup": "cheap",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "seedance-2-0-fast",
+      "wireGroup": "cheap",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "seedance-2-5",
+      "wireGroup": "default",
+      "enableGroups": [
+        "seedance-2-5-480p",
+        "seedance-2-5-720p"
+      ]
+    }
+  ],
+  "groupExtra": [
+    {
+      "id": "gpt-image-2.5",
+      "wireGroup": "nanobanana-economy"
+    },
+    {
+      "id": "seedance-2-5",
+      "wireGroup": "seedance-2-5-480p"
+    },
+    {
+      "id": "seedance-2-5",
+      "wireGroup": "seedance-2-5-720p"
+    },
+    {
+      "id": "seedream-5-0-pro",
+      "wireGroup": "default"
+    },
+    {
+      "id": "seedream-5-0-pro",
+      "wireGroup": "nanobanana-economy"
+    }
+  ],
+  "priceChanged": [],
+  "uncomparablePrices": []
+}
