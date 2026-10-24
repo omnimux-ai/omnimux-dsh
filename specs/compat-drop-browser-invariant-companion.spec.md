@@ -43,3 +43,10 @@ DSH `0.2.1-rc.3` 移除了 `invariants` 服务与 `@deepseek-ai/dsh-invariants` 
 ## 风险
 
 R2。删除的是空 installer 与死声明；失败模式是构建配置遗漏（由验收 2 覆盖）。若假设 1 不成立（旧宿主上 companion 实际承担所有权登记），影响限于旧宿主的 invariant 覆盖统计，不改变 bridge 功能。
+
+## 旧标准变更
+
+- `plugins/omnimux-browser/tests/setup-invariant.ts` :: `*`
+  - 理由：该文件不是用例文件（无 `test`/`it` 与断言），只为在 vitest 启动时执行已删除的空 invariant companion；删除后 vitest 仍运行同一批 spec。
+  - 新期望与证据：`npx vitest run` 的通过集合与改动前一致——338 通过 / 6 跳过；失败仅 `composition.spec.ts`、`session-purge.spec.ts` 两文件，原因是 `@deepseek-ai/dsh-session` / `@deepseek-ai/cordis-plugin-loader` 在本仓（含 `origin/main`）从未声明，属预存在环境缺口。
+
