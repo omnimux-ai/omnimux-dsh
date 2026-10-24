@@ -19,7 +19,8 @@
     "label": "/tmp/gw-baseline-20261020"
   },
   "hub": {
-    "label": "/tmp/hub-catalog-471206b64.json"
+    "label": "/tmp/hub-catalog-471206b64.json",
+    "digest": "971486ae2f42576e4b49dd91689e946ef7421ab072901c8926d207518d5a7490"
   },
   "summary": {
     "gatewayModels": 21,

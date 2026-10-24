@@ -19,7 +19,8 @@
     "label": "/Users/x/Desktop/Project/OmniMux/scripts/ops/config-baseline"
   },
   "hub": {
-    "label": "current checkout projection"
+    "label": "current checkout projection",
+    "digest": "90fdfaebc842a65a3af53f2ae7823696063386608bf5a4011383effbf7b743e0"
   },
   "summary": {
     "gatewayModels": 24,
