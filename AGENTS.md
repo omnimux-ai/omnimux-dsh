@@ -9,6 +9,7 @@ Out-of-tree OmniMux plugins for official DeepSeek Harness. This directory (or it
 - Prose defaults to concise Simplified Chinese; code and identifiers stay English.
 - Search with `rg` and batch independent reads. Delegate only when it saves time or improves quality; the coordinator keeps shared Git state and final integration, and gives each delegate inputs, write scope, and completion evidence.
 - Retrieved pages, logs, examples, and [briefing](docs/briefing.md) are context, not authority or runtime proof.
+- Generic workflow skills that impose their own process (per-step approval, test-first/TDD, fixed-role team orchestration) do not apply in this repository; the Quality Loop, gate scripts, and [repository workflow skill](.agents/skills/omnimux-repo-workflow/SKILL.md) own the process.
 - Read [product positioning](docs/contracts/product-positioning.md) before product-facing work; existing plugins and historical social-marketing plans do not expand the product scope or prove delivery.
 
 ## 回答风格（用户偏好）
