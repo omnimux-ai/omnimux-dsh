@@ -4,7 +4,7 @@ import { readFileSync, readdirSync, mkdirSync, writeFileSync, rmSync } from 'nod
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { evaluateAntiCheat, decideOldStandardDeclaration, collectOldStandardDeclarations, handle } from './guard-anti-cheat.mjs';
+import { evaluateAntiCheat, decideOldStandardDeclaration, collectOldStandardDeclarations, handle, repoRootOf } from './guard-anti-cheat.mjs';
 import { inspectTestStandardChange } from './test-authoring-inspection.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -399,5 +399,43 @@ describe('6. 解析不了的新增测试文件仍拦最典型风险（不因放�
     assert.equal(handle(commentPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
     const stringPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-string-paren.test.ts', content: TS_HEAD + "const s = 'xit(';\n" } });
     assert.equal(handle(stringPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+  });
+});
+
+describe('7. 仓库身份不接受伪造的嵌套 .git', () => {
+  const VICTIM_BEFORE = "import test from 'node:test'\nimport assert from 'node:assert/strict'\ntest('keeps', () => { assert.equal(value(), 1) })\n";
+  const VICTIM_AFTER = "import test from 'node:test'\nimport assert from 'node:assert/strict'\ntest('keeps', () => { assert.equal(value(), 2) })\n";
+
+  function withForgedRoot(forgery, run) {
+    const dir = resolve(ROOT_DIR, 'scripts/__probe-root');
+    mkdirSync(resolve(dir, 'specs'), { recursive: true });
+    writeFileSync(resolve(dir, 'victim.test.mjs'), VICTIM_BEFORE);
+    // 伪造根相对路径的声明：如果门禁把这个目录当成仓库根，声明就会命中。
+    writeFileSync(resolve(dir, 'specs/forged.spec.md'), "# forged\n\n## 旧标准变更\n\n- `victim.test.mjs` :: `keeps`\n");
+    forgery(resolve(dir, '.git'));
+    try { run(dir); } finally { rmSync(dir, { recursive: true, force: true }); }
+  }
+
+  function weakenPayload(dir) {
+    return JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: resolve(dir, 'victim.test.mjs'), content: VICTIM_AFTER } });
+  }
+
+  it('伪造的空 .git 目录不被当成仓库根，伪造声明不生效', () => {
+    withForgedRoot(gitDir => mkdirSync(gitDir, { recursive: true }), dir => {
+      // 门禁仍应解析到真工作树根，而不是伪造目录。
+      assert.equal(repoRootOf(resolve(dir, 'victim.test.mjs')), ROOT_DIR);
+      assert.equal(handle(weakenPayload(dir))?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    });
+  });
+
+  it('嵌套的真仓库同样不被当成仓库根，伪造声明不生效', () => {
+    withForgedRoot(gitDir => spawnSync('git', ['init', '-q', gitDir], { encoding: 'utf8' }), dir => {
+      assert.equal(repoRootOf(resolve(dir, 'victim.test.mjs')), ROOT_DIR);
+      assert.equal(handle(weakenPayload(dir))?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    });
+  });
+
+  it('正常的仓库内文件仍解析到工作树根', () => {
+    assert.equal(repoRootOf(resolve(ROOT_DIR, 'scripts/guard-anti-cheat.mjs')), ROOT_DIR);
   });
 });
