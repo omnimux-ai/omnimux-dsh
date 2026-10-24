@@ -15,7 +15,7 @@
 1. 开发者接到一个必须改写既有断言的修复（例如「旧断言逐字要求缺陷行为」）。
 2. 在任务 spec 里新增 `## 旧标准变更` 一节，逐条写明：文件路径、用例名、原断言、为什么必须改、新期望及其真实证据。
 3. 正常编辑测试文件。门禁发现断言被移除/改写后，先查 spec 声明；命中则放行，未命中则拒绝并**明确告知需要补哪条声明**。
-4. 审查者在 PR 里同时看到三处：spec 声明的理由、diff 里的实际改动、CI `test-change-review` 产出的评估域变更清单。
+4. 审查者在 PR 里同时看到三处：spec 声明的理由、diff 里的实际改动、`test-change-review` 产出的评估域变更清单（该清单目前是独立工具，其 `scan` 尚未接入 CI）。
 5. 若 agent 想静默削弱测试：spec 里没有对应声明 → 门禁照旧拒绝，且拒绝信息会点名缺失的用例。
 
 ## 期望界面反馈
@@ -57,7 +57,7 @@
   3. 用 `matchOldStandardDeclarations` 逐条匹配「本文件 + changedCases」；
   4. 全部命中 → 放行；否则 → 维持拒绝，并在信息中点名缺失的用例。
 - 其它拒绝原因（跳过、聚焦、动态执行、公共绑定逃逸等）**一律维持硬拒绝**，不进入本通道。
-- **不写任何文件**：审查痕迹由 spec 声明（受版本管理）、diff、以及 CI 已接入的 `scripts/test-change-review.mjs` 评估域清单三处共同承载。原先提案中的 `docs/evidence/test-standard-changes/*.json` 取消——该目录被 git 忽略，写进去既到不了 PR，又会在 hook 里引入副作用。
+- **不写任何文件**：审查痕迹由 spec 声明（受版本管理）、diff、以及 `scripts/test-change-review.mjs` 的评估域清单（独立工具，`scan` 尚未接入 CI）三处共同承载。原先提案中的 `docs/evidence/test-standard-changes/*.json` 取消——该目录被 git 忽略，写进去既到不了 PR，又会在 hook 里引入副作用。
 
 ### 4. 测试
 

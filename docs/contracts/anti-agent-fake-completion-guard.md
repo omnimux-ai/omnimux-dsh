@@ -96,7 +96,7 @@ related:
 ```
 
 ### 3.1 层级 1：文件与配置物理只读隔离 (Write Scope Sandboxing)
-* **规格与测试分类**：任务需求 Markdown 不属于可执行评估资产，写前防造假检查不扫描 `.md` 的文档示例。可解析的完整 JavaScript 测试候选可经语法检查形成：真实跳过/聚焦选择、已识别的动态成员或执行、未知语法保守拒绝；这是有界语法检查，不证明任意程序不存在间接执行，文字样例不当作执行。现有测试编写意图兼容通路不新增许可来源；已有标准的删除、跳过、聚焦或期待变化须独立审查——写入时刻由 `scripts/guard-anti-cheat.mjs` 要求任务 spec 的 `## 旧标准变更` 逐条点名，合入前由 `scripts/verify-test-standard-declarations.mjs` 按**已提交范围**复核声明（未跟踪的 spec、放行后删除的声明、base 上遗留的旧声明都不算数），CI 步骤见 `.github/workflows/quality-gate.yml`。该闭环的已知边界：acorn 解析不了的 TypeScript 测试文件两侧都不可评估，只报告不阻断；`.github/` 与校验器自身不在评估保护路径内，同一 PR 移除该 CI 步骤不需要声明，那属分支保护/CODEOWNERS 的职责；写前检查不提供文件系统物理只读。
+* **规格与测试分类**：任务需求 Markdown 不属于可执行评估资产，写前防造假检查不扫描 `.md` 的文档示例。可解析的完整 JavaScript 测试候选可经语法检查形成：真实跳过/聚焦选择、已识别的动态成员或执行、未知语法保守拒绝；这是有界语法检查，不证明任意程序不存在间接执行，文字样例不当作执行。现有测试编写意图兼容通路不新增许可来源；已有标准的删除、跳过、聚焦或期待变化须独立审查——写入时刻由 `scripts/guard-anti-cheat.mjs` 要求任务 spec 的 `## 旧标准变更` 逐条点名，合入前由 `scripts/verify-test-standard-declarations.mjs` 按**已提交范围**复核声明（未跟踪的 spec、放行后删除的声明、base 上遗留的旧声明都不算数），CI 步骤见 `.github/workflows/quality-gate.yml`。该闭环的已知边界：acorn 解析不了的 TypeScript 测试文件只在**两侧都不可解析**时才只报告不阻断；`before` 不可解析而 `after` 可解析或为空（删除、截断、改写为 JS）要求文件级声明 `- \`<路径>\` :: \`*\``，`before` 可解析而 `after` 不可解析（把可评估的测试改成解析不过去）直接拒绝且不可声明；`.github/` 与校验器自身不在评估保护路径内，同一 PR 移除该 CI 步骤不需要声明，那属分支保护/CODEOWNERS 的职责；`scripts/test-change-review.mjs` 的评估域清单目前是独立工具，其 `scan` 尚未接入 CI；写前检查不提供文件系统物理只读。
 * **CI 与构建配置锁定**：禁止 Agent 修改 `.github/`、`eslint*`、`tsconfig.json` 等门禁配置文件；任何对配置文件的修改必须单独审批。
 
 ### 3.2 层级 2：有界语法与生产模式检查 (Static Anti-Fallback Gates)

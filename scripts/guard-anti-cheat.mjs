@@ -65,7 +65,8 @@ export function collectOldStandardDeclarations(root = REPO_ROOT) {
  * 旧标准变更通道：被 spec 逐条点名的既有用例削弱可放行。
  *
  * 通道只判定「是否被点名」，不判定理由是否成立——后者交给审查者。痕迹由三处承载：
- * spec 声明（受版本管理）、diff、以及 CI 已接入的 `scripts/test-change-review.mjs` 评估域清单。
+ * spec 声明（受版本管理）、diff、以及 `scripts/test-change-review.mjs` 的评估域清单
+ * （该清单目前是独立工具，其 `scan` 尚未接入 CI）。
  * 未命中声明时返回 null，调用方沿用原拒绝信息，行为与开启通道前完全一致。
  *
  * 不落在具名 `test`/`it` 内的断言削弱（`changedCases` 为空）不开放通道：
