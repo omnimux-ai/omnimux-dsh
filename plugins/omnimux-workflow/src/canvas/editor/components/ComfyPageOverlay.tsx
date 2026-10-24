@@ -28,26 +28,38 @@ import {
 import {
   COMFY_BACKEND_LOG_LINES,
   COMFY_BACKEND_POLL_MS,
-  comfyBackendDriverKey,
+  comfyBackendDriverDisplay,
+  comfyBackendDriverRequirementKey,
   comfyBackendSettingsCodeKey,
+  comfyBackendSupportKey,
+  comfyBackendVariantKey,
   fetchComfyBackendLog,
   fetchComfyBackendSettings,
   fetchComfyBackendState,
   formatComfyBackendBytes,
   installComfyBackend,
-  parseComfyBackendDriver,
+  parseComfyBackendDriverVerdict,
   parseComfyBackendLog,
   parseComfyBackendSettings,
   parseComfyBackendSettingsCode,
   parseComfyBackendStatus,
+  parseComfyBackendSupport,
+  parseComfyBackendTargetOptions,
+  parseComfyBackendTargetProblem,
+  parseComfyBackendVariant,
+  parseComfyBackendVariants,
   resolveComfyBackendPanel,
   shouldProbeComfyPage,
   startComfyBackend,
   updateComfyBackendSettings,
-  type ComfyBackendDriver,
+  type ComfyBackendDriverVerdict,
+  type ComfyBackendEnvelopeContext,
   type ComfyBackendPrimaryAction,
   type ComfyBackendSettings,
   type ComfyBackendStatus,
+  type ComfyBackendSupport,
+  type ComfyBackendTargetProblem,
+  type ComfyBackendVariantRow,
 } from '../utils/comfyBackendClient';
 import { COMFY_PAGE_OPEN_EVENT } from '../../nodes/definitions/comfyPage';
 
@@ -67,7 +79,10 @@ const PRIMARY_KEY: Record<Exclude<ComfyBackendPrimaryAction, 'none'>, string> = 
   'retry-start': 'comfyPage.backend.retryStart',
   update: 'comfyPage.backend.update',
   'change-dir': 'comfyPage.backend.changeDir',
+  'choose-variant': 'comfyPage.backend.chooseVariant',
 };
+
+const NO_VERDICT: ComfyBackendDriverVerdict = { status: 'unknown', detail: '', required: null };
 
 export function ComfyPageOverlay() {
   const t = useT();
@@ -92,7 +107,14 @@ export function ComfyPageOverlay() {
   /** M3：宿主给的设置、预检体积与驱动结论。 */
   const [settings, setSettings] = useState<ComfyBackendSettings>({ installRoot: '', modelsPath: '' });
   const [requiredBytes, setRequiredBytes] = useState(0);
-  const [driver, setDriver] = useState<ComfyBackendDriver>('unknown');
+  /** M4：驱动判定（四态 + 人话 + 下限）。 */
+  const [driver, setDriver] = useState<ComfyBackendDriverVerdict>(NO_VERDICT);
+  /** M4：平台矩阵、当前方案、目标解析问题与候选列表。 */
+  const [variants, setVariants] = useState<ComfyBackendVariantRow[]>([]);
+  const [variant, setVariant] = useState('');
+  const [support, setSupport] = useState<ComfyBackendSupport | null>(null);
+  const [targetProblem, setTargetProblem] = useState<ComfyBackendTargetProblem | null>(null);
+  const [targetOptions, setTargetOptions] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   /** 输入框草稿（空串 = 用默认）。 */
   const [installRootDraft, setInstallRootDraft] = useState('');
@@ -116,7 +138,17 @@ export function ComfyPageOverlay() {
     );
   }, []);
 
-  const panel = managed ? resolveComfyBackendPanel(backend) : null;
+  /** 信封里的矩阵/驱动/目标问题：纯数据，喂给状态 → 界面映射。 */
+  const context: ComfyBackendEnvelopeContext = {
+    targetProblem,
+    targetOptions,
+    driver,
+    variant,
+    support,
+    variants,
+    requiredBytes,
+  };
+  const panel = managed ? resolveComfyBackendPanel(backend, context) : null;
   const view = panel && panel.kind === 'state' ? panel.view : null;
   /** 读不到托管状态时回落 M1 探测/引导，而不是给死胡同面板。 */
   const useProbe = shouldProbeComfyPage(managed, backend);
@@ -195,7 +227,12 @@ export function ComfyPageOverlay() {
             ? result.body.requiredBytes
             : 0,
         );
-        setDriver(parseComfyBackendDriver(result.body.driver));
+        setDriver(parseComfyBackendDriverVerdict(result.body));
+        setVariants(parseComfyBackendVariants(result.body.variants));
+        setVariant(parseComfyBackendVariant(result.body));
+        setSupport(parseComfyBackendSupport(result.body.support));
+        setTargetProblem(parseComfyBackendTargetProblem(result.body.targetProblem));
+        setTargetOptions(parseComfyBackendTargetOptions(result.body.targetOptions));
         patchNodeStatus(nodeId, parsed.state === 'ready' ? 'connected' : 'unreachable');
         return;
       }
@@ -253,7 +290,7 @@ export function ComfyPageOverlay() {
 
   /** 保存设置：只发用户真正改过的字段（另一项不会被顺手重置）。 */
   const saveSettings = useCallback(
-    async (patch: { installRoot?: string; modelsPath?: string }) => {
+    async (patch: { installRoot?: string; modelsPath?: string; variant?: string }) => {
       if (!nodeId) return;
       actionRef.current?.abort();
       const controller = new AbortController();
@@ -266,6 +303,8 @@ export function ComfyPageOverlay() {
         if (controller.signal.aborted) return;
         if (result.ok) {
           setSettings(parseComfyBackendSettings(result.body.settings));
+          // 选方案也会改「当前方案」：立刻用响应里的 variant 更新，不用等下一次轮询。
+          if (patch.variant !== undefined) setVariant(parseComfyBackendVariant(result.body.settings));
           setAttempt((value) => value + 1);
           return;
         }
@@ -390,10 +429,19 @@ export function ComfyPageOverlay() {
     : t(`comfyPage.status.${probe}`);
   const headerState = panel && panel.kind === 'state' ? panel.state : probe;
 
+  /** 方案名称：画布自己的 i18n 名称；未知 id 回落宿主 label（不编名称）。 */
+  const variantName = (id: string, label: string): string => {
+    const key = comfyBackendVariantKey(id);
+    return key ? t(key) : label;
+  };
+
+  /** 驱动结论：结论 + 行内精确原因（unknown/unsatisfied 不能只藏在悬停里）。 */
+  const driverLine = comfyBackendDriverDisplay(driver);
+
   const runPrimary = () => {
     if (!view) return;
-    // 「换目录」不是后端动作：它只是把设置区打开，让用户选一个可写的目录。
-    if (view.primaryAction === 'change-dir') {
+    // 「换目录」/「更换方案」都不是后端动作：它们只是把设置区打开，让用户自己选。
+    if (view.primaryAction === 'change-dir' || view.primaryAction === 'choose-variant') {
       setSettingsOpen(true);
       return;
     }
@@ -505,9 +553,27 @@ export function ComfyPageOverlay() {
             </dl>
           ) : null}
 
+          {view.problemKey ? (
+            <p className="wf-comfy-page-overlay__problem" role="alert" data-problem={targetProblem}>
+              {t(view.problemKey)}
+            </p>
+          ) : null}
+
           {view.showDriverNote ? (
-            <p className="wf-comfy-page-overlay__driver" data-driver={driver}>
-              {t(comfyBackendDriverKey(driver))}
+            <p
+              className="wf-comfy-page-overlay__driver"
+              data-driver={driver.status}
+              title={driver.detail || undefined}
+            >
+              {t(driverLine.key)}
+              {driverLine.requirement ? (
+                <span className="wf-comfy-page-overlay__driver-required">
+                  {`（${t('comfyPage.backend.driver.requiredAtLeast')} ${driverLine.requirement}）`}
+                </span>
+              ) : null}
+              {driverLine.detail ? (
+                <span className="wf-comfy-page-overlay__driver-detail">{`· ${driverLine.detail}`}</span>
+              ) : null}
             </p>
           ) : null}
 
@@ -549,6 +615,45 @@ export function ComfyPageOverlay() {
 
       {managed && settingsOpen && panel && panel.kind === 'state' ? (
         <div className="wf-comfy-page-overlay__settings">
+          {variants.length > 0 ? (
+            <div className="wf-comfy-page-overlay__variants">
+              <p className="wf-comfy-page-overlay__setting-label">{t('comfyPage.backend.variants')}</p>
+              {variants.map((row) => (
+                <button
+                  type="button"
+                  className="wf-comfy-page-overlay__variant"
+                  key={row.id}
+                  data-variant={row.variant}
+                  data-support={row.support}
+                  aria-pressed={row.variant === variant}
+                  onClick={() => void saveSettings({ variant: row.variant })}
+                >
+                  <span className="wf-comfy-page-overlay__variant-head">
+                    <span className="wf-comfy-page-overlay__variant-name">
+                      {variantName(row.variant, row.label)}
+                    </span>
+                    <span className="wf-comfy-page-overlay__variant-support">
+                      {t(comfyBackendSupportKey(row.support))}
+                    </span>
+                    {row.variant === variant ? (
+                      <span className="wf-comfy-page-overlay__variant-current">
+                        {t('comfyPage.backend.variant.current')}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="wf-comfy-page-overlay__variant-meta">
+                    {`${t(comfyBackendDriverRequirementKey(row.driver))}${
+                      row.minDriver ? ` ≥ ${row.minDriver}` : ''
+                    } · ${formatComfyBackendBytes(row.estimatedBytes)}`}
+                  </span>
+                  {row.notes ? (
+                    <span className="wf-comfy-page-overlay__variant-notes">{row.notes}</span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           <div className="wf-comfy-page-overlay__setting" data-field="install-root">
             <label className="wf-comfy-page-overlay__setting-label" htmlFor="wf-comfy-install-root">
               {t('comfyPage.backend.settings.installRoot')}
