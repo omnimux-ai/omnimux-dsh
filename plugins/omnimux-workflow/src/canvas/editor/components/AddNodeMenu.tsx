@@ -1,17 +1,26 @@
 /**
  * 画布「添加节点」菜单：Dock (+) 与 ContextMenu 钻取共用同一份 UI。
- * 数据来自 addNodePalette（单点真源）；零 inline 颜色、零副标题。
+ * 数据来自 addNodePalette（单点真源）；零 inline 颜色。
+ * 调色板行保持单行（无副标题）；底部「新建工作流」入口卡是唯一的例外，
+ * 其副标题来自既有 i18n key，描述真实语义（存为可复用模板）。
  *
- * 分类与检索同样来自 addNodePalette（其分组/检索词取自节点注册表），
- * 本组件不持有第二份分类表；注册表未声明分组的节点不会被安进伪造分类。
+ * 面板是**无分类平铺列表**（Issue 3640）：条目按 addNodePalette 的声明顺序渲染，
+ * 不渲染分类标题 / 计数 / 折叠态；检索词同样来自 addNodePalette（取自节点注册表），
+ * 本组件不持有第二份清单。
+ *
+ * 两个入口共用清单，但形态按 scope 分叉（Issue 3651）：Dock 面板有搜索框与命中高亮；
+ * 右键钻取面板**不渲染搜索框**（该浮层不做检索，输入框只会是死入口），列表直接平铺，
+ * 底部工作流入口在右键下是平铺行（无分割线、无常态底色），样式见 components.css 的
+ * `wf-node-menu--context` 规则。
  */
 
 import { memo, useMemo, useState, type ComponentType, type FC, type MouseEvent, type ReactNode } from 'react';
 import {
   AudioLines,
   Box,
-  ChevronDown,
+  Boxes,
   ChevronLeft,
+  ChevronRight,
   Film,
   ImagePlus,
   Search,
@@ -23,7 +32,6 @@ import {
 import { useT } from '../../i18n';
 import {
   getAddNodePalette,
-  groupAddNodePalette,
   matchAddNodePalette,
   type AddNodePaletteIcon,
   type AddNodePaletteMatch,
@@ -42,14 +50,16 @@ const ICON_MAP: Record<AddNodePaletteIcon, ComponentType<{ size?: number }>> = {
   UploadCloud,
 };
 
-/** 折叠态在组件内的键：注册表未声明分组的行使用此哨兵（不是用户可见文案）。 */
-const UNGROUPED_KEY = '\u0000ungrouped';
-
 export interface AddNodeMenuProps {
   scope: AddNodePaletteScope;
   onSelect: (type: CanvasAddNodeType) => void;
   /** Context 钻取：返回主菜单 */
   onBack?: () => void;
+  /**
+   * 面板底部「新建工作流」入口卡（存为可复用模板）。
+   * 缺省时不渲染该卡——组件自身不打开任何弹窗，也不伪造入口。
+   */
+  onCreateWorkflow?: () => void;
 }
 
 function stopMenuEvent(event: MouseEvent) {
@@ -77,28 +87,17 @@ function renderLabel(match: AddNodePaletteMatch): ReactNode {
   return parts;
 }
 
-const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack }) => {
+const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack, onCreateWorkflow }) => {
   const t = useT();
   const [query, setQuery] = useState('');
-  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(() => new Set());
+  /** 搜索只属于 Dock 面板：右键浮层不做检索（Issue 3651）。 */
+  const showSearch = scope === 'dock';
 
   const items = useMemo(() => getAddNodePalette(scope), [scope]);
-  const matches = useMemo(() => matchAddNodePalette(items, query, t), [items, query, t]);
-  const groups = useMemo(
-    () => groupAddNodePalette(matches, (match) => match.item.type),
-    [matches],
+  const matches = useMemo(
+    () => matchAddNodePalette(items, showSearch ? query : '', t),
+    [items, query, showSearch, t],
   );
-
-  const searching = query.trim().length > 0;
-
-  const toggleGroup = (groupKey: string) => {
-    setCollapsedGroups((current) => {
-      const next = new Set(current);
-      if (next.has(groupKey)) next.delete(groupKey);
-      else next.add(groupKey);
-      return next;
-    });
-  };
 
   return (
     <div
@@ -124,87 +123,79 @@ const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack }) => {
           {scope === 'dock' ? <kbd className="wf-node-menu__kbd">N</kbd> : null}
         </div>
 
-        <div className="wf-node-menu__search">
-          <Search size={14} className="wf-node-menu__search-icon" />
-          <input
-            type="text"
-            className="wf-node-menu__search-input"
-            value={query}
-            placeholder={t('palette.searchPlaceholder')}
-            aria-label={t('palette.searchLabel')}
-            onChange={(event) => setQuery(event.target.value)}
-            onClick={(event) => event.stopPropagation()}
-          />
-        </div>
+        {showSearch ? (
+          <div className="wf-node-menu__search">
+            <Search size={14} className="wf-node-menu__search-icon" />
+            <input
+              type="text"
+              className="wf-node-menu__search-input"
+              value={query}
+              placeholder={t('palette.searchPlaceholder')}
+              aria-label={t('palette.searchLabel')}
+              onChange={(event) => setQuery(event.target.value)}
+              onClick={(event) => event.stopPropagation()}
+            />
+          </div>
+        ) : null}
 
         <div className="wf-node-menu__list">
-          {groups.length === 0 ? (
+          {showSearch && matches.length === 0 ? (
             <div className="wf-node-menu__empty" role="status">
               <p className="wf-node-menu__empty-title">{t('palette.searchEmpty')}</p>
               <p className="wf-node-menu__empty-hint">{t('palette.searchEmptyHint')}</p>
             </div>
           ) : null}
 
-          {groups.map((group) => {
-            const groupKey = group.groupKey ?? UNGROUPED_KEY;
-            // 检索时强制展开：命中项必须可见，折叠态不得藏住搜索结果。
-            const isCollapsed = !searching && collapsedGroups.has(groupKey);
+          {matches.map((match) => {
+            const { item } = match;
+            const Icon = ICON_MAP[item.icon];
             return (
-              <div key={groupKey} className="wf-node-menu__group">
-                {group.groupKey ? (
-                  <button
-                    type="button"
-                    className="wf-node-menu__group-header"
-                    aria-expanded={!isCollapsed}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      toggleGroup(groupKey);
-                    }}
+              <button
+                key={item.type}
+                type="button"
+                className="wf-node-menu__item"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelect(item.type);
+                }}
+              >
+                <div className="wf-node-menu__icon-box">
+                  <Icon size={18} />
+                </div>
+                <span className="wf-node-menu__label">{renderLabel(match)}</span>
+                {item.badge ? (
+                  <span
+                    className={`wf-node-menu__badge wf-node-menu__badge--${item.badge.variant}`}
                   >
-                    <ChevronDown
-                      size={14}
-                      className={`wf-node-menu__group-caret${
-                        isCollapsed ? ' wf-node-menu__group-caret--collapsed' : ''
-                      }`}
-                    />
-                    <span className="wf-node-menu__group-title">{t(group.groupKey)}</span>
-                    <span className="wf-node-menu__group-count">{group.items.length}</span>
-                  </button>
+                    {item.badge.text}
+                  </span>
                 ) : null}
-
-                {isCollapsed
-                  ? null
-                  : group.items.map((match) => {
-                      const { item } = match;
-                      const Icon = ICON_MAP[item.icon];
-                      return (
-                        <button
-                          key={item.type}
-                          type="button"
-                          className="wf-node-menu__item"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onSelect(item.type);
-                          }}
-                        >
-                          <div className="wf-node-menu__icon-box">
-                            <Icon size={18} />
-                          </div>
-                          <span className="wf-node-menu__label">{renderLabel(match)}</span>
-                          {item.badge ? (
-                            <span
-                              className={`wf-node-menu__badge wf-node-menu__badge--${item.badge.variant}`}
-                            >
-                              {item.badge.text}
-                            </span>
-                          ) : null}
-                        </button>
-                      );
-                    })}
-              </div>
+              </button>
             );
           })}
         </div>
+
+        {onCreateWorkflow ? (
+          <div className="wf-node-menu__footer">
+            <button
+              type="button"
+              className="wf-node-menu__entry"
+              onClick={(event) => {
+                stopMenuEvent(event);
+                onCreateWorkflow();
+              }}
+            >
+              <div className="wf-node-menu__icon-box">
+                <Boxes size={18} />
+              </div>
+              <span className="wf-node-menu__entry-text">
+                <span className="wf-node-menu__entry-title">{t('template.panel.newWorkflow')}</span>
+                <span className="wf-node-menu__entry-hint">{t('template.panel.newWorkflowHint')}</span>
+              </span>
+              <ChevronRight size={16} className="wf-node-menu__entry-arrow" />
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

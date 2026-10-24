@@ -20,15 +20,16 @@ const menuSrc = readFileSync(join(here, 'AddNodeMenu.tsx'), 'utf8');
 const paletteSrc = readFileSync(join(here, 'addNodePalette.ts'), 'utf8');
 const cssSrc = readFileSync(join(here, '../../theme/components.css'), 'utf8');
 
-const REQUIRED_ICONS = ['Type', 'Table', 'ImagePlus', 'Video', 'AudioLines', 'Film', 'Box', 'UploadCloud'];
+// Issue #3640：顺序对齐参考截图（导演台在视频剪辑之前）
+const REQUIRED_ICONS = ['Type', 'Table', 'ImagePlus', 'Video', 'AudioLines', 'Box', 'Film', 'UploadCloud'];
 const REQUIRED_ORDER = [
   'text',
   'table',
   'image',
   'video',
   'audio',
-  'video_composition',
   'director',
+  'video_composition',
   'import_asset',
 ];
 const FORBIDDEN_ICON_ALIASES = ['FileText', 'Music', "Image as ImageIcon", 'ImageIcon'];

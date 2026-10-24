@@ -529,6 +529,7 @@ const en: Record<DictKey, string> = {
   'template.modal.saved': 'Workflow “{name}” saved to the template library',
   'template.modal.failed': 'Failed to create workflow',
   'template.missingGroup': 'Missing group',
+  'template.emptyCanvas': 'Add nodes to the canvas before saving a template',
   'template.toast.inserted': 'Inserted template “{name}”',
   'template.toast.loadFailed': 'Failed to load template',
   'asset.modal.title': 'Save to asset library',
@@ -666,11 +667,14 @@ const en: Record<DictKey, string> = {
   'template.panel.noMatchHint': 'Try another category or clear the search.',
   'template.panel.loading': 'Loading templates...',
   'template.panel.loadFailed': 'Failed to load templates',
-  // Node palette categories / search (Issue #3625 workflow 1: addNodePalette + AddNodeMenu)
+  // Node palette search & add-node entry copy (#3625 workflow 1; #3640 flat list,
+  // category keys retained as search aliases)
   'palette.group.data': 'Data',
   'palette.group.composition': 'Composition',
   'palette.group.creation': 'Creation',
   'palette.group.source': 'Import',
+  'palette.item.director': 'Director',
+  'palette.item.video_composition': 'Video Clip',
   'palette.node.table': 'Table',
   'palette.node.director': '3D Director',
   'palette.keyword.table': 'Structured data, batch records',

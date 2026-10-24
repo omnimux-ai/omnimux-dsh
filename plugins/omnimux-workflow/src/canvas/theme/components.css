@@ -2424,8 +2424,12 @@ button.wf-slot-well.wf-slot-well--append:hover {
   align-items: center;
   gap: 8px;
   padding: 2px 4px 8px 2px;
-  border-bottom: 1px solid var(--dsw-alias-border-l1, var(--wf-menu-border, var(--wb-border)));
   margin-bottom: 6px;
+}
+
+/* 标题分割线只属于 Dock 面板（Issue 3651）：右键钻取面板按对照图不带分割线。 */
+.wf-node-menu--dock .wf-node-menu__header {
+  border-bottom: 1px solid var(--dsw-alias-border-l1, var(--wf-menu-border, var(--wb-border)));
 }
 
 .wf-node-menu__back-btn {
@@ -9151,8 +9155,9 @@ body:has(.wf-voice-picker-modal) > .wf-custom-select-dropdown .wf-custom-select-
 
 /* preview-cards block end */
 
-/* ==================== palette-groups block start ====================
- * Issue 3625 工作流 1：添加节点调色板的分组 / 搜索 / 命中高亮 / 空态。
+/* ==================== palette block start ====================
+ * Issue 3625 工作流 1 / Issue 3640：添加节点调色板（无分类平铺）/ 搜索 /
+ * 命中高亮 / 空态。
  * 零裸色，全部走既有 token；几何属性显式声明（同 .wf-node-menu__item 的
  * 「不依赖外部默认值」约定）。 */
 
@@ -9187,61 +9192,6 @@ body:has(.wf-voice-picker-modal) > .wf-custom-select-dropdown .wf-custom-select-
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
 }
 
-.wf-node-menu__group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.wf-node-menu__group + .wf-node-menu__group {
-  margin-top: 6px;
-}
-
-.wf-node-menu__group-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 4px 6px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
-  cursor: pointer;
-  text-align: left;
-}
-
-.wf-node-menu__group-header:hover {
-  background: var(--dsw-alias-interactive-bg-hover, var(--wb-dock-item-hover));
-}
-
-.wf-node-menu__group-caret {
-  flex-shrink: 0;
-  transition: transform 120ms ease;
-}
-
-.wf-node-menu__group-caret--collapsed {
-  transform: rotate(-90deg);
-}
-
-.wf-node-menu__group-title {
-  flex: 1 1 auto;
-  min-width: 0;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.wf-node-menu__group-count {
-  flex-shrink: 0;
-  font-size: 11px;
-  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
-}
-
 .wf-node-menu__match {
   background: var(--dsw-alias-bg-layer-2, var(--wb-surface-raised));
   color: var(--dsw-alias-label-primary, var(--wb-text-primary));
@@ -9267,7 +9217,7 @@ body:has(.wf-voice-picker-modal) > .wf-custom-select-dropdown .wf-custom-select-
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
 }
 
-/* palette-groups block end */
+/* palette block end */
 
 /* ==================== exec-queue block start ====================
  * Issue 3625 工作流 2：执行队列面板四区（Queue / Pending / Running / History）。
@@ -9656,3 +9606,109 @@ body:has(.wf-voice-picker-modal) > .wf-custom-select-dropdown .wf-custom-select-
 }
 
 /* comfyui-codec block end */
+
+/* addnode-new-workflow entry card start (Issue 3639) */
+.wf-node-menu-host {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 内层根节点也必须是可压缩的 flex 子项，否则 maxHeight 只压到外层、footer 仍被挤出视口。 */
+.wf-node-menu-host .wf-node-menu {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.wf-node-menu-host .wf-node-menu__container {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.wf-node-menu-host .wf-node-menu__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.wf-node-menu__footer {
+  flex: 0 0 auto;
+  margin-top: 8px;
+}
+
+/* 入口上方分割线只属于 Dock 面板（Issue 3651）；右键下入口行并入列表尾部。 */
+.wf-node-menu--dock .wf-node-menu__footer {
+  padding-top: 8px;
+  border-top: 1px solid var(--wf-node-icon-border);
+}
+
+.wf-node-menu__entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  border: 1px solid var(--wf-node-icon-border);
+  border-radius: 10px;
+  background: var(--wf-menu-surface-hover, transparent);
+  color: var(--dsw-alias-label-primary, var(--wf-menu-text, var(--wb-text-primary)));
+  cursor: pointer;
+  text-align: left;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.wf-node-menu__entry:hover {
+  background: var(--dsw-alias-interactive-bg-hover, var(--wf-menu-surface-hover, var(--wb-dock-item-hover)));
+}
+
+.wf-node-menu__entry-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wf-node-menu__entry-title {
+  font-size: var(--wb-fs-body, 13px);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.wf-node-menu__entry-hint {
+  font-size: var(--wb-fs-caption, 12px);
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wf-node-menu__entry-arrow {
+  flex: 0 0 auto;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+/* 右键钻取面板：工作流入口是**平铺行**，不是卡片（Issue 3651）。
+ * 常态无边框、无底色 —— 旧形态把 hover 底色当常态底色，看起来像默认选中。
+ * 行内边距 / 圆角 / 间距与 .wf-node-menu__item 对齐，使它和上方条目同一节奏。 */
+.wf-node-menu--context .wf-node-menu__footer {
+  margin-top: 2px;
+}
+
+.wf-node-menu--context .wf-node-menu__entry {
+  gap: 12px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  transition: background 120ms ease;
+}
+
+.wf-node-menu--context .wf-node-menu__entry:hover {
+  background: var(--dsw-alias-interactive-bg-hover, var(--wf-menu-surface-hover, var(--wb-dock-item-hover)));
+}
+/* addnode-new-workflow entry card end */

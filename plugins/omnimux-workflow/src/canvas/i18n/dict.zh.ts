@@ -554,6 +554,7 @@ const zh = {
   'template.modal.saved': '工作流「{name}」已保存到模板库',
   'template.modal.failed': '创建工作流失败',
   'template.missingGroup': '缺少分组',
+  'template.emptyCanvas': '画布还没有节点，先添加节点再保存',
   'template.toast.inserted': '已插入模板「{name}」',
   'template.toast.loadFailed': '读取模板失败',
   'asset.modal.title': '批量保存到资产库',
@@ -691,11 +692,14 @@ const zh = {
   'template.panel.noMatchHint': '换个分类或清空搜索试试。',
   'template.panel.loading': '正在读取模板…',
   'template.panel.loadFailed': '读取模板失败',
-  // 节点调色板分类 / 检索（Issue #3625 工作流 1：addNodePalette + AddNodeMenu）
+  // 节点调色板检索与菜单专属文案（#3625 工作流 1；#3640 面板改为无分类平铺，
+  // 分类键保留为检索别名）
   'palette.group.data': '数据',
   'palette.group.composition': '合成',
   'palette.group.creation': '创作',
   'palette.group.source': '导入',
+  'palette.item.director': '导演台',
+  'palette.item.video_composition': '视频剪辑',
   'palette.node.table': '表格',
   'palette.node.director': '3D 导演台',
   'palette.keyword.table': '结构化数据、批量记录',
