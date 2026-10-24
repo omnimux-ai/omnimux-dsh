@@ -390,11 +390,27 @@ dev_plugin_matches_range() {
   return 0
 }
 
+# Dev 物化结果。收尾横幅只能复述这里的事实，不得无条件宣称「已物化」。
+# 取值：ok | already-current | not-needed | failed | unknown
+MATERIALIZE_STATUS="unknown"
+
+# 把 MATERIALIZE_STATUS 翻译成横幅里的开发版分句。
+materialize_dev_state() {
+  case "${MATERIALIZE_STATUS}" in
+    ok) echo "开发版已物化" ;;
+    already-current) echo "开发版已是最新（本次无需重复安装）" ;;
+    not-needed) echo "开发版无需物化（本次变更不进运行时）" ;;
+    failed) echo "开发版未更新（物化失败，见上方提示）" ;;
+    *) echo "开发版物化状态未知" ;;
+  esac
+}
+
 auto_materialize_and_reload() {
   local base_ref="${1:-HEAD~1}"
   local target_ref="${2:-HEAD}"
 
   if [ ! -f "${ROOT}/scripts/sync-to-app.sh" ]; then
+    MATERIALIZE_STATUS="failed"
     say "⚠️ 缺少安装脚本，开发版未更新。请在主检出运行: ./scripts/sync-to-app.sh"
     return 0
   fi
@@ -409,6 +425,7 @@ auto_materialize_and_reload() {
   local source_paths
   source_paths="$(printf '%s\n' "${changed_paths}" | grep -vE '^plugins/omnimux/scripts/run-tests\.mjs$|^plugins/[^/]+/[^/]+\.md$|^plugins/[^/]+/docs/|^plugins/[^/]+/(tests?|test-support|__tests__)/|\.test\.(js|mjs|ts|jsx|tsx|cjs)$' || true)"
   if [ -n "${changed_paths}" ] && [ -z "${source_paths}" ]; then
+    MATERIALIZE_STATUS="not-needed"
     say "ℹ️ 本次合入只改了插件文档或测试文件，无需物化。"
     return 0
   fi
@@ -418,6 +435,7 @@ auto_materialize_and_reload() {
   done < <(printf '%s\n' "${changed_paths}" | cut -d'/' -f2 | sort -u)
 
   if [ "${#changed_plugins[@]}" -eq 0 ]; then
+    MATERIALIZE_STATUS="not-needed"
     say "ℹ️ 本次合入未包含 plugins/ 插件源码变更，无需物化。"
     return 0
   fi
@@ -432,6 +450,7 @@ auto_materialize_and_reload() {
     fi
   done
   if [ "${#pending[@]}" -eq 0 ]; then
+    MATERIALIZE_STATUS="already-current"
     say "✅ 开发版已包含本次合入，无需重复安装。"
     return 0
   fi
@@ -446,6 +465,7 @@ auto_materialize_and_reload() {
 
   say "🔄 自动物化：合并已确认，变更插件 [${changed_plugins[*]}] 开始装进开发版 (~/.omnimux-dev)，不写正式版..."
   if (cd "${ROOT}" && bash "${ROOT}/scripts/sync-to-app.sh" "${changed_plugins[@]}"); then
+    MATERIALIZE_STATUS="ok"
     say "✅ 增量物化成功！"
     # 自动探测 Dev App：宿主侧变更受控重启，纯 Client 变更刷新页面
     if [ -f "${ROOT}/scripts/reload-dev-app.mjs" ]; then
@@ -464,6 +484,7 @@ auto_materialize_and_reload() {
       fi
     fi
   else
+    MATERIALIZE_STATUS="failed"
     say "⚠️ 自动物化未成功，请手动在主检出运行: ./scripts/sync-to-app.sh ${changed_plugins[*]}"
   fi
 }
@@ -525,7 +546,7 @@ cmd_ship() {
   auto_materialize_and_reload "${pr_merge}^1" "${pr_merge}"
 
   if [ "${keep_worktree}" -eq 1 ]; then
-    say "PR MERGED; applicable Dev materialization auto-completed. Worktree retained (--keep-worktree): ${wt}"
+    say "PR MERGED; Dev materialization status: ${MATERIALIZE_STATUS} ($(materialize_dev_state)). Worktree retained (--keep-worktree): ${wt}"
   else
     say "git worktree remove ${wt}"
     git worktree remove "${wt}" 2>/dev/null || rm -rf "${wt}"
@@ -533,7 +554,10 @@ cmd_ship() {
       git branch -d "${branch}" 2>/dev/null || git branch -D "${branch}" 2>/dev/null || true
     fi
     git worktree prune
-    say "✅ 交付全链路闭环完成：PR 已合入、主干已同步、开发版已物化、临时工作树 [${task}] 与分支已清理。"
+    say "✅ 交付全链路闭环完成：PR 已合入、主干已同步、$(materialize_dev_state)、临时工作树 [${task}] 与分支已清理。"
+    if [ "${MATERIALIZE_STATUS}" = "failed" ]; then
+      say "⚠️ 开发版仍是旧版本：请在主检出运行 ./scripts/sync-to-app.sh（无插件参数=完整同步，可覆盖 shared kit）后自行确认。"
+    fi
   fi
 }
 
@@ -628,6 +652,7 @@ cmd_remove() {
         if [ -n "${first_parent}" ]; then
           auto_materialize_and_reload "${first_parent}" "${remote_head}"
         else
+          MATERIALIZE_STATUS="failed"
           say "⚠️ 无法确定本次合并的起点，开发版未更新。请在主检出运行: ./scripts/sync-to-app.sh"
         fi
       fi
