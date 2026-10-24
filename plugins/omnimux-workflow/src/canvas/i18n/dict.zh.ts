@@ -713,6 +713,7 @@ const zh = {
   'palette.keyword.table': '结构化数据、批量记录',
   'palette.keyword.videoComposition': '剪辑、合成、字幕',
   'palette.keyword.director': '3D 场景、多视角截图',
+  'palette.node.comfyPage': 'ComfyUI 页面',
   'palette.keyword.comfyPage': 'ComfyUI 页面、本机 8188、节点编辑器',
   'node.type.comfy-page': 'ComfyUI 页面',
   'comfyPage.card.title': 'ComfyUI 页面',

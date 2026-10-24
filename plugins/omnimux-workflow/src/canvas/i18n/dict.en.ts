@@ -688,6 +688,7 @@ const en: Record<DictKey, string> = {
   'palette.keyword.table': 'Structured data, batch records',
   'palette.keyword.videoComposition': 'Editing, composition, subtitles',
   'palette.keyword.director': '3D scene, multi-view screenshots',
+  'palette.node.comfyPage': 'ComfyUI page',
   'palette.keyword.comfyPage': 'ComfyUI page, local 8188, node editor',
   'node.type.comfy-page': 'ComfyUI page',
   'comfyPage.card.title': 'ComfyUI page',

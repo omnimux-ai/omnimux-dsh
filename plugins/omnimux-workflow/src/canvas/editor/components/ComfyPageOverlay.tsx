@@ -11,7 +11,7 @@
  * 同一时刻最多一个全屏层：再次打开只切换 nodeId；关闭时卸载 iframe（不留后台连接）。
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useT } from '../../i18n';
 import { useCanvasStore } from '../../store/canvasStore';
 import {
@@ -39,7 +39,6 @@ export function ComfyPageOverlay() {
   const [reason, setReason] = useState<ComfyPageUrlReason | null>(null);
   /** 每次「重试」递增，驱动重新探测。 */
   const [attempt, setAttempt] = useState(0);
-  const frameRef = useRef<HTMLIFrameElement>(null);
 
   const patchNodeStatus = useCallback((id: string, status: string) => {
     useCanvasStore.getState().setNodes((nodes) =>
@@ -146,7 +145,6 @@ export function ComfyPageOverlay() {
 
       {probe === 'connected' ? (
         <iframe
-          ref={frameRef}
           className="wf-comfy-page-overlay__frame"
           src={url}
           title={t('comfyPage.card.title')}

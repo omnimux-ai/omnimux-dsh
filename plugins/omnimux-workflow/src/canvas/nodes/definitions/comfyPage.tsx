@@ -41,6 +41,8 @@ function ComfyPageNode({ id, data, selected }: NodeProps) {
       selected={selected}
       nodeWidth={350}
       dataNodeType="comfy-page"
+      showLeftHandle={false}
+      showRightHandle={false}
       onCardDoubleClick={open}
       renderHeader={<NodeHeader label={t('comfyPage.card.title')} materialType="comfy-page" customIcon={Globe} />}
     >
