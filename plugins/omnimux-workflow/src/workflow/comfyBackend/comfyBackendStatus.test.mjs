@@ -5,6 +5,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { createComfyBackendService } from './service.ts';
+import { resolveComfyBackendTarget } from './plan.ts';
+
+/**
+ * 固定目标：CI 跑在 Linux 上，本机目标解析会失败（target=null），
+ * 而本文件断言的是状态机而不是平台探测，所以显式喂一个确定目标。
+ */
+const FIXED_TARGET = resolveComfyBackendTarget('darwin', 'arm64').target;
 
 /** 造一个临时安装根并写入指定的状态文件，返回 service 与清理函数。 */
 function withRoot(state) {
@@ -12,7 +19,7 @@ function withRoot(state) {
   const root = join(dataRoot, 'comfyui-backend');
   mkdirSync(join(root, 'logs'), { recursive: true });
   if (state) writeFileSync(join(root, 'install-state.json'), JSON.stringify(state));
-  const service = createComfyBackendService({ dataRoot });
+  const service = createComfyBackendService({ dataRoot, target: FIXED_TARGET });
   return { service, root, dataRoot };
 }
 
