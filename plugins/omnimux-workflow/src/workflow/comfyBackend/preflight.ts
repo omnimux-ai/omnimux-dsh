@@ -90,3 +90,22 @@ export function failureAction(failure: ComfyBackendFailure): 'retry-install' | '
 }
 
 export const PREFLIGHT_PORT = COMFY_BACKEND_PORT;
+
+/** ComfyUI 启动参数（纯函数，便于单测「模型目录到底有没有带上」）。 */
+export function launchArgs(input: {
+  mainPy: string;
+  port: number;
+  baseDirectory: string;
+  modelsConfigFile?: string;
+}): string[] {
+  const args = [
+    input.mainPy,
+    '--port', String(input.port),
+    '--base-directory', input.baseDirectory,
+    '--enable-cors-header', '*',
+  ];
+  if (input.modelsConfigFile !== undefined && input.modelsConfigFile !== '') {
+    args.push('--extra-model-paths-config', input.modelsConfigFile);
+  }
+  return args;
+}

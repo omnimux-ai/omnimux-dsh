@@ -32,7 +32,7 @@ import {
   type ComfyBackendTarget,
   type InstallStageId,
 } from './plan.ts';
-import { runPreflight, type DriverStatus } from './preflight.ts';
+import { launchArgs, runPreflight } from './preflight.ts';
 import {
   EMPTY_SETTINGS,
   modelsConfigYaml,
@@ -403,6 +403,17 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
   const start = async (): Promise<ComfyBackendStatus> => {
     if (!target) return writeState({ state: 'failed', error: 'unsupported-platform', message: '当前设备暂不支持托管后端' });
     if (!existsSync(join(root, '.ready'))) return writeState({ state: 'not-installed', message: '尚未安装托管后端' });
+    // 已装的是旧固定版本时，别把它拉起来冒充可用（M3 实测发现：start 之前不比对版本）。
+    if (!versionMatches(readReady(), target)) {
+      return writeState({
+        state: 'failed',
+        failure: 'version-mismatch',
+        error: 'version-mismatch',
+        message: '已安装的后端版本与当前固定版本不一致，需要更新',
+        stage: null,
+        percent: 0,
+      });
+    }
     if (await probeReady()) return writeState({ state: 'ready', message: 'ComfyUI 已就绪' });
     const portFree = await portIsFree(target.port);
     if (!portFree) {
@@ -420,13 +431,12 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     const logFd = openSync(join(root, 'logs', 'backend.log'), 'a');
     const child = spawnImpl(
       venvPython(),
-      [
-        join(paths.comfyui, 'main.py'),
-        '--port', String(target.port),
-        '--base-directory', paths.userdata,
-        '--enable-cors-header', '*',
-        ...(modelsConfigArgs().length > 0 ? modelsConfigArgs() : []),
-      ],
+      launchArgs({
+        mainPy: join(paths.comfyui, 'main.py'),
+        port: target.port,
+        baseDirectory: paths.userdata,
+        modelsConfigFile: modelsConfigFile(),
+      }),
       { cwd: paths.comfyui, detached: true, stdio: ['ignore', logFd, logFd] },
     );
     closeSync(logFd);
@@ -456,18 +466,18 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     });
   };
 
-  /** 模型目录：设置后写配置文件并把它交给 ComfyUI（不复制用户文件）。 */
-  const modelsConfigArgs = (): string[] => {
+  /** 模型目录：设置后写配置文件并把它交给 ComfyUI（不复制、不移动用户文件）。 */
+  const modelsConfigFile = (): string | undefined => {
     const yaml = modelsConfigYaml(settings.modelsPath);
-    if (yaml === '') return [];
+    if (yaml === '') return undefined;
     const file = join(paths.root, MODELS_CONFIG_FILE);
     try {
       writeFileSync(file, yaml);
+      return file;
     } catch (error) {
       log(`模型目录配置写入失败：${error instanceof Error ? error.message : String(error)}`);
-      return [];
+      return undefined;
     }
-    return ['--extra-model-paths-config', file];
   };
 
   const readReady = (): { comfyui?: { commit?: string }; python?: string; torch?: string } | null => {

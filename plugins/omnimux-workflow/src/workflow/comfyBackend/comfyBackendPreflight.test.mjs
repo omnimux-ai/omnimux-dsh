@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { resolveComfyBackendTarget, versionMatches } from './plan.ts';
 import {
   checkDriver,
+  launchArgs,
   estimateRequiredBytes,
   failureAction,
   failureMessageKey,
@@ -120,4 +121,19 @@ test('模型目录 YAML：空目录不给配置，非空只指向用户目录（
   assert.equal(yaml.includes('/Users/me/models'), true);
   assert.equal(yaml.includes('base_path:'), true);
   assert.equal(yaml.includes('cp '), false);
+});
+
+test('启动参数：不带模型目录时不加参数，带目录时指向配置文件', () => {
+  const base = { mainPy: '/x/ComfyUI/main.py', port: 18188, baseDirectory: '/x/userdata' };
+  const plain = launchArgs(base);
+  assert.equal(plain.includes('--extra-model-paths-config'), false);
+  assert.deepEqual(plain.slice(0, 2), ['/x/ComfyUI/main.py', '--port']);
+  assert.equal(plain.includes('18188'), true);
+  assert.equal(plain.includes('--base-directory'), true);
+  assert.equal(plain.includes('--enable-cors-header'), true);
+
+  const withModels = launchArgs({ ...base, modelsConfigFile: '/x/local-models.yaml' });
+  const index = withModels.indexOf('--extra-model-paths-config');
+  assert.equal(index > 0, true);
+  assert.equal(withModels[index + 1], '/x/local-models.yaml');
 });
