@@ -16,6 +16,7 @@
 import { readFileSync } from 'node:fs';
 
 import { WORKFLOW_API_ROUTES } from '../../shared/api.ts';
+import { checkDriver, estimateRequiredBytes } from './preflight.ts';
 import type { ComfyBackendService } from './service.ts';
 
 export const COMFY_BACKEND_ROUTE_PREFIX = '/omnimux-workflow/api/comfy-backend';
@@ -25,6 +26,7 @@ export const COMFY_BACKEND_LOG_MAX_LINES = 2000;
 export interface ComfyBackendDispatchRequest {
   method?: string;
   url?: string;
+  body?: unknown;
 }
 
 type RouteResult = { status: number; body: unknown };
@@ -54,7 +56,31 @@ export function createComfyBackendRoutes(service: ComfyBackendService): {
 } {
   const tryHandle = async (method: string, path: string, req: ComfyBackendDispatchRequest): Promise<RouteResult | null> => {
     if (path === WORKFLOW_API_ROUTES.comfyBackendState && method === 'GET') {
-      return { status: 200, body: { status: await service.status() } };
+      // 状态里额外给「装之前要多少空间」和「本机需不需要额外驱动」——都是纯计算，
+      // 不在这里做磁盘/端口探测（那是安装/启动动作时的事，避免每次轮询都探一遍）。
+      // 只读一次状态（一次 status() 会读状态文件并可能探测后端，别读两遍）。
+      const status = await service.status();
+      const target = status.target;
+      return {
+        status: 200,
+        body: {
+          status,
+          settings: service.settings(),
+          requiredBytes: target ? estimateRequiredBytes(target) : 0,
+          driver: target ? checkDriver(target) : 'unsupported',
+        },
+      };
+    }
+    if (path === WORKFLOW_API_ROUTES.comfyBackendSettings && method === 'GET') {
+      return { status: 200, body: { settings: service.settings() } };
+    }
+    if (path === WORKFLOW_API_ROUTES.comfyBackendSettings && method === 'POST') {
+      const body = (req.body ?? {}) as { installRoot?: unknown; modelsPath?: unknown };
+      const patch: { installRoot?: string; modelsPath?: string } = {};
+      if (typeof body.installRoot === 'string') patch.installRoot = body.installRoot;
+      if (typeof body.modelsPath === 'string') patch.modelsPath = body.modelsPath;
+      const result = service.updateSettings(patch);
+      return { status: result.ok ? 200 : 400, body: result };
     }
     if (path === WORKFLOW_API_ROUTES.comfyBackendInstall && method === 'POST') {
       return { status: 202, body: { status: await service.install() } };

@@ -123,6 +123,41 @@ export const INSTALL_STAGES = [
 
 export type InstallStageId = (typeof INSTALL_STAGES)[number]['id'];
 
+/** 失败分类（Issue #3717 M3）：状态里带一个码，界面据此给唯一主行动。 */
+export type ComfyBackendFailure =
+  | 'unsupported-platform'
+  | 'install-dir-not-writable'
+  | 'insufficient-disk'
+  | 'port-occupied'
+  | 'driver-unsupported'
+  | 'version-mismatch'
+  | 'install-failed'
+  | 'start-timeout';
+
+export const COMFY_BACKEND_FAILURES: readonly ComfyBackendFailure[] = [
+  'unsupported-platform',
+  'install-dir-not-writable',
+  'insufficient-disk',
+  'port-occupied',
+  'driver-unsupported',
+  'version-mismatch',
+  'install-failed',
+  'start-timeout',
+];
+
+/** 已装 pin 与当前目标 pin 是否一致（不一致 = 需要更新）。 */
+export function versionMatches(
+  ready: { comfyui?: { commit?: string }; python?: string; torch?: string } | null,
+  target: ComfyBackendTarget,
+): boolean {
+  if (!ready) return false;
+  const commit = ready.comfyui?.commit;
+  if (typeof commit !== 'string' || commit !== target.comfyui.commit) return false;
+  if (ready.python !== undefined && ready.python !== target.python.version) return false;
+  if (ready.torch !== undefined && ready.torch !== target.torch.version) return false;
+  return true;
+}
+
 export interface ComfyBackendStatus {
   state: ComfyBackendState;
   stage: InstallStageId | 'done' | null;
@@ -136,6 +171,8 @@ export interface ComfyBackendStatus {
   target: ComfyBackendTarget | null;
   /** 安装根绝对路径：UI 要如实告诉用户装到哪，不给相对片段。 */
   installRoot: string;
+  /** 失败分类码（M3）：界面据此给唯一主行动；正常状态为 null。 */
+  failure: ComfyBackendFailure | null;
 }
 
 /** 阶段 + 阶段内比例 → 总进度（0–100 整数）。 */

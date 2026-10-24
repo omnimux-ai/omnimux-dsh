@@ -72,6 +72,8 @@ export const WORKFLOW_API_ROUTES = {
   comfyBackendStart: `${WORKFLOW_ROUTE_PREFIX}/api/comfy-backend/start`,
   comfyBackendStop: `${WORKFLOW_ROUTE_PREFIX}/api/comfy-backend/stop`,
   comfyBackendLog: (lines: number) => `${WORKFLOW_ROUTE_PREFIX}/api/comfy-backend/log?lines=${lines}`,
+  /** GET/POST: 托管后端设置（安装根、已有模型目录）。 */
+  comfyBackendSettings: `${WORKFLOW_ROUTE_PREFIX}/api/comfy-backend/settings`,
   /** POST: list one layer of local directories for in-dialog browse. */
   browseDirectory: `${WORKFLOW_ROUTE_PREFIX}/api/browse-directory`,
   /** GET: stream an imported local file by realPath (Range 206). */

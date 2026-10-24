@@ -26,7 +26,9 @@ const NOT_INSTALLED = {
 
 function serviceWithLog(logPath) {
   return {
-    paths: { root: '/tmp/none', state: '/tmp/none/state.json', log: logPath, userdata: '/tmp/none/userdata', comfyui: '/tmp/none/ComfyUI', venv: '/tmp/none/venv' },
+    paths: { root: '/tmp/none', state: '/tmp/none/state.json', log: logPath, userdata: '/tmp/none/userdata', comfyui: '/tmp/none/ComfyUI', venv: '/tmp/none/venv', settings: '/tmp/none/settings.json' },
+    settings: () => ({ installRoot: '', modelsPath: '' }),
+    updateSettings: () => ({ ok: true, code: null, settings: { installRoot: '', modelsPath: '' } }),
     status: async () => NOT_INSTALLED,
     install: async () => NOT_INSTALLED,
     start: async () => NOT_INSTALLED,
