@@ -175,7 +175,7 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 | 变更面（路径/行为启发） | 必跑（最小） | 有触及再加跑 | 明确禁止 / 不适用 |
 | --- | --- | --- | --- |
 | 纯文档 / skill / 合同 Markdown | `git diff --check`；抽查改动链接、命令与边界句 | 触及配对或 skill 时：`pnpm doc:pairing` / `pnpm verify:skill-bilingual` | 不要求包测、浏览器、物化 |
-| 门禁 / CI / hooks / `scripts/*gate*` | 改动脚本所属 `node --test …`；触及 gates 集合时 `pnpm test:gates` | 改 impact/authorization/ci-verdict 时 `pnpm test:ci` | 不要无差别 `verify:all` |
+| 门禁 / CI / hooks / `scripts/*gate*` | 改动脚本所属 `node --test …`；触及 gates 集合时 `pnpm test:gates` | 改 impact/authorization/ci-verdict 时 `pnpm test:ci` | 不要无差别 `verify:all`；新增或修改守卫另需 [anti-agent-fake-completion-guard §3.4.1](anti-agent-fake-completion-guard.md#341-新增或修改的守卫必须能被证伪-a-guard-only-guards-if-the-regression-fails-it) 的证伪实验记录——跑绿不等于守卫生效 |
 | 产品基线 / 路径 / 本地状态默认 | `pnpm verify:product-baseline` | 相关包测 | 不得把开发机私有状态写进默认路径 |
 | 单插件业务逻辑（非 UI） | `pnpm --filter <package> test` | 该插件边界/registry 小测 | 默认不跑 `pnpm -r test` / `test:all` |
 | Agent Tools / Schema | `pnpm test:agent-tools` | `pnpm verify:tools` | — |
