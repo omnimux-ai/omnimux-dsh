@@ -1,27 +1,27 @@
 {
-  "runId": "02b61863-20e6-4391-beac-86f47d0f39c2",
-  "stage": "inspiration",
-  "plugin": "omnimux-inspiration",
-  "startedAt": "2026-10-21T04:16:03.363Z",
-  "completedAt": "2026-10-21T04:16:05.198Z",
+  "runId": "91485250-c820-462a-98e8-3114ebe1c081",
+  "stage": "analytics",
+  "plugin": "omnimux-analytics",
+  "startedAt": "2026-10-24T02:43:29.217Z",
+  "completedAt": "2026-10-24T02:43:30.836Z",
   "pass": true,
-  "serverPort": 56913,
-  "cdpPort": 56916,
+  "serverPort": 56921,
+  "cdpPort": 56922,
   "assertions": [
     {
       "name": "bundle-client-code",
       "pass": true,
-      "size": 7445584
+      "size": 5261190
     },
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 56913
+      "port": 56921
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 56916
+      "port": 56922
     },
     {
       "name": "runner-page-ready",
@@ -30,16 +30,16 @@
     {
       "name": "sidebar-entry-clicked",
       "pass": true,
-      "selector": "[data-omnimux-inspiration-entry]"
+      "selector": "[data-omnimux-analytics-entry]"
     },
     {
       "name": "stage-content-rendered",
       "pass": true,
       "dimensions": {
         "width": 548,
-        "height": 106
+        "height": 88
       },
-      "textSnippet": "创作灵感\n\n工作树隔离环境已成功渲染 Stage 内容 (Tab: omnimux-inspirat"
+      "textSnippet": "数据分析\n\n工作树隔离环境已成功渲染 Stage 内容 (Tab: omnimux-analytic"
     },
     {
       "name": "screenshot-png-verified",
@@ -48,14 +48,14 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 37909
+      "bytes": 37555
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-card-hover-chrome/.workbuddy/evidence/worktree-qa/02b61863-20e6-4391-beac-86f47d0f39c2/inspiration.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-settings-value-reader-issue-3666/.workbuddy/evidence/worktree-qa/91485250-c820-462a-98e8-3114ebe1c081/analytics.png",
     "width": 1280,
     "height": 713,
-    "bytes": 37909
+    "bytes": 37555
   },
   "errors": []
 }

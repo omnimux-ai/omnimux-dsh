@@ -6,7 +6,7 @@ import { DEFAULT_SCENARIO_BINDINGS, resolveScenarioBindings } from './runtime-mo
  * Official `settings.register` requires a callable schemastery-shaped schema
  * (`schema(value)` + `schema.toJSON()` + `type`/`dict` for redaction). Hub
  * composition Config stays Standard Schema in `src/config.js`; this object is
- * only the top-level fields `settingsScope.set` can write.
+ * only the top-level fields the settings write path can write.
  */
 
 import { parseReferenceStorageConfig } from '../reference-storage/config.js'
