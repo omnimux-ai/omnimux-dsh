@@ -19,6 +19,7 @@
     "THIRD-PARTY-NOTICES.md",
     "scripts/build-client.mjs",
     "scripts/build-media-inspect.mjs",
+    "scripts/catalog-diff.mjs",
     "scripts/export-voice-previews.mjs",
     "cordis.patch.yml"
   ],

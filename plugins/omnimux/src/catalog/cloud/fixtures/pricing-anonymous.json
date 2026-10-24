@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": "alpha-video-1",
+      "model_name": "Alpha Video 1",
+      "enable_groups": ["default"],
+      "supported_endpoint_types": ["openai-video"],
+      "billing_mode": "per_second",
+      "model_price": 0.5,
+      "model_ratio": 1,
+      "quota_type": 0,
+      "contract": { "operations": ["text_to_video"], "durations_seconds": { "min": 4, "max": 12 } }
+    },
+    {
+      "id": "beta-image-1",
+      "model_name": "Beta Image 1",
+      "enable_groups": ["default", "economy"],
+      "supported_endpoint_types": ["image-generation"],
+      "billing_mode": "per_task",
+      "model_price": 0.02,
+      "quota_type": 0,
+      "contract": {}
+    }
+  ],
+  "group_ratio": { "default": 1, "economy": 0.5 },
+  "usable_group": { "default": "标准", "economy": "经济" },
+  "auto_groups": ["default"]
+}

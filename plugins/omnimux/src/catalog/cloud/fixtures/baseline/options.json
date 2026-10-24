@@ -1,0 +1,5 @@
+[
+  { "key": "GroupRatio", "value": "{\"default\":1,\"economy\":0.5}" },
+  { "key": "UserUsableGroups", "value": "{\"default\":\"标准\",\"economy\":\"经济\"}" },
+  { "key": "AutoGroups", "value": "[\"default\"]" }
+]

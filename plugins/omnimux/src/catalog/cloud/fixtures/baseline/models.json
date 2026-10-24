@@ -1,0 +1,6 @@
+[
+  { "model_name": "alpha-video-1", "status": 1, "tags": "video", "vendor_id": 1 },
+  { "model_name": "beta-image-1", "status": 1, "tags": "image", "vendor_id": 2 },
+  { "model_name": "shared-model-1", "status": 1, "tags": "text", "vendor_id": 3 },
+  { "model_name": "retired-model-1", "status": 0, "tags": "text", "vendor_id": 4 }
+]

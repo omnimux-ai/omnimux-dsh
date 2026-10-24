@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "[fixture] alpha relay",
+    "status": 1,
+    "group": "default",
+    "models": ["alpha-video-1", "shared-model-1"],
+    "model_mapping": {}
+  },
+  {
+    "id": 2,
+    "name": "[fixture] beta relay",
+    "status": 1,
+    "group": "economy",
+    "models": ["beta-image-1", "shared-model-1"],
+    "model_mapping": {}
+  },
+  {
+    "id": 3,
+    "name": "[fixture] retired relay",
+    "status": 0,
+    "group": "default",
+    "models": ["retired-model-1"],
+    "model_mapping": {}
+  }
+]
