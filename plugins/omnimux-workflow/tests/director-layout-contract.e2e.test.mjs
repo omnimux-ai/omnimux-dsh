@@ -160,3 +160,34 @@ test('真机证据：窄屏四档（含窄而高反例）都保底、不重叠�
     }
   }
 });
+
+test('窄面板按容器宽度决策，画布列保底 140px（#3702）', () => {
+  assert.match(layoutCss, /\[data-director-workbench="true"\] \{[^}]*container-type: inline-size;[^}]*container-name: director-workbench;/s,
+    'workbench 必须是容器查询上下文');
+  assert.match(layoutCss, /@container director-workbench \(max-width: 520px\) \{/s, '必须有窄面板容器查询');
+  assert.match(layoutCss, /grid-template-columns: minmax\(0, min\(220px, 38cqw\)\) minmax\(140px, 1fr\);/,
+    '窄面板下左栏按比例让位、画布列保底 140px');
+  assert.equal(layoutCss.includes('[data-workspace-view="scene"]'), true, '容器规则必须限定 scene 视图，不能改到 preview');
+  assert.match(layoutCss, /\[data-left-dock-collapsed="true"\] \.director-workbench-grid \{[^}]*grid-template-columns: 48px minmax\(140px, 1fr\);/s,
+    '左栏折叠时必须保留 48px 轨道');
+  assert.match(layoutCss, /\[data-right-dock-collapsed="true"\] \.director-workbench-property-dock \{[^}]*display: none;/s,
+    '右栏折叠时窄面板下不应白占一行');
+  assert.equal(workbench.includes('director-workbench-grid'), true, '栅格需要稳定类名供容器规则使用');
+});
+
+test('真机证据：面板 279px 时画布列可用，折叠态保留轨道（#3702）', () => {
+  const evidence = JSON.parse(readFileSync(join(repoRoot, 'docs/evidence/director-panel-width-3702/after-panel-width.json'), 'utf8'));
+  assert.deepEqual(evidence.failures, [], '面板宽度证据里的逐项判定必须为空');
+  for (const size of evidence.sizes) {
+    if (size.measured.panelWidth > 320) continue;
+    assert.equal(size.measured.middleColumn.width >= evidence.narrowThresholds.canvasMinWidth, true,
+      `${size.viewport.width}x${size.viewport.height}: 面板 ${size.measured.panelWidth}px 时画布列必须 >= ${evidence.narrowThresholds.canvasMinWidth}`);
+  }
+  assert.equal(evidence.collapsed.measured.collapsed, 'true');
+  assert.equal(evidence.collapsed.measured.leftDockWidth <= 56, true, '折叠后左栏应保留 48px 轨道');
+  assert.equal(evidence.collapsed.measured.canvasWidth >= evidence.narrowThresholds.canvasMinWidth, true, '折叠后画布列仍须可用');
+  const wide = JSON.parse(readFileSync(join(repoRoot, 'docs/evidence/director-panel-width-3702/after-wide-thresholds.json'), 'utf8'));
+  assert.equal(wide.measured.leftDockWidth, 248, '宽屏左栏必须仍是 248');
+  assert.equal(wide.measured.rightDockWidth, 300, '宽屏右栏必须仍是 300');
+  assert.equal(wide.measured.sequencerHeight, 236, '宽屏时间轴必须仍是 236');
+});

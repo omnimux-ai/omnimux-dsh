@@ -61,7 +61,7 @@ const NARROW_VIEWPORTS = [
   { width: 900, height: 400, kind: 'short' },
   { width: 900, height: 1400, kind: 'tall' },
 ];
-const NARROW_THRESHOLDS = { middleMinHeight: 180, sequencerMinHeight: 160, sequencerMaxHeight: 236 };
+const NARROW_THRESHOLDS = { middleMinHeight: 180, sequencerMinHeight: 160, sequencerMaxHeight: 236, canvasMinWidth: 140 };
 const baseExpected = ['normal-project-entry', 'portrait-selected', 'managed-media-decoded', 'saved-scene', 'play-seek', 'decoded-motion', 'scene-reopened', 'aspect-reopened'];
 // 测量断言紧跟入口阶段记录，窄屏断言在旅程末尾（切视口会重排，放在最后不影响其它步骤）。
 const expected = MEASURE
@@ -625,6 +625,8 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle, palett
         return {
           viewport: { width: window.innerWidth, height: window.innerHeight },
           topbarHeight: rect(root.querySelector('[data-director-topbar="true"]')).height,
+          panelWidth: rect(grid).width,
+          leftDockWidth: rect(leftDock).width,
           gridColumns: getComputedStyle(grid).gridTemplateColumns,
           gridRows: getComputedStyle(grid).gridTemplateRows,
           grid: { clientHeight: grid.clientHeight, scrollHeight: grid.scrollHeight, overflowY: getComputedStyle(grid).overflowY },
@@ -656,17 +658,50 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle, palett
       if (narrowMeasured.middleColumn.width <= 0) {
         narrowFailures.push(at(`middle column width: 实测 ${narrowMeasured.middleColumn.width}（画布退化为 0 宽）`));
       }
+      // 窄面板（#3702）：面板 <=320px 时画布列必须仍有可用宽度，左栏按比例让位。
+      if (narrowMeasured.panelWidth <= 320 && narrowMeasured.middleColumn.width < narrowThresholds.canvasMinWidth) {
+        narrowFailures.push(at(`panel ${narrowMeasured.panelWidth}px 下 middle column width: 实测 ${narrowMeasured.middleColumn.width} vs 期望 >= ${narrowThresholds.canvasMinWidth}（左栏 ${narrowMeasured.leftDockWidth}px 没有让位）`));
+      }
       const scrollable = narrowMeasured.grid.overflowY === 'auto' || narrowMeasured.grid.overflowY === 'scroll';
       if (narrowMeasured.grid.scrollHeight > narrowMeasured.grid.clientHeight + 1 && !scrollable) {
         narrowFailures.push(at(`grid 内容 ${narrowMeasured.grid.scrollHeight} > 可视 ${narrowMeasured.grid.clientHeight} 且 overflow-y=${narrowMeasured.grid.overflowY}（内容被裁且不可滚动）`));
       }
       narrowSizes.push({ viewport: narrowViewport, measured: narrowMeasured, failures: narrowFailures });
       }
+      // 折叠态交叉验证：窄面板 + 左栏折叠时必须留 48px 轨道、画布列仍 >=140px
+      // （容器规则会覆盖 Tailwind 的折叠列定义，这里证明它没把折叠状态吃掉）。
+      await page.cdp('Emulation.setDeviceMetricsOverride', { width: 900, height: 560, deviceScaleFactor: 1, mobile: false });
+      await page.waitForFunction(() => window.innerWidth === 900 && window.innerHeight === 560, undefined, { timeout: 10000 });
+      await clickOrActivate('loc=css:.wf-director-root button[aria-label="折叠场景面板"]', '.wf-director-root', { kind: 'aria', value: '折叠场景面板' });
+      await page.waitForFunction(() => document.querySelector('[data-director-workbench="true"]')?.getAttribute('data-left-dock-collapsed') === 'true', undefined, { timeout: 10000 });
+      const collapsedMeasured = await page.evaluate(() => {
+        const root = document.querySelector('.wf-director-root');
+        const workbench = root.querySelector('[data-director-workbench="true"]');
+        const grid = [...workbench.children].find(node => getComputedStyle(node).display === 'grid');
+        const leftDock = root.querySelector('[data-director-left-dock="true"]');
+        const rightDock = root.querySelector('[data-director-right-dock="true"]');
+        const middleColumn = [...grid.children].find(node => node !== leftDock && node !== rightDock && !node.hasAttribute('data-director-sequencer-slot'));
+        const round = value => Math.round(Number.parseFloat(value) * 100) / 100;
+        return {
+          panelWidth: round(grid.getBoundingClientRect().width),
+          leftDockWidth: round(leftDock.getBoundingClientRect().width),
+          canvasWidth: round(middleColumn.getBoundingClientRect().width),
+          gridColumns: getComputedStyle(grid).gridTemplateColumns,
+          collapsed: workbench.getAttribute('data-left-dock-collapsed'),
+        };
+      });
+      const collapsedFailures = [];
+      if (collapsedMeasured.collapsed !== 'true') collapsedFailures.push('左栏折叠状态未生效');
+      if (collapsedMeasured.leftDockWidth > 56) collapsedFailures.push(`折叠后左栏宽度 ${collapsedMeasured.leftDockWidth} vs 期望 <= 56（折叠轨道应保留 48px）`);
+      if (collapsedMeasured.canvasWidth < narrowThresholds.canvasMinWidth) collapsedFailures.push(`折叠后画布列宽度 ${collapsedMeasured.canvasWidth} vs 期望 >= ${narrowThresholds.canvasMinWidth}`);
+      await page.screenshot({ path: `${evidence}/layout-narrow-collapsed.png` });
+      await clickOrActivate('loc=css:.wf-director-root button[aria-label="展开场景面板"]', '.wf-director-root', { kind: 'aria', value: '展开场景面板' });
+      await page.waitForFunction(() => document.querySelector('[data-director-workbench="true"]')?.getAttribute('data-left-dock-collapsed') === 'false', undefined, { timeout: 10000 });
       await page.cdp('Emulation.clearDeviceMetricsOverride');
-      const narrowFailuresAll = narrowSizes.flatMap(item => item.failures);
-      write('layout-narrow-thresholds.json', { narrowViewports, narrowThresholds, sizes: narrowSizes, failures: narrowFailuresAll });
+      const narrowFailuresAll = narrowSizes.flatMap(item => item.failures).concat(collapsedFailures);
+      write('layout-narrow-thresholds.json', { narrowViewports, narrowThresholds, sizes: narrowSizes, collapsed: { measured: collapsedMeasured, failures: collapsedFailures }, failures: narrowFailuresAll.concat(collapsedFailures) });
       if (narrowFailuresAll.length) throw new Error(`layout-narrow-thresholds failed: ${narrowFailuresAll.join('; ')}`);
-      record('layout-narrow-thresholds', { sizes: narrowSizes });
+      record('layout-narrow-thresholds', { sizes: narrowSizes, collapsed: collapsedMeasured });
     }
     await write('completion.json', { completed: true });
   } catch (error) {
