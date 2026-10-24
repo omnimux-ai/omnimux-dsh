@@ -399,7 +399,7 @@ materialize_dev_state() {
   case "${MATERIALIZE_STATUS}" in
     ok) echo "开发版已物化" ;;
     already-current) echo "开发版已是最新（本次无需重复安装）" ;;
-    not-needed) echo "开发版无需物化（本次变更不进运行时）" ;;
+    not-needed) echo "开发版无需物化（本次合入未包含插件源码变更）" ;;
     failed) echo "开发版未更新（物化失败，见上方提示）" ;;
     *) echo "开发版物化状态未知" ;;
   esac
@@ -554,10 +554,10 @@ cmd_ship() {
       git branch -d "${branch}" 2>/dev/null || git branch -D "${branch}" 2>/dev/null || true
     fi
     git worktree prune
-    say "✅ 交付全链路闭环完成：PR 已合入、主干已同步、$(materialize_dev_state)、临时工作树 [${task}] 与分支已清理。"
-    if [ "${MATERIALIZE_STATUS}" = "failed" ]; then
-      say "⚠️ 开发版仍是旧版本：请在主检出运行 ./scripts/sync-to-app.sh（无插件参数=完整同步，可覆盖 shared kit）后自行确认。"
-    fi
+    say "✅ 交付全链路闭环完成：PR 已合入、主干已同步、$(materialize_dev_state)（materialize=${MATERIALIZE_STATUS}）、临时工作树 [${task}] 与分支已清理。"
+  fi
+  if [ "${MATERIALIZE_STATUS}" = "failed" ]; then
+    say "⚠️ 开发版仍是旧版本：请在主检出运行 ./scripts/sync-to-app.sh（无插件参数=完整同步，可覆盖 shared kit）后自行确认。"
   fi
 }
 

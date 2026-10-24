@@ -817,7 +817,11 @@ function shipRepoWithSyncScript(label, syncScript) {
   const result = spawnSync('bash', ['scripts/worktree.sh', 'ship', 'plugin-feature', '--pr', '3700'], {
     cwd: repo,
     encoding: 'utf8',
-    env: Object.assign({}, process.env, { PATH: `${bin}:${process.env.PATH}` }),
+    env: Object.assign({}, process.env, {
+      PATH: `${bin}:${process.env.PATH}`,
+      // 与同文件其它物化用例一致：不要让用例读真实 ~/.omnimux-dev。
+      OMNIMUX_DEV_SNAPSHOT: join(fixture, 'absent-dev'),
+    }),
   })
   return { fixture, result }
 }
