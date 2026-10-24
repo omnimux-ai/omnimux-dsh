@@ -1,5 +1,5 @@
 /**
- * ComfyUI 页面全屏层（Issue #3681 M1；托管状态机 #3701 M2c）。
+ * ComfyUI 工作流全屏层（Issue #3681 M1；托管状态机 #3701 M2c）。
  *
  * 与导演台同款约定：监听 `COMFY_PAGE_OPEN_EVENT`（detail: { nodeId }），从画布 store
  * 解析该节点的目标地址。地址决定走哪条路径：

@@ -32,7 +32,7 @@ import {
   preventToolbarAddContextMenu,
   stopToolbarNativeEvent,
 } from './toolbarPointerGuard';
-import AddNodeMenu, { type AddNodeComfyProps } from './AddNodeMenu';
+import AddNodeMenu from './AddNodeMenu';
 import WorkflowTemplatePanel from './WorkflowTemplatePanel';
 import type { CanvasAddNodeType } from './addNodePalette';
 
@@ -293,9 +293,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
   const t = useT();
   const [internalIsAddMenuOpen, setInternalIsAddMenuOpen] = useState(false);
   const [isTemplateMenuOpen, setIsTemplateMenuOpen] = useState(false);
-  // 导入/导出状态本体（Issue 3669）：工具栏按钮与「添加节点」面板入口共用。
+  // 导入/导出状态本体（Issue 3669）：工具栏按钮、拖拽与预览面板共用。
   const transfer = useWorkflowTransferStore((state) => state.transfer);
-  const recents = useWorkflowTransferStore((state) => state.recents);
   const importNonce = useWorkflowTransferStore((state) => state.importNonce);
   const exportWorkflow = useWorkflowTransferStore((state) => state.exportWorkflow);
   const importText = useWorkflowTransferStore((state) => state.importText);
@@ -304,7 +303,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
   const applyComfy = useWorkflowTransferStore((state) => state.applyComfy);
   const applyOwn = useWorkflowTransferStore((state) => state.applyOwn);
   const dismissTransfer = useWorkflowTransferStore((state) => state.dismiss);
-  const applyRecent = useWorkflowTransferStore((state) => state.applyRecent);
   const addMenuRef = useRef<HTMLDivElement>(null);
   const templateMenuRef = useRef<HTMLDivElement>(null);
   const transferRef = useRef<HTMLDivElement>(null);
@@ -350,18 +348,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
     fileInputRef.current?.click();
   }, [importNonce]);
 
-  /** 底部 ComfyUI 工作流入口的数据与动作（Issue 3669）；点完关面板，避免与预览面板叠在一起。 */
-  const comfyMenu = useMemo<AddNodeComfyProps>(() => ({
-    recents,
-    onImport: () => {
-      requestImport();
-      closeAdd();
-    },
-    onApplyRecent: (name: string) => {
-      applyRecent(name);
-      closeAdd();
-    },
-  }), [recents, requestImport, applyRecent, closeAdd]);
+  /** 底部 ComfyUI 工作流入口已删除（Issue 3741）：文件导入仍走工具栏按钮与拖拽。 */
 
   useClickOutside({
     refs: addMenuRef,
@@ -417,7 +404,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
         </button>
 
         {isAddOpen ? (
-          <AddNodeMenu scope="dock" onSelect={handleSelectNodeType} comfy={comfyMenu} />
+          <AddNodeMenu scope="dock" onSelect={handleSelectNodeType} />
         ) : null}
       </div>
 

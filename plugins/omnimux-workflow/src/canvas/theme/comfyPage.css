@@ -1,4 +1,4 @@
-/* ComfyUI 页面节点卡 + 全屏层（Issue #3681 M1）：节点只做入口，全屏层承载 iframe。 */
+/* ComfyUI 工作流节点卡 + 全屏层（Issue #3681 M1）：节点只做入口，全屏层承载 iframe。 */
 .wf-comfy-page-card {
   display: flex;
   flex-direction: column;
