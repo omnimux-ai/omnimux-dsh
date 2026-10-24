@@ -8,10 +8,7 @@
  *    - 项目资产 Tab (M)：工作区文件管理器，展示全部物理素材文件，支持新建文件夹与批量上传。
  */
 import React, { useCallback, useEffect, useState } from 'react'
-import {
-  IconPlusOutline16,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import { Button, ConfirmModal, Divider, FilterBar, ModalDialog, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
+import { Button, ConfirmModal, Divider, FilterBar, IconPlusOutline16, ModalDialog, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { Info } from 'lucide-react'
 import {
   listProjects,

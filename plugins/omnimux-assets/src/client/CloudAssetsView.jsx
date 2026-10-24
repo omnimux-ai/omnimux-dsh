@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Button, EmptyState, IconButton } from 'dsh-ui-kit'
-import { IconDownloadOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, EmptyState, IconButton, IconDownloadOutline16 } from 'dsh-ui-kit'
 import {
   AudioIcon,
   ChatIcon,

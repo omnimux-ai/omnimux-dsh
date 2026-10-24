@@ -1,7 +1,9 @@
 import { forwardRef } from "react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { IconLoadingOutline16, Tooltip } from "@deepseek-ai/dsh-client-ui-primitives";
+import { Tooltip } from "@deepseek-ai/dsh-client-ui-primitives";
 import type { TooltipSide } from "@deepseek-ai/dsh-client-ui-primitives";
+
+import { IconLoadingOutline16 } from "../icons/compat-icons.tsx";
 
 import { cssClass } from "../internal/cssClass.ts";
 import { cx } from "../internal/cx.ts";

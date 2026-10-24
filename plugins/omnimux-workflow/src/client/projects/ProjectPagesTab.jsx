@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { IconEditOutline16, IconTrashOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Button, IconButton } from 'dsh-ui-kit'
+import { Button, IconButton, IconEditOutline16, IconTrashOutline16 } from 'dsh-ui-kit'
 import { ProjectCover } from './ProjectCover.jsx'
 
 function ProjectPageCard({ page, active, onOpenPage, onRenamePage, onDeletePage, t }) {

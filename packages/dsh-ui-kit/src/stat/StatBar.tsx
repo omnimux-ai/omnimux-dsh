@@ -3,7 +3,7 @@ import type { HTMLAttributes, ReactNode } from 'react'
 import {
   IconChevronDownOutline14,
   IconChevronUpOutline14,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from '../icons/compat-icons.tsx'
 import { cssClass } from '../internal/cssClass.ts'
 import { cx } from '../internal/cx.ts'
 import css from './StatBar.module.css'

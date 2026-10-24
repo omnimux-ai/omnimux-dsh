@@ -15,7 +15,7 @@ await build({
   plugins: [{ name: 'kit-button', setup(ctx) {
     ctx.onResolve({ filter: /^dsh-ui-kit$/ }, () => ({ path: 'kit', namespace: 'stub' }))
     ctx.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({
-      contents: 'export function IconButton({children, variant, size, ...props}) { return <button {...props}>{children}</button> }', loader: 'jsx',
+      contents: 'export function IconButton({children, variant, size, ...props}) { return <button {...props}>{children}</button> }\nexport function IconEllipsisOutline16(props) { return <svg {...props} /> }', loader: 'jsx',
     }))
   } }], logLevel: 'silent',
 })

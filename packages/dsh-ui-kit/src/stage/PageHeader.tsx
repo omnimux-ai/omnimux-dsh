@@ -4,7 +4,7 @@ import {
   IconCloseOutline16,
   IconLoadingOutline16,
   IconRefreshOutline16,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from '../icons/compat-icons.tsx'
 import { IconButton } from '../button/Button.tsx'
 import { Tabs } from '../tabs/Tabs.tsx'
 import type { PageHeaderTabItem } from '../tabs/Tabs.tsx'

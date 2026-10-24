@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { IconChevronLeftOutline14, IconRefreshOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Button } from 'dsh-ui-kit'
+import { Button, IconChevronLeftOutline14, IconRefreshOutline16 } from 'dsh-ui-kit'
 import { recordDetail, refreshRecord, retryTask } from './api.js'
 import { isPublishingAccount, isRetryablePublishingTask } from '../account-policy.js'
 
@@ -83,7 +82,7 @@ export function RecordDetail({ t, recordId, onBack, onChanged }) {
   if (!record) {
     return (
       <div>
-        <Button variant="ghost" size="sm" leadingIcon={<IconChevronLeftOutline14 />} onClick={onBack}>
+        <Button variant="ghost" size="sm" leadingIcon={<IconChevronLeftOutline14 size={14} />} onClick={onBack}>
           {t('detail.back')}
         </Button>
         <div className="omnimux-publish-muted">{error || t('loading')}</div>
@@ -95,7 +94,7 @@ export function RecordDetail({ t, recordId, onBack, onChanged }) {
   return (
     <div>
       <div className="omnimux-publish-detail-head">
-        <Button variant="ghost" size="sm" leadingIcon={<IconChevronLeftOutline14 />} onClick={onBack}>
+        <Button variant="ghost" size="sm" leadingIcon={<IconChevronLeftOutline14 size={14} />} onClick={onBack}>
           {t('detail.back')}
         </Button>
         <strong className="omnimux-publish-detail-title">

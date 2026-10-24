@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef } from "react";
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
-import { IconCloseOutline16 } from "@deepseek-ai/dsh-client-ui-primitives";
+import { IconCloseOutline16 } from "../icons/compat-icons.tsx";
 
 import { IconButton } from "../button/Button.tsx";
 import { focusFirstDescendant, trapFocus } from "../internal/a11y.ts";

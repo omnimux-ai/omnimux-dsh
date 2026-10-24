@@ -1,5 +1,4 @@
-import { IconRightUpOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Badge } from 'dsh-ui-kit'
+import { Badge, IconRightUpOutline14 } from 'dsh-ui-kit'
 import { formatCount, formatEr, formatSignedCount } from '../format.js'
 
 function Trend({ up, children }) {
@@ -59,7 +58,7 @@ function BestPostCard({ t, post }) {
             onClick={handleClick}
           >
             {t('kpi.viewDetail')}
-            <IconRightUpOutline14 />
+            <IconRightUpOutline14 size={14} />
           </a>
         </div>
       </div>

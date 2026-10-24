@@ -1,5 +1,31 @@
-import { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, MouseEvent, ReactNode, ReactPortal, TableHTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from "react";
 import { TooltipSide } from "@deepseek-ai/dsh-client-ui-primitives";
+import { ButtonHTMLAttributes, ComponentType, HTMLAttributes, InputHTMLAttributes, MouseEvent, ReactNode, ReactPortal, TableHTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from "react";
+//#region src/icons/compat-icons.d.ts
+interface CompatIconProps {
+  size?: number | undefined;
+  className?: string | undefined;
+}
+type IconComponent = ComponentType<CompatIconProps>;
+declare const IconCheckOutline16: IconComponent;
+declare const IconChevronDownOutline14: IconComponent;
+declare const IconChevronUpOutline14: IconComponent;
+declare const IconChevronLeftOutline14: IconComponent;
+declare const IconCloseFill14: IconComponent;
+declare const IconCloseOutline16: IconComponent;
+declare const IconCopyOutline16: IconComponent;
+declare const IconDownloadOutline16: IconComponent;
+declare const IconEditOutline16: IconComponent;
+declare const IconEllipsisOutline16: IconComponent;
+declare const IconLoadingOutline16: IconComponent;
+declare const IconPaperclipOutline16: IconComponent;
+declare const IconPlayOutline16: IconComponent;
+declare const IconPlusOutline16: IconComponent;
+declare const IconRefreshOutline14: IconComponent;
+declare const IconRefreshOutline16: IconComponent;
+declare const IconRightUpOutline14: IconComponent;
+declare const IconSearchOutline16: IconComponent;
+declare const IconTrashOutline16: IconComponent;
+//#endregion
 //#region src/button/Button.d.ts
 type ButtonVariant = "primary" | "secondary" | "ghost" | "outline" | "danger";
 type ButtonSize = "default" | "sm" | "xs";
@@ -682,5 +708,5 @@ declare function trapFocus(container: HTMLElement, event: KeyboardEvent): void;
  */
 declare function focusFirstDescendant(container: HTMLElement): boolean;
 //#endregion
-export { ActionRow, type ActionRowProps, Badge, type BadgeProps, type BadgeShape, type BadgeSize, type BadgeVariant, Button, type ButtonProps, type ButtonSize, type ButtonVariant, CardGrid, type CardGridProps, type CellContext, type ColumnDef, ConfirmModal, type ConfirmModalProps, CopyButton, type CopyButtonProps, type CopyState, DataTable, type DataTableProps, type DialogSize, Divider, type DividerProps, Drawer, type DrawerPlacement, DrawerPortal, type DrawerPortalProps, type DrawerProps, type DropdownOption, DropdownSelect, type DropdownSelectProps, EmptyState, type EmptyStateProps, FilterBar, type FilterBarProps, GenWaveCard, type GenWaveCardProps, type HeaderContext, IconButton, type IconButtonProps, InputField, type InputFieldProps, type MediaAspectRatio, MediaCard, type MediaCardProps, ModalDialog, type ModalDialogProps, PageHeader, type PageHeaderProps, type PageHeaderTabItem, type PortalContainer, SearchField, type SearchFieldHandle, type SearchFieldProps, SelectableTile, type SelectableTileProps, type SidebarCoordinatorApi, type SidebarEntryOptions, type SortDirection, type StageBox, StageContainer, type StageContainerProps, StageHeader, type StageHeaderProps, type StageHostSingleton, type StageStore, StatBar, type StatBarProps, type StatItem, Table, TableBody, type TableBodyProps, TableCell, type TableCellProps, TableHead, type TableHeadProps, TableHeader, type TableHeaderProps, type TableProps, TableRow, type TableRowProps, Tabs, type TabsProps, type TabsVariant, type TileSelectionMode, Toolbar, type ToolbarProps, copyToClipboard, createPortalSafe, createSidebarEntry, createStageStore, focusFirstDescendant, resolvePortalContainer, trapFocus };
+export { ActionRow, type ActionRowProps, Badge, type BadgeProps, type BadgeShape, type BadgeSize, type BadgeVariant, Button, type ButtonProps, type ButtonSize, type ButtonVariant, CardGrid, type CardGridProps, type CellContext, type ColumnDef, type CompatIconProps, ConfirmModal, type ConfirmModalProps, CopyButton, type CopyButtonProps, type CopyState, DataTable, type DataTableProps, type DialogSize, Divider, type DividerProps, Drawer, type DrawerPlacement, DrawerPortal, type DrawerPortalProps, type DrawerProps, type DropdownOption, DropdownSelect, type DropdownSelectProps, EmptyState, type EmptyStateProps, FilterBar, type FilterBarProps, GenWaveCard, type GenWaveCardProps, type HeaderContext, IconButton, type IconButtonProps, IconCheckOutline16, IconChevronDownOutline14, IconChevronLeftOutline14, IconChevronUpOutline14, IconCloseFill14, IconCloseOutline16, IconCopyOutline16, IconDownloadOutline16, IconEditOutline16, IconEllipsisOutline16, IconLoadingOutline16, IconPaperclipOutline16, IconPlayOutline16, IconPlusOutline16, IconRefreshOutline14, IconRefreshOutline16, IconRightUpOutline14, IconSearchOutline16, IconTrashOutline16, InputField, type InputFieldProps, type MediaAspectRatio, MediaCard, type MediaCardProps, ModalDialog, type ModalDialogProps, PageHeader, type PageHeaderProps, type PageHeaderTabItem, type PortalContainer, SearchField, type SearchFieldHandle, type SearchFieldProps, SelectableTile, type SelectableTileProps, type SidebarCoordinatorApi, type SidebarEntryOptions, type SortDirection, type StageBox, StageContainer, type StageContainerProps, StageHeader, type StageHeaderProps, type StageHostSingleton, type StageStore, StatBar, type StatBarProps, type StatItem, Table, TableBody, type TableBodyProps, TableCell, type TableCellProps, TableHead, type TableHeadProps, TableHeader, type TableHeaderProps, type TableProps, TableRow, type TableRowProps, Tabs, type TabsProps, type TabsVariant, type TileSelectionMode, Toolbar, type ToolbarProps, copyToClipboard, createPortalSafe, createSidebarEntry, createStageStore, focusFirstDescendant, resolvePortalContainer, trapFocus };
 //# sourceMappingURL=index.d.ts.map

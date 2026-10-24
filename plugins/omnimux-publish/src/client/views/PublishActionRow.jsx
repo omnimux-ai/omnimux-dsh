@@ -1,7 +1,7 @@
 import {
   IconPlusOutline16,
   IconDownloadOutline16,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from 'dsh-ui-kit'
 import { IconFolderOutline16 } from '../icons/stage.js'
 import { Button } from 'dsh-ui-kit'
 

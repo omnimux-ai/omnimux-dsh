@@ -1,6 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react'
-import { Button, IconButton } from 'dsh-ui-kit'
-import { IconEditOutline16, IconTrashOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, IconButton, IconEditOutline16, IconTrashOutline16 } from 'dsh-ui-kit'
 import { ProjectCover } from './ProjectCover.jsx'
 import { injectFolderStyles } from './folderStyles.js'
 
