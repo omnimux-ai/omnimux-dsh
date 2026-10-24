@@ -142,11 +142,14 @@ export function createCloudCatalogStore(home, opts = {}) {
      * refresh attempt failed and the previous snapshot is still serving).
      *
      * @param {string} reason
+     * @param {string} [at] attempt timestamp; defaults to now (callers with an
+     *   injected clock pass their own so the mark stays deterministic in tests)
      */
-    markStale(reason) {
+    markStale(reason, at) {
       const meta = readJson(metaPath)
       if (!meta || !dir) return { updated: false }
-      writeJson(metaPath, { ...meta, stale: true, staleReason: reason, staleAt: new Date().toISOString() })
+      const stamp = typeof at === 'string' && at ? at : new Date().toISOString()
+      writeJson(metaPath, { ...meta, stale: true, staleReason: reason, staleAt: stamp })
       return { updated: true }
     },
 

@@ -67,18 +67,17 @@ export function createCatalogRefresher(deps) {
   let refresh = 'idle'
   let lastError = null
   let lastFetchedAt = null
-  let lastAttemptAt = null
   let inFlight
 
   function due() {
     if (!(deps.ttlSeconds > 0)) return false
     const meta = deps.live.store.read()?.meta
+    // The clock is the last *successful* attempt, recorded by `acceptRefresh`
+    // (changed) or `markFresh` (unchanged). A failed attempt deliberately does
+    // not move it, so the next tick retries instead of waiting out a full TTL.
     const fetchedAt = typeof meta?.fetchedAt === 'string' ? meta.fetchedAt : null
-    // The TTL counts from the last *attempt*, not only from the last accepted
-    // change: an unchanged gateway must not make every tick refetch.
-    const latest = [fetchedAt, lastAttemptAt].filter(Boolean).sort().pop() ?? null
-    if (!latest) return true
-    const elapsed = now() - Date.parse(latest)
+    if (!fetchedAt) return true
+    const elapsed = now() - Date.parse(fetchedAt)
     if (!Number.isFinite(elapsed)) return true
     return elapsed >= deps.ttlSeconds * 1000
   }
@@ -105,7 +104,6 @@ export function createCatalogRefresher(deps) {
     refresh = 'running'
     inFlight = (async () => {
       const fetchedAt = new Date(now()).toISOString()
-      lastAttemptAt = fetchedAt
       let payload
       try {
         const controller = new AbortController()
@@ -120,7 +118,7 @@ export function createCatalogRefresher(deps) {
           clearTimeout(timer)
         }
       } catch (error) {
-        deps.live.store.markStale('fetch-failed')
+        deps.live.store.markStale('fetch-failed', fetchedAt)
         refresh = 'failed'
         lastError = `fetch-failed: ${String(error?.message ?? error)}`
         lastFetchedAt = fetchedAt
@@ -130,7 +128,7 @@ export function createCatalogRefresher(deps) {
       const normalized = normalizePricingPayload(payload, { generatedAt: fetchedAt })
       const snapshot = normalized.snapshot
       if (isSnapshotEmpty(snapshot)) {
-        deps.live.store.markStale('empty-response')
+        deps.live.store.markStale('empty-response', fetchedAt)
         refresh = 'failed'
         lastError = 'empty-response'
         lastFetchedAt = fetchedAt
@@ -140,7 +138,7 @@ export function createCatalogRefresher(deps) {
       const current = deps.live.resolve().snapshot
       const gone = disappearance(current, snapshot)
       if (gone.known >= DISAPPEARANCE_MIN_MODELS && gone.ratio > DISAPPEARANCE_LIMIT) {
-        deps.live.store.markStale('disappearance-guard')
+        deps.live.store.markStale('disappearance-guard', fetchedAt)
         refresh = 'failed'
         lastError = `disappearance-guard: ${gone.missing}/${gone.known}`
         lastFetchedAt = fetchedAt
