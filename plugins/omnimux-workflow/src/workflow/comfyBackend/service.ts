@@ -27,12 +27,14 @@ import {
   stageLabel,
   versionMatches,
   type ComfyBackendFailure,
+  type ComfyBackendTargetResult,
   type ComfyBackendState,
   type ComfyBackendStatus,
   type ComfyBackendTarget,
   type InstallStageId,
 } from './plan.ts';
 import { launchArgs, runPreflight } from './preflight.ts';
+import { checkDriver, type DriverProbe } from './driver.ts';
 import {
   EMPTY_SETTINGS,
   modelsConfigYaml,
@@ -52,6 +54,11 @@ export interface ComfyBackendServiceOptions {
   now?: () => number;
   /** 安装/启动过程中的日志行（同时写 `<root>/logs/install.log`）。 */
   onLog?: (line: string) => void;
+  /** 注入点：驱动探测（测试用假实现；生产由 service 内部按平台探测）。 */
+  driverProbe?: DriverProbe;
+  /** 注入点：平台/架构（测试用；生产用 process.platform / process.arch）。 */
+  platform?: string;
+  arch?: string;
 }
 
 export interface ComfyBackendService {
@@ -63,6 +70,12 @@ export interface ComfyBackendService {
   probeReady: () => Promise<boolean>;
   settings: () => ComfyBackendSettings;
   updateSettings: (patch: Partial<ComfyBackendSettings>) => { ok: boolean; code: string | null; settings: ComfyBackendSettings };
+  /** 当前解析到的目标（含 support/driver/variant），没解析到时为 null。 */
+  currentTarget: () => ComfyBackendTarget | null;
+  /** 目标解析失败的原因（variant-required / unsupported-platform / unsupported-variant）。 */
+  targetProblem: () => Extract<ComfyBackendTargetResult, { ok: false }> | null;
+  /** 驱动判定（当前目标）。 */
+  driverVerdict: () => Promise<{ status: string; detail: string; required: string | null }>;
 }
 
 const READY_TIMEOUT_MS = 120_000;
@@ -144,10 +157,23 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
   const spawnImpl = options.spawnImpl ?? spawn;
   const now = options.now ?? Date.now;
 
-  const targetResult = options.target
-    ? ({ ok: true, target: options.target } as const)
-    : resolveLocalComfyBackendTarget();
-  const target = targetResult.ok ? targetResult.target : null;
+  // 目标解析：用户选的方案优先；没选时「有实测方案」或「只有一个候选」才自动选，
+  // Windows 这种多候选平台必须让用户显式选（`variant-required`，不猜也不回退）。
+  let target: ComfyBackendTarget | null = null;
+  let targetProblem: Extract<ComfyBackendTargetResult, { ok: false }> | null = null;
+  /** 解析目标（用户换方案后必须重新解析，否则会拿旧方案去装）。 */
+  const resolveTarget = () => {
+    const result = options.target
+      ? ({ ok: true, target: options.target } as const)
+      : resolveLocalComfyBackendTarget(
+          options.platform ?? process.platform,
+          options.arch ?? process.arch,
+          settings.variant,
+        );
+    target = result.ok ? result.target : null;
+    targetProblem = result.ok ? null : result;
+  };
+  resolveTarget();
 
   /** 安装根变了：把 paths 整体指过去并建骨架（用户数据目录不搬，就地新建）。 */
   const applyRoot = (nextRoot: string) => {
@@ -313,7 +339,9 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
       if (!existsSync(venvPython())) await run(pythonBin(), ['-m', 'venv', paths.venv]);
 
       progress('torch', `安装 PyTorch ${target.torch.version}`);
-      await run(venvPython(), ['-m', 'pip', 'install', '--disable-pip-version-check', `${target.torch.url}#sha256=${target.torch.sha256}`]);
+      // 一个方案可能带多个 wheel（AMD 那条：torch 2.4.1 + torchvision + torch-directml）。
+      const wheelArgs = target.torch.wheels.map((wheel) => `${wheel.url}#sha256=${wheel.sha256}`);
+      await run(venvPython(), ['-m', 'pip', 'install', '--disable-pip-version-check', ...wheelArgs]);
 
       progress('source', `下载 ComfyUI ${target.comfyui.tag}`);
       const sourceArchive = join(downloads(), `comfyui-${target.comfyui.commit}.tar.gz`);
@@ -334,7 +362,11 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
 
       writeFileSync(
         join(root, '.ready'),
-        JSON.stringify({ target: target.id, comfyui: target.comfyui, python: target.python.version, torch: target.torch.version, at: now() }, null, 2),
+        JSON.stringify(
+          { target: target.id, variant: target.variant, comfyui: target.comfyui, python: target.python.version, torch: target.torch.version, at: now() },
+          null,
+          2,
+        ),
       );
       progress('done', '安装完成');
       log('安装完成');
@@ -362,6 +394,19 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     if (!existsSync(join(root, '.ready'))) {
       return current.state === 'not-installed' ? current : writeState({ state: 'not-installed', stage: null, percent: 0, pid: null });
     }
+    // 目标解析不出来（选了本平台没有的方案 / 多候选没选）→ 如实报错，不能因为
+    // `.ready` 还在就显示成「已装未启动」（实测踩到：界面会说可用，其实用不了）。
+    if (!target && targetProblem) {
+      const mapped = targetFailure(targetProblem);
+      return writeState({
+        state: 'failed',
+        failure: mapped.failure,
+        error: mapped.failure,
+        message: mapped.message,
+        stage: null,
+        percent: 0,
+      });
+    }
     // 已装版本与当前固定目标不一致 → 需要更新，不能当成正常就绪继续跑（M3）。
     if (target && !versionMatches(readReady(), target)) {
       return writeState({
@@ -381,6 +426,17 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
 
   const install = async (): Promise<ComfyBackendStatus> => {
     if (installing) return readState();
+    if (!target && targetProblem) {
+      const mapped = targetFailure(targetProblem);
+      return writeState({
+        state: 'failed',
+        failure: mapped.failure,
+        error: mapped.failure,
+        message: mapped.message,
+        stage: null,
+        percent: 0,
+      });
+    }
     const pre = await preflightFor(target, true);
     if (!pre.ok) {
       const failure = pre.failures[0] ?? 'install-failed';
@@ -401,7 +457,17 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
   };
 
   const start = async (): Promise<ComfyBackendStatus> => {
-    if (!target) return writeState({ state: 'failed', error: 'unsupported-platform', message: '当前设备暂不支持托管后端' });
+    if (!target) {
+      const mapped = targetFailure(targetProblem);
+      return writeState({
+        state: 'failed',
+        failure: mapped.failure,
+        error: mapped.failure,
+        message: mapped.message,
+        stage: null,
+        percent: 0,
+      });
+    }
     if (!existsSync(join(root, '.ready'))) return writeState({ state: 'not-installed', message: '尚未安装托管后端' });
     // 已装的是旧固定版本时，别把它拉起来冒充可用（M3 实测发现：start 之前不比对版本）。
     if (!versionMatches(readReady(), target)) {
@@ -457,12 +523,14 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     const free = forInstall ? freeBytesAt(paths.root) : null;
     const freePort = t ? await portIsFree(t.port) : true;
     const owned = !freePort && (await probeReady());
+    const driverVerdict = t ? await checkDriver(t, options.driverProbe ?? {}) : undefined;
     return runPreflight({
       target: t,
       writable,
       freeBytes: free,
       portFree: freePort,
       portOwnedByBackend: owned,
+      ...(driverVerdict ? { driverVerdict } : {}),
     });
   };
 
@@ -480,11 +548,11 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     }
   };
 
-  const readReady = (): { comfyui?: { commit?: string }; python?: string; torch?: string } | null => {
+  const readReady = (): { comfyui?: { commit?: string }; python?: string; torch?: string; variant?: string } | null => {
     const text = readTextOrNull(join(paths.root, '.ready'));
     if (!text) return null;
     try {
-      return JSON.parse(text) as { comfyui?: { commit?: string }; python?: string; torch?: string };
+      return JSON.parse(text) as { comfyui?: { commit?: string }; python?: string; torch?: string; variant?: string };
     } catch {
       return null;
     }
@@ -516,6 +584,12 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
       return { ok: false, code: 'settings-write-failed', settings: settingsApi() };
     }
     applyRoot(resolveInstallRoot(dataRoot, settings));
+    resolveTarget();
+    // 用户改了设置（换方案/换目录）说明在回应上一次失败：清掉粘住的失败标记，
+    // 让状态按新配置重新判定，否则界面会一直显示旧的失败原因。
+    if (readState().state === 'failed') {
+      writeState({ state: 'not-installed', stage: null, percent: 0, pid: null, failure: null, error: null, message: '' });
+    }
     return { ok: true, code: null, settings: settingsApi() };
   };
 
@@ -533,7 +607,30 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     return readState();
   };
 
-  return { paths, status, install, start, stop, probeReady, settings: settingsApi, updateSettings };
+  return {
+    paths,
+    status,
+    install,
+    start,
+    stop,
+    probeReady,
+    settings: settingsApi,
+    updateSettings,
+    currentTarget: () => target,
+    targetProblem: () => targetProblem,
+    driverVerdict: async () => (target ? checkDriver(target, options.driverProbe ?? {}) : { status: 'unknown', detail: '未解析到目标', required: null }),
+  };
+}
+
+/** 目标解析失败 → 失败码与文案（选到本平台没有的方案不能被折叠成「平台不支持」）。 */
+function targetFailure(problem: { reason: string } | null): { failure: ComfyBackendFailure; message: string } {
+  if (problem && problem.reason === 'variant-required') {
+    return { failure: 'variant-required', message: '这台机器有多套显卡方案，请先选一个' };
+  }
+  if (problem && problem.reason === 'unsupported-variant') {
+    return { failure: 'unsupported-variant', message: '这个方案不适用于当前设备，请换一个方案' };
+  }
+  return { failure: 'unsupported-platform', message: '当前设备暂不支持托管后端' };
 }
 
 function preflightMessage(failure: ComfyBackendFailure, requiredBytes: number, freeBytes: number | null): string {
@@ -547,6 +644,9 @@ function preflightMessage(failure: ComfyBackendFailure, requiredBytes: number, f
   if (failure === 'port-occupied') return '端口 18188 被其它程序占用';
   if (failure === 'version-mismatch') return '已安装的后端版本与当前固定版本不一致，需要更新';
   if (failure === 'start-timeout') return '启动超时，请看后端日志';
+  if (failure === 'driver-unsatisfied') return '当前驱动不满足这个方案的要求，请换一个方案或先升级驱动';
+  if (failure === 'variant-required') return '这台机器有多套显卡方案，请先选一个';
+  if (failure === 'unsupported-variant') return '这个方案不适用于当前设备，请换一个方案';
   return '安装失败';
 }
 

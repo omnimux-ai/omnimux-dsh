@@ -123,6 +123,9 @@ test('八类失败各有唯一主行动，且不并列', () => {
     ['version-mismatch', 'update'],
     ['install-failed', 'retry-install'],
     ['start-timeout', 'retry-start'],
+    ['driver-unsatisfied', 'choose-variant'],
+    ['variant-required', 'choose-variant'],
+    ['unsupported-variant', 'choose-variant'],
   ];
   for (const row of table) {
     assert.equal(resolveFailureAction(row[0], null), row[1], `失败码 ${row[0]} 的主行动不对`);

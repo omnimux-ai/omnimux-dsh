@@ -16,7 +16,8 @@
 import { readFileSync } from 'node:fs';
 
 import { WORKFLOW_API_ROUTES } from '../../shared/api.ts';
-import { checkDriver, estimateRequiredBytes } from './preflight.ts';
+import { estimateRequiredBytes } from './preflight.ts';
+import { listComfyBackendTargets } from './plan.ts';
 import type { ComfyBackendService } from './service.ts';
 
 export const COMFY_BACKEND_ROUTE_PREFIX = '/omnimux-workflow/api/comfy-backend';
@@ -60,14 +61,23 @@ export function createComfyBackendRoutes(service: ComfyBackendService): {
       // 不在这里做磁盘/端口探测（那是安装/启动动作时的事，避免每次轮询都探一遍）。
       // 只读一次状态（一次 status() 会读状态文件并可能探测后端，别读两遍）。
       const status = await service.status();
-      const target = status.target;
+      const target = service.currentTarget();
+      const driver = await service.driverVerdict();
+      const problem = service.targetProblem();
       return {
         status: 200,
         body: {
           status,
           settings: service.settings(),
           requiredBytes: target ? estimateRequiredBytes(target) : 0,
-          driver: target ? checkDriver(target) : 'unsupported',
+          driver: driver.status,
+          driverDetail: driver.detail,
+          driverRequired: driver.required,
+          variant: target ? target.variant : null,
+          support: target ? target.support : null,
+          targetProblem: problem ? problem.reason : null,
+          targetOptions: problem && problem.options ? problem.options : [],
+          variants: listComfyBackendTargets(),
         },
       };
     }
@@ -75,10 +85,11 @@ export function createComfyBackendRoutes(service: ComfyBackendService): {
       return { status: 200, body: { settings: service.settings() } };
     }
     if (path === WORKFLOW_API_ROUTES.comfyBackendSettings && method === 'POST') {
-      const body = (req.body ?? {}) as { installRoot?: unknown; modelsPath?: unknown };
-      const patch: { installRoot?: string; modelsPath?: string } = {};
+      const body = (req.body ?? {}) as { installRoot?: unknown; modelsPath?: unknown; variant?: unknown };
+      const patch: { installRoot?: string; modelsPath?: string; variant?: string } = {};
       if (typeof body.installRoot === 'string') patch.installRoot = body.installRoot;
       if (typeof body.modelsPath === 'string') patch.modelsPath = body.modelsPath;
+      if (typeof body.variant === 'string') patch.variant = body.variant;
       const result = service.updateSettings(patch);
       return { status: result.ok ? 200 : 400, body: result };
     }

@@ -7,6 +7,7 @@
  */
 
 import { COMFY_BACKEND_FAILURES, COMFY_BACKEND_PORT, type ComfyBackendFailure, type ComfyBackendTarget } from './plan.ts';
+import type { DriverStatus, DriverVerdict } from './driver.ts';
 
 // 失败码的真源在 plan.ts（避免与 preflight 互相 import）；这里转出去方便调用方一处取。
 export { COMFY_BACKEND_FAILURES };
@@ -21,16 +22,7 @@ export function estimateRequiredBytes(target: ComfyBackendTarget): number {
   return download * 3 + 2_500_000_000;
 }
 
-export type DriverStatus = 'not-required' | 'unknown' | 'unsupported';
-
-/**
- * 驱动判定：mac arm64 用 MPS，**不需要**额外驱动；其它平台在 M4 落地前一律 `unknown`
- * （不阻断，但也不假装检查过）。
- */
-export function checkDriver(target: ComfyBackendTarget): DriverStatus {
-  if (target.platform === 'darwin' && target.arch === 'arm64') return 'not-required';
-  return 'unknown';
-}
+export type { DriverStatus };
 
 export interface PreflightInput {
   /** 平台目标（不支持时传 null）。 */
@@ -45,6 +37,8 @@ export interface PreflightInput {
   portOwnedByBackend?: boolean;
   /** 覆盖需求体积（测试用）。 */
   requiredBytes?: number;
+  /** 驱动判定结果（`driver.ts` 产出；不传 = 不判驱动）。 */
+  driverVerdict?: DriverVerdict;
 }
 
 export interface PreflightResult {
@@ -53,13 +47,16 @@ export interface PreflightResult {
   requiredBytes: number;
   freeBytes: number | null;
   driver: DriverStatus;
+  /** 驱动判定的人话说明（界面直接显示）。 */
+  driverDetail: string;
   /** 端口：占用者是我们自己的后端时为 true（不算失败）。 */
   backendAlreadyRunning: boolean;
 }
 
 export function runPreflight(input: PreflightInput): PreflightResult {
   const failures: ComfyBackendFailure[] = [];
-  const driver: DriverStatus = input.target ? checkDriver(input.target) : 'unsupported';
+  const driver: DriverStatus = input.driverVerdict ? input.driverVerdict.status : 'unknown';
+  const driverDetail = input.driverVerdict ? input.driverVerdict.detail : '未做驱动检查';
   const requiredBytes = input.target
     ? input.requiredBytes ?? estimateRequiredBytes(input.target)
     : 0;
@@ -71,8 +68,18 @@ export function runPreflight(input: PreflightInput): PreflightResult {
   }
   const backendAlreadyRunning = input.portFree === false && input.portOwnedByBackend === true;
   if (input.portFree === false && !backendAlreadyRunning) failures.push('port-occupied');
+  // 驱动不满足才算失败；unknown 不阻断（但界面必须说「查不到」，不能声称通过）。
+  if (driver === 'unsatisfied') failures.push('driver-unsatisfied');
 
-  return { ok: failures.length === 0, failures, requiredBytes, freeBytes: input.freeBytes, driver, backendAlreadyRunning };
+  return {
+    ok: failures.length === 0,
+    failures,
+    requiredBytes,
+    freeBytes: input.freeBytes,
+    driver,
+    driverDetail,
+    backendAlreadyRunning,
+  };
 }
 
 /** 失败码 → 界面文案键（画布侧按此取词，避免前后端各写一套字符串）。 */
@@ -81,9 +88,14 @@ export function failureMessageKey(failure: ComfyBackendFailure): string {
 }
 
 /** 失败码 → 建议的下一步动作。 */
-export function failureAction(failure: ComfyBackendFailure): 'retry-install' | 'retry-start' | 'choose-dir' | 'update' | 'none' {
+export function failureAction(
+  failure: ComfyBackendFailure,
+): 'retry-install' | 'retry-start' | 'choose-dir' | 'update' | 'choose-variant' | 'none' {
   if (failure === 'insufficient-disk' || failure === 'install-dir-not-writable') return 'choose-dir';
   if (failure === 'version-mismatch') return 'update';
+  if (failure === 'driver-unsatisfied' || failure === 'variant-required' || failure === 'unsupported-variant') {
+    return 'choose-variant';
+  }
   if (failure === 'start-timeout') return 'retry-start';
   if (failure === 'install-failed' || failure === 'port-occupied') return 'retry-install';
   return 'none';
