@@ -154,13 +154,22 @@ function ownRepositoryIdentity() {
  * （`gitDir` 落在 `<公共目录>/worktrees` 下）。
  *
  * 只比公共目录与 `show-toplevel` 是不够的：把 `.git` 写成文件或符号链接指向门禁
- * 自己的 `.git`，两条都成立，而它并不是一个仓库根——它只是同族伪造。
+ * 自己的 `.git`，两条都成立，而它并不是一个仓库根——它只是同族伪造。同样地，
+ * 「`gitDir` 落在 `<公共目录>/worktrees` 下」也不够：指向**另一个**已注册工作树的
+ * gitdir 时位置成立，所以链接工作树这一支必须再验 back-pointer。
  */
 function isRepositoryRoot(root, own) {
   const identity = gitIdentity(root);
   if (!identity || identity.common !== own.common || identity.top !== safeRealpath(root)) return false;
   if (identity.top === own.mainRoot) return identity.gitDir === own.common;
-  return dirname(identity.gitDir) === resolve(own.common, 'worktrees');
+  if (dirname(identity.top) !== resolve(own.mainRoot, '.worktrees')) return false;
+  if (dirname(identity.gitDir) !== resolve(own.common, 'worktrees')) return false;
+  // `<gitDir>/gitdir` 必须指回本候选的 `.git`：这是「注册过的这个工作树」与
+  // 「指向另一个已注册工作树 gitdir 的伪造」之间唯一的分界。
+  try {
+    const backPointer = safeRealpath(sourceInspectionIO.readFileSync(resolve(identity.gitDir, 'gitdir'), 'utf8').trim());
+    return backPointer !== null && backPointer === safeRealpath(resolve(root, '.git'));
+  } catch { return false; }
 }
 
 /** 逐级解析的记忆化；hook 是短命进程，缓存不会跨越仓库状态变化。 */

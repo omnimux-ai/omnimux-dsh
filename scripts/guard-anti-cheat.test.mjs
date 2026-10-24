@@ -444,6 +444,22 @@ describe('7. 仓库身份不接受伪造的嵌套 .git', () => {
     withForgedRoot(gitDir => writeFileSync(gitDir, 'gitdir: /nonexistent-repository\n'), resolvesToWorktree);
   });
 
+  // 指向「另一个已注册工作树」的 gitdir：位置与公共目录都成立，只有 back-pointer
+  // （`<gitDir>/gitdir` 必须指回本候选的 `.git`）能排除它。在链接工作树里取本工作树
+  // 的 gitdir；在主检出里退化为公共目录，等价于上面已覆盖的形态。
+  const registeredGitDir = (() => {
+    try { return readFileSync(resolve(ROOT_DIR, '.git'), 'utf8').trim().replace(/^gitdir:\s*/, ''); }
+    catch { return resolve(ROOT_DIR, '.git'); }
+  })();
+
+  it('.git 文件指向已注册工作树的 gitdir 时不被当成仓库根', () => {
+    withForgedRoot(gitDir => writeFileSync(gitDir, `gitdir: ${registeredGitDir}\n`), resolvesToWorktree);
+  });
+
+  it('.git 符号链接指向已注册工作树的 gitdir 时不被当成仓库根', () => {
+    withForgedRoot(gitDir => symlinkSync(registeredGitDir, gitDir), resolvesToWorktree);
+  });
+
   it('正常的仓库内文件仍解析到工作树根', () => {
     assert.equal(repoRootOf(resolve(ROOT_DIR, 'scripts/guard-anti-cheat.mjs')), ROOT_DIR);
   });
