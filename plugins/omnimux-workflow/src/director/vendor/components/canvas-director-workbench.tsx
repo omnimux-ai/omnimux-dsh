@@ -1787,7 +1787,7 @@ export function CanvasDirectorWorkbench({ open, scene, projectId, imageNodes, on
 
             {/* P1-3：时间轴是 grid 第 2 列第 2 行（宽屏），左右栏 row-span-2 因而通高；
                 max-lg 下时间轴回退为 col-span-2 全宽，与右栏跨列行为一致。 */}
-            <div className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] ${workbenchGridClass}`}>
+            <div className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] max-lg:grid-rows-[minmax(180px,1fr)_auto] max-lg:overflow-y-auto ${workbenchGridClass}`}>
                 {workspaceView === "scene" ? <>
                 <aside id="director-workbench-left-dock" data-director-left-dock="true" className="director-workbench-sidebar flex min-h-0 overflow-hidden border-r lg:row-span-2" style={{ background: theme.node.panel, borderColor: theme.toolbar.border }}>
                     <DirectorWorkbenchRail active={navigationTab} onHelp={() => setOnboardingRestartSignal((value) => value + 1)} onChange={(tab) => {
@@ -1965,7 +1965,7 @@ export function CanvasDirectorWorkbench({ open, scene, projectId, imageNodes, on
                 </main>
 
                 {workspaceView === "scene" ? <>
-                <aside id="director-workbench-right-dock" data-director-right-dock="true" className="director-workbench-property-dock flex min-h-0 flex-col overflow-hidden border-l lg:row-span-2 max-lg:col-span-2 max-lg:max-h-[40vh] max-lg:border-l-0 max-lg:border-t" style={{ background: theme.node.panel, borderColor: theme.toolbar.border }}>
+                <aside id="director-workbench-right-dock" data-director-right-dock="true" className="director-workbench-property-dock flex min-h-0 flex-col overflow-hidden border-l lg:row-span-2 max-lg:col-span-2 max-lg:max-h-[30vh] max-lg:border-l-0 max-lg:border-t" style={{ background: theme.node.panel, borderColor: theme.toolbar.border }}>
                     {/* 摄影机模式下右栏固定显示 shot/camera 检查器：对齐视图与运镜是这个模式的主入口。 */}
                     <div data-director-property-inspector="true" className="director-workbench-property-inspector thin-scrollbar">
                         {selectedGroup && !capabilities.cameraTools ? <Inspector title={selectedGroup.name} onTitleChange={(name) => commit((current) => ({ ...current, groups: current.groups?.map((group) => group.id === selectedGroup.id ? { ...group, name } : group) }))}><Field label="对象">{draft.objects.filter((object) => object.groupId === selectedGroup.id).length}</Field></Inspector>

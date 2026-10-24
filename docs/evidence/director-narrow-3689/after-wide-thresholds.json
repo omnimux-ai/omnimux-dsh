@@ -1,0 +1,159 @@
+{
+  "thresholds": {
+    "topbarHeight": 48,
+    "leftDockWidth": 248,
+    "rightDockWidth": 300,
+    "sequencerHeight": 236,
+    "fontSizes": [
+      11,
+      12,
+      13,
+      15
+    ],
+    "radii": [
+      4,
+      6,
+      8,
+      10,
+      12,
+      999
+    ]
+  },
+  "measured": {
+    "topbarHeight": 48,
+    "leftDockWidth": 248,
+    "rightDockWidth": 300,
+    "gridWidth": 1027,
+    "middleColumnWidth": 479,
+    "gridTemplateColumns": "248px 479px 300px",
+    "offsets": {
+      "grid": 701,
+      "middleColumn": 949,
+      "sequencer": 949,
+      "rightDock": 1428
+    },
+    "workbenchChildren": [
+      {
+        "node": "header.director-workbench-topbar",
+        "display": "flex",
+        "width": 1027,
+        "left": 701
+      },
+      {
+        "node": "div.grid.min-h-0.flex-1",
+        "display": "grid",
+        "width": 1027,
+        "left": 701
+      }
+    ],
+    "sequencerHeight": 236,
+    "sequencerWidth": 479,
+    "sequencerPlacement": {
+      "className": "max-lg:col-span-2 lg:col-start-2 lg:row-start-2",
+      "width": 479,
+      "gridColumn": "2",
+      "gridRow": "2",
+      "parent": "div.grid.min-h-0.flex-1"
+    },
+    "inspector": {
+      "scrollHeight": 1074,
+      "clientHeight": 794,
+      "overflowY": "auto"
+    },
+    "fontSizes": [
+      {
+        "value": 11,
+        "samples": [
+          "span.min-w-0.flex-1.truncate \"已保存\"",
+          "span.text-[11px].opacity-50 \"X\"",
+          "span.text-[11px].opacity-50 \"Y\""
+        ]
+      },
+      {
+        "value": 12,
+        "samples": [
+          "span \"当前视角\"",
+          "span \"正面中景\"",
+          "span \"正面特写\""
+        ]
+      },
+      {
+        "value": 13,
+        "samples": [
+          "span.shrink-0.text-[13px].font-medium \"3D导演台\"",
+          "div.text-[13px].opacity-50 \"场景缩放\"",
+          "div.text-[13px].opacity-50 \"场景 平移\""
+        ]
+      },
+      {
+        "value": 15,
+        "samples": [
+          "span.flex-1 \"添加机位\"",
+          "h2.border-b.px-4.pt-3 \"3D场景\""
+        ]
+      }
+    ],
+    "radii": [
+      {
+        "value": "10px",
+        "samples": [
+          "section.grid.gap-[var(--space-2)].director-workbench-onboarding",
+          "section.grid.gap-[var(--space-2)].director-workbench-onboarding",
+          "section.grid.gap-[var(--space-2)].director-workbench-onboarding"
+        ]
+      },
+      {
+        "value": "12px",
+        "samples": [
+          "button.flex.h-[72px].flex-col",
+          "button.flex.h-[72px].flex-col",
+          "button.flex.h-[72px].flex-col"
+        ]
+      },
+      {
+        "value": "4px",
+        "samples": [
+          "span.rounded.bg-white/10.px-2 \"0.00s\"",
+          "span.rounded.bg-white/10.px-2 \"0.00s\"",
+          "span.rounded.bg-white/10.px-2 \"0.00s\""
+        ]
+      },
+      {
+        "value": "6px",
+        "samples": [
+          "button.grid.size-8.shrink-0",
+          "button.grid.size-8.shrink-0",
+          "button.grid.size-8.shrink-0"
+        ]
+      },
+      {
+        "value": "8px",
+        "samples": [
+          "button.flex.size-8.items-center",
+          "button.flex.size-8.items-center",
+          "button.flex.size-8.items-center"
+        ]
+      },
+      {
+        "value": "999px",
+        "samples": [
+          "span",
+          "span",
+          "span"
+        ]
+      }
+    ],
+    "borderColors": [
+      {
+        "value": "rgb(249, 250, 251)",
+        "samples": [
+          "div.rounded-lg.border.border-dashed \"从左侧上传或选择图片\"",
+          "div.rounded-lg.border.border-dashed \"从左侧上传或选择图片\"",
+          "div.rounded-lg.border.border-dashed \"从左侧上传或选择图片\""
+        ]
+      }
+    ],
+    "aliasBorder": "rgb(249, 250, 251)"
+  },
+  "failures": []
+}

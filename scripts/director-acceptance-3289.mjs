@@ -53,9 +53,14 @@ const LAYOUT_THRESHOLDS = {
   fontSizes: [11, 12, 13, 15],
   radii: [4, 6, 8, 10, 12, 999],
 };
+// 窄屏两档高度：560 是常规矮视口，480 是 spec 里的极端下限（必须仍不裁不塌）。
+const NARROW_VIEWPORTS = [{ width: 900, height: 560 }, { width: 900, height: 480 }];
+const NARROW_THRESHOLDS = { middleMinHeight: 180, sequencerMinHeight: 160, sequencerMaxHeight: 236 };
 const baseExpected = ['normal-project-entry', 'portrait-selected', 'managed-media-decoded', 'saved-scene', 'play-seek', 'decoded-motion', 'scene-reopened', 'aspect-reopened'];
-// 测量断言紧跟入口阶段记录，保持断言顺序与 expected 一致。
-const expected = MEASURE ? [baseExpected[0], 'layout-thresholds', ...baseExpected.slice(1)] : baseExpected;
+// 测量断言紧跟入口阶段记录，窄屏断言在旅程末尾（切视口会重排，放在最后不影响其它步骤）。
+const expected = MEASURE
+  ? [baseExpected[0], 'layout-thresholds', ...baseExpected.slice(1), 'layout-narrow-thresholds']
+  : baseExpected;
 const browserEnv = () => ({ HOME: process.env.HOME, PATH: process.env.PATH });
 const save = (directory, name, value) => fs.writeFileSync(join(directory, name), JSON.stringify(value, null, 2) + '\n');
 const read = (directory, name) => JSON.parse(fs.readFileSync(join(directory, name), 'utf8'));
@@ -66,7 +71,7 @@ const log = message => process.stdout.write(`[director-acceptance] ${stamp()} ${
  * Serialized declaration. Ego only receives the in-memory login capability,
  * never a token in evidence. Keep it fully self-contained.
  */
-async function browserJourney({ loginUrl, evidence, origin, projectTitle, paletteLabels, measure, thresholds }) {
+async function browserJourney({ loginUrl, evidence, origin, projectTitle, paletteLabels, measure, thresholds, narrowViewports, narrowThresholds }) {
   const fs = await import('node:fs/promises');
   const assert = (await import('node:assert/strict')).default;
   const redact = value => String(value).replaceAll(loginUrl, '[redacted-login-url]').replace(/([?&]token=)[^&\s"'<>]+/gi, '$1REDACTED');
@@ -563,6 +568,65 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle, palett
     await clickOrActivate(director + 'button[aria-label="选择画幅比例"]', '.wf-director-root', { kind: 'aria', value: '选择画幅比例' });
     assert.equal(await page.evaluate(() => document.querySelector('.wf-director-root button[aria-label="9:16"]')?.getAttribute('aria-pressed')), 'true');
     await page.screenshot({ path: `${evidence}/reopened.png` }); record(phase, { aspectRatio: '9:16' });
+    if (measure) {
+      // 窄屏 + 矮视口：切视口会重排整屏，因此放在旅程最后，不影响前面的功能断言。
+      step = 'measure-layout-narrow-thresholds';
+      const narrowSizes = [];
+      for (const narrowViewport of narrowViewports) {
+      // ego 的 Page 没有 setViewportSize，走 CDP 的 Emulation 覆盖视口（媒体查询随之生效）。
+      await page.cdp('Emulation.setDeviceMetricsOverride', { width: narrowViewport.width, height: narrowViewport.height, deviceScaleFactor: 1, mobile: false });
+      await page.waitForFunction(viewport => window.innerWidth === viewport.width && window.innerHeight === viewport.height, narrowViewport, { timeout: 10000 });
+      const narrowTimelineOpen = await page.evaluate(() => Boolean(document.querySelector('.wf-director-root .director-sequencer')));
+      if (!narrowTimelineOpen) {
+        await clickOrActivate('loc=css:.wf-director-root button[aria-label="动画时间轴"]', '.wf-director-root', { kind: 'aria', value: '动画时间轴' });
+        await visible('.wf-director-root .director-sequencer', 15000);
+      }
+      await page.screenshot({ path: `${evidence}/layout-narrow-${narrowViewport.height}.png` });
+      const narrowMeasured = await page.evaluate(() => {
+        const root = document.querySelector('.wf-director-root');
+        const workbench = root.querySelector('[data-director-workbench="true"]');
+        const grid = [...workbench.children].find(node => getComputedStyle(node).display === 'grid');
+        const leftDock = root.querySelector('[data-director-left-dock="true"]');
+        const rightDock = root.querySelector('[data-director-right-dock="true"]');
+        const middleColumn = [...grid.children].find(node => node !== leftDock && node !== rightDock && !node.hasAttribute('data-director-sequencer-slot'));
+        const sequencer = root.querySelector('.director-sequencer');
+        const round = value => Math.round(Number.parseFloat(value) * 100) / 100;
+        const rect = element => { const box = element.getBoundingClientRect(); return { top: round(box.top), bottom: round(box.bottom), width: round(box.width), height: round(box.height) }; };
+        return {
+          viewport: { width: window.innerWidth, height: window.innerHeight },
+          topbarHeight: rect(root.querySelector('[data-director-topbar="true"]')).height,
+          gridColumns: getComputedStyle(grid).gridTemplateColumns,
+          gridRows: getComputedStyle(grid).gridTemplateRows,
+          grid: { clientHeight: grid.clientHeight, scrollHeight: grid.scrollHeight, overflowY: getComputedStyle(grid).overflowY },
+          middleColumn: rect(middleColumn),
+          rightDock: rect(rightDock),
+          sequencer: rect(sequencer),
+        };
+      });
+      const narrowFailures = [];
+      const at = message => `${narrowViewport.width}x${narrowViewport.height} ${message}`;
+      if (narrowMeasured.middleColumn.height < narrowThresholds.middleMinHeight) {
+        narrowFailures.push(at(`middle column height: 实测 ${narrowMeasured.middleColumn.height} vs 期望 >= ${narrowThresholds.middleMinHeight}`));
+      }
+      if (narrowMeasured.sequencer.height < narrowThresholds.sequencerMinHeight || narrowMeasured.sequencer.height > narrowThresholds.sequencerMaxHeight) {
+        narrowFailures.push(at(`sequencer height: 实测 ${narrowMeasured.sequencer.height} vs 期望 ${narrowThresholds.sequencerMinHeight}..${narrowThresholds.sequencerMaxHeight}`));
+      }
+      if (narrowMeasured.rightDock.bottom > narrowMeasured.sequencer.top + 1) {
+        narrowFailures.push(at(`right dock bottom ${narrowMeasured.rightDock.bottom} > sequencer top ${narrowMeasured.sequencer.top}（行重叠）`));
+      }
+      // 矮到放不下时允许栅格滚动；但不允许「内容超高且不可滚动」——那才是被裁掉。
+      const scrollable = narrowMeasured.grid.overflowY === 'auto' || narrowMeasured.grid.overflowY === 'scroll';
+      if (narrowMeasured.grid.scrollHeight > narrowMeasured.grid.clientHeight + 1 && !scrollable) {
+        narrowFailures.push(at(`grid 内容 ${narrowMeasured.grid.scrollHeight} > 可视 ${narrowMeasured.grid.clientHeight} 且 overflow-y=${narrowMeasured.grid.overflowY}（内容被裁且不可滚动）`));
+      }
+      narrowSizes.push({ viewport: narrowViewport, measured: narrowMeasured, failures: narrowFailures });
+      }
+      await page.cdp('Emulation.clearDeviceMetricsOverride');
+      const narrowFailuresAll = narrowSizes.flatMap(item => item.failures);
+      write('layout-narrow-thresholds.json', { narrowViewports, narrowThresholds, sizes: narrowSizes, failures: narrowFailuresAll });
+      if (narrowFailuresAll.length) throw new Error(`layout-narrow-thresholds failed: ${narrowFailuresAll.join('; ')}`);
+      record('layout-narrow-thresholds', { sizes: narrowSizes });
+    }
     await write('completion.json', { completed: true });
   } catch (error) {
     const diagnosis = await diagnose(error);
@@ -689,7 +753,7 @@ async function main() {
 
     // The journey is stringified into a separate node process, so module-scope constants must be
     // passed through the payload instead of being referenced directly.
-    const input = `${browserJourney.toString()}\ntry { await browserJourney(${JSON.stringify({ loginUrl: app.loginUrl, evidence, origin: app.origin, projectTitle, paletteLabels: DIRECTOR_PALETTE_LABELS, measure: MEASURE, thresholds: LAYOUT_THRESHOLDS })}); } catch (error) { console.log(JSON.stringify({ directorDiagnostic: true, name: error.name, message: String(error.message).replace(/([?&]token=)[^&\\s"'<>]+/gi, '$1REDACTED') })); throw Error('director-browser-verification-failed'); }`;
+    const input = `${browserJourney.toString()}\ntry { await browserJourney(${JSON.stringify({ loginUrl: app.loginUrl, evidence, origin: app.origin, projectTitle, paletteLabels: DIRECTOR_PALETTE_LABELS, measure: MEASURE, thresholds: LAYOUT_THRESHOLDS, narrowViewports: NARROW_VIEWPORTS, narrowThresholds: NARROW_THRESHOLDS })}); } catch (error) { console.log(JSON.stringify({ directorDiagnostic: true, name: error.name, message: String(error.message).replace(/([?&]token=)[^&\\s"'<>]+/gi, '$1REDACTED') })); throw Error('director-browser-verification-failed'); }`;
     log('starting browser journey');
     const result = await runBrowser(executable, input, 480000);
     save(evidence, 'browser-process.json', result);

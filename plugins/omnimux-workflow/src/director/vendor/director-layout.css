@@ -1,7 +1,16 @@
 .director-sequencer {
     position: relative;
+    /* max-height 放这里而不是内联样式：内联会压过下面的窄屏断点。 */
+    max-height: 60vh;
     color: var(--dsw-alias-label-secondary);
     font-size: var(--fs-xs);
+}
+
+@media (max-width: 1023px) {
+    /* 窄屏矮视口：栅格按行堆叠，时间轴是辅助面板，先收缩给 3D 画布让位。 */
+    .director-sequencer {
+        max-height: min(236px, 30vh);
+    }
 }
 
 .director-viewport-shell {

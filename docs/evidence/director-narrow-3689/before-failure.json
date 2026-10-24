@@ -1,0 +1,585 @@
+{
+  "phase": "aspect-reopened",
+  "step": "measure-layout-narrow-thresholds",
+  "error": {
+    "name": "Error",
+    "message": "layout-narrow-thresholds failed: middle column height: 实测 11 vs 期望 >= 180"
+  },
+  "screenshot": "failure.png",
+  "dom": {
+    "url": "http://127.0.0.1:59833/",
+    "title": "OmniMux",
+    "directorRoot": true,
+    "rendererReady": "true",
+    "propertyInspector": true,
+    "details": [],
+    "buttons": [
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "New session",
+        "role": "",
+        "text": "OmniMux"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "New session",
+        "role": "",
+        "text": "New Session"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "Projects",
+        "role": "",
+        "text": "Projects"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "探索",
+        "role": "",
+        "text": "探索"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "Search sessions",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "View options",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "Add workspace",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "Settings",
+        "role": "",
+        "text": "Settings"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "Choose workspace",
+        "role": "",
+        "text": "Director Portrait QA 1792827544806"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": "CodeDev"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "Commands",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "Select model, current DeepSeek-V41-Flash, reasoning effort High",
+        "role": "",
+        "text": "DeepSeek-V41-FlashHigh"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "Send message",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "收起侧边栏",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "全屏铺满右侧栏",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "Expand bottom panel",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "Collapse sidebar",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "Close",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "New tab",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": "Templates"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": "Export workflow"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": "Import workflow"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": "Project Assets"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": "Keyboard Shortcuts"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "关闭导演台",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "折叠场景面板",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "折叠属性面板",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "场景",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "添加角色",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "添加机位",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "全景图",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "选择画幅比例",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "AI 识图导入",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "帮助与快捷键",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "自适应",
+        "role": "",
+        "text": "自适应"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "21:9",
+        "role": "",
+        "text": "21:9"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "16:9",
+        "role": "",
+        "text": "16:9"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "4:3",
+        "role": "",
+        "text": "4:3"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "1:1",
+        "role": "",
+        "text": "1:1"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "3:4",
+        "role": "",
+        "text": "3:4"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "9:16",
+        "role": "",
+        "text": "9:16"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "导演视角",
+        "role": "",
+        "text": "导演视角"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "机位视角",
+        "role": "",
+        "text": "机位视角"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "背视",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "仰视",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "右视",
+        "role": "",
+        "text": "X"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "左视",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "俯视",
+        "role": "",
+        "text": "Y"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "正视",
+        "role": "",
+        "text": "Z"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "重置视角",
+        "role": "",
+        "text": "重置视角"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "移动",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "截图",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "动画时间轴",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "添加场景参考图片",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "将当前场景发送到画布",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "角色标签",
+        "role": "switch",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "网格吸附",
+        "role": "switch",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "显示网格",
+        "role": "switch",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "显示地面",
+        "role": "switch",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "播放",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "自动帧",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "新建轨道",
+        "role": "",
+        "text": "新建轨道"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "收起时间轴",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": "导出视频到画布"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "展开标准女性 1属性",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": "标准女性 1"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "绘制标准女性 1轨迹",
+        "role": "",
+        "text": "绘制轨迹"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "收起主机位属性",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": "主机位"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "绘制主机位轨迹",
+        "role": "",
+        "text": "绘制轨迹"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "选择 主摄影机 镜头 0.00s 的关键帧",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "选择 主摄影机 镜头 5.00s 的关键帧",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": "位置"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "上一关键帧",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "当前帧有关键帧",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "下一关键帧",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "选择 主摄影机 位置 0.00s 的关键帧",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "选择 主摄影机 位置 5.00s 的关键帧",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": "焦点"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "上一关键帧",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "当前帧无关键帧",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "下一关键帧",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "",
+        "role": "",
+        "text": "视角"
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "上一关键帧",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "当前帧无关键帧",
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "ariaLabel": "下一关键帧",
+        "role": "",
+        "text": ""
+      }
+    ],
+    "summaries": [],
+    "menuItems": []
+  }
+}

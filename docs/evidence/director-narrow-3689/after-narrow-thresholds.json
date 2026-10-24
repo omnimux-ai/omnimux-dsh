@@ -1,0 +1,98 @@
+{
+  "narrowViewports": [
+    {
+      "width": 900,
+      "height": 560
+    },
+    {
+      "width": 900,
+      "height": 480
+    }
+  ],
+  "narrowThresholds": {
+    "middleMinHeight": 180,
+    "sequencerMinHeight": 160,
+    "sequencerMaxHeight": 236
+  },
+  "sizes": [
+    {
+      "viewport": {
+        "width": 900,
+        "height": 560
+      },
+      "measured": {
+        "viewport": {
+          "width": 900,
+          "height": 560
+        },
+        "topbarHeight": 48,
+        "gridColumns": "220px 59px",
+        "gridRows": "180px 115px 168px",
+        "grid": {
+          "clientHeight": 463,
+          "scrollHeight": 463,
+          "overflowY": "auto"
+        },
+        "middleColumn": {
+          "top": 89,
+          "bottom": 269,
+          "width": 59,
+          "height": 180
+        },
+        "rightDock": {
+          "top": 269,
+          "bottom": 384,
+          "width": 279,
+          "height": 115
+        },
+        "sequencer": {
+          "top": 384,
+          "bottom": 552,
+          "width": 279,
+          "height": 168
+        }
+      },
+      "failures": []
+    },
+    {
+      "viewport": {
+        "width": 900,
+        "height": 480
+      },
+      "measured": {
+        "viewport": {
+          "width": 900,
+          "height": 480
+        },
+        "topbarHeight": 48,
+        "gridColumns": "220px 59px",
+        "gridRows": "180px 43px 160px",
+        "grid": {
+          "clientHeight": 383,
+          "scrollHeight": 383,
+          "overflowY": "auto"
+        },
+        "middleColumn": {
+          "top": 89,
+          "bottom": 269,
+          "width": 59,
+          "height": 180
+        },
+        "rightDock": {
+          "top": 269,
+          "bottom": 312,
+          "width": 279,
+          "height": 43
+        },
+        "sequencer": {
+          "top": 312,
+          "bottom": 472,
+          "width": 279,
+          "height": 160
+        }
+      },
+      "failures": []
+    }
+  ],
+  "failures": []
+}

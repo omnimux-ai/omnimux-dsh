@@ -187,7 +187,7 @@ export function DirectorSequencer({ scene, shot, camera, objects, selectedObject
     }
 
     return (
-        <section ref={rootRef} data-presentation={isCompact ? "compact" : presentation} className={`director-sequencer shrink-0 border-t ${isPreview ? "is-preview" : ""}`} style={isPreview ? { height: "min(150px, 22vh)", minHeight: 118, maxHeight: "25vh", background: "var(--director-sequencer-surface)", borderColor: "var(--director-sequencer-border)" } : { height, minHeight: 160, maxHeight: "60vh", background: "var(--director-sequencer-surface)", borderColor: "var(--director-sequencer-border)" }}>
+        <section ref={rootRef} data-presentation={isCompact ? "compact" : presentation} className={`director-sequencer shrink-0 border-t ${isPreview ? "is-preview" : ""}`} style={isPreview ? { height: "min(150px, 22vh)", minHeight: 118, maxHeight: "25vh", background: "var(--director-sequencer-surface)", borderColor: "var(--director-sequencer-border)" } : { height, minHeight: 160, background: "var(--director-sequencer-surface)", borderColor: "var(--director-sequencer-border)" }}>
             {!isPreview ? <div className="director-sequencer-resizer" onPointerDown={startResize} role="separator" aria-label="调整时间轴高度" /> : null}
             {isCompact ? <div className="director-sequencer-compact-grid" style={{ display: "grid", gridTemplateColumns: "min(322px, 36vw) minmax(0, 1fr)", gridTemplateRows: "36px minmax(0, 1fr)", height: "100%" }}>
                 <div className="flex min-w-0 items-center gap-1 border-b px-2" style={{ borderColor: "var(--director-sequencer-border)" }}>
