@@ -110,6 +110,7 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
       pid: null,
       updatedAt: now(),
       target,
+      installRoot: root,
     };
     if (!existsSync(paths.state)) return base;
     try {
@@ -274,6 +275,10 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
       if (installing) return current;
       return writeState({ state: 'not-installed', stage: null, percent: 0, pid: null, message: '上次安装未完成，可重试', error: null });
     }
+    // failed 必须粘住：安装失败/启动超时的原因不能被「.ready 不存在」或「进程没在跑」
+    // 洗成 not-installed/installed，否则界面会把「失败 + 重试」显示成「未安装 + 安装」，
+    // 用户永远看不到真实原因。下一次 install/start 动作才会覆盖它。
+    if (current.state === 'failed') return current;
     if (!existsSync(join(root, '.ready'))) {
       return current.state === 'not-installed' ? current : writeState({ state: 'not-installed', stage: null, percent: 0, pid: null });
     }

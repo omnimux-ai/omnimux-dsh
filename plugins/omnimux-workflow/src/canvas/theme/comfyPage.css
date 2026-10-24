@@ -182,3 +182,182 @@
   color: var(--dsw-alias-state-error, #d9534f);
   font-size: 12px;
 }
+
+/* ==================== 托管后端状态面板（Issue 3701 M2c） ====================
+ * 未安装 / 安装中 / 已装未启动 / 启动中 / 失败五种非就绪态共用一套面板骨架，
+ * 差异只由 data-state 与各自的小部件表达；就绪态不渲染面板（直接 iframe）。 */
+
+.wf-comfy-page-overlay__status[data-status='ready'] {
+  color: var(--dsw-alias-state-success, var(--wb-text-success, #2f9e6b));
+}
+
+.wf-comfy-page-overlay__status[data-status='failed'] {
+  color: var(--dsw-alias-state-error, #d9534f);
+}
+
+.wf-comfy-page-overlay__log-toggle {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l2, var(--wb-border-strong));
+  border-radius: 7px;
+  background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.wf-comfy-page-overlay__log-toggle:hover {
+  background: var(--dsw-alias-interactive-bg-hover, var(--wb-dock-item-hover));
+}
+
+.wf-comfy-page-overlay__panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.wf-comfy-page-overlay__panel-state {
+  margin: 0;
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.wf-comfy-page-overlay__progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.wf-comfy-page-overlay__progress-track {
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-2, var(--wb-surface-base));
+  overflow: hidden;
+}
+
+.wf-comfy-page-overlay__progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--dsw-alias-brand-primary, var(--wb-accent));
+  transition: width 200ms ease;
+}
+
+.wf-comfy-page-overlay__progress-value {
+  flex: 0 0 auto;
+  min-width: 40px;
+  text-align: right;
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wf-comfy-page-overlay__stage {
+  margin: 0;
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+  font-size: 13px;
+}
+
+.wf-comfy-page-overlay__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 24px;
+  margin: 0;
+  max-width: 480px;
+  text-align: left;
+}
+
+.wf-comfy-page-overlay__fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wf-comfy-page-overlay__fact dt {
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  font-size: 12px;
+}
+
+.wf-comfy-page-overlay__fact dd {
+  margin: 0;
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 安装根是绝对路径，可能很长：允许在任意字符处折行，不撑破面板。 */
+.wf-comfy-page-overlay__fact-value {
+  word-break: break-all;
+}
+
+.wf-comfy-page-overlay__primary {
+  height: 34px;
+  padding: 0 22px;
+  border: 1px solid var(--dsw-alias-border-l2, var(--wb-border-strong));
+  border-radius: 8px;
+  background: var(--dsw-alias-brand-primary, var(--wb-accent));
+  color: var(--dsw-alias-label-primary-foreground, var(--dsw-alias-label-primary));
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.wf-comfy-page-overlay__primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.wf-comfy-page-overlay__log {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 38%;
+  padding: 10px 12px;
+  border-top: 1px solid var(--dsw-alias-border-l2, var(--wb-border-subtle));
+  background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
+}
+
+.wf-comfy-page-overlay__log-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wf-comfy-page-overlay__log-title {
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.wf-comfy-page-overlay__log-body {
+  overflow: auto;
+  margin: 0;
+}
+
+.wf-comfy-page-overlay__log-line {
+  margin: 0;
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+  font-family: var(--wf-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.wf-comfy-page-overlay__log-empty {
+  margin: 0;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  font-size: 12px;
+}

@@ -134,6 +134,8 @@ export interface ComfyBackendStatus {
   updatedAt: number;
   /** 未安装时带上目标描述（体积/版本），供 UI 展示「要装什么」。 */
   target: ComfyBackendTarget | null;
+  /** 安装根绝对路径：UI 要如实告诉用户装到哪，不给相对片段。 */
+  installRoot: string;
 }
 
 /** 阶段 + 阶段内比例 → 总进度（0–100 整数）。 */

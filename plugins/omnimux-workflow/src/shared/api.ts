@@ -63,6 +63,15 @@ export const WORKFLOW_API_ROUTES = {
   media: `${WORKFLOW_ROUTE_PREFIX}/media`,
   /** POST: native file/folder picker → absolute paths (no copy). */
   pick: `${WORKFLOW_ROUTE_PREFIX}/api/pick`,
+  /**
+   * ComfyUI 托管后端（Issue #3690 M2a 路由 / #3701 M2c 界面）：
+   * state 读状态机，install/start/stop 是动作，log 读安装日志尾部。
+   */
+  comfyBackendState: `${WORKFLOW_ROUTE_PREFIX}/api/comfy-backend/state`,
+  comfyBackendInstall: `${WORKFLOW_ROUTE_PREFIX}/api/comfy-backend/install`,
+  comfyBackendStart: `${WORKFLOW_ROUTE_PREFIX}/api/comfy-backend/start`,
+  comfyBackendStop: `${WORKFLOW_ROUTE_PREFIX}/api/comfy-backend/stop`,
+  comfyBackendLog: (lines: number) => `${WORKFLOW_ROUTE_PREFIX}/api/comfy-backend/log?lines=${lines}`,
   /** POST: list one layer of local directories for in-dialog browse. */
   browseDirectory: `${WORKFLOW_ROUTE_PREFIX}/api/browse-directory`,
   /** GET: stream an imported local file by realPath (Range 206). */

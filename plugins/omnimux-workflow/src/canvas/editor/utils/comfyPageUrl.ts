@@ -5,8 +5,17 @@
  * `http://`；尾部斜杠去掉，避免同一地址在节点数据里出现两种写法。
  */
 
-/** ComfyUI 官方默认端口，新用户基线用这个值（不是本机 dev 端口）。 */
-export const DEFAULT_COMFY_PAGE_URL = 'http://127.0.0.1:8188';
+/**
+ * 节点默认地址：本插件托管后端的固定入口（Issue #3701 M2c）。
+ *
+ * 主机名用 `localhost` 而不是 `127.0.0.1`：DSH 的 `dsh-auth` cookie 是 host-only 绑在
+ * `127.0.0.1` 上的，画布 iframe 请求 `127.0.0.1:18188` 会带上它，撞爆 ComfyUI 的
+ * 8190 字节请求头上限（M2a 实测）；`localhost` 属于不同 host，不带该 cookie。
+ *
+ * 与宿主 `COMFY_BACKEND_BASE_URL`（`workflow/comfyBackend/plan.ts`）必须一致，
+ * 由 `comfyPageUrl.test.mjs` 锁住，避免两处默认值漂移。用户自装的 8188 仍可手填。
+ */
+export const DEFAULT_COMFY_PAGE_URL = 'http://localhost:18188';
 
 /** 连通探测的超时上限：超时按「不可达」处理，不无限转圈。 */
 export const COMFY_PAGE_PROBE_TIMEOUT_MS = 4000;
