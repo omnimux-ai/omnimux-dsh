@@ -43,6 +43,7 @@ import {
   sanitizePreviewUrl,
   resolveDefaultNodeModelId,
   isSlotOrImportNode,
+  shouldShowModelSelector,
 } from './appTabWidgets.js'
 
 export {
@@ -60,6 +61,7 @@ export {
   displayValueOf,
   sanitizePreviewUrl,
   resolveDefaultNodeModelId,
+  shouldShowModelSelector,
 }
 
 export const KNOWN_OFFICIAL_MODELS = Object.freeze({
@@ -676,9 +678,18 @@ export function AppTab(props) {
     return availableModels[0] || null
   }, [selectedModel, defaultModelObj, availableModels])
 
+  /**
+   * 「生成模型」选择器显示门禁：仅当工作流快照证明存在「绑定生成模型的生成节点」时才渲染。
+   * 提取 / 拆解 / 分镜 / 纯文本编辑类应用没有任何生成节点，选择器必须整体不出现，
+   * 否则会列出与其能力无关的视频模型列表（例如「提取视频」应用显示 Seedance 2.0）。
+   * 内置应用无内嵌快照时保持既有行为（证据不足不隐藏），判定真源见 `shouldShowModelSelector`。
+   */
+  const showModelSelector = useMemo(() => shouldShowModelSelector(manifest), [manifest])
+
   const defaultModelName = useMemo(() => {
-    return defaultModelObj?.name || (currentCategory === 'image' ? 'GPT Image 2.5' : 'Seedance 2.0')
-  }, [defaultModelObj, currentCategory])
+    // 不再硬编码 'Seedance 2.0' 兜底：默认名只来自真实解析到的模型契约或当前目录首项。
+    return defaultModelObj?.name || availableModels[0]?.name || ''
+  }, [defaultModelObj, availableModels])
   const [linkDrafts, setLinkDrafts] = useState({})
   const [promptModal, setPromptModal] = useState(null)
   const [productPickerModal, setProductPickerModal] = useState(null)
@@ -1440,7 +1451,8 @@ export function AppTab(props) {
         <div className="omx-apptab-form-panel">
           <form className="omx-apptab-form" onSubmit={handleGenerate} noValidate>
             <div className="omx-apptab-form-fields">
-              {/* 生成模型选择器 */}
+              {/* 生成模型选择器：仅当工作流快照含「绑定生成模型的生成节点」时渲染 */}
+              {showModelSelector && (
               <div className={`omx-apptab-field-group ${openDropdownKey === '__model_selector__' ? 'is-dropdown-open' : ''}`}>
                 <div className="omx-apptab-label-row">
                   <label className="omx-apptab-label">生成模型</label>
@@ -1506,6 +1518,7 @@ export function AppTab(props) {
                   )}
                 </div>
               </div>
+              )}
 
               {Object.entries(properties).map(([key, prop]) => {
                 const isRequired = requiredList.includes(key)

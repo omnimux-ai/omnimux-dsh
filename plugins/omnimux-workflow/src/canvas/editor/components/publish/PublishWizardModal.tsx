@@ -103,6 +103,14 @@ const DEFAULT_CATEGORY_MEDIA_URLS: Record<ApplicationCategory, string> = {
   audio: 'https://cdn.omnimux.com/samples/audio-default.mp3',
 };
 
+/**
+ * 分类未判定（文本 / 表格产物）时没有默认封面。
+ * 返回空串而不是伪造一个视频封面 —— 伪造封面会掩盖「该工作流尚不支持发布」的事实。
+ */
+function defaultCoverFor(category: ApplicationCategory | null): string {
+  return category ? DEFAULT_CATEGORY_COVERS[category] : '';
+}
+
 /** Candidate groups rendered in step 2, in display order */
 const INPUT_GROUP_META: Array<{ id: InputGroupId; label: string; hint: string; icon: React.ReactNode }> = [
   { id: 'asset', label: '素材输入', hint: '用户提供的图片 / 视频 / 音频', icon: <ImageIcon size={14} /> },
@@ -149,9 +157,11 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
   }, [isOpen, nodes, edges, catalog]);
 
   // Step 1: Basic Info
+  // `category` 可以为 null：工作流产物是文本 / 表格时无法判定分类。
+  // 此时不预选、不预填封面，并要求发布者显式选择后才能发布。
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [appName, setAppName] = useState('');
-  const [category, setCategory] = useState<ApplicationCategory>('video');
+  const [category, setCategory] = useState<ApplicationCategory | null>(null);
   const [description, setDescription] = useState('');
 
   // Step 2: Input & config exposure
@@ -176,21 +186,29 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
 
     setCurrentStep(1);
     const initialName = (workflowName || workspaceId || '新创作应用').replace(/[_-]/g, ' ');
+    const suggested = analysis.categorySuggestion;
     setAppName(initialName);
-    setCategory(analysis.categorySuggestion);
+    setCategory(suggested);
     setDescription('');
     setInputs(analysis.inputs.map((inp) => ({ ...inp })));
-    setCoverUrl(DEFAULT_CATEGORY_COVERS[analysis.categorySuggestion]);
     setShowcaseMode('carousel');
-    setShowcaseItems([
-      {
-        id: `showcase_${Date.now()}`,
-        title: `${initialName} 示例演示`,
-        mediaType: analysis.categorySuggestion,
-        mediaUrl: DEFAULT_CATEGORY_MEDIA_URLS[analysis.categorySuggestion],
-        posterUrl: DEFAULT_CATEGORY_COVERS[analysis.categorySuggestion],
-      },
-    ]);
+    // 分类未判定（文本 / 表格产物）时不预填封面与展示项，
+    // 避免给一个尚不存在的分类伪造视频封面素材。
+    if (suggested) {
+      setCoverUrl(DEFAULT_CATEGORY_COVERS[suggested]);
+      setShowcaseItems([
+        {
+          id: `showcase_${Date.now()}`,
+          title: `${initialName} 示例演示`,
+          mediaType: suggested,
+          mediaUrl: DEFAULT_CATEGORY_MEDIA_URLS[suggested],
+          posterUrl: DEFAULT_CATEGORY_COVERS[suggested],
+        },
+      ]);
+    } else {
+      setCoverUrl('');
+      setShowcaseItems([]);
+    }
     setIsSubmitting(false);
   }, [isOpen, analysis, workflowName, workspaceId]);
 
@@ -251,6 +269,14 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
       return;
     }
 
+    // 分类必须显式确定。工作流产物为文本 / 表格时没有可推断的分类，
+    // 此时禁止发布，而不是兜底成视频分类（会让应用运行页列出视频模型）。
+    if (!category) {
+      toast.warning('请先选择应用核心分类');
+      setCurrentStep(1);
+      return;
+    }
+
     const exposedInputs = inputs.filter((inp) => inp.isExposed && !inp.isInternal);
     if (exposedInputs.length === 0) {
       toast.warning('请至少暴露一个输入项供消费端填写');
@@ -276,6 +302,14 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
   };
 
   const executePublish = async (targetAppId?: string, isOverride?: boolean) => {
+    // 兜底守卫：任何调用路径都不允许在分类未确定时落盘 manifest。
+    if (!category) {
+      toast.error('请先选择应用核心分类');
+      setCurrentStep(1);
+      return;
+    }
+    // 收窄为确定分类，供下方 manifest 组装与分类查表使用。
+    const resolvedCategory: ApplicationCategory = category;
     setIsSubmitting(true);
     try {
       // 1. Generate standard restricted JSON schema, field mappings, and the fixed-field summary.
@@ -313,10 +347,10 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
         } : {}),
         metadata: {
           name: appName.trim(),
-          category,
+          category: resolvedCategory,
           description: description.trim() || undefined,
-          iconSvg: DEFAULT_CATEGORY_ICONS[category],
-          coverUrl: coverUrl || DEFAULT_CATEGORY_COVERS[category],
+          iconSvg: DEFAULT_CATEGORY_ICONS[resolvedCategory],
+          coverUrl: coverUrl || DEFAULT_CATEGORY_COVERS[resolvedCategory],
           ...(isOverride ? { isUserOverridden: true } : {}),
         },
         workflowBinding: {
@@ -340,9 +374,9 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
                 {
                   id: `showcase_${Date.now()}`,
                   title: `${appName.trim()} 演示效果`,
-                  mediaType: category,
-                  mediaUrl: DEFAULT_CATEGORY_MEDIA_URLS[category],
-                  posterUrl: coverUrl || DEFAULT_CATEGORY_COVERS[category],
+                  mediaType: resolvedCategory,
+                  mediaUrl: DEFAULT_CATEGORY_MEDIA_URLS[resolvedCategory],
+                  posterUrl: coverUrl || DEFAULT_CATEGORY_COVERS[resolvedCategory],
                 },
               ],
         },
@@ -636,6 +670,10 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
                     toast.warning('请输入应用名称');
                     return;
                   }
+                  if (currentStep === 1 && !category) {
+                    toast.warning('请先选择应用核心分类');
+                    return;
+                  }
                   setCurrentStep((s) => (s + 1) as 1 | 2 | 3);
                 }}
               >
@@ -763,6 +801,22 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
               >
                 核心分类（严格受限单选）
               </label>
+              {analysis.categorySuggestion === null && (
+                <div
+                  style={{
+                    marginBottom: '8px',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    lineHeight: '1.6',
+                    background: 'var(--dsw-alias-bg-layer-2, rgba(255,255,255,0.08))',
+                    border: '1px solid var(--dsw-alias-border-l2, rgba(255,255,255,0.12))',
+                    color: 'var(--dsw-alias-label-secondary, #a1a1aa)',
+                  }}
+                >
+                  当前工作流的产物为文本 / 表格，暂不支持发布为 AI 应用。请先在工作流中产出视频、图片或音频素材，再重新发布。
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                 {CATEGORIES.map((cat) => {
                   const isSelected = category === cat.key;
@@ -981,7 +1035,7 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
               </label>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <img
-                  src={coverUrl || DEFAULT_CATEGORY_COVERS[category]}
+                  src={coverUrl || defaultCoverFor(category)}
                   alt="Cover preview"
                   style={{
                     width: '120px',
@@ -1012,7 +1066,7 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
                   />
                   <button
                     type="button"
-                    onClick={() => setCoverUrl(DEFAULT_CATEGORY_COVERS[category])}
+                    onClick={() => setCoverUrl(defaultCoverFor(category))}
                     style={{
                       alignSelf: 'flex-start',
                       fontSize: '11px',

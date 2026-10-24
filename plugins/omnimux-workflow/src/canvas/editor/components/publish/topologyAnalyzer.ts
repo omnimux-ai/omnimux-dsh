@@ -623,21 +623,29 @@ function isGenerativeToolName(tool: string): boolean {
   );
 }
 
-function inferCategory(terminalIds: string[], nodes: FlowNodeLike[]): ApplicationCategory {
+/**
+ * 由终端节点产物类型推断应用分类，优先级 video > image > audio。
+ *
+ * 没有任何终端节点命中媒体类型时返回 `null`（文本 / 表格产物，或产物形态未知），
+ * **不再兜底成 `'video'`**。硬兜底会让纯文本工作流被发布成视频应用，
+ * 运行页据此读取 Hub 目录的 video 桶并列出视频模型（Seedance 2.0）。
+ * 分类只表达「导航 / 展示分类」，不是引擎或模型族；无法判定时应当如实表达
+ * 「未判定」，由发布向导要求发布者显式选择，而不是伪造一个分类。
+ */
+function inferCategory(terminalIds: string[], nodes: FlowNodeLike[]): ApplicationCategory | null {
   const terminalNodes = nodes.filter((n) => terminalIds.includes(n.id));
+  const materialTypeOf = (node: FlowNodeLike) => (node.data?.materialType as string) || '';
   for (const node of terminalNodes) {
-    const materialType = (node.data?.materialType as string) || '';
-    if (materialType === 'video') return 'video';
+    if (materialTypeOf(node) === 'video') return 'video';
   }
   for (const node of terminalNodes) {
-    const materialType = (node.data?.materialType as string) || '';
-    if (materialType === 'image') return 'image';
+    if (materialTypeOf(node) === 'image') return 'image';
   }
   for (const node of terminalNodes) {
-    const materialType = (node.data?.materialType as string) || '';
-    if (materialType === 'audio') return 'audio';
+    if (materialTypeOf(node) === 'audio') return 'audio';
   }
-  return 'video';
+  // 文本 / 表格产物（如「内容拆解」「分镜表」）或产物形态未知：不猜测分类。
+  return null;
 }
 
 /**

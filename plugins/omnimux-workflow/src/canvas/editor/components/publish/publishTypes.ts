@@ -227,8 +227,12 @@ export interface WorkflowAnalysisResult {
   nodeInDegrees: Record<string, number>;
   /** Out-degree map of all nodes */
   nodeOutDegrees: Record<string, number>;
-  /** Inferred app category based on terminal nodes */
-  categorySuggestion: ApplicationCategory;
+  /**
+   * 由终端节点产物类型推断的应用分类。
+   * `null` 表示无法判定（文本 / 表格产物或产物形态未知）——此时发布向导
+   * 必须要求发布者显式选择分类后才能发布，绝不兜底成某个媒体分类。
+   */
+  categorySuggestion: ApplicationCategory | null;
   /** Deterministic SHA-256 hash of the workflow topology */
   workflowHash: string;
   /** Pruned unwired / isolated nodes excluded from app input extraction */
