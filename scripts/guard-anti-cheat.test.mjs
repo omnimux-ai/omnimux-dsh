@@ -355,6 +355,9 @@ describe('6. 解析不了的新增测试文件仍拦最典型风险（不因放�
     assert.equal(handle(skipPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
     const onlyPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-only.test.ts', content: "import { test } from 'vitest'\ntest.only('a', () => {\n  const v: number = 1\n})\n" } });
     assert.equal(handle(onlyPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    // vitest 对象选项写法：test('a', { skip: true }, fn)
+    const optionPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-option.test.ts', content: "import { test } from 'vitest'\ntest('a', { skip: true }, () => {\n  const v: number = 1\n})\n" } });
+    assert.equal(handle(optionPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
   });
 
   it('动态执行与外部执行来源仍拒绝', () => {

@@ -34,6 +34,8 @@ export function isProtectedTestPath(path) {
  */
 const UNPARSEABLE_RISK_PATTERNS = [
   /(?:^|[^.\w$])(?:test|it|describe|suite)\.(?:skip|only|todo)\s*\(/,
+  // vitest 也支持对象选项写法：test('a', { skip: true }, fn)
+  /\{\s*(?:skip|only|todo)\s*:\s*true\b/,
   /\beval\s*\(/,
   /\bnew\s+Function\s*\(/,
   /\brequire\s*\(/,
