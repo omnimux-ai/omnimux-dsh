@@ -1,27 +1,27 @@
 {
-  "runId": "c947bdea-12ee-4de0-9384-2d65a3dba60c",
+  "runId": "f27e05e0-390a-4cad-ab98-7b3fc532a1e1",
   "stage": "analytics",
   "plugin": "omnimux-analytics",
-  "startedAt": "2026-10-24T06:01:39.007Z",
-  "completedAt": "2026-10-24T06:01:40.570Z",
+  "startedAt": "2026-10-24T07:59:59.790Z",
+  "completedAt": "2026-10-24T08:00:01.445Z",
   "pass": true,
-  "serverPort": 55335,
-  "cdpPort": 55336,
+  "serverPort": 52771,
+  "cdpPort": 52772,
   "assertions": [
     {
       "name": "bundle-client-code",
       "pass": true,
-      "size": 5261190
+      "size": 5480180
     },
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 55335
+      "port": 52771
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 55336
+      "port": 52772
     },
     {
       "name": "runner-page-ready",
@@ -52,7 +52,7 @@
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/common-settings-plugin-item-migration-issue-3665/.workbuddy/evidence/worktree-qa/c947bdea-12ee-4de0-9384-2d65a3dba60c/analytics.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/common-icon-api-compat-issue-3652/.workbuddy/evidence/worktree-qa/f27e05e0-390a-4cad-ab98-7b3fc532a1e1/analytics.png",
     "width": 1280,
     "height": 713,
     "bytes": 37555

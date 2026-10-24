@@ -1,5 +1,4 @@
-import { IconRefreshOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Button, Tabs } from 'dsh-ui-kit'
+import { Button, IconRefreshOutline14, Tabs } from 'dsh-ui-kit'
 import { minutesBetween } from '../format.js'
 
 function formatMinutes(t, info, ago) {
@@ -39,7 +38,7 @@ export function ActionNavRow({ t, tab, syncStatus, syncing, now = Date.now(), on
           size="sm"
           loading={syncing}
           disabled={syncing}
-          leadingIcon={<IconRefreshOutline14 />}
+          leadingIcon={<IconRefreshOutline14 size={14} />}
           onClick={onSync}
         >
           {syncing ? t('sync.syncing') : t('sync.now')}

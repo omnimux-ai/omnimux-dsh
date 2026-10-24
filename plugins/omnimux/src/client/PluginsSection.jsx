@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { IconEllipsisOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Button, ConfirmModal, IconButton, SearchField } from 'dsh-ui-kit'
+import { Button, ConfirmModal, IconButton, IconEllipsisOutline16, SearchField } from 'dsh-ui-kit'
 import { getApps, installApp, uninstallApp } from './api.js'
 import { canOpen, hasOverflowMenu, primaryActionFor } from './app-actions.js'
 import { attemptOpen, notifyTabsChanged } from './open-app-flow.js'

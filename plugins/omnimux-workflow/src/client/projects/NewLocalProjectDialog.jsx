@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, IconButton, InputField, ModalDialog } from 'dsh-ui-kit'
-import { IconCloseOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, IconButton, IconCloseOutline16, InputField, ModalDialog } from 'dsh-ui-kit'
 import { pickProjectDirectory } from '../api.js'
 import { MAX_PROJECT_TITLE_LENGTH } from './limits.js'
 import { extractFolderName, firstPickedDirectory } from './pickDirectory.js'

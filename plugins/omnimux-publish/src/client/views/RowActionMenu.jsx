@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
-import { IconEllipsisOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { IconButton } from 'dsh-ui-kit'
+import { IconButton, IconEllipsisOutline16 } from 'dsh-ui-kit'
 import { Menu } from '@deepseek-ai/dsh-client-ui-primitives'
 import { displayStatus } from '../status-display.js'
 import { isRetryablePublishingTask } from '../../account-policy.js'

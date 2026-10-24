@@ -1,3 +1,26 @@
+export {
+  IconCheckOutline16,
+  IconChevronDownOutline14,
+  IconChevronUpOutline14,
+  IconChevronLeftOutline14,
+  IconCloseFill14,
+  IconCloseOutline16,
+  IconCopyOutline16,
+  IconDownloadOutline16,
+  IconEditOutline16,
+  IconEllipsisOutline16,
+  IconLoadingOutline16,
+  IconPaperclipOutline16,
+  IconPlayOutline16,
+  IconPlusOutline16,
+  IconRefreshOutline14,
+  IconRefreshOutline16,
+  IconRightUpOutline14,
+  IconSearchOutline16,
+  IconTrashOutline16,
+} from "./icons/compat-icons.tsx";
+export type { CompatIconProps } from "./icons/compat-icons.tsx";
+
 export { Button, IconButton } from "./button/Button.tsx";
 export type { ButtonProps, ButtonSize, ButtonVariant, IconButtonProps } from "./button/Button.tsx";
 

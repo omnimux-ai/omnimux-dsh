@@ -10,7 +10,8 @@ import {
 import { shouldConfirmFullAccess } from "./create-modal-logic.js";
 import { CloseOutlineIcon, FolderIcon, ShieldIcon, SparkleIcon } from "./icons.jsx";
 import { MenuHostProvider, MenuPanel, MenuPopup, MenuRow, MenuSelect, useMenuState } from "./menu.jsx";
-import { IconCheckOutline16, IconChevronDownOutline14, RiskConfirmation } from "@deepseek-ai/dsh-client-ui-primitives";
+import { RiskConfirmation } from "@deepseek-ai/dsh-client-ui-primitives";
+import { IconCheckOutline16, IconChevronDownOutline14 } from "dsh-ui-kit";
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7];
 const KINDS = ["once", "interval", "hourly", "daily", "weekly", "monthly", "custom"];
 const HOURS = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, "0"));
@@ -325,7 +326,7 @@ function ModelPicker({
   >
         <span>{trigger}</span>
         {effortLabel !== void 0 && <span className="dsh-st-model-trigger-effort">{effortLabel}</span>}
-        <IconChevronDownOutline14 className={`dsh-st-model-trigger-chevron${menu.open ? " is-open" : ""}`} />
+        <IconChevronDownOutline14 size={14} className={`dsh-st-model-trigger-chevron${menu.open ? " is-open" : ""}`} />
       </Button>
       <MenuPopup open={menu.open} anchor={menu.root} menuRef={menu.menu} up end className="dsh-st-model-select-menu is-up is-end" ariaLabel={modelT("menu.aria")}>
         {pane === "root" && <>

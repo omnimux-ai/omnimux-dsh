@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, ConfirmModal, IconButton } from 'dsh-ui-kit'
-import { IconEllipsisOutline16, IconPlusOutline16, Menu } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, ConfirmModal, IconButton, IconEllipsisOutline16, IconPlusOutline16 } from 'dsh-ui-kit'
+import { Menu } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
   disconnectHubAccount,
   errorText,

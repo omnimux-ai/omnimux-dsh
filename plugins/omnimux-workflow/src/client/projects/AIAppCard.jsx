@@ -5,11 +5,8 @@
  * 的 `Menu`（带 portal / 键盘导航），不新增自造卡片皮肤，也不手写菜单键盘逻辑。
  */
 import React, { useCallback, useState } from 'react'
-import { IconButton, MediaCard } from 'dsh-ui-kit'
+import { IconButton, IconEditOutline16, IconEllipsisOutline16, IconTrashOutline16, MediaCard } from 'dsh-ui-kit'
 import {
-  IconEditOutline16,
-  IconEllipsisOutline16,
-  IconTrashOutline16,
   Menu,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { appCategoryLabelKey } from './appLibrary.js'

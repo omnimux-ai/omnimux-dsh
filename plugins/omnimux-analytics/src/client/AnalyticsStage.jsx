@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { IconDownloadOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Divider, IconButton, PageHeader } from 'dsh-ui-kit'
+import { Divider, IconButton, IconDownloadOutline16, PageHeader } from 'dsh-ui-kit'
 import { injectAnalyticsStyles } from './styles.js'
 import { useAnalyticsStore } from './store.js'
 import { buildDashboardCsv, downloadCsv } from './csv.js'
