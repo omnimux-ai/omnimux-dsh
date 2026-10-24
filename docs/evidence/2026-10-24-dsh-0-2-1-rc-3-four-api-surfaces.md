@@ -181,7 +181,7 @@ DSH 标准 slot 的条目定义在 0.1.5 与 rc.3 之间**未变**（kind/scope/
 ## 7. 版本口径（rc.2 → rc.3 增量核对）
 
 - rc.2 材料仍可从桌面壳 commit `e19f7cfa89`（2026-10-17，`feat(desktop): adapt … to dsh v0.2.1-rc.2`）读取；本轮只对四个目标面包做了增量核对。
-- `dsh-client-ui-slots` 的 `lib/types/index.d.ts` 在 rc.2 与 rc.3 之间 **diff 为空**；包数 rc.2 为 343 个 tgz + `manifest.json`，rc.3 为 344 个 tgz + `manifest.json`（多出的 1 个包不涉及四个目标面）。
+- `dsh-client-ui-slots` 的 `lib/types/index.d.ts` 在 rc.2 与 rc.3 之间 **diff 为空**；包数 rc.2 为 343 个 tgz + `manifest.json`，rc.3 为 344 个 tgz + `manifest.json`。rc.3 只新增 1 个包 `dsh-client-ui-entry-customization`（其类型面未声明 `SlotMap` 条目，不涉及本仓消费的 slot）。
 - cordis / schemastery 是 npm 依赖，rc.3 的 `@deepseek-ai/dsh` 声明 `~4.0.5` / `~3.18.5`，壳 `origin/master:yarn.lock` 解析一致（第 1020、6383 行）。
 - 结论：以 rc.3 为口径不会漏掉 rc.2 的四个面结论；issue 标题里的 rc.2 已由 #3652 的更正评论覆盖。
 
