@@ -780,7 +780,7 @@ test('测试文件与源码同时改时照常安装有源码改动的插件', ()
 // ---------------------------------------------------------------------------
 
 /** 建一个 ship 场景：单个插件提交已合入 main，sync-to-app.sh 按传入脚本决定成败。 */
-function shipRepoWithSyncScript(label, syncScript) {
+function shipRepoWithSyncScript(label, syncScript, extraEnv = {}) {
   const fixture = mkdtempSync(join(tmpdir(), `omnimux-${label}-`))
   const repo = join(fixture, 'repo')
   const remote = join(fixture, 'origin.git')
@@ -814,23 +814,29 @@ function shipRepoWithSyncScript(label, syncScript) {
     `#!/bin/sh\ncase "$*" in\n  *'--json state -q .state'*) echo 'MERGED' ;;\n  *) printf 'MERGED\\tagent/plugin-feature\\t${head}\\tmain\\t${head}\\n' ;;\nesac\n`,
     { mode: 0o755 },
   )
+  // 不用对象展开：测试编写检查把新增的 SpreadElement 记为不可声明放行的执行风险。
+  const env = Object.assign({}, process.env, {
+    PATH: `${bin}:${process.env.PATH}`,
+    // 与同文件其它物化用例一致：不要让用例读真实 ~/.omnimux-dev。
+    OMNIMUX_DEV_SNAPSHOT: join(fixture, 'absent-dev'),
+    // 开发机若导出该开关，兜底用例会假失败；用例显式清掉它（或按用例覆写）。
+    OMNIMUX_SHIP_NO_FULL_SYNC: undefined,
+  }, extraEnv)
   const result = spawnSync('bash', ['scripts/worktree.sh', 'ship', 'plugin-feature', '--pr', '3700'], {
     cwd: repo,
     encoding: 'utf8',
-    env: Object.assign({}, process.env, {
-      PATH: `${bin}:${process.env.PATH}`,
-      // 与同文件其它物化用例一致：不要让用例读真实 ~/.omnimux-dev。
-      OMNIMUX_DEV_SNAPSHOT: join(fixture, 'absent-dev'),
-    }),
+    env,
   })
   return { fixture, result }
 }
 
-test('ship 物化失败时横幅如实说明开发版未更新（Issue #3700）', () => {
+test('ship 物化失败时以退出码 3 结束且不宣告交付闭环（Issue #3720）', () => {
   const { fixture, result } = shipRepoWithSyncScript('ship-sync-fail', '#!/bin/sh\necho "dsh-ui-kit 漂移" >&2\nexit 1\n')
   try {
-    assert.equal(result.status, 0, `合并已确认时 ship 仍应返回 0：\n${result.stdout}\n${result.stderr}`)
-    assert.match(result.stdout, /交付全链路闭环完成/i, '收尾框架句保留，但分句必须是真话')
+    // 退出码必须机器可读：0 会被调用方当成交付完成。
+    assert.equal(result.status, 3, `物化失败必须以退出码 3 结束：\n${result.stdout}\n${result.stderr}`)
+    assert.doesNotMatch(result.stdout, /交付全链路闭环完成/, '失败路径不得宣告交付闭环完成')
+    assert.match(result.stdout, /交付未闭环/, '失败路径必须明说未闭环')
     assert.match(result.stdout, /开发版未更新/, '失败路径必须说明开发版未更新')
     assert.match(result.stdout, /materialize=failed/, '默认横幅必须给出机器可读的物化状态')
     assert.doesNotMatch(result.stdout, /开发版已物化/, '失败路径不得宣称开发版已物化')
@@ -844,6 +850,60 @@ test('ship 物化成功时横幅说明开发版已物化（Issue #3700）', () =
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.match(result.stdout, /交付全链路闭环完成/i)
     assert.match(result.stdout, /开发版已物化/, '成功路径必须说明开发版已物化')
+    assert.match(result.stdout, /materialize=ok/, '成功路径必须给出机器可读状态')
     assert.doesNotMatch(result.stdout, /开发版未更新/, '成功路径不得出现未更新提示')
+    assert.doesNotMatch(result.stdout, /交付未闭环/, '成功路径不得出现未闭环字样')
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
+/**
+ * 增量失败后的兜底（Issue #3720）：shared kit 漂移只能靠无参数完整同步覆盖，但完整同步只装
+ * 默认清单内的插件——所以兜底必须是「先刷新 shared kit，再重试本次插件」，否则本次插件可能
+ * 根本没进开发版却报成功（新的假闭环）。桩把每次调用记为 `<第几次> <参数个数>`。
+ */
+const CALL_COUNTER_STUB = `#!/bin/sh
+counter="$(dirname "$0")/../sync_count.txt"
+n=0
+[ -f "$counter" ] && n=$(cat "$counter")
+n=$((n + 1))
+printf '%s' "$n" > "$counter"
+printf '%s %s\\n' "$n" "$#" >> "$(dirname "$0")/../sync_calls.txt"
+__BODY__
+`;
+
+test('ship 增量失败后刷新 shared kit 并重试本次插件（Issue #3720）', () => {
+  const stub = CALL_COUNTER_STUB.replace('__BODY__', '[ "$n" -eq 1 ] && exit 1\nexit 0')
+  const { fixture, result } = shipRepoWithSyncScript('ship-sync-kit-refresh', stub)
+  try {
+    assert.equal(result.status, 0, `兜底成功后应返回 0：\n${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /增量物化失败/, '必须披露这次增量确实失败过')
+    assert.match(result.stdout, /刷新 shared kit/, '必须说明先刷新 shared kit')
+    assert.match(result.stdout, /重试成功/, '必须说明本次插件重试成功')
+    assert.match(result.stdout, /materialize=ok/, '兜底成功后物化状态应为 ok')
+    assert.match(result.stdout, /交付全链路闭环完成/, '兜底成功后可以宣告闭环')
+    const calls = readFileSync(join(fixture, 'repo', 'sync_calls.txt'), 'utf8').trim().split('\n')
+    assert.deepEqual(calls, ['1 1', '2 0', '3 1'], `调用序必须是 增量→完整→增量重试，实际 ${calls.join(', ')}`)
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
+
+test('OMNIMUX_SHIP_NO_FULL_SYNC=1 时不刷新 shared kit，直接判失败（Issue #3720）', () => {
+  const stub = CALL_COUNTER_STUB.replace('__BODY__', 'exit 1')
+  const { fixture, result } = shipRepoWithSyncScript('ship-sync-no-refresh', stub, { OMNIMUX_SHIP_NO_FULL_SYNC: '1' })
+  try {
+    assert.equal(result.status, 3, `关掉兜底时仍应返回 3：\n${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /OMNIMUX_SHIP_NO_FULL_SYNC/, '必须说明是配置关掉了兜底')
+    const calls = readFileSync(join(fixture, 'repo', 'sync_calls.txt'), 'utf8').trim().split('\n')
+    assert.deepEqual(calls, ['1 1'], '关掉兜底后只应调用一次同步，且必须带插件参数（增量）')
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
+
+test('shared kit 刷新后本次插件仍失败时判失败并退出 3（Issue #3720）', () => {
+  const stub = CALL_COUNTER_STUB.replace('__BODY__', '[ "$n" -eq 2 ] && exit 0\nexit 1')
+  const { fixture, result } = shipRepoWithSyncScript('ship-sync-retry-fail', stub)
+  try {
+    assert.equal(result.status, 3, `重试仍失败必须以 3 结束：\n${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /shared kit 已刷新，但本次插件仍安装失败/, '必须区分「kit 已刷新」与「插件仍失败」')
+    assert.doesNotMatch(result.stdout, /交付全链路闭环完成/, '失败路径不得宣告闭环')
+    const calls = readFileSync(join(fixture, 'repo', 'sync_calls.txt'), 'utf8').trim().split('\n')
+    assert.deepEqual(calls, ['1 1', '2 0', '3 1'], '仍应走完 增量→完整→增量重试 三步')
   } finally { rmSync(fixture, { recursive: true, force: true }) }
 })
