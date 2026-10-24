@@ -1787,7 +1787,7 @@ export function CanvasDirectorWorkbench({ open, scene, projectId, imageNodes, on
 
             {/* P1-3：时间轴是 grid 第 2 列第 2 行（宽屏），左右栏 row-span-2 因而通高；
                 max-lg 下时间轴回退为 col-span-2 全宽，与右栏跨列行为一致。 */}
-            <div className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] max-lg:grid-rows-[minmax(180px,1fr)_auto] max-lg:overflow-y-auto max-lg:overflow-x-hidden ${workbenchGridClass}`}>
+            <div className={`director-workbench-grid grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] max-lg:grid-rows-[minmax(180px,1fr)_auto] max-lg:overflow-y-auto max-lg:overflow-x-hidden ${workbenchGridClass}`}>
                 {workspaceView === "scene" ? <>
                 <aside id="director-workbench-left-dock" data-director-left-dock="true" className="director-workbench-sidebar flex min-h-0 overflow-hidden border-r lg:row-span-2" style={{ background: theme.node.panel, borderColor: theme.toolbar.border }}>
                     <DirectorWorkbenchRail active={navigationTab} onHelp={() => setOnboardingRestartSignal((value) => value + 1)} onChange={(tab) => {

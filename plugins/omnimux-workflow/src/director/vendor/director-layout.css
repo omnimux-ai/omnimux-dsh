@@ -20,6 +20,53 @@
     min-height: 0;
 }
 
+/* 面板宽度才是真正的约束（900px 视口下面板只有 279px，与视口宽度并不同步），
+   因此窄面板的列宽分配按容器宽度决策，而不是按窗口宽度。 */
+[data-director-workbench="true"] {
+    container-type: inline-size;
+    container-name: director-workbench;
+}
+
+/* 面板过窄：左栏按比例让位（上限仍是 220px），3D 画布列保底 140px。 */
+@container director-workbench (max-width: 520px) {
+    [data-director-workbench="true"][data-workspace-view="scene"] .director-workbench-grid {
+        grid-template-columns: minmax(0, min(220px, 38cqw)) minmax(140px, 1fr);
+        grid-template-rows: minmax(180px, 1fr) auto auto;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    /* 折叠状态必须被尊重：左栏折叠留 48px 轨道，右栏折叠直接不显示（窄面板下它本是整行）。 */
+    [data-director-workbench="true"][data-workspace-view="scene"][data-left-dock-collapsed="true"] .director-workbench-grid {
+        grid-template-columns: 48px minmax(140px, 1fr);
+    }
+
+    [data-director-workbench="true"][data-workspace-view="scene"][data-right-dock-collapsed="true"] .director-workbench-property-dock {
+        display: none;
+    }
+
+    [data-director-workbench="true"][data-workspace-view="scene"] .director-workbench-sidebar {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    [data-director-workbench="true"][data-workspace-view="scene"] .director-workbench-grid > main {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    [data-director-workbench="true"][data-workspace-view="scene"] .director-workbench-property-dock {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        max-height: 30vh;
+    }
+
+    [data-director-workbench="true"][data-workspace-view="scene"] [data-director-sequencer-slot="true"] {
+        grid-column: 1 / -1;
+        grid-row: 3;
+    }
+}
+
 .director-viewport-shell[data-drawing-actor-path="true"] canvas,
 .director-viewport-shell[data-drawing-camera-path="true"] canvas {
     cursor: crosshair !important;

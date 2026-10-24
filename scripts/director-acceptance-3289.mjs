@@ -61,7 +61,7 @@ const NARROW_VIEWPORTS = [
   { width: 900, height: 400, kind: 'short' },
   { width: 900, height: 1400, kind: 'tall' },
 ];
-const NARROW_THRESHOLDS = { middleMinHeight: 180, sequencerMinHeight: 160, sequencerMaxHeight: 236 };
+const NARROW_THRESHOLDS = { middleMinHeight: 180, sequencerMinHeight: 160, sequencerMaxHeight: 236, canvasMinWidth: 140, containerQueryMaxWidth: 520 };
 const baseExpected = ['normal-project-entry', 'portrait-selected', 'managed-media-decoded', 'saved-scene', 'play-seek', 'decoded-motion', 'scene-reopened', 'aspect-reopened'];
 // 测量断言紧跟入口阶段记录，窄屏断言在旅程末尾（切视口会重排，放在最后不影响其它步骤）。
 const expected = MEASURE
@@ -77,7 +77,7 @@ const log = message => process.stdout.write(`[director-acceptance] ${stamp()} ${
  * Serialized declaration. Ego only receives the in-memory login capability,
  * never a token in evidence. Keep it fully self-contained.
  */
-async function browserJourney({ loginUrl, evidence, origin, projectTitle, paletteLabels, measure, thresholds, narrowViewports, narrowThresholds }) {
+async function browserJourney({ loginUrl, evidence, origin, projectTitle, paletteLabels, measure, thresholds, narrowViewports, narrowThresholds, runIdentity }) {
   const fs = await import('node:fs/promises');
   const assert = (await import('node:assert/strict')).default;
   const redact = value => String(value).replaceAll(loginUrl, '[redacted-login-url]').replace(/([?&]token=)[^&\s"'<>]+/gi, '$1REDACTED');
@@ -624,7 +624,11 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle, palett
         const rect = element => { const box = element.getBoundingClientRect(); return { top: round(box.top), bottom: round(box.bottom), width: round(box.width), height: round(box.height) }; };
         return {
           viewport: { width: window.innerWidth, height: window.innerHeight },
+          containerType: getComputedStyle(workbench).containerType,
+          gridIsDirectChild: workbench.children.length > 0 && [...workbench.children].includes(grid),
           topbarHeight: rect(root.querySelector('[data-director-topbar="true"]')).height,
+          panelWidth: rect(grid).width,
+          leftDockWidth: rect(leftDock).width,
           gridColumns: getComputedStyle(grid).gridTemplateColumns,
           gridRows: getComputedStyle(grid).gridTemplateRows,
           grid: { clientHeight: grid.clientHeight, scrollHeight: grid.scrollHeight, overflowY: getComputedStyle(grid).overflowY },
@@ -656,17 +660,100 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle, palett
       if (narrowMeasured.middleColumn.width <= 0) {
         narrowFailures.push(at(`middle column width: 实测 ${narrowMeasured.middleColumn.width}（画布退化为 0 宽）`));
       }
+      // 窄屏档位（#3702）：画布列必须无条件保底（不做「面板足够窄才检查」的自我门控），
+      // 并确保这一档确实落在容器查询区间内，否则断言会静默失效。
+      if (narrowMeasured.middleColumn.width < narrowThresholds.canvasMinWidth) {
+        narrowFailures.push(at(`middle column width: 实测 ${narrowMeasured.middleColumn.width} vs 期望 >= ${narrowThresholds.canvasMinWidth}（左栏 ${narrowMeasured.leftDockWidth}px 没有让位）`));
+      }
+      if (narrowMeasured.panelWidth > narrowThresholds.containerQueryMaxWidth) {
+        narrowFailures.push(at(`panel width: 实测 ${narrowMeasured.panelWidth} > ${narrowThresholds.containerQueryMaxWidth}（该档没有走容器查询，断言无效）`));
+      }
       const scrollable = narrowMeasured.grid.overflowY === 'auto' || narrowMeasured.grid.overflowY === 'scroll';
       if (narrowMeasured.grid.scrollHeight > narrowMeasured.grid.clientHeight + 1 && !scrollable) {
         narrowFailures.push(at(`grid 内容 ${narrowMeasured.grid.scrollHeight} > 可视 ${narrowMeasured.grid.clientHeight} 且 overflow-y=${narrowMeasured.grid.overflowY}（内容被裁且不可滚动）`));
       }
       narrowSizes.push({ viewport: narrowViewport, measured: narrowMeasured, failures: narrowFailures });
       }
+      // 折叠态交叉验证：窄面板 + 左栏折叠时必须留 48px 轨道、画布列仍 >=140px
+      // （容器规则会覆盖 Tailwind 的折叠列定义，这里证明它没把折叠状态吃掉）。
+      await page.cdp('Emulation.setDeviceMetricsOverride', { width: 900, height: 560, deviceScaleFactor: 1, mobile: false });
+      await page.waitForFunction(() => window.innerWidth === 900 && window.innerHeight === 560, undefined, { timeout: 10000 });
+      await clickOrActivate('loc=css:.wf-director-root button[aria-label="折叠场景面板"]', '.wf-director-root', { kind: 'aria', value: '折叠场景面板' });
+      await page.waitForFunction(() => document.querySelector('[data-director-workbench="true"]')?.getAttribute('data-left-dock-collapsed') === 'true', undefined, { timeout: 10000 });
+      const collapsedMeasured = await page.evaluate(() => {
+        const root = document.querySelector('.wf-director-root');
+        const workbench = root.querySelector('[data-director-workbench="true"]');
+        const grid = [...workbench.children].find(node => getComputedStyle(node).display === 'grid');
+        const leftDock = root.querySelector('[data-director-left-dock="true"]');
+        const rightDock = root.querySelector('[data-director-right-dock="true"]');
+        const middleColumn = [...grid.children].find(node => node !== leftDock && node !== rightDock && !node.hasAttribute('data-director-sequencer-slot'));
+        const round = value => Math.round(Number.parseFloat(value) * 100) / 100;
+        return {
+          panelWidth: round(grid.getBoundingClientRect().width),
+          leftDockWidth: round(leftDock.getBoundingClientRect().width),
+          canvasWidth: round(middleColumn.getBoundingClientRect().width),
+          gridColumns: getComputedStyle(grid).gridTemplateColumns,
+          collapsed: workbench.getAttribute('data-left-dock-collapsed'),
+        };
+      });
+      const collapsedFailures = [];
+      if (collapsedMeasured.collapsed !== 'true') collapsedFailures.push('左栏折叠状态未生效');
+      if (collapsedMeasured.leftDockWidth > 56) collapsedFailures.push(`折叠后左栏宽度 ${collapsedMeasured.leftDockWidth} vs 期望 <= 56（折叠轨道应保留 48px）`);
+      if (collapsedMeasured.canvasWidth < narrowThresholds.canvasMinWidth) collapsedFailures.push(`折叠后画布列宽度 ${collapsedMeasured.canvasWidth} vs 期望 >= ${narrowThresholds.canvasMinWidth}`);
+      await page.screenshot({ path: `${evidence}/layout-narrow-collapsed.png` });
+      await clickOrActivate('loc=css:.wf-director-root button[aria-label="展开场景面板"]', '.wf-director-root', { kind: 'aria', value: '展开场景面板' });
+      await page.waitForFunction(() => document.querySelector('[data-director-workbench="true"]')?.getAttribute('data-left-dock-collapsed') === 'false', undefined, { timeout: 10000 });
       await page.cdp('Emulation.clearDeviceMetricsOverride');
+      // 「宽窗口 + 窄面板」交叉验证：容器查询存在的意义就是这种情形（视口媒体查询此时是宽屏态，
+      // 只能靠容器规则把三列布局改成堆叠）。这里把工作台自身宽度压到 300px 来构造该状态，
+      // 并断言确实是容器查询（而不是视口查询）在起作用。
+      const forced = await page.evaluate(() => {
+        const root = document.querySelector('.wf-director-root');
+        const workbench = root.querySelector('[data-director-workbench="true"]');
+        workbench.dataset.forcedWidth = workbench.style.width;
+        workbench.style.width = '300px';
+        return { applied: workbench.style.width };
+      });
+      await page.waitForFunction(() => document.querySelector('[data-director-workbench="true"]')?.getBoundingClientRect().width <= 320, undefined, { timeout: 10000 });
+      const wideWindowNarrowPanel = await page.evaluate(() => {
+        const root = document.querySelector('.wf-director-root');
+        const workbench = root.querySelector('[data-director-workbench="true"]');
+        const grid = [...workbench.children].find(node => getComputedStyle(node).display === 'grid');
+        const leftDock = root.querySelector('[data-director-left-dock="true"]');
+        const rightDock = root.querySelector('[data-director-right-dock="true"]');
+        const middleColumn = [...grid.children].find(node => node !== leftDock && node !== rightDock && !node.hasAttribute('data-director-sequencer-slot'));
+        const slot = grid.querySelector('[data-director-sequencer-slot="true"]');
+        const round = value => Math.round(Number.parseFloat(value) * 100) / 100;
+        return {
+          windowWidth: window.innerWidth,
+          panelWidth: round(grid.getBoundingClientRect().width),
+          containerType: getComputedStyle(workbench).containerType,
+          leftDockWidth: round(leftDock.getBoundingClientRect().width),
+          canvasWidth: round(middleColumn.getBoundingClientRect().width),
+          gridColumns: getComputedStyle(grid).gridTemplateColumns,
+          gridRows: getComputedStyle(grid).gridTemplateRows,
+          sequencerColumn: slot ? getComputedStyle(slot).gridColumn : null,
+          sequencerRow: slot ? getComputedStyle(slot).gridRow : null,
+          rightDockColumn: getComputedStyle(rightDock).gridColumn,
+        };
+      });
+      await page.screenshot({ path: `${evidence}/layout-wide-window-narrow-panel.png` });
+      const wideNarrowFailures = [];
+      if (!(wideWindowNarrowPanel.windowWidth > 1024)) wideNarrowFailures.push(`window width ${wideWindowNarrowPanel.windowWidth} 应为宽屏（视口媒体查询处于宽屏态）`);
+      if (wideWindowNarrowPanel.containerType !== 'inline-size') wideNarrowFailures.push(`container-type 实测 ${wideWindowNarrowPanel.containerType} vs inline-size`);
+      if (wideWindowNarrowPanel.panelWidth > narrowThresholds.containerQueryMaxWidth) wideNarrowFailures.push(`panel width ${wideWindowNarrowPanel.panelWidth} 未落入容器查询区间`);
+      if (wideWindowNarrowPanel.canvasWidth < narrowThresholds.canvasMinWidth) wideNarrowFailures.push(`canvas width 实测 ${wideWindowNarrowPanel.canvasWidth} vs 期望 >= ${narrowThresholds.canvasMinWidth}`);
+      if (wideWindowNarrowPanel.sequencerRow !== '3') wideNarrowFailures.push(`时间轴应堆叠到第 3 行，实测 row ${wideWindowNarrowPanel.sequencerRow}（视口是宽屏态，说明容器规则没生效）`);
+      await page.evaluate(() => {
+        const workbench = document.querySelector('[data-director-workbench="true"]');
+        workbench.style.width = workbench.dataset.forcedWidth || '';
+        delete workbench.dataset.forcedWidth;
+      });
       const narrowFailuresAll = narrowSizes.flatMap(item => item.failures);
-      write('layout-narrow-thresholds.json', { narrowViewports, narrowThresholds, sizes: narrowSizes, failures: narrowFailuresAll });
-      if (narrowFailuresAll.length) throw new Error(`layout-narrow-thresholds failed: ${narrowFailuresAll.join('; ')}`);
-      record('layout-narrow-thresholds', { sizes: narrowSizes });
+      write('layout-narrow-thresholds.json', { runIdentity, narrowViewports, narrowThresholds, sizes: narrowSizes, collapsed: { measured: collapsedMeasured, failures: collapsedFailures }, wideWindowNarrowPanel: { measured: wideWindowNarrowPanel, failures: wideNarrowFailures }, failures: narrowFailuresAll.concat(collapsedFailures, wideNarrowFailures) });
+      const allNarrowFailures = narrowFailuresAll.concat(collapsedFailures, wideNarrowFailures);
+      if (allNarrowFailures.length) throw new Error(`layout-narrow-thresholds failed: ${allNarrowFailures.join('; ')}`);
+      record('layout-narrow-thresholds', { sizes: narrowSizes, collapsed: collapsedMeasured, collapsedFailures, wideWindowNarrowPanel, wideNarrowFailures });
     }
     await write('completion.json', { completed: true });
   } catch (error) {
@@ -794,7 +881,7 @@ async function main() {
 
     // The journey is stringified into a separate node process, so module-scope constants must be
     // passed through the payload instead of being referenced directly.
-    const input = `${browserJourney.toString()}\ntry { await browserJourney(${JSON.stringify({ loginUrl: app.loginUrl, evidence, origin: app.origin, projectTitle, paletteLabels: DIRECTOR_PALETTE_LABELS, measure: MEASURE, thresholds: LAYOUT_THRESHOLDS, narrowViewports: NARROW_VIEWPORTS, narrowThresholds: NARROW_THRESHOLDS })}); } catch (error) { console.log(JSON.stringify({ directorDiagnostic: true, name: error.name, message: String(error.message).replace(/([?&]token=)[^&\\s"'<>]+/gi, '$1REDACTED') })); throw Error('director-browser-verification-failed'); }`;
+    const input = `${browserJourney.toString()}\ntry { await browserJourney(${JSON.stringify({ loginUrl: app.loginUrl, evidence, origin: app.origin, projectTitle, paletteLabels: DIRECTOR_PALETTE_LABELS, measure: MEASURE, thresholds: LAYOUT_THRESHOLDS, narrowViewports: NARROW_VIEWPORTS, narrowThresholds: NARROW_THRESHOLDS, runIdentity: { runId, head, base } })}); } catch (error) { console.log(JSON.stringify({ directorDiagnostic: true, name: error.name, message: String(error.message).replace(/([?&]token=)[^&\\s"'<>]+/gi, '$1REDACTED') })); throw Error('director-browser-verification-failed'); }`;
     log('starting browser journey');
     const result = await runBrowser(executable, input, 480000);
     save(evidence, 'browser-process.json', result);

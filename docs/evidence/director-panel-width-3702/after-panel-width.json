@@ -1,0 +1,244 @@
+{
+  "runIdentity": {
+    "runId": "accept-mvm8be2y-etij5j",
+    "head": "c7c0fea0592d66624c6d295774fa0649a3b952b7",
+    "base": "9daf9dbaff3c3d0ecda173570f3bdf68621afcd2"
+  },
+  "narrowViewports": [
+    {
+      "width": 900,
+      "height": 560,
+      "kind": "short"
+    },
+    {
+      "width": 900,
+      "height": 480,
+      "kind": "short"
+    },
+    {
+      "width": 900,
+      "height": 400,
+      "kind": "short"
+    },
+    {
+      "width": 900,
+      "height": 1400,
+      "kind": "tall"
+    }
+  ],
+  "narrowThresholds": {
+    "middleMinHeight": 180,
+    "sequencerMinHeight": 160,
+    "sequencerMaxHeight": 236,
+    "canvasMinWidth": 140,
+    "containerQueryMaxWidth": 520
+  },
+  "sizes": [
+    {
+      "viewport": {
+        "width": 900,
+        "height": 560,
+        "kind": "short"
+      },
+      "measured": {
+        "viewport": {
+          "width": 900,
+          "height": 560
+        },
+        "containerType": "inline-size",
+        "gridIsDirectChild": true,
+        "topbarHeight": 48,
+        "panelWidth": 279,
+        "leftDockWidth": 106.02,
+        "gridColumns": "106.016px 172.984px",
+        "gridRows": "180px 123px 168px",
+        "grid": {
+          "clientHeight": 471,
+          "scrollHeight": 471,
+          "overflowY": "auto"
+        },
+        "middleColumn": {
+          "top": 89,
+          "bottom": 269,
+          "width": 172.98,
+          "height": 180
+        },
+        "rightDock": {
+          "top": 269,
+          "bottom": 392,
+          "width": 279,
+          "height": 123
+        },
+        "sequencer": {
+          "top": 392,
+          "bottom": 560,
+          "width": 279,
+          "height": 168
+        },
+        "sequencerMaxHeight": 168
+      },
+      "failures": []
+    },
+    {
+      "viewport": {
+        "width": 900,
+        "height": 480,
+        "kind": "short"
+      },
+      "measured": {
+        "viewport": {
+          "width": 900,
+          "height": 480
+        },
+        "containerType": "inline-size",
+        "gridIsDirectChild": true,
+        "topbarHeight": 48,
+        "panelWidth": 279,
+        "leftDockWidth": 106.02,
+        "gridColumns": "106.016px 172.984px",
+        "gridRows": "180px 51px 160px",
+        "grid": {
+          "clientHeight": 391,
+          "scrollHeight": 391,
+          "overflowY": "auto"
+        },
+        "middleColumn": {
+          "top": 89,
+          "bottom": 269,
+          "width": 172.98,
+          "height": 180
+        },
+        "rightDock": {
+          "top": 269,
+          "bottom": 320,
+          "width": 279,
+          "height": 51
+        },
+        "sequencer": {
+          "top": 320,
+          "bottom": 480,
+          "width": 279,
+          "height": 160
+        },
+        "sequencerMaxHeight": 144
+      },
+      "failures": []
+    },
+    {
+      "viewport": {
+        "width": 900,
+        "height": 400,
+        "kind": "short"
+      },
+      "measured": {
+        "viewport": {
+          "width": 900,
+          "height": 400
+        },
+        "containerType": "inline-size",
+        "gridIsDirectChild": true,
+        "topbarHeight": 48,
+        "panelWidth": 279,
+        "leftDockWidth": 106.02,
+        "gridColumns": "106.016px 164.984px",
+        "gridRows": "180px 0px 160px",
+        "grid": {
+          "clientHeight": 311,
+          "scrollHeight": 340,
+          "overflowY": "auto"
+        },
+        "middleColumn": {
+          "top": 89,
+          "bottom": 269,
+          "width": 164.98,
+          "height": 180
+        },
+        "rightDock": {
+          "top": 269,
+          "bottom": 269,
+          "width": 271,
+          "height": 0
+        },
+        "sequencer": {
+          "top": 269,
+          "bottom": 429,
+          "width": 271,
+          "height": 160
+        },
+        "sequencerMaxHeight": 120
+      },
+      "failures": []
+    },
+    {
+      "viewport": {
+        "width": 900,
+        "height": 1400,
+        "kind": "tall"
+      },
+      "measured": {
+        "viewport": {
+          "width": 900,
+          "height": 1400
+        },
+        "containerType": "inline-size",
+        "gridIsDirectChild": true,
+        "topbarHeight": 48,
+        "panelWidth": 279,
+        "leftDockWidth": 106.02,
+        "gridColumns": "106.016px 172.984px",
+        "gridRows": "655px 420px 236px",
+        "grid": {
+          "clientHeight": 1311,
+          "scrollHeight": 1311,
+          "overflowY": "auto"
+        },
+        "middleColumn": {
+          "top": 89,
+          "bottom": 744,
+          "width": 172.98,
+          "height": 655
+        },
+        "rightDock": {
+          "top": 744,
+          "bottom": 1164,
+          "width": 279,
+          "height": 420
+        },
+        "sequencer": {
+          "top": 1164,
+          "bottom": 1400,
+          "width": 279,
+          "height": 236
+        },
+        "sequencerMaxHeight": 840
+      },
+      "failures": []
+    }
+  ],
+  "collapsed": {
+    "measured": {
+      "panelWidth": 279,
+      "leftDockWidth": 48,
+      "canvasWidth": 231,
+      "gridColumns": "48px 231px",
+      "collapsed": "true"
+    },
+    "failures": []
+  },
+  "wideWindowNarrowPanel": {
+    "measured": {
+      "windowWidth": 1728,
+      "panelWidth": 300,
+      "containerType": "inline-size",
+      "leftDockWidth": 114,
+      "canvasWidth": 186,
+      "gridColumns": "114px 186px",
+      "gridRows": "293.102px 264.898px 236px",
+      "sequencerColumn": "1 / -1",
+      "sequencerRow": "3",
+      "rightDockColumn": "1 / -1"
+    },
+    "failures": []
+  },
+  "failures": []
+}
