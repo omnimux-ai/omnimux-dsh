@@ -123,3 +123,19 @@ node scripts/impact-matrix.mjs --git-diff --base origin/main
 # 5. 真实浏览器验收（工作树隔离，port: 0 自清理）
 pnpm test:worktree-web
 ```
+
+---
+
+## 旧标准变更
+
+- `plugins/omnimux-inspiration/src/explore/composer-docking.test.js` :: `useComposerDocking: 意图驱动模式——纯向下滚动默认不吸底，显式意图触发后才吸底`
+
+**原断言**：`assert.equal(hookApi.placement, 'inline', '未触发输入框时纯向下滚动必须保持 inline')`，同用例内另有 `assert.equal(hookApi.open, false)`、`assert.equal(hookApi.attached, false)` 两条同义期望——即把「纯向下滚动必须保持 inline」固化为标准。
+
+**必须改的理由**：该用例固化的正是 #2703 引入、本任务要推翻的意图门禁行为，与 hook 自身文档契约第 2 条（滚出顶部视口即吸底）自相矛盾。恢复自动吸底后，同一滚动输入的期望必须随之变为吸底，否则「恢复」无法被任何测试表达；不改则该任务永远无法通过测试。
+
+**新期望证据**：
+- 改写后断言（同一用例、同一滚动输入）：`placement === 'docked'`、`isDocked === true`、`host.hasAttribute(DOCK_OPEN_ATTR) === true`。
+- 另新增独立用例覆盖同一契约（纯加法，不删用例、不改其它断言指纹）。
+- 真机验收：`journey:autodock-on-scroll-out` PASS——`scrollTop=865 > 阈值316` → 吸底，卡片底边 500 / 视口 520（正好 `DOCK_BOTTOM=20`）；`journey:autodock-initial-inline`、`journey:autodock-release-on-scroll-back` 同批 PASS。
+- 落笔人：该期待值变更由用户（人类）在收到 PreToolUse 硬门禁拒绝后手工落笔，Agent 未自行改写断言指纹。
