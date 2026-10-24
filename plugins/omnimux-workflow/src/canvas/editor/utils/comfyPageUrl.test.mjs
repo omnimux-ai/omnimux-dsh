@@ -6,10 +6,13 @@ import {
   comfyPageUrlFromData,
   normalizeComfyPageUrl,
 } from './comfyPageUrl.ts';
+import { COMFY_BACKEND_BASE_URL } from '../../../workflow/comfyBackend/plan.ts';
 
-test('默认地址就是 ComfyUI 官方默认端口', () => {
-  assert.equal(DEFAULT_COMFY_PAGE_URL, 'http://127.0.0.1:8188');
+test('默认地址指向托管后端 localhost:18188', () => {
+  assert.equal(DEFAULT_COMFY_PAGE_URL, 'http://localhost:18188');
   assert.equal(normalizeComfyPageUrl(DEFAULT_COMFY_PAGE_URL).ok, true);
+  // 与宿主托管后端同一份默认值：两处漂移会让画布指向一个后端不监听的地址。
+  assert.equal(DEFAULT_COMFY_PAGE_URL, COMFY_BACKEND_BASE_URL);
 });
 
 test('缺协议时补 http://，并去掉尾部斜杠', () => {
