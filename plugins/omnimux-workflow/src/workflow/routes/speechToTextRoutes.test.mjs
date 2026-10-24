@@ -20,7 +20,8 @@ const { createWorkspaceStore, createWorkflowDispatcher, mountWorkflowHost } = aw
 after(() => rmSync(buildDir, { recursive: true, force: true }));
 
 const text = '1\r\n00:00:00,000 --> 00:00:01,000\r\n你好\r\n\r\n';
-const model = 'doubao-asr-bigmodel';
+// #3705：缺省转写模型改为中枢当前唯一上架的 whisper-1（doubao-asr-bigmodel 自 #3516 起仅登记不上架）。
+const model = 'whisper-1';
 const result = { mode: 'live', model, text };
 const request = { nodeId: 'audio-node', audioPath: '/tmp/selected-audio.mp3' };
 
@@ -44,6 +45,7 @@ function harness(t, execute = async () => result) {
 }
 
 test('workflow STT defaults to Doubao SRT without writing the graph or starting audio generation', async (t) => {
+  // 用例名沿用历史措辞（Doubao）；#3705 起断言的是中枢当前唯一上架的 whisper-1。
   const h = harness(t);
   const response = await h.call();
   assert.equal(response.status, 200);

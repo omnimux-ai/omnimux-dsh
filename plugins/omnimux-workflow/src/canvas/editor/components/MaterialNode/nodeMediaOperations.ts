@@ -172,7 +172,7 @@ async function runSpeechToText(
   const result = await transcribeAudio(workspaceId, {
     nodeId: id,
     audioPath,
-    model: 'doubao-asr-bigmodel',
+    // 不指定模型：缺省由请求 schema 决定（中枢当前唯一上架的转写模型）。
     responseFormat: 'srt',
   });
   const text = result.body?.text;
