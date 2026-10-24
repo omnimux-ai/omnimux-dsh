@@ -1111,8 +1111,25 @@ export function createAppQaRunner(deps = {}) {
       // Preparation failures carry an actionable hint (missing install command, archive stderr).
       // Dropping it left the standard entry point with a bare code, so keep a sanitized copy that
       // the CLI and report readers can act on. Never persist credential-shaped text.
-      const hint = typeof error?.hint === 'string' ? error.hint.replace(/\s+/g, ' ').trim().slice(0, 800) : '';
-      if (hint && !/token|bearer|api[-_]?key|password|secret/i.test(hint)) report.hint = hint;
+      const sensitive = /token|bearer|api[-_]?key|password|secret/i;
+      const scrub = value => {
+        if (typeof value !== 'string') return value;
+        const flat = value.replace(/\s+/g, ' ').trim().slice(0, 400);
+        return sensitive.test(flat) ? '[redacted]' : flat;
+      };
+      const hint = scrub(typeof error?.hint === 'string' ? error.hint.slice(0, 800) : '');
+      if (hint && hint !== '[redacted]') report.hint = hint;
+      // A bare code cannot be classified and the free-text hint is not a contract, so keep the
+      // stable reason plus bounded structured detail alongside it.
+      if (typeof error?.code === 'string' && /^(?:TEST_ENV|TEST_APP_QA)_[A-Z_]+$/.test(error.code)) {
+        const raw = error.detail && typeof error.detail === 'object' && !Array.isArray(error.detail) ? error.detail : null;
+        report.failure = {
+          code: error.code,
+          reason: typeof error.reason === 'string' ? error.reason : null,
+          detail: raw ? Object.fromEntries(Object.entries(raw).slice(0, 8).map(([key, value]) => [key,
+            Array.isArray(value) ? value.slice(0, 32).map(scrub) : scrub(value)])) : null,
+        };
+      }
       if (error?.code === 'TEST_ENV_NOT_USER_FRESH_TASK_UNKNOWN') report.userFresh = false;
       if (!env && error?.cleanup) envCleanup = error.cleanup;
       if (!env && error?.observations) prepareObservations = error.observations;
@@ -1149,6 +1166,10 @@ export function createAppQaRunner(deps = {}) {
     })) : [];
     report.observations.appEvents = safeEvents((env?.observations ?? prepareObservations)?.events);
     report.observations.browserEvents = safeEvents(browser?.observations?.events);
+    // Skip volume stays visible even though the preparation observation only keeps a bounded sample;
+    // absent data is omitted rather than reported as a fake zero.
+    const skippedInputCount = (env?.observations ?? prepareObservations)?.preparation?.skippedInputCount;
+    if (Number.isInteger(skippedInputCount)) report.observations.skippedInputCount = skippedInputCount;
     if (request) {
       const allExpected = request.requiredChecks.flatMap(name => request.expectedAssertions[name]);
       if (new Set(report.assertions.map(item => item.name)).size !== report.assertions.length
@@ -1249,7 +1270,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       }
     } else {
       console.error(`❌ 应用级 Web 验收未通过 -> ${[...report.errors, ...failed].join('; ')}`);
-      if (report.hint) console.error(`   原因: ${report.hint}`);
+      if (report.failure?.reason) console.error(`   原因: ${report.failure.reason}${report.hint ? ` — ${report.hint}` : ''}`);
+      else if (report.hint) console.error(`   原因: ${report.hint}`);
       process.exitCode = 1;
     }
   } catch (error) {

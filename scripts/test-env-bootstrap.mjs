@@ -37,11 +37,21 @@ const MOCK_IMAGE_IMAGE_TO_IMAGE = Buffer.from(
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = sourceRoot.split(`${sep}.worktrees${sep}`)[0];
 const failure = (code, hint) => Object.assign(new Error('TEST_ENV_' + code), { code: 'TEST_ENV_' + code, ...(hint ? { hint } : {}) });
+/** Attach a stable machine-readable reason and structured detail; `hint` stays human-readable. */
+function detailFailure(code, reason, detail, hint) {
+  const error = failure(code, hint);
+  error.reason = reason;
+  error.detail = detail;
+  return error;
+}
 function safeError(error, fallback) {
   const code = error?.code;
   if (typeof code === 'string' && /^TEST_ENV_(?:CREDENTIAL_)?[A-Z_]+$/.test(code)) {
     // 保留可读说明与精确原因：脱敏只针对底层原文，不能把面向调用者的提示一并丢掉。
-    return Object.assign(new Error(code), { code, hint: error.hint, rootReason: error.rootReason });
+    const classified = Object.assign(new Error(code), { code, hint: error.hint, rootReason: error.rootReason });
+    if (error.reason !== undefined) classified.reason = error.reason;
+    if (error.detail !== undefined) classified.detail = error.detail;
+    return classified;
   }
   return failure(fallback);
 }
@@ -268,11 +278,19 @@ export function normalizeTaskPlugins(value) {
 }
 
 /** Archive child-process failures must carry the real reason: an empty error code made a broken
- * archive look identical to a broken build and cost several diagnosis rounds. */
-function archiveCommandFailure(code, action, result) {
-  const detail = String(result.stderr || '').trim() || String(result.stdout || '').trim() || String(result.error || '');
-  const reason = `python3 归档${action}失败（status=${result.status ?? 'null'}, signal=${result.signal ?? 'null'}）：${detail.slice(-1200) || '无输出'}`;
-  return failure(code, reason.slice(0, 1600));
+ * archive look identical to a broken build and cost several diagnosis rounds. The `hint` stays
+ * human-readable while `reason`/`detail` let callers classify the failure without parsing prose. */
+export function archiveCommandFailure(code, action, result) {
+  const stderr = String(result.stderr || '').trim();
+  const stdout = String(result.stdout || '').trim();
+  const tail = (stderr || stdout || String(result.error || '')).slice(-1200);
+  const reason = result.error ? 'ARCHIVE_COMMAND_SPAWN' : result.signal ? 'ARCHIVE_COMMAND_SIGNAL' : 'ARCHIVE_COMMAND_EXIT';
+  return detailFailure(code, reason, {
+    action,
+    exitStatus: Number.isInteger(result.status) ? result.status : null,
+    signal: typeof result.signal === 'string' ? result.signal : null,
+    stderrTail: tail,
+  }, `python3 归档${action}失败（status=${result.status ?? 'null'}, signal=${result.signal ?? 'null'}）：${tail || '无输出'}`.slice(0, 1600));
 }
 
 function inspectArchive(tarball, name, version, sha256) {
@@ -327,6 +345,22 @@ export function missingPackageDependencies({ packedPaths, hasInstalledDependenci
   return packedPaths.filter(rel => !hasInstalledDependencies(rel) && declaresDependencies(rel));
 }
 
+/** Bounded sample plus the true total of working-tree entries skipped while staging the candidate.
+ * The sample keeps observations readable; the total keeps the skip volume honest. */
+export function createSkippedInputTracker(limit = 20) {
+  const sample = [];
+  let count = 0;
+  return {
+    note(rel) {
+      count += 1;
+      if (sample.length < limit) sample.push(rel);
+    },
+    snapshot() {
+      return { count, sample: [...sample] };
+    },
+  };
+}
+
 /** preparation-only: real candidate source → owned stage → fixed build → pack → archive inspect.
  * Reuses captureCandidate, prepareFiles, privatePnpmEnvironment, runPnpm, payloadManifest and archive.py inspect.
  * Never installs, never reads Dev profile or credentials, never upgrades output to installed/loaded/fresh proof.
@@ -367,8 +401,7 @@ async function runTaskPreparation({ options, io, deps }) {
     observations.steps.push('candidate-before');
     const allowed = new Set((before.candidate?.entries || []).map(item => item.path));
     const candidateDirectories = candidateDirectoryIndex(allowed);
-    const skippedInputs = [];
-    const noteSkipped = rel => { if (skippedInputs.length < 20) skippedInputs.push(rel); };
+    const skipped = createSkippedInputTracker();
     const copyTree = (source, destination, allowAll = false, batch = null) => {
       const operations = batch ?? [];
       for (const name of io.readdirSync(source)) {
@@ -380,9 +413,9 @@ async function runTaskPreparation({ options, io, deps }) {
           rel, allowed, candidateDirectories, allowAll,
           isSymbolicLink: stat.isSymbolicLink(), isDirectory: stat.isDirectory(), isFile: stat.isFile(),
         });
-        if (decision === 'skip') { noteSkipped(rel); continue; }
-        if (decision === 'unsupported-symlink') throw failure('PREPARE_INPUT_UNSUPPORTED', `候选输入是符号链接，装配不支持复制：${rel}`);
-        if (decision === 'unsupported-special') throw failure('PREPARE_INPUT_UNSUPPORTED', `候选输入不是普通文件：${rel}`);
+        if (decision === 'skip') { skipped.note(rel); continue; }
+        if (decision === 'unsupported-symlink') throw detailFailure('PREPARE_INPUT_UNSUPPORTED', 'INPUT_SYMLINK', { path: rel, kind: 'symlink' }, `候选输入是符号链接，装配不支持复制：${rel}`);
+        if (decision === 'unsupported-special') throw detailFailure('PREPARE_INPUT_UNSUPPORTED', 'INPUT_SPECIAL', { path: rel, kind: 'special' }, `候选输入不是普通文件：${rel}`);
         if (decision === 'recurse') { copyTree(from, to, allowAll, operations); continue; }
         io.mkdirSync(dirname(to), { recursive: true });
         operations.push({ operation: 'copy', source: from, destination: to });
@@ -393,12 +426,16 @@ async function runTaskPreparation({ options, io, deps }) {
     for (const rel of PREPARATION_CONFIG.concat(packagePaths)) {
       const source = join(root, rel), destination = join(stageRoot, rel);
       const stat = io.lstatSync(source);
-      if (stat.isSymbolicLink()) throw failure('PREPARE_INPUT_UNSUPPORTED', `任务源路径是符号链接：${rel}`);
+      if (stat.isSymbolicLink()) throw detailFailure('PREPARE_INPUT_UNSUPPORTED', 'INPUT_SYMLINK', { path: rel, kind: 'symlink' }, `任务源路径是符号链接：${rel}`);
       if (stat.isDirectory()) copyTree(source, destination);
       else if (stat.isFile()) { io.mkdirSync(dirname(destination), { recursive: true }); prepareFiles({ operation: 'copy', source, destination }); }
-      else throw failure('PREPARE_INPUT_UNSUPPORTED', `任务源路径不是普通文件：${rel}`);
+      else throw detailFailure('PREPARE_INPUT_UNSUPPORTED', 'INPUT_SPECIAL', { path: rel, kind: 'special' }, `任务源路径不是普通文件：${rel}`);
     }
-    if (skippedInputs.length) observations.skippedInputs = skippedInputs;
+    const skippedSnapshot = skipped.snapshot();
+    if (skippedSnapshot.count) {
+      observations.skippedInputCount = skippedSnapshot.count;
+      observations.skippedInputs = skippedSnapshot.sample;
+    }
     observations.steps.push('stage-copied');
     // The stage reuses the task worktree's installed dependencies. A worktree that never ran the
     // standard install otherwise fails deep inside a package build with no actionable reason, so
@@ -412,7 +449,8 @@ async function runTaskPreparation({ options, io, deps }) {
       },
     });
     if (missingDependencies.length) {
-      throw failure('PREPARE_DEPENDENCY_REQUIRED', `任务工作树缺少依赖：${missingDependencies.join('、')}。请先在该工作树执行 pnpm install --frozen-lockfile。`);
+      throw detailFailure('PREPARE_DEPENDENCY_REQUIRED', 'DEPENDENCY_REQUIRED', { packages: missingDependencies },
+        `任务工作树缺少依赖：${missingDependencies.join('、')}。请先在该工作树执行 pnpm install --frozen-lockfile。`);
     }
     let linkedTools = 0;
     for (const rel of ['node_modules', ...packagePaths.map(item => join(item, 'node_modules'))]) {
@@ -622,6 +660,10 @@ async function startFreshTaskRuntime({ options, io, deps }) {
   try {
     preparation = await runTaskPreparation({ options, io, deps });
     observations.preparation = { candidateDigest: preparation.candidateBefore.candidate.contentDigest, inputsDigest: preparation.candidateBefore.inputs.contentDigest, packages: preparation.packages.map(item => ({ name: item.name, sha256: item.sha256 })) };
+    // Skip volume is honest observation data, not proof of correctness: expose the true total so a
+    // suspiciously large skip set is visible even though only a bounded sample is kept.
+    if (Number.isInteger(preparation.observations?.skippedInputCount)) observations.preparation.skippedInputCount = preparation.observations.skippedInputCount;
+    if (Array.isArray(preparation.observations?.skippedInputs)) observations.preparation.skippedInputs = preparation.observations.skippedInputs;
     runtimeRoot = io.realpathSync(io.mkdtempSync(join(io.realpathSync(tmpdir()), runtimePrefix)));
     io.chmodSync(runtimeRoot, 0o700);
     const owner = io.statSync(runtimeRoot, { bigint: true });
