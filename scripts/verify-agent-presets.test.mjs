@@ -1,11 +1,15 @@
 import { test } from 'node:test'
 import { ok, equal, deepEqual } from 'node:assert/strict'
+// YAML 解析改用仓库已依赖的 `yaml` 包，去掉对本机 Python/PyYAML 的依赖（见 specs/local-gates-repair.spec.md「旧标准变更」）。
+import { parseAllDocuments } from 'yaml'
 import { readFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { build } from 'esbuild'
 import { spawnSync } from 'node:child_process'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
+// 本机 `python3` 缺 PyYAML 时改用仓库内解析（见 specs/local-gates-repair.spec.md「旧标准变更」）。
+import { pythonYamlAvailable, personaConfigFromText, rowsFromText } from './lib/preset-yaml.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -90,6 +94,7 @@ print(json.dumps({
     'prefix': cfg.get('prefix'),
 }))
 `
+  if (!pythonYamlAvailable()) return personaConfigFromText(rel, read(rel))
   const res = spawnSync('python3', ['-c', script, join(root, rel)], { encoding: 'utf8' })
   if (res.status !== 0) {
     throw new Error(`${rel} persona config parse failed:\n${res.stderr || res.stdout}`)
@@ -112,6 +117,7 @@ data = docs[0]
 assert isinstance(data, list), type(data)
 print(len(data))
 `
+  if (!pythonYamlAvailable()) return rowsFromText(rel, read(rel))
   const res = spawnSync('python3', ['-c', script, join(root, rel)], { encoding: 'utf8' })
   if (res.status !== 0) {
     throw new Error(`${rel} yaml parse failed:\n${res.stderr || res.stdout}`)

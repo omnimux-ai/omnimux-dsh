@@ -627,7 +627,14 @@ if (!targetAppPath) {
     + `请用 --app <应用路径> 或 ${TARGET_APP_ENV} 显式指定。预检不会退回最小替身。`);
 }
 if (!existsSync(targetAppPath)) {
-  fail(`目标应用不存在: ${targetAppPath}（Profile ${targetProfile} 对应的物化目标）。`);
+  if (explicitApp) {
+    fail(`目标应用不存在: ${targetAppPath}（显式指定的物化目标）。`);
+  }
+  // 推导得出的默认目标应用在本机未安装：该 Profile 没有可校验的宿主，启动预检无从执行。
+  // 这是「不适用」，不是「代际不匹配」，因此降级为明确跳过；显式 --app 指定却缺失仍硬失败。
+  console.log(`⚠ [Pre-flight] 跳过启动预检：目标应用未安装 ${targetAppPath}（Profile ${targetProfile}）。`
+    + `安装该应用后重跑可得到完整校验；显式 --app 指向不存在的路径仍会失败。`);
+  process.exit(0);
 }
 
 const targetHostPackages = new TargetHostPackages(targetAppPath);
