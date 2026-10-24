@@ -33,10 +33,10 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-/** 「添加节点」菜单里导演台条目的文案。#3640 把菜单文案从「3D 导演台 / 3D Director」改成
+/** 「添加节点」菜单里导演台条目的当前文案。#3640 把菜单文案从「3D 导演台 / 3D Director」改成
  * 「导演台 / Director」，而节点类型名仍是「3D 导演台 / 3D Director」——两者是两个事实。
- * 菜单文案只此一处声明，改名时改这里即可，避免 runner 与产品事实再次脱节。 */
-export const DIRECTOR_PALETTE_LABELS = ['导演台', 'Director', '3D 导演台', '3D Director'];
+ * 这里只认当前文案：菜单再改名时本 runner 应当带着期望文案明确失败，而不是静默兼容旧文案。 */
+const DIRECTOR_PALETTE_LABELS = ['导演台', 'Director'];
 const reportRoot = join(root, '.agent-reports/beeftv-director');
 const expected = ['normal-project-entry', 'portrait-selected', 'managed-media-decoded', 'saved-scene', 'play-seek', 'decoded-motion', 'scene-reopened', 'aspect-reopened'];
 const browserEnv = () => ({ HOME: process.env.HOME, PATH: process.env.PATH });
@@ -226,7 +226,7 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle, palett
     const menuLabel = await waitForAnyLabel(paletteLabels, 30000);
     if (!menuLabel) throw new Error(`3D director palette entry did not appear (expected: ${paletteLabels.join(' / ')})`);
     const nodeLabel = await clickFirstLabel([menuLabel], 10000);
-    if (!nodeLabel) throw new Error('3D director palette entry not actionable');
+    if (!nodeLabel) throw new Error(`3D director palette entry not actionable (expected: ${paletteLabels.join(' / ')})`);
     await visible('text="打开导演台"'); await page.click('text="打开导演台"');
     await visible('.wf-director-root');
     await visible('.director-viewport-shell[data-renderer-ready="true"]', 45000);
