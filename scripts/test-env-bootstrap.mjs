@@ -250,7 +250,7 @@ const PREPARATION_OUTPUTS = {
   'packages/dsh-ui-kit': ['lib/index.js', 'lib/index.d.ts', 'lib/index.js.map', 'lib/index.d.ts.map'],
   'plugins/omnimux-inspiration': ['lib/client.js'],
   'plugins/omnimux-assets': ['lib/client.js'],
-  'plugins/omnimux-browser': ['lib/index.js', 'lib/protocol.js', 'lib/invariant.js', 'lib/client.js'],
+  'plugins/omnimux-browser': ['lib/index.js', 'lib/protocol.js', 'lib/client.js'],
   'plugins/omnimux-workflow': ['dist/index.js', 'lib/client.js', 'lib/canvas.js', 'lib/director.js'],
   'plugins/omnimux-automation': ['lib/client.js'],
 };
