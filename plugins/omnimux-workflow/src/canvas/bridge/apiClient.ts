@@ -271,6 +271,14 @@ export function pickLocalFiles(): Promise<ApiResult<{ path: string | null; paths
   });
 }
 
+/** 同一个原生选择器，`kind: 'directory'`（宿主 `/api/pick` 支持两种 kind）。 */
+export function pickLocalDirectory(): Promise<ApiResult<{ path: string | null; paths: string[] }>> {
+  return request<{ path: string | null; paths: string[] }>(WORKFLOW_API_ROUTES.pick, {
+    method: 'POST',
+    body: { kind: 'directory' },
+  });
+}
+
 export function probeLocalFiles(
   paths: string[],
 ): Promise<ApiResult<{ items: Array<{ path: string; exists: boolean; size?: number; mime?: string; name?: string }> }>> {

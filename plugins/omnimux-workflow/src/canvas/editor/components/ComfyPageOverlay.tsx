@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useT } from '../../i18n';
 import { useCanvasStore } from '../../store/canvasStore';
+import { pickLocalDirectory } from '../../bridge/apiClient.ts';
 import {
   COMFY_PAGE_PROBE_TIMEOUT_MS,
   DEFAULT_COMFY_PAGE_URL,
@@ -27,16 +28,25 @@ import {
 import {
   COMFY_BACKEND_LOG_LINES,
   COMFY_BACKEND_POLL_MS,
+  comfyBackendDriverKey,
+  comfyBackendSettingsCodeKey,
   fetchComfyBackendLog,
+  fetchComfyBackendSettings,
   fetchComfyBackendState,
   formatComfyBackendBytes,
   installComfyBackend,
+  parseComfyBackendDriver,
   parseComfyBackendLog,
+  parseComfyBackendSettings,
+  parseComfyBackendSettingsCode,
   parseComfyBackendStatus,
   resolveComfyBackendPanel,
   shouldProbeComfyPage,
   startComfyBackend,
+  updateComfyBackendSettings,
+  type ComfyBackendDriver,
   type ComfyBackendPrimaryAction,
+  type ComfyBackendSettings,
   type ComfyBackendStatus,
 } from '../utils/comfyBackendClient';
 import { COMFY_PAGE_OPEN_EVENT } from '../../nodes/definitions/comfyPage';
@@ -55,6 +65,8 @@ const PRIMARY_KEY: Record<Exclude<ComfyBackendPrimaryAction, 'none'>, string> = 
   start: 'comfyPage.backend.start',
   'retry-install': 'comfyPage.backend.retryInstall',
   'retry-start': 'comfyPage.backend.retryStart',
+  update: 'comfyPage.backend.update',
+  'change-dir': 'comfyPage.backend.changeDir',
 };
 
 export function ComfyPageOverlay() {
@@ -76,6 +88,19 @@ export function ComfyPageOverlay() {
   const [logOpen, setLogOpen] = useState(false);
   const [logLines, setLogLines] = useState<string[]>([]);
   const [logError, setLogError] = useState<string | null>(null);
+
+  /** M3：宿主给的设置、预检体积与驱动结论。 */
+  const [settings, setSettings] = useState<ComfyBackendSettings>({ installRoot: '', modelsPath: '' });
+  const [requiredBytes, setRequiredBytes] = useState(0);
+  const [driver, setDriver] = useState<ComfyBackendDriver>('unknown');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  /** 输入框草稿（空串 = 用默认）。 */
+  const [installRootDraft, setInstallRootDraft] = useState('');
+  const [modelsPathDraft, setModelsPathDraft] = useState('');
+  /** 设置保存失败的码（宿主 400 的 code）。 */
+  const [settingsErrorKey, setSettingsErrorKey] = useState<string | null>(null);
+  const [settingsErrorCode, setSettingsErrorCode] = useState<string | null>(null);
+  const [settingsSaving, setSettingsSaving] = useState(false);
 
   /** 动作请求的 abort 句柄：关闭全屏层时一并中止。 */
   const actionRef = useRef<AbortController | null>(null);
@@ -115,6 +140,9 @@ export function ComfyPageOverlay() {
       setLogOpen(false);
       setLogLines([]);
       setLogError(null);
+      setSettingsOpen(false);
+      setSettingsErrorKey(null);
+      setSettingsErrorCode(null);
       setAttempt((value) => value + 1);
     };
     window.addEventListener(COMFY_PAGE_OPEN_EVENT, listener);
@@ -161,6 +189,13 @@ export function ComfyPageOverlay() {
       if (parsed) {
         setBackend(parsed);
         setBackendError(null);
+        setSettings(parseComfyBackendSettings(result.body.settings));
+        setRequiredBytes(
+          typeof result.body.requiredBytes === 'number' && Number.isFinite(result.body.requiredBytes)
+            ? result.body.requiredBytes
+            : 0,
+        );
+        setDriver(parseComfyBackendDriver(result.body.driver));
         patchNodeStatus(nodeId, parsed.state === 'ready' ? 'connected' : 'unreachable');
         return;
       }
@@ -207,6 +242,73 @@ export function ComfyPageOverlay() {
 
   // 卸载：中止在途动作请求（轮询与状态/日志请求由各自 effect 的清理负责）。
   useEffect(() => () => actionRef.current?.abort(), []);
+
+  // 打开设置区时用宿主当前值填充草稿；轮询不会覆盖用户正在输入的内容
+  // （依赖的是两个字符串本身，值没变就不会重跑）。
+  useEffect(() => {
+    if (!settingsOpen) return;
+    setInstallRootDraft(settings.installRoot);
+    setModelsPathDraft(settings.modelsPath);
+  }, [settingsOpen, settings.installRoot, settings.modelsPath]);
+
+  /** 保存设置：只发用户真正改过的字段（另一项不会被顺手重置）。 */
+  const saveSettings = useCallback(
+    async (patch: { installRoot?: string; modelsPath?: string }) => {
+      if (!nodeId) return;
+      actionRef.current?.abort();
+      const controller = new AbortController();
+      actionRef.current = controller;
+      setSettingsSaving(true);
+      setSettingsErrorKey(null);
+      setSettingsErrorCode(null);
+      try {
+        const result = await updateComfyBackendSettings(patch, controller.signal);
+        if (controller.signal.aborted) return;
+        if (result.ok) {
+          setSettings(parseComfyBackendSettings(result.body.settings));
+          setAttempt((value) => value + 1);
+          return;
+        }
+        const code = parseComfyBackendSettingsCode(result.body.code);
+        const rawCode = result.body.code;
+        setSettingsErrorCode(code ?? (typeof rawCode === 'string' ? rawCode : null));
+        setSettingsErrorKey(
+          code ? comfyBackendSettingsCodeKey(code) : 'comfyPage.backend.settingsCode.unknown',
+        );
+      } finally {
+        if (actionRef.current === controller) actionRef.current = null;
+        if (!controller.signal.aborted) setSettingsSaving(false);
+      }
+    },
+    [nodeId],
+  );
+
+  /** 「选择目录」：复用画布既有的原生选择器（宿主 /api/pick，kind=directory）。 */
+  const pickDirectory = useCallback(
+    async (field: 'installRoot' | 'modelsPath') => {
+      const picked = await pickLocalDirectory().catch(() => null);
+      if (!picked) {
+        setSettingsErrorKey('comfyPage.backend.settings.pickFailed');
+        setSettingsErrorCode(null);
+        return;
+      }
+      if (!picked.ok) {
+        setSettingsErrorKey(
+          picked.body.error === 'picker-unsupported'
+            ? 'comfyPage.backend.settings.pickUnsupported'
+            : 'comfyPage.backend.settings.pickFailed',
+        );
+        setSettingsErrorCode(picked.body.error ?? null);
+        return;
+      }
+      const path = picked.body.path;
+      if (!path) return;
+      if (field === 'installRoot') setInstallRootDraft(path);
+      else setModelsPathDraft(path);
+      await saveSettings(field === 'installRoot' ? { installRoot: path } : { modelsPath: path });
+    },
+    [saveSettings],
+  );
 
   const runAction = useCallback(
     async (kind: 'install' | 'start') => {
@@ -290,8 +392,15 @@ export function ComfyPageOverlay() {
 
   const runPrimary = () => {
     if (!view) return;
+    // 「换目录」不是后端动作：它只是把设置区打开，让用户选一个可写的目录。
+    if (view.primaryAction === 'change-dir') {
+      setSettingsOpen(true);
+      return;
+    }
     if (view.primaryAction === 'start' || view.primaryAction === 'retry-start') void runAction('start');
-    else if (view.primaryAction === 'install' || view.primaryAction === 'retry-install') void runAction('install');
+    else if (view.primaryAction === 'install' || view.primaryAction === 'retry-install' || view.primaryAction === 'update') {
+      void runAction('install');
+    }
   };
 
   return (
@@ -305,6 +414,16 @@ export function ComfyPageOverlay() {
         >
           {headerStatus}
         </span>
+        {managed && panel && panel.kind === 'state' ? (
+          <button
+            type="button"
+            className="wf-comfy-page-overlay__settings-toggle"
+            aria-expanded={settingsOpen}
+            onClick={() => setSettingsOpen((value) => !value)}
+          >
+            {t('comfyPage.backend.settings.open')}
+          </button>
+        ) : null}
         {view && view.showLog ? (
           <button
             type="button"
@@ -375,6 +494,23 @@ export function ComfyPageOverlay() {
             </p>
           ) : null}
 
+          {view.showDiskRequired && requiredBytes > 0 ? (
+            <dl className="wf-comfy-page-overlay__facts">
+              <div className="wf-comfy-page-overlay__fact">
+                <dt>{t('comfyPage.backend.factRequired')}</dt>
+                <dd className="wf-comfy-page-overlay__fact-value" data-fact="required-bytes">
+                  {formatComfyBackendBytes(requiredBytes)}
+                </dd>
+              </div>
+            </dl>
+          ) : null}
+
+          {view.showDriverNote ? (
+            <p className="wf-comfy-page-overlay__driver" data-driver={driver}>
+              {t(comfyBackendDriverKey(driver))}
+            </p>
+          ) : null}
+
           {view.state === 'not-installed' && backend && backend.target ? (
             <dl className="wf-comfy-page-overlay__facts">
               <div className="wf-comfy-page-overlay__fact">
@@ -407,6 +543,94 @@ export function ComfyPageOverlay() {
             >
               {t(PRIMARY_KEY[view.primaryAction])}
             </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {managed && settingsOpen && panel && panel.kind === 'state' ? (
+        <div className="wf-comfy-page-overlay__settings">
+          <div className="wf-comfy-page-overlay__setting" data-field="install-root">
+            <label className="wf-comfy-page-overlay__setting-label" htmlFor="wf-comfy-install-root">
+              {t('comfyPage.backend.settings.installRoot')}
+            </label>
+            <div className="wf-comfy-page-overlay__setting-row">
+              <input
+                id="wf-comfy-install-root"
+                className="wf-comfy-page-overlay__setting-input"
+                value={installRootDraft}
+                spellCheck={false}
+                placeholder={backend ? backend.installRoot : ''}
+                onChange={(event) => setInstallRootDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') void saveSettings({ installRoot: installRootDraft });
+                }}
+              />
+              <button
+                type="button"
+                className="wf-comfy-page-overlay__setting-pick"
+                onClick={() => void pickDirectory('installRoot')}
+              >
+                {t('comfyPage.backend.settings.pick')}
+              </button>
+            </div>
+            <p className="wf-comfy-page-overlay__setting-hint">
+              {settings.installRoot
+                ? settings.installRoot
+                : `${t('comfyPage.backend.settings.installRootDefault')}${backend && backend.installRoot ? ` · ${backend.installRoot}` : ''}`}
+            </p>
+          </div>
+
+          <div className="wf-comfy-page-overlay__setting" data-field="models-path">
+            <label className="wf-comfy-page-overlay__setting-label" htmlFor="wf-comfy-models-path">
+              {t('comfyPage.backend.settings.modelsPath')}
+            </label>
+            <div className="wf-comfy-page-overlay__setting-row">
+              <input
+                id="wf-comfy-models-path"
+                className="wf-comfy-page-overlay__setting-input"
+                value={modelsPathDraft}
+                spellCheck={false}
+                onChange={(event) => setModelsPathDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') void saveSettings({ modelsPath: modelsPathDraft });
+                }}
+              />
+              <button
+                type="button"
+                className="wf-comfy-page-overlay__setting-pick"
+                onClick={() => void pickDirectory('modelsPath')}
+              >
+                {t('comfyPage.backend.settings.pick')}
+              </button>
+            </div>
+            <p className="wf-comfy-page-overlay__setting-hint">
+              {settings.modelsPath
+                ? settings.modelsPath
+                : t('comfyPage.backend.settings.modelsPathDefault')}
+            </p>
+          </div>
+
+          <div className="wf-comfy-page-overlay__setting-actions">
+            <button
+              type="button"
+              className="wf-comfy-page-overlay__setting-save"
+              disabled={settingsSaving}
+              onClick={() =>
+                void saveSettings({ installRoot: installRootDraft, modelsPath: modelsPathDraft })
+              }
+            >
+              {t('comfyPage.backend.settings.save')}
+            </button>
+          </div>
+
+          {settingsErrorKey ? (
+            <p
+              className="wf-comfy-page-overlay__setting-error"
+              role="alert"
+              data-code={settingsErrorCode ?? ''}
+            >
+              {t(settingsErrorKey)}
+            </p>
           ) : null}
         </div>
       ) : null}

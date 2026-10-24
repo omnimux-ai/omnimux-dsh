@@ -45,6 +45,8 @@ function fakeService(calls) {
       calls.push('stop');
       return NOT_INSTALLED;
     },
+    settings: () => ({ installRoot: '', modelsPath: '' }),
+    updateSettings: () => ({ ok: true, code: null, settings: { installRoot: '', modelsPath: '' } }),
   };
 }
 

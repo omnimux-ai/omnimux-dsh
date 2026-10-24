@@ -58,11 +58,13 @@ export function createComfyBackendRoutes(service: ComfyBackendService): {
     if (path === WORKFLOW_API_ROUTES.comfyBackendState && method === 'GET') {
       // 状态里额外给「装之前要多少空间」和「本机需不需要额外驱动」——都是纯计算，
       // 不在这里做磁盘/端口探测（那是安装/启动动作时的事，避免每次轮询都探一遍）。
-      const target = (await service.status()).target;
+      // 只读一次状态（一次 status() 会读状态文件并可能探测后端，别读两遍）。
+      const status = await service.status();
+      const target = status.target;
       return {
         status: 200,
         body: {
-          status: await service.status(),
+          status,
           settings: service.settings(),
           requiredBytes: target ? estimateRequiredBytes(target) : 0,
           driver: target ? checkDriver(target) : 'unsupported',

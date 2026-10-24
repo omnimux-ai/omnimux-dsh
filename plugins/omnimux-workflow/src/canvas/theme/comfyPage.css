@@ -361,3 +361,117 @@
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
   font-size: 12px;
 }
+
+/* ==================== 失败分类 + 目录设置（Issue 3717 M3） ====================
+ * 失败面板复用上面的骨架，只多两行事实：磁盘需求与驱动结论。
+ * 设置区与日志同层：贴在面板下方，展开才占位。 */
+
+.wf-comfy-page-overlay__settings-toggle {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l2, var(--wb-border));
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.wf-comfy-page-overlay__settings-toggle[aria-expanded='true'] {
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+}
+
+/* 驱动结论：三态都明说，不用颜色暗示「通过」。 */
+.wf-comfy-page-overlay__driver {
+  margin: 0;
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+  font-size: 12px;
+}
+
+.wf-comfy-page-overlay__settings {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--dsw-alias-border-l2, var(--wb-border));
+}
+
+/* 面板是 flex:1 的整屏容器，设置区必须自带列宽：否则输入框 flex:1 会横铺整屏、
+   把「选择目录」挤出可视区。 */
+.wf-comfy-page-overlay__setting {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.wf-comfy-page-overlay__setting-label {
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.wf-comfy-page-overlay__setting-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wf-comfy-page-overlay__setting-input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l2, var(--wb-border));
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-base, var(--wb-bg-base));
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+  font: inherit;
+  font-size: 12px;
+}
+
+.wf-comfy-page-overlay__setting-input::placeholder {
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+}
+
+.wf-comfy-page-overlay__setting-pick,
+.wf-comfy-page-overlay__setting-save {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--dsw-alias-border-l2, var(--wb-border-strong));
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.wf-comfy-page-overlay__setting-save {
+  background: var(--dsw-alias-brand-primary, var(--wb-accent));
+  color: var(--dsw-alias-label-primary-foreground, var(--dsw-alias-label-primary));
+}
+
+.wf-comfy-page-overlay__setting-save:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* 默认值可见：空串代表「用默认」，这里显示当前生效路径而不是留白。 */
+.wf-comfy-page-overlay__setting-hint {
+  margin: 0;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.wf-comfy-page-overlay__setting-error {
+  margin: 0;
+  max-width: 480px;
+  color: var(--dsw-alias-state-error, #d9534f);
+  font-size: 12px;
+}
