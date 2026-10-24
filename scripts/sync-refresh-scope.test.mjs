@@ -42,7 +42,10 @@ describe('OmniMux managed file: refresh scope (#3157)', () => {
       OMNIMUX_SYNC_VIA: 'internal',
       OMNIMUX_PLUGINS_DIR: fixturePlugins,
       HOME: fakeHome,
-      COREPACK_HOME: process.env.COREPACK_HOME,
+      // 重定向 HOME 会把 corepack 的缓存目录一起挪走，于是每次同步都得重新下载被 pin 的
+      // pnpm：网络当时的状态决定了检查是绿是红。缓存位置本来与 HOME 无关，固定住它即可。
+      // 刻意不关 corepack 联网——那会把偶发红换成「缓存不在时必然红」。
+      COREPACK_HOME: process.env.COREPACK_HOME ?? `${process.env.HOME}/.cache/node/corepack`,
       COREPACK_DEFAULT_TO_LATEST: '0',
       COREPACK_ENABLE_AUTO_PIN: '0',
       CI: 'true',
