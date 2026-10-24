@@ -36,7 +36,9 @@
 
 - 假设 1：`source` 不是字符串 ⇔ 目标文件在磁盘上不存在。依据：受保护分支的 `source` 来自 `createSourceInspection().readTarget()`（`readExistingSource` 只服务另一条 `evaluateWithInspection` 路径）。实测：目标是目录、符号链接、悬空符号链接、FIFO 或 `chmod 000` 时都是**抛错拒绝**，不会返回非字符串，所以这条放行不会在这些形态上被触发。
 - 假设 2：把「整条尾部缺失」按缺失处理不会放松路径安全。依据：`capturePath` 对每个存在的组件仍做 `realpathSync(path) !== path` 与 `lstatSync` 类型检查；缺失组件不参与 `openSync`，且「缺失层之下出现实体」会抛错——该检查是 load-bearing 的（删掉后同场景会放行，已用 IO seam 差分验证）。
-- 假设 3：解析失败就等于放弃结构化检查，因此放行必须配字面模式兜底。依据：acorn 无法解析候选内容时，跳过/聚焦、动态执行、公共绑定逃逸、未验证 import 这些**结构化原因根本不会产生**。已用字面模式覆盖前两类（`test|it|describe|suite` 的 `skip|only|todo`、`eval`、`new Function`、`require`、动态 `import`、`node:vm|child_process|worker_threads`、`process.binding`），并按「调用形态」匹配以避免误伤正常用例名与注释。**残余取舍**：公共绑定逃逸与未验证 import 在解析失败时仍不被覆盖——这与既有 TS 盲区同源，显式记录而非声称已覆盖。
+- 假设 3：解析失败就等于放弃结构化检查，因此放行必须配字面模式兜底。依据：acorn 无法解析候选内容时，跳过/聚焦、动态执行、公共绑定逃逸、未验证 import 这些**结构化原因根本不会产生**。已用字面模式覆盖前两类（`test|it|describe|suite` 的 `skip|only|todo`、`{ skip|only|todo: true }`、`eval`、`new Function`、`require`、动态 `import`、`'node:vm'|'node:child_process'|'node:worker_threads'`、`process.binding`）。
+- 假设 4：该兜底是**拼写级**而非类别级，且两个方向都有已知代价。实测拦不住的等价写法：`test['skip']`、`test\n.skip`、`test.concurrent.skip`、`test.each([...]).skip`、`skipIf`/`runIf`、`{ skip: !!0 }`、`globalThis['ev'+'al']`、`(0, eval)`、`Function(...)`（无 `new`）、`Reflect.construct`、裸 `import vm from 'vm'`、`process['binding']`。反方向会误判拒绝的良性内容：注释/字符串里出现 `eval(`、`require(`、`test.skip(`，以及类型或断言位置出现 `{ skip: true }`（如 `Partial<{ skip: true }>`、`toHaveBeenCalledWith({ skip: true })`）。**可利用性有界**：只能靠一次 `write` 新建不可解析文件触发；已存在的不可解析文件做任何改写仍是拒绝（`changedCases` 为空、声明通道也打不开），所以「先写良性再改写」绕不过去。合同文档已按此边界改写，不再读作类别级承诺。
+- 假设 5：导出的 `evaluateAntiCheat` 比 `handle()` 更保守。它不参与本次放宽，同一份「新增不可解析 TS 候选」在它那里仍是拒绝；只被单测使用，hook 与 CI 都走 `handle()` 的 CLI。代码里原先写着「两处判定必须一致」，与实现不符，已改为如实描述这条单向不对称。
 
 ## 证伪方式
 

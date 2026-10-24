@@ -392,7 +392,10 @@ function evaluateWithInspection({ tool, filePath, content, cwd = process.cwd() }
   const isTestFile = isTestPath(normalizedPath);
   const isFixtureFile = isFixturePath(normalizedPath);
   // 目标已存在时必须与磁盘现状比较：否则导出的评估入口看不出断言被削弱，
-  // 会对同一份候选内容给出比 hook 路径更宽松的结论（两处判定必须一致）。
+  // 会对同一份候选内容给出比 hook 路径更宽松的结论。
+  // 注意一致性是**单向**的：本入口比 `handle()` 更保守——它不参与「无 baseline 的
+  // 新增文件解析失败即放行」那条放宽，同一份新增 TS 候选在这里仍然拒绝。
+  // 本入口只被单测使用，hook 与 CI 都走 `handle()` 的 CLI，所以不影响运行路径。
   if (isTestFile && !isFixtureFile) {
     let snapshot;
     let inspection;
