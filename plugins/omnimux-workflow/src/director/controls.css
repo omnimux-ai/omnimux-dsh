@@ -18,16 +18,16 @@
 .wf-director-root .director-dropdown-anchor { display:inline-flex; min-width:0; }
 .wf-director-root .director-input-wrap input::-webkit-inner-spin-button { appearance:none; }
 .wf-director-root .director-switch { width:36px; height:20px; border-radius:var(--r-full); padding:2px; background:var(--dsw-alias-bg-layer-3); border:1px solid var(--dsw-alias-border); }
-.wf-director-root .director-switch span { display:block; width:16px; height:16px; border-radius:50%; background:var(--dsw-alias-label-primary); transition:transform .12s; }
+.wf-director-root .director-switch span { display:block; width:16px; height:16px; border-radius:var(--r-full); background:var(--dsw-alias-label-primary); transition:transform .12s; }
 .wf-director-root .director-switch[aria-checked="true"] { background:var(--dsw-alias-brand-primary); }
 .wf-director-root .director-switch[aria-checked="true"] span { transform:translateX(14px); }
 /* P2e 滑杆单一实现：轨道 2px / 圆角 1 / border，滑块 12px 圆 / label-primary。 */
 .wf-director-root .director-slider { width:100%; min-width:0; height:24px; margin:0; appearance:none; background:transparent; }
 .wf-director-root .director-slider::-webkit-slider-runnable-track { height:2px; border-radius:1px; background:var(--dsw-alias-border); }
-.wf-director-root .director-slider::-webkit-slider-thumb { appearance:none; width:12px; height:12px; margin-top:-5px; border:0; border-radius:50%; background:var(--dsw-alias-label-primary); transition:transform .12s; }
+.wf-director-root .director-slider::-webkit-slider-thumb { appearance:none; width:12px; height:12px; margin-top:-5px; border:0; border-radius:var(--r-full); background:var(--dsw-alias-label-primary); transition:transform .12s; }
 .wf-director-root .director-slider:hover::-webkit-slider-thumb { transform:scale(1.1); }
 .wf-director-root .director-slider::-moz-range-track { height:2px; border-radius:1px; background:var(--dsw-alias-border); }
-.wf-director-root .director-slider::-moz-range-thumb { width:12px; height:12px; border:0; border-radius:50%; background:var(--dsw-alias-label-primary); }
+.wf-director-root .director-slider::-moz-range-thumb { width:12px; height:12px; border:0; border-radius:var(--r-full); background:var(--dsw-alias-label-primary); }
 .wf-director-root .director-slider:disabled { opacity:.45; }
 .wf-director-root .director-color { width:40px; height:32px; border:1px solid var(--dsw-alias-border); border-radius:8px; background:transparent; }
 .wf-director-root .director-menu { position:fixed; z-index:var(--z-menu); min-width:180px; max-width:320px; max-height:55vh; overflow:auto; padding:6px; border:1px solid var(--dsw-alias-border); border-radius:var(--r-xl); background:var(--dsw-alias-bg-elevated); color:var(--dsw-alias-label-primary); box-shadow:0 8px 24px var(--dsw-alias-bg-mask-1); }
