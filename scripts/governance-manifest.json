@@ -99,6 +99,7 @@
     "task-runtime-proof.test.mjs",
     "test-env-bootstrap-fresh.test.mjs",
     "test-env-bootstrap-inputs.test.mjs",
+    "test-env-bootstrap-observability.test.mjs",
     "test-env-bootstrap.mjs",
     "test-env-bootstrap.test.mjs",
     "test-env-credentials.mjs",
