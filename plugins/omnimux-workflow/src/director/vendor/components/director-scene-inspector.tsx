@@ -52,7 +52,7 @@ export function DirectorSceneInspector({ scene, onChange }: { scene: DirectorSce
                 </div>)}
             </section>
             <section className="space-y-3 border-b px-4 py-4" style={{ borderColor: "var(--border)" }} aria-label="全景背景">
-                <h3 className="font-semibold">全景背景</h3>
+                <h3 className="text-[13px] font-semibold">全景背景</h3>
                 <div className="space-y-2">
                     <span className="text-xs opacity-65">{scene.panorama ? "已连接全景图" : "尚未添加全景图"}</span>
                     {scene.panorama ? <div className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs" style={{ borderColor: "var(--border)" }}>
@@ -68,13 +68,13 @@ export function DirectorSceneInspector({ scene, onChange }: { scene: DirectorSce
                         </label>
                         <div className="flex h-7 min-w-0 flex-1 items-center gap-0.5 rounded-lg px-2 text-xs" style={{ background: "var(--director-dock-active-surface)" }}>
                             <span className="opacity-50">#</span>
-                            <input type="text" aria-label="天空颜色色值" className="h-full min-w-0 flex-1 bg-transparent font-mono text-xs uppercase outline-none" maxLength={6} spellCheck={false} value={skyHex} onChange={(event) => setSkyHex(event.target.value.toUpperCase())} onBlur={commitSkyHex} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { setSkyHex(scene.background.replace(/^#/, "").toUpperCase()); event.currentTarget.blur(); } }} />
+                            <input type="text" aria-label="天空颜色色值" className="h-full min-w-0 flex-1 border-0 bg-transparent font-mono text-xs uppercase outline-none" maxLength={6} spellCheck={false} value={skyHex} onChange={(event) => setSkyHex(event.target.value.toUpperCase())} onBlur={commitSkyHex} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { setSkyHex(scene.background.replace(/^#/, "").toUpperCase()); event.currentTarget.blur(); } }} />
                         </div>
                     </div>
                 </div>
             </section>
             <section className="space-y-3 border-b px-4 py-4" style={{ borderColor: "var(--border)" }} aria-label="全景球">
-                <h3 className="font-semibold">全景球</h3>
+                <h3 className="text-[13px] font-semibold">全景球</h3>
                 <div className="text-xs opacity-65">水平旋转</div>
                 <div className="flex items-center gap-3">
                     <Slider aria-label="全景球水平旋转" className="m-0 min-w-0 flex-1" min={0} max={360} step={1} value={sphere.rotation} onChangeComplete={(panoramaRotation) => onChange({ panoramaRotation })} />
@@ -106,7 +106,7 @@ export function DirectorSceneInspector({ scene, onChange }: { scene: DirectorSce
             </div>
             <section className="space-y-3 border-t px-4 py-4" style={{ borderColor: "var(--border)" }} aria-label="地面设置">
                 <div className="flex items-center justify-between gap-3">
-                    <h3 className="font-semibold">地面</h3>
+                    <h3 className="text-[13px] font-semibold">地面</h3>
                     <Switch size="sm" aria-label="显示地面" checked={ground.visible} onChange={(visible) => updateGround({ visible })} />
                 </div>
                 <div className="space-y-1.5">

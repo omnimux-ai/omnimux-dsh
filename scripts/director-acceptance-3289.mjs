@@ -22,6 +22,11 @@
  *   DIRECTOR_FFMPEG=/Users/x/.local/bin/ffmpeg \
  *   node scripts/director-acceptance-3289.mjs
  *
+ * Measurement variant (#3682): add DIRECTOR_MEASURE=1 to also assert the #3646 layout
+ * thresholds (topbar 48 / docks 248+300 / sequencer 236 and middle-column width / inspector
+ * scroll / font-size, radius and border-color sets) in the same real-browser run. The extra
+ * assertion is `layout-thresholds`; measured values land in `layout-thresholds.json`.
+ *
  * Evidence: `<root>/.agent-reports/beeftv-director/acceptance-3289-<random>/`.
  * Exit code 0 only when a completed run has read-back passing evidence.
  */
@@ -38,7 +43,19 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
  * 这里只认当前文案：菜单再改名时本 runner 应当带着期望文案明确失败，而不是静默兼容旧文案。 */
 const DIRECTOR_PALETTE_LABELS = ['导演台', 'Director'];
 const reportRoot = join(root, '.agent-reports/beeftv-director');
-const expected = ['normal-project-entry', 'portrait-selected', 'managed-media-decoded', 'saved-scene', 'play-seek', 'decoded-motion', 'scene-reopened', 'aspect-reopened'];
+/** #3646 §五 的真实浏览器阈值。开关默认关闭：不设 DIRECTOR_MEASURE 时断言集合与行为保持原样。 */
+const MEASURE = process.env.DIRECTOR_MEASURE === '1';
+const LAYOUT_THRESHOLDS = {
+  topbarHeight: 48,
+  leftDockWidth: 248,
+  rightDockWidth: 300,
+  sequencerHeight: 236,
+  fontSizes: [11, 12, 13, 15],
+  radii: [4, 6, 8, 10, 12, 999],
+};
+const baseExpected = ['normal-project-entry', 'portrait-selected', 'managed-media-decoded', 'saved-scene', 'play-seek', 'decoded-motion', 'scene-reopened', 'aspect-reopened'];
+// 测量断言紧跟入口阶段记录，保持断言顺序与 expected 一致。
+const expected = MEASURE ? [baseExpected[0], 'layout-thresholds', ...baseExpected.slice(1)] : baseExpected;
 const browserEnv = () => ({ HOME: process.env.HOME, PATH: process.env.PATH });
 const save = (directory, name, value) => fs.writeFileSync(join(directory, name), JSON.stringify(value, null, 2) + '\n');
 const read = (directory, name) => JSON.parse(fs.readFileSync(join(directory, name), 'utf8'));
@@ -49,7 +66,7 @@ const log = message => process.stdout.write(`[director-acceptance] ${stamp()} ${
  * Serialized declaration. Ego only receives the in-memory login capability,
  * never a token in evidence. Keep it fully self-contained.
  */
-async function browserJourney({ loginUrl, evidence, origin, projectTitle, paletteLabels }) {
+async function browserJourney({ loginUrl, evidence, origin, projectTitle, paletteLabels, measure, thresholds }) {
   const fs = await import('node:fs/promises');
   const assert = (await import('node:assert/strict')).default;
   const redact = value => String(value).replaceAll(loginUrl, '[redacted-login-url]').replace(/([?&]token=)[^&\s"'<>]+/gi, '$1REDACTED');
@@ -231,6 +248,124 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle, palett
     await visible('.wf-director-root');
     await visible('.director-viewport-shell[data-renderer-ready="true"]', 45000);
     record(phase, { normalUI: true, rendererReady: true, firstRunNoticeDismissed, newProjectLabel, namePlaceholder, fullscreenControl, nodeLabel });
+    if (measure) {
+      step = 'measure-layout-thresholds';
+      // 时间轴默认收起（store 默认 sequencerVisible=false），按用户路径点开后再量高度与宽度。
+      const timelineOpen = await page.evaluate(() => Boolean(document.querySelector('.wf-director-root .director-sequencer')));
+      if (!timelineOpen) {
+        await clickOrActivate('loc=css:.wf-director-root button[aria-label="动画时间轴"]', '.wf-director-root', { kind: 'aria', value: '动画时间轴' });
+        await visible('.wf-director-root .director-sequencer', 15000);
+      }
+      await page.screenshot({ path: `${evidence}/layout-thresholds.png` });
+      const measured = await page.evaluate(() => {
+        const root = document.querySelector('.wf-director-root');
+        if (!root) return { missing: ['.wf-director-root'] };
+        const round = value => Math.round(Number.parseFloat(value) * 100) / 100;
+        const box = element => { const rect = element.getBoundingClientRect(); return { width: round(rect.width), height: round(rect.height) }; };
+        const describe = node => {
+          const cls = typeof node.className === 'string' ? node.className.split(/\s+/).filter(Boolean).slice(0, 3).join('.') : '';
+          const text = [...node.childNodes].filter(child => child.nodeType === 3).map(child => child.textContent.trim()).join(' ').slice(0, 24);
+          return `${node.tagName.toLowerCase()}${cls ? '.' + cls : ''}${text ? ` "${text}"` : ''}`;
+        };
+        const hasOwnText = node => [...node.childNodes].some(child => child.nodeType === 3 && child.textContent.trim());
+        const topbar = root.querySelector('[data-director-topbar="true"]');
+        const workbench = root.querySelector('[data-director-workbench="true"]');
+        const leftDock = root.querySelector('[data-director-left-dock="true"]');
+        const rightDock = root.querySelector('[data-director-right-dock="true"]');
+        const sequencer = root.querySelector('.director-sequencer');
+        const inspector = root.querySelector('[data-director-property-inspector="true"]');
+        const missing = [];
+        for (const [name, element] of [['[data-director-topbar]', topbar], ['[data-director-workbench]', workbench], ['[data-director-left-dock]', leftDock], ['[data-director-right-dock]', rightDock], ['.director-sequencer', sequencer], ['[data-director-property-inspector]', inspector]]) if (!element) missing.push(name);
+        if (missing.length) return { missing };
+        // 栅格是 workbench 内唯一的 grid 子元素（顶栏是 flex 项），中列是既非左右栏也非时间轴槽的栅格项。
+        const grid = [...workbench.children].find(node => getComputedStyle(node).display === 'grid');
+        if (!grid) return { missing: ['workbench grid'] };
+        const middleColumn = [...grid.children].find(node => node !== leftDock && node !== rightDock && !node.hasAttribute('data-director-sequencer-slot'));
+        if (!middleColumn) return { missing: ['middle column'] };
+        // 面板外观集合的测量范围：导演台 chrome（顶栏 / 左右栏 / 时间轴 / 属性面板），
+        // 排除 3D 视口与其悬浮控件——那是三维场景，不是 #3646 收敛的面板规范。
+        const chromeScope = node => !node.closest('.director-viewport-shell, .director-viewport-dock, .director-viewport-notice');
+        const collect = () => {
+          const fonts = new Map(); const radii = new Map(); const borders = new Map();
+          const note = (map, value, node) => { const list = map.get(value) ?? []; if (list.length < 3) list.push(describe(node)); map.set(value, list); };
+          for (const node of root.querySelectorAll('*')) {
+            if (!chromeScope(node)) continue;
+            const style = getComputedStyle(node);
+            if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') continue;
+            // 字号只看「直接含可见文字」的元素：容器继承到的 16px 不代表任何可见文本。
+            if (hasOwnText(node)) note(fonts, round(style.fontSize), node);
+            for (const corner of ['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius']) {
+              const value = round(style[corner]);
+              if (value > 0) note(radii, value, node);
+            }
+            const widths = ['borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth'].map(side => round(style[side]));
+            if (widths.some(width => width > 0)) {
+              // 只看可见边框：与自身背景同色的边框画不出来（例如实心主按钮的 accent 描边），
+              // 它不属于「边框色」这个设计面。
+              const background = style.backgroundColor;
+              for (const side of ['borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor']) {
+                const color = style[side];
+                if (!color || color === 'rgba(0, 0, 0, 0)' || color === 'transparent') continue;
+                if (background !== 'rgba(0, 0, 0, 0)' && color === background) continue;
+                note(borders, color, node);
+              }
+            }
+          }
+          return { fonts, radii, borders };
+        };
+        const panelChrome = collect();
+        const probe = document.createElement('span');
+        probe.style.color = getComputedStyle(root).getPropertyValue('--dsw-alias-border').trim();
+        root.appendChild(probe);
+        const aliasBorder = getComputedStyle(probe).color;
+        probe.remove();
+        const asSamples = map => [...map.entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]))).map(([value, samples]) => ({ value, samples }));
+        const slot = sequencer.closest('[data-director-sequencer-slot="true"]');
+        const left = element => round(element.getBoundingClientRect().left);
+        return {
+          topbarHeight: box(topbar).height,
+          leftDockWidth: box(leftDock).width,
+          rightDockWidth: box(rightDock).width,
+          gridWidth: box(grid).width,
+          middleColumnWidth: box(middleColumn).width,
+          gridTemplateColumns: getComputedStyle(grid).gridTemplateColumns,
+          offsets: { grid: left(grid), middleColumn: left(middleColumn), sequencer: left(sequencer), rightDock: left(rightDock) },
+          workbenchChildren: [...workbench.children].map(node => ({ node: describe(node), display: getComputedStyle(node).display, width: box(node).width, left: left(node) })),
+          sequencerHeight: box(sequencer).height,
+          sequencerWidth: box(sequencer).width,
+          sequencerPlacement: slot ? { className: slot.className, width: box(slot).width, gridColumn: getComputedStyle(slot).gridColumn, gridRow: getComputedStyle(slot).gridRow, parent: describe(slot.parentElement) } : null,
+          inspector: { scrollHeight: inspector.scrollHeight, clientHeight: inspector.clientHeight, overflowY: getComputedStyle(inspector).overflowY },
+          fontSizes: asSamples(panelChrome.fonts),
+          radii: asSamples(panelChrome.radii),
+          borderColors: asSamples(panelChrome.borders),
+          aliasBorder,
+        };
+      });
+      if (measured.missing) throw new Error(`layout-thresholds: 缺少测量锚点 ${measured.missing.join(', ')}`);
+      const failures = [];
+      const near = (label, actual, expectedValue, tolerance = 1) => {
+        if (typeof actual !== 'number' || Math.abs(actual - expectedValue) > tolerance) failures.push(`${label}: 实测 ${JSON.stringify(actual)} vs 期望 ${JSON.stringify(expectedValue)}`);
+      };
+      const middleWidth = Math.round((measured.gridWidth - thresholds.leftDockWidth - thresholds.rightDockWidth) * 100) / 100;
+      near('topbar height', measured.topbarHeight, thresholds.topbarHeight);
+      near('left dock width', measured.leftDockWidth, thresholds.leftDockWidth);
+      near('middle column width', measured.middleColumnWidth, middleWidth);
+      near('right dock width', measured.rightDockWidth, thresholds.rightDockWidth);
+      near('sequencer height', measured.sequencerHeight, thresholds.sequencerHeight);
+      near('sequencer width = middle column width', measured.sequencerWidth, measured.middleColumnWidth);
+      const outside = (samples, allowed) => samples.filter(sample => !allowed.includes(sample.value));
+      const outsideFonts = outside(measured.fontSizes, thresholds.fontSizes);
+      if (outsideFonts.length) failures.push(`font sizes outside ${JSON.stringify(thresholds.fontSizes)}: ${JSON.stringify(outsideFonts)}`);
+      const outsideRadii = outside(measured.radii, thresholds.radii);
+      if (outsideRadii.length) failures.push(`radii outside ${JSON.stringify(thresholds.radii)}: ${JSON.stringify(outsideRadii)}`);
+      const outsideBorders = measured.borderColors.filter(sample => sample.value !== measured.aliasBorder);
+      if (outsideBorders.length) failures.push(`border colors outside --dsw-alias-border (${measured.aliasBorder}): ${JSON.stringify(outsideBorders)}`);
+      if (measured.inspector.overflowY !== 'auto') failures.push(`inspector overflow-y: ${measured.inspector.overflowY} vs auto`);
+      if (measured.inspector.scrollHeight < measured.inspector.clientHeight) failures.push(`inspector scrollHeight ${measured.inspector.scrollHeight} < clientHeight ${measured.inspector.clientHeight}`);
+      write('layout-thresholds.json', { thresholds, measured, failures });
+      if (failures.length) throw new Error(`layout-thresholds failed: ${failures.join('; ')}`);
+      record('layout-thresholds', { measured, middleWidth });
+    }
 
     step = 'add-actor-standard-female'; phase = 'portrait-selected';
     const director = 'loc=css:.wf-director-root ';
@@ -549,7 +684,7 @@ async function main() {
 
     // The journey is stringified into a separate node process, so module-scope constants must be
     // passed through the payload instead of being referenced directly.
-    const input = `${browserJourney.toString()}\ntry { await browserJourney(${JSON.stringify({ loginUrl: app.loginUrl, evidence, origin: app.origin, projectTitle, paletteLabels: DIRECTOR_PALETTE_LABELS })}); } catch (error) { console.log(JSON.stringify({ directorDiagnostic: true, name: error.name, message: String(error.message).replace(/([?&]token=)[^&\\s"'<>]+/gi, '$1REDACTED') })); throw Error('director-browser-verification-failed'); }`;
+    const input = `${browserJourney.toString()}\ntry { await browserJourney(${JSON.stringify({ loginUrl: app.loginUrl, evidence, origin: app.origin, projectTitle, paletteLabels: DIRECTOR_PALETTE_LABELS, measure: MEASURE, thresholds: LAYOUT_THRESHOLDS })}); } catch (error) { console.log(JSON.stringify({ directorDiagnostic: true, name: error.name, message: String(error.message).replace(/([?&]token=)[^&\\s"'<>]+/gi, '$1REDACTED') })); throw Error('director-browser-verification-failed'); }`;
     log('starting browser journey');
     const result = await runBrowser(executable, input, 480000);
     save(evidence, 'browser-process.json', result);
