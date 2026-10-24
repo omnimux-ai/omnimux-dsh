@@ -16,7 +16,7 @@
  * so naming either generation's exports statically cannot typecheck against both.
  * The 0.2.x names below are checked against a checked-in snapshot of the rc.3 type
  * surface (`icons/fixtures/rc3-icon-exports.txt`) by
- * `plugins/omnimux/src/client/icon-compat-contract.test.js`.
+ * `plugins/omnimux/src/client/icon-compat-rc3-fixture.test.js`.
  */
 import type { ComponentType } from "react";
 import * as primitives from "@deepseek-ai/dsh-client-ui-primitives";
