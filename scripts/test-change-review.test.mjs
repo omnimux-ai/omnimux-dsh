@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { analyzeTestChanges, isEvaluationPath } from './test-change-review.mjs'
+import { analyzeTestChanges, isEvaluationPath, readEvaluationChanges } from './test-change-review.mjs'
+import { withFixtureRepo } from './lib/git-fixture-repo.mjs'
 
 const inventory = changes => analyzeTestChanges({ root: '/repository', baseCommit: 'base', comparisonBase: 'base', candidate: 'candidate', changes })
 
@@ -40,4 +41,40 @@ test('same bytes and mode do not invent changes but copies remain visible', () =
   const copied = inventory([{ status: 'C100', oldPath: 'tests/a.test.js', path: 'tests/b.test.js', before: 'same', after: 'same', beforeMode: '100644', afterMode: '100644' }])
   assert.equal(copied.risks.length, 1)
   assert.equal(copied.files[0].oldPath, 'tests/a.test.js')
+})
+
+// git 的 `--name-status -M` 用零填充三位报告相似度（实测 `R073`）。原先只接受 `R100`
+// 与 1–2 位数字，所以真实的部分重命名会被判成 unsupported-change-status。
+test('git zero-padded rename and copy scores are accepted', () => {
+  for (const status of ['R100', 'R99', 'R9', 'R073', 'R007', 'C100', 'C073']) {
+    const report = inventory([{ status, oldPath: 'tests/a.test.js', path: 'tests/b.test.js', before: 'same', after: 'changed', beforeMode: '100644', afterMode: '100644' }])
+    assert.equal(report.files.length, 1, `${status} 必须被接受`)
+    assert.equal(report.files[0].status, status)
+  }
+  for (const status of ['R000', 'R999', 'R101', 'X073', 'R073x', '']) {
+    assert.throws(
+      () => inventory([{ status, oldPath: 'tests/a.test.js', path: 'tests/b.test.js', before: 'same', after: 'changed', beforeMode: '100644', afterMode: '100644' }]),
+      /unsupported-change-status/,
+      `${status} 必须被拒绝`,
+    )
+  }
+})
+
+test('a real partial rename survives readEvaluationChanges and analyzeTestChanges', () => {
+  withFixtureRepo(repo => {
+    let body = ''
+    for (let index = 0; index < 200; index++) body += `const line${index} = ${index};\n`
+    repo.write('tests/original.test.js', body)
+    const base = repo.commit('base')
+    repo.write('tests/renamed.test.js', body.split('\n').slice(0, 150).join('\n'))
+    repo.remove('tests/original.test.js')
+    repo.commit('rename with partial similarity')
+    const changes = readEvaluationChanges(repo.root, base)
+    // 生产者必须真的产出零填充分数，否则这条测试就没有守住这个回归。
+    assert.equal(changes.changes.some(change => /^R0\d\d$/.test(change.status)), true, `git 应产出零填充分数：${JSON.stringify(changes.changes.map(change => change.status))}`)
+    const report = analyzeTestChanges(changes)
+    assert.equal(report.files.length, 1)
+    assert.equal(report.files[0].oldPath, 'tests/original.test.js')
+    assert.equal(report.files[0].path, 'tests/renamed.test.js')
+  })
 })
