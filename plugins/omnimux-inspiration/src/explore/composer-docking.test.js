@@ -466,10 +466,10 @@ test('useComposerDocking: 意图驱动模式——纯向下滚动默认不吸底
     })
     await flush()
 
-    // 契约铁律：未显式意图触发时，纯向下滚动绝不自动吸底，底部不显示输入框
-    assert.equal(hookApi.placement, 'inline', '未触发输入框时纯向下滚动必须保持 inline')
-    assert.equal(hookApi.isDocked, false)
-    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '宿主严禁打上吸底标记')
+    // 契约（本任务恢复）：纯向下滚动滑出顶部视口即自动吸底，无需显式意图
+    assert.equal(hookApi.placement, 'docked', '纯向下滚动滑出顶部视口必须自动吸底')
+    assert.equal(hookApi.isDocked, true)
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '自动吸底后宿主必须打上吸底标记')
 
     // 阶段 2：显式意图触发（例如用户点击加号选素材或卡片选用）
     await act(async () => {
@@ -973,6 +973,67 @@ test('resolveNativeComposerMaxWidth: 精准支持 calc(...) 表达式求值，�
     assert.equal(rightMargin, 388)
     assert.equal(leftMargin, rightMargin, 'column margins are exactly symmetric')
   } finally {
+    env.restore()
+  }
+})
+
+test('useComposerDocking: 恢复纯滚动自动吸底——顶部输入框滚出视口即滑到底部，滑回露头自动归位', async () => {
+  const env = withDom()
+  const host = document.querySelector('[data-omnimux-starter-host]')
+  const scroller = host.querySelector('[data-conversation-scroll]')
+  const root = createRoot(document.querySelector('#seat'))
+  let hookApi = null
+
+  function TestHarness() {
+    const guideRef = useRef(null)
+    hookApi = useComposerDocking({ hostRef: guideRef })
+    return React.createElement('div', { ref: guideRef }, 'ScrollAutoDockTest')
+  }
+
+  const scrollTo = async (top) => {
+    scroller.scrollTop = top
+    await act(async () => {
+      scroller.dispatchEvent(new window.Event('scroll'))
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+  }
+
+  try {
+    await act(async () => {
+      root.render(React.createElement(TestHarness))
+    })
+    assert.equal(hookApi.placement, 'inline', '初始处于页面顶部必须为 inline')
+
+    // 纯向下滚动滑出顶部视口（> leaveThreshold 196px），全程没有任何点击意图
+    await scrollTo(280)
+    assert.equal(hookApi.placement, 'docked', '纯滚动滑出顶部视口必须自动吸底，不得依赖显式意图')
+    assert.equal(hookApi.isDocked, true)
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '自动吸底后宿主必须打上吸底标记')
+
+    // 迟滞死区（reveal 166 < scrollTop 180 <= leave 196）维持上一状态，绝不横跳
+    await scrollTo(180)
+    assert.equal(hookApi.placement, 'docked', '迟滞保护区内必须维持 docked，不得提前归位')
+
+    // 向上滚动回到露头可见范围（<= revealThreshold 166px）自动归还原位
+    await scrollTo(80)
+    assert.equal(hookApi.placement, 'inline', '滑回露头可见范围必须自动归还原位')
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '归位后必须移除吸底标记')
+
+    // 主动收起（undock）后，纯上下滚动严格静默
+    await act(async () => {
+      hookApi.undock()
+    })
+    await scrollTo(320)
+    assert.equal(hookApi.placement, 'inline', '主动收起后滚动必须保持静默，不得自动弹起')
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '收起后宿主不得保留吸底标记')
+
+    // 滑回页面最顶部复位收起态，再次下滑必须恢复自动吸底
+    await scrollTo(0)
+    await scrollTo(280)
+    assert.equal(hookApi.placement, 'docked', '收起态在滑回最顶部复位后必须恢复自动吸底')
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
+  } finally {
+    await act(async () => root.unmount())
     env.restore()
   }
 })
