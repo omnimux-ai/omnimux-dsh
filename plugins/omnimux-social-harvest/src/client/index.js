@@ -1,6 +1,7 @@
 /**
  * @file omnimux-social-harvest 客户端入口 —— 注册词典、工作台 Tab 与设置卡片。
- * 模式对齐 omnimux-accounts：registerTab（betterSidebar）+ settings.plugin.item 紧凑卡。
+ * 模式对齐 omnimux-accounts：registerTab（betterSidebar）+ 插件配置卡
+ * （0.1.5 `settings.plugin.item` / 0.2.x `plugins.bundle.config` 双席位）。
  */
 
 import { createElement } from 'react'
@@ -67,6 +68,15 @@ export function apply(ctx) {
   if (ctx.slots?.inject && ctx.slots?.register) {
     ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
       name: 'settings.plugin.item',
+      key: 'omnimux-social-harvest',
+      id: 'omnimux-social-harvest',
+      locale: NS,
+      inject: () => ({ t }),
+    }, SettingsCard))
+    // DSH 0.2.x 把 bundle 自身配置移到插件详情页的 `plugins.bundle.config`
+    // （key 为包名）。两个席位并存：旧宿主只命中上面那个，新宿主只命中这个。
+    ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
+      name: 'plugins.bundle.config',
       key: 'omnimux-social-harvest',
       id: 'omnimux-social-harvest',
       locale: NS,
