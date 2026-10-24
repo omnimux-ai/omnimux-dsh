@@ -32,6 +32,11 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+/** 「添加节点」菜单里导演台条目的文案。#3640 把菜单文案从「3D 导演台 / 3D Director」改成
+ * 「导演台 / Director」，而节点类型名仍是「3D 导演台 / 3D Director」——两者是两个事实。
+ * 菜单文案只此一处声明，改名时改这里即可，避免 runner 与产品事实再次脱节。 */
+export const DIRECTOR_PALETTE_LABELS = ['导演台', 'Director', '3D 导演台', '3D Director'];
 const reportRoot = join(root, '.agent-reports/beeftv-director');
 const expected = ['normal-project-entry', 'portrait-selected', 'managed-media-decoded', 'saved-scene', 'play-seek', 'decoded-motion', 'scene-reopened', 'aspect-reopened'];
 const browserEnv = () => ({ HOME: process.env.HOME, PATH: process.env.PATH });
@@ -44,7 +49,7 @@ const log = message => process.stdout.write(`[director-acceptance] ${stamp()} ${
  * Serialized declaration. Ego only receives the in-memory login capability,
  * never a token in evidence. Keep it fully self-contained.
  */
-async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
+async function browserJourney({ loginUrl, evidence, origin, projectTitle, paletteLabels }) {
   const fs = await import('node:fs/promises');
   const assert = (await import('node:assert/strict')).default;
   const redact = value => String(value).replaceAll(loginUrl, '[redacted-login-url]').replace(/([?&]token=)[^&\s"'<>]+/gi, '$1REDACTED');
@@ -218,8 +223,8 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle }) {
     }
     await visible('.wf-canvas-toolbar');
     await page.click('loc=css:.wf-canvas-toolbar button.wf-canvas-toolbar__item--primary-add');
-    const menuLabel = await waitForAnyLabel(['3D Director', '3D 导演台'], 30000);
-    if (!menuLabel) throw new Error('3D director palette entry did not appear');
+    const menuLabel = await waitForAnyLabel(paletteLabels, 30000);
+    if (!menuLabel) throw new Error(`3D director palette entry did not appear (expected: ${paletteLabels.join(' / ')})`);
     const nodeLabel = await clickFirstLabel([menuLabel], 10000);
     if (!nodeLabel) throw new Error('3D director palette entry not actionable');
     await visible('text="打开导演台"'); await page.click('text="打开导演台"');
@@ -542,7 +547,9 @@ async function main() {
     if (app.summary?.realModelRequest !== false) throw new Error('task-source runtime must not issue real model requests');
     log(`app ready (evidenceLevel=${app.summary.evidenceLevel}, taskPluginsCount=${app.summary.taskPluginsCount})`);
 
-    const input = `${browserJourney.toString()}\ntry { await browserJourney(${JSON.stringify({ loginUrl: app.loginUrl, evidence, origin: app.origin, projectTitle })}); } catch (error) { console.log(JSON.stringify({ directorDiagnostic: true, name: error.name, message: String(error.message).replace(/([?&]token=)[^&\\s"'<>]+/gi, '$1REDACTED') })); throw Error('director-browser-verification-failed'); }`;
+    // The journey is stringified into a separate node process, so module-scope constants must be
+    // passed through the payload instead of being referenced directly.
+    const input = `${browserJourney.toString()}\ntry { await browserJourney(${JSON.stringify({ loginUrl: app.loginUrl, evidence, origin: app.origin, projectTitle, paletteLabels: DIRECTOR_PALETTE_LABELS })}); } catch (error) { console.log(JSON.stringify({ directorDiagnostic: true, name: error.name, message: String(error.message).replace(/([?&]token=)[^&\\s"'<>]+/gi, '$1REDACTED') })); throw Error('director-browser-verification-failed'); }`;
     log('starting browser journey');
     const result = await runBrowser(executable, input, 480000);
     save(evidence, 'browser-process.json', result);
