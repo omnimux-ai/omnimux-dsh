@@ -267,12 +267,21 @@ export function normalizeTaskPlugins(value) {
   return ['omnimux', ...value.slice().sort()];
 }
 
+/** Archive child-process failures must carry the real reason: an empty error code made a broken
+ * archive look identical to a broken build and cost several diagnosis rounds. */
+function archiveCommandFailure(code, action, result) {
+  const detail = String(result.stderr || '').trim() || String(result.stdout || '').trim() || String(result.error || '');
+  const reason = `python3 归档${action}失败（status=${result.status ?? 'null'}, signal=${result.signal ?? 'null'}）：${detail.slice(-1200) || '无输出'}`;
+  return failure(code, reason.slice(0, 1600));
+}
+
 function inspectArchive(tarball, name, version, sha256) {
   const result = spawnSync('python3', ['-B', ARCHIVE_SCRIPT, 'inspect'], {
     input: JSON.stringify({ tarball, name, version, sha256 }), encoding: 'utf8', maxBuffer: 16 << 20,
   });
-  if (result.status !== 0) throw failure('PREPARE_ARCHIVE_INSPECTION_FAILED');
-  return JSON.parse(result.stdout);
+  if (result.status !== 0) throw archiveCommandFailure('PREPARE_ARCHIVE_INSPECTION_FAILED', '检查', result);
+  try { return JSON.parse(result.stdout); }
+  catch { throw failure('PREPARE_ARCHIVE_INSPECTION_FAILED', `归档检查输出不是 JSON：${String(result.stdout || '').slice(-600)}`); }
 }
 
 /** Materialize a verified archive so the packed manifest can be compared by content, not by bytes. */
@@ -280,8 +289,42 @@ function extractArchive(tarball, name, version, sha256, destination) {
   const result = spawnSync('python3', ['-B', ARCHIVE_SCRIPT, 'extract'], {
     input: JSON.stringify({ tarball, name, version, sha256, destination }), encoding: 'utf8', maxBuffer: 16 << 20,
   });
-  if (result.status !== 0) throw failure('PREPARE_ARCHIVE_EXTRACTION_FAILED');
-  return JSON.parse(result.stdout);
+  if (result.status !== 0) throw archiveCommandFailure('PREPARE_ARCHIVE_EXTRACTION_FAILED', '解包', result);
+  try { return JSON.parse(result.stdout); }
+  catch { throw failure('PREPARE_ARCHIVE_EXTRACTION_FAILED', `归档解包输出不是 JSON：${String(result.stdout || '').slice(-600)}`); }
+}
+
+/** Directory prefixes that contain at least one captured candidate entry. */
+export function candidateDirectoryIndex(allowed) {
+  const directories = new Set();
+  for (const path of allowed) {
+    const parts = path.split('/');
+    for (let index = 1; index <= parts.length; index += 1) directories.add(parts.slice(0, index).join('/'));
+  }
+  return directories;
+}
+
+/** Classify one working-tree entry against the captured candidate index.
+ * The stage must mirror the captured candidate: build outputs written by dependency `prepare`
+ * scripts (`lib/`, `dist/`) and every other policy-excluded file are rebuilt inside the stage and
+ * therefore skipped. Only a candidate-owned symlink or an exotic entry cannot be staged faithfully.
+ * @returns {'copy' | 'recurse' | 'skip' | 'unsupported-symlink' | 'unsupported-special'}
+ */
+export function classifyCandidateEntry({ rel, isSymbolicLink, isDirectory, isFile, allowed, candidateDirectories, allowAll = false }) {
+  if (allowAll) {
+    if (isSymbolicLink) return 'unsupported-symlink';
+    if (isDirectory) return 'recurse';
+    return isFile ? 'copy' : 'unsupported-special';
+  }
+  if (isSymbolicLink) return allowed.has(rel) ? 'unsupported-symlink' : 'skip';
+  if (isDirectory) return candidateDirectories.has(rel) ? 'recurse' : 'skip';
+  if (isFile) return allowed.has(rel) ? 'copy' : 'skip';
+  return 'unsupported-special';
+}
+
+/** Packages whose manifest declares dependencies but whose worktree install is missing. */
+export function missingPackageDependencies({ packedPaths, hasInstalledDependencies, declaresDependencies }) {
+  return packedPaths.filter(rel => !hasInstalledDependencies(rel) && declaresDependencies(rel));
 }
 
 /** preparation-only: real candidate source → owned stage → fixed build → pack → archive inspect.
@@ -323,22 +366,26 @@ async function runTaskPreparation({ options, io, deps }) {
     const before = capture(captureOptions);
     observations.steps.push('candidate-before');
     const allowed = new Set((before.candidate?.entries || []).map(item => item.path));
+    const candidateDirectories = candidateDirectoryIndex(allowed);
+    const skippedInputs = [];
+    const noteSkipped = rel => { if (skippedInputs.length < 20) skippedInputs.push(rel); };
     const copyTree = (source, destination, allowAll = false, batch = null) => {
       const operations = batch ?? [];
       for (const name of io.readdirSync(source)) {
         if (['node_modules', '.git', '.scratch'].includes(name)) continue;
         const from = join(source, name), to = join(destination, name);
+        const rel = relative(root, from);
         const stat = io.lstatSync(from);
-        if (stat.isSymbolicLink()) throw failure('PREPARE_INPUT_UNSUPPORTED');
-        if (stat.isDirectory()) {
-          const rel = relative(root, from);
-          if (allowAll || [...allowed].some(path => path === rel || path.startsWith(`${rel}/`))) copyTree(from, to, allowAll, operations);
-        } else if (stat.isFile()) {
-          const rel = relative(root, from);
-          if (!allowAll && !allowed.has(rel)) throw failure('PREPARE_INPUT_UNSUPPORTED');
-          io.mkdirSync(dirname(to), { recursive: true });
-          operations.push({ operation: 'copy', source: from, destination: to });
-        } else throw failure('PREPARE_INPUT_UNSUPPORTED');
+        const decision = classifyCandidateEntry({
+          rel, allowed, candidateDirectories, allowAll,
+          isSymbolicLink: stat.isSymbolicLink(), isDirectory: stat.isDirectory(), isFile: stat.isFile(),
+        });
+        if (decision === 'skip') { noteSkipped(rel); continue; }
+        if (decision === 'unsupported-symlink') throw failure('PREPARE_INPUT_UNSUPPORTED', `候选输入是符号链接，装配不支持复制：${rel}`);
+        if (decision === 'unsupported-special') throw failure('PREPARE_INPUT_UNSUPPORTED', `候选输入不是普通文件：${rel}`);
+        if (decision === 'recurse') { copyTree(from, to, allowAll, operations); continue; }
+        io.mkdirSync(dirname(to), { recursive: true });
+        operations.push({ operation: 'copy', source: from, destination: to });
       }
       if (batch === null) prepareFiles({ operation: 'batch', root: privateDir, operations });
     };
@@ -346,12 +393,27 @@ async function runTaskPreparation({ options, io, deps }) {
     for (const rel of PREPARATION_CONFIG.concat(packagePaths)) {
       const source = join(root, rel), destination = join(stageRoot, rel);
       const stat = io.lstatSync(source);
-      if (stat.isSymbolicLink()) throw failure('PREPARE_INPUT_UNSUPPORTED');
+      if (stat.isSymbolicLink()) throw failure('PREPARE_INPUT_UNSUPPORTED', `任务源路径是符号链接：${rel}`);
       if (stat.isDirectory()) copyTree(source, destination);
       else if (stat.isFile()) { io.mkdirSync(dirname(destination), { recursive: true }); prepareFiles({ operation: 'copy', source, destination }); }
-      else throw failure('PREPARE_INPUT_UNSUPPORTED');
+      else throw failure('PREPARE_INPUT_UNSUPPORTED', `任务源路径不是普通文件：${rel}`);
     }
+    if (skippedInputs.length) observations.skippedInputs = skippedInputs;
     observations.steps.push('stage-copied');
+    // The stage reuses the task worktree's installed dependencies. A worktree that never ran the
+    // standard install otherwise fails deep inside a package build with no actionable reason, so
+    // reject early and name both the missing packages and the command that fixes it.
+    const missingDependencies = missingPackageDependencies({
+      packedPaths,
+      hasInstalledDependencies: rel => io.existsSync(join(root, rel, 'node_modules')),
+      declaresDependencies: rel => {
+        const manifest = readJsonFile(join(root, rel, 'package.json'));
+        return Object.keys(manifest.dependencies ?? {}).length + Object.keys(manifest.devDependencies ?? {}).length > 0;
+      },
+    });
+    if (missingDependencies.length) {
+      throw failure('PREPARE_DEPENDENCY_REQUIRED', `任务工作树缺少依赖：${missingDependencies.join('、')}。请先在该工作树执行 pnpm install --frozen-lockfile。`);
+    }
     let linkedTools = 0;
     for (const rel of ['node_modules', ...packagePaths.map(item => join(item, 'node_modules'))]) {
       const source = join(root, rel);
