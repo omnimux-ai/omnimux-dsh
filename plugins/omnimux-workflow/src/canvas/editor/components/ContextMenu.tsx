@@ -74,6 +74,14 @@ const ADD_MENU_HEIGHT_ESTIMATE = 440;
  * `maxHeight` 只扣视口边距时，这 14px 会把底部入口卡挤出视口 1px（900×560 实测）。
  */
 const ADD_MENU_BOX_OVERHEAD = 14;
+/**
+ * 底部悬浮控制坞（`.wf-canvas-toolbar`）占用的高度，`maxHeight` 必须把它一起扣掉。
+ *
+ * 控制坞 `bottom: 24px`、内容约 44px（1728×883 实测 y813–859），z-index 高于面板；
+ * 只扣视口边距时，面板最后一行会钻到控制坞下面（Issue 3681 加第 9 个条目后实测
+ * 末行只剩顶部约 7px 可点）。留 72px = 24 偏移 + 44 高度 + 间隙。
+ */
+const ADD_MENU_DOCK_RESERVED = 72;
 
 interface MenuItemSpec {
   action: ContextMenuAction | 'open-add-node';
@@ -173,7 +181,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   // 减数含面板自身 padding/border（ADD_MENU_BOX_OVERHEAD），否则底部卡片会被裁掉几个像素。
   const maxHeight =
     view === 'add-node'
-      ? Math.max(200, window.innerHeight - top - 8 - ADD_MENU_BOX_OVERHEAD)
+      ? Math.max(200, window.innerHeight - top - 8 - ADD_MENU_BOX_OVERHEAD - ADD_MENU_DOCK_RESERVED)
       : undefined;
 
   return createPortal(

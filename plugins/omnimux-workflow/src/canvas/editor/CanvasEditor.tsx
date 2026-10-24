@@ -64,6 +64,8 @@ import { tableNodeDefinition } from '../nodes/definitions/table';
 import { videoCompositionNodeDefinition } from '../nodes/definitions/videoComposition';
 import { groupNodeDefinition } from '../nodes/definitions/group';
 import { directorNodeDefinition } from '../nodes/definitions/director.tsx';
+import { comfyPageNodeDefinition } from '../nodes/definitions/comfyPage.tsx';
+import { ComfyPageOverlay } from './components/ComfyPageOverlay.tsx';
 import { FloatingSelectionToolbar } from './components/FloatingSelectionToolbar';
 import { BatchCreateAssetModal, type MediaAssetItem } from './components/BatchCreateAssetModal';
 import { CreateWorkflowModal } from './components/CreateWorkflowModal';
@@ -145,6 +147,7 @@ registerNodeDefinition(tableNodeDefinition);
 registerNodeDefinition(videoCompositionNodeDefinition);
 registerNodeDefinition(groupNodeDefinition);
 registerNodeDefinition(directorNodeDefinition);
+registerNodeDefinition(comfyPageNodeDefinition);
 
 const nodeTypes = buildNodeTypes();
 
@@ -662,7 +665,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   // 右键菜单可传入显式落点。
   // 「导入素材」：先弹系统选文件器，确认后再按文件落导入节点；取消则不建空节点。
   const handleAddNode = useCallback(
-    async (type: MaterialType | 'table' | 'video_composition' | 'import_asset' | 'director', position?: { x: number; y: number }) => {
+    async (type: MaterialType | 'table' | 'video_composition' | 'import_asset' | 'director' | 'comfy-page', position?: { x: number; y: number }) => {
       const index = nodeCreateCounter.current;
       const targetPosition = position ?? {
         x: 120 + (index % 3) * 420,
@@ -706,7 +709,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         return;
       }
 
-      if (type === 'table' || type === 'video_composition' || type === 'director') {
+      if (type === 'table' || type === 'video_composition' || type === 'director' || type === 'comfy-page') {
         const created = createNode(type, targetPosition, `node_${type}_${Date.now()}`);
         if (!created) return;
         nodeCreateCounter.current += 1;
@@ -989,6 +992,9 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
           <MiniMap pannable zoomable />
         </div>
       )}
+
+      {/* ComfyUI 页面节点全屏层（Issue #3681）：与画布同根，关闭即卸载 iframe */}
+      <ComfyPageOverlay />
 
       {/* 底部悬浮控制坞 */}
       <Toolbar

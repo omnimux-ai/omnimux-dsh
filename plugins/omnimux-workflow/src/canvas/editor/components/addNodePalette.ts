@@ -23,7 +23,7 @@ import type { MaterialType } from '../../types/materialNode';
 import { MATERIAL_TOOLS_BY_TYPE, materialTools } from '../../../shared/specs/nodes/materialNodeSpec.ts';
 import { getNodeDefinition } from '../../nodes/registry.ts';
 
-export type CanvasAddNodeType = MaterialType | 'table' | 'video_composition' | 'import_asset' | 'director';
+export type CanvasAddNodeType = MaterialType | 'table' | 'video_composition' | 'import_asset' | 'director' | 'comfy-page';
 
 export type AddNodePaletteScope = 'dock' | 'context';
 
@@ -36,7 +36,8 @@ export type AddNodePaletteIcon =
   | 'AudioLines'
   | 'Film'
   | 'UploadCloud'
-  | 'Box';
+  | 'Box'
+  | 'MonitorPlay';
 
 /** 条目文案的 i18n key：节点类型名（菜单专属文案见 ADD_NODE_MENU_LABEL_KEYS）。 */
 export type AddNodePaletteLabelKey = `node.type.${CanvasAddNodeType}`;
@@ -114,6 +115,12 @@ export const ADD_NODE_PALETTE: readonly AddNodePaletteItem[] = [
     labelKey: 'node.type.import_asset',
     scopes: ['dock'],
   },
+  {
+    type: 'comfy-page',
+    icon: 'MonitorPlay',
+    labelKey: 'node.type.comfy-page',
+    scopes: ['dock', 'context'],
+  },
 ];
 
 /**
@@ -154,6 +161,7 @@ const PALETTE_NODE_TYPE: Record<CanvasAddNodeType, string | null> = {
   table: 'table',
   video_composition: 'video_composition',
   director: 'director',
+  'comfy-page': 'comfy-page',
   import_asset: null,
 };
 
