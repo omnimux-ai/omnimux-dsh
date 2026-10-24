@@ -9,6 +9,11 @@
  * to maintain consistent widget deduction, option resolution, and preview sanitization across plugins.
  */
 
+// 节点身份真源（`resolveNodeKind`）与工具能力真源（`materialTools[].modelCategory`）。
+// 两者都是纯数据 / 纯函数，无 React 与宿主依赖，可在浏览器与 node 测试中直接使用。
+import { resolveNodeKind } from '../../shared/graph/materialNode.ts'
+import { materialTools } from '../../shared/specs/nodes/materialNodeSpec.ts'
+
 /**
  * 统一选项解析器：同时兼容 prop.options（{label, value} 或基础类型）与 prop.enum。
  * @param {object} prop
@@ -557,13 +562,16 @@ export function displayValueOf(val) {
  * 支持多层级健壮推导：
  * 1. 优先读取 manifest?.defaultModel 或 manifest?.metadata?.defaultModel
  * 2. 遍历 manifest?.workflowBinding?.snapshot?.nodes 提取主生成节点配置模型
- * 3. 兜底回退：若 nodes 缺失或历史本地缓存仅有 workspaceId，根据 appId、workspaceId、category 推导
- *    - 包含 creatify 或预设经典应用（app-creatify-*, app-builtin-*）-> seedance-2.0
- *    - 分类为图片 (category === 'image') -> gpt-image-2.5
- *    - 其它视频分类或未指定 -> seedance-2.0
+ * 3. 条件兼容：内置 / creatify 应用族（app-creatify-*, app-builtin-*）历史默认 seedance-2.0
+ * 4. 分类为图片 (category === 'image') -> gpt-image-2.5
+ * 5. **无法从快照读出任何模型时返回 `null`**，绝不猜测
+ *
+ * 第 5 条是本函数曾经的无条件兜底 `return 'seedance-2.0'` 的反面：无条件返回视频模型
+ * 会让纯文本 / 提取类应用显示视频模型列表（Seedance 2.0）。调用方必须自行处理 `null`
+ * （`AppTab` 会因此不渲染「生成模型」选择器）。
  *
  * @param {object} [manifest]
- * @returns {string} 规范化模型 ID
+ * @returns {string|null} 规范化模型 ID；无法判定时为 null
  */
 /**
  * 判定节点是否为插槽节点或导入节点（排他过滤）
@@ -581,19 +589,10 @@ export function isSlotOrImportNode(node) {
   )
 }
 
-/**
- * 推导 AI 应用 Manifest 中的工程默认节点模型 ID
- * 1. 优先 manifest.defaultModel / manifest.metadata.defaultModel
- * 2. 遍历 nodes 拓扑（按应用实际分类限定目标生成引擎）
- * 3. 图片分类（cat === 'image'）优先判定
- * 4. 识别已知工作流预设（creatify / builtin）
- * 5. 兜底默认视频模型
- * @param {object} [manifest]
- * @returns {string} 规范化模型 ID
- */
 export function resolveDefaultNodeModelId(manifest) {
   if (!manifest || typeof manifest !== 'object') {
-    return 'seedance-2.0'
+    // 没有清单可读：不猜测任何模型。
+    return null
   }
 
   // 1. 优先读取 manifest?.defaultModel 或 manifest?.metadata?.defaultModel
@@ -671,5 +670,73 @@ export function resolveDefaultNodeModelId(manifest) {
     return 'seedance-2.0'
   }
 
-  return 'seedance-2.0'
+  // 5. 无法从快照读出任何模型：返回 null，让调用方决定「不显示模型选择器」。
+  //    历史行为是在此无条件 `return 'seedance-2.0'`，使任何分类（含文本 / 提取类）
+  //    都落到同一个视频模型，即本 issue 报告的现象。
+  return null
+}
+
+/**
+ * 证据层判定：工作流快照中是否**存在**绑定生成模型的生成节点。
+ *
+ * 只看证据，不做策略判断 —— 快照缺失或为空时返回 `false`（「未找到证据」）。
+ * 运行页的显示策略见 `shouldShowModelSelector`：它把「证据不足」与
+ * 「证据证明没有生成节点」区分开，避免误伤无内嵌快照的内置应用。
+ *
+ * 组合两个既有 SSOT，缺一不可：
+ * 1. 节点身份 `resolveNodeKind(data) === 'generate'`（`shared/graph/materialNode.ts`）：
+ *    排除导入 / 提取 / 槽位节点。注意该函数对未标注的 `text-editor` 也返回
+ *    `'generate'`，所以必须叠加第 2 条，否则纯文本工作流仍会被判为生成型。
+ * 2. 工具能力 `materialTools[selectedTool].modelCategory`（`shared/specs/nodes/materialNodeSpec.ts`）：
+ *    只有真正绑定生成模型的工具才声明该字段；`text-editor` / `link-extract` /
+ *    `import` 均无。
+ * 3. 遗留兼容：预设工作流使用注册表未收录的 legacy tool id（`omnimux_video_submit`），
+ *    但其生成节点持久化了 `data.model`，据此识别。
+ *
+ * @param {object} [manifest]
+ * @returns {boolean} 是否存在绑定生成模型的生成节点
+ */
+export function hasGenerationModelNode(manifest) {
+  if (!manifest || typeof manifest !== 'object') return false
+  const nodes = manifest.workflowBinding?.snapshot?.nodes
+  if (!Array.isArray(nodes) || nodes.length === 0) return false
+  return nodes.some(isGenerationModelNode)
+}
+
+/**
+ * 策略层判定：应用运行页是否应当向终端用户暴露「生成模型」选择器。
+ *
+ * 三态语义：
+ * - 快照缺失 / 为空 → `true`（**证据不足，保持既有行为**）。内置应用的 manifest
+ *   只带 `workspaceId`，工作流实体在 `catalog/presets/*.workflow.json`；快照缺失
+ *   不等于没有生成节点，不能据此隐藏选择器而误伤内置视频应用。
+ * - 快照存在且含生成节点 → `true`。
+ * - 快照存在且不含生成节点 → `false`。提取 / 拆解 / 分镜 / 纯文本编辑类工作流
+ *   没有任何生成节点，选择器必须整体不渲染，否则会像「视频提取」应用那样
+ *   列出与其能力无关的视频模型。
+ *
+ * @param {object} [manifest]
+ * @returns {boolean} 是否应渲染「生成模型」选择器
+ */
+export function shouldShowModelSelector(manifest) {
+  if (!manifest || typeof manifest !== 'object') return true
+  const nodes = manifest.workflowBinding?.snapshot?.nodes
+  // 无内嵌快照：证据不足，保持既有行为（不因缺失而隐藏）。
+  if (!Array.isArray(nodes) || nodes.length === 0) return true
+  return hasGenerationModelNode(manifest)
+}
+
+/** 单个节点是否绑定生成模型：节点身份 SSOT + 工具能力 SSOT 组合。 */
+function isGenerationModelNode(node) {
+  if (!node || typeof node !== 'object') return false
+  if (isSlotOrImportNode(node)) return false
+  const d = node.data || {}
+  if (resolveNodeKind(d) !== 'generate') return false
+
+  const toolId = typeof d.selectedTool === 'string' ? d.selectedTool : ''
+  if (toolId && materialTools[toolId]?.modelCategory) return true
+
+  // 遗留预设节点（legacy tool id 不在注册表中）凭持久化模型识别。
+  const persistedModel = d.model || d.params?.model
+  return typeof persistedModel === 'string' && persistedModel.trim() !== ''
 }

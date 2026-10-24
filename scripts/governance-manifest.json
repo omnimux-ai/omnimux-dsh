@@ -322,6 +322,7 @@
     "verify-agent-presets.mjs",
     "verify-app-edit-and-fork-flow.mjs",
     "verify-app-edit-fork-modal.mjs",
+    "verify-apptab-model-selector-gate-browser.mjs",
     "verify-asset-card-compact-cta.mjs",
     "verify-asset-picker-add-card-browser.mjs",
     "verify-asset-picker-add-card.mjs",

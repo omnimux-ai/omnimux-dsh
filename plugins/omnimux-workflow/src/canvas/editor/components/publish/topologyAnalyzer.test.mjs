@@ -401,3 +401,30 @@ test('T01.8: Internal params never reach the form or the fixed summary', () => {
   assert.equal(describeFixedValue(''), '未设置');
   assert.equal(describeFixedValue('16:9'), '16:9');
 });
+
+test('T01.4b: Returns null category when no terminal node exposes a media materialType', () => {
+  // 文本 / 表格产物：没有 video/image/audio 终端节点。
+  // 历史行为是兜底成 'video'，会让纯文本工作流被发布成视频应用并列出视频模型。
+  const textOnly = [
+    { id: 't1', type: 'material', data: { materialType: 'text', selectedTool: 'text-editor' } },
+    { id: 't2', type: 'material', data: { materialType: 'text', selectedTool: 'text-to-text' } },
+  ];
+  assert.equal(
+    analyzeWorkflowInputs(textOnly, [{ id: 'e1', source: 't1', target: 't2' }]).categorySuggestion,
+    null,
+  );
+
+  // 终端节点未声明 materialType 时同样不猜测分类。
+  const undeclared = [{ id: 'a1', type: 'material', data: { selectedTool: 'text-editor' } }];
+  assert.equal(analyzeWorkflowInputs(undeclared, []).categorySuggestion, null);
+
+  // 显式声明媒体类型的终端节点仍然正常推断。
+  const videoTerminal = [
+    { id: 't1', type: 'material', data: { materialType: 'text' } },
+    { id: 'v1', type: 'material', data: { materialType: 'video' } },
+  ];
+  assert.equal(
+    analyzeWorkflowInputs(videoTerminal, [{ id: 'e1', source: 't1', target: 'v1' }]).categorySuggestion,
+    'video',
+  );
+});

@@ -28,6 +28,8 @@ import {
   sanitizePreviewUrl,
   resolveDefaultNodeModelId,
   isSlotOrImportNode,
+  hasGenerationModelNode,
+  shouldShowModelSelector,
 } from './appTabWidgets.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -841,10 +843,168 @@ describe('AppTab Form Widgets Engine (Issue #2607)', () => {
       )
     })
 
-    it('resolves seedance-2.0 for default video category or empty/null manifest', () => {
-      assert.equal(resolveDefaultNodeModelId({}), 'seedance-2.0')
-      assert.equal(resolveDefaultNodeModelId(null), 'seedance-2.0')
-      assert.equal(resolveDefaultNodeModelId({ category: 'video' }), 'seedance-2.0')
+    // 标准更正（独立审查）：原断言要求「没有可解析模型时回退 seedance-2.0」，
+    // 而那个回退正是缺陷本身（文本/提取类应用显示视频模型列表）。
+    it('returns null instead of guessing a video model when no model is resolvable', () => {
+      assert.equal(resolveDefaultNodeModelId({}), null)
+      assert.equal(resolveDefaultNodeModelId(null), null)
+      assert.equal(resolveDefaultNodeModelId({ category: 'video' }), null)
+      assert.equal(resolveDefaultNodeModelId({ workflowBinding: { snapshot: { nodes: [] } } }), null)
+    })
+  })
+
+  describe('hasGenerationModelNode() — 生成模型选择器显示门禁', () => {
+    const withNodes = (nodes) => ({ workflowBinding: { snapshot: { nodes } } })
+
+    it('returns false for a pure text-editor workflow (no model-binding tool)', () => {
+      assert.equal(
+        hasGenerationModelNode(
+          withNodes([
+            { id: 't1', type: 'material', data: { materialType: 'text', selectedTool: 'text-editor' } },
+          ]),
+        ),
+        false,
+      )
+    })
+
+    it('returns false for extraction/import nodes even when they carry a media materialType', () => {
+      assert.equal(
+        hasGenerationModelNode(
+          withNodes([
+            {
+              id: 'v1',
+              type: 'material',
+              data: { nodeKind: 'import', selectedTool: 'import', materialType: 'video' },
+            },
+          ]),
+        ),
+        false,
+      )
+    })
+
+    it('returns false for link-extract (capability tool without a generation model)', () => {
+      assert.equal(
+        hasGenerationModelNode(
+          withNodes([
+            { id: 't1', type: 'material', data: { materialType: 'text', selectedTool: 'link-extract' } },
+          ]),
+        ),
+        false,
+      )
+    })
+
+    it('returns true for a registry-backed generation node (modelCategory declared)', () => {
+      assert.equal(
+        hasGenerationModelNode(
+          withNodes([
+            {
+              id: 'g1',
+              type: 'material',
+              data: { nodeKind: 'generate', selectedTool: 'video-generation', materialType: 'video' },
+            },
+          ]),
+        ),
+        true,
+      )
+    })
+
+    it('returns true for a legacy preset generation node identified by its persisted model', () => {
+      assert.equal(
+        hasGenerationModelNode(
+          withNodes([
+            {
+              id: 'g1',
+              type: 'material',
+              data: {
+                nodeKind: 'generate',
+                selectedTool: 'omnimux_video_submit',
+                materialType: 'video',
+                model: 'seedance-2.0',
+              },
+            },
+          ]),
+        ),
+        true,
+      )
+    })
+
+    it('returns false for empty, missing, or malformed manifests', () => {
+      assert.equal(hasGenerationModelNode(null), false)
+      assert.equal(hasGenerationModelNode({}), false)
+      assert.equal(hasGenerationModelNode(withNodes([])), false)
+      assert.equal(hasGenerationModelNode(withNodes([null, 'nope'])), false)
+    })
+  })
+
+  describe('shouldShowModelSelector() — 显示策略（证据不足不隐藏）', () => {
+    const withNodes = (nodes) => ({ workflowBinding: { snapshot: { nodes } } })
+
+    it('keeps the legacy selector when there is no embedded snapshot (builtin apps)', () => {
+      // 内置应用 manifest 只带 workspaceId，工作流实体在 catalog/presets。
+      // 快照缺失不等于没有生成节点，因此保持既有行为、不隐藏选择器。
+      assert.equal(shouldShowModelSelector(null), true)
+      assert.equal(shouldShowModelSelector({}), true)
+      assert.equal(
+        shouldShowModelSelector({ appId: 'app-creatify-chasing-product', workflowBinding: { workspaceId: 'ws-x' } }),
+        true,
+      )
+      assert.equal(shouldShowModelSelector(withNodes([])), true)
+    })
+
+    it('hides the selector when the snapshot proves there is no generation node', () => {
+      assert.equal(
+        shouldShowModelSelector(
+          withNodes([
+            { id: 't1', type: 'material', data: { materialType: 'text', selectedTool: 'text-editor' } },
+          ]),
+        ),
+        false,
+      )
+      assert.equal(
+        shouldShowModelSelector(
+          withNodes([
+            {
+              id: 'v1',
+              type: 'material',
+              data: { nodeKind: 'import', selectedTool: 'import', materialType: 'video' },
+            },
+          ]),
+        ),
+        false,
+      )
+    })
+
+    it('shows the selector when the snapshot contains a generation node', () => {
+      assert.equal(
+        shouldShowModelSelector(
+          withNodes([
+            { id: 't1', type: 'material', data: { materialType: 'text', selectedTool: 'text-editor' } },
+            {
+              id: 'g1',
+              type: 'material',
+              data: { nodeKind: 'generate', selectedTool: 'video-generation', materialType: 'video' },
+            },
+          ]),
+        ),
+        true,
+      )
+      assert.equal(
+        shouldShowModelSelector(
+          withNodes([
+            {
+              id: 'g1',
+              type: 'material',
+              data: {
+                nodeKind: 'generate',
+                selectedTool: 'omnimux_video_submit',
+                materialType: 'video',
+                model: 'seedance-2.0',
+              },
+            },
+          ]),
+        ),
+        true,
+      )
     })
   })
 })

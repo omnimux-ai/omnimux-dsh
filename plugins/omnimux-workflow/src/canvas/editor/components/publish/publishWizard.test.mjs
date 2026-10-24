@@ -133,6 +133,9 @@ describe('T03: Canvas Workflow Publishing Wizard & Tab Dispatch', () => {
       data: {
         nodeKind: 'generate',
         title: '分镜视频生成',
+        // 显式声明媒体类型：分类推断只依据终端节点的 materialType，
+        // 不再有「未命中就兜底成 video」的行为。
+        materialType: 'video',
         prompt: '高质量短剧画面',
         params: {
           aspectRatio: '9:16',

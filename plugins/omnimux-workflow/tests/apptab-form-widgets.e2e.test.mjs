@@ -860,7 +860,8 @@ test('E2E: 表单首部生成模型默认项显式绑定工程作者模型 (Issu
   assert.doesNotMatch(nameSpan.textContent, /工程默认 · 作者推荐/, '主标题绝无冗长后缀括号')
   assert.equal(subSpan.textContent.trim(), '工程预设推荐模型', '副标题极简展示工程预设推荐模型')
 
-  // 3. 验证无模型工程节点时的健全推导呈现：彻底杜绝回退为「智能推荐 (默认)」(Issue #2647)
+  // 3. 只有文本节点的快照（无生成节点）：应用页不得渲染模型选择器，更不得回退为
+  //    「智能推荐 (默认)」或写死的视频模型 (Issue #2647 / 本次标准更正)
   const manifestWithoutModel = JSON.parse(JSON.stringify(CHASING_PRODUCT_APP))
   manifestWithoutModel.workflowBinding = {
     workspaceId: 'ws_test_no_model',
@@ -875,6 +876,7 @@ test('E2E: 表单首部生成模型默认项显式绑定工程作者模型 (Issu
       edges: [],
     },
   }
+  assert.equal(manifestWithoutModel.workflowBinding.snapshot.nodes.length, 1, '前置：纯文本快照只有一个文本节点，不含生成节点')
 
   const host2 = doc.createElement('div')
   doc.body.appendChild(host2)
@@ -895,9 +897,9 @@ test('E2E: 表单首部生成模型默认项显式绑定工程作者模型 (Issu
   const modelSelectGroup2 = Array.from(host2.querySelectorAll('.omx-apptab-field-group')).find((fg) =>
     fg.textContent.includes('生成模型'),
   )
-  const modelTrigger2 = modelSelectGroup2.querySelector('.omx-apptab-select-trigger')
-  assert.equal(modelTrigger2.textContent.trim(), 'Seedance 2.0', '无生成节点时健全推导为 Seedance 2.0，彻底杜绝智能推荐')
-  assert.doesNotMatch(modelTrigger2.textContent, /智能推荐/, '绝不回退为智能推荐')
+  // 3. 标准更正（独立审查）：只有文本节点的快照没有生成节点，应用页因此不应渲染
+  //    模型选择器。原断言要求此处显示 'Seedance 2.0'——那正是被报的缺陷。
+  assert.equal(modelSelectGroup2, undefined, '无生成节点的应用不得渲染「生成模型」选择器')
 
   // 4. 验证复杂多节点拓扑（含 slot 节点、import 节点、LLM 节点与主生成节点）下的排他精确寻址 (Issue #2642 Review #13)
   const manifestMultiNodes = JSON.parse(JSON.stringify(CHASING_PRODUCT_APP))
