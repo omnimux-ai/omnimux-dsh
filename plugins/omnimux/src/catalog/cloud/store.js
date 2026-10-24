@@ -15,7 +15,7 @@ import { createHash } from 'node:crypto'
 import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { CLOUD_SNAPSHOT_SCHEMA_VERSION, isSnapshotEmpty, snapshotDigest } from './snapshot.js'
+import { CLOUD_SNAPSHOT_SCHEMA_VERSION, isSnapshotEmpty, snapshotContentDigest } from './snapshot.js'
 
 export const CLOUD_CATALOG_DIR = 'catalog'
 export const ANONYMOUS_VIEW = 'anonymous'
@@ -115,7 +115,7 @@ export function createCloudCatalogStore(home, opts = {}) {
         return { accepted: false, reason: 'schema-mismatch' }
       }
       if (isSnapshotEmpty(snapshot)) return { accepted: false, reason: 'empty' }
-      const digest = snapshotDigest(snapshot)
+      const digest = snapshotContentDigest(snapshot)
       const previous = readJson(metaPath)
       if (previous && previous.digest === digest) return { accepted: false, reason: 'unchanged', digest }
       if (!dir) return { accepted: false, reason: 'no-home' }

@@ -2,6 +2,7 @@ import z from '@deepseek-ai/schemastery'
 import { parseReferenceStorageConfig } from './reference-storage/config.js'
 import { SETTINGS_DEFAULTS, parseSettingsSection } from './settings/schema.js'
 import { parseAppsConfig } from './apps/config.js'
+import { parseCatalogConfig } from './catalog/cloud/config.js'
 import { DEFAULT_SITE, resolveSiteBaseUrl } from './auth/omnimux-auth.js'
 import { parseBrandConfig } from './brand/config.js'
 import { parseGateConfig } from './gate/config.js'
@@ -30,6 +31,14 @@ export function parseHubConfig(value) {
           : process.env.OMNIMUX_SITE_URL || DEFAULT_SITE,
       ),
     ),
+    catalog: parseCatalogConfig(
+      raw.catalog,
+      resolveSiteBaseUrl(
+        typeof raw.siteBaseUrl === 'string' && raw.siteBaseUrl.trim()
+          ? raw.siteBaseUrl
+          : process.env.OMNIMUX_SITE_URL || DEFAULT_SITE,
+      ),
+    ),
     text: parseTextConfig(raw.text),
     gate: parseGateConfig(raw.gate),
   }
@@ -38,7 +47,7 @@ export function parseHubConfig(value) {
 /**
  * @type {{ '~standard': { version: 1, vendor: string, validate: (value: unknown) => { value: ReturnType<typeof parseHubConfig> } | { issues: Array<{ message: string }> } } }}
  */
-const ordinaryKeys = ['siteBaseUrl', 'clientName', 'productName', 'logoSvg', 'wordmarkText', 'replaceHeroMark', 'hidePreviewBadge', 'rewriteWelcome', 'heroHeadline', 'heroHeadlineFit', 'heroHeadlineMaxPx', 'heroHeadlineMinPx', 'media', 'official', 'apps', 'text', 'gate', 'hmrTransport']
+const ordinaryKeys = ['siteBaseUrl', 'clientName', 'productName', 'logoSvg', 'wordmarkText', 'replaceHeroMark', 'hidePreviewBadge', 'rewriteWelcome', 'heroHeadline', 'heroHeadlineFit', 'heroHeadlineMaxPx', 'heroHeadlineMinPx', 'media', 'official', 'apps', 'catalog', 'text', 'gate', 'hmrTransport']
 const fields = Object.fromEntries(ordinaryKeys.map(key => [key, z.any()]))
 fields.referenceStorage = z.object({
   enabled: z.boolean().default(false),
