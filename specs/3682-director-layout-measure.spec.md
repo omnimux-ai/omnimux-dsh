@@ -25,9 +25,10 @@
     - `.director-sequencer` 高度 = 236，且 `rect.width` = 中列宽度；
     - `[data-director-property-inspector]` `scrollHeight >= clientHeight` 且 `overflow-y: auto`；
     - 字号：**直接含可见文字**的元素 `font-size` 去重 ⊆ {11,12,13,15}px（容器继承到的 16px 不代表可见文本）；
-    - 圆角：四角非 0 的 `border-radius` 去重 ⊆ {4,6,8,10,12,999}px；
-    - 边框色：**可见**边框（任一边宽度 > 0、颜色非透明、且颜色 ≠ 自身背景色）颜色去重 ⊆ `--dsw-alias-border` 解析值——与背景同色的描边画不出来，不属于边框色设计面；
-    - 测量范围限导演台 chrome：排除 3D 视口及其悬浮控件（`.director-viewport-shell` / `-dock` / `-notice`），那是三维场景不是面板规范。
+    - 圆角：四角非 0 的 `border-radius` 去重 ⊆ {4,6,8,10,12,999}px；保留原始计算值（`50%` 不会被伪装成 `50px`）；
+    - 边框色：**逐边**判定可见性——该边宽度 > 0、颜色非透明、且颜色 ≠ 自身背景色；颜色去重 ⊆ `--dsw-alias-border` 解析值（与背景同色的描边画不出来，不算边框色）；
+    - 测量范围限导演台 chrome：**包含**视口浮动工具条（#3646 P1-6 点名的按钮/边框/圆角/字号），只排除 3D 画布本身与瞬时提示浮层（后者只在引导期间出现，会让集合抖动）；
+    - 固定常量（48/248/300/236）精确命中，只有「中列 = 栅格宽 − 548」这类派生比较允许 1px 取整误差。
   - 证据：`layout-thresholds.json`（阈值、实测、逐项失败原因、越界元素出处）+ `layout-thresholds.png`（展开时间轴后的整屏截图）+ `assertions.json`。
 - 不改原 8 条断言语义、不改装配与清理逻辑。
 
@@ -56,11 +57,11 @@
 
 ## 5. 验收
 
-1. `DIRECTOR_MEASURE=1 DIRECTOR_REAL_UI=1 DIRECTOR_EGO_BROWSER=<ego-browser> DIRECTOR_FFMPEG=<ffmpeg> node scripts/director-acceptance-3289.mjs` 退出码 0，断言 9 条（原 8 条 + `layout-thresholds`），实测值落 `layout-thresholds.json` 与 `layout-thresholds.png`。**已达成**：`acceptance-3289-VWtNRg`，实测 48/248/300/479、时间轴 236×479（x=949 与中列对齐）、inspector 1074≥794 且 overflow auto、字号 {11,12,13,15}、圆角 {4,6,8,10,12,999}、边框色只有 `rgb(249,250,251)`。
-2. 不开开关时退出码 0、断言仍为原 8 条。**已达成**：`acceptance-3289-21QUN6`，`expected-assertions.json` 逐字为原 8 条。
+1. `DIRECTOR_MEASURE=1 DIRECTOR_REAL_UI=1 DIRECTOR_EGO_BROWSER=<ego-browser> DIRECTOR_FFMPEG=<ffmpeg> node scripts/director-acceptance-3289.mjs` 退出码 0，断言 9 条（原 8 条 + `layout-thresholds`），实测值落 `layout-thresholds.json` 与 `layout-thresholds.png`。**已达成**：`acceptance-3289-z7ej05`（含视口工具条口径），实测 48/248/300/479、时间轴 236×479（x=949 与中列对齐）、inspector 可滚动、字号 {11,12,13,15}、圆角 {4,6,8,10,12,999}、边框色只有 `rgb(249,250,251)`。
+2. 不开开关时退出码 0、断言仍为原 8 条。**已达成**：`acceptance-3289-eWrvTh`，`expected-assertions.json` 逐字为原 8 条。
 3. 实测值与 #3646 §五 规格逐项一致；偏离在 §2.2 列出并已修复，未调低任何阈值。
-4. `pnpm --filter omnimux-workflow test`（2947/2947）、`typecheck`、`node scripts/build-director.mjs --check`、`node --test scripts/verify-anti-slop.test.mjs`（3/3）、`pnpm verify:stages` 全绿。**已达成**。
-5. `git diff` 只落在 `scripts/`、`specs/` 与 `plugins/omnimux-workflow/src/director`。
+4. `pnpm --filter omnimux-workflow test`（2954/2954）、`typecheck`、`node scripts/build-director.mjs --check`、`node --test scripts/verify-anti-slop.test.mjs`（3/3）、`pnpm verify:stages` 全绿。**已达成**。
+5. `git diff` 落在 `scripts/`、`specs/`、`plugins/omnimux-workflow/src/director`、`plugins/omnimux-workflow/tests/` 与 `docs/evidence/director-layout-3682/`。
 
 ## 6. 非目标
 

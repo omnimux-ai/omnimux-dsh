@@ -92,3 +92,31 @@ test('阈值常量与测量锚点覆盖 #3646 §五 的全部数值', () => {
   }
   assert.equal(runner.includes('button[aria-label="动画时间轴"]'), true, '测量前需要按用户路径展开时间轴');
 });
+
+test('真机证据：时间轴是栅格直接子项，且与中列同宽同左边界', () => {
+  const evidence = JSON.parse(readFileSync(join(repoRoot, 'docs/evidence/director-layout-3682/layout-thresholds.json'), 'utf8'));
+  const measured = evidence.measured;
+  assert.deepEqual(evidence.failures, [], '证据里的逐项判定必须为空');
+  assert.equal(measured.sequencerPlacement.parent.startsWith('div.grid'), true, '时间轴槽位的父节点必须是栅格容器');
+  assert.equal(measured.sequencerPlacement.gridColumn, '2', '时间轴应落在第 2 列');
+  assert.equal(measured.sequencerPlacement.gridRow, '2', '时间轴应落在第 2 行');
+  assert.equal(measured.sequencerWidth, measured.middleColumnWidth, '时间轴宽度必须等于中列宽度');
+  assert.equal(measured.offsets.sequencer, measured.offsets.middleColumn, '时间轴左边界必须与中列对齐');
+  assert.equal(measured.gridTemplateColumns, `248px ${measured.middleColumnWidth}px 300px`, '栅格列必须为 248 / 中列 / 300');
+});
+
+test('真机证据：外观三集合都落在 #3646 允许集合内', () => {
+  const evidence = JSON.parse(readFileSync(join(repoRoot, 'docs/evidence/director-layout-3682/layout-thresholds.json'), 'utf8'));
+  const measured = evidence.measured;
+  const allowedRadii = evidence.thresholds.radii.map(value => `${value}px`);
+  const badRadii = measured.radii.filter(sample => !allowedRadii.includes(sample.value));
+  const badFonts = measured.fontSizes.filter(sample => !evidence.thresholds.fontSizes.includes(sample.value));
+  const badBorders = measured.borderColors.filter(sample => sample.value !== measured.aliasBorder);
+  assert.deepEqual(badFonts, [], '字号必须 ⊆ {11,12,13,15}');
+  assert.deepEqual(badRadii, [], '圆角必须 ⊆ {4,6,8,10,12,999}px');
+  assert.deepEqual(badBorders, [], '可见边框色必须只有 --dsw-alias-border');
+  assert.equal(measured.topbarHeight, 48, '顶栏高度必须是 48');
+  assert.equal(measured.leftDockWidth, 248, '左栏宽度必须是 248');
+  assert.equal(measured.rightDockWidth, 300, '右栏宽度必须是 300');
+  assert.equal(measured.sequencerHeight, 236, '时间轴高度必须是 236');
+});

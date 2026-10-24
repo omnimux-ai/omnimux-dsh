@@ -282,9 +282,9 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle, palett
         if (!grid) return { missing: ['workbench grid'] };
         const middleColumn = [...grid.children].find(node => node !== leftDock && node !== rightDock && !node.hasAttribute('data-director-sequencer-slot'));
         if (!middleColumn) return { missing: ['middle column'] };
-        // 面板外观集合的测量范围：导演台 chrome（顶栏 / 左右栏 / 时间轴 / 属性面板），
-        // 排除 3D 视口与其悬浮控件——那是三维场景，不是 #3646 收敛的面板规范。
-        const chromeScope = node => !node.closest('.director-viewport-shell, .director-viewport-dock, .director-viewport-notice');
+        // 外观集合的测量范围：导演台 chrome，含视口浮动工具条（#3646 P1-6 点名的按钮/边框/圆角/字号）。
+        // 只排除 3D 画布本身与瞬时提示浮层——前者是三维场景，后者只在引导期间出现、会让集合抖动。
+        const chromeScope = node => !node.closest('.director-viewport-shell, .director-viewport-notice');
         const collect = () => {
           const fonts = new Map(); const radii = new Map(); const borders = new Map();
           const note = (map, value, node) => { const list = map.get(value) ?? []; if (list.length < 3) list.push(describe(node)); map.set(value, list); };
@@ -294,21 +294,21 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle, palett
             if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') continue;
             // 字号只看「直接含可见文字」的元素：容器继承到的 16px 不代表任何可见文本。
             if (hasOwnText(node)) note(fonts, round(style.fontSize), node);
+            // 圆角保留原始计算值（如 "4px" / "50%"），百分比不能伪装成 50px。
             for (const corner of ['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius']) {
-              const value = round(style[corner]);
-              if (value > 0) note(radii, value, node);
+              const value = style[corner];
+              if (value && value !== '0px') note(radii, value, node);
             }
-            const widths = ['borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth'].map(side => round(style[side]));
-            if (widths.some(width => width > 0)) {
-              // 只看可见边框：与自身背景同色的边框画不出来（例如实心主按钮的 accent 描边），
-              // 它不属于「边框色」这个设计面。
-              const background = style.backgroundColor;
-              for (const side of ['borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor']) {
-                const color = style[side];
-                if (!color || color === 'rgba(0, 0, 0, 0)' || color === 'transparent') continue;
-                if (background !== 'rgba(0, 0, 0, 0)' && color === background) continue;
-                note(borders, color, node);
-              }
+            // 只看可见边框，且按边判定：宽度为 0 的边画不出来，它的 border-color 不算边框色。
+            // 与自身背景同色的边框同样画不出来（实心主按钮的 accent 描边）。
+            const background = style.backgroundColor;
+            const sides = [['borderTopWidth', 'borderTopColor'], ['borderRightWidth', 'borderRightColor'], ['borderBottomWidth', 'borderBottomColor'], ['borderLeftWidth', 'borderLeftColor']];
+            for (const [widthProperty, colorProperty] of sides) {
+              if (!(round(style[widthProperty]) > 0)) continue;
+              const color = style[colorProperty];
+              if (!color || color === 'rgba(0, 0, 0, 0)' || color === 'transparent') continue;
+              if (background !== 'rgba(0, 0, 0, 0)' && color === background) continue;
+              note(borders, color, node);
             }
           }
           return { fonts, radii, borders };
@@ -343,21 +343,26 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle, palett
       });
       if (measured.missing) throw new Error(`layout-thresholds: 缺少测量锚点 ${measured.missing.join(', ')}`);
       const failures = [];
+      // 固定常量要求精确命中；只有「中列 = 栅格宽 − 548」这类派生比较允许 1px 的取整误差。
+      const exact = (label, actual, expectedValue) => {
+        if (actual !== expectedValue) failures.push(`${label}: 实测 ${JSON.stringify(actual)} vs 期望 ${JSON.stringify(expectedValue)}`);
+      };
       const near = (label, actual, expectedValue, tolerance = 1) => {
         if (typeof actual !== 'number' || Math.abs(actual - expectedValue) > tolerance) failures.push(`${label}: 实测 ${JSON.stringify(actual)} vs 期望 ${JSON.stringify(expectedValue)}`);
       };
       const middleWidth = Math.round((measured.gridWidth - thresholds.leftDockWidth - thresholds.rightDockWidth) * 100) / 100;
-      near('topbar height', measured.topbarHeight, thresholds.topbarHeight);
-      near('left dock width', measured.leftDockWidth, thresholds.leftDockWidth);
+      exact('topbar height', measured.topbarHeight, thresholds.topbarHeight);
+      exact('left dock width', measured.leftDockWidth, thresholds.leftDockWidth);
       near('middle column width', measured.middleColumnWidth, middleWidth);
-      near('right dock width', measured.rightDockWidth, thresholds.rightDockWidth);
-      near('sequencer height', measured.sequencerHeight, thresholds.sequencerHeight);
+      exact('right dock width', measured.rightDockWidth, thresholds.rightDockWidth);
+      exact('sequencer height', measured.sequencerHeight, thresholds.sequencerHeight);
       near('sequencer width = middle column width', measured.sequencerWidth, measured.middleColumnWidth);
       const outside = (samples, allowed) => samples.filter(sample => !allowed.includes(sample.value));
       const outsideFonts = outside(measured.fontSizes, thresholds.fontSizes);
       if (outsideFonts.length) failures.push(`font sizes outside ${JSON.stringify(thresholds.fontSizes)}: ${JSON.stringify(outsideFonts)}`);
-      const outsideRadii = outside(measured.radii, thresholds.radii);
-      if (outsideRadii.length) failures.push(`radii outside ${JSON.stringify(thresholds.radii)}: ${JSON.stringify(outsideRadii)}`);
+      const allowedRadii = thresholds.radii.map(value => `${value}px`);
+      const outsideRadii = measured.radii.filter(sample => !allowedRadii.includes(sample.value));
+      if (outsideRadii.length) failures.push(`radii outside ${JSON.stringify(allowedRadii)}: ${JSON.stringify(outsideRadii)}`);
       const outsideBorders = measured.borderColors.filter(sample => sample.value !== measured.aliasBorder);
       if (outsideBorders.length) failures.push(`border colors outside --dsw-alias-border (${measured.aliasBorder}): ${JSON.stringify(outsideBorders)}`);
       if (measured.inspector.overflowY !== 'auto') failures.push(`inspector overflow-y: ${measured.inspector.overflowY} vs auto`);
