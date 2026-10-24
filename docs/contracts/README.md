@@ -58,6 +58,7 @@ subsystem: "global"
 | `living` | [ui-copywriting-and-naming-standards.md](ui-copywriting-and-naming-standards.md) | OmniMux 全局 UI 命名与微文案规范 (UI Copywriting & Naming Standards) | `omnimux` | 2026-08-26 | * **规则**：维度标识、筛选字段必须使用 **2~4 字纯实体名词**。 |
 | `living` | [ui-design-guidelines.md](ui-design-guidelines.md) | OmniMux UI Design & Interaction Guidelines | `omnimux-accounts` | 2026-08-26 | 1. **严禁裸用原生 `<select>`**： |
 | `living` | [plugin-git-pr.md](plugin-git-pr.md) | plugin-git-pr — OmniMux 插件仓 Git / PR 与授权合同 | `global` | 2026-09-09 | 禁止直推 main；required CI/MQ；qa:pass 仅合入前静态与测试；Agent 交付以隔离 worktree Web 验证为准，Dev 真机验收归人工、另行记录。 |
+| `living` | [dsh-plugin-engineering-practices.md](dsh-plugin-engineering-practices.md) | DSH 插件开发工程实践（蒸馏自官方 deepseek-harness） | `global` | 2026-10-24 | 官方框架工程实践的插件侧蒸馏：插件即组成、effect 注册、会话日志事实源、配置显式化、类型边界、测试分层、代码卫生、交付纪律；剔除框架内部与阶段性条款。 |
 | `living` | [client-external-store.md](client-external-store.md) | Client external store（useSyncExternalStore） | `omnimux-workflow` | 2026-08-22 | Normative rule for first-level product pages that subscribe to Cordis / Locale faces via React `useS |
 | `living` | [dsh-video-plugin.md](dsh-video-plugin.md) | PRD：omnimux-video 视频能力插件（自包含本地执行 + 理解层） | `omnimux-video` | 2026-08-22 | 状态：**Revised v2.1（2026-08-22：增补视频理解两工具；处理层仍为本机 ffmpeg）** |
 | `living` | [gxgen-workflow-migration.md](gxgen-workflow-migration.md) | Gxgen → OmniMux 工作流迁移蓝图（代理必读） | `omnimux-workflow` | 2026-08-22 | \| 项 \| 决定 \| |
