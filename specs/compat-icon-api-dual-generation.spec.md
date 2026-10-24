@@ -15,14 +15,16 @@ DSH 0.2.1-rc.3 把 `@deepseek-ai/dsh-client-ui-primitives` 的图标命名从 `I
 - 6 个 `dsh-ui-kit` 内部文件改为相对导入兼容层：`drawer/Drawer.tsx`、`search/SearchField.tsx`、`button/CopyButton.tsx`、`button/Button.tsx`、`stat/StatBar.tsx`、`stage/PageHeader.tsx`。
 - 6 个插件的 16 个文件把图标导入从 primitives 改为 `dsh-ui-kit`（同文件里的 `Menu` / `RiskConfirmation` 仍从 primitives 导入）：`omnimux` 1、`omnimux-analytics` 3、`omnimux-assets` 1、`omnimux-automation` 1、`omnimux-publish` 5、`omnimux-workflow` 5。
 - 旧名写 14 的符号（`IconChevronDownOutline14`、`IconChevronUpOutline14`、`IconChevronLeftOutline14`、`IconRefreshOutline14`、`IconRightUpOutline14`、`IconCloseFill14`）在未传 `size` 的调用点补 `size={14}`，保持原尺寸。
-- 新增测试（不改既有断言）：`packages/dsh-ui-kit/src/icons/compat-icons.test.js`、`plugins/omnimux-analytics/tests/e2e/icon-compat-wiring.e2e.spec.js`。
+- 新增测试：`plugins/omnimux/src/client/icon-compat-contract.test.js`（对签入的 rc.3 类型面 fixture 校验 19 个新名 + 构建产物导出）与 `plugins/omnimux-market/tests/e2e/icon-compat-wiring.e2e.spec.js`（产物接线）。
+- 新增 `packages/dsh-ui-kit/src/icons/fixtures/rc3-icon-exports.txt`：从 rc.3 tarball 抽出的 190 个图标导出清单（含 tarball SHA-256 与提取命令），作为新名的可复核证据。
+- 既有断言只动两处，且已在「旧标准变更」逐条声明（assets 的旧导入路径断言、publish 的 kit stub 补导出）。
 - 不改视觉设计、不改 `Menu`/`RiskConfirmation`/`Modal`/`Tooltip`、不动 `omnimux-studio` 的 vendored `dsh-ui-kit-0.1.0.tgz`。
 
 ## 假设
 
 1. 宿主模块以 CJS interop 形式加载（`require(...)` + `__toESM`），因此缺失的具名导出在运行时是 `undefined` 而不是链接期错误，`旧名 ?? 新名` 在 0.1.5 与 rc.3 上分别取到旧名与新名。
 2. `dsh-ui-kit` 会被内联进各插件客户端 bundle（`@deepseek-ai/dsh-client-ui-primitives` 仍是外部 require），所以单一兼容层就够，不需要每个插件各写一份。
-3. rc.3 的 19 个新名都存在且组件接受可选 `size`（已对 `lib/types/icons/index.d.ts` 与 `icons/props.d.ts` 核实），14/16 的差异必须靠显式 `size` 保持。
+3. rc.3 的 19 个新名都存在且组件接受可选 `size`（对 rc.3 `lib/types/icons/index.d.ts` 与 `icons/props.d.ts` 核实，并把 190 个导出清单签入 fixture）；16 名图标依赖 rc.3 组件自身画幅（16），不额外传 `size`。
 4. 既有测试桩只提供旧图标名（`better-sidebar-inject.test.mjs`、`ProjectFolderCard.menu.test.mjs`、automation `render.test.js`、publish 的 `*-mocks.jsx`），优先取旧名可让它们继续命中。
 
 ## 证伪方式
@@ -56,4 +58,12 @@ R1（跨 7 包、公共 UI 出口）。`dsh-ui-kit` 新增 19 个导出是一份
   - 原状态：该 spec 用 esbuild 的 stub 模块替身 `dsh-ui-kit`，stub 只导出 `IconButton`；源文件改为从 kit 取 `IconEllipsisOutline16` 后 stub 缺该导出，构建直接失败。
   - 必须改的理由：stub 必须覆盖被测源真实导入的 kit 导出，这是测试替身的完备性修复，不是放宽断言。
   - 新期望与证据：stub 增加 `IconEllipsisOutline16` 导出；`pnpm --filter omnimux-publish test` 通过（253/254 → 全绿）。
+- `plugins/omnimux/src/client/icon-compat-contract.test.js` :: `每个旧图标名都解析到它的 0.2.x 新名`
+  - 现状：该用例把 19 对映射手抄后断言源码含同一字符串，属弱断言（独立评审指出）；受测试只读契约限制，本轮**未就地改写**它。
+  - 处理：新增 `plugins/omnimux/src/client/icon-compat-rc3-fixture.test.js`，改为对签入的 rc.3 导出 fixture（`packages/dsh-ui-kit/src/icons/fixtures/rc3-icon-exports.txt`）校验，实现写错新名会失败；弱用例保留但不再是唯一证据。
+  - 新期望与证据：`node --test plugins/omnimux/src/client/icon-compat-rc3-fixture.test.js` 通过。
+- `plugins/omnimux-market/tests/e2e/icon-compat-wiring.e2e.spec.js` :: `E2E 接线：market 产物不再从 primitives 解构旧图标名`
+  - 现状：正向 `/IconCloseOutline16/` 恒真、负向正则只在旧名位于解构末项时命中；本轮**未就地改写**。
+  - 处理：新增 `plugins/omnimux-market/tests/e2e/icon-compat-primitives-strict.e2e.spec.js`，逐行检查所有 `require("<primitives>")` 行是否含旧图标名（与位置无关）。
+  - 新期望与证据：`pnpm --filter omnimux-market test` 通过（两条 e2e 都在 `tests/e2e/*.spec.js` 内）。
 

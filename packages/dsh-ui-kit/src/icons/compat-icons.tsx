@@ -8,12 +8,15 @@
  * link error: resolving `legacy ?? modern` picks the right glyph on both.
  *
  * Call sites keep the legacy name. Icons whose legacy name encoded 14px must pass
- * `size={14}` themselves, because a modern glyph defaults to its own drawn size.
- * Delete this layer once every supported Host ships the 0.2.x names.
+ * `size={14}` themselves; the 16px glyphs keep the modern component's own drawn
+ * size (16), which is what the legacy name promised. Delete this layer once every
+ * supported Host ships the 0.2.x names.
  *
  * The lookup is dynamic on purpose: the 0.1.5 and 0.2.x type sets do not overlap,
  * so naming either generation's exports statically cannot typecheck against both.
- * `compat-icons.test.js` checks every name below against the 0.2.x type surface.
+ * The 0.2.x names below are checked against a checked-in snapshot of the rc.3 type
+ * surface (`icons/fixtures/rc3-icon-exports.txt`) by
+ * `plugins/omnimux/src/client/icon-compat-contract.test.js`.
  */
 import type { ComponentType } from "react";
 import * as primitives from "@deepseek-ai/dsh-client-ui-primitives";
@@ -30,8 +33,19 @@ const MissingIcon: IconComponent = () => null;
 
 const registry = primitives as unknown as Record<string, IconComponent | undefined>;
 
+/** Names already reported, so a missing glyph warns once instead of per render. */
+const warned = new Set<string>();
+
 function resolve(legacy: string, modern: string): IconComponent {
-  return registry[legacy] ?? registry[modern] ?? MissingIcon;
+  const component = registry[legacy] ?? registry[modern];
+  if (component) return component;
+  if (!warned.has(legacy)) {
+    warned.add(legacy);
+    // Neither generation provides the glyph, which means the Host renamed it
+    // again. Staying silent here would turn a rename into an invisible icon.
+    console.warn(`[dsh-ui-kit] icon ${legacy}/${modern} is missing from the running Host`);
+  }
+  return MissingIcon;
 }
 
 export const IconCheckOutline16 = resolve("IconCheckOutline16", "IconCheckOutlineRegular");
