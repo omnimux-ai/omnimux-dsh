@@ -164,9 +164,16 @@ function createSourceInspection(target, allowMissing = true) {
     const parts = path.split(sep).filter(Boolean);
     let current = sep;
     record(current, true);
+    // 中间组件可以整条缺失（新建 `plugins/x/tests/` 这类目录是常规动作），但一旦出现
+    // 缺失组件，其后所有组件必须同样缺失：缺失层之下又出现实体说明是符号链接、并发创建
+    // 或路径构造异常，一律 fail closed。存在的组件仍逐个做 realpath 与类型检查。
+    let missingSeen = false;
     for (let index = 0; index < parts.length; index++) {
       current = resolve(current, parts[index]);
-      record(current, index < parts.length - 1 || directory, index === parts.length - 1 && missingAllowed);
+      const last = index === parts.length - 1;
+      const item = record(current, !last || directory, last ? missingAllowed : true);
+      if (item?.missing) { missingSeen = true; continue; }
+      if (missingSeen) throw new Error('Noncanonical or nonregular inspection path');
     }
     return records.get(path);
   }
@@ -499,6 +506,13 @@ export function handle(rawInput) {
         checkedTarget.verify();
         if (unverifiedImport) return formatHookOutput(testDecision({ allowed: false }), hookEventName);
         if (inspection.allowed) return formatHookOutput({ permissionDecision: 'allow' }, hookEventName);
+        // 无 baseline = 纯新增：磁盘上没有既有文件，就没有既有标准可削弱。此时若唯一原因是
+        // acorn 解析不了 TypeScript 注解（`source` 为 null 说明目标不存在），放行——
+        // 与 CI 侧 `change.before === null` 的「纯加法」口径一致。其余原因（跳过/聚焦、
+        // 动态执行、公共绑定逃逸、未验证 import）不受影响，仍然拒绝。
+        if (typeof source !== 'string' && inspection.reason === 'unsupported-or-incomplete-test-syntax') {
+          return formatHookOutput({ permissionDecision: 'allow' }, hookEventName);
+        }
         // 旧标准变更通道：仅对「被 spec 逐条点名的具名用例削弱」放行。
         // 规格在被改文件所属的工作树里，不能用门禁自己的检出根去找。
         const declared = decideOldStandardDeclaration({ filePath: repoPath(target), inspection, root: repoRootOf(target) ?? REPO_ROOT });
