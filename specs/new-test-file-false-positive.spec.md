@@ -4,7 +4,7 @@
 
 `scripts/guard-anti-cheat.mjs` 的测试保护分支对**新增**测试文件有两处误报，都会让正常开发动作被硬拒：
 
-1. **新增 TypeScript 测试文件被拒，且理由自相矛盾**。实测 `write` 到 `scripts/probe-new.test.ts`（内容含类型注解）返回 deny，理由是「禁止删除/改写已有测试用例或断言（**新增用例、追加断言放行**）」——一个全新文件既没删除也没改写任何东西。原因是 acorn 解析不了 TS 注解，`inspectTestAuthoring` 返回 `unsupported-or-incomplete-test-syntax`，而 `testDecision` 把这个原因一律映射成「既有标准」拒绝文案。仓库里这是常见动作（最近 800 个提交新增了 9 个 `.test.ts`，`origin/main` 上共 69 个 `.test.ts(x)`）。
+1. **新增 TypeScript 测试文件被拒，且理由自相矛盾**。实测 `write` 到 `scripts/probe-new.test.ts`（内容含类型注解）返回 deny，理由是「禁止删除/改写已有测试用例或断言（**新增用例、追加断言放行**）」——一个全新文件既没删除也没改写任何东西。原因是 acorn 解析不了 TS 注解，`inspectTestAuthoring` 返回 `unsupported-or-incomplete-test-syntax`，而 `testDecision` 把这个原因一律映射成「既有标准」拒绝文案。仓库里这是常见动作（最近 800 个提交新增了 8 个 `.test.ts`，`origin/main` 上共 69 个 `.test.ts(x)`）。
 2. **父目录不存在时新建测试文件被拒**。实测 `write` 到 `plugins/demo/tests/probe.test.mjs`（`plugins/demo/tests/` 不存在）返回 deny，理由 `Cannot inspect canonical test target or source`；同样内容写到已存在的 `scripts/` 下则放行。原因是 `createSourceInspection.capturePath` 只允许**最后一段**缺失，中间任何一段不存在都直接抛错。新建插件测试目录是常规动作。
 
 两条都只是「新增」，不涉及任何既有标准；它们与 CI 侧声明校验已经采用的「无 baseline = 纯加法」口径不一致。
@@ -34,9 +34,9 @@
 
 ## 假设
 
-- 假设 1：`source` 不是字符串 ⇔ 目标文件在磁盘上不存在。依据：`readExistingSource` 用 `lstatSync` + `readFileSync`，文件缺失、是目录或是符号链接时返回 `null`。可评审点：若将来改成「目录也返回内容」，这条放行会变宽。
-- 假设 2：把「整条尾部缺失」按缺失处理不会放松路径安全。依据：`capturePath` 对每个存在的组件仍做 `realpathSync(path) !== path` 与 `lstatSync` 类型检查；缺失组件不参与 `openSync`，且「缺失层之下出现实体」会抛错。
-- 假设 3：新增 TS 测试文件里若藏 `test.skip`，本次放宽后写入门禁不会再拦。依据：acorn 无法解析 TS，这是既有语法层盲区（CI 侧同一文件两侧都不可解析时也只报告不阻断）。可评审点：这是**已知取舍**，不是新引入的能力缺口。
+- 假设 1：`source` 不是字符串 ⇔ 目标文件在磁盘上不存在。依据：受保护分支的 `source` 来自 `createSourceInspection().readTarget()`（`readExistingSource` 只服务另一条 `evaluateWithInspection` 路径）。实测：目标是目录、符号链接、悬空符号链接、FIFO 或 `chmod 000` 时都是**抛错拒绝**，不会返回非字符串，所以这条放行不会在这些形态上被触发。
+- 假设 2：把「整条尾部缺失」按缺失处理不会放松路径安全。依据：`capturePath` 对每个存在的组件仍做 `realpathSync(path) !== path` 与 `lstatSync` 类型检查；缺失组件不参与 `openSync`，且「缺失层之下出现实体」会抛错——该检查是 load-bearing 的（删掉后同场景会放行，已用 IO seam 差分验证）。
+- 假设 3：解析失败就等于放弃结构化检查，因此放行必须配字面模式兜底。依据：acorn 无法解析候选内容时，跳过/聚焦、动态执行、公共绑定逃逸、未验证 import 这些**结构化原因根本不会产生**。已用字面模式覆盖前两类（`test|it|describe|suite` 的 `skip|only|todo`、`eval`、`new Function`、`require`、动态 `import`、`node:vm|child_process|worker_threads`、`process.binding`），并按「调用形态」匹配以避免误伤正常用例名与注释。**残余取舍**：公共绑定逃逸与未验证 import 在解析失败时仍不被覆盖——这与既有 TS 盲区同源，显式记录而非声称已覆盖。
 
 ## 证伪方式
 
@@ -49,7 +49,7 @@
 
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
-| 门禁自身测试 | `node --test scripts/guard-anti-cheat.test.mjs` | **29/29 通过**（新增 5 条：两条放行 + 三条不溢出） |
+| 门禁自身测试 | `node --test scripts/guard-anti-cheat.test.mjs` | **32/32 通过**（新增 8 条：两条放行 + 三条不溢出 + 三条字面模式兜底） |
 | 语法层评估测试 | `node --test scripts/test-authoring-inspection.test.mjs` | **47/47 通过**（未改动） |
 | 门禁套件 | `pnpm test:gates` | 465 / 453 通过；**12 条失败与改动前逐条同名**（既有环境/内容问题） |
 
@@ -62,6 +62,8 @@
 | 新增 `.test.mjs`（父目录不存在） | deny（`Cannot inspect…`） | allow | allow |
 | 新增 `.test.ts`（父目录不存在） | deny | allow | allow |
 | 新增 `.test.mjs` 含 `test.skip` | deny | **deny** | deny（不溢出） |
+| 新增 `.test.ts` 含 `test.skip` / `test.only` / `eval` / `node:vm` / 动态 `import` | deny | **deny** | deny（字面模式兜底，见假设 3） |
+| 新增 `.test.ts` 用例名含 `skips` / 注释含 `skip` | deny | **allow** | allow（只匹配调用形态，不误伤） |
 | `edit` 不存在的测试文件 | deny | **deny** | deny（不溢出） |
 | 改写既有断言（无声明） | deny | **deny** | deny（不溢出） |
 | 经仓库外符号链接目录新建 | deny | **deny** | deny（安全假设 2 成立） |
@@ -72,4 +74,4 @@
 
 ## 文档影响
 
-`docs/contracts/anti-agent-fake-completion-guard.md` §3.1 已写明「写前防造假检查不扫描 `.md`…可解析的完整 JavaScript 测试候选可经语法检查形成」。本次放宽后需补一句：**纯新增（磁盘上无既有文件）的测试文件，若仅因 acorn 解析不了 TypeScript 注解而无法评估，则放行**；该文件因此不在写前检查范围内，与 CI 侧「两侧都不可解析只报告」的取舍一致。
+`docs/contracts/anti-agent-fake-completion-guard.md` §3.1 已写明「写前防造假检查不扫描 `.md`…可解析的完整 JavaScript 测试候选可经语法检查形成」。本次放宽后需补一句：**纯新增（磁盘上无既有文件）的测试文件，若 acorn 解析不了候选内容而无法评估，则放行**（不是「仅因 TypeScript 注解」——任何解析失败都走这条，实测 `.mjs` 里的类型注解、纯语法错误、`.test.js` 里的 JSX 与装饰器同样命中），并说明放行仍配字面模式兜底、且解析失败时不会产生其余结构化原因。

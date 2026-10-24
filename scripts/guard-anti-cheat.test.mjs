@@ -346,3 +346,30 @@ describe('5. 新增测试文件不得被误判为削弱既有标准', () => {
     }
   });
 });
+
+describe('6. 解析不了的新增测试文件仍拦最典型风险（不因放宽而失守）', () => {
+  const TS_HEAD = 'const typed: number = 1;\n';
+
+  it('跳过/聚焦选择仍拒绝', () => {
+    const skipPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-skip.test.ts', content: "import { test } from 'vitest'\ntest.skip('a', () => {\n  const v: number = 1\n})\n" } });
+    assert.equal(handle(skipPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    const onlyPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-only.test.ts', content: "import { test } from 'vitest'\ntest.only('a', () => {\n  const v: number = 1\n})\n" } });
+    assert.equal(handle(onlyPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+  });
+
+  it('动态执行与外部执行来源仍拒绝', () => {
+    const evalPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-eval.test.ts', content: TS_HEAD + "eval('1');\n" } });
+    assert.equal(handle(evalPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    const vmPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-vm.test.ts', content: "import vm from 'node:vm'\n" + TS_HEAD } });
+    assert.equal(handle(vmPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+    const dynImportPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-import.test.ts', content: TS_HEAD + "import('./x');\n" } });
+    assert.equal(handle(dynImportPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'deny');
+  });
+
+  it('只匹配调用形态，正常命名与注释不误伤', () => {
+    const namedPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-named.test.ts', content: "import { test } from 'vitest'\ntest('skips invalid input', () => {\n  const v: number = 1\n})\n" } });
+    assert.equal(handle(namedPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'allow');
+    const commentPayload = JSON.stringify({ tool_name: 'write', cwd: ROOT_DIR, tool_input: { file_path: 'scripts/__risk-comment.test.ts', content: '// 这个用例 skip 掉重活\n' + TS_HEAD } });
+    assert.equal(handle(commentPayload)?.hookSpecificOutput?.permissionDecision ?? 'allow', 'allow');
+  });
+});
