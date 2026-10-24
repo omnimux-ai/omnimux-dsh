@@ -401,6 +401,7 @@ materialize_dev_state() {
     already-current) echo "开发版已是最新（本次无需重复安装）" ;;
     not-needed) echo "开发版无需物化（本次合入未包含插件源码变更）" ;;
     failed) echo "开发版未更新（物化失败，见上方提示）" ;;
+    pipeline-absent) echo "开发版未更新（本检出没有安装脚本，不属于本仓交付管线）" ;;
     *) echo "开发版物化状态未知" ;;
   esac
 }
@@ -408,9 +409,13 @@ materialize_dev_state() {
 auto_materialize_and_reload() {
   local base_ref="${1:-HEAD~1}"
   local target_ref="${2:-HEAD}"
+  # 只有 ship 允许「刷新 shared kit 后重试」；remove 是清理动作，不额外做全量同步与重启。
+  local kit_refresh_allowed="${3:-0}"
 
   if [ ! -f "${ROOT}/scripts/sync-to-app.sh" ]; then
-    MATERIALIZE_STATUS="failed"
+    # 本检出没有交付管线（外来/不完整检出）：开发版不会更新，但也没有「本仓管线失败」可言，
+    # 因此不套用退出码 3；横幅按 pipeline-absent 如实说明。
+    MATERIALIZE_STATUS="pipeline-absent"
     say "⚠️ 缺少安装脚本，开发版未更新。请在主检出运行: ./scripts/sync-to-app.sh"
     return 0
   fi
@@ -464,9 +469,36 @@ auto_materialize_and_reload() {
   fi
 
   say "🔄 自动物化：合并已确认，变更插件 [${changed_plugins[*]}] 开始装进开发版 (~/.omnimux-dev)，不写正式版..."
+  # 单插件同步拒绝覆盖 shared kit（避免共享依赖被单个插件顺带改掉）。失败后的兜底必须是
+  # 「先刷新 shared kit，再重试本次插件」：只跑无参数完整同步会漏掉不在默认清单里的插件
+  # （omnimux-studio / device / intercept 等），那会造出「本次插件没进开发版却报成功」的新假闭环。
+  local sync_ok=0 sync_mode="incremental"
   if (cd "${ROOT}" && bash "${ROOT}/scripts/sync-to-app.sh" "${changed_plugins[@]}"); then
+    sync_ok=1
+  elif [ "${kit_refresh_allowed}" -eq 1 ] && [ "${OMNIMUX_SHIP_NO_FULL_SYNC:-0}" != "1" ]; then
+    say "⚠️ 增量物化失败（常见原因：shared kit 漂移）。先刷新 shared kit，再重试本次插件..."
+    if (cd "${ROOT}" && bash "${ROOT}/scripts/sync-to-app.sh"); then
+      sync_mode="kit-refresh+retry"
+      if (cd "${ROOT}" && bash "${ROOT}/scripts/sync-to-app.sh" "${changed_plugins[@]}"); then
+        sync_ok=1
+      else
+        say "⚠️ shared kit 已刷新，但本次插件仍安装失败。"
+      fi
+    else
+      say "⚠️ 刷新 shared kit 的完整同步也失败。"
+    fi
+  else
+    say "⚠️ 增量物化失败（OMNIMUX_SHIP_NO_FULL_SYNC=1，不做 shared kit 刷新与重试）。"
+  fi
+  if [ "${sync_ok}" -eq 1 ]; then
     MATERIALIZE_STATUS="ok"
-    say "✅ 增量物化成功！"
+    if [ "${sync_mode}" = "kit-refresh+retry" ]; then
+      say "✅ 物化成功（本次增量先失败，刷新 shared kit 后重试成功）。"
+      # shared kit 刷新属于宿主侧变更，需要受控重启。
+      needs_restart=1
+    else
+      say "✅ 增量物化成功！"
+    fi
     # 自动探测 Dev App：宿主侧变更受控重启，纯 Client 变更刷新页面
     if [ -f "${ROOT}/scripts/reload-dev-app.mjs" ]; then
       if [ "${needs_restart}" -eq 1 ]; then
@@ -485,7 +517,8 @@ auto_materialize_and_reload() {
     fi
   else
     MATERIALIZE_STATUS="failed"
-    say "⚠️ 自动物化未成功，请手动在主检出运行: ./scripts/sync-to-app.sh ${changed_plugins[*]}"
+    say "⚠️ 自动物化未成功（增量与完整同步都失败）。"
+    say "   补救：在主检出运行 ./scripts/sync-to-app.sh（无插件参数=完整同步，可覆盖 shared kit），完成后自行确认开发版版本。"
   fi
 }
 
@@ -543,10 +576,14 @@ cmd_ship() {
   # Queue 批次可能合入多个 PR，后 ship 较早的 PR 时 HEAD~1..HEAD 只剩最后一个 PR，
   # 会漏掉本次的插件改动/删除；而 merge-base(^1,^2) 会把分叉后 main 上其他 PR 的
   # 改动也纳入。squash 提交与 merge 提交的 ^1..merge 都恰好是本 PR 的增量。
-  auto_materialize_and_reload "${pr_merge}^1" "${pr_merge}"
+  auto_materialize_and_reload "${pr_merge}^1" "${pr_merge}" 1
 
   if [ "${keep_worktree}" -eq 1 ]; then
-    say "PR MERGED; Dev materialization status: ${MATERIALIZE_STATUS} ($(materialize_dev_state)). Worktree retained (--keep-worktree): ${wt}"
+    if [ "${MATERIALIZE_STATUS}" = "failed" ]; then
+      say "⚠️ 交付未闭环：PR 已合入、主干已同步、工作树按 --keep-worktree 保留在 ${wt}，但$(materialize_dev_state)。[materialize=failed]"
+    else
+      say "PR MERGED; Dev materialization status: ${MATERIALIZE_STATUS} ($(materialize_dev_state)). Worktree retained (--keep-worktree): ${wt}"
+    fi
   else
     say "git worktree remove ${wt}"
     git worktree remove "${wt}" 2>/dev/null || rm -rf "${wt}"
@@ -554,10 +591,16 @@ cmd_ship() {
       git branch -d "${branch}" 2>/dev/null || git branch -D "${branch}" 2>/dev/null || true
     fi
     git worktree prune
-    say "✅ 交付全链路闭环完成：PR 已合入、主干已同步、$(materialize_dev_state)、临时工作树 [${task}] 与分支已清理。[materialize=${MATERIALIZE_STATUS}]"
+    if [ "${MATERIALIZE_STATUS}" = "failed" ]; then
+      # 合并与清理确实完成了，但开发版没更新——不能宣告「交付闭环完成」。
+      say "⚠️ 交付未闭环：PR 已合入、主干已同步、临时工作树 [${task}] 与分支已清理，但$(materialize_dev_state)。[materialize=failed]"
+    else
+      say "✅ 交付全链路闭环完成：PR 已合入、主干已同步、$(materialize_dev_state)、临时工作树 [${task}] 与分支已清理。[materialize=${MATERIALIZE_STATUS}]"
+    fi
   fi
   if [ "${MATERIALIZE_STATUS}" = "failed" ]; then
-    say "⚠️ 开发版仍是旧版本：请在主检出运行 ./scripts/sync-to-app.sh（无插件参数=完整同步，可覆盖 shared kit）后自行确认。"
+    say "⚠️ 开发版仍是旧版本：请按上面的补救命令同步后自行确认版本；退出码 3 = 已合入但未物化（1 = 硬失败）。"
+    exit 3
   fi
 }
 
