@@ -38,7 +38,7 @@ import { buildModelCatalog } from '../catalog/list.js'
 import { createLiveCatalog } from '../catalog/cloud/live.js'
 import { createCatalogRefresher } from '../catalog/cloud/refresh.js'
 import { resolvePricingUrl } from '../catalog/cloud/config.js'
-import { diffGatewayAgainstHub } from '../catalog/cloud/diff.js'
+import { diffGatewayAgainstHub, driftSummaryCounts } from '../catalog/cloud/diff.js'
 import { createGenerationProducts } from '../catalog/generation-products.js'
 import { createGenerationMapping } from '../media/generation-mapping.js'
 import { listSessionModels } from '../catalog/session-models.js'
@@ -171,6 +171,10 @@ export function apply(ctx, config = {}) {
    * Read-only view of the gateway snapshot and its drift against the catalog we
    * serve. P1a ships this without acting on it: it is how the pipeline is
    * verified in a real process before membership switches over.
+   *
+   * Counts are read from the diff document's own `summary`, so a renamed
+   * category can never silently read as zero. Diagnostics stay free of local
+   * paths and raw upstream error text: only stable codes and counts go out.
    */
   const catalogDiagnostics = () => {
     const resolved = liveCatalog.resolve()
@@ -186,17 +190,10 @@ export function apply(ctx, config = {}) {
         stale: resolved.stale,
         models: Array.isArray(resolved.snapshot?.models) ? resolved.snapshot.models.length : 0,
         drop: resolved.drop,
-        bundledIssue: resolved.bundledIssue,
+        bundledIssueCode: resolved.bundledIssueCode,
       },
-      refresh: state,
-      drift: drift
-        ? {
-            unreachable: (drift.unreachable ?? []).length,
-            groupMissing: (drift.groupMissing ?? []).length,
-            gatewayOnly: (drift.gatewayOnly ?? []).length,
-            groupUnregistered: (drift.groupUnregistered ?? []).length,
-          }
-        : null,
+      refresh: { refresh: state.refresh, errorCode: state.errorCode, fetchedAt: state.fetchedAt, due: state.due },
+      drift: drift ? driftSummaryCounts(drift) : null,
     }
   }
 

@@ -150,6 +150,30 @@ export function createCloudCatalogStore(home, opts = {}) {
       return { updated: true }
     },
 
+    /**
+     * Record a successful refresh attempt whose content did not change.
+     *
+     * The snapshot body stays as it is, but the attempt time moves forward and
+     * any stale mark is cleared. Without this the TTL clock would never advance
+     * for an unchanged gateway (so every tick refetches) and a snapshot that
+     * once failed would stay marked stale forever.
+     *
+     * @param {{ fetchedAt?: string }} [meta]
+     */
+    markFresh(meta = {}) {
+      const current = readJson(metaPath)
+      if (!current || !dir) return { updated: false }
+      const next = {
+        ...current,
+        stale: false,
+        fetchedAt: typeof meta.fetchedAt === 'string' && meta.fetchedAt ? meta.fetchedAt : new Date().toISOString(),
+      }
+      delete next.staleReason
+      delete next.staleAt
+      writeJson(metaPath, next)
+      return { updated: true }
+    },
+
     /** Task-owned cleanup helper for tests and explicit cache resets. */
     clear() {
       if (!dir) return

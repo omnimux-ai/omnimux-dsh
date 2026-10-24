@@ -69,6 +69,7 @@ export function createLiveCatalog(deps) {
    *   stale: boolean,
    *   drop: Array<{ kind: string, reason: string }>,
    *   bundledIssue: string|null,
+   *   bundledIssueCode: string|null,
    * }}
    */
   function resolve() {
@@ -120,6 +121,7 @@ export function createLiveCatalog(deps) {
       stale,
       drop,
       bundledIssue: bundledRead.snapshot ? null : bundledRead.issue,
+      bundledIssueCode: bundledRead.snapshot ? null : bundledRead.code ?? 'unreadable',
     }
   }
 

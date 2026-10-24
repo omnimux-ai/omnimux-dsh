@@ -67,20 +67,27 @@ export function createCatalogRefresher(deps) {
   let refresh = 'idle'
   let lastError = null
   let lastFetchedAt = null
+  let lastAttemptAt = null
   let inFlight
 
   function due() {
     if (!(deps.ttlSeconds > 0)) return false
     const meta = deps.live.store.read()?.meta
     const fetchedAt = typeof meta?.fetchedAt === 'string' ? meta.fetchedAt : null
-    if (!fetchedAt) return true
-    const elapsed = now() - Date.parse(fetchedAt)
+    // The TTL counts from the last *attempt*, not only from the last accepted
+    // change: an unchanged gateway must not make every tick refetch.
+    const latest = [fetchedAt, lastAttemptAt].filter(Boolean).sort().pop() ?? null
+    if (!latest) return true
+    const elapsed = now() - Date.parse(latest)
     if (!Number.isFinite(elapsed)) return true
     return elapsed >= deps.ttlSeconds * 1000
   }
 
   function state() {
-    return { refresh, error: lastError, fetchedAt: lastFetchedAt, due: due() }
+    // `error` keeps the detail for logs; `errorCode` is the stable, path-free
+    // value callers may surface (diagnostics, settings UI).
+    const code = typeof lastError === 'string' ? lastError.split(':')[0].trim() : null
+    return { refresh, error: lastError, errorCode: lastError ? code : null, fetchedAt: lastFetchedAt, due: due() }
   }
 
   /**
@@ -98,6 +105,7 @@ export function createCatalogRefresher(deps) {
     refresh = 'running'
     inFlight = (async () => {
       const fetchedAt = new Date(now()).toISOString()
+      lastAttemptAt = fetchedAt
       let payload
       try {
         const controller = new AbortController()
@@ -148,7 +156,9 @@ export function createCatalogRefresher(deps) {
       lastError = null
       refresh = 'idle'
       if (!accepted.accepted) {
-        // 'unchanged' is a healthy outcome: nothing to announce.
+        // 'unchanged' is a healthy outcome: nothing to announce, but the
+        // attempt time and any stale mark still have to move.
+        deps.live.store.markFresh({ fetchedAt })
         return { status: 'ok', changed: false, reason: accepted.reason, digest: accepted.digest }
       }
       deps.live.setMemory(snapshot)
