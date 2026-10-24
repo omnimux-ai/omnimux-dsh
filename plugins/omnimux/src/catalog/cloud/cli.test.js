@@ -137,3 +137,25 @@ describe('runCatalogDiff', () => {
     assert.match(output, /gateway-input-unrecognized/)
   })
 })
+
+describe('runCatalogDiff error handling', () => {
+  it('rejects an unknown flag instead of ignoring it', async () => {
+    const { exitCode, output } = await run(['--gateway', BASELINE_DIR, '--wat', 'x'])
+    assert.equal(exitCode, 2)
+    assert.match(output, /unknown flag: --wat/)
+  })
+
+  it('reports an unreadable --hub-catalog without a stack trace', async () => {
+    const { exitCode, output } = await run(['--gateway', BASELINE_DIR, '--hub-catalog', join(FIXTURES, 'missing.json')])
+    assert.equal(exitCode, 1)
+    assert.match(output, /hub catalog unreadable/)
+  })
+
+  it('reports an unwritable --out without a stack trace', async () => {
+    const hubCatalogPath = writeHubCatalog()
+    const outPath = join(temporaryDirectory(), 'no-such-directory', 'report.md')
+    const { exitCode, output } = await run(['--gateway', BASELINE_DIR, '--hub-catalog', hubCatalogPath, '--out', outPath])
+    assert.equal(exitCode, 1)
+    assert.match(output, /cannot write --out/)
+  })
+})

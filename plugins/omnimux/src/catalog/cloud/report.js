@@ -38,6 +38,7 @@ export function diffReportDocument(diff, context = {}) {
     groupMissing: diff.groupMissing,
     groupExtra: diff.groupExtra,
     priceChanged: diff.priceChanged,
+    uncomparablePrices: diff.uncomparablePrices ?? [],
   }
 }
 
@@ -65,6 +66,7 @@ export function formatDiffReport(diff, context = {}) {
   lines.push(`- 中枢分组在网关缺失：${summary.groupMissing ?? 0}`)
   lines.push(`- 网关分组中枢未登记：${summary.groupExtra ?? 0}`)
   lines.push(`- 积分估算与网关口径不一致：${summary.priceChanged ?? 0}（可比对 ${summary.comparablePrices ?? 0} 项）`)
+  lines.push(`- 因网关按 billing_expr 计费而无法比对：${summary.uncomparablePrices ?? 0}`)
 
   const sections = [
     ['中枢上架但网关不可达（调用必然失败）', diff.unreachable, (row) => `- ${row.id}（listed ops: ${row.listedOperations.join(', ') || 'none'}）`],
@@ -72,6 +74,11 @@ export function formatDiffReport(diff, context = {}) {
     ['中枢分组在网关缺失', diff.groupMissing, (row) => `- ${row.id} @ ${row.wireGroup}（网关现役: ${row.enableGroups.join(', ')}）`],
     ['网关分组中枢未登记', diff.groupExtra, (row) => `- ${row.id} @ ${row.wireGroup}`],
     ['积分估算不一致', diff.priceChanged, (row) => `- ${row.id} @ ${row.wireGroup}：中枢 ${row.hub}，按网关口径 ${row.expected}`],
+    [
+      '积分无法比对（网关按 billing_expr 计费，model_price 不生效）',
+      diff.uncomparablePrices,
+      (row) => `- ${row.id} @ ${row.wireGroup}：${row.expr}`,
+    ],
   ]
   for (const [title, rows, format] of sections) {
     if (!Array.isArray(rows) || rows.length === 0) continue

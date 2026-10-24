@@ -142,3 +142,43 @@ describe('diffGatewayAgainstHub', () => {
     assert.equal(diff.summary.gatewayOnly, 0)
   })
 })
+
+describe('price comparison against a gateway billing expression', () => {
+  function exprGateway() {
+    return normalizePricingPayload({
+      data: [
+        {
+          id: 'alpha-video-1',
+          enable_groups: ['default'],
+          billing_mode: 'per_task',
+          model_price: 0.02,
+          billing_expr: 'fixed(0.05)',
+        },
+      ],
+    }).snapshot
+  }
+
+  it('refuses to compare when billing_expr overrides model_price', () => {
+    assert.equal(
+      expectedPoints({ billing: { modelPrice: 0.02, expr: 'fixed(0.05)' }, billingMode: 'per_task', groupRatio: 1, baselineSeconds: 5 }),
+      null,
+    )
+  })
+
+  it('reports such rows as uncomparable instead of price drift', () => {
+    const hub = hubCatalog([
+      hubModel('alpha-video-1', [{ id: 'standard', wireGroup: 'default', billingMode: 'per_task', pointsEstimate: 0.2 }]),
+    ])
+    const diff = diffGatewayAgainstHub({ gateway: exprGateway(), hub })
+    assert.deepEqual(diff.priceChanged, [])
+    assert.equal(diff.summary.comparablePrices, 0)
+    assert.deepEqual(diff.uncomparablePrices, [{ id: 'alpha-video-1', wireGroup: 'default', expr: 'fixed(0.05)' }])
+  })
+
+  it('stays silent when the hub declares no estimate for the group', () => {
+    const hub = hubCatalog([hubModel('alpha-video-1', [{ id: 'standard', wireGroup: 'default', billingMode: 'per_task' }])])
+    const diff = diffGatewayAgainstHub({ gateway: exprGateway(), hub })
+    assert.deepEqual(diff.uncomparablePrices, [])
+    assert.equal(diff.summary.uncomparablePrices, 0)
+  })
+})

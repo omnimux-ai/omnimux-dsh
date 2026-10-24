@@ -123,6 +123,8 @@ export function diffGatewayAgainstHub(input) {
   const groupExtra = []
   /** @type {object[]} */
   const priceChanged = []
+  /** @type {object[]} */
+  const uncomparablePrices = []
   let comparablePrices = 0
 
   for (const [id, hubModel] of hubModels) {
@@ -142,13 +144,22 @@ export function diffGatewayAgainstHub(input) {
     }
     for (const group of hubModel.groups) {
       if (!group.enabled || !group.wireGroup) continue
+      const billing = objectOrEmpty(gatewayModel.billing)
       const expected = expectedPoints({
-        billing: objectOrEmpty(gatewayModel.billing),
+        billing,
         billingMode: group.billingMode,
         groupRatio: finiteNumber(groupRatio[group.wireGroup]),
         baselineSeconds,
       })
-      if (expected === null || group.pointsEstimate === null) continue
+      if (expected === null) {
+        // A gateway-side fixed price expression makes `model_price` moot; report
+        // it instead of silently comparing the wrong number.
+        if (text(billing.expr) && group.pointsEstimate !== null) {
+          uncomparablePrices.push({ id, wireGroup: group.wireGroup, expr: text(billing.expr) })
+        }
+        continue
+      }
+      if (group.pointsEstimate === null) continue
       comparablePrices += 1
       if (Math.abs(expected - group.pointsEstimate) > PRICE_TOLERANCE) {
         priceChanged.push({ id, wireGroup: group.wireGroup, hub: group.pointsEstimate, expected })
@@ -174,12 +185,14 @@ export function diffGatewayAgainstHub(input) {
       groupExtra: groupExtra.length,
       priceChanged: priceChanged.length,
       comparablePrices,
+      uncomparablePrices: uncomparablePrices.length,
     },
     unreachable,
     gatewayOnly,
     groupMissing,
     groupExtra,
     priceChanged,
+    uncomparablePrices,
     limitations: stringList(objectOrEmpty(gateway.coverage).limitations),
   }
 }
@@ -187,13 +200,17 @@ export function diffGatewayAgainstHub(input) {
 /**
  * Reproduce the hub's points estimate from the gateway's own numbers.
  *
- * Returns null when the two sides are not comparable (unknown unit price, no
- * group ratio, or a billing mode this comparison does not model, such as
- * per-token text billing).
+ * Returns null when the two sides are not comparable: unknown unit price, no
+ * group ratio, a billing mode this comparison does not model (such as per-token
+ * text billing), or a `billing_expr` that overrides `model_price` upstream
+ * (see `docs/evidence/2026-10-21-hub-gateway-drift-audit.md` §3 note 2).
+ * Those rows are reported as uncomparable rather than as price drift.
  *
  * @param {{ billing: object, billingMode: string|null, groupRatio: number|null, baselineSeconds: number }} input
  */
 export function expectedPoints(input) {
+  const expr = text(input.billing?.expr)
+  if (expr) return null
   const modelPrice = finiteNumber(input.billing?.modelPrice)
   const groupRatio = finiteNumber(input.groupRatio)
   if (modelPrice === null || groupRatio === null) return null

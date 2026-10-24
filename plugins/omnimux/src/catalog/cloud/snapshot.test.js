@@ -181,3 +181,26 @@ describe('comma-separated channel fields', () => {
     assert.deepEqual(snapshot.models[1].enableGroups, ['default', 'economy'])
   })
 })
+
+describe('pricing billing expression', () => {
+  it('keeps billing_expr so a price comparison cannot treat model_price as authoritative', () => {
+    const { snapshot } = normalizePricingPayload({
+      data: [
+        { id: 'm1', enable_groups: ['default'], billing_mode: 'per_task', model_price: 0.02, billing_expr: 'fixed(0.05)' },
+        { id: 'm2', enable_groups: ['default'], billing_mode: 'per_task', model_price: 0.02 },
+      ],
+    })
+    assert.equal(snapshot.models[0].billing.expr, 'fixed(0.05)')
+    assert.equal(snapshot.models[1].billing.expr, null)
+  })
+
+  it('flags a pricing response that carries no group information at all', () => {
+    const { snapshot } = normalizePricingPayload({ data: [{ id: 'm1' }, { id: 'm2' }] })
+    assert.deepEqual(snapshot.coverage.limitations, ['pricing-response-without-enable-groups'])
+  })
+
+  it('does not flag the limitation when at least one row carries groups', () => {
+    const { snapshot } = normalizePricingPayload({ data: [{ id: 'm1' }, { id: 'm2', enable_groups: ['default'] }] })
+    assert.deepEqual(snapshot.coverage.limitations, [])
+  })
+})

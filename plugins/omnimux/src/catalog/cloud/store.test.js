@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, describe, it } from 'node:test'
@@ -129,5 +129,24 @@ describe('createCloudCatalogStore', () => {
     const store = createCloudCatalogStore('')
     assert.equal(store.acceptRefresh(pricingSnapshot()).reason, 'no-home')
     assert.equal(existsSync(store.snapshotPath), false)
+  })
+})
+
+describe('createCloudCatalogStore hardening', () => {
+  it('treats a snapshot whose models field is not a list as no snapshot', () => {
+    const home = temporaryHome()
+    const store = createCloudCatalogStore(home)
+    store.acceptRefresh(pricingSnapshot())
+    writeFileSync(store.snapshotPath, JSON.stringify({ schemaVersion: 1, models: null }))
+    assert.equal(store.read(), undefined)
+  })
+
+  it('corrects the permissions of a directory that already existed', () => {
+    const home = temporaryHome()
+    const store = createCloudCatalogStore(home)
+    mkdirSync(store.dir, { recursive: true, mode: 0o755 })
+    chmodSync(store.dir, 0o755)
+    assert.equal(store.acceptRefresh(pricingSnapshot()).accepted, true)
+    assert.equal(statSync(store.dir).mode & 0o777, 0o700)
   })
 })

@@ -192,10 +192,22 @@ export function normalizePricingPayload(payload, opts = {}) {
         modelPrice: finiteNumber(row.model_price ?? row.modelPrice),
         modelRatio: finiteNumber(row.model_ratio ?? row.modelRatio),
         quotaType: finiteNumber(row.quota_type ?? row.quotaType),
+        // `billing_expr` overrides `model_price` upstream (see
+        // docs/evidence/2026-10-21-hub-gateway-drift-audit.md §3 note 2), so a
+        // price comparison must not treat `modelPrice` as authoritative when it
+        // is present.
+        expr: text(row.billing_expr ?? row.billingExpr) || null,
       },
       contract: objectOrEmpty(row.contract),
       contractPresent: Object.keys(objectOrEmpty(row.contract)).length > 0,
     })
+  }
+
+  const limitations = []
+  if (models.size > 0 && [...models.values()].every((model) => model.enableGroups.length === 0)) {
+    // Membership without groups is not a usable catalog: callers must not read
+    // it as "nothing is served" (see the P1 note in the task spec).
+    limitations.push('pricing-response-without-enable-groups')
   }
 
   const snapshot = {
@@ -210,7 +222,7 @@ export function normalizePricingPayload(payload, opts = {}) {
     coverage: {
       models: models.size,
       channels: null,
-      limitations: [],
+      limitations,
     },
     models: sortModels([...models.values()]),
   }
@@ -270,7 +282,7 @@ export function normalizeChannelBaseline(input = {}, opts = {}) {
       displayName: text(row.model_name) || id,
       enableGroups: [...groups].sort(),
       supportedEndpointTypes: [],
-      billing: { mode: null, modelPrice: null, modelRatio: null, quotaType: null },
+      billing: { mode: null, modelPrice: null, modelRatio: null, quotaType: null, expr: null },
       contract: {},
       contractPresent: false,
     })

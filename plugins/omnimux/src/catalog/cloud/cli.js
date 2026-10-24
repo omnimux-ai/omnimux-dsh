@@ -23,6 +23,9 @@ export const USAGE = [
   '  --out <file>       write the report to a file instead of stdout',
 ].join('\n')
 
+/** Flags that take a value; anything else starting with `--` is rejected. */
+const VALUE_FLAGS = new Set(['gateway', 'hub-catalog', 'out'])
+
 /** @param {string[]} argv */
 export function parseArgs(argv) {
   /** @type {Record<string, string|boolean>} */
@@ -32,9 +35,11 @@ export function parseArgs(argv) {
     if (token === '--json') args.json = true
     else if (token === '--help' || token === '-h') args.help = true
     else if (token.startsWith('--')) {
+      const name = token.slice(2)
+      if (!VALUE_FLAGS.has(name)) throw new Error(`unknown flag: ${token}`)
       const value = argv[index + 1]
       if (value === undefined || value.startsWith('--')) throw new Error(`missing value for ${token}`)
-      args[token.slice(2)] = value
+      args[name] = value
       index += 1
     } else {
       throw new Error(`unexpected argument: ${token}`)
@@ -145,13 +150,19 @@ export async function runCatalogDiff(options) {
   let hubCatalog
   let hubLabel
   if (typeof args['hub-catalog'] === 'string') {
-    hubCatalog = readJson(args['hub-catalog'])
+    try {
+      hubCatalog = readJson(args['hub-catalog'])
+    } catch (error) {
+      const output = `catalog-diff: hub catalog unreadable (${String(error?.message ?? error)})\n`
+      write(output)
+      return { exitCode: 1, output }
+    }
     hubLabel = args['hub-catalog']
   } else if (typeof options.loadHubCatalog === 'function') {
     hubCatalog = await options.loadHubCatalog(args)
     hubLabel = 'current checkout projection'
   } else {
-    const { buildModelCatalog } = await import('../list.js')
+    const { buildModelCatalog } = await import(join(options.hubRoot, 'src/catalog/list.js'))
     hubCatalog = buildModelCatalog({})
     hubLabel = 'current checkout projection'
   }
@@ -162,7 +173,16 @@ export async function runCatalogDiff(options) {
     ? `${JSON.stringify(diffReportDocument(diff, context), undefined, 2)}\n`
     : formatDiffReport(diff, context)
 
-  if (typeof args.out === 'string') writeFileSync(args.out, output)
-  else write(output)
+  if (typeof args.out === 'string') {
+    try {
+      writeFileSync(args.out, output)
+    } catch (error) {
+      const message = `catalog-diff: cannot write --out (${String(error?.message ?? error)})\n`
+      write(message)
+      return { exitCode: 1, output: message }
+    }
+  } else {
+    write(output)
+  }
   return { exitCode: 0, output }
 }

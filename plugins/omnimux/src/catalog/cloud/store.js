@@ -12,7 +12,7 @@
  */
 
 import { createHash } from 'node:crypto'
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { CLOUD_SNAPSHOT_SCHEMA_VERSION, isSnapshotEmpty, snapshotDigest } from './snapshot.js'
@@ -37,6 +37,24 @@ export function viewDirectoryName(viewKey) {
   const safe = raw.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
   const digest = createHash('sha256').update(raw).digest('hex').slice(0, 16)
   return safe ? `${safe}-${digest}` : `view-${digest}`
+}
+
+/**
+ * `mkdirSync`'s mode only applies when the directory is created, so an
+ * already-existing directory keeps whatever permissions it had. Correct it and
+ * return the failure message instead of swallowing it.
+ *
+ * @param {string} dir
+ * @param {number} mode
+ * @returns {string|null}
+ */
+function correctDirectoryMode(dir, mode) {
+  try {
+    chmodSync(dir, mode)
+    return null
+  } catch (error) {
+    return String(error?.message ?? error)
+  }
 }
 
 /**
@@ -77,7 +95,7 @@ export function createCloudCatalogStore(home, opts = {}) {
     /** Last accepted snapshot plus its metadata, or undefined. */
     read() {
       const snapshot = readJson(snapshotPath)
-      if (!snapshot || typeof snapshot.models !== 'object') return undefined
+      if (!snapshot || !Array.isArray(snapshot.models)) return undefined
       const meta = readJson(metaPath) ?? {}
       return { snapshot, meta }
     },
@@ -103,6 +121,7 @@ export function createCloudCatalogStore(home, opts = {}) {
       if (!dir) return { accepted: false, reason: 'no-home' }
 
       mkdirSync(dir, { recursive: true, mode: 0o700 })
+      const modeIssue = correctDirectoryMode(dir, 0o700)
       writeJson(snapshotPath, snapshot)
       writeJson(metaPath, {
         schemaVersion: CLOUD_SNAPSHOT_SCHEMA_VERSION,
@@ -113,8 +132,9 @@ export function createCloudCatalogStore(home, opts = {}) {
         fetchedAt: meta.fetchedAt ?? new Date().toISOString(),
         origin: meta.origin ?? null,
         stale: meta.stale === true,
+        modeWarning: modeIssue,
       })
-      return { accepted: true, reason: 'written', digest }
+      return { accepted: true, reason: 'written', digest, modeWarning: modeIssue }
     },
 
     /**

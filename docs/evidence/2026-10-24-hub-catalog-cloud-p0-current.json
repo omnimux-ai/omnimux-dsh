@@ -1,0 +1,165 @@
+{
+  "kind": "omnimux-gateway-catalog-diff",
+  "schemaVersion": 1,
+  "gateway": {
+    "source": "channel-baseline",
+    "generatedAt": null,
+    "digest": "7a9dac09557980618b1564a36939df919a82963f2528d4204b3fc81ada750c46",
+    "coverage": {
+      "models": 24,
+      "channels": {
+        "total": 68,
+        "enabled": 24
+      },
+      "limitations": [
+        "channel-baseline lacks supported_endpoint_types",
+        "channel-baseline lacks per-model contract"
+      ]
+    },
+    "label": "/Users/x/Desktop/Project/OmniMux/scripts/ops/config-baseline"
+  },
+  "hub": {
+    "label": "current checkout projection"
+  },
+  "summary": {
+    "gatewayModels": 24,
+    "hubModels": 44,
+    "hubListed": 9,
+    "unreachable": 0,
+    "gatewayOnly": 15,
+    "groupMissing": 0,
+    "groupExtra": 5,
+    "priceChanged": 0,
+    "comparablePrices": 0,
+    "uncomparablePrices": 0
+  },
+  "limitations": [
+    "channel-baseline lacks supported_endpoint_types",
+    "channel-baseline lacks per-model contract"
+  ],
+  "unreachable": [],
+  "gatewayOnly": [
+    {
+      "id": "gemini-3.1-flash-lite-image",
+      "enableGroups": [
+        "default",
+        "nanobanana-economy"
+      ]
+    },
+    {
+      "id": "gemini-4-argon",
+      "enableGroups": [
+        "gemini-4-argon-multimodal"
+      ]
+    },
+    {
+      "id": "indextts-2",
+      "enableGroups": [
+        "auto",
+        "default"
+      ]
+    },
+    {
+      "id": "kling-v2-6",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "kling-v3",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "minimax-h3-video",
+      "enableGroups": [
+        "auto",
+        "default",
+        "minimax-h3-video-fast",
+        "minimax-h3-video-pro"
+      ]
+    },
+    {
+      "id": "nano-banana-2",
+      "enableGroups": [
+        "nano-banana-2-pro"
+      ]
+    },
+    {
+      "id": "nano-banana-pro",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "qwen-image-3-0",
+      "enableGroups": [
+        "default",
+        "nanobanana-economy"
+      ]
+    },
+    {
+      "id": "suno-sounds",
+      "enableGroups": [
+        "default"
+      ]
+    },
+    {
+      "id": "tiktok-posts",
+      "enableGroups": [
+        "social-data-tikhub"
+      ]
+    },
+    {
+      "id": "tiktok-user",
+      "enableGroups": [
+        "social-data-tikhub"
+      ]
+    },
+    {
+      "id": "wan-3.0",
+      "enableGroups": [
+        "wan-3.0-1080p",
+        "wan-3.0-720p"
+      ]
+    },
+    {
+      "id": "x-posts",
+      "enableGroups": [
+        "social-data-tikhub"
+      ]
+    },
+    {
+      "id": "x-user",
+      "enableGroups": [
+        "social-data-tikhub"
+      ]
+    }
+  ],
+  "groupMissing": [],
+  "groupExtra": [
+    {
+      "id": "gpt-image-2.5",
+      "wireGroup": "nanobanana-economy"
+    },
+    {
+      "id": "seedance-2-5",
+      "wireGroup": "seedance-2-5-480p"
+    },
+    {
+      "id": "seedance-2-5",
+      "wireGroup": "seedance-2-5-720p"
+    },
+    {
+      "id": "seedream-5-0-pro",
+      "wireGroup": "nanobanana-economy"
+    },
+    {
+      "id": "whisper-1",
+      "wireGroup": "default"
+    }
+  ],
+  "priceChanged": [],
+  "uncomparablePrices": []
+}
