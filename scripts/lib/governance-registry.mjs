@@ -239,6 +239,19 @@ export function inspectGovernance(manifest, files, packageJson, workflows) {
           if (words[offset] === '--check') { mode = 'syntax'; offset++ }
           else if (words[offset] === '--test') { testing = true; offset++ }
         } else if (runtime === 'bash' && words[offset] === '-n') { mode = 'syntax'; offset++ }
+        // `node --test --import <module> <files...>`：加载器模块本身也是一次可核验的调用，
+        // 必须登记（否则它拿不到类别证据）；其余测试文件照常解析，未知选项仍然拒绝。
+        // 就地登记，避免后续某个不在扫描范围内的测试文件提前返回时丢掉这条证据。
+        while (testing && (words[offset] === '--import' || (words[offset] ?? '').startsWith('--import='))) {
+          const inline = words[offset].startsWith('--import=')
+          const spec = inline ? words[offset].slice('--import='.length) : words[offset + 1]
+          if (!spec || spec.startsWith('-')) { unknown('runtime-options-or-discovery', location); return }
+          const loaderPath = resolveTarget(spec, cwd, location)
+          if (!loaderPath) return
+          if (!JS.test(loaderPath)) { unknown('runtime-language-mismatch', { ...location, runtime, target: loaderPath }); return }
+          addRoot(loaderPath, location, 'execution', [])
+          offset += inline ? 1 : 2
+        }
         if (!words[offset] || words[offset].startsWith('-')) { unknown('runtime-options-or-discovery', location); return }
         if (testing && words.slice(offset).some(word => word.startsWith('-'))) {
           unknown('test-runner-options', location); return
