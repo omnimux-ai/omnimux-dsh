@@ -38,6 +38,8 @@ Out-of-tree OmniMux plugins for official DeepSeek Harness. This directory (or it
 - **Node inputs.** Input, connection, generation-control, and submission changes follow the [node input contract](docs/contracts/node-input-submission.md): generic `in`/`input` edges never lock slots or hide generation modes; verify clean empty nodes and connected project graphs.
 - **Model truth.** Model support comes from the selected channel's official docs, checked offline; never probe real model APIs, and only submission `mode: "live"` proves live generation ([model API authority](docs/contracts/model-api-authority.md)). Model changes close atomically across all consuming plugins ([cross-plugin closure](docs/contracts/model-list-ownership.md#cross-plugin-closure)).
 - **Real verification boundary.** Image/audio real-task verification is agent-allowed; video-generation live verification requires task-level approval ([plugin QA](docs/contracts/plugin-qa.md)).
+- **State truth.** Degraded output (`ui` fixtures, cached results, fallbacks) is never reported as live or persisted; business-error or non-OK responses are failures even when the page still renders.
+- **Validated write paths.** Delete, publish, quota, credential, and account writes verify ownership and references first — no fallback IDs, default permissions, or silent `catch`; referenced assets are preserved, failed physical cleanup never erases the record.
 
 ## MVP scope
 
@@ -55,6 +57,8 @@ The current MVP boundary and its admission and consent rules are owned by [mvp-s
 | `plugins/*/skills/`, `plugins/omnimux-market/catalog/`, `presets/` | Product-distributed skills and expert workflows | Global agent configuration |
 | `scripts/`, [package.json](package.json) | Build, worktree, and verification entrypoints | A second deployment system |
 | Shipping shell fork (path in [dev pipeline](docs/contracts/dev-pipeline.md)) | `yarn omnimux:*` operations | Plugin source; retired `omnimux-desktop` is read-only |
+
+Each layer declares one call surface in its contract or nested `AGENTS.md`; before adding code, fix which layer owns it and never add a parallel entry that bypasses the declared surface.
 
 ## Verification
 
@@ -76,6 +80,7 @@ Select the minimal sufficient checks for the changed surfaces using [plugin QA �
 - **Browser acceptance** is real-browser verification inside the task's own worktree (ego-browser or the worktree web QA runner on `port: 0`, self-cleaning) with retained screenshots or reports. Unit tests, HTTP 200, CI `qa:pass`, or private harnesses do not count. Missing ego capability is BLOCKED; never fall back to IAB. Unpacked-extension e2e is the exception: use `scripts/lib/extension-e2e.mjs` (one browser per run, self-cleaning); never ad-hoc spawn Chrome from `/tmp`. Shell-specific behavior also needs Electron evidence.
 - **Test environments** use the [worktree bootstrap](docs/contracts/plugin-qa.md#工作树测试配置准备): synthetic `ui` mode by default; `live` needs task-specific credential authorization; never copy shared profiles or type real keys into test pages.
 - **Shared Dev app acceptance is human-owned.** It is one shared instance (address in [dev pipeline](docs/contracts/dev-pipeline.md)); agents never wait on, gate on, or claim it.
+- After three consecutive same-class failures, stop blind retries: record the error, what was ruled out, and the new hypothesis before switching approach or asking the user.
 
 ## Delivery
 
