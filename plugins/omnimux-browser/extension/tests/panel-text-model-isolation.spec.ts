@@ -1,22 +1,18 @@
 // @vitest-environment jsdom
 // @ts-nocheck
 //
-// 设置面板「对话模型与推理等级」/「文本生成模型与推理等级」的隔离（Issue #3629 · A1）。
-//
-// 两行必须各自读写自己的设置：改文本生成模型不能碰对话模型键，改对话模型也不能
-// 碰文本生成选择；重开面板时两值各自保持。这里驱动真实的 App 组件（不是 handler 单测），
-// 断言的是用户真正看到的 select 与其持久化结果。
-//
-// 写法与 tests/capture-message.spec.ts 一致：不使用 TS 专有语法、用 node:assert/strict
-// 断言（写入门禁对新测试文件做 acorn 静态检查）。
+// 设置面板「对话模型」/「文本生成模型」的隔离（Issue #3629 · A1）。
 
 import { afterEach, beforeEach, describe, it, vi } from 'vitest'
 import assert from 'node:assert/strict'
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 
-const LABEL_CHAT = '对话模型与推理等级'
-const LABEL_TEXT = '文本生成模型与推理等级'
+const LABEL_CHAT = '对话模型'
+const LABEL_TEXT = '文本生成模型'
+// 行标签简化锚点：把定位常量钉在新文案上，防止旧长标签回归。
+assert.equal(LABEL_CHAT, '对话模型')
+assert.equal(LABEL_TEXT, '文本生成模型')
 const TAB_ID = 7
 
 let panelApi = null
@@ -140,7 +136,8 @@ describe('设置面板的文本生成模型行（#3629 A1）', () => {
     const texts = labels()
     assert.ok(texts.some((label) => label.includes(LABEL_CHAT)))
     assert.ok(texts.some((label) => label.includes(LABEL_TEXT)))
-    assert.equal(texts.some((label) => label.includes('默认模型与推理等级')), false)
+    assert.equal(texts.some((label) => label.includes('对话模型与推理等级')), false)
+    assert.equal(texts.some((label) => label.includes('文本生成模型与推理等级')), false)
 
     const textSelect = selectIn(LABEL_TEXT)
     assert.equal(textSelect.value, '')

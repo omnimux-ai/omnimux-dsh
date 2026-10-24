@@ -3288,7 +3288,7 @@ export function App(): React.JSX.Element {
             </div>
           </label>
           <label>
-            <span>{locale === 'en' ? 'Chat Model & Reasoning' : '对话模型与推理等级'}</span>
+            <span>{locale === 'en' ? 'Chat Model' : '对话模型'}</span>
             <small>{locale === 'en' ? 'Match models and reasoning effort supported by the active instance' : '跟随当前实例匹配可用模型与思考推理等级'}</small>
             <div style={{ gridColumn: '1 / -1', width: '100%', marginTop: '7px' }}>
               <ModelSelector
@@ -3304,7 +3304,7 @@ export function App(): React.JSX.Element {
             </div>
           </label>
           <label>
-            <span>{locale === 'en' ? 'Text Generation Model & Reasoning' : '文本生成模型与推理等级'}</span>
+            <span>{locale === 'en' ? 'Text Generation Model' : '文本生成模型'}</span>
             <small>{locale === 'en' ? 'Model used for one-shot Copilot text generation; leave on Follow Chat Model to inherit the chat model' : '页面 Copilot 一次性正文生成使用的模型；保持「跟随对话模型」即继承对话模型'}</small>
             <div style={{ gridColumn: '1 / -1', width: '100%', marginTop: '7px' }}>
               <ModelSelector
