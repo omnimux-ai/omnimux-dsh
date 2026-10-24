@@ -1,5 +1,5 @@
 /**
- * ComfyUI 页面节点（Issue #3681 M1）。
+ * ComfyUI 工作流节点（Issue #3681 M1）。
  *
  * 只做入口：卡片显示目标地址与连通状态，双击或点按钮把「打开」事件抛给
  * ComfyPageOverlay（与导演台同款 CustomEvent 约定），节点本身不承载 iframe。
