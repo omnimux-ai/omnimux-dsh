@@ -545,6 +545,35 @@ export function resolveJourneyPath(candidate, root) {
   return { ok: true, path: abs };
 }
 
+const FAILURE_SECRET = /token|bearer|api[-_]?key|password|secret/i;
+
+/** Flatten one failure text value into a single bounded line; credential-shaped text is redacted.
+ * `tail` keeps the end of the value, which is where an archive subprocess states its real reason. */
+export function sanitizeFailureText(value, { tail = false, limit = 400 } = {}) {
+  if (typeof value !== 'string') return value;
+  const flat = value.replace(/\s+/g, ' ').trim();
+  const bounded = tail ? flat.slice(-limit) : flat.slice(0, limit);
+  return FAILURE_SECRET.test(bounded) ? '[redacted]' : bounded;
+}
+
+/** Bound and sanitize a structured failure so reports stay machine-readable without leaking.
+ * Unsupported nested values become null rather than passing through unchecked. */
+export function sanitizeFailureReport(code, reason, detail) {
+  const scrub = (value, tail = false) => {
+    if (value === null || typeof value === 'number' || typeof value === 'boolean') return value;
+    if (typeof value === 'string') return sanitizeFailureText(value, { tail, limit: tail ? 1200 : 400 });
+    if (Array.isArray(value)) return value.slice(0, 32).map(item => scrub(item));
+    return null;
+  };
+  const raw = detail && typeof detail === 'object' && !Array.isArray(detail) ? detail : null;
+  return {
+    code,
+    reason: typeof reason === 'string' ? reason : null,
+    detail: raw ? Object.fromEntries(Object.entries(raw).slice(0, 8).map(([key, value]) => [key,
+      key === 'stderrTail' ? scrub(value, true) : scrub(value)])) : null,
+  };
+}
+
 /**
  * journey 断言名 = `journey:` 前缀 + 非空名称。runJourney 统一生成该形态；
  * 契约模式另按请求预声明集合校验，legacy 模式才用本判定放行自定义旅程断言。
@@ -1111,24 +1140,12 @@ export function createAppQaRunner(deps = {}) {
       // Preparation failures carry an actionable hint (missing install command, archive stderr).
       // Dropping it left the standard entry point with a bare code, so keep a sanitized copy that
       // the CLI and report readers can act on. Never persist credential-shaped text.
-      const sensitive = /token|bearer|api[-_]?key|password|secret/i;
-      const scrub = value => {
-        if (typeof value !== 'string') return value;
-        const flat = value.replace(/\s+/g, ' ').trim().slice(0, 400);
-        return sensitive.test(flat) ? '[redacted]' : flat;
-      };
-      const hint = scrub(typeof error?.hint === 'string' ? error.hint.slice(0, 800) : '');
+      const hint = sanitizeFailureText(typeof error?.hint === 'string' ? error.hint.slice(0, 800) : '', { limit: 800 });
       if (hint && hint !== '[redacted]') report.hint = hint;
       // A bare code cannot be classified and the free-text hint is not a contract, so keep the
       // stable reason plus bounded structured detail alongside it.
       if (typeof error?.code === 'string' && /^(?:TEST_ENV|TEST_APP_QA)_[A-Z_]+$/.test(error.code)) {
-        const raw = error.detail && typeof error.detail === 'object' && !Array.isArray(error.detail) ? error.detail : null;
-        report.failure = {
-          code: error.code,
-          reason: typeof error.reason === 'string' ? error.reason : null,
-          detail: raw ? Object.fromEntries(Object.entries(raw).slice(0, 8).map(([key, value]) => [key,
-            Array.isArray(value) ? value.slice(0, 32).map(scrub) : scrub(value)])) : null,
-        };
+        report.failure = sanitizeFailureReport(error.code, error.reason, error.detail);
       }
       if (error?.code === 'TEST_ENV_NOT_USER_FRESH_TASK_UNKNOWN') report.userFresh = false;
       if (!env && error?.cleanup) envCleanup = error.cleanup;
@@ -1167,8 +1184,10 @@ export function createAppQaRunner(deps = {}) {
     report.observations.appEvents = safeEvents((env?.observations ?? prepareObservations)?.events);
     report.observations.browserEvents = safeEvents(browser?.observations?.events);
     // Skip volume stays visible even though the preparation observation only keeps a bounded sample;
-    // absent data is omitted rather than reported as a fake zero.
-    const skippedInputCount = (env?.observations ?? prepareObservations)?.preparation?.skippedInputCount;
+    // absent data is omitted rather than reported as a fake zero. A preparation that skipped inputs
+    // and then failed carries the count on the raw preparation observation, so read both shapes.
+    const observed = env?.observations ?? prepareObservations;
+    const skippedInputCount = observed?.preparation?.skippedInputCount ?? observed?.skippedInputCount;
     if (Number.isInteger(skippedInputCount)) report.observations.skippedInputCount = skippedInputCount;
     if (request) {
       const allExpected = request.requiredChecks.flatMap(name => request.expectedAssertions[name]);

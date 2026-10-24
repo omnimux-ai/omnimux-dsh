@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { archiveCommandFailure, createSkippedInputTracker } from './test-env-bootstrap.mjs'
+import { archiveCommandFailure, createSkippedInputTracker, safeError } from './test-env-bootstrap.mjs'
+import { sanitizeFailureReport, sanitizeFailureText } from './worktree-app-qa.mjs'
 
 test('skipped input tracker keeps a bounded sample and the true total', () => {
   const tracker = createSkippedInputTracker(3)
@@ -48,4 +49,34 @@ test('archive failure detail and hint stay bounded', () => {
     { status: 1, signal: null, stdout: '', stderr: 'x'.repeat(4000) })
   assert.equal(error.detail.stderrTail.length, 1200)
   assert.ok(error.hint.length <= 1600)
+})
+
+test('safeError keeps reason and detail through runtime reclassification', () => {
+  const original = archiveCommandFailure('PREPARE_ARCHIVE_EXTRACTION_FAILED', '解包',
+    { status: 2, signal: null, stdout: '', stderr: 'tar: broken pipe' })
+  const classified = safeError(original, 'PREPARE_FAILED')
+  assert.equal(classified.code, 'TEST_ENV_PREPARE_ARCHIVE_EXTRACTION_FAILED')
+  assert.equal(classified.reason, 'ARCHIVE_COMMAND_EXIT')
+  assert.equal(classified.detail.exitStatus, 2)
+  assert.match(classified.detail.stderrTail, /broken pipe/)
+  assert.equal(safeError(new Error('unrelated'), 'PREPARE_FAILED').code, 'TEST_ENV_PREPARE_FAILED')
+})
+
+test('failure report keeps the stderr tail, redacts secrets and drops unsupported nesting', () => {
+  const longTail = `${'a'.repeat(1300)}SHA256 mismatch`
+  const report = sanitizeFailureReport('TEST_ENV_PREPARE_ARCHIVE_INSPECTION_FAILED', 'ARCHIVE_COMMAND_EXIT', {
+    action: '检查',
+    exitStatus: 3,
+    stderrTail: longTail,
+    nested: { token: 'secret-value' },
+    packages: ['packages/dsh-ui-kit', 'plugins/omnimux', 'plugins/omnimux-workflow'],
+  })
+  assert.equal(report.code, 'TEST_ENV_PREPARE_ARCHIVE_INSPECTION_FAILED')
+  assert.equal(report.reason, 'ARCHIVE_COMMAND_EXIT')
+  assert.equal(report.detail.exitStatus, 3)
+  assert.match(report.detail.stderrTail, /SHA256 mismatch$/)
+  assert.equal(report.detail.nested, null)
+  assert.deepEqual(report.detail.packages, ['packages/dsh-ui-kit', 'plugins/omnimux', 'plugins/omnimux-workflow'])
+  assert.equal(sanitizeFailureText('Authorization: Bearer abc'), '[redacted]')
+  assert.equal(sanitizeFailureReport('TEST_ENV_RUNTIME_EXIT', null, null).detail, null)
 })

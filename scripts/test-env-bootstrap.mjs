@@ -44,7 +44,7 @@ function detailFailure(code, reason, detail, hint) {
   error.detail = detail;
   return error;
 }
-function safeError(error, fallback) {
+export function safeError(error, fallback) {
   const code = error?.code;
   if (typeof code === 'string' && /^TEST_ENV_(?:CREDENTIAL_)?[A-Z_]+$/.test(code)) {
     // 保留可读说明与精确原因：脱敏只针对底层原文，不能把面向调用者的提示一并丢掉。
@@ -468,9 +468,11 @@ async function runTaskPreparation({ options, io, deps }) {
         }
         linkedTools++;
       }
-      catch { throw failure('PREPARE_DEPENDENCY_REQUIRED'); }
+      catch { throw detailFailure('PREPARE_DEPENDENCY_REQUIRED', 'DEPENDENCY_LINK_FAILED', { path: rel },
+        `无法在装配暂存区链接依赖：${rel}。请先在该工作树执行 pnpm install --frozen-lockfile。`); }
     }
-    if (!linkedTools) throw failure('PREPARE_DEPENDENCY_REQUIRED');
+    if (!linkedTools) throw detailFailure('PREPARE_DEPENDENCY_REQUIRED', 'DEPENDENCY_NOT_LINKED', { packages: packagePaths },
+      '任务工作树没有可复用的依赖链接。请先在该工作树执行 pnpm install --frozen-lockfile。');
     // Snapshot the staged source before building: the build must not mutate the copied inputs, and
     // this same snapshot is the honest source map the caller receives.
     const stageExclusions = ['node_modules', ...packagePaths.map(item => `${item}/node_modules`)];
