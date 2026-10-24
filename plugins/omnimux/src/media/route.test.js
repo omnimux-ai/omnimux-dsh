@@ -15,8 +15,8 @@ describe('media route', () => {
     assert.equal(route.modelId, 'seedance-2-5')
     // 2026-10-21 网关对账 #3516 评审修正：默认档位是 720p 标准版（default:true），
     // 空意图请求自动钉住该默认线路（不再返回裸候选）。
-    assert.equal(route.group, 'seedance-2-5-720p')
-    assert.deepEqual(route.candidates, ['seedance-2-5@seedance-2-5-720p'])
+    assert.equal(route.group, 'desktop-720p')
+    assert.deepEqual(route.candidates, ['seedance-2-5@desktop-720p'])
     assert.equal(route.apiKey, '')
     assert.equal(route.authMode, 'auto')
   })
@@ -26,17 +26,17 @@ describe('media route', () => {
     // 无显式分组的请求必须按 resolution 参数选线，否则默认 720p 档会在传输前拒绝 480p。
     const media = parseMediaConfig(undefined)
     const economy = resolveMediaRoute('video', { model: 'seedance-2-5', resolution: '480p' }, media, {})
-    assert.equal(economy.group, 'seedance-2-5-480p')
-    assert.deepEqual(economy.candidates, ['seedance-2-5@seedance-2-5-480p'])
+    assert.equal(economy.group, 'desktop-480p')
+    assert.deepEqual(economy.candidates, ['seedance-2-5@desktop-480p'])
     for (const request of [{ model: 'seedance-2-5', resolution: '720p' }, { model: 'seedance-2-5' }]) {
       const route = resolveMediaRoute('video', request, media, {})
-      assert.equal(route.group, 'seedance-2-5-720p')
-      assert.deepEqual(route.candidates, ['seedance-2-5@seedance-2-5-720p'])
+      assert.equal(route.group, 'desktop-720p')
+      assert.deepEqual(route.candidates, ['seedance-2-5@desktop-720p'])
     }
     // 显式分组始终优先于参数派生线路。
     const explicit = resolveMediaRoute('video', { model: 'seedance-2-5', group: '720p', resolution: '480p' }, media, {})
     assert.equal(explicit.group, '720p')
-    assert.deepEqual(explicit.candidates, ['seedance-2-5@seedance-2-5-720p'])
+    assert.deepEqual(explicit.candidates, ['seedance-2-5@desktop-720p'])
   })
 
   it('defaults image to gpt-image-2.5 on the same provider row', () => {
@@ -325,15 +325,15 @@ describe('resolveMediaAuth (dual-track auth)', () => {
     const costRoute = resolveMediaRoute('video', { model: 'seedance-2-5', strategy: 'cost_first' }, media)
     assert.equal(costRoute.strategy, 'cost_first')
     assert.deepEqual(costRoute.candidates, [
-      'seedance-2-5@seedance-2-5-480p',
-      'seedance-2-5@seedance-2-5-720p',
+      'seedance-2-5@desktop-480p',
+      'seedance-2-5@desktop-720p',
     ])
-    assert.equal(costRoute.candidates[0], 'seedance-2-5@seedance-2-5-480p')
+    assert.equal(costRoute.candidates[0], 'seedance-2-5@desktop-480p')
 
     const stabRoute = resolveMediaRoute('video', { model: 'seedance-2-5', strategy: 'stability_first' }, media)
     assert.equal(stabRoute.strategy, 'stability_first')
     // 两档 24h 稳定性同为 100%，排序由平均等待时间决定（480p 60s < 720p 70s）。
-    assert.equal(stabRoute.candidates[0], 'seedance-2-5@seedance-2-5-480p')
+    assert.equal(stabRoute.candidates[0], 'seedance-2-5@desktop-480p')
     // 只剩单条线路的 seedance-2-0 在任何策略下都只有 default 一条。
     assert.deepEqual(
       resolveMediaRoute('video', { model: 'seedance-2-0', strategy: 'cost_first' }, media).candidates,

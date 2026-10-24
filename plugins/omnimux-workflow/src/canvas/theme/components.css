@@ -2424,8 +2424,12 @@ button.wf-slot-well.wf-slot-well--append:hover {
   align-items: center;
   gap: 8px;
   padding: 2px 4px 8px 2px;
-  border-bottom: 1px solid var(--dsw-alias-border-l1, var(--wf-menu-border, var(--wb-border)));
   margin-bottom: 6px;
+}
+
+/* 标题分割线只属于 Dock 面板（Issue 3651）：右键钻取面板按对照图不带分割线。 */
+.wf-node-menu--dock .wf-node-menu__header {
+  border-bottom: 1px solid var(--dsw-alias-border-l1, var(--wf-menu-border, var(--wb-border)));
 }
 
 .wf-node-menu__back-btn {
@@ -3409,54 +3413,6 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   cursor: not-allowed;
 }
 
-.wf-header-capsule__btn.wf-generation-draft-entry { width: auto; height: 32px; padding: 0 10px; white-space: nowrap; }
-.wf-modal-card.wf-generation-draft {
-  border-radius: 16px;
-  background: var(--dsw-alias-bg-elevated, var(--wb-surface-elevated));
-  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
-  border-color: var(--dsw-alias-border, var(--wb-border));
-  box-shadow: var(--wb-shadow-pop);
-}
-.wf-generation-draft .wf-modal-header,
-.wf-generation-draft .wf-modal-footer { border-color: var(--dsw-alias-border-l1, var(--wb-border)); gap: 8px; }
-.wf-generation-draft .wf-modal-title { font-size: 16px; line-height: 22px; color: var(--dsw-alias-label-primary, var(--wb-text-primary)); }
-.wf-generation-draft .wf-modal-close { width: 32px; height: 32px; color: var(--dsw-alias-label-secondary, var(--wb-text-secondary)); }
-.wf-generation-draft .wf-modal-close:hover { color: var(--dsw-alias-label-primary, var(--wb-text-primary)); background: var(--dsw-alias-interactive-bg-hover, var(--wb-dock-item-hover)); }
-.wf-generation-draft > [class~="wf-modal-body"] { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
-.wf-generation-draft p { margin: 0; color: var(--dsw-alias-label-secondary, var(--wb-text-secondary)); line-height: 18px; }
-.wf-generation-draft h3 { margin: 0 0 8px; font-size: 14px; font-weight: 500; line-height: 20px; }
-.wf-generation-draft summary { cursor: pointer; padding: 8px 0; }
-.wf-generation-draft pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: 12px; border-radius: 8px; background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised)); font-size: 12px; line-height: 18px; }
-.wf-generation-draft__field { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; }
-.wf-generation-draft__choices { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
-.wf-generation-draft__parameter { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(100px, 1fr) minmax(80px, 1fr); align-items: center; gap: 8px; margin: 8px 0; }
-.wf-generation-draft__parameter > span { overflow-wrap: anywhere; }
-.wf-generation-draft__sources,
-.wf-generation-draft__actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.wf-generation-draft__asset { padding: 12px 0; margin-top: 8px; border-top: 1px solid var(--dsw-alias-border-l1, var(--wb-border)); display: flex; flex-direction: column; gap: 8px; }
-.wf-generation-draft__asset strong { font-weight: 500; overflow-wrap: anywhere; }
-.wf-generation-draft input,
-.wf-generation-draft textarea,
-.wf-generation-draft .wf-custom-select-trigger { box-sizing: border-box; border-radius: 8px; border: 1px solid var(--dsw-alias-border-l2, var(--wb-border)); background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised)); color: var(--dsw-alias-label-primary, var(--wb-text-primary)); font-size: 13px; min-width: 0; }
-.wf-generation-draft input,
-.wf-generation-draft .wf-custom-select-trigger { height: 32px; padding: 0 10px; }
-.wf-generation-draft textarea { min-height: 80px; resize: vertical; padding: 8px 10px; }
-.wf-generation-draft input:focus-visible,
-.wf-generation-draft textarea:focus-visible,
-.wf-generation-draft button:focus-visible { outline: 2px solid var(--dsw-alias-border-l4, var(--wb-text-primary)); outline-offset: 2px; }
-.wf-generation-draft .wf-modal-btn-primary,
-.wf-generation-draft .wf-modal-btn-cancel { box-sizing: border-box; height: 32px; padding: 0 12px; border-radius: 8px; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 120ms ease, background 120ms ease; }
-.wf-generation-draft .wf-modal-btn-primary { border: 1px solid var(--dsw-alias-label-primary, var(--wb-text-primary)); background: var(--dsw-alias-label-primary, var(--wb-text-primary)); color: var(--dsw-alias-bg-base, var(--wb-surface)); }
-.wf-generation-draft .wf-modal-btn-cancel { border: 1px solid var(--dsw-alias-border-l2, var(--wb-border)); background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised)); color: var(--dsw-alias-label-primary, var(--wb-text-primary)); }
-.wf-generation-draft .wf-modal-btn-cancel:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover, var(--wb-dock-item-hover)); }
-.wf-generation-draft button:disabled { opacity: 0.5; cursor: not-allowed; }
-.wf-generation-draft button:active:not(:disabled) { transform: scale(0.96); }
-body:has(.wf-generation-draft) > .wf-custom-select-dropdown { background: var(--dsw-alias-bg-elevated, Canvas); border-color: var(--dsw-alias-border-l2, ButtonBorder); color: var(--dsw-alias-label-primary, CanvasText); }
-body:has(.wf-generation-draft) > .wf-custom-select-dropdown .wf-custom-select-option { color: var(--dsw-alias-label-primary, CanvasText); }
-body:has(.wf-generation-draft) > .wf-custom-select-dropdown .wf-custom-select-option:hover { background: var(--dsw-alias-interactive-bg-hover, ButtonFace); color: var(--dsw-alias-label-primary, CanvasText); }
-body:has(.wf-generation-draft) > .wf-custom-select-dropdown .wf-custom-select-option--selected { background: var(--dsw-alias-interactive-bg-active, ButtonFace); }
-body:has(.wf-generation-draft) > .wf-custom-select-dropdown .wf-custom-select-option-check { color: var(--dsw-alias-label-primary, CanvasText); }
-.wf-modal-overlay:has(> .wf-generation-draft) { background: var(--dsw-alias-bg-mask-1, color-mix(in srgb, var(--dsw-alias-label-primary, var(--wb-text-primary)) 35%, transparent)); }
 
 .wf-header-controls {
   position: absolute;
@@ -8796,3 +8752,971 @@ body:has(.wf-voice-picker-modal) > .wf-custom-select-dropdown .wf-custom-select-
 }
 
 /* 3058 theme-correction end */
+
+/* ==================================================================
+   Issue 3625 工作流 3+5 · preview-cards
+   - wf-gif-frame*  : 生成中的中间帧预览层（仅生成中渲染）
+   - wf-gsc__progress-percent : 生成中的真实进度百分比
+   - wf-template-panel* : 工作流模板面板（卡片形态）
+   仅追加本区块，不改动上方任何既有条目。
+   ================================================================== */
+
+/* ---------- 生成中：真实进度百分比（GSC 骨架内） ---------- */
+
+.wf-gsc__progress-percent {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--wb-accent, var(--dsw-alias-brand-primary));
+}
+
+/* ---------- 生成中：中间帧预览层 ---------- */
+
+.wf-gif-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-radius: inherit;
+  overflow: hidden;
+  background: var(--wb-panel-inner, var(--dsw-alias-bg-secondary));
+}
+
+.wf-gif-frame__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.wf-gif-frame__status {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--wb-bg) 0%, transparent),
+    color-mix(in srgb, var(--wb-bg) 78%, transparent)
+  );
+}
+
+.wf-gif-frame__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--wb-accent-soft, var(--dsw-alias-interactive-bg-active));
+  color: var(--wb-accent, var(--dsw-alias-brand-primary));
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.wf-gif-frame__spinner {
+  animation: wf-gif-spin 1s linear infinite;
+}
+
+.wf-gif-frame__label {
+  font-size: 12px;
+  color: var(--wb-text-secondary, var(--dsw-alias-label-secondary));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-gif-frame__progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wf-gif-frame__bar {
+  flex: 1 1 auto;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--wb-accent, var(--dsw-alias-brand-primary));
+  width: var(--wf-gif-progress, 0%);
+  transition: width 200ms ease-out;
+}
+
+.wf-gif-frame__percent {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+@keyframes wf-gif-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- 工作流模板面板（卡片形态） ---------- */
+
+.wf-template-panel {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 0;
+  z-index: 25;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 560px;
+  max-width: min(560px, calc(100vw - 48px));
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--dsw-alias-border, var(--wb-border));
+  background: var(--dsw-alias-bg-elevated, var(--wb-surface));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--wb-shadow-pop);
+  animation: wf-dock-pop-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wf-template-panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wf-template-panel__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wb-text-primary, var(--dsw-alias-label-primary));
+}
+
+.wf-template-panel__count {
+  font-size: 11px;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+.wf-template-panel__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.wf-template-panel__search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+  pointer-events: none;
+}
+
+.wf-template-panel__search-input {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 32px;
+  padding: 0 12px 0 30px;
+  border-radius: 8px;
+  border: 1px solid var(--wb-border, var(--dsw-alias-border));
+  background: var(--dsw-alias-bg-secondary, var(--wb-panel-inner));
+  color: var(--wb-text-primary, var(--dsw-alias-label-primary));
+  font-size: 13px;
+  font-family: var(--wb-font-family);
+  outline: none;
+  transition: border-color 120ms ease-out, box-shadow 120ms ease-out;
+}
+
+.wf-template-panel__search-input::placeholder {
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+.wf-template-panel__search-input:hover {
+  border-color: var(--wb-border-strong, var(--dsw-alias-border-hover));
+}
+
+.wf-template-panel__search-input:focus {
+  border-color: var(--wb-accent, var(--dsw-alias-brand-primary));
+  box-shadow: 0 0 0 2px var(--wb-accent-soft, var(--dsw-alias-interactive-bg-active));
+}
+
+.wf-template-panel__body {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 10px;
+  min-height: 0;
+  max-height: 300px;
+}
+
+.wf-template-panel__rail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.wf-template-panel__rail-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wb-text-secondary, var(--dsw-alias-label-secondary));
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease-out, color 120ms ease-out;
+}
+
+.wf-template-panel__rail-item:hover:not(:disabled) {
+  background: var(--wb-dock-item-hover, var(--dsw-alias-interactive-bg-hover));
+}
+
+.wf-template-panel__rail-item--active {
+  background: var(--wb-accent-soft, var(--dsw-alias-interactive-bg-active));
+  color: var(--wb-text-primary, var(--dsw-alias-label-primary));
+}
+
+.wf-template-panel__rail-item:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.wf-template-panel__rail-label {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-template-panel__rail-count {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+.wf-template-panel__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  align-content: start;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.wf-template-panel__card {
+  position: relative;
+  border-radius: 10px;
+  border: 1px solid var(--wb-border, var(--dsw-alias-border));
+  background: var(--wb-panel-inner, var(--dsw-alias-bg-secondary));
+  overflow: hidden;
+  transition: border-color 120ms ease-out, background 120ms ease-out;
+}
+
+.wf-template-panel__card:hover {
+  border-color: var(--wb-border-strong, var(--dsw-alias-border-hover));
+}
+
+.wf-template-panel__card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wf-template-panel__cover {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 62px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--wb-surface-raised, var(--dsw-alias-bg-elevated));
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+.wf-template-panel__card-title {
+  font-size: 13px;
+  color: var(--wb-text-primary, var(--dsw-alias-label-primary));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-template-panel__card-desc {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.wf-template-panel__card-meta {
+  font-size: 11px;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+.wf-template-panel__card--create {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 10px;
+  border-style: dashed;
+  border-color: var(--wb-border-strong, var(--dsw-alias-border-hover));
+  background: transparent;
+  color: var(--wb-text-secondary, var(--dsw-alias-label-secondary));
+  cursor: pointer;
+  transition: border-color 120ms ease-out, background 120ms ease-out;
+}
+
+.wf-template-panel__card--create:hover {
+  border-color: var(--wb-accent, var(--dsw-alias-brand-primary));
+  background: var(--wb-accent-soft, var(--dsw-alias-interactive-bg-active));
+}
+
+.wf-template-panel__create-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--wb-accent-soft, var(--dsw-alias-interactive-bg-active));
+  color: var(--wb-accent, var(--dsw-alias-brand-primary));
+}
+
+.wf-template-panel__card-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease-out, color 120ms ease-out;
+}
+
+.wf-template-panel__card:hover .wf-template-panel__card-delete,
+.wf-template-panel__card-delete:focus-visible {
+  opacity: 1;
+}
+
+.wf-template-panel__card-delete:hover {
+  color: var(--wb-danger, var(--dsw-alias-label-danger));
+}
+
+.wf-template-panel__empty {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  text-align: center;
+}
+
+.wf-template-panel__empty-title {
+  font-size: 13px;
+  color: var(--wb-text-primary, var(--dsw-alias-label-primary));
+}
+
+.wf-template-panel__empty--error .wf-template-panel__empty-title {
+  color: var(--wb-danger, var(--dsw-alias-label-danger));
+}
+
+.wf-template-panel__empty-hint {
+  font-size: 11px;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+/* preview-cards block end */
+
+/* ==================== palette block start ====================
+ * Issue 3625 工作流 1 / Issue 3640：添加节点调色板（无分类平铺）/ 搜索 /
+ * 命中高亮 / 空态。
+ * 零裸色，全部走既有 token；几何属性显式声明（同 .wf-node-menu__item 的
+ * 「不依赖外部默认值」约定）。 */
+
+.wf-node-menu__search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  margin-bottom: 6px;
+  border: 1px solid var(--dsw-alias-border-l1, var(--wb-border));
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
+}
+
+.wf-node-menu__search-icon {
+  flex-shrink: 0;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+}
+
+.wf-node-menu__search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 30px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+}
+
+.wf-node-menu__search-input::placeholder {
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+}
+
+.wf-node-menu__match {
+  background: var(--dsw-alias-bg-layer-2, var(--wb-surface-raised));
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.wf-node-menu__empty {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  text-align: center;
+}
+
+.wf-node-menu__empty-title {
+  font-size: 13px;
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+}
+
+.wf-node-menu__empty-hint {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+}
+
+/* ComfyUI 工作流视图里的「最近导入」分组标题（Issue 3669）。
+ * 只做分组，不加副标题与说明句；层级交给间距表达。 */
+.wf-node-menu__section {
+  padding: 10px 12px 4px;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+}
+
+/* palette block end */
+
+/* ==================== exec-queue block start ====================
+ * Issue 3625 工作流 2：执行队列面板四区（Queue / Pending / Running / History）。
+ * 纯只读视图，不含任何控制按钮。 */
+
+.wf-exec-queue {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 22;
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  max-height: calc(100% - 32px);
+  border: 1px solid var(--dsw-alias-border, var(--wb-border));
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-elevated, var(--wb-surface));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--wb-shadow-pop);
+  pointer-events: auto;
+}
+
+.wf-exec-queue__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, var(--wb-border));
+}
+
+.wf-exec-queue__title {
+  flex: 1 1 auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+}
+
+.wf-exec-queue__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  cursor: pointer;
+}
+
+.wf-exec-queue__close:hover {
+  background: var(--dsw-alias-interactive-bg-hover, var(--wb-dock-item-hover));
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+}
+
+.wf-exec-queue__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  overflow-y: auto;
+}
+
+.wf-exec-queue__section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wf-exec-queue__section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wf-exec-queue__section-title {
+  flex: 1 1 auto;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+}
+
+.wf-exec-queue__section-count {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+}
+
+.wf-exec-queue__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wf-exec-queue__row,
+.wf-exec-queue__run {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
+}
+
+.wf-exec-queue__row-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-exec-queue__pill {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 5px;
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+  background: var(--dsw-alias-bg-layer-2, var(--wb-surface));
+}
+
+.wf-exec-queue__pill--running,
+.wf-exec-queue__pill--pending {
+  color: var(--wb-accent, var(--dsw-alias-brand-primary));
+}
+
+.wf-exec-queue__pill--completed {
+  color: var(--wb-success, var(--dsw-alias-label-success));
+}
+
+.wf-exec-queue__pill--error {
+  color: var(--wb-danger, var(--dsw-alias-label-danger));
+}
+
+.wf-exec-queue__counts,
+.wf-exec-queue__progress,
+.wf-exec-queue__duration {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+}
+
+.wf-exec-queue__error {
+  flex: 1 1 100%;
+  font-size: 11px;
+  color: var(--wb-danger, var(--dsw-alias-label-danger));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-exec-queue__nodes {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 0;
+  padding: 0 0 0 10px;
+  list-style: none;
+}
+
+.wf-exec-queue__empty,
+.wf-exec-queue__note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+}
+
+/* exec-queue block end */
+
+/* ==========================================================================
+   Issue 3625 · 工作流文件导入导出（comfyui-codec block start）
+   仅本区块的类名归本工作流所有：wf-transfer-*
+   ========================================================================== */
+
+.wf-canvas-toolbar__anchor {
+  position: relative;
+}
+
+/* 原生文件选择器仅由「导入」按钮触发，不占 Dock 版面 */
+.wf-transfer-input {
+  display: none;
+}
+
+.wf-transfer-panel-anchor {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 26;
+  pointer-events: auto;
+}
+
+.wf-transfer-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 460px;
+  max-width: min(460px, calc(100vw - 48px));
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--dsw-alias-border, var(--wb-border));
+  background: var(--dsw-alias-bg-elevated, var(--wb-surface));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--wb-shadow-pop);
+  animation: wf-dock-pop-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wf-transfer-panel--comfy {
+  width: 560px;
+  max-width: min(560px, calc(100vw - 48px));
+}
+
+.wf-transfer-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wf-transfer-panel__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wb-text-primary, var(--dsw-alias-label-primary));
+}
+
+.wf-transfer-panel__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+  cursor: pointer;
+}
+
+.wf-transfer-panel__close:hover {
+  background: var(--wb-dock-item-hover, var(--dsw-alias-interactive-bg-hover));
+  color: var(--wb-text-primary, var(--dsw-alias-label-primary));
+}
+
+.wf-transfer-panel__message {
+  margin: 0;
+  font-size: var(--wb-fs-caption, 12px);
+  color: var(--wb-text-primary, var(--dsw-alias-label-primary));
+}
+
+.wf-transfer-panel__message--error {
+  color: var(--wb-danger, var(--dsw-alias-label-danger));
+}
+
+.wf-transfer-panel__detail {
+  margin: 0;
+  font-size: 11px;
+  word-break: break-word;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+.wf-transfer-panel__warning {
+  margin: 0;
+  font-size: 11px;
+  color: var(--wb-warning, var(--dsw-alias-label-warning));
+}
+
+.wf-transfer-panel__success {
+  margin: 0;
+  font-size: 11px;
+  color: var(--wb-text-primary, var(--dsw-alias-label-primary));
+}
+
+.wf-transfer-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wf-transfer-panel__section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+.wf-transfer-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wf-transfer-panel__list-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--wb-text-primary, var(--dsw-alias-label-primary));
+}
+
+.wf-transfer-panel__list-item--muted {
+  font-size: 11px;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+.wf-transfer-panel__list-id {
+  font-variant-numeric: tabular-nums;
+}
+
+.wf-transfer-panel__list-note {
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+.wf-transfer-panel__reason {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--wb-text-primary, var(--dsw-alias-label-primary));
+}
+
+.wf-transfer-panel__reason-label {
+  flex: 1 1 auto;
+}
+
+.wf-transfer-panel__reason-count {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--wb-warning, var(--dsw-alias-label-warning));
+}
+
+.wf-transfer-panel__reason-ids {
+  flex: 0 0 auto;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+.wf-transfer-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wf-transfer-panel__button {
+  padding: 6px 12px;
+  border: 1px solid var(--dsw-alias-border, var(--wb-border));
+  border-radius: 8px;
+  background: var(--wb-dock-item-hover, var(--dsw-alias-interactive-bg-hover));
+  color: var(--wb-text-primary, var(--dsw-alias-label-primary));
+  font-size: var(--wb-fs-caption, 12px);
+  cursor: pointer;
+}
+
+.wf-transfer-panel__button:hover {
+  background: var(--dsw-alias-interactive-bg-active, var(--wb-dock-item-hover));
+}
+
+.wf-transfer-panel__button--ghost {
+  background: transparent;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+/* comfyui-codec block end */
+
+/* addnode-new-workflow entry card start (Issue 3639) */
+.wf-node-menu-host {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 内层根节点也必须是可压缩的 flex 子项，否则 maxHeight 只压到外层、footer 仍被挤出视口。 */
+.wf-node-menu-host .wf-node-menu {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.wf-node-menu-host .wf-node-menu__container {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.wf-node-menu-host .wf-node-menu__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.wf-node-menu__footer {
+  flex: 0 0 auto;
+  margin-top: 8px;
+}
+
+/* 入口上方分割线只属于 Dock 面板（Issue 3651）；右键下入口行并入列表尾部。 */
+.wf-node-menu--dock .wf-node-menu__footer {
+  padding-top: 8px;
+  border-top: 1px solid var(--wf-node-icon-border);
+}
+
+.wf-node-menu__entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  border: 1px solid var(--wf-node-icon-border);
+  border-radius: 10px;
+  background: var(--wf-menu-surface-hover, transparent);
+  color: var(--dsw-alias-label-primary, var(--wf-menu-text, var(--wb-text-primary)));
+  cursor: pointer;
+  text-align: left;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.wf-node-menu__entry:hover {
+  background: var(--dsw-alias-interactive-bg-hover, var(--wf-menu-surface-hover, var(--wb-dock-item-hover)));
+}
+
+.wf-node-menu__entry-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wf-node-menu__entry-title {
+  font-size: var(--wb-fs-body, 13px);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.wf-node-menu__entry-hint {
+  font-size: var(--wb-fs-caption, 12px);
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wf-node-menu__entry-arrow {
+  flex: 0 0 auto;
+  color: var(--wb-text-muted, var(--dsw-alias-label-tertiary));
+}
+
+/* 右键钻取面板：工作流入口是**平铺行**，不是卡片（Issue 3651）。
+ * 常态无边框、无底色 —— 旧形态把 hover 底色当常态底色，看起来像默认选中。
+ * 行内边距 / 圆角 / 间距与 .wf-node-menu__item 对齐，使它和上方条目同一节奏。 */
+.wf-node-menu--context .wf-node-menu__footer {
+  margin-top: 2px;
+}
+
+.wf-node-menu--context .wf-node-menu__entry {
+  gap: 12px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  transition: background 120ms ease;
+}
+
+.wf-node-menu--context .wf-node-menu__entry:hover {
+  background: var(--dsw-alias-interactive-bg-hover, var(--wf-menu-surface-hover, var(--wb-dock-item-hover)));
+}
+/* addnode-new-workflow entry card end */

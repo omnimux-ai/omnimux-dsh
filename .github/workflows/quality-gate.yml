@@ -108,6 +108,14 @@ jobs:
           node --test scripts/verify-governance-registry.test.mjs scripts/lib/governance-registry.test.mjs
           node --test scripts/guard-anti-cheat.test.mjs
 
+      # 旧测试标准声明闭环：写入时刻的门禁只能做早期反馈——声明被消费之后没人再校验它，
+      # 而声明可以写在未跟踪的 specs/*.md 里（读得到、不进 PR diff），也可以事后删除。
+      # 这里只看**已提交范围**，因此是唯一能真正闭环的位置；判定口径与 hook 共用。
+      - name: Old test standard declaration gate (CI-side closure)
+        run: |
+          node --test scripts/verify-test-standard-declarations.test.mjs
+          node scripts/verify-test-standard-declarations.mjs . "$QA_BASE"
+
       # 侧栏契约门禁：真实装配 8 个 Stage + market 全生命周期（JSDOM + 真实
       # dsh-ui-kit 缝位）。file: 依赖在全仓 install 下可解析、kit lib 产物已
       # 入库，concat-client 于 CI 可运行；此处挡回归只在本地 test:gates。
@@ -218,7 +226,7 @@ jobs:
 
       - name: Verify public evidence core and consumer
         run: |
-          node --test scripts/evidence-contract.test.mjs scripts/worktree-app-qa-journey.test.mjs scripts/test-env-bootstrap.test.mjs scripts/test-env-bootstrap-fresh.test.mjs scripts/task-runtime-install.test.mjs scripts/task-runtime-proof.test.mjs
+          node --test scripts/evidence-contract.test.mjs scripts/worktree-app-qa-journey.test.mjs scripts/test-env-bootstrap.test.mjs scripts/test-env-bootstrap-fresh.test.mjs scripts/test-env-bootstrap-inputs.test.mjs scripts/test-env-bootstrap-observability.test.mjs scripts/task-runtime-install.test.mjs scripts/task-runtime-proof.test.mjs
           node --test scripts/guard-quality-loop.test.mjs
 
       # A direct registered task below the original checkout resolves its already locked root dependencies.

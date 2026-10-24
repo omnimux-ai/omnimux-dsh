@@ -116,8 +116,8 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "经济版",
       "badge": "480p 档 · 经济走量",
       "pricing": {
-        "pointsEstimate": 21,
-        "discountRate": 0.524,
+        "pointsEstimate": 6.8,
+        "discountRate": 0.17,
         "billingMode": "per_second"
       },
       "sla": {
@@ -129,7 +129,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
           "resolution": { "fixed": "480p" }
         }
       },
-      "wireGroup": "seedance-2-5-480p",
+      "wireGroup": "desktop-480p",
       "enabled": true
     },
     {
@@ -137,8 +137,8 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "标准版",
       "badge": "720p 档 · 稳定满血",
       "pricing": {
-        "pointsEstimate": 29,
-        "discountRate": 0.7206,
+        "pointsEstimate": 9.6,
+        "discountRate": 0.24,
         "billingMode": "per_second"
       },
       "constraints": {
@@ -146,7 +146,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
           "resolution": { "fixed": "720p" }
         }
       },
-      "wireGroup": "seedance-2-5-720p",
+      "wireGroup": "desktop-720p",
       "default": true,
       "enabled": true
     }

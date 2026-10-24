@@ -1,0 +1,129 @@
+{
+  "runId": "79e3c5a1-9724-4ba8-8531-30c6290dd8db",
+  "origin": "http://127.0.0.1:60831",
+  "completedAt": "2026-10-23T09:11:18.541Z",
+  "executionPassed": true,
+  "summary": {
+    "mode": "ui",
+    "evidenceLevel": "unknown",
+    "taskPluginsInstalled": true,
+    "realModelRequest": false,
+    "seededWorkspace": "ws_qa_media"
+  },
+  "taskBinding": "installed-loaded",
+  "userFresh": true,
+  "hubPath": {
+    "clickedNewSession": false,
+    "exploreVisible": true,
+    "assetHubOpened": true,
+    "librarySelected": true,
+    "workbenchRequestAccepted": true
+  },
+  "checks": [
+    {
+      "name": "app-environment",
+      "status": "completed",
+      "exitCode": 0,
+      "assertions": [
+        {
+          "name": "app-runtime-ready",
+          "pass": true
+        },
+        {
+          "name": "same-origin-login",
+          "pass": true
+        },
+        {
+          "name": "task-source-installed-loaded",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "app-browser",
+      "status": "completed",
+      "exitCode": 0,
+      "assertions": [
+        {
+          "name": "chrome-cdp-listen",
+          "pass": true
+        },
+        {
+          "name": "auth-cookie-applied",
+          "pass": true
+        },
+        {
+          "name": "app-dom-mounted",
+          "pass": true
+        },
+        {
+          "name": "visible-geometry-positive",
+          "pass": true
+        },
+        {
+          "name": "runtime-modal-bypassed",
+          "pass": true
+        },
+        {
+          "name": "blank-session-guide-visible",
+          "pass": true
+        },
+        {
+          "name": "explore-section-visible",
+          "pass": true
+        },
+        {
+          "name": "explore-cards-present",
+          "pass": true
+        },
+        {
+          "name": "asset-hub-reachable-via-library",
+          "pass": true
+        },
+        {
+          "name": "screenshot-png-verified",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "task-journey",
+      "status": "completed",
+      "exitCode": 0,
+      "assertions": [
+        {
+          "name": "journey:explore-view-ready",
+          "pass": true
+        },
+        {
+          "name": "journey:explore-grid-rendered",
+          "pass": true
+        },
+        {
+          "name": "journey:single-vertical-scroll-owner",
+          "pass": true
+        },
+        {
+          "name": "journey:explore-grid-not-a-scrollport",
+          "pass": true
+        },
+        {
+          "name": "journey:wheel-scrolls-conversation",
+          "pass": true
+        },
+        {
+          "name": "journey:grid-wrap-scroll-top-stays-zero",
+          "pass": true
+        },
+        {
+          "name": "journey:tab-bar-sticks-to-scrollport-top",
+          "pass": true
+        },
+        {
+          "name": "journey:single-scroll-screenshot-png",
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

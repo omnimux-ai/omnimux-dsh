@@ -545,6 +545,37 @@ export function resolveJourneyPath(candidate, root) {
   return { ok: true, path: abs };
 }
 
+const FAILURE_SECRET = /token|bearer|api[-_]?key|password|secret/i;
+
+/** Flatten one failure text value into a single bounded line; credential-shaped text is redacted.
+ * `tail` keeps the end of the value, which is where an archive subprocess states its real reason. */
+export function sanitizeFailureText(value, { tail = false, limit = 400 } = {}) {
+  if (typeof value !== 'string') return value;
+  const flat = value.replace(/\s+/g, ' ').trim();
+  // Decide on the full value before truncating: a cut inside a keyword could otherwise strip
+  // `Bearer` and leave the credential value itself in the report.
+  if (FAILURE_SECRET.test(flat)) return '[redacted]';
+  return tail ? flat.slice(-limit) : flat.slice(0, limit);
+}
+
+/** Bound and sanitize a structured failure so reports stay machine-readable without leaking.
+ * Unsupported nested values become null rather than passing through unchecked. */
+export function sanitizeFailureReport(code, reason, detail) {
+  const scrub = (value, tail = false) => {
+    if (value === null || typeof value === 'number' || typeof value === 'boolean') return value;
+    if (typeof value === 'string') return sanitizeFailureText(value, { tail, limit: tail ? 1200 : 400 });
+    if (Array.isArray(value)) return value.slice(0, 32).map(item => scrub(item));
+    return null;
+  };
+  const raw = detail && typeof detail === 'object' && !Array.isArray(detail) ? detail : null;
+  return {
+    code,
+    reason: typeof reason === 'string' ? reason : null,
+    detail: raw ? Object.fromEntries(Object.entries(raw).slice(0, 8).map(([key, value]) => [key,
+      key === 'stderrTail' ? scrub(value, true) : scrub(value)])) : null,
+  };
+}
+
 /**
  * journey 断言名 = `journey:` 前缀 + 非空名称。runJourney 统一生成该形态；
  * 契约模式另按请求预声明集合校验，legacy 模式才用本判定放行自定义旅程断言。
@@ -1108,6 +1139,16 @@ export function createAppQaRunner(deps = {}) {
       env.assertAlive?.();
     } catch (error) {
       report.errors.push(typeof error?.code === 'string' && /^(?:TEST_ENV|TEST_APP_QA)_[A-Z_]+$/.test(error.code) ? error.code : 'TEST_APP_QA_EXECUTION');
+      // Preparation failures carry an actionable hint (missing install command, archive stderr).
+      // Dropping it left the standard entry point with a bare code, so keep a sanitized copy that
+      // the CLI and report readers can act on. Never persist credential-shaped text.
+      const hint = sanitizeFailureText(typeof error?.hint === 'string' ? error.hint.slice(0, 800) : '', { limit: 800 });
+      if (hint && hint !== '[redacted]') report.hint = hint;
+      // A bare code cannot be classified and the free-text hint is not a contract, so keep the
+      // stable reason plus bounded structured detail alongside it.
+      if (typeof error?.code === 'string' && /^(?:TEST_ENV|TEST_APP_QA)_[A-Z_]+$/.test(error.code)) {
+        report.failure = sanitizeFailureReport(error.code, error.reason, error.detail);
+      }
       if (error?.code === 'TEST_ENV_NOT_USER_FRESH_TASK_UNKNOWN') report.userFresh = false;
       if (!env && error?.cleanup) envCleanup = error.cleanup;
       if (!env && error?.observations) prepareObservations = error.observations;
@@ -1144,6 +1185,12 @@ export function createAppQaRunner(deps = {}) {
     })) : [];
     report.observations.appEvents = safeEvents((env?.observations ?? prepareObservations)?.events);
     report.observations.browserEvents = safeEvents(browser?.observations?.events);
+    // Skip volume stays visible even though the preparation observation only keeps a bounded sample;
+    // absent data is omitted rather than reported as a fake zero. A preparation that skipped inputs
+    // and then failed carries the count on the raw preparation observation, so read both shapes.
+    const observed = env?.observations ?? prepareObservations;
+    const skippedInputCount = observed?.preparation?.skippedInputCount ?? observed?.skippedInputCount;
+    if (Number.isInteger(skippedInputCount)) report.observations.skippedInputCount = skippedInputCount;
     if (request) {
       const allExpected = request.requiredChecks.flatMap(name => request.expectedAssertions[name]);
       if (new Set(report.assertions.map(item => item.name)).size !== report.assertions.length
@@ -1244,12 +1291,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       }
     } else {
       console.error(`❌ 应用级 Web 验收未通过 -> ${[...report.errors, ...failed].join('; ')}`);
-      if (report.hint) console.error(`   原因: ${report.hint}`);
+      if (report.failure?.reason) console.error(`   原因: ${report.failure.reason}${report.hint ? ` — ${report.hint}` : ''}`);
+      else if (report.hint) console.error(`   原因: ${report.hint}`);
       process.exitCode = 1;
     }
   } catch (error) {
     console.error(`❌ 无法开始：${typeof error?.code === 'string' && /^(?:TEST_APP_QA|TEST_ENV)_[A-Z_]+$/.test(error.code) ? error.code : 'TEST_APP_QA_REQUEST_FAILED'}`);
-    if (error?.code === 'TEST_ENV_ROOT_UNSAFE' && error.hint) console.error(`   ${error.hint}`);
+    if (typeof error?.hint === 'string' && error.hint && !/token|bearer|api[-_]?key|password|secret/i.test(error.hint)) console.error(`   原因: ${error.hint.replace(/\s+/g, ' ').trim().slice(0, 800)}`);
     process.exitCode = 1;
   }
 }

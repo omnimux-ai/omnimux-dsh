@@ -40,6 +40,10 @@ import {
 } from '../store/executionStore';
 import { t } from '../i18n';
 import { signatureOf } from '../bridge/persistSanitize';
+import {
+  buildNodeProgressPatch,
+  progressClearPatch,
+} from '../editor/components/intermediateFrame.ts';
 
 const TERMINAL_STATUSES = new Set<ExecutionUiStatus>(['completed', 'error', 'cancelled']);
 
@@ -50,6 +54,17 @@ interface SseEventData {
   type?: string;
   progress?: number;
   message?: string;
+  /**
+   * 可选中间帧地址（Issue #3625 工作流 3）。
+   *
+   * 当前生产端（`ExecutionContext.reportProgress`）**不下发**该字段：进度通道的
+   * 真实 payload 只有 `{executionId, nodeId, progress, message}`，网关
+   * `awaitTask` 也是终态一次性轮询，没有增量帧。这里按前向兼容**防御式**读取：
+   * 上游将来下发帧就渲染，没有就保持纯进度态，绝不用占位图伪造。
+   */
+  previewUrl?: string;
+  /** 中间帧地址的别名（兼容上游可能采用的 frame 命名）。 */
+  frameUrl?: string;
   error?: string;
   reason?: string;
   duration?: number;
@@ -218,6 +233,9 @@ export function settleInFlightNodes(
     writeNodeData(nodeId, {
       executionStatus: status,
       executionError: status === 'error' ? (error ?? t('error.nodeExecutionFailed')) : undefined,
+      // 运行级终态（完成/失败/取消）收敛时一并抹掉实时进度与中间帧地址：
+      // 失败与取消必须正确清理，不能让中间帧留在最终产物位置。
+      ...progressClearPatch(),
     });
   }
   return settled;
@@ -314,6 +332,13 @@ export function dispatchExecutionEvent(
       if (!data.nodeId) break;
       const progress = runProgress();
       exec.setRunNodeStatus(executionId, data.nodeId, 'running');
+      // Issue #3625 工作流 2：队列面板的节点显示名来自这里（`node_start` 是
+      // 唯一携带 label/type 的事件）。只增写入：状态仍由 setRunNodeStatus 写，
+      // 调度/控制语义不变。
+      exec.patchRunNode(executionId, data.nodeId, {
+        label: data.label,
+        type: data.type,
+      });
       exec.patchRun(executionId, {
         progress: {
           ...progress,
@@ -321,13 +346,45 @@ export function dispatchExecutionEvent(
           pending: Math.max(0, progress.pending - 1),
         },
       });
-      writeNodeData(data.nodeId, { executionStatus: 'running', executionError: undefined });
+      writeNodeData(data.nodeId, {
+        executionStatus: 'running',
+        executionError: undefined,
+        // 重跑同一节点时先抹掉上一轮的进度与中间帧，避免旧帧挂在新一轮上。
+        ...progressClearPatch(),
+      });
+      break;
+    }
+    case 'node_progress': {
+      // Issue #3625 工作流 3：该事件此前**没有任何分支**（落到 default: break），
+      // 进度被整个丢弃。这里把真实进度接到节点 UI：百分比 + 状态文案（+ 上游若
+      // 下发的可选中间帧地址）。不写 run 级进度——run 的 percentage 仍由
+      // node_complete 的 completed/total 推导，调度语义不变。
+      if (!data.nodeId) break;
+      const progressPatch = buildNodeProgressPatch({
+        progress: data.progress,
+        message: data.message,
+        previewUrl: data.previewUrl,
+        frameUrl: data.frameUrl,
+      });
+      if (progressPatch) writeNodeData(data.nodeId, progressPatch);
+      // Issue #3625 工作流 2：同一份进度也进队列面板的节点条目（只读视图）。
+      if (typeof data.progress === 'number' || typeof data.message === 'string') {
+        exec.patchRunNode(executionId, data.nodeId, {
+          progress: typeof data.progress === 'number' ? data.progress : undefined,
+          message: typeof data.message === 'string' ? data.message : undefined,
+        });
+      }
       break;
     }
     case 'node_complete': {
       if (!data.nodeId) break;
       const progress = runProgress();
       exec.setRunNodeStatus(executionId, data.nodeId, 'completed');
+      // Issue #3625 工作流 2：调度器上报的权威耗时（非 UI 观测值）。
+      exec.patchRunNode(executionId, data.nodeId, {
+        durationMs: typeof data.duration === 'number' ? data.duration : undefined,
+        progress: 100,
+      });
       exec.patchRun(executionId, {
         progress: {
           ...progress,
@@ -337,10 +394,13 @@ export function dispatchExecutionEvent(
         },
       });
       // Result backfill also marks the workspace dirty and triggers autosave.
+      // progressClearPatch 与最终产物同一次写入：中间帧地址在同一 patch 里被清空，
+      // 因此最终产物落定后不可能被中间帧覆盖。
       applyExecutionNodeOutput(data.nodeId, data.output ?? {}, {
         executionStatus: 'completed',
         executionError: undefined,
         taskId: 'exec-' + executionId,
+        ...progressClearPatch(),
       });
       break;
     }
@@ -348,21 +408,30 @@ export function dispatchExecutionEvent(
       if (!data.nodeId) break;
       const progress = runProgress();
       exec.setRunNodeStatus(executionId, data.nodeId, 'error');
+      exec.patchRunNode(executionId, data.nodeId, {
+        durationMs: typeof data.duration === 'number' ? data.duration : undefined,
+        error: data.error ?? undefined,
+      });
       exec.patchRun(executionId, {
         progress: { ...progress, running: Math.max(0, progress.running - 1) },
       });
       writeNodeData(data.nodeId, {
         executionStatus: 'error',
         executionError: data.error ?? t('error.nodeExecutionFailed'),
+        ...progressClearPatch(),
       });
       break;
     }
     case 'node_skipped': {
       if (!data.nodeId) break;
       exec.setRunNodeStatus(executionId, data.nodeId, 'skipped');
+      exec.patchRunNode(executionId, data.nodeId, {
+        message: typeof data.reason === 'string' ? data.reason : undefined,
+      });
       writeNodeData(data.nodeId, {
         executionStatus: 'skipped',
         executionError: undefined,
+        ...progressClearPatch(),
       });
       break;
     }
@@ -545,8 +614,23 @@ export function useExecutionController(
     });
     for (const [nodeId, state] of Object.entries(snapshot.nodeStates ?? {})) {
       exec.setRunNodeStatus(snapshot.id, nodeId, state.status);
+      // Issue #3625 工作流 2：快照携带的节点级耗时（host 时间戳差值）进队列面板。
+      // `startedAt`/`completedAt` 是 host 时钟，不冒充 UI 观测时间，只换算成耗时。
+      const hostDurationMs =
+        typeof state.startedAt === 'number' && typeof state.completedAt === 'number'
+          ? Math.max(0, state.completedAt - state.startedAt)
+          : undefined;
+      exec.patchRunNode(snapshot.id, nodeId, {
+        error: state.error ?? undefined,
+        durationMs: hostDurationMs,
+      });
       const patch: Record<string, unknown> = { executionStatus: state.status };
       if (state.status === 'error' && state.error) patch.executionError = state.error;
+      // 终态快照回填：实时进度与中间帧地址是瞬态数据，快照里本就不含，回填时
+      // 必须清掉——否则重新订阅后终态节点会挂着上一轮的中间帧。
+      if (state.status === 'completed' || state.status === 'error' || state.status === 'skipped') {
+        Object.assign(patch, progressClearPatch());
+      }
       const output = snapshot.nodeOutputs?.[nodeId] as ExecutionNodeOutput | undefined;
       if (output) {
         applyExecutionNodeOutput(nodeId, output, patch);

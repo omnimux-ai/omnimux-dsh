@@ -10,6 +10,8 @@ import GenerationStateContainer from '../../GenerationStateContainer';
 import MediaPreview, { type MediaAssetLike } from '../MediaPreview';
 import NodeEmptyState from '../NodeEmptyState';
 import { OfflineCardBody } from './OfflineCardBody';
+import { readNodeExecutionProgress } from '../../intermediateFrame.ts';
+import { useT } from '../../../../i18n';
 
 export interface MediaCardBodyProps {
   materialType: MaterialType;
@@ -67,6 +69,8 @@ export const MediaCardBody: React.FC<MediaCardBodyProps> = ({
   onImport,
   onRelink,
 }) => {
+  const t = useT();
+
   if (isOffline) {
     return <OfflineCardBody materialType={materialType} onRelink={onRelink} />;
   }
@@ -84,6 +88,10 @@ export const MediaCardBody: React.FC<MediaCardBodyProps> = ({
     return <div className="wf-material-node__media">{emptyState}</div>;
   }
 
+  // Issue #3625 工作流 3：实时进度 / 中间帧地址来自节点数据（SSE node_progress 写入）。
+  // 字段缺失时三项均为 undefined，GSC 只显示微光骨架 —— 不伪造进度、不伪造帧。
+  const liveProgress = readNodeExecutionProgress(nodeData as Record<string, unknown>);
+
   return (
     <div className="wf-material-node__media">
       <GenerationStateContainer
@@ -93,6 +101,9 @@ export const MediaCardBody: React.FC<MediaCardBodyProps> = ({
         errorUpstream={errorUpstream}
         taskId={nodeData.taskId}
         onRetry={materialType === 'audio' ? undefined : onRetry}
+        progress={liveProgress.progress}
+        progressMessage={liveProgress.progressMessage}
+        intermediateFrameUrl={liveProgress.previewUrl}
       >
         {previewUrl ? (
           <MediaPreview
@@ -107,6 +118,11 @@ export const MediaCardBody: React.FC<MediaCardBodyProps> = ({
             onDurationChange={onDurationChange}
             onSaveAudio={audioWorkspaceId ? onSaveAudio : undefined}
             onReplaceAudio={onReplaceAudio}
+            isGenerating={isGenerating}
+            intermediateFrameUrl={liveProgress.previewUrl}
+            progress={liveProgress.progress}
+            progressMessage={liveProgress.progressMessage}
+            loadingLabel={generationStatus === 'pending' ? t('node.preparing') : t('node.generating')}
           />
         ) : (
           emptyState

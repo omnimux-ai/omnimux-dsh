@@ -272,3 +272,23 @@ test('视口几何仿真断言：网格容器上限 100vh-120px 内部滚动，�
   assert.equal(fiftyCards.containerHeight, wrapMaxHeight, '50 张卡片下容器必须封顶 100vh - 120px')
   assert.ok(fiftyCards.innerScrollable > 0, '50 张卡片下容器内部必须具备滚动余量')
 })
+
+test('单一滚动归属契约（Issue 3628）：网格容器必须带 flow 修饰类，修饰类必须解除历史视口上限', () => {
+  const stylesSource = readFileSync(new URL('../../../omnimux/src/client/session-guide/styles.js', import.meta.url), 'utf8')
+  const exploreSource = readFileSync(new URL('./templates/ExploreTemplatesSection.jsx', import.meta.url), 'utf8')
+
+  // 历史类名的视口上限 + 内部滚动由上面的样式契约断言锁定（旧标准变更须独立审查）；
+  // 当前契约由修饰类显式解除：不设视口上限、不自开滚动条，滚动归官方滚动底座。
+  assert.match(
+    stylesSource,
+    /\.omnimux-explore-grid-view-wrap\.omnimux-explore-grid-view-flow\s*\{[^}]*max-height:\s*none[^}]*overflow-y:\s*visible/i,
+    'flow 修饰类必须解除视口上限并放行溢出',
+  )
+
+  // 三个网格视图分支（精选子分类 / Skills / 外部库）都必须带修饰类，否则双滚动条回归。
+  const wrappers = exploreSource.match(/className="omnimux-explore-grid-view-wrap[^"]*"/g) || []
+  assert.equal(wrappers.length, 3, '探索区网格视图分支数量必须为 3')
+  for (const wrapper of wrappers) {
+    assert.match(wrapper, /omnimux-explore-grid-view-flow/, `每个网格容器都必须带 flow 修饰类：${wrapper}`)
+  }
+})

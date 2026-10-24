@@ -193,7 +193,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
       { parameters: { resolution: { fixed: '480p' } } });
     assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: '720p' }),
       { parameters: { resolution: { fixed: '720p' } } });
-    assert.deepEqual(resolveLineConstraints('seedance-2-5@seedance-2-5-480p', { group: 'seedance-2-5-480p' }),
+    assert.deepEqual(resolveLineConstraints('seedance-2-5@desktop-480p', { group: 'desktop-480p' }),
       { parameters: { resolution: { fixed: '480p' } } });
     // 自动路由只对 gpt-image-2.5 落实默认线路约束；未点名分组的视频路由不额外收紧。
     assert.deepEqual(resolveLineConstraints('seedance-2-5', undefined), {});

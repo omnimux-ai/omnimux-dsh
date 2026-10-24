@@ -418,7 +418,10 @@ class ArchiveGuard:
         payload = 0
         package = None
         with contextlib.ExitStack() as stack:
-            compressed = stack.enter_context(gzip.GzipFile(fileobj=self.frozen))
+            # TemporaryFile() is read-write, and Python 3.14+ infers write mode from that file
+            # object for GzipFile, so an explicit read mode is required to keep every supported
+            # interpreter able to inspect a frozen archive.
+            compressed = stack.enter_context(gzip.GzipFile(fileobj=self.frozen, mode='rb'))
             decoded = BoundedReader(compressed, self.limits['decoded'])
             archive = stack.enter_context(tarfile.open(fileobj=decoded, mode='r|',
                                                        tarinfo=BoundedTarInfo))

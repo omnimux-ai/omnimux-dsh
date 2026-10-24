@@ -23,6 +23,15 @@ export interface DirectorOutputInput {
   sceneId: string;
   shotId: string;
   resources: { image?: DirectorOutputResource | null; video?: DirectorOutputResource | null };
+  /**
+   * 显式截图出口：每次截图都用一个新的节点 id，而不是复用同镜头的投影节点。
+   * 只允许用于单张 image；省略时保持历史投影语义（同镜头复用、保留用户布局）。
+   */
+  freshNodeId?: string;
+  /** 新节点的标题（只作用于新建节点；复用节点保留用户标题）。 */
+  label?: string;
+  /** 新节点的画布位置（省略时沿用历史投影位置）。 */
+  position?: { x: number; y: number };
 }
 export interface DirectorOutputChange {
   nodeId: string;
@@ -61,6 +70,13 @@ export function planDirectorOutput(input: DirectorOutputInput): DirectorOutputPl
     || source.data.directorSceneId !== sceneId || !Number.isSafeInteger(sourceRevision) || sourceRevision < 1
     || ![sourceNodeId, sceneId, shotId].every(value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,120}$/.test(value))) throw new Error('导演输出来源身份或修订已变化');
   if (!input.resources.image && !input.resources.video) throw new Error('导演输出缺少已确认素材');
+  if (input.freshNodeId !== undefined) {
+    if (typeof input.freshNodeId !== 'string' || !/^[A-Za-z0-9_-]{1,120}$/.test(input.freshNodeId)
+      || input.nodes.some(node => node.id === input.freshNodeId)) throw new Error('导演新节点身份无效或已被占用');
+    if (!input.resources.image || input.resources.video) throw new Error('导演新节点只支持单张截图');
+    if (input.label !== undefined && (typeof input.label !== 'string' || !input.label.trim() || input.label.length > 120)) throw new Error('导演新节点标题无效');
+    if (input.position !== undefined && (!Number.isFinite(input.position.x) || !Number.isFinite(input.position.y))) throw new Error('导演新节点位置无效');
+  }
   for (const kind of ['image', 'video'] as const) {
     const resource = input.resources[kind];
     if (!resource) continue;
@@ -88,7 +104,8 @@ export function planDirectorOutput(input: DirectorOutputInput): DirectorOutputPl
   for (const kind of ['image', 'video'] as const) {
     const resource = input.resources[kind];
     if (!resource) continue;
-    const id = `director-output-${kind}-${outputKey([sourceNodeId, sceneId, shotId])}`;
+    const fresh = kind === 'image' && input.freshNodeId !== undefined;
+    const id = fresh ? input.freshNodeId! : `director-output-${kind}-${outputKey([sourceNodeId, sceneId, shotId])}`;
     const index = nodes.findIndex(node => node.id === id);
     const existing = nodes[index];
     if (existing && (existing.type !== 'material' || existing.data.materialType !== kind
@@ -102,7 +119,9 @@ export function planDirectorOutput(input: DirectorOutputInput): DirectorOutputPl
     const mediaAsset = { type: kind, url: resource.url, relativePath: resource.storageKey, assetId: resource.assetId, ...metadata };
     const data = {
       ...existing?.data,
-      label: typeof existing?.data.label === 'string' ? existing.data.label : (kind === 'image' ? '导演构图' : '白膜参考视频'),
+      label: typeof existing?.data.label === 'string'
+        ? existing.data.label
+        : (fresh && input.label !== undefined ? input.label.trim() : (kind === 'image' ? '导演构图' : '白膜参考视频')),
       materialType: kind, nodeKind: 'import' as const, selectedTool: 'import' as const, status: 'completed' as const,
       mediaUrl: resource.url, relativePath: resource.storageKey, assetId: resource.assetId,
       ...metadata, dimensions: { width: resource.width, height: resource.height },
@@ -121,7 +140,7 @@ export function planDirectorOutput(input: DirectorOutputInput): DirectorOutputPl
       directorCaptureRevision: resource.capturedSource.revision,
     });
     const created = existing ? { ...existing, data } : {
-      ...createImportNode(kind, { x: source.position.x + 420, y: source.position.y + (kind === 'video' ? 350 : 0) }, data), id,
+      ...createImportNode(kind, fresh && input.position ? input.position : { x: source.position.x + 420, y: source.position.y + (kind === 'video' ? 350 : 0) }, data), id,
     };
     if (existing) nodes[index] = created;
     else nodes.push(created);

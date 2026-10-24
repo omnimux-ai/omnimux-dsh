@@ -1,0 +1,27 @@
+[
+  {
+    "name": "composition.png",
+    "bytes": 49778,
+    "sha256": "dd2e6b96b1e24770e20d448400dba71d007dd08a54599a6affe10465d0e5ffcb"
+  },
+  {
+    "name": "reference.webm",
+    "bytes": 1075008,
+    "sha256": "b3245d5109ff38739ec5c687defd95379f4d89058d438467fedc5841d5f89643"
+  },
+  {
+    "name": "playback.png",
+    "bytes": 120264,
+    "sha256": "6edb17d18c54be67f22c7ab89da284425a0246857d45d614313619627c03f14b"
+  },
+  {
+    "name": "reopened.png",
+    "bytes": 127636,
+    "sha256": "0d1797e5eb2836d625ca5c4dd58b5085720c596e834f1055fb1f672031eaab8e"
+  },
+  {
+    "name": "camera-properties.png",
+    "bytes": 175352,
+    "sha256": "862d890b22e837180697a1cb64521898fbc1bd51cab30898f22fde36d9000b71"
+  }
+]

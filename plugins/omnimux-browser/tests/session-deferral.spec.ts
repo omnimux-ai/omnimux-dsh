@@ -167,3 +167,73 @@ describe('withSessionDeferral', () => {
     expect(withSessionDeferral(api, false)).toBe(api)
   })
 })
+
+// --- Issue #3629 A6: on-demand materialization for the text-generation pin ---
+
+import { createSessionDeferral } from '../src/session-deferral.ts'
+
+describe('createSessionDeferral on-demand materialization', () => {
+  it('reports provisional ids and materializes one on demand', async () => {
+    const { api, sessionCreate } = apiHarness()
+    const deferral = createSessionDeferral(api, true)
+    if (deferral === undefined) throw new Error('deferral should be enabled')
+    const created = await deferral.api.call(request('session.create', { cwd: '/work' }))
+    if (!created.ok) throw new Error('create failed')
+    const id = (created.value as { sessionId: string }).sessionId
+
+    expect(deferral.isProvisional(id)).toBe(true)
+    expect(sessionCreate).not.toHaveBeenCalled()
+
+    await deferral.materialize(id)
+
+    expect(sessionCreate).toHaveBeenCalledWith(expect.objectContaining({
+      method: 'session.create', payload: { cwd: '/work', sessionId: id },
+    }))
+    expect(deferral.isProvisional(id)).toBe(false)
+  })
+
+  it('is a no-op for a real session id', async () => {
+    const { api, call, sessionCreate } = apiHarness()
+    const deferral = createSessionDeferral(api, true)
+    if (deferral === undefined) throw new Error('deferral should be enabled')
+
+    expect(deferral.isProvisional('session-real')).toBe(false)
+    await deferral.materialize('session-real')
+
+    expect(sessionCreate).not.toHaveBeenCalled()
+    expect(call).not.toHaveBeenCalled()
+  })
+
+  it('shares one admission with the prompt path', async () => {
+    const { api, sessionCreate, sessionPrompt } = apiHarness()
+    const deferral = createSessionDeferral(api, true)
+    if (deferral === undefined) throw new Error('deferral should be enabled')
+    const id = await provisionalId(deferral.api)
+
+    await deferral.materialize(id)
+    await deferral.api.call(request('session.prompt', { sessionId: id }, 'prompt'))
+
+    expect(sessionCreate).toHaveBeenCalledOnce()
+    expect(sessionPrompt).toHaveBeenCalledOnce()
+    expect(deferral.isProvisional(id)).toBe(false)
+  })
+
+  it('throws on a failed replay and keeps the entry provisional', async () => {
+    const { api, sessionCreate } = apiHarness()
+    sessionCreate.mockResolvedValueOnce({
+      ok: false,
+      error: { code: 'internal', message: 'boom', details: {} },
+    })
+    const deferral = createSessionDeferral(api, true)
+    if (deferral === undefined) throw new Error('deferral should be enabled')
+    const id = await provisionalId(deferral.api)
+
+    await expect(deferral.materialize(id)).rejects.toThrow(`could not materialize session ${id}: boom`)
+    expect(deferral.isProvisional(id)).toBe(true)
+  })
+
+  it('returns undefined when deferral is disabled', () => {
+    const { api } = apiHarness()
+    expect(createSessionDeferral(api, false)).toBeUndefined()
+  })
+})

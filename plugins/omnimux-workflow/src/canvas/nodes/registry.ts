@@ -24,9 +24,27 @@ export interface ConfigSpec {
 }
 
 export interface NodePaletteEntry {
+  /**
+   * Palette category key, as an i18n key (never a literal).
+   *
+   * Nodes declaring the same key share one category. Since Issue #3640 the
+   * add-node panel renders a flat, uncategorised list: the key is no longer a
+   * heading — it stays the palette's category search alias. Keys must exist in
+   * both `canvas/i18n/dict.zh.ts` and `dict.en.ts`.
+   */
   group: string;
+  /** Entry label, as an i18n key (never a literal). */
   label: string;
   icon: string;
+  /**
+   * Extra palette search terms, as i18n keys.
+   *
+   * Declared from the node's real capability surface (its tool labelKeys, its
+   * executor contract) so keyword search matches what the node can actually do
+   * — e.g. 「音频转写」 finds the text node because `audio-transcription` is one
+   * of its tools. Never carries user-facing copy of its own.
+   */
+  keywords?: readonly string[];
 }
 
 export interface NodeDefinition {

@@ -36,6 +36,7 @@ import type { MaterialType } from '../types/materialNode';
 import AnimatedEdge from './components/AnimatedEdge';
 import Toolbar, { type CanvasPointerMode } from './components/Toolbar';
 import HeaderControls from './components/HeaderControls';
+import ExecutionQueuePanel from './components/ExecutionQueuePanel';
 import { CanvasPageHeader } from './components/CanvasPageHeader';
 import AssetsDrawer, { type AssetRecord } from './components/AssetsDrawer';
 import ShortcutsModal from './components/ShortcutsModal';
@@ -67,6 +68,9 @@ import { FloatingSelectionToolbar } from './components/FloatingSelectionToolbar'
 import { BatchCreateAssetModal, type MediaAssetItem } from './components/BatchCreateAssetModal';
 import { CreateWorkflowModal } from './components/CreateWorkflowModal';
 import { calculateGroupBounds, childIdsOfGroup, planAlignLayout } from './utils/nodeVisualMath';
+import { resolveWorkflowTemplateScope, toFlatTemplateSnapshot } from './utils/workflowTemplateScope';
+import { useWorkflowTransferStore } from '../store/workflowTransferStore';
+import type { AddNodeComfyProps } from './components/AddNodeMenu';
 import { createTemplate, getTemplate, listTemplates } from '../bridge/templateApi';
 import { sanitizeEdges, sanitizeNodes } from '../bridge/persistSanitize';
 import { planInstantiateTemplate } from './utils/planInstantiateTemplate';
@@ -190,6 +194,10 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   const { screenToFlowPosition, fitView, zoomTo, setCenter } = useReactFlow();
   const reactFlowInstance = useReactFlow();
   const { nodes, edges, onNodesChange, onEdgesChange } = useGraphStore();
+  // 右键钻取面板底部的 ComfyUI 工作流入口（Issue 3669）读同一份 transfer store。
+  const transferRecents = useWorkflowTransferStore((state) => state.recents);
+  const requestImport = useWorkflowTransferStore((state) => state.requestImport);
+  const applyRecent = useWorkflowTransferStore((state) => state.applyRecent);
   const applyCanvasInputMutation = useCanvasStore((state) => state.applyCanvasInputMutation);
   const setNodes = useCanvasStore((state) => state.setNodes);
   const setSelectedElement = useCanvasStore((state) => state.setSelectedElement);
@@ -221,7 +229,9 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   const [batchAssetItems, setBatchAssetItems] = useState<MediaAssetItem[]>([]);
   const [createWorkflowModalOpen, setCreateWorkflowModalOpen] = useState(false);
   const [targetGroupForWorkflow, setTargetGroupForWorkflow] = useState<{ id: string; title: string; nodeCount: number } | null>(null);
-  const [workflowTemplates, setWorkflowTemplates] = useState<Array<{ id: string; name: string; nodeCount: number }>>([]);
+  const [workflowTemplates, setWorkflowTemplates] = useState<Array<{ id: string; name: string; nodeCount: number; description?: string; tags?: string[] }>>([]);
+  // 执行队列面板开关（Issue 3625）：面板为纯只读消费，不参与调度。
+  const [isQueueOpen, setIsQueueOpen] = useState(false);
   const nodeCreateCounter = useRef(0);
 
   const hasSelection = useMemo(() => nodes.some((node) => node.selected), [nodes]);
@@ -229,6 +239,15 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   const selectedRegularNodes = useMemo(
     () => nodes.filter((node) => node.selected && node.type !== 'group'),
     [nodes],
+  );
+
+  /**
+   * 入口卡路径（未指定分组）的模板范围 = 整块画布（Issue 3659）。
+   * 模态提示与提交取同一份，避免「提示 0 个节点」与真实范围不一致。
+   */
+  const canvasTemplateScope = useMemo(
+    () => resolveWorkflowTemplateScope(nodes, edges, null),
+    [nodes, edges],
   );
 
   const multiSelectToolbarPosition = useMemo(() => {
@@ -253,6 +272,8 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
       id: template.id,
       name: template.name,
       nodeCount: template.nodeCount,
+      description: template.description,
+      tags: template.tags,
     })));
   }, []);
 
@@ -744,6 +765,22 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
     setSelectedElement,
   });
 
+  /**
+   * 右键钻取面板底部的 ComfyUI 工作流入口（Issue 3669）：数据与动作来自共享
+   * transfer store，点完关菜单，避免菜单与导入预览面板叠在一起。
+   */
+  const contextComfyMenu = useMemo<AddNodeComfyProps>(() => ({
+    recents: transferRecents,
+    onImport: () => {
+      requestImport();
+      closeMenu();
+    },
+    onApplyRecent: (name: string) => {
+      applyRecent(name);
+      closeMenu();
+    },
+  }), [transferRecents, requestImport, applyRecent, closeMenu]);
+
   // 项目资产按所属工作区解析相对路径；原生导入仍使用绝对路径。
   const mountImportFromAsset = useCallback(
     (asset: AssetRecord | Record<string, unknown>, position: { x: number; y: number }) => {
@@ -939,7 +976,12 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         onResumeExecution={onResumeExecution}
         onCancelExecution={onCancelExecution}
         onResetExecution={onResetExecution}
+        isQueueOpen={isQueueOpen}
+        onToggleQueue={() => setIsQueueOpen((prev) => !prev)}
       />
+
+      {/* 执行队列面板：纯只读消费调度状态（Issue 3625） */}
+      <ExecutionQueuePanel open={isQueueOpen} onClose={() => setIsQueueOpen(false)} />
 
       {/* 浮动小地图 Popover */}
       {isMinimapOpen && (
@@ -960,6 +1002,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         onToggleAddMenu={() => setIsAddMenuOpen((prev) => !prev)}
         templates={workflowTemplates}
         onInsertTemplate={(id) => { void handleInsertTemplate(id); }}
+        onCreateWorkflow={() => setCreateWorkflowModalOpen(true)}
       />
 
       {/* 项目资产抽屉 (带防护隔离，保证画布永远不黑屏) */}
@@ -1028,6 +1071,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         onClose={closeMenu}
         onAction={handleMenuAction}
         onAddNode={handleAddNodeFromMenu}
+        comfy={contextComfyMenu}
         canUndo={canUndo}
         canRedo={canRedo}
         hasClipboard={clipboard.hasClipboard}
@@ -1066,19 +1110,18 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         }}
         groupId={targetGroupForWorkflow?.id}
         defaultTitle={targetGroupForWorkflow?.title}
-        nodeCount={targetGroupForWorkflow?.nodeCount}
+        nodeCount={targetGroupForWorkflow?.nodeCount ?? canvasTemplateScope.nodeCount}
         onConfirm={async (payload) => {
-          const groupId = targetGroupForWorkflow?.id;
-          if (!groupId) throw new Error(t('template.missingGroup'));
-          const childIds = new Set(childIdsOfGroup(nodes, groupId));
-          const childNodes = nodes.filter((n) => childIds.has(n.id));
-          const childEdges = edges.filter((edge) => childIds.has(edge.source) && childIds.has(edge.target));
+          // 组右键入口 = 该组范围；入口卡入口 = 整块画布（Issue 3659）。
+          const scope = resolveWorkflowTemplateScope(nodes, edges, targetGroupForWorkflow?.id ?? null);
+          if (scope.nodeCount === 0) throw new Error(t('template.emptyCanvas'));
           const result = await createTemplate({
             name: payload.name,
             description: payload.description,
             tags: payload.tags,
-            nodes: sanitizeNodes(childNodes),
-            edges: sanitizeEdges(childEdges),
+            // 模板是扁平快照：组容器不在 payload 里，落库前统一丢掉悬空父引用（Issue 3662）。
+            nodes: sanitizeNodes(toFlatTemplateSnapshot(scope.nodes)),
+            edges: sanitizeEdges(scope.edges),
           });
           if (!result.ok || !result.body.template) {
             throw new Error(result.body.message || result.body.error || t('template.modal.failed'));

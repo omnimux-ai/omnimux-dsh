@@ -5,7 +5,7 @@ type: "index"
 status: "living"
 authority: "L3"
 date: "2026-08-26"
-updated: "2026-09-05"
+updated: "2026-10-24"
 authors: ["x", "agent-architect", "kou-douma"]
 subsystem: "global"
 ---
@@ -29,6 +29,7 @@ subsystem: "global"
 
 | 状态 | 文件名 | 标题 | 模块 | 维护/生效日期 | 核心摘要 |
 |---|---|---|---|---|---|
+| `accepted` | [2026-10-24-dsh-0-2-1-rc-3-four-api-surfaces.md](2026-10-24-dsh-0-2-1-rc-3-four-api-surfaces.md) | DSH 0.2.1-rc.3 四个 API 面清点（client slot / host service / cordis / schemastery） | `global` | 2026-10-24 | #3658 基线 0.1.5-rc.3 → 目标 0.2.1-rc.3：slots 增量扩展但 `settings.plugin.item` 退役；host 服务 15 个不变，`settingsScope` 移除、`invariants` 包删除、25 条 peer 范围不含 0.2.x；cordis 零影响；schemastery API 无差异但精确 pin 冲突。 |
 | `accepted` | [2026-09-05-astra-agent-guidance-audit.md](2026-09-05-astra-agent-guidance-audit.md) | GPT-6 Astra Agent 指令与工作流审计 | `global` | 2026-09-05 | #602 官方依据、全量入口覆盖、规则收敛与验证边界。 |
 | `accepted` | [2026-09-05-plugin-suite-refactor-audit.md](2026-09-05-plugin-suite-refactor-audit.md) | 重构前审查证据 | `global` | 2026-09-05 | 246 条合并记录、源码热点、82 项选定回归、静态检查边界及既有文档错误。 |
 | `accepted` | [2026-09-05-model-seedance-2-0-text_to_video.md](2026-09-05-model-seedance-2-0-text_to_video.md) | model evidence — seedance-2-0#text_to_video — 2026-09-05 | `omnimux/catalog` | 2026-09-05 | #530 C1 Seedance live t2v；token id 45；listed。 |

@@ -881,3 +881,278 @@ describe('authenticated unary text completion', () => {
     expect(completeText).not.toHaveBeenCalled()
   })
 })
+
+// --- Issue #3629: bridge.textGeneration pinning and the optional completeText model ---
+
+import {
+  BRIDGE_COMPLETE_TEXT_METHOD,
+  BRIDGE_TEXT_GENERATION_METHOD,
+  TEXT_GENERATION_MAX_ID_CHARS,
+  TEXT_GENERATION_MAX_OPTION_CHARS,
+  parseTextGenerationRequest,
+} from '../src/protocol.ts'
+
+/** The rpc.result frame for one id, or undefined while it is still pending. */
+function rpcResult(frames: BridgeFrame[], id: string): Extract<BridgeFrame, { t: 'rpc.result' }> | undefined {
+  return frames.find((frame): frame is Extract<BridgeFrame, { t: 'rpc.result' }> => frame.t === 'rpc.result' && frame.id === id)
+}
+
+describe('parseTextGenerationRequest', () => {
+  it('accepts a full pin payload and drops empty optional values', () => {
+    expect(parseTextGenerationRequest({
+      sessionId: 'session-1',
+      model: 'claude-opus-4-6',
+      provider: 'anthropic',
+      reasoningEffort: 'high',
+    })).toEqual({
+      sessionId: 'session-1',
+      model: 'claude-opus-4-6',
+      provider: 'anthropic',
+      reasoningEffort: 'high',
+    })
+    expect(parseTextGenerationRequest({ sessionId: 'session-1', model: 'claude-opus-4-6', provider: 'anthropic', reasoningEffort: '' }))
+      .toEqual({ sessionId: 'session-1', model: 'claude-opus-4-6', provider: 'anthropic' })
+  })
+
+  it('accepts the exact frozen boundaries', () => {
+    const maxId = 'm'.repeat(TEXT_GENERATION_MAX_ID_CHARS)
+    const maxOption = 'o'.repeat(TEXT_GENERATION_MAX_OPTION_CHARS)
+    expect(parseTextGenerationRequest({
+      sessionId: maxId,
+      model: maxId,
+      provider: maxOption,
+      reasoningEffort: maxOption,
+    })).toEqual({ sessionId: maxId, model: maxId, provider: maxOption, reasoningEffort: maxOption })
+  })
+
+  it('rejects illegal pin payloads', () => {
+    const overlongId = 'x'.repeat(TEXT_GENERATION_MAX_ID_CHARS + 1)
+    const overlongOption = 'x'.repeat(TEXT_GENERATION_MAX_OPTION_CHARS + 1)
+    const payloads: unknown[] = [
+      undefined,
+      null,
+      'session-1',
+      42,
+      [],
+      {},
+      { model: 'claude-opus-4-6' },
+      { sessionId: 'session-1' },
+      { sessionId: '', model: 'claude-opus-4-6' },
+      { sessionId: '   ', model: 'claude-opus-4-6' },
+      { sessionId: 'session-1', model: '' },
+      { sessionId: 'session-1', model: '   ' },
+      { sessionId: overlongId, model: 'claude-opus-4-6' },
+      { sessionId: 'session-1', model: overlongId },
+      { sessionId: 'session-1', model: 'claude-opus-4-6' },
+      { sessionId: 'session-1', model: 'claude-opus-4-6', provider: '' },
+      { sessionId: 'session-1', model: 'claude-opus-4-6', provider: '   ' },
+      { sessionId: 'session-1', model: 'claude-opus-4-6', provider: 7 },
+      { sessionId: 'session-1', model: 'claude-opus-4-6', provider: overlongOption },
+      { sessionId: 'session-1', model: 'claude-opus-4-6', reasoningEffort: overlongOption },
+      { sessionId: 'session-1', model: 'claude-opus-4-6', reasoningEffort: null },
+    ]
+    for (const payload of payloads) {
+      expect(parseTextGenerationRequest(payload)).toBeUndefined()
+    }
+  })
+})
+
+describe('bridge.textGeneration', () => {
+  it('pins the session through the injected service and answers pinned', async () => {
+    const pinTextGeneration = vi.fn(async () => {})
+    const h = await startBridge({ pinTextGeneration })
+    harnesses.push(h)
+    const { ws, frames } = await connect(h.url)
+    send(ws, { t: 'hello', token: TOKEN, caps: CAPS })
+    await waitFor(() => frames.some((frame) => frame.t === 'hello.ok'))
+
+    send(ws, {
+      t: 'rpc',
+      id: 'pin-1',
+      method: BRIDGE_TEXT_GENERATION_METHOD,
+      payload: { sessionId: 'session-1', model: 'claude-opus-4-6', provider: 'anthropic', reasoningEffort: 'high' },
+    })
+    await waitFor(() => rpcResult(frames, 'pin-1') !== undefined)
+
+    expect(pinTextGeneration).toHaveBeenCalledWith({
+      sessionId: 'session-1',
+      model: 'claude-opus-4-6',
+      provider: 'anthropic',
+      reasoningEffort: 'high',
+    })
+    expect(rpcResult(frames, 'pin-1')).toEqual({ t: 'rpc.result', id: 'pin-1', ok: true, result: { pinned: true } })
+    expect(h.callMock).not.toHaveBeenCalled()
+    ws.close()
+  })
+
+  it('rejects illegal payloads with bad-request before the pin runs', async () => {
+    const pinTextGeneration = vi.fn(async () => {})
+    const h = await startBridge({ pinTextGeneration })
+    harnesses.push(h)
+    const { ws, frames } = await connect(h.url)
+    send(ws, { t: 'hello', token: TOKEN, caps: CAPS })
+    await waitFor(() => frames.some((frame) => frame.t === 'hello.ok'))
+
+    const payloads: unknown[] = [
+      { model: 'claude-opus-4-6' },
+      { sessionId: '', model: 'claude-opus-4-6' },
+      { sessionId: 'session-1', model: '' },
+      { sessionId: 'x'.repeat(TEXT_GENERATION_MAX_ID_CHARS + 1), model: 'claude-opus-4-6' },
+      { sessionId: 'session-1', model: 'claude-opus-4-6' },
+      { sessionId: 'session-1', model: 'claude-opus-4-6', provider: '' },
+      { sessionId: 'session-1', model: 'claude-opus-4-6', provider: 'x'.repeat(TEXT_GENERATION_MAX_OPTION_CHARS + 1) },
+      null,
+    ]
+    let index = 0
+    for (const payload of payloads) {
+      index += 1
+      const id = `pin-bad-${index}`
+      send(ws, { t: 'rpc', id, method: BRIDGE_TEXT_GENERATION_METHOD, payload })
+      await waitFor(() => rpcResult(frames, id) !== undefined)
+      expect(rpcResult(frames, id)).toMatchObject({ t: 'rpc.result', id, ok: false, error: { code: 'bad-request' } })
+    }
+    expect(pinTextGeneration).not.toHaveBeenCalled()
+    expect(h.callMock).not.toHaveBeenCalled()
+    ws.close()
+  })
+
+  it('answers internal when the pin service is not injected', async () => {
+    const h = await startBridge()
+    harnesses.push(h)
+    const { ws, frames } = await connect(h.url)
+    send(ws, { t: 'hello', token: TOKEN, caps: CAPS })
+    await waitFor(() => frames.some((frame) => frame.t === 'hello.ok'))
+
+    send(ws, {
+      t: 'rpc',
+      id: 'pin-missing',
+      method: BRIDGE_TEXT_GENERATION_METHOD,
+      payload: { sessionId: 'session-1', model: 'claude-opus-4-6', provider: 'anthropic' },
+    })
+    await waitFor(() => rpcResult(frames, 'pin-missing') !== undefined)
+
+    expect(rpcResult(frames, 'pin-missing')).toEqual({
+      t: 'rpc.result',
+      id: 'pin-missing',
+      ok: false,
+      error: { code: 'internal', message: 'Text generation pin unavailable' },
+    })
+    ws.close()
+  })
+
+  it('surfaces a failed pin as internal', async () => {
+    const pinTextGeneration = vi.fn(async () => { throw new Error('model unavailable') })
+    const h = await startBridge({ pinTextGeneration })
+    harnesses.push(h)
+    const { ws, frames } = await connect(h.url)
+    send(ws, { t: 'hello', token: TOKEN, caps: CAPS })
+    await waitFor(() => frames.some((frame) => frame.t === 'hello.ok'))
+
+    send(ws, {
+      t: 'rpc',
+      id: 'pin-failed',
+      method: BRIDGE_TEXT_GENERATION_METHOD,
+      payload: { sessionId: 'session-1', model: 'claude-opus-4-6', provider: 'anthropic' },
+    })
+    await waitFor(() => rpcResult(frames, 'pin-failed') !== undefined)
+
+    expect(rpcResult(frames, 'pin-failed')).toEqual({
+      t: 'rpc.result',
+      id: 'pin-failed',
+      ok: false,
+      error: { code: 'internal', message: 'model unavailable' },
+    })
+    ws.close()
+  })
+
+  it('finishes the pin before forwarding a prompt for the same session', async () => {
+    let releasePin!: () => void
+    const pinGate = new Promise<void>((resolve) => { releasePin = resolve })
+    const order: string[] = []
+    const pinTextGeneration = vi.fn(async () => {
+      order.push('pin')
+      await pinGate
+      order.push('pin-settled')
+    })
+    const call = vi.fn(async (request: Parameters<BrowserHostApi['call']>[0]) => {
+      order.push(`api:${request.method}`)
+      return { ok: true as const, value: { accepted: true } }
+    })
+    const h = await startBridge({ pinTextGeneration, api: hostApi({ call }) })
+    harnesses.push(h)
+    const { ws, frames } = await connect(h.url)
+    send(ws, { t: 'hello', token: TOKEN, caps: CAPS })
+    await waitFor(() => frames.some((frame) => frame.t === 'hello.ok'))
+
+    send(ws, {
+      t: 'rpc',
+      id: 'pin-ordered',
+      method: BRIDGE_TEXT_GENERATION_METHOD,
+      payload: { sessionId: 'session-ordered', model: 'claude-opus-4-6', provider: 'anthropic' },
+    })
+    send(ws, {
+      t: 'rpc',
+      id: 'prompt-after-pin',
+      method: 'session.prompt',
+      payload: { sessionId: 'session-ordered', mode: 'queue', content: [] },
+    })
+
+    await waitFor(() => pinTextGeneration.mock.calls.length === 1)
+    expect(order).toEqual(['pin'])
+    expect(call).not.toHaveBeenCalled()
+    releasePin()
+    await waitFor(() => rpcResult(frames, 'prompt-after-pin') !== undefined)
+    expect(order).toEqual(['pin', 'pin-settled', 'api:session.prompt'])
+    ws.close()
+  })
+})
+
+describe('bridge.completeText model passthrough', () => {
+  it('forwards the optional model and omits it when unset', async () => {
+    const requests: Array<{ prompt: string; system: string; model?: string; maxTokens: number }> = []
+    const completeText = vi.fn(async (request: { prompt: string; system: string; model?: string; maxTokens: number }) => {
+      requests.push(request)
+      return 'body'
+    })
+    const h = await startBridge({ completeText })
+    harnesses.push(h)
+    const { ws, frames } = await connect(h.url)
+    send(ws, { t: 'hello', token: TOKEN, caps: CAPS })
+    await waitFor(() => frames.some((frame) => frame.t === 'hello.ok'))
+
+    send(ws, {
+      t: 'rpc',
+      id: 'text-model',
+      method: BRIDGE_COMPLETE_TEXT_METHOD,
+      payload: { prompt: 'hello', system: 'brief', model: 'claude-opus-4-6' },
+    })
+    await waitFor(() => rpcResult(frames, 'text-model') !== undefined)
+    expect(requests[0]?.model).toBe('claude-opus-4-6')
+    expect(requests[0]?.prompt).toBe('hello')
+    expect(rpcResult(frames, 'text-model')).toMatchObject({ ok: true, result: { text: 'body' } })
+
+    send(ws, { t: 'rpc', id: 'text-plain', method: BRIDGE_COMPLETE_TEXT_METHOD, payload: { prompt: 'hello' } })
+    await waitFor(() => rpcResult(frames, 'text-plain') !== undefined)
+    expect(requests[1] !== undefined && 'model' in requests[1]).toBe(false)
+
+    send(ws, {
+      t: 'rpc',
+      id: 'text-empty',
+      method: BRIDGE_COMPLETE_TEXT_METHOD,
+      payload: { prompt: 'hello', model: '' },
+    })
+    await waitFor(() => rpcResult(frames, 'text-empty') !== undefined)
+    expect(requests[2] !== undefined && 'model' in requests[2]).toBe(false)
+
+    send(ws, {
+      t: 'rpc',
+      id: 'text-overlong',
+      method: BRIDGE_COMPLETE_TEXT_METHOD,
+      payload: { prompt: 'hello', model: 'x'.repeat(TEXT_GENERATION_MAX_ID_CHARS + 1) },
+    })
+    await waitFor(() => rpcResult(frames, 'text-overlong') !== undefined)
+    expect(rpcResult(frames, 'text-overlong')).toMatchObject({ ok: false, error: { code: 'bad-request' } })
+    expect(completeText).toHaveBeenCalledTimes(3)
+    ws.close()
+  })
+})

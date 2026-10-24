@@ -79,7 +79,7 @@ test('video failover refuses a resolution-incompatible tier instead of silently 
   })
   // 头档 720p 只发一次请求；480p 尾档在第二次 HTTP 之前被固定分辨率约束拒绝。
   assert.deepEqual(bodies.map((body) => body.model), ['seedance-2-5'])
-  assert.deepEqual(groups, ['seedance-2-5-720p'])
+  assert.deepEqual(groups, ['desktop-720p'])
   assert.equal(bodies[0].resolution, '720p')
   assert.equal(input.model, 'seedance-2-5')
   assert.equal(input.resolution, '720p')

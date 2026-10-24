@@ -1,6 +1,6 @@
 import { directorPortal } from "../../services";
 import { Select } from "../../controls";
-import { Bone, Box, Camera, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, KeyRound, Magnet, Minus, Move3d, Pause, Pencil, PenTool, Play, Plus, Rows3, Square, Trash2, ZoomIn, ZoomOut } from "lucide-react";
+import { Bone, Box, Camera, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, KeyRound, Magnet, Minus, Move3d, Pause, Pencil, PenTool, Play, Plus, Square, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 
@@ -61,7 +61,6 @@ type TrackKey = { id: string; time: number; color?: string; label?: string; easi
 export function DirectorSequencer({ scene, shot, camera, objects, selectedObjectId, pendingActorPathId = null, selectedBone, playhead, playing, autoKey, height, visible, presentation = "editor", onPlayToggle, onCreateCameraPath, onCreateActorPath, onCreateObjectTrack, onRemoveObjectTrack, onRemoveActorPath, onRemoveCameraPath, onExportVideo, exportBusy = false, onPlayheadChange, onAutoKeyChange, onHeightChange, onVisibilityChange, onSelectObject, onSelectBone, onSelectCameraTrack, onToggleCameraTrack, onToggleObjectChannel, onRecordKeyframe, onAddShot, onDeleteKeyframe, onSetKeyframeEasing, onSelectShot }: DirectorSequencerProps) {
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
     const [snapEnabled, setSnapEnabled] = useState(true);
-    const [showDetails, setShowDetails] = useState(true);
     const [timelineScale, setTimelineScale] = useState(1);
     const [selectedKey, setSelectedKey] = useState<TrackKey | null>(null);
     const [pathMenuTarget, setPathMenuTarget] = useState<string | null>(null);
@@ -188,7 +187,7 @@ export function DirectorSequencer({ scene, shot, camera, objects, selectedObject
     }
 
     return (
-        <section ref={rootRef} data-presentation={isCompact ? "compact" : presentation} className={`director-sequencer shrink-0 border-t ${isPreview ? "is-preview" : ""}`} style={isPreview ? { height: "min(150px, 22vh)", minHeight: 118, maxHeight: "25vh", background: "var(--director-sequencer-surface)", borderColor: "var(--director-sequencer-border)" } : { height, minHeight: 130, maxHeight: "60vh", background: "var(--director-sequencer-surface)", borderColor: "var(--director-sequencer-border)" }}>
+        <section ref={rootRef} data-presentation={isCompact ? "compact" : presentation} className={`director-sequencer shrink-0 border-t ${isPreview ? "is-preview" : ""}`} style={isPreview ? { height: "min(150px, 22vh)", minHeight: 118, maxHeight: "25vh", background: "var(--director-sequencer-surface)", borderColor: "var(--director-sequencer-border)" } : { height, minHeight: 160, maxHeight: "60vh", background: "var(--director-sequencer-surface)", borderColor: "var(--director-sequencer-border)" }}>
             {!isPreview ? <div className="director-sequencer-resizer" onPointerDown={startResize} role="separator" aria-label="调整时间轴高度" /> : null}
             {isCompact ? <div className="director-sequencer-compact-grid" style={{ display: "grid", gridTemplateColumns: "min(322px, 36vw) minmax(0, 1fr)", gridTemplateRows: "36px minmax(0, 1fr)", height: "100%" }}>
                 <div className="flex min-w-0 items-center gap-1 border-b px-2" style={{ borderColor: "var(--director-sequencer-border)" }}>
@@ -206,7 +205,7 @@ export function DirectorSequencer({ scene, shot, camera, objects, selectedObject
                         <span className="director-sequencer-playhead" style={{ left: `${(playhead / duration) * 100}%` }} />
                     </div>
                     <span className="absolute right-2 top-1 flex items-center gap-2">
-                        <button type="button" className="director-sequencer-icon" aria-label={height > 150 ? "收起时间轴" : "展开时间轴"} title={height > 150 ? "收起时间轴" : "展开时间轴"} onClick={() => onHeightChange(height > 150 ? 130 : 300)}>{height > 150 ? <ChevronDown className="size-3.5" /> : <ChevronUp className="size-3.5" />}</button>
+                        <button type="button" className="director-sequencer-icon" aria-label={height > 220 ? "收起时间轴" : "展开时间轴"} title={height > 220 ? "收起时间轴" : "展开时间轴"} onClick={() => onHeightChange(height > 220 ? 160 : 300)}>{height > 220 ? <ChevronDown className="size-3.5" /> : <ChevronUp className="size-3.5" />}</button>
                         {onExportVideo ? <button type="button" disabled={exportBusy} className="rounded bg-white px-3 py-1 text-xs font-medium disabled:opacity-40" style={{ color: "#171717" }} onClick={onExportVideo}>{exportBusy ? "正在导出" : "导出视频到画布"}</button> : null}
                     </span>
                 </div>
@@ -246,8 +245,8 @@ export function DirectorSequencer({ scene, shot, camera, objects, selectedObject
                 </span>
             </header> : <header className="flex h-10 shrink-0 items-center gap-2 border-b px-3" style={{ borderColor: "var(--director-sequencer-border)" }}>
                 <button type="button" className="director-sequencer-transport" onClick={onPlayToggle} aria-label={playing ? "暂停" : "播放"} title={playing ? "暂停" : "播放"}>{playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}</button>
-                <span className="w-14 text-right text-[var(--fs-caption)] font-medium tabular-nums text-white/75">{formatTime(playhead)}</span>
-                <span className="text-[var(--fs-micro)] text-white/35">/ {formatTime(duration)} · {fps}fps</span>
+                <span className="w-14 text-right text-[var(--fs-xs)] font-medium tabular-nums text-white/75">{formatTime(playhead)}</span>
+                <span className="text-[var(--fs-2xs)] text-white/35">/ {formatTime(duration)} · {fps}fps</span>
                 <span className="mx-1 h-4 w-px bg-white/10" />
                 <Select className="director-sequencer-shot-select" value={shot.id} aria-label="当前镜头" onChange={onSelectShot} options={scene.shots.map((item, index) => ({ value: item.id, label: `${index + 1}. ${item.name}` }))} />
                 {selectedObjectTrack ? <button type="button" aria-label="移除轨道" className="director-sequencer-tool" onClick={removeSelectedTrack}><Trash2 className="size-3.5" /><span>移除轨道</span></button>
@@ -260,11 +259,8 @@ export function DirectorSequencer({ scene, shot, camera, objects, selectedObject
                     <button type="button" className="director-sequencer-icon" title="删除所选关键帧" aria-label="删除所选关键帧" onClick={() => deleteTrackKey(activeSelectedKey.target!)}><Trash2 className="size-3.5" /></button>
                 </> : null}
                 <span className="ml-auto flex items-center gap-1">
-                    <button type="button" className="director-sequencer-icon" title="缩小时间轴" aria-label="缩小时间轴" onClick={() => setTimelineScale((value) => Math.max(0.75, value - 0.25))}><ZoomOut className="size-3.5" /></button>
-                    <button type="button" className="director-sequencer-icon" title="放大时间轴" aria-label="放大时间轴" onClick={() => setTimelineScale((value) => Math.min(2.5, value + 0.25))}><ZoomIn className="size-3.5" /></button>
-                    <button type="button" className={`director-sequencer-icon ${showDetails ? "is-active" : ""}`} title="显示子轨道" aria-label="显示子轨道" aria-pressed={showDetails} onClick={() => setShowDetails((value) => !value)}><Rows3 className="size-3.5" /></button>
                     <button type="button" className="director-sequencer-icon" title="新增镜头" aria-label="新增镜头" onClick={onAddShot}><Plus className="size-3.5" /></button>
-                    <button type="button" className="director-sequencer-icon" title="收起高级轨道" aria-label="收起高级轨道" onClick={() => onHeightChange(130)}><ChevronDown className="size-3.5" /></button>
+                    <button type="button" className="director-sequencer-icon" title="收起高级轨道" aria-label="收起高级轨道" onClick={() => onHeightChange(160)}><ChevronDown className="size-3.5" /></button>
                     <button type="button" className="director-sequencer-icon" title="隐藏时间轴" aria-label="隐藏时间轴" onClick={() => onVisibilityChange(false)}><ChevronDown className="size-3.5" /></button>
                 </span>
             </header>}
@@ -308,7 +304,7 @@ export function DirectorSequencer({ scene, shot, camera, objects, selectedObject
                                 {/* 折叠时这是唯一的关键帧入口，必须可删除。 */}
                                 <TrackKeys duration={duration} keys={[...transformKeys, ...boneTrackKeys]} selectedTarget={activeSelectedKey?.target} onSelectKey={selectTrackKey} onDeleteKey={deleteTrackKey} />
                             </SequencerRow>
-                            {isExpanded && showDetails ? <>
+                            {isExpanded ? <>
                                 <SequencerRow label="动作片段" icon={<Play size={14} />} indent selected={selectedObjectId === object.id && !selectedBone} onClick={() => onSelectObject(object.id)}>
                                     <TrackBar duration={duration} color="#61d2ad" label={activeClip ? `${activeClip.name}${activeClip.loop ? " · 循环" : ""}` : "姿势 / 动作"} start={activeClip?.start || 0} clipDuration={activeClip?.loop ? duration : activeClip?.duration || duration} />
                                 </SequencerRow>
@@ -328,7 +324,7 @@ export function DirectorSequencer({ scene, shot, camera, objects, selectedObject
                     })}
                 </div>
             </div>}
-            {pathMenuOpen && !isPreview ? createPortal(<div ref={pathMenuPortalRef} role="menu" aria-label={pathMenuTarget === "camera" ? "主机位绘制轨迹" : "人物绘制轨迹"} className="fixed w-40 rounded-lg border border-white/10 bg-[#252525] p-2 text-xs text-white shadow-xl" style={{ top: pathMenuPosition.top, left: pathMenuPosition.left, transform: "translateY(-100%)", zIndex: 1000 }}>
+            {pathMenuOpen && !isPreview ? createPortal(<div ref={pathMenuPortalRef} role="menu" aria-label={pathMenuTarget === "camera" ? "主机位绘制轨迹" : "人物绘制轨迹"} className="fixed w-40 rounded-lg border border-white/10 bg-[#252525] p-2 text-xs text-white shadow-xl" style={{ top: pathMenuPosition.top, left: pathMenuPosition.left, transform: "translateY(-100%)", zIndex: "var(--z-menu)" }}>
                 {([ ["ring", "圆环路径", Circle], ["line", "直线路径", Minus], ["rectangle", "矩形路径", Square] ] as const).map(([kind, label, Icon]) => <button key={kind} type="button" role="menuitem" className="flex h-7 w-full items-center gap-2 rounded px-2 text-left text-white/75 hover:bg-white/10 hover:text-white" onClick={() => createPathFromMenu(kind)}><span aria-hidden="true" className="w-4 text-center"><Icon size={14} /></span>{label}</button>)}
                 {([ ["pencil", "铅笔路径", Pencil], ["pen", "钢笔路径", PenTool] ] as const).map(([kind, label, Icon]) => <button key={kind} type="button" role="menuitem" className="flex h-7 w-full items-center gap-2 rounded px-2 text-left text-white/75 hover:bg-white/10 hover:text-white" onClick={() => createPathFromMenu(kind)}><span aria-hidden="true" className="w-4 text-center"><Icon size={14} /></span>{label}</button>)}
             </div>, directorPortal()) : null}

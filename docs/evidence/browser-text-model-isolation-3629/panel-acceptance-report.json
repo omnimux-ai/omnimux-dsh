@@ -1,0 +1,154 @@
+{
+  "mode": "accept",
+  "stamp": "2026-10-23T10-43-44-223Z",
+  "assertions": [
+    {
+      "name": "A1 对话模型行存在",
+      "pass": true
+    },
+    {
+      "name": "A1 文本生成模型行存在",
+      "pass": true
+    },
+    {
+      "name": "A1 两行各有独立 select",
+      "pass": true
+    },
+    {
+      "name": "A5 文本生成模型可切换",
+      "pass": true
+    },
+    {
+      "name": "A1 切换后 dshSettings.textModel 生效",
+      "pass": true
+    },
+    {
+      "name": "A1 对话模型键未被文本切换改动",
+      "pass": true
+    }
+  ],
+  "screenshots": [
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-text-model-isolation-issue-3629/.workbuddy/evidence/text-model-e2e/2026-10-23T10-43-44-223Z-settings-before.png",
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-text-model-isolation-issue-3629/.workbuddy/evidence/text-model-e2e/2026-10-23T10-43-44-223Z-settings-after.png"
+  ],
+  "pass": true,
+  "extensionId": "lknofogppglmkjppnmglcnkdlmcjgmef",
+  "panelBefore": {
+    "labels": [
+      "连接实例",
+      "默认工作区",
+      "对话模型与推理等级",
+      "文本生成模型与推理等级",
+      "桥地址",
+      "鉴权 Token",
+      "页面内容共享",
+      "界面主题",
+      "界面语言",
+      "界面字号大小",
+      "启用悬浮球控制网页右下角全局悬浮球是否显示",
+      "",
+      "悬停在图片上时显示控制页面图片、视频悬停感知的 OmniMux 胶囊工具栏是否启用",
+      "",
+      "显示 X 爆速角标在 X 推文上展示爆速指标与评论机会提示。",
+      "",
+      "显示「生成海报」入口在 X 推文下增加「生成海报」：选择黑白主题后生成海报与个人观点，跳到发帖页自动附图并预填正文，发布仍由你确认。",
+      "",
+      "允许模型完全控制浏览器无需弹窗二次确认即可操作网页与标签页",
+      "",
+      "浏览器审批通知侧栏关闭时通过系统通知提醒审批",
+      "",
+      "续接当前页面会话重开同网址标签页时自动恢复对应会话",
+      ""
+    ],
+    "modelRows": [
+      {
+        "label": "对话模型与推理等级",
+        "hasSelect": true,
+        "value": "gpt-6-astra",
+        "options": [
+          "gpt-6-astra",
+          "gpt-5.6-sol",
+          "gpt-5.6-terra",
+          "gpt-5.6-luna",
+          "gpt-5.5",
+          "gpt-5.3-codex-spark",
+          "grok-4.20-0309-non-reasoning",
+          "grok-4.20-0309-reasoning",
+          "grok-4.20-multi-agent-0309",
+          "grok-4.3",
+          "grok-4.5",
+          "grok-4.6",
+          "grok-build-0.1",
+          "__custom__"
+        ]
+      },
+      {
+        "label": "文本生成模型与推理等级",
+        "hasSelect": true,
+        "value": "",
+        "options": [
+          "",
+          "gpt-6-astra",
+          "gpt-5.6-sol",
+          "gpt-5.6-terra",
+          "gpt-5.6-luna",
+          "gpt-5.5",
+          "gpt-5.3-codex-spark",
+          "grok-4.20-0309-non-reasoning",
+          "grok-4.20-0309-reasoning",
+          "grok-4.20-multi-agent-0309",
+          "grok-4.3",
+          "grok-4.5",
+          "grok-4.6",
+          "grok-build-0.1",
+          "__custom__"
+        ]
+      },
+      {
+        "label": "页面内容共享",
+        "hasSelect": true,
+        "value": "auto",
+        "options": [
+          "auto",
+          "ask",
+          "off"
+        ]
+      },
+      {
+        "label": "界面主题",
+        "hasSelect": true,
+        "value": "auto",
+        "options": [
+          "auto",
+          "dark",
+          "light"
+        ]
+      },
+      {
+        "label": "界面语言",
+        "hasSelect": true,
+        "value": "auto",
+        "options": [
+          "auto",
+          "zh",
+          "en"
+        ]
+      }
+    ]
+  },
+  "storageBefore": {
+    "textModel": null,
+    "textEffort": null,
+    "chatLocalModel": null
+  },
+  "switch": {
+    "ok": true,
+    "before": "",
+    "target": "gpt-6-astra"
+  },
+  "storageAfter": {
+    "textModel": "gpt-6-astra",
+    "textEffort": "medium",
+    "chatLocalModel": null
+  }
+}

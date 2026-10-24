@@ -1,0 +1,157 @@
+{
+  "stamp": "2026-10-23T10-43-48-541Z",
+  "assertions": [
+    {
+      "name": "A5 连接设置已下发扩展",
+      "pass": true
+    },
+    {
+      "name": "A5 扩展已连上桩宿主（hello）",
+      "pass": true
+    },
+    {
+      "name": "A5 文本行显示已保存的文本模型",
+      "pass": true
+    },
+    {
+      "name": "A5 生成前发出 bridge.textGeneration",
+      "pass": true
+    },
+    {
+      "name": "A5 钉定 payload 精确等于设置三元组（provider 必填）",
+      "pass": true
+    },
+    {
+      "name": "A5 帧序 create → pin → prompt → purge",
+      "pass": true
+    },
+    {
+      "name": "A5 生成结果回显桩宿主正文",
+      "pass": true
+    },
+    {
+      "name": "A5 生成链路未改写对话模型键",
+      "pass": true
+    }
+  ],
+  "screenshots": [
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-text-model-isolation-issue-3629/.workbuddy/evidence/text-model-e2e/2026-10-23T10-43-48-541Z-generation-settings.png",
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-text-model-isolation-issue-3629/.workbuddy/evidence/text-model-e2e/2026-10-23T10-43-48-541Z-generation-after.png"
+  ],
+  "pass": true,
+  "panelState": {
+    "rows": [
+      {
+        "label": "连接实例",
+        "value": null
+      },
+      {
+        "label": "默认工作区",
+        "value": null
+      },
+      {
+        "label": "对话模型与推理等级",
+        "value": "gpt-6-astra"
+      },
+      {
+        "label": "文本生成模型与推理等级",
+        "value": "grok-4.6"
+      },
+      {
+        "label": "桥地址",
+        "value": null
+      },
+      {
+        "label": "鉴权 Token",
+        "value": null
+      },
+      {
+        "label": "页面内容共享",
+        "value": "auto"
+      },
+      {
+        "label": "界面主题",
+        "value": "auto"
+      },
+      {
+        "label": "界面语言",
+        "value": "auto"
+      },
+      {
+        "label": "界面字号大小",
+        "value": null
+      },
+      {
+        "label": "启用悬浮球控制网页右下角全局悬浮球是否显示",
+        "value": null
+      },
+      {
+        "label": "悬停在图片上时显示控制页面图片、视频悬停感知的 OmniMux 胶囊工具栏是否启用",
+        "value": null
+      },
+      {
+        "label": "显示 X 爆速角标在 X 推文上展示爆速指标与评论机会提示。",
+        "value": null
+      },
+      {
+        "label": "显示「生成海报」入口在 X 推文下增加「生成海报」：选择黑白主题后生成海报与个人观点，跳到发帖页自动附图并预填正文，发布仍由你确认。",
+        "value": null
+      },
+      {
+        "label": "允许模型完全控制浏览器无需弹窗二次确认即可操作网页与标签页",
+        "value": null
+      },
+      {
+        "label": "浏览器审批通知侧栏关闭时通过系统通知提醒审批",
+        "value": null
+      },
+      {
+        "label": "续接当前页面会话重开同网址标签页时自动恢复对应会话",
+        "value": null
+      }
+    ],
+    "chatLocal": "gpt-6-astra"
+  },
+  "response": {
+    "ok": true,
+    "text": "桩宿主回帖正文"
+  },
+  "frameOrder": [
+    "settings.describe",
+    "session.create",
+    "session.history",
+    "bridge.injectBrowserSnapshot",
+    "bridge.injectBrowserSnapshot",
+    "bridge.modelMode",
+    "session.modelCatalog",
+    "settings.describe",
+    "settings.describe",
+    "session.list",
+    "workspace.list",
+    "session.create",
+    "session.history",
+    "bridge.injectBrowserSnapshot",
+    "workspace.list",
+    "session.modelCatalog",
+    "settings.mutate",
+    "session.selectModel",
+    "session.modelCatalog",
+    "settings.describe",
+    "session.create",
+    "bridge.textGeneration",
+    "session.prompt",
+    "bridge.session.purge",
+    "session.history",
+    "session.history"
+  ],
+  "generationSequence": [
+    "session.create",
+    "bridge.textGeneration",
+    "session.prompt",
+    "bridge.session.purge"
+  ],
+  "chatLocal": {
+    "before": "gpt-6-astra",
+    "after": "gpt-6-astra"
+  }
+}

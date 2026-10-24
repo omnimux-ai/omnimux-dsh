@@ -64,11 +64,19 @@ function nulFields(bytes) {
   if (text && !text.endsWith('\0')) throw new Error('truncated-git-path-list')
   return text.split('\0')
 }
-export function readFixedTestChanges(root, base = 'origin/main') {
+/**
+ * 固定提交身份下的评估域变更，含前后 blob 原文。
+ * 扫描前后各校验一次候选身份；`readFixedTestChanges` 与 CI 侧声明校验共用本函数，
+ * 避免两处各写一套 merge-base / diff / blob 读取。
+ *
+ * `requireClean` 默认 true（`scan` 的既有契约：候选检出必须干净）。声明校验只需已提交
+ * 范围，工作区是否脏不影响结论，因此可显式关闭——HEAD 身份仍会被前后各校验一次。
+ */
+export function readEvaluationChanges(root, base = 'origin/main', { requireClean = true, includePath = null } = {}) {
   root = realpathSync(root)
   if (realpathSync(git(root, ['rev-parse', '--show-toplevel']).trim()) !== root) throw new Error('not-repository-root')
   const clean = () => !git(root, ['status', '--porcelain', '-z', '--untracked-files=all'])
-  if (!clean()) throw new Error('candidate-has-uncommitted-changes')
+  if (requireClean && !clean()) throw new Error('candidate-has-uncommitted-changes')
   const resolveCommit = ref => git(root, ['rev-parse', '--verify', `${ref}^{commit}`]).trim()
   const candidate = resolveCommit('HEAD')
   const baseCommit = resolveCommit(base)
@@ -88,13 +96,20 @@ export function readFixedTestChanges(root, base = 'origin/main') {
     const oldPath = fields[i++]
     const path = /^[RC]/.test(status) ? fields[i++] : oldPath
     if (!path || !oldPath) throw new Error('truncated-change-list')
-    if (!isEvaluationPath(path) && !isEvaluationPath(oldPath)) continue
+    // 默认只收评估域；`includePath` 供调用方按同一份提交范围额外收拢路径
+    // （声明校验需要 `specs/*.md`，而它不在评估域内）。
+    const wanted = value => isEvaluationPath(value) || (typeof includePath === 'function' && includePath(value))
+    if (!wanted(path) && !wanted(oldPath)) continue
     changes.push({ status, path, oldPath,
       before: status === 'A' ? null : blob(comparisonBase, oldPath), after: status === 'D' ? null : blob(candidate, path),
       beforeMode: status === 'A' ? null : mode(comparisonBase, oldPath), afterMode: status === 'D' ? null : mode(candidate, path) })
   }
-  if (resolveCommit('HEAD') !== candidate || !clean()) throw new Error('candidate-changed-during-scan')
-  return analyzeTestChanges({ root, baseCommit, comparisonBase, candidate, changes })
+  if (resolveCommit('HEAD') !== candidate || (requireClean && !clean())) throw new Error('candidate-changed-during-scan')
+  return { root, baseCommit, comparisonBase, candidate, changes }
+}
+
+export function readFixedTestChanges(root, base = 'origin/main') {
+  return analyzeTestChanges(readEvaluationChanges(root, base))
 }
 
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {

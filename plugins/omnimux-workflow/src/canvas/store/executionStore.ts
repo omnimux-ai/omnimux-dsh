@@ -38,6 +38,11 @@ export const LIVE_EXECUTION_STATUSES: readonly ExecutionUiStatus[] = ['pending',
 
 const LIVE_STATUS_SET = new Set<ExecutionUiStatus>(LIVE_EXECUTION_STATUSES);
 
+/** Statuses a run never leaves again. */
+export const TERMINAL_EXECUTION_STATUSES: readonly ExecutionUiStatus[] = ['completed', 'error', 'cancelled'];
+
+const TERMINAL_STATUSES = new Set<ExecutionUiStatus>(TERMINAL_EXECUTION_STATUSES);
+
 /** Run id used when a caller writes run-scoped state without naming a run. */
 export const LOCAL_RUN_ID = '__local__';
 
@@ -56,12 +61,54 @@ function emptyProgress(): ExecutionProgressState {
   return { ...EMPTY_PROGRESS };
 }
 
+/**
+ * Per-node execution detail for the queue panel (Issue #3625 工作流 2).
+ *
+ * The run's `nodeStatuses` map stays the badge/projection contract (many
+ * consumers read it); this record is the **additive** detail view the queue
+ * panel needs — display name, progress and timing — and never replaces it.
+ * Every field is either observed by the UI or reported by the host; nothing is
+ * synthesised to fill a gap.
+ */
+export interface ExecutionNodeRecord {
+  nodeId: string;
+  status: NodeExecutionApiStatus;
+  /** Node label: from the canvas document, else from the `node_start` payload. */
+  label?: string;
+  /** Node type from the `node_start` payload. */
+  type?: string;
+  /**
+   * Epoch ms when this UI first saw the node running.
+   *
+   * A **client-observed** clock, kept separately from the scheduler-reported
+   * {@link ExecutionNodeRecord.durationMs} so the panel can label it as such
+   * rather than passing an approximation off as the host's measurement.
+   */
+  observedStartedAt?: number;
+  /** Epoch ms when this UI saw the node reach a terminal status. */
+  observedCompletedAt?: number;
+  /** Authoritative duration reported by the scheduler (`node_complete` / `node_error`). */
+  durationMs?: number;
+  /** 0-100 progress from `node_progress`. */
+  progress?: number;
+  /** Progress message from `node_progress`. */
+  message?: string;
+  /** Failure text from `node_error` / the status snapshot. */
+  error?: string;
+}
+
 export interface ExecutionRun {
   executionId: string;
   status: ExecutionUiStatus;
   error: string | null;
   progress: ExecutionProgressState;
   nodeStatuses: Record<string, NodeExecutionApiStatus>;
+  /** Additive per-node detail for the queue panel; `nodeStatuses` stays authoritative for badges. */
+  nodeRecords: Record<string, ExecutionNodeRecord>;
+  /** Epoch ms when this UI first saw the run live. */
+  observedStartedAt?: number;
+  /** Epoch ms when this UI saw the run reach a terminal status. */
+  observedCompletedAt?: number;
 }
 
 function createRun(executionId: string, status: ExecutionUiStatus = 'idle'): ExecutionRun {
@@ -71,6 +118,7 @@ function createRun(executionId: string, status: ExecutionUiStatus = 'idle'): Exe
     error: null,
     progress: emptyProgress(),
     nodeStatuses: {},
+    nodeRecords: {},
   };
 }
 
@@ -203,6 +251,57 @@ function patchRunIn(
   return index;
 }
 
+/** Terminal node statuses: nothing is in flight for the node any more. */
+const TERMINAL_NODE_STATUSES: ReadonlySet<NodeExecutionApiStatus> = new Set<NodeExecutionApiStatus>([
+  'completed',
+  'error',
+  'skipped',
+]);
+
+/**
+ * UI-observed timing stamps for a status transition.
+ *
+ * Observation only — it reads the transition and records wall-clock time; it
+ * never decides or alters execution state. `running` always restarts the clock
+ * (a re-run of the same node in one run must not inherit the old start), and a
+ * terminal status closes it.
+ */
+function nodeTimingStamp(
+  status: NodeExecutionApiStatus,
+  now: number,
+): Pick<ExecutionNodeRecord, 'observedStartedAt' | 'observedCompletedAt'> {
+  if (status === 'running') return { observedStartedAt: now, observedCompletedAt: undefined };
+  if (TERMINAL_NODE_STATUSES.has(status)) return { observedCompletedAt: now };
+  return {};
+}
+
+/**
+ * Merge one node's detail into its run without touching `nodeStatuses`
+ * ordering: both maps are written together so a detail write can never leave
+ * the badge contract behind.
+ */
+function writeNodeRecord(
+  runs: ExecutionRun[],
+  executionId: string,
+  nodeId: string,
+  patch: Partial<ExecutionNodeRecord>,
+): void {
+  const index = patchRunIn(runs, executionId, {});
+  const run = runs[index]!;
+  // A detail-only write must not invent a status: inherit the run's authoritative
+  // `nodeStatuses` entry so the two maps cannot disagree.
+  const previous: ExecutionNodeRecord = run.nodeRecords[nodeId] ?? {
+    nodeId,
+    status: run.nodeStatuses[nodeId] ?? 'pending',
+  };
+  const next: ExecutionNodeRecord = { ...previous, ...patch, nodeId, status: patch.status ?? previous.status };
+  runs[index] = {
+    ...run,
+    nodeRecords: { ...run.nodeRecords, [nodeId]: next },
+    ...(patch.status ? { nodeStatuses: { ...run.nodeStatuses, [nodeId]: patch.status } } : {}),
+  };
+}
+
 export interface ExecutionState extends ExecutionProjection {
   /** Live and recently finished runs, oldest first. */
   runs: ExecutionRun[];
@@ -224,6 +323,17 @@ export interface ExecutionState extends ExecutionProjection {
   patchRun: (executionId: string, patch: Partial<Omit<ExecutionRun, 'executionId'>>) => void;
   /** Write one node's status inside a run (creating a non-live run when absent). */
   setRunNodeStatus: (executionId: string, nodeId: string, status: NodeExecutionApiStatus) => void;
+  /**
+   * Write one node's queue-panel detail (label / progress / host-reported
+   * duration / error) inside a run. Additive: `nodeStatuses` is kept in sync
+   * when the patch carries a status, so the badge contract never drifts from
+   * the detail view.
+   */
+  patchRunNode: (
+    executionId: string,
+    nodeId: string,
+    patch: Partial<Omit<ExecutionNodeRecord, 'nodeId'>>,
+  ) => void;
   /** Drop one run; its node statuses stop contributing to the projection. */
   dropRun: (executionId: string) => void;
 
@@ -261,9 +371,12 @@ export const useExecutionStore = create<ExecutionState>()((set, get) => {
   };
 
   const writeNodeStatus = (runs: ExecutionRun[], executionId: string, nodeId: string, status: NodeExecutionApiStatus): void => {
-    const index = patchRunIn(runs, executionId, {});
-    const run = runs[index]!;
-    runs[index] = { ...run, nodeStatuses: { ...run.nodeStatuses, [nodeId]: status } };
+    // `nodeStatuses` (badge/projection contract) and `nodeRecords` (queue-panel
+    // detail) are written in the same commit so they cannot drift apart.
+    writeNodeRecord(runs, executionId, nodeId, {
+      status,
+      ...nodeTimingStamp(status, Date.now()),
+    });
   };
 
   return {
@@ -287,13 +400,30 @@ export const useExecutionStore = create<ExecutionState>()((set, get) => {
     patchRun: (executionId, patch) =>
       mutate((runs, focus) => {
         const index = runs.findIndex((run) => run.executionId === executionId);
-        if (index !== -1) runs[index] = { ...runs[index]!, ...patch };
+        if (index !== -1) {
+          const previous = runs[index]!;
+          const now = Date.now();
+          // Observation-only run timing: a run that turns live starts its clock,
+          // a terminal one closes it. Scheduling behavior is untouched.
+          const timing: Pick<ExecutionRun, 'observedStartedAt' | 'observedCompletedAt'> = {};
+          if (patch.status && patch.status !== previous.status) {
+            if (LIVE_STATUS_SET.has(patch.status)) timing.observedStartedAt = now;
+            if (TERMINAL_STATUSES.has(patch.status)) timing.observedCompletedAt = now;
+          }
+          runs[index] = { ...previous, ...patch, ...timing };
+        }
         return [runs, focus];
       }),
 
     setRunNodeStatus: (executionId, nodeId, status) =>
       mutate((runs, focus) => {
         writeNodeStatus(runs, executionId, nodeId, status);
+        return [runs, focus];
+      }),
+
+    patchRunNode: (executionId, nodeId, patch) =>
+      mutate((runs, focus) => {
+        writeNodeRecord(runs, executionId, nodeId, patch);
         return [runs, focus];
       }),
 

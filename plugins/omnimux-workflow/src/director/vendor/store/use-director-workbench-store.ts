@@ -53,7 +53,7 @@ const initialState = {
     playhead: 0,
     playing: false,
     autoKey: false,
-    sequencerHeight: 130,
+    sequencerHeight: 236,
     sequencerVisible: false,
 };
 
@@ -93,7 +93,7 @@ export const useDirectorWorkbenchStore = create<DirectorWorkbenchStore>((set) =>
     setPlayhead: (playhead) => set({ playhead }),
     setPlaying: (playing) => set({ playing }),
     setAutoKey: (autoKey) => set({ autoKey }),
-    setSequencerHeight: (sequencerHeight) => set({ sequencerHeight: Math.max(130, Math.min(620, sequencerHeight)) }),
+    setSequencerHeight: (sequencerHeight) => set({ sequencerHeight: Math.max(160, Math.min(620, sequencerHeight)) }),
     setSequencerVisible: (sequencerVisible) => set({ sequencerVisible }),
     reset: () => set(initialState),
 }));

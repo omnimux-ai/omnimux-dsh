@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from 'react'
 import { loopbackFetch } from '../../shared/loopback-fetch.ts'
+import { providerFromCatalogGroup } from '../../shared/model-catalog.ts'
 import type { PanelApi } from '../api.ts'
 
 export interface EffortOption {
@@ -218,6 +219,16 @@ export function getDefaultModelForInstance(port: number): string {
   return 'gpt-6-astra'
 }
 
+/**
+ * Where the selector's own persistence lives.
+ *
+ * `chat` is the historical behavior: the choice is mirrored into the panel's
+ * `localStorage` keys and pushed to the host's `agent-default-model`. `text`
+ * is the controlled text-generation row (#3629): the caller owns the value and
+ * its storage, so this component must not touch either chat key.
+ */
+export type ModelSelectorStorageScope = 'chat' | 'text'
+
 export const ModelSelector = memo(function ModelSelector({
   locale = 'zh',
   activePort = 43128,
@@ -227,6 +238,11 @@ export const ModelSelector = memo(function ModelSelector({
   onSelectModel,
   onSelectEffort,
   api,
+  storageScope = 'chat',
+  selectedModel: selectedModelProp,
+  selectedEffort: selectedEffortProp,
+  allowEmptyOption = false,
+  emptyOptionLabel,
 }: {
   locale?: 'zh' | 'en'
   activePort?: number
@@ -237,13 +253,31 @@ export const ModelSelector = memo(function ModelSelector({
   onSelectEffort?: (effort: string) => void
   /** Host RPC client; when present the live `session.modelCatalog` wins. */
   api?: PanelApi
+  /** Storage range this instance owns; the text row injects `text`. */
+  storageScope?: ModelSelectorStorageScope
+  /**
+   * Controlled selected model. When provided the component never decides the
+   * value, never writes the chat storage keys, and reports every change through
+   * the callbacks — that is what keeps the two settings rows independent.
+   */
+  selectedModel?: string
+  /** Controlled reasoning effort; only read while {@link selectedModel} is set. */
+  selectedEffort?: string
+  /** Offer an empty "follow the chat model" choice (text-generation row). */
+  allowEmptyOption?: boolean
+  emptyOptionLabel?: string
 }) {
   const isEn = locale === 'en'
+  const controlled = selectedModelProp !== undefined
+  // Only the uncontrolled chat usage owns the localStorage keys; a controlled
+  // or text-scoped instance must never touch them.
+  const persistLocally = !controlled && storageScope === 'chat'
   const [modelGroups, setModelGroups] = useState<ModelGroup[]>(REAL_LOCAL_SUBSCRIPTION_GROUPS)
 
   // 默认模型初始化
-  const [selectedModel, setSelectedModel] = useState<string>(() => {
+  const [internalModel, setInternalModel] = useState<string>(() => {
     try {
+      if (!persistLocally) return hostDefaultModel || getDefaultModelForInstance(activePort)
       const savedForPort = localStorage.getItem(`omnimux_default_model_${activePort}`)
       if (savedForPort) {
         if (!hostDefaultModel || savedForPort !== 'gpt-6-astra' || hostDefaultModel === 'gpt-6-astra') {
@@ -263,8 +297,9 @@ export const ModelSelector = memo(function ModelSelector({
   })
 
   // 推理等级初始化
-  const [selectedEffort, setSelectedEffort] = useState<string>(() => {
+  const [internalEffort, setInternalEffort] = useState<string>(() => {
     try {
+      if (!persistLocally) return hostDefaultEffort || 'medium'
       const savedForPort = localStorage.getItem(`omnimux_default_effort_${activePort}`)
       if (savedForPort) return savedForPort
       const savedGlobal = localStorage.getItem('omnimux_default_effort')
@@ -274,6 +309,10 @@ export const ModelSelector = memo(function ModelSelector({
     }
     return hostDefaultEffort || 'medium'
   })
+
+  // The value on screen: the caller's in controlled mode, ours otherwise.
+  const selectedModel: string = controlled ? (selectedModelProp ?? '') : internalModel
+  const selectedEffort: string = controlled ? (selectedEffortProp ?? '') : internalEffort
 
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [customModelInput, setCustomModelInput] = useState('')
@@ -313,15 +352,17 @@ export const ModelSelector = memo(function ModelSelector({
     }
   }, [activePort, api])
 
-  // 当外部实例端口切换时，同步更新默认模型与推理等级
+  // 当外部实例端口切换时，同步更新默认模型与推理等级。
+  // 受控实例的取值由调用方决定，这里既不改写它的值也不回写对话存储。
   useEffect(() => {
+    if (controlled) return
     try {
       const savedForPort = localStorage.getItem(`omnimux_default_model_${activePort}`)
       if (savedForPort) {
         if (!hostDefaultModel || savedForPort !== 'gpt-6-astra' || hostDefaultModel === 'gpt-6-astra') {
-          setSelectedModel(savedForPort)
+          setInternalModel(savedForPort)
           const savedEffort = localStorage.getItem(`omnimux_default_effort_${activePort}`) || hostDefaultEffort || 'medium'
-          setSelectedEffort(savedEffort)
+          setInternalEffort(savedEffort)
           onSelectModel?.(savedForPort, savedEffort)
           return
         }
@@ -331,10 +372,10 @@ export const ModelSelector = memo(function ModelSelector({
     }
     const defaultModel = hostDefaultModel || getDefaultModelForInstance(activePort)
     const defaultEffort = hostDefaultEffort || 'medium'
-    setSelectedModel(defaultModel)
-    setSelectedEffort(defaultEffort)
+    setInternalModel(defaultModel)
+    setInternalEffort(defaultEffort)
     onSelectModel?.(defaultModel, defaultEffort)
-  }, [activePort, hostDefaultModel, hostDefaultEffort])
+  }, [activePort, hostDefaultModel, hostDefaultEffort, controlled])
 
   // 找到当前选中的模型对象与其支持的推理等级
   let currentModelItem: ModelItem | undefined
@@ -354,11 +395,13 @@ export const ModelSelector = memo(function ModelSelector({
   const unassignedDynamic = dynamicModels.filter((dm) => !allKnownIds.has(dm.id))
 
   // 实时目录加载后，按模型元数据纠正历史/默认 effort；无 reasoning 的模型清空。
+  // 受控实例不在组件内纠正：调用方拥有该值，组件只上报用户的选择。
   useEffect(() => {
+    if (controlled) return
     if (currentModelItem === undefined) return
     const nextEffort = resolveEffortForModel(currentModelItem, selectedEffort)
     if (nextEffort === selectedEffort) return
-    setSelectedEffort(nextEffort)
+    setInternalEffort(nextEffort)
     try {
       if (nextEffort === '') {
         localStorage.removeItem(`omnimux_default_effort_${activePort}`)
@@ -372,7 +415,7 @@ export const ModelSelector = memo(function ModelSelector({
     }
     const group = modelGroups.find((candidate) => candidate.models.some((model) => model.id === selectedModel))
     onSelectModel?.(selectedModel, nextEffort === '' ? undefined : nextEffort, group?.provider)
-  }, [modelGroups, selectedModel, selectedEffort])
+  }, [modelGroups, selectedModel, selectedEffort, controlled])
 
   const handleSelectModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value
@@ -380,42 +423,47 @@ export const ModelSelector = memo(function ModelSelector({
       setShowCustomInput(true)
       return
     }
-    setSelectedModel(val)
+    if (!controlled) setInternalModel(val)
     setShowCustomInput(false)
 
     // 无 reasoning 元数据的模型必须清空 effort，不能继承旧值。
     const found = modelGroups.flatMap((g) => g.models).find((m) => m.id === val)
     const newEffort = resolveEffortForModel(found, selectedEffort)
-    setSelectedEffort(newEffort)
+    if (!controlled) setInternalEffort(newEffort)
 
-    try {
-      localStorage.setItem(`omnimux_default_model_${activePort}`, val)
-      localStorage.setItem('omnimux_default_model', val)
-      if (newEffort === '') {
-        localStorage.removeItem(`omnimux_default_effort_${activePort}`)
-        localStorage.removeItem('omnimux_default_effort')
-      } else {
-        localStorage.setItem(`omnimux_default_effort_${activePort}`, newEffort)
-        localStorage.setItem('omnimux_default_effort', newEffort)
+    if (persistLocally) {
+      try {
+        localStorage.setItem(`omnimux_default_model_${activePort}`, val)
+        localStorage.setItem('omnimux_default_model', val)
+        if (newEffort === '') {
+          localStorage.removeItem(`omnimux_default_effort_${activePort}`)
+          localStorage.removeItem('omnimux_default_effort')
+        } else {
+          localStorage.setItem(`omnimux_default_effort_${activePort}`, newEffort)
+          localStorage.setItem('omnimux_default_effort', newEffort)
+        }
+      } catch {
+        // Ignore
       }
-    } catch {
-      // Ignore
     }
 
     const group = modelGroups.find((candidate) => candidate.models.some((model) => model.id === val))
-    const matchedProvider = group?.provider
-      || (group?.group === 'ChatGPT (Codex)' ? 'chatgpt' : group?.group === 'Grok (Subscription)' ? 'grok' : group?.group === 'OmniMux' ? 'omnimux' : undefined)
+    // provider 解析规则与 background 的钉定路径共用同一实现（#3629）：目录组 id
+    // 优先，组名映射兜底；两处若各写一份就会漂移。
+    const matchedProvider = providerFromCatalogGroup(group)
     onSelectModel?.(val, newEffort === '' ? undefined : newEffort, matchedProvider)
   }
 
   const handleEffortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value
-    setSelectedEffort(val)
-    try {
-      localStorage.setItem(`omnimux_default_effort_${activePort}`, val)
-      localStorage.setItem('omnimux_default_effort', val)
-    } catch {
-      // Ignore
+    if (!controlled) setInternalEffort(val)
+    if (persistLocally) {
+      try {
+        localStorage.setItem(`omnimux_default_effort_${activePort}`, val)
+        localStorage.setItem('omnimux_default_effort', val)
+      } catch {
+        // Ignore
+      }
     }
     onSelectEffort?.(val)
     onSelectModel?.(selectedModel, val)
@@ -424,14 +472,16 @@ export const ModelSelector = memo(function ModelSelector({
   const handleApplyCustom = () => {
     const trimmed = customModelInput.trim()
     if (!trimmed) return
-    setSelectedModel(trimmed)
+    if (!controlled) setInternalModel(trimmed)
     setShowCustomInput(false)
     setCustomModelInput('')
-    try {
-      localStorage.setItem(`omnimux_default_model_${activePort}`, trimmed)
-      localStorage.setItem('omnimux_default_model', trimmed)
-    } catch {
-      // Ignore
+    if (persistLocally) {
+      try {
+        localStorage.setItem(`omnimux_default_model_${activePort}`, trimmed)
+        localStorage.setItem('omnimux_default_model', trimmed)
+      } catch {
+        // Ignore
+      }
     }
     onSelectModel?.(trimmed, selectedEffort)
   }
@@ -446,6 +496,11 @@ export const ModelSelector = memo(function ModelSelector({
               value={selectedModel}
               onChange={handleSelectModelChange}
             >
+              {allowEmptyOption && (
+                <option value="">
+                  {emptyOptionLabel ?? (isEn ? 'Follow Chat Model' : '跟随对话模型')}
+                </option>
+              )}
               {modelGroups.map((group) => (
                 <optgroup key={group.group} label={group.group}>
                   {group.models.map((m) => (

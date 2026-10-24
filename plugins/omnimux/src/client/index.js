@@ -7,6 +7,7 @@ import { DshPluginsSection } from './DshPluginsSection.jsx'
 import { ReferenceStorageSection } from './ReferenceStorageSection.jsx'
 import { LoginGate } from './LoginGate.jsx'
 import { setRuntimeChoiceReader } from './auth-gate.js'
+import { installSettingsValueReader } from './settings-value-reader.js'
 import { QuotaGate } from './QuotaGate.jsx'
 import { installQuotaGlobal } from './quota-gate.js'
 import { SidebarUpdateAction } from './SidebarUpdateAction.jsx'
@@ -46,7 +47,7 @@ import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 
 export const name = 'omnimux'
 export const inject = ['slots', 'locale']
-// settingsScope is optional: Hosts without ui-settings still mount chrome.
+// The settings read service is optional: Hosts without ui-settings still mount chrome.
 
 /**
  * Client seam for vertical plugins: single source of truth for the
@@ -125,20 +126,11 @@ export function apply(ctx) {
   })
   // Read existing choices for login compatibility without exposing another
   // model configuration surface. Account/API setup remains on the Host page.
-  if (typeof ctx.inject === 'function') {
-    ctx.inject(['settingsScope'], (sctx) => {
-      const binder = sctx.settingsScope
-      if (!binder || typeof binder.bind !== 'function') return
-      const scope = binder.bind({ namespace: 'omnimux' })
-      // The login gate asks this before prompting: a local agent or custom key
-      // does not need the official account for generation. Without a readable
-      // value the gate keeps its old behaviour and still prompts.
-      setRuntimeChoiceReader(() => {
-        const snapshot = typeof scope.getSnapshot === 'function' ? scope.getSnapshot() : undefined
-        return snapshot && typeof snapshot === 'object' ? snapshot.value : undefined
-      })
-    })
-  }
+  // The login gate asks this before prompting: a local agent or custom key does
+  // not need the official account for generation. Without a readable value the
+  // gate keeps its old behaviour and still prompts.
+  const readRuntimeChoice = installSettingsValueReader({ ctx, namespace: 'omnimux' })
+  if (readRuntimeChoice) setRuntimeChoiceReader(readRuntimeChoice)
   // Unified login gate. It lives on the shell.overlay seat but renders as a
   // transient modal via createPortal(document.body) with a zIndex above every
   // other overlay; it returns null while closed so it never claims a product

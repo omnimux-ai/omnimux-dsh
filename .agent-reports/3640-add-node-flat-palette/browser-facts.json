@@ -1,0 +1,267 @@
+{
+  "issue": 3640,
+  "task": "add-node flat (uncategorised) palette — real-browser acceptance evidence",
+  "capturedAt": "2026-10-23T19:02+08:00",
+  "capturedAtZone": "Asia/Taipei",
+  "agent": "browser-evidence (teammate)",
+  "sourceIdentity": {
+    "worktree": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-addnode-flat-menu",
+    "branch": "agent/workflow-addnode-flat-menu-issue-3640",
+    "headBefore": "70439270bd278276c0dd85fecf256d8d86881b5c",
+    "headAfter": "70439270bd278276c0dd85fecf256d8d86881b5c",
+    "headCommand": "git rev-parse HEAD",
+    "sourceModifiedByThisTask": false
+  },
+  "harness": {
+    "command": "node plugins/omnimux-workflow/scripts/canvas-harness.mjs --port 60653",
+    "cwd": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-addnode-flat-menu",
+    "node": "v25.8.0 (/Users/x/.nvm/versions/node/v25.8.0/bin/node)",
+    "portSelection": "OS-assigned free ephemeral port via net.createServer().listen(0), closed before reuse",
+    "port": 60653,
+    "urls": ["http://localhost:60653/", "http://127.0.0.1:60653/"],
+    "buildLog": [
+      "skipped .../plugins/omnimux-workflow/lib/canvas.js (--harness does not write production bundle)",
+      "wrote .../plugins/omnimux-workflow/dist-harness/canvas-harness.js (18047812 bytes)",
+      "canvas harness: http://localhost:60653/"
+    ],
+    "httpProbe": "curl -s -o /dev/null -w '%{http_code} %{size_download}' http://127.0.0.1:60653/ -> 200 358",
+    "devOnly": true,
+    "selfCleaning": "harness runs as an owned background job and is stopped after capture"
+  },
+  "browser": {
+    "tool": "ego-browser (ego lite) skill guide v2.1.0",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "taskSpace": {
+      "id": 248,
+      "name": "omnimux-3640-flat-menu-20261023-1852",
+      "ownership": "agent",
+      "createdByThisTask": true,
+      "finishedWith": "finish({ keep: [] })",
+      "keptPages": []
+    },
+    "iabUsed": false,
+    "viewportAtFinalMeasure": { "innerWidth": 1716, "innerHeight": 815, "devicePixelRatio": 2 },
+    "screenshotPixelSize": "1728x883"
+  },
+  "assertions": [
+    {
+      "id": "A1",
+      "claim": "面板内没有分类标题、计数或折叠箭头（旧版为 素材/数据/合成/创作 四组）",
+      "result": "pass",
+      "targets": ["dock panel", "context drill panel"],
+      "evidence": {
+        "dock": {
+          "wf-node-menu__group": 0,
+          "wf-node-menu__group-header": 0,
+          "wf-node-menu__group-caret": 0,
+          "wf-node-menu__group-title": 0,
+          "wf-node-menu__group-count": 0,
+          "listChildTags": "8 x BUTTON.wf-node-menu__item (no wrapper divs)",
+          "svgInList": 8,
+          "itemCount": 8,
+          "panelText": "添加节点N文本表格HTable图片视频MiniMax H3音频导演台视频剪辑Clip导入素材",
+          "legacyGroupWordsAsStandaloneTextNodes": { "素材": 0, "数据": 0, "合成": 0, "创作": 0 }
+        },
+        "context": {
+          "wf-node-menu__group": 0,
+          "wf-node-menu__group-header": 0,
+          "wf-node-menu__group-caret": 0,
+          "wf-node-menu__group-title": 0,
+          "wf-node-menu__group-count": 0,
+          "listChildTags": "7 x BUTTON.wf-node-menu__item",
+          "svgInList": 7,
+          "itemCount": 7,
+          "panelText": "添加节点文本表格HTable图片视频MiniMax H3音频导演台视频剪辑Clip",
+          "legacyGroupWordsAsStandaloneTextNodes": { "素材": 0, "数据": 0, "合成": 0, "创作": 0 }
+        }
+      }
+    },
+    {
+      "id": "A2",
+      "claim": "条目顺序 = 文本、表格、图片、视频、音频、导演台、视频剪辑、导入素材",
+      "result": "pass",
+      "evidence": {
+        "dockItemLabels": ["文本", "表格", "图片", "视频", "音频", "导演台", "视频剪辑", "导入素材"],
+        "dockItemBadges": [null, "HTable", null, "MiniMax H3", null, null, "Clip", null]
+      }
+    },
+    {
+      "id": "A3",
+      "claim": "菜单显示「导演台」「视频剪辑」",
+      "result": "pass",
+      "evidence": {
+        "dockItemLabels5": "导演台",
+        "dockItemLabels6": "视频剪辑",
+        "contextItemLabels5": "导演台",
+        "contextItemLabels6": "视频剪辑",
+        "nodeTypeNamesUnchanged": { "node.type.director": "3D 导演台", "node.type.video_composition": "视频合成" }
+      }
+    },
+    {
+      "id": "A4",
+      "claim": "搜索「导演台」后仅剩导演台一项且文字高亮",
+      "result": "pass",
+      "evidence": {
+        "queryValue": "导演台",
+        "itemCount": 1,
+        "visibleItemCount": 1,
+        "itemLabels": ["导演台"],
+        "markCount": 1,
+        "markText": "导演台",
+        "markTag": "MARK",
+        "markClass": "wf-node-menu__match",
+        "markComputedStyle": {
+          "backgroundColor": "rgb(251, 251, 252)",
+          "color": "rgb(26, 29, 38)",
+          "borderRadius": "3px",
+          "padding": "0px 1px",
+          "display": "inline"
+        },
+        "labelComputedBackground": "rgba(0, 0, 0, 0)",
+        "highlightApplied": true,
+        "emptyStateShown": false,
+        "note": "Highlight background is a light surface token, so it is visually subtle at 1x; DOM structure plus computed style is the authority."
+      }
+    },
+    {
+      "id": "A5",
+      "claim": "右键钻取面板同样无分类、且不含「导入素材」",
+      "result": "pass",
+      "evidence": {
+        "paneMainMenuLabels": ["导入素材", "添加节点", "撤销", "重做", "创建工作流", "粘贴", "全选"],
+        "paneMainMenuNote": "「导入素材」 is the pane context menu's own top-level item by design, not a palette row",
+        "drillItemIndex": 1,
+        "drillPanelClasses": "wf-node-menu wf-node-menu--context",
+        "drillItemCount": 7,
+        "drillItemLabels": ["文本", "表格", "图片", "视频", "音频", "导演台", "视频剪辑"],
+        "containsImportAsset": false,
+        "hasBackButton": true
+      }
+    },
+    {
+      "id": "A6",
+      "claim": "点调色板「视频剪辑」后，画布上新节点的标题仍是「视频合成」，不是「视频剪辑」",
+      "result": "pass",
+      "round": 2,
+      "evidence": {
+        "clickedPaletteRow": { "index": 6, "label": "视频剪辑" },
+        "paletteLabelsInSameRound": ["文本", "表格", "图片", "视频", "音频", "导演台", "视频剪辑", "导入素材"],
+        "createdNodeId": "node_video_composition_1792761587845",
+        "nodeType": "video_composition",
+        "cardDataNodeType": "video_composition",
+        "titleSelector": ".wf-node-shell[data-node-id] .wf-node-header__label",
+        "titleTag": "SPAN",
+        "titleClass": "wf-node-header__label",
+        "titleText": "视频合成",
+        "headerText": "视频合成",
+        "titleTitleAttr": "双击重命名",
+        "editingInputValue": null,
+        "storeDataTitle": "视频合成",
+        "storeDataLabel": "视频合成",
+        "titleEqualsVideoCompose": true,
+        "titleEqualsVideoClip": false,
+        "titleContainsVideoClip": false,
+        "videoCompositionCardCountBefore": 0,
+        "videoCompositionCardCountAfter": 1,
+        "labelBoxAfterDrag": { "x": 765, "y": 212, "w": 56, "h": 20 },
+        "labelInViewport": true,
+        "note": "The node title comes from createDefaultVideoCompositionData() (title/label hardcoded to 视频合成); the palette row copy comes from palette.item.video_composition (视频剪辑). The two are independent, as required."
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "file": "dock-panel.png",
+      "bytes": 102575,
+      "pixels": "1728x883",
+      "sha256": "8bd5ff9644cb4782a953b89696680250127088e9eb4960851856f58ffc50ee9b",
+      "shows": "dock (+) add-node panel: flat 8-item list, no group headings/counts/carets"
+    },
+    {
+      "file": "search-director.png",
+      "bytes": 82889,
+      "pixels": "1728x883",
+      "sha256": "707d8ef68f7e14cac78c11092f6931ef864f7476fdc813ff993f37cd087cef1f",
+      "shows": "search box containing 导演台, single remaining row 导演台"
+    },
+    {
+      "file": "context-drill-panel.png",
+      "bytes": 102163,
+      "pixels": "1728x883",
+      "sha256": "af99bb82c10212f1bcb28985f8686b269c628ffeb329bb982e3679ebf6ad61d8",
+      "shows": "right-click drill panel: flat 7-item list, no 导入素材, back button present"
+    },
+    {
+      "file": "dock-panel-zoom.png",
+      "bytes": 218564,
+      "pixels": "885x1500",
+      "sha256": "a33c2184c02620516563a9a0dbe69751d29d61542d03fb3fa87aa573201134d3",
+      "shows": "3x crop of dock-panel.png panel region"
+    },
+    {
+      "file": "search-director-zoom.png",
+      "bytes": 115431,
+      "pixels": "1180x780",
+      "sha256": "994773e57d22a48c758d1a00d621d8235987f78e922ea60209dccccc69cd0c8b",
+      "shows": "4x crop of search-director.png panel region"
+    },
+    {
+      "file": "context-drill-panel-zoom.png",
+      "bytes": 169006,
+      "pixels": "840x1275",
+      "sha256": "e11472cc14705e62e9d4e2f5a995b8d4c400c24049a8660903bae6f6e97c8db4",
+      "shows": "3x crop of context-drill-panel.png panel region"
+    },
+    {
+      "file": "created-node-title.png",
+      "bytes": 80162,
+      "pixels": "1728x883",
+      "sha256": "42ff60c4745f8aa4677e54cf969455f53a5f8f79a06f0e8bf5941ccd4b76937e",
+      "shows": "canvas node created by clicking palette row 视频剪辑; its header title reads 视频合成",
+      "round": 2
+    },
+    {
+      "file": "created-node-title-zoom.png",
+      "bytes": 111943,
+      "pixels": "850x1050",
+      "sha256": "1414389a38af919dac97230df32ba7aac920cd91637507ce40f90b115604d6a7",
+      "shows": "5x crop of created-node-title.png, node title 视频合成 clearly readable",
+      "round": 2
+    }
+  ],
+  "coverageGaps": [
+    "English locale (dict.en.ts) palette copy not re-verified in browser; only zh default locale was exercised.",
+    "Selecting a palette row (actual node creation) not exercised; this round covers panel structure and copy only.",
+    "Dark theme panel styling not verified.",
+    "Keyboard shortcut N to open the dock panel not verified.",
+    "Panel scroll behaviour not specifically verified; the screenshot shows all 8 rows fully visible without scrolling.",
+    "The dock-only 「导入素材」 import flow (after clicking the row) not exercised.",
+    "Harness is dev-only and skips the production bundle (lib/canvas.js); this evidence covers the canvas island add-node panel only, not the Dev app or Electron shell.",
+    "Round 1 viewport measured after capture (1716x815 @DPR2) did not match screenshot pixel size (1728x883); round 2 measured 1728x883 @DPR2, exactly matching its screenshots, so round 1's gap was window-size drift during capture rather than a scaling artifact.",
+    "Round 2: only the 视频剪辑 row was clicked. Clicking 导演台 and checking that the created node still reads 3D 导演台 was not exercised.",
+    "Round 2: double-click rename interaction between the node title and node.type was not verified.",
+    "Round 2: English locale was not exercised, so 'Video Clip' -> node title 'Video Composition' is unverified."
+  ],
+  "round2": {
+    "head": "70439270bd278276c0dd85fecf256d8d86881b5c",
+    "harnessCommand": "node plugins/omnimux-workflow/scripts/canvas-harness.mjs --port 58654",
+    "port": 58654,
+    "urls": ["http://localhost:58654/", "http://127.0.0.1:58654/"],
+    "taskSpace": {
+      "id": 252,
+      "name": "omnimux-3640-created-node-title-20261023-2117",
+      "ownership": "agent",
+      "createdByThisTask": true,
+      "finishedWith": "finish({ keep: [] })"
+    },
+    "viewport": { "innerWidth": 1728, "innerHeight": 883, "devicePixelRatio": 2 },
+    "workspaceNote": "Working tree gained ~6 extra lines in addNodePalette.ts (search haystack now also matches node name/type key) versus round 1; HEAD unchanged.",
+    "nodeDrag": {
+      "reason": "Created node's header sat above the viewport at flow (120,120); dragged the node down so the title is visible.",
+      "from": { "x": 781, "y": 38 },
+      "to": { "x": 781, "y": 298 },
+      "positionBefore": { "x": 120, "y": 120 },
+      "positionAfter": { "x": 120, "y": 1097.7173913043478 }
+    }
+  }
+}

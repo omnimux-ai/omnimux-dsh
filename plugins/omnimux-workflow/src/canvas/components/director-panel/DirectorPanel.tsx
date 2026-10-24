@@ -69,7 +69,6 @@ export function DirectorPanel({ workspaceId, saveGraph }: { workspaceId: string 
     let initialized = false;
     const unregisterClose = registerDirectorCloseGuard({ prepareClose: async () => mount.current ? mount.current.prepareClose() : initialized });
     let revision = 0;
-    let coverGraphConfirmed = true;
     const importedModels = new Set<string>();
     let latest: DirectorScene;
     const check = () => {
@@ -82,7 +81,7 @@ export function DirectorPanel({ workspaceId, saveGraph }: { workspaceId: string 
     const save = async (scene: DirectorScene, expectedRevision: number, signal: AbortSignal) => {
       check(); const document = await saveDirectorScene(workspaceId, nodeId, scene, expectedRevision, signal); check();
       revision = document.revision; latest = document.scene as DirectorScene;
-      updateNode({ directorRevision: revision, directorSceneId: latest.id, directorActiveShotId: latest.activeShotId, description: latest.shots.find(shot => shot.id === latest.activeShotId)?.prompt || '', directorDescriptionApplied: useCanvasStore.getState().nodes.find(node => node.id === nodeId)?.data.directorDescriptionEdit });
+      updateNode({ directorRevision: revision, directorSceneId: latest.id, directorActiveShotId: latest.activeShotId });
       return { confirmed: true as const, revision, sceneId: latest.id };
     };
     setStatus('正在打开三维导演台');
@@ -93,18 +92,13 @@ export function DirectorPanel({ workspaceId, saveGraph }: { workspaceId: string 
       if (loaded.ok) {
         latest = loaded.body.document.scene as DirectorScene; revision = loaded.body.document.revision;
         if (source.data.directorRevision !== revision || source.data.directorSceneId !== latest.id) updateNode({ directorRevision: revision, directorSceneId: latest.id });
-        const description = String(source.data.description || '');
-        const active = latest.shots.find(shot => shot.id === latest.activeShotId);
-        if (active && source.data.directorDescriptionEdit && source.data.directorDescriptionEdit !== source.data.directorDescriptionApplied) {
-          if (source.data.directorDescriptionSourceRevision !== revision || source.data.directorDescriptionSceneId !== latest.id || source.data.directorDescriptionShotId !== active.id) throw new Error('画布描述基于旧镜头，请保留描述并重新确认后再打开导演台');
-          if (active.prompt !== description) { latest = { ...latest, shots: latest.shots.map(shot => shot.id === active.id ? { ...shot, prompt: description } : shot) }; await save(latest, revision, controller.signal); }
-          else updateNode({ directorDescriptionApplied: source.data.directorDescriptionEdit });
-        }
       }
       else {
         const missing = resolveMissingDirectorScene({ error: loaded.body.error, priorSceneId: source.data.directorSceneId, emptyScene: () => emptyScene(String(source.data.title || '3D 导演台')) });
         if (missing.action === 'throw') throw new Error(missing.message);
-        latest = missing.scene; latest.shots[0]!.prompt = String(source.data.description || '');
+        latest = missing.scene;
+        // 节点不再有描述输入框，但 Agent/历史节点留下的 description 仍作为新场景的初始镜头意图。
+        latest.shots[0]!.prompt = String(source.data.description || '');
         await save(latest, 0, controller.signal);
       }
       const apiPath = directorScenePath(workspaceId, nodeId);
@@ -218,32 +212,47 @@ export function DirectorPanel({ workspaceId, saveGraph }: { workspaceId: string 
           catch (error) { useCanvasStore.getState().setNodes(current => rollbackDirectorOutput(current, previous, plan).nodes); throw error; }
           return { confirmed: true };
         },
-        captureCover: async (input, context) => {
+        addScreenshotNode: async (input, context) => {
           check(); context.signal.throwIfAborted();
-          const sourceRevision = revision, snapshot = directorFingerprint(serializeDirectorScene(input.scene));
-          if (input.scene.id !== latest.id || snapshot !== directorFingerprint(serializeDirectorScene(latest)) || !latest.shots.some(shot => shot.id === input.shotId)) throw new Error('封面捕获来源已变化，请重试关闭');
-          const cover = await importDirectorMedia(workspaceId, nodeId, 'image', input.beauty, sourceRevision, context.signal);
-          check(); context.signal.throwIfAborted();
-          if (revision !== sourceRevision || snapshot !== directorFingerprint(serializeDirectorScene(latest))) throw new Error('封面保存期间场景已变化，原封面已保留');
-          const before = useCanvasStore.getState().nodes.find(node => node.id === nodeId)!.data;
-          const patch = { coverUrl: projectUrl(cover.storageKey), coverStorageKey: cover.storageKey, coverRevision: sourceRevision };
-          coverGraphConfirmed = false;
-          updateNode(patch);
-          try { await saveRef.current(); check(); context.signal.throwIfAborted(); coverGraphConfirmed = true; }
+          const snapshot = directorFingerprint(serializeDirectorScene(input.scene));
+          if (context.revision !== revision || input.scene.id !== latest.id || snapshot !== directorFingerprint(serializeDirectorScene(latest))
+            || !latest.shots.some(shot => shot.id === input.shotId)) throw new Error('截图来源已变化，请重新截图');
+          const registered = await getWorkspaceAssets(workspaceId); check();
+          const item = registered.body.assets?.items.find(asset => asset.relative_path === input.image.storageKey);
+          const ledgerBytes = item ? item.sizeBytes ?? item.size : undefined;
+          if (!registered.ok || !item || item.id !== input.image.assetId
+            || (typeof ledgerBytes === 'number' && ledgerBytes !== input.image.bytes)
+            || (item.mimeType && item.mimeType !== input.image.mimeType)) throw new Error('截图尚未收到项目账本确认');
+          context.signal.throwIfAborted();
+          const nodes = useCanvasStore.getState().nodes;
+          const source = nodes.find(node => node.id === nodeId);
+          if (!source) throw new Error('导演台所属节点已变化');
+          // 每次截图独立成节点：向右排布，已占用的位置继续向下错开。
+          const occupied = new Set(nodes.filter(node => node.data.directorSourceNodeId === nodeId).map(node => `${Math.round(node.position.x)}:${Math.round(node.position.y)}`));
+          let position = { x: source.position.x + 420, y: source.position.y };
+          for (let index = 0; index < 200 && occupied.has(`${position.x}:${position.y}`); index += 1) position = { x: source.position.x + 420, y: source.position.y + (index + 1) * 370 };
+          const plan = planDirectorOutput({ nodes, sourceNodeId: nodeId, sourceRevision: context.revision, sceneId: input.scene.id, shotId: input.shotId,
+            resources: { image: { assetId: item.id, storageKey: input.image.storageKey, url: projectUrl(input.image.storageKey), mimeType: item.mimeType || input.image.mimeType,
+              bytes: item.sizeBytes || item.size || input.image.bytes, width: input.image.width!, height: input.image.height!,
+              capturedSource: { sceneId: input.scene.id, shotId: input.shotId, revision: context.revision } } },
+            freshNodeId: crypto.randomUUID(), label: input.title, position });
+          const outputNodeId = plan.outputNodeIds.image!;
+          const edge = { id: `director-screenshot-${outputNodeId}`, source: nodeId, target: outputNodeId, sourceHandle: 'out', targetHandle: 'in' };
+          useCanvasStore.getState().setNodes(plan.nodes);
+          useCanvasStore.getState().setEdges(edges => edges.some(item => item.id === edge.id) ? edges : [...edges, edge]);
+          try { await saveRef.current(); check(); context.signal.throwIfAborted(); }
           catch (error) {
-            useCanvasStore.getState().setNodes(nodes => nodes.map(node => {
-              if (node.id !== nodeId || node.data.coverUrl !== patch.coverUrl || node.data.coverStorageKey !== patch.coverStorageKey || node.data.coverRevision !== patch.coverRevision) return node;
-              const data = { ...node.data };
-              for (const key of ['coverUrl', 'coverStorageKey', 'coverRevision'] as const) {
-                if (Object.prototype.hasOwnProperty.call(before, key)) data[key] = before[key];
-                else delete data[key];
-              }
-              return { ...node, data };
-            }));
-            throw error;
+            // 只有节点确实被回滚时才删边：用户在新节点上留过编辑时，节点与连线必须一起保留。
+            const rolled = rollbackDirectorOutput(useCanvasStore.getState().nodes, nodes, plan);
+            useCanvasStore.getState().setNodes(rolled.nodes);
+            const rolledBack = rolled.rolledBackNodeIds.includes(outputNodeId);
+            if (rolledBack) useCanvasStore.getState().setEdges(current => current.filter(item => item.id !== edge.id));
+            throw new Error(rolledBack
+              ? (error instanceof Error ? error.message : '画布保存失败')
+              : `画布图片节点已保留（保存失败：${error instanceof Error ? error.message : '未知错误'}）`);
           }
+          return { confirmed: true as const, nodeId: outputNodeId };
         },
-        shouldCaptureCover: () => !coverGraphConfirmed || useCanvasStore.getState().nodes.find(node => node.id === nodeId)?.data.coverRevision !== revision,
         analyzeImage: async (input, context) => {
           const result = await postAssistant<{ elements: Array<{ name: string; type: 'person' | 'object'; x: number; depth: number }>; simulated: boolean }>('analyze', { imageRef: input.imageUrl, expectedRevision: revision }, context.signal);
           if (result.simulated) toast.warning('这是测试模型的站位建议，不是真实识图结果');
