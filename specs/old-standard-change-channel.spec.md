@@ -68,7 +68,9 @@
 
 同一个门禁有两个入口，但契约不一致：hook 路径 `handle()` 做前后对比，导出的 `evaluateAntiCheat()` 只做纯内容检查，因此后者**根本无法察觉断言被削弱**，会对同一份候选内容给出更宽松的结论。
 
-修复：测试文件且目标已存在时，`evaluateAntiCheat` 改为用 `inspectTestStandardChange(before, code)` 比较磁盘现状；目标不存在时行为不变（新增文件只能做内容检查）。声明通道同时接入该入口，两个入口判定一致。
+修复：测试文件且目标已存在时，`evaluateAntiCheat` 改为用 `inspectTestStandardChange(before, code)` 比较磁盘现状；目标不存在时行为不变（新增文件只能做内容检查）。声明通道同时接入该入口。
+
+**「两入口判定一致」的准确范围**（R1 两轮评审均指出，已更正）：一致的是**前后对比与声明判定**这部分。仓库身份校验并不一致——`handle()` 走 `createSourceInspection`，会拒绝路径里的嵌套 `.git` 与符号链接；`evaluateAntiCheat` 用 `repoRootOf(target)` 认领声明来源，不校验嵌套仓库，因此攻击者可在目标上方自建嵌套 `.git` 让它放行（实测：同目标同内容，`evaluateAntiCheat` = allow，`handle()` = deny）。该函数目前**未接入任何 hook 或 CI**（只被测试与合同文档引用），属潜在缺口，本任务未修，留作独立任务；本任务只保证**运行路径上的那个入口**是对的。
 
 对既有样本无影响：`tests/anti-cheat-samples/*` 的 `filePath` 均为合成路径（`tests/unit/*.test.ts` 等），磁盘上不存在，仍走纯内容检查分支。
 
@@ -125,6 +127,16 @@
 - `scripts/test-change-review.mjs` 抽出 `readEvaluationChanges(root, base, { requireClean })`：`scan` 保持「候选必须干净」的既有契约；声明校验只读已提交范围，因此显式关闭该要求（HEAD 身份仍前后各校验一次），否则本地脏检出无法预览结论。
 - 接线：`.github/workflows/quality-gate.yml` 新增步骤，用仓库既有的 `QA_BASE`（PR base / merge_group base / push before / origin/main）作为范围基线；`fetch-depth: 0` 已满足历史需求。
 - 新增 `scripts/lib/git-fixture-repo.mjs`（临时 git 仓库夹具，登记为 `ciRequired`）：测试文件受评估契约保护，不允许新增 `node:child_process` 之类高风险导入，故夹具单独成模块。
+
+### 第二轮评审后的收紧
+
+第一版 CI 校验把 H1 关上了，但自身有两条零声明通道，第二轮评审逐条实测出来，现已修复：
+
+- **H3「把测试改到解析不过去」**：原先解析失败一律记为 `unevaluable` 且不阻断。现按两侧分流——`before` 可解析而 `after` 不可解析 = **销毁可评估性**，直接违规且**不可声明**（否则这就是一条免声明通道）；`before` 不可解析而 `after` 可解析或为空 = 无法枚举用例，改要求**文件级声明** `- \`<路径>\` :: \`*\``；两侧都不可解析仍仅报告不阻断（否则 254 个 TS 测试文件的日常改动都会挂 PR）。
+- **H4「改名出保护集」**：原先只判新路径，`plugins/demo/src/a.test.mjs → ….bak` 这类改名整条被跳过。现保护判定同时看新旧路径，且**声明点名的始终是原本受保护的那个文件**（改名时旧路径才是契约来处）。
+- **H2「声明跨 PR 复用」**：原先只要求「范围内 spec 有改动」且候选内容里有匹配声明，于是 base 上遗留的旧声明 + 给 spec 加个空行即可放行，diff 里看不到任何新声明。现只统计 **after 相对 before 新增**的声明行。
+- **H5「校验器与 CI 步骤可被同一 PR 改写」**：补上元门禁断言——CLI 对未声明削弱必须退出码 1、对已声明必须 0；`quality-gate.yml` 中必须存在该步骤。
+- **L1**：可声明原因集合收敛为 `guard-anti-cheat.mjs` 单一导出 `DECLARABLE_TEST_STANDARD_REASONS`，CI 侧不再另写一份。
 
 ### 已知盲区（显式报告，不阻断）
 

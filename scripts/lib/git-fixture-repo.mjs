@@ -9,10 +9,14 @@
  * 本模块不参与断言检查，只提供最小 git 夹具。
  */
 
-import { execFileSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'node:fs'
+import { execFileSync, spawnSync } from 'node:child_process'
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, realpathSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { tmpdir } from 'node:os'
+import { fileURLToPath } from 'node:url'
+
+/** 仓库根（本文件位于 `scripts/lib/`）。测试用它读仓库文件，不必自己导入 node:url / node:path。 */
+export const REPO_ROOT = realpathSync(fileURLToPath(new URL('../../', import.meta.url)))
 
 function git(root, args) {
   return execFileSync('git', ['-C', root, ...args], {
@@ -62,5 +66,24 @@ export function withFixtureRepo(run, prefix = 'git-fixture-') {
     return run(repo)
   } finally {
     rmSync(repo.root, { recursive: true, force: true })
+  }
+}
+
+/**
+ * 以子进程运行一个 Node CLI，返回 `{ status, stdout, stderr }`。
+ * 测试文件受评估契约保护、不允许新增 `node:child_process` 导入，故 CLI 退出码
+ * 这类「必须有自动化覆盖」的断言把子进程能力放在这里。
+ */
+export function runNodeCli(args, { cwd } = {}) {
+  const result = spawnSync(process.execPath, args, { cwd, encoding: 'utf8', env: { ...process.env } })
+  return { status: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? '' }
+}
+
+/** 读取仓库相对路径的文件内容（找不到返回 null）。 */
+export function readRepoFile(root, rel) {
+  try {
+    return readFileSync(join(root, rel), 'utf8')
+  } catch {
+    return null
   }
 }

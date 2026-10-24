@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { withFixtureRepo } from './lib/git-fixture-repo.mjs'
+import { withFixtureRepo, runNodeCli, readRepoFile, REPO_ROOT } from './lib/git-fixture-repo.mjs'
 import { verifyTestStandardDeclarations, collectRangeDeclarations } from './verify-test-standard-declarations.mjs'
 
 const TEST_FILE = 'plugins/demo/tests/a.test.mjs'
@@ -127,4 +127,105 @@ test('声明收集只看本范围内已提交的 spec', () => {
     { status: 'D', path: SPEC_FILE, after: null },
     { status: 'M', path: TEST_FILE, after: Buffer.from('') },
   ]), [])
+})
+
+// —— R1 第二轮评审发现的绕过：以下用例逐一钉住它们 ——
+
+const TS_FILE = 'plugins/demo/tests/a.test.ts'
+const TS_SOURCE = "import { test, expect } from 'vitest'\ntest('typed', () => {\n  const value: number = 1\n  expect(value).toBe(1)\n})\n"
+
+test('把可解析的测试改成解析不过去：违规且不可声明（H3）', () => {
+  withFixtureRepo(repo => {
+    repo.write(TEST_FILE, BEFORE)
+    const base = repo.commit('base')
+    // 最小形态的「改成 TS」：加一个类型注解即让 acorn 解析失败。
+    repo.write(TEST_FILE, "import test from 'node:test'\ntest('keeps contract', () => {\n  const n: number = 2\n})\n")
+    repo.write(SPEC_FILE, `${SPEC_HEADER}\n## 旧标准变更\n\n- \`${TEST_FILE}\` :: \`keeps contract\`\n  - 理由：试图用声明放行。\n`)
+    repo.commit('make unparseable, with a declaration')
+    const result = verifyTestStandardDeclarations({ root: repo.root, base })
+    assert.equal(result.violations.length, 1)
+    assert.equal(result.violations[0].reason, 'evaluation-made-unparseable')
+    assert.equal(result.violations[0].declarable, false)
+  })
+})
+
+test('原本不可解析的文件被改写：要求文件级声明（H3）', () => {
+  withFixtureRepo(repo => {
+    repo.write(TS_FILE, TS_SOURCE)
+    const base = repo.commit('base')
+    repo.write(TS_FILE, "import test from 'node:test'\ntest('typed', () => {})\n")
+    repo.commit('rewrite an unparseable baseline')
+    const flagged = verifyTestStandardDeclarations({ root: repo.root, base })
+    assert.equal(flagged.violations.length, 1)
+    assert.equal(flagged.violations[0].reason, 'unparseable-baseline-changed')
+    assert.deepEqual(flagged.violations[0].missing, ['*'])
+    repo.write(SPEC_FILE, `${SPEC_HEADER}\n## 旧标准变更\n\n- \`${TS_FILE}\` :: \`*\`\n  - 理由：原本就解析不了，无法枚举具名用例。\n`)
+    repo.commit('declare at file level')
+    assert.deepEqual(verifyTestStandardDeclarations({ root: repo.root, base }).violations, [])
+  })
+})
+
+test('两侧都不可解析时仅报告不阻断（TS 日常改动不受影响）', () => {
+  withFixtureRepo(repo => {
+    repo.write(TS_FILE, TS_SOURCE)
+    const base = repo.commit('base')
+    repo.write(TS_FILE, TS_SOURCE.replace('= 1', '= 2'))
+    repo.commit('edit a TS test in place')
+    const result = verifyTestStandardDeclarations({ root: repo.root, base })
+    assert.deepEqual(result.violations, [])
+    assert.equal(result.unevaluable.length, 1)
+  })
+})
+
+test('把受保护测试改名到非保护位置：按旧路径要求声明（H4）', () => {
+  withFixtureRepo(repo => {
+    repo.write(TEST_FILE, BEFORE)
+    const base = repo.commit('base')
+    repo.write(`${TEST_FILE}.bak`, AFTER)
+    repo.remove(TEST_FILE)
+    repo.commit('move the test out of the protected set')
+    const result = verifyTestStandardDeclarations({ root: repo.root, base })
+    assert.equal(result.violations.length, 1)
+    assert.equal(result.violations[0].path, TEST_FILE)
+    assert.deepEqual(result.violations[0].missing, ['keeps contract'])
+  })
+})
+
+test('base 上已有的声明不能当本次授权复用（H2）', () => {
+  withFixtureRepo(repo => {
+    repo.write(TEST_FILE, BEFORE)
+    const declared = `${SPEC_HEADER}\n## 旧标准变更\n\n- \`${TEST_FILE}\` :: \`keeps contract\`\n  - 理由：早先某次合法削弱留下的声明。\n`
+    repo.write(SPEC_FILE, declared)
+    const base = repo.commit('base already carries a declaration')
+    repo.write(TEST_FILE, AFTER)
+    // 只对 spec 做无关改动，不新增任何声明行。
+    repo.write(SPEC_FILE, `${declared}\n（本次只加了一行无关文字）\n`)
+    repo.commit('weaken while merely touching the spec')
+    const result = verifyTestStandardDeclarations({ root: repo.root, base })
+    assert.equal(result.violations.length, 1)
+    assert.equal(result.declarationCount, 0)
+  })
+})
+
+test('CLI 对未声明削弱退出码为 1（H5：退出逻辑需有自动化覆盖）', () => {
+  withFixtureRepo(repo => {
+    repo.write(TEST_FILE, BEFORE)
+    const base = repo.commit('base')
+    repo.write(TEST_FILE, AFTER)
+    repo.commit('weaken')
+    const cli = `${REPO_ROOT}/scripts/verify-test-standard-declarations.mjs`
+    const failed = runNodeCli([cli, repo.root, base])
+    assert.equal(failed.status, 1)
+    assert.match(failed.stdout, /发现 1 处未声明的既有标准削弱/)
+    repo.write(SPEC_FILE, `${SPEC_HEADER}\n## 旧标准变更\n\n- \`${TEST_FILE}\` :: \`keeps contract\`\n  - 理由：本次授权。\n`)
+    repo.commit('declare in range')
+    assert.equal(runNodeCli([cli, repo.root, base]).status, 0)
+  })
+})
+
+test('quality-gate 中存在声明校验步骤（H5：元门禁）', () => {
+  const workflow = readRepoFile(REPO_ROOT, '.github/workflows/quality-gate.yml')
+  assert.ok(workflow, '.github/workflows/quality-gate.yml 必须存在')
+  assert.match(workflow, /node scripts\/verify-test-standard-declarations\.mjs/)
+  assert.match(workflow, /node --test scripts\/verify-test-standard-declarations\.test\.mjs/)
 })

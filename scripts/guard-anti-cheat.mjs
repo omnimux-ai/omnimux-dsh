@@ -37,7 +37,11 @@ function testDecision(inspection) {
 
 /** `## 旧标准变更` 声明节；只有具名用例的削弱才可进入该通道。 */
 export const OLD_STANDARD_SECTION = '旧标准变更';
-const DECLARABLE_TEST_STANDARD_REASONS = new Set(['test-assertion-removed-or-rewritten', 'test-case-removed-or-renamed']);
+/**
+ * 唯一可经 spec 声明放行的拒绝原因。其余（跳过、聚焦、动态执行、公共绑定逃逸、
+ * 解析失败等）恒为硬拒绝。CI 侧校验复用本集合，避免两处各写一份而漂移。
+ */
+export const DECLARABLE_TEST_STANDARD_REASONS = new Set(['test-assertion-removed-or-rewritten', 'test-case-removed-or-renamed']);
 
 /**
  * 汇总本任务 spec 中「## 旧标准变更」的声明条目。
