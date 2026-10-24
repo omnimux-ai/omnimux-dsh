@@ -24,7 +24,7 @@ const result = await esbuild.build({
     '@deepseek-ai/cordis',
     '@deepseek-ai/dsh-client-ui-slots',
     '@deepseek-ai/dsh-client-locale',
-    '@deepseek-ai/dsh-client-runtime',
+    '@deepseek-ai/dsh-client-ui-renderer',
     '@deepseek-ai/dsh-client-ui-primitives',
   ],
 })

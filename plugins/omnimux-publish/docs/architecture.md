@@ -48,7 +48,7 @@
 
 - **侧边栏协调器**（`plugins/omnimux/src/client/sidebar-coordinator.js`）：接口为 `window.__omnimuxSidebar.register({ id, rank, styles, styleId, create }) → disposer`，幂等 rank 排序放置，禁止垂直插件自挂 observer/interval。现有 rank 占用：hub 应用=1（app tabs=2）、omnimux-accounts=3、omnimux-gallery=3、omnimux-assets=4、omnimux-workflow=5。**dsh-publish 取 rank 4.2**（位于创作插件 rank 4 与数据分析/工作流之间）。行规格严格按 sidebar-extra-entries.md：32px 行高 / `0 8px` padding / 14×14 icon / 14px-20px label / 6px gap / 8px corner / `--dsw-alias-interactive-bg-*` hover；marker `data-omnimux-publish-entry`；注册走 `registerWhenReady` 轮询等待 hub 全局就绪后注册一次（同 accounts sidebar-entry.js 范式）。
 - **一级页**：`ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name:'shell.overlay', id:'dsh-publish-stage', order:22, locale:NS, inject: stageFace }, PublishStage))`；舞台互斥走 hub `window.__omnimuxStage` 的 `claim/release('dsh-publish')` + `dsh-product-stage` 事件监听（同 accounts stage-store.js）；顶距 `12px 20px 12px`，overlay z-index 200，点会话行退出，不注册 `conversation.view`。
-- 客户端半边装载：esbuild 打包 `src/client/index.js` → `lib/client.js`，`window.__ModuleLoader__.load({ id:'dsh-publish', factory })` 包裹；package.json 带 `exports['./client']`、`files` 含 `lib/client.js` + `cordis.patch.yml`、`dsh.client.inject`（`@deepseek-ai/dsh-client-runtime` / `dsh-client-locale`）——完整复制 omnimux-accounts 的装载件写法。
+- 客户端半边装载：esbuild 打包 `src/client/index.js` → `lib/client.js`，`window.__ModuleLoader__.load({ id:'dsh-publish', factory })` 包裹；package.json 带 `exports['./client']`、`files` 含 `lib/client.js` + `cordis.patch.yml`、`dsh.client.inject`（`@deepseek-ai/dsh-client-ui-renderer` / `dsh-client-locale`）——完整复制 omnimux-accounts 的装载件写法。（0.1.5 的客户端核心包 `@deepseek-ai/dsh-client-runtime` 在 0.2.1-rc.3 已整体删除，改为 rc.3 承载客户端 Slot 服务的 `dsh-client-ui-renderer`。）
 
 ### 1.3 Host HTTP 路由
 

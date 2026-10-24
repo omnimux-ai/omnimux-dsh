@@ -6,12 +6,14 @@
 
 Built and tested against the newest **coherent** harness train: `next`, currently `0.1.1-rc.2`. "Coherent" is the operative word — a train counts only when every package this plugin needs is published on it.
 
+The peer range now admits **two** generations at once. This plugin's own range is `>=0.1.0-rc.1 <0.1.1-0 || >=0.1.1-rc.0 <0.1.2-0 || >=0.2.1-rc.3 <0.3.0-0` — the original per-tuple branches are kept verbatim and one `>=0.2.1-rc.3 <0.3.0-0` branch is appended. The second branch is written as its own tuple because npm does not open `includePrerelease`: a single `>=0.1.5-rc.3 <0.3.0-0` range silently excludes `0.2.1-rc.3` (see "The prerelease trap" below). Runtime work against the 0.2.x train still needs the settings/fs migration tracked separately — the peer range says "the host may be either", not "we are done with 0.2.x".
+
 `0.1.2-alpha.2` is deliberately excluded on two grounds, both verified rather than assumed:
 
 - It is **published incomplete**. `@deepseek-ai/dsh-client-runtime` has no build on that tag, so the set cannot install; `npm install` ends in `ERESOLVE`.
 - It **removes API this plugin uses**. `@deepseek-ai/dsh-settings` no longer exports `installSettingsSection` or `settingsNamespace`, and no subpath or sibling package exports them either.
 
-Claiming support would hand users an install failure or a runtime crash, so the peer range stops below `0.1.2`. It widens on evidence, not optimism.
+Claiming support for that incomplete train would hand users an install failure or a runtime crash, so it stays out of the range. The range widens on evidence, not optimism.
 
 ## The prerelease trap
 

@@ -136,9 +136,9 @@ The same record covers successful `read` redirection without an error row, neste
 
 ## Harness compatibility
 
-Built and tested against the newest **coherent** harness train, `next` = `0.1.1-rc.2`, and the peer ranges carry an explicit prerelease branch so every `0.1.x` prerelease resolves — a naive broad range silently excludes them all.
+Built and tested against the newest **coherent** harness train, `next` = `0.1.1-rc.2`. The peer ranges now carry an explicit prerelease branch per generation — this plugin's own is `>=0.1.0-rc.1 <0.1.1-0 || >=0.1.1-rc.0 <0.1.2-0 || >=0.2.1-rc.3 <0.3.0-0` — because a single broad range silently excludes prereleases whose `major.minor.patch` tuple has no tagged comparator. The second branch says the host may be 0.2.x; it does not claim the 0.2.x runtime work is finished (settings/fs migration is tracked separately).
 
-`0.1.2-alpha.2` is deliberately **not** claimed. That train is published incomplete (`@deepseek-ai/dsh-client-runtime` has no build on it, so it cannot install as a set) and it drops `installSettingsSection` and `settingsNamespace` from `@deepseek-ai/dsh-settings` with no replacement in the published types. Claiming support would hand users an `ERESOLVE` or a runtime crash. The peer range therefore stops below `0.1.2`, and a scheduled CI job (`.github/workflows/harness-compat.yml`) re-tests against the `next` and `alpha` tags weekly and opens an issue the moment upstream moves — so the range widens on evidence, not optimism.
+`0.1.2-alpha.2` is deliberately **not** claimed. That train is published incomplete (`@deepseek-ai/dsh-client-runtime` has no build on it, so it cannot install as a set) and it drops `installSettingsSection` and `settingsNamespace` from `@deepseek-ai/dsh-settings` with no replacement in the published types. Claiming support would hand users an `ERESOLVE` or a runtime crash, so it stays outside the range. A scheduled CI job (`.github/workflows/harness-compat.yml`) re-tests against the `next` and `alpha` tags weekly and opens an issue the moment upstream moves — so the range widens on evidence, not optimism.
 
 ## Known limitations
 

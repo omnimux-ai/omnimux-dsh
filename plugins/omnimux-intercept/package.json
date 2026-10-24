@@ -26,7 +26,7 @@
     "typescript": "~5.9.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-base": "^0.1.5-rc.3"
+    "@deepseek-ai/dsh-base": "^0.1.5-rc.3 || >=0.2.1-rc.3 <0.3.0-0"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-base": {

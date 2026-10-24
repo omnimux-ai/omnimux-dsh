@@ -426,6 +426,7 @@ jobs:
           node --test scripts/verify-skill-bilingual.test.mjs scripts/generate-featured-skills.test.mjs
           node scripts/verify-skill-bilingual.mjs
           node scripts/verify-dsh-lockfile-uniform.mjs
+          node scripts/verify-dsh-declaration-range.mjs
           node --test scripts/verify-dsh-lockfile-uniform.test.mjs
           node --test scripts/verify-modality-matrix.test.mjs
 
