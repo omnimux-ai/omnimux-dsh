@@ -9,8 +9,10 @@
  * Checks:
  * 1. Whitelist Listedness: Canvas policy allowedModelIds and defaultModelId must be
  *    canonical and listed (listed === true with verified+live status in Hub), unless
- *    explicitly marked requiredInAuto: false in auto-serving-manifest.json. Default models
- *    must ALWAYS be listed.
+ *    registered in auto-serving-manifest.json (a registration is not a serving claim).
+ *    Default models must ALWAYS be listed. P1b: whether a model is actually on sale is
+ *    decided by the gateway snapshot at runtime, so there is no local "required in auto"
+ *    flag left to judge here.
  * 2. Default Alignment: Central catalog-defaults.json, canvas policy defaultModelId,
  *    and media route defaults must agree on default models.
  * 3. Aspect Ratio UI Coverage: All aspect ratios declared by listed models must have
@@ -169,7 +171,7 @@ export function verifyCrossPluginModelAlignment(options = {}) {
       const hasListedOp = (model.operations ?? []).some((op) => op.listed === true && op.output?.type === kind);
       const isDefault = modelId === defaultModel;
       const manifestRow = manifestMap.get(modelId);
-      const isExemptUnlisted = manifestRow && manifestRow.requiredInAuto === false;
+      const isExemptUnlisted = Boolean(manifestRow);
 
       // Default models must ALWAYS be listed and ready.
       if (isDefault && !hasListedOp) {
@@ -182,12 +184,12 @@ export function verifyCrossPluginModelAlignment(options = {}) {
         continue;
       }
 
-      // Allowed models must either have a listed operation or be an explicitly registered unlisted stub (requiredInAuto: false)
+      // Allowed models must either have a listed operation or be a registered stub.
       if (!hasListedOp && !isExemptUnlisted) {
         issue(
           'whitelist_unlisted',
           `Model "${modelId}" in canvas ${kind} allowedModelIds is unlisted (listed=false) in hub specs. ` +
-          `Canvas submitGuard will reject this model at runtime. Provide verified+live evidence or register as requiredInAuto: false.`,
+          `Canvas submitGuard will reject this model at runtime. Provide verified+live evidence or register it in auto-serving-manifest.json.`,
           modelId,
         );
       }

@@ -2,11 +2,26 @@
  * OmniMux Model Channel Groups and Routing Strategies.
  * Supports Brand -> Model ID -> Channel Group hierarchical routing,
  * with 'auto', 'stability_first', and 'cost_first' dispatching policies.
+ *
+ * P1b: which lines a model may use is decided by the gateway snapshot's
+ * `enable_groups`, and what a line costs is decided by the snapshot's
+ * `group_ratio` + per-model billing. `MODEL_CHANNEL_GROUPS` below is reduced to
+ * a *display and ordering override* table (label, badge, SLA, constraints,
+ * default line); it no longer grants or withholds a line. There is no local
+ * whitelist fallback: a model the snapshot does not sell has no lines at all.
  */
 
 import { gatewayCandidates, toProductId } from './id-universe.js'
 import { loadDispositions, resolveDisposition } from '../contract/dispositions.js'
-import { resolveGroupEstimatedPoints } from '../pricing-calculator.js'
+import { gatewayPricingBlock } from '../pricing-calculator.js'
+import { resolveCurrentSnapshot } from '../cloud/current.js'
+import {
+  autoGroupIndex,
+  findSnapshotModel,
+  gatewayEnableGroups,
+  snapshotGroupLabels,
+  snapshotGroupRatio,
+} from '../cloud/view.js'
 
 export const ROUTING_STRATEGIES = Object.freeze(['auto', 'stability_first', 'cost_first'])
 
@@ -49,8 +64,14 @@ export const BYOK_PROVIDER_DISPLAY_MAP = Object.freeze({
 })
 
 /**
- * Standard group catalog definitions per model family / model ID.
- * Metadata aligns with production gateway GroupRatio, pricing, and SLA metrics.
+ * Per-model display and ordering overrides for the gateway's own lines.
+ *
+ * P1b: this table no longer decides membership, lines or prices. The gateway
+ * snapshot owns `enable_groups` (which lines exist) and `group_ratio` +
+ * per-model billing (what they cost); the entries here only rename a line,
+ * carry its badge/SLA/constraints, pin the default line and feed the canvas
+ * picker mirror. The `pricing` values left in the table are historical and are
+ * ignored by the projection — see `snapshotChannelGroups` below.
  */
 export const MODEL_CHANNEL_GROUPS = Object.freeze({
   "seedance-2-0": [
@@ -267,15 +288,46 @@ const OFFICIAL_CHANNEL_ID_SET = (() => {
 export const OFFICIAL_CHANNEL_IDS = Object.freeze(Array.from(OFFICIAL_CHANNEL_ID_SET))
 
 /**
- * 只读辅助函数：判断给定渠道 ID 是否属于官方渠道白名单
+ * Every line name the gateway itself publishes: its group ratios, labels, auto
+ * order and the `enable_groups` of each model. P1b treats the gateway as the
+ * authority for "is this an official line?", so a line the gateway sells is
+ * never misread as a user-defined BYOK channel.
+ *
+ * @param {unknown} snapshot
+ * @returns {Set<string>}
+ */
+function snapshotGroupIdSet(snapshot) {
+  const ids = new Set()
+  const add = (value) => {
+    const id = typeof value === 'string' ? value.toLowerCase().trim() : ''
+    if (id) ids.add(id)
+  }
+  for (const key of Object.keys(snapshot?.groups?.ratio ?? {})) add(key)
+  for (const key of Object.keys(snapshot?.groups?.usable ?? {})) add(key)
+  for (const key of Array.isArray(snapshot?.groups?.auto) ? snapshot.groups.auto : []) add(key)
+  for (const model of Array.isArray(snapshot?.models) ? snapshot.models : []) {
+    for (const group of Array.isArray(model?.enableGroups) ? model.enableGroups : []) add(group)
+  }
+  return ids
+}
+
+/**
+ * 只读辅助函数：判断给定渠道 ID 是否属于官方渠道白名单。
+ *
+ * With a snapshot, the gateway's own group vocabulary joins the whitelist, so a
+ * line that only the gateway publishes (a dedicated tier the local override
+ * table never listed) still counts as an official channel.
+ *
  * @param {unknown} id
+ * @param {unknown} [snapshot]
  * @returns {boolean}
  */
-export function isOfficialChannelId(id) {
+export function isOfficialChannelId(id, snapshot) {
   if (typeof id !== 'string') return false
   const trimmed = id.toLowerCase().trim()
   if (!trimmed) return false
-  return OFFICIAL_CHANNEL_ID_SET.has(trimmed)
+  if (OFFICIAL_CHANNEL_ID_SET.has(trimmed)) return true
+  return snapshot ? snapshotGroupIdSet(snapshot).has(trimmed) : false
 }
 
 /**
@@ -307,13 +359,85 @@ export function parseModelAndGroup(input) {
 }
 
 /**
- * Get channel groups available for a model.
- * @param {string} modelId
- * @returns {Array<typeof MODEL_CHANNEL_GROUPS[string][number]>}
+ * Build one model's lines from the gateway snapshot (P1b).
+ *
+ * `enable_groups` is the only source of "which lines exist": the local override
+ * table contributes a display name, badge, SLA, constraints and the default
+ * pin, and the snapshot contributes the line's group ratio and price. A line the
+ * gateway serves but the override table never listed is projected verbatim with
+ * the gateway's own label, so nothing the gateway sells can go missing.
+ *
+ * @param {string} modelId canonical product id
+ * @param {unknown} snapshot normalized gateway snapshot
+ * @returns {object[]}
  */
-export function getModelChannelGroups(modelId) {
+export function snapshotChannelGroups(modelId, snapshot) {
   const canonical = toProductId(modelId)
-  return structuredClone(MODEL_CHANNEL_GROUPS[canonical] ?? [])
+  if (!canonical || !snapshot) return []
+  const snapshotModel = findSnapshotModel(snapshot, canonical)
+  const enableGroups = gatewayEnableGroups(snapshotModel)
+  if (!snapshotModel || enableGroups.length === 0) return []
+  const ratios = snapshotGroupRatio
+  const labels = snapshotGroupLabels(snapshot)
+  const overrides = Array.isArray(MODEL_CHANNEL_GROUPS[canonical]) ? MODEL_CHANNEL_GROUPS[canonical] : []
+  /** @type {Map<string, object>} */
+  const overrideByWire = new Map()
+  for (const group of overrides) {
+    const key = typeof group?.wireGroup === 'string' && group.wireGroup.trim()
+      ? group.wireGroup.trim()
+      : (typeof group?.id === 'string' ? group.id.trim() : '')
+    if (key && !overrideByWire.has(key)) overrideByWire.set(key, group)
+  }
+
+  return enableGroups.map((wireGroup) => {
+    const override = overrideByWire.get(wireGroup)
+    const pricing = gatewayPricingBlock(snapshotModel, ratios(snapshot, wireGroup))
+    const gatewayLabel = typeof labels[wireGroup] === 'string' && labels[wireGroup].trim() ? labels[wireGroup].trim() : ''
+    return {
+      id: typeof override?.id === 'string' && override.id.trim() ? override.id : wireGroup,
+      label: typeof override?.label === 'string' && override.label.trim()
+        ? override.label
+        : (gatewayLabel || wireGroup),
+      ...(typeof override?.badge === 'string' ? { badge: override.badge } : {}),
+      wireGroup,
+      // A line may be served by a different upstream model than the product id (the
+      // MiniMax H3 fixed 15-second task edition is a separate on-sale model). The
+      // gateway publishes group names, not wire models, so this stays a local
+      // override and never changes which lines exist.
+      ...(typeof override?.wireModel === 'string' && override.wireModel.trim()
+        ? { wireModel: override.wireModel.trim() }
+        : {}),
+      pricing: {
+        ...pricing,
+        // `discountRate` / `priceRatio` are the fields existing consumers read
+        // for the line multiplier; both now carry the gateway's group ratio.
+        discountRate: pricing.groupRatio,
+        priceRatio: pricing.groupRatio,
+      },
+      ...(override?.constraints && typeof override.constraints === 'object'
+        ? { constraints: structuredClone(override.constraints) }
+        : {}),
+      ...(override?.sla && typeof override.sla === 'object' ? { sla: structuredClone(override.sla) } : {}),
+      enabled: true,
+      ...(override?.default === true ? { default: true } : {}),
+    }
+  })
+}
+
+/**
+ * Get channel groups available for a model.
+ *
+ * P1b: the gateway snapshot decides. Without a snapshot argument the read-only
+ * current snapshot is used (bundled floor → disk cache, never the network), and
+ * a model the snapshot does not sell reports `[]` — there is no local fallback.
+ *
+ * @param {string} modelId
+ * @param {unknown} [snapshot]
+ * @returns {object[]}
+ */
+export function getModelChannelGroups(modelId, snapshot) {
+  const resolved = snapshot ?? resolveCurrentSnapshot().snapshot
+  return structuredClone(snapshotChannelGroups(modelId, resolved))
 }
 
 /**
@@ -475,7 +599,7 @@ export function buildByokChannelGroup(provider, constraints, capability) {
  *   byokProvider: string,
  * }}
  */
-export function resolveRequestChannelIntent(req) {
+export function resolveRequestChannelIntent(req, snapshot) {
   if (!req || typeof req !== 'object' || Array.isArray(req)) {
     return {
       requestedChannel: '',
@@ -499,7 +623,7 @@ export function resolveRequestChannelIntent(req) {
     : []
   const firstAllowed = normalizedAllowed[0] || ''
   const hasAllowedByok = normalizedAllowed.some((g) => g.toLowerCase().startsWith('byok-'))
-  const hasAllowedOfficial = normalizedAllowed.some((g) => !g.toLowerCase().startsWith('byok-') && isOfficialChannelId(g))
+  const hasAllowedOfficial = normalizedAllowed.some((g) => !g.toLowerCase().startsWith('byok-') && isOfficialChannelId(g, snapshot))
   const effectiveChannel = requestedChannel || firstAllowed
 
   const isMixedAllowedGroups = !requestedChannel && hasAllowedByok && hasAllowedOfficial
@@ -510,10 +634,10 @@ export function resolveRequestChannelIntent(req) {
   // 1. requestedChannel 存在且属于 OFFICIAL_CHANNEL_IDS 白名单且不是 BYOK
   // 2. 或 allowedGroups 存在非空且全部为 OFFICIAL_CHANNEL_IDS 中的官方分组（严防未知自定义渠道冒领）
   const normRequested = typeof requestedChannel === 'string' ? requestedChannel.toLowerCase().trim() : ''
-  const hasOfficialRequested = Boolean(normRequested && !isByokChannel && isOfficialChannelId(normRequested))
+  const hasOfficialRequested = Boolean(normRequested && !isByokChannel && isOfficialChannelId(normRequested, snapshot))
   const hasOfficialAllowedOnly = Array.isArray(req.allowedGroups)
     && req.allowedGroups.length > 0
-    && req.allowedGroups.every((g) => typeof g === 'string' && g.trim() && !g.toLowerCase().startsWith('byok-') && isOfficialChannelId(g))
+    && req.allowedGroups.every((g) => typeof g === 'string' && g.trim() && !g.toLowerCase().startsWith('byok-') && isOfficialChannelId(g, snapshot))
 
   const isOfficialChannel = hasOfficialRequested || hasOfficialAllowedOnly
 
@@ -533,11 +657,11 @@ export function resolveRequestChannelIntent(req) {
  * @param {Record<string, unknown> | null} [runtimeSettings] 当前运行时设置快照
  * @returns {Array<object>} 包含 category ('official' | 'byok')、chipLabel 等属性的渠道分组列表
  */
-export function resolveModelChannelGroups(modelId, runtimeSettings) {
+export function resolveModelChannelGroups(modelId, runtimeSettings, snapshot) {
   const { modelId: parsedModelId } = parseModelAndGroup(modelId)
   const canonicalId = parsedModelId || toProductId(modelId)
   const capability = inferCapabilityFromModel(canonicalId || modelId)
-  const officialGroups = getModelChannelGroups(canonicalId).map((group) => ({
+  const officialGroups = getModelChannelGroups(canonicalId, snapshot).map((group) => ({
     ...group,
     category: 'official',
     sourceType: 'official',
@@ -661,25 +785,22 @@ const UNPRICED_RANKING_POINTS = 1000
  * Numeric point estimate only. Display-only notes (`当前参数不支持报价`) never
  * participate in ranking, so a note can never reorder the failover plan.
  * 支柱三：若声明内部排序权重 sortWeight 则优先用于排序，彻底解耦面向用户的 pointsEstimate。
- * 支柱一：若 pointsEstimate 未显式配置，自动依据定价引擎推导客观预估积分。
- * @param {{ pricing?: { pointsEstimate?: number | string, sortWeight?: number } }} group
- * @param {string} [modelId]
+ * P1b：积分口径已由快照推导并写在 `pricing.pointsEstimate`；本函数不再自建价格表。
+ * 第二参数保留以兼容旧调用签名，不再参与推导。
+ * @param {{ pricing?: { pointsEstimate?: number | string, sortWeight?: number, groupRatio?: number|null, priceRatio?: number|null } }} group
+ * @param {string} [_modelId]
  * @returns {number | null}
  */
-function pointsOf(group, modelId) {
+export function pointsOf(group, _modelId) {
   const weight = group.pricing?.sortWeight
   if (typeof weight === 'number' && Number.isFinite(weight)) return weight
 
   const points = group.pricing?.pointsEstimate
   if (typeof points === 'number' && Number.isFinite(points)) return points
 
-  if (modelId) {
-    const derived = resolveGroupEstimatedPoints(modelId, group)
-    if (typeof derived === 'number' && Number.isFinite(derived)) return derived
-  }
-
-  // 网关不给积分口径时，用真实分组倍率折算排序权重（仅用于排序，不当作积分展示）。
-  const ratio = group.pricing?.priceRatio
+  // 网关不给可比对积分口径时（表达式计费 / 按词元计费），用快照分组倍率折算排序权重
+  // （仅用于排序，不当作积分展示），绝不猜一个价格。
+  const ratio = group.pricing?.groupRatio ?? group.pricing?.priceRatio
   return typeof ratio === 'number' && Number.isFinite(ratio) ? ratio * UNPRICED_RANKING_POINTS : null
 }
 
@@ -697,10 +818,32 @@ function calculateAutoScore(group) {
 }
 
 /**
- * @param {string} strategy
+ * P1b: the automatic line order is the gateway's own `groups.auto` sequence.
+ * Lines the gateway does not list there keep their snapshot order after the
+ * automatic ones, ranked by the legacy stability/cost score so the result stays
+ * deterministic. A local manifest can no longer inject or reorder the pool.
+ *
+ * @param {unknown} snapshot
  * @returns {(a: object, b: object) => number}
  */
-function comparatorFor(strategy) {
+function autoComparatorFor(snapshot) {
+  return (a, b) => {
+    const aIndex = autoGroupIndex(snapshot, a.wireGroup ?? a.id)
+    const bIndex = autoGroupIndex(snapshot, b.wireGroup ?? b.id)
+    const aAuto = aIndex >= 0
+    const bAuto = bIndex >= 0
+    if (aAuto !== bAuto) return aAuto ? -1 : 1
+    if (aAuto && bAuto && aIndex !== bIndex) return aIndex - bIndex
+    return calculateAutoScore(b) - calculateAutoScore(a)
+  }
+}
+
+/**
+ * @param {string} strategy
+ * @param {unknown} [snapshot]
+ * @returns {(a: object, b: object) => number}
+ */
+function comparatorFor(strategy, snapshot) {
   if (strategy === 'stability_first') {
     return (a, b) => {
       const stabDiff = (b.sla?.stability24h ?? 0) - (a.sla?.stability24h ?? 0)
@@ -712,7 +855,7 @@ function comparatorFor(strategy) {
     // Unpriced groups sort last: an unknown price must not win a cheapest-first race.
     return (a, b) => (pointsOf(a) ?? Number.POSITIVE_INFINITY) - (pointsOf(b) ?? Number.POSITIVE_INFINITY)
   }
-  return (a, b) => calculateAutoScore(b) - calculateAutoScore(a)
+  return autoComparatorFor(snapshot)
 }
 
 /**
@@ -830,6 +973,7 @@ function isByokProviderVerifiedAndCapReady(provider, capability, runtimeSettings
  *   group?: string,
  *   allowedGroups?: unknown,
  *   runtimeSettings?: Record<string, unknown>,
+ *   snapshot?: object,
  * }} [options]
  * @returns {{ candidates: string[], unresolvedGroups: string[] }}
  */
@@ -837,6 +981,7 @@ export function resolveChannelPlan(modelId, options = {}) {
   const { modelId: canonicalModel, group: inlineGroup } = parseModelAndGroup(modelId)
   if (!canonicalModel) return { candidates: [], unresolvedGroups: [] }
 
+  const snapshot = options.snapshot ?? resolveCurrentSnapshot().snapshot
   const fieldGroup = typeof options.group === 'string' ? options.group.trim() : ''
   const requestedGroup = inlineGroup || fieldGroup
   const strategy = ROUTING_STRATEGIES.includes(options.strategy) ? options.strategy : 'auto'
@@ -860,7 +1005,7 @@ export function resolveChannelPlan(modelId, options = {}) {
     ? options.allowedGroups.map((g) => (typeof g === 'string' ? g.trim() : '')).filter(Boolean)
     : []
   const hasAllowedByok = normalizedAllowed.some((g) => g.toLowerCase().startsWith('byok-'))
-  const hasAllowedOfficial = normalizedAllowed.some((g) => !g.toLowerCase().startsWith('byok-') && isOfficialChannelId(g))
+  const hasAllowedOfficial = normalizedAllowed.some((g) => !g.toLowerCase().startsWith('byok-') && isOfficialChannelId(g, snapshot))
   const isMixedAllowedGroups = !requestedGroup && hasAllowedByok && hasAllowedOfficial
 
   if (isMixedAllowedGroups) {
@@ -870,7 +1015,7 @@ export function resolveChannelPlan(modelId, options = {}) {
     }
   }
 
-  let groups = resolveModelChannelGroups(canonicalModel, options.runtimeSettings)
+  let groups = resolveModelChannelGroups(canonicalModel, options.runtimeSettings, snapshot)
 
   const isByok = (id) => typeof id === 'string' && id.toLowerCase().startsWith('byok-')
   const ensureByokGroup = (byokId) => {
@@ -954,7 +1099,7 @@ export function resolveChannelPlan(modelId, options = {}) {
     // Only an explicit allowed pool authorizes backup lines; a selection alone
     // locks to the one resolved row, including its wire model and constraints.
     const orderedTail = allowed
-      ? enabled.filter((group) => group !== matched && isAllowed(group)).sort(comparatorFor(strategy))
+      ? enabled.filter((group) => group !== matched && isAllowed(group)).sort(comparatorFor(strategy, snapshot))
       : []
     return {
       candidates: [...new Set([wireOf(matched), ...orderedTail.map(wireOf)])],
@@ -971,7 +1116,7 @@ export function resolveChannelPlan(modelId, options = {}) {
     return { candidates: [], unresolvedGroups }
   }
 
-  return { candidates: pool.sort(comparatorFor(strategy)).map(wireOf), unresolvedGroups: [] }
+  return { candidates: pool.sort(comparatorFor(strategy, snapshot)).map(wireOf), unresolvedGroups: [] }
 }
 
 /**

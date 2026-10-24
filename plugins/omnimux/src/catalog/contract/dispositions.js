@@ -4,7 +4,10 @@
  * listing is still decided by the H1 op-level five-predicate conjunction.
  *
  * Rules D1-D7 (design doc 2026-09-04-model-io-contract-h2-catalog-design §5.2):
- *   D1 every runtime id must have a disposition row          disposition_missing
+ *   D1 every runtime id with a listed op must have a row     disposition_missing
+ *      (P1b: membership is gateway-snapshot ∩ callable contract, so a
+ *      contracted-but-unlisted id is invisible without a row; the risk D1
+ *      guards — an offerable id with no governance — is unchanged.)
  *   D2 canonical/draft ⇒ YAML contract row exists             disposition_contract_missing
  *   D3 alias ⇒ no YAML model.id; target canonical + aliases[] disposition_alias_inconsistent
  *   D4 unavailable/quarantine/deprecated ⇒ no listed op       disposition_listed_forbidden
@@ -264,8 +267,17 @@ export function validateDispositions(doc, ctx) {
   const rows = Array.isArray(doc?.dispositions) ? doc.dispositions : [];
   const byDispositionId = new Map(rows.map((r) => [r?.id, r]));
 
-  // D1: every runtime id must have a disposition row.
+  // D1: every runtime id that exposes a listed operation must have a disposition
+  // row. An id with no listed op cannot reach a catalog list (membership needs a
+  // gateway line AND a listed contract op), so P1b no longer requires a row to
+  // keep it hidden; the "offerable id without governance" case still fails.
+  const listedRuntimeIds = new Set()
+  for (const model of index?.all?.() ?? []) {
+    const listedOps = Array.isArray(model?.listedOperations) ? model.listedOperations : []
+    if (listedOps.length > 0 && typeof model?.id === 'string' && model.id) listedRuntimeIds.add(model.id)
+  }
   for (const id of runtimeIds) {
+    if (!listedRuntimeIds.has(id)) continue
     if (!byDispositionId.has(id)) {
       out.push(
         issue('disposition_missing', `runtime id "${id}" has no disposition row`, {

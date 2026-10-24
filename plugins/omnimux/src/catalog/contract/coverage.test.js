@@ -171,7 +171,7 @@ test('negative: canonical-disposition missing contract is a strict coverage erro
   assert.ok(auditIssues.some((i) => i.code === 'coverage_missing' && i.level === 'warning'));
 });
 
-test('verifyContracts: audit ok; strict ok once 83 dispositions resolve', () => {
+test('verifyContracts: audit ok; strict ok once 67 dispositions resolve', () => {
   const audit = verifyContracts({ strict: false });
   assert.equal(audit.ok, true, JSON.stringify(audit.issues.filter((i) => i.level === 'error'), null, 2));
   assert.equal(audit.exitCode, 0);
@@ -181,12 +181,12 @@ test('verifyContracts: audit ok; strict ok once 83 dispositions resolve', () => 
   assert.equal(strict.ok, true, JSON.stringify(strict.issues.filter((i) => i.level === 'error'), null, 2));
   assert.equal(strict.exitCode, 0);
   assert.equal(strict.admission.errorCount, 0, 'strict must not invent admission errors');
-  assert.equal(strict.dispositions.total, 83); // #3209 google-vids-omni 转墓碑行，行数不变 → 83
+  assert.equal(strict.dispositions.total, 67); // P1b：13 条 unavailable + 3 条 draft 行删除 → 67
   assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
   assert.deepEqual(strict.coverage.extraInYaml, []);
   assert.equal(strict.listedOperations.length, 24); // 2026-10-21 网关对账 #3516：上架面收敛为 24
   // forbidden-listed models never expose listed operations
-  assert.equal(strict.dispositions.forbiddenListed.length, 13); // #3209 google-vids-omni 墓碑 +1 → 13
+  assert.equal(strict.dispositions.forbiddenListed.length, 0); // P1b：墓碑行全部删除，禁止 listed 集合为空
   for (const id of strict.dispositions.forbiddenListed) {
     assert.ok(!strict.listedOperations.some((key) => key.startsWith(`${id}#`)), id);
   }

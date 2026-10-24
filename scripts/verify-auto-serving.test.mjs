@@ -26,9 +26,10 @@ test('manifest registers all whitelist IDs without claiming online supply', () =
     assert.ok(!manifest.models.some((row) => row.productId === removed), `${removed} must be deregistered`)
     assert.ok(!report.issues.some((issue) => issue.modelId === removed), `${removed} must not be reported`)
   }
-  // 2026-10-21 网关对账 #3516：24 行登记，其中 8 款已上架白名单型号为必需。
+  // 2026-10-21 网关对账 #3516：24 行登记。
+  // P1b：本门禁不再统计「必需」数量——在售与否由运行时网关快照决定。
   assert.equal(report.registeredCount, 24)
-  assert.equal(report.requiredCount, 8)
+  assert.equal(report.requiredCount, undefined)
   assert.equal(report.onlineVerified, false)
 })
 
@@ -69,10 +70,15 @@ test('manifest candidate ordering may override the default without crossing mode
   assert.equal(verifyAutoServing({ manifest }).ok, true)
 })
 
-test('required supply cannot include an unlisted model or exclude a listed whitelist model', () => {
-  // suno 现在是已上架型号；用仍无 listed 操作的已登记型号触发 not_listed。
-  checkMutation((m) => { m.models.find((row) => row.productId === 'minimax-h3').requiredInAuto = true }, 'not_listed')
-  checkMutation((m) => { m.models.find((row) => row.productId === 'gpt-image-2.5').requiredInAuto = false }, 'required')
+test('the retired requiredInAuto flag is no longer judged', () => {
+  // P1b：成员资格改由网关快照决定，本地 requiredInAuto 判断已删除。
+  // 残留字段既不加分也不扣分，登记本身仍然只由 canonical/gatewayIds 校验约束。
+  const withFlag = fixture()
+  withFlag.models.find((row) => row.productId === 'minimax-h3').requiredInAuto = true
+  assert.equal(verifyAutoServing({ manifest: withFlag }).ok, true)
+  const withoutFlag = fixture()
+  withoutFlag.models.find((row) => row.productId === 'gpt-image-2.5').requiredInAuto = false
+  assert.equal(verifyAutoServing({ manifest: withoutFlag }).ok, true)
 })
 
 test('wrong modality, duplicate products and wire-model drift fail closed', () => {
@@ -86,7 +92,7 @@ test('malformed or unreadable manifests fail closed', () => {
     assert.equal(verifyAutoServing({ manifest }).exitCode, 1)
   }
   checkMutation((m) => { m.models.push(null) }, 'manifest_invalid')
-  checkMutation((m) => { delete m.models[0].requiredInAuto }, 'manifest_invalid')
+  checkMutation((m) => { m.models[0].priority = 'P2' }, 'manifest_invalid')
   assert.equal(verifyAutoServing({ manifestPath: new URL('./does-not-exist.json', import.meta.url) }).exitCode, 1)
 })
 

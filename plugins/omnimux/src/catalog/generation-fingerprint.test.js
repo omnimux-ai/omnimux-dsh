@@ -7,6 +7,7 @@ import { stringify as stringifyYaml } from 'yaml'
 import { loadAll } from './contract/load.js'
 import { buildModelCatalog, fingerprintOf } from './list.js'
 import { MODEL_CHANNEL_GROUPS } from './serving/channel-groups.js'
+import { resolveReadOnlySnapshot } from './cloud/current.js'
 
 const fixtureRoot = fileURLToPath(new URL('../../../../.tmp/3250/', import.meta.url))
 
@@ -120,9 +121,7 @@ function withChannelGroups(t) {
 // 且 480p 已带 default:true —— 断言意图是「该字段单独变化时必须失效」，故直接赋值/翻转。
 for (const [field, mutate] of [
   ['constraints', (group) => { group.constraints = { parameters: { duration: { fixed: 20 } } } }],
-  ['enabled', (group) => { group.enabled = !group.enabled }],
   ['wireGroup', (group) => { group.wireGroup = 'fixture-wire-group' }],
-  ['pricing', (group) => { group.pricing.pointsEstimate += 1 }],
   ['sla', (group) => { group.sla.avgWaitTimeSec += 1 }],
   ['default', (group) => { group.default = !group.default }],
 ]) {
@@ -137,6 +136,23 @@ for (const [field, mutate] of [
     assert.notEqual(after.fingerprint, before.catalog.fingerprint, field)
   })
 }
+
+// P1b: the local override table no longer decides membership or price, so flipping its
+// `enabled` / `pricing` must NOT move the fingerprint; the gateway snapshot does.
+test('buildModelCatalog ignores local enabled/pricing overrides and follows the snapshot', (t) => {
+  const groups = withChannelGroups(t)
+  const { before } = loadFixture(t)
+  groups[0].enabled = !groups[0].enabled
+  groups[0].pricing.pointsEstimate += 1
+  const after = buildModelCatalog({ contractIndex: before.index, env: {} })
+  assert.deepEqual(after.models[0].channelGroups, before.catalog.models[0].channelGroups)
+  assert.equal(after.fingerprint, before.catalog.fingerprint)
+
+  const snapshot = structuredClone(resolveReadOnlySnapshot().snapshot)
+  snapshot.groups.ratio['desktop-480p'] = (snapshot.groups.ratio['desktop-480p'] ?? 1) + 1
+  const repriced = buildModelCatalog({ contractIndex: before.index, env: {}, snapshot })
+  assert.notEqual(repriced.fingerprint, before.catalog.fingerprint, 'a snapshot price change must invalidate the catalog')
+})
 
 test('buildModelCatalog invalidates when defaultOperations alone change', (t) => {
   const { before } = loadFixture(t)
@@ -181,12 +197,13 @@ test('loadAll and buildModelCatalog preserve semantic operation candidate order'
 })
 
 test('buildModelCatalog preserves semantic channel candidate order', (t) => {
-  const groups = withChannelGroups(t)
   const { before } = loadFixture(t)
-  groups.reverse()
-  const after = buildModelCatalog({ contractIndex: before.index, env: {} })
-  assert.deepEqual(after.models[0].channelGroups.map((group) => group.id),
-    before.catalog.models[0].channelGroups.map((group) => group.id).reverse())
+  // P1b: the snapshot's enable_groups order is the order the catalog serves.
+  const snapshot = structuredClone(resolveReadOnlySnapshot().snapshot)
+  const snapshotModel = snapshot.models.find((row) => row.id === 'seedance-2-5')
+  snapshotModel.enableGroups.reverse()
+  const after = buildModelCatalog({ contractIndex: before.index, env: {}, snapshot })
+  assert.deepEqual(after.models[0].channelGroups.map((group) => group.wireGroup), snapshotModel.enableGroups)
   assert.equal(after.contractFingerprint, before.catalog.contractFingerprint)
   assert.notEqual(after.fingerprint, before.catalog.fingerprint)
 })

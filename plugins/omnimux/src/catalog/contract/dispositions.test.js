@@ -42,7 +42,8 @@ test('dispositions.json: every row unique, all kinds valid, reasons present', ()
   const doc = loadDispositions();
   assert.equal(validateDispositionsShape(doc).length, 0);
   const rows = doc.dispositions;
-  assert.equal(rows.length, 83, `expected 83 disposition rows, got ${rows.length}`); // #3209 google-vids-omni 转墓碑行，行数不变 → 83
+  // P1b：删除 13 条 unavailable 与 3 条 draft 行后，处置表只剩 canonical/alias。
+  assert.equal(rows.length, 67, `expected 67 disposition rows, got ${rows.length}`);
   const ids = new Set(rows.map((r) => r.id));
   assert.equal(ids.size, rows.length);
   for (const row of rows) {
@@ -83,11 +84,11 @@ test('locked dispositions: draft-probeable / tombstones / un-quarantined / alias
   // 处置由 draft 翻 canonical 并上架；执行探测证据仍在 #530 跟踪。
   assert.equal(resolveDisposition(doc, 'whisper-1')?.disposition, 'canonical');
   assert.ok(resolveDisposition(doc, 'whisper-1')?.evidence?.length > 0);
-  // #1751: the removed models keep a tombstone row instead of a shelf entry.
-  assert.equal(resolveDisposition(doc, 'kling-avatar')?.disposition, 'unavailable');
-  assert.equal(resolveDisposition(doc, 'gpt-image-2')?.disposition, 'unavailable');
-  // #3209: the retired local Google Vids channel keeps a tombstone row, never a shelf entry.
-  assert.equal(resolveDisposition(doc, 'google-vids-omni')?.disposition, 'unavailable');
+  // P1b: tombstone rows are gone - a withdrawn model is ungoverned (no row) and cannot
+  // re-enter the catalog because membership needs a gateway line plus a listed op.
+  for (const removed of ['kling-avatar', 'gpt-image-2', 'google-vids-omni']) {
+    assert.equal(resolveDisposition(doc, removed), undefined, removed);
+  }
   assert.equal(resolveDisposition(doc, 'minimax-h3')?.disposition, 'canonical');
   // #1751: quarantine is fully retired — kling-o3 / kling-v3-motion-control were un-quarantined
   // as canonical (upstream-registered), while omni_flash / kling-o1 were removed outright.
@@ -97,7 +98,7 @@ test('locked dispositions: draft-probeable / tombstones / un-quarantined / alias
     'no quarantine rows survive the 2026-09-14 reconciliation',
   );
   for (const id of ['omni_flash', 'kling-o1']) {
-    assert.equal(resolveDisposition(doc, id)?.disposition, 'unavailable', id);
+    assert.equal(resolveDisposition(doc, id), undefined, id);
   }
   for (const id of ['kling-o3', 'kling-v3-motion-control']) {
     assert.equal(resolveDisposition(doc, id)?.disposition, 'canonical', id);
@@ -156,11 +157,11 @@ test('forbidden-listed set has no listed op in the real index', () => {
       assert.deepEqual(model.listedOperations ?? [], [], `${model.id} must not list`);
     }
   }
-  // #3516: whisper-1 已翻 canonical 并上架 speech_to_text，因此不属于 forbidden-listed 集合；
-  // kling-avatar 仍是墓碑行，永远没有 listed operation。
+  // #3516: whisper-1 已翻 canonical 并上架 speech_to_text，因此不属于 forbidden-listed 集合。
   assert.equal(forbidden.has('whisper-1'), false);
   assert.deepEqual(index.get('whisper-1')?.listedOperations ?? [], ['whisper-1#speech_to_text']);
-  assert.deepEqual(index.get('kling-avatar')?.listedOperations ?? [], []);
+  // P1b: 仓内已无 unavailable/quarantine/deprecated 行，禁止 listed 集合为空。
+  assert.equal(forbidden.size, 0, 'no tombstone rows remain after the P1b cleanup');
 });
 
 test('alias targets exist as canonical contracts declaring the alias', () => {
@@ -223,16 +224,22 @@ test('negative: listed op on forbidden disposition triggers disposition_listed_f
   const index = freshIndex();
   const doc = loadDispositions();
   const runtimeIds = runtimeIdsOf(index);
+  // P1b: 仓内不再有墓碑行，D4 用一份合成的 unavailable 行验证（判定口径不变）。
+  const forbiddenId = 'omni_flash';
+  const docWithTombstone = {
+    ...doc,
+    dispositions: [...doc.dispositions, { id: forbiddenId, disposition: 'unavailable', reason: 'P1b D4 fixture row' }],
+  };
   const fakeIndex = {
     ...index,
     get: (id) => index.get(id),
     all: () => [
       ...index.all(),
-      { id: 'omni_flash', listedOperations: ['omni_flash#text_to_video'], operations: [] },
+      { id: forbiddenId, listedOperations: [forbiddenId + '#text_to_video'], operations: [] },
     ],
   };
-  const issues = validateDispositions(doc, { index: fakeIndex, runtimeIds, strict: true });
-  assert.ok(issues.some((i) => i.code === 'disposition_listed_forbidden' && i.modelId === 'omni_flash'));
+  const issues = validateDispositions(docWithTombstone, { index: fakeIndex, runtimeIds, strict: true });
+  assert.ok(issues.some((i) => i.code === 'disposition_listed_forbidden' && i.modelId === forbiddenId));
 });
 
 test('negative: ghost disposition row triggers disposition_unknown_id', () => {
@@ -364,35 +371,27 @@ test('dispositions path constant points at the on-disk machine truth', () => {
  * unnoticed (the reviewer reproduced this with a synthetic id). Pin the exact tombstone set: any
  * new, renamed, or typo'd `unavailable` row now fails here instead of slipping through D5.
  */
-test('tombstone whitelist: exactly the 13 removed models are unavailable, no typos or ghosts', () => {
+test('P1b cleanup: the 16 withdrawn rows are gone and none of them is a listed runtime id', () => {
   const doc = loadDispositions();
-  const tombstones = doc.dispositions
-    .filter((row) => row.disposition === 'unavailable')
-    .map((row) => row.id)
-    .sort();
-  assert.deepEqual(tombstones, [
-    'google-vids-omni',
-    'gpt-image-2',
-    'kling-avatar',
-    'kling-o1',
-    'midjourney',
-    'midjourney-niji-7',
-    'minimax-h3-max',
-    'minimax-h3-max-turbo',
-    'omni_flash',
-    'seedance2.5-stable-max-720p',
-    'seedream-4.5',
-    'veo-3.1',
-    'veo-3.1-fast',
-  ]);
-  // 这 13 个 id 必须都不在 runtime 宇宙内（YAML 整行已删），且都被 D4 列为禁止 listed。
+  const withdrawn = [
+    'google-vids-omni', 'gpt-image-2', 'grok-imagine-image-quality', 'kling-avatar', 'kling-o1',
+    'midjourney', 'midjourney-niji-7', 'minimax-h3-max', 'minimax-h3-max-turbo', 'mj-v7', 'mj-v8-1',
+    'omni_flash', 'seedance2.5-stable-max-720p', 'seedream-4.5', 'veo-3.1', 'veo-3.1-fast',
+  ];
+  // 13 条 unavailable + 3 条 draft 行被删除；两者不再是本仓的处置状态。
+  assert.deepEqual(doc.dispositions.filter((row) => row.disposition === 'unavailable'), []);
+  assert.deepEqual(doc.dispositions.filter((row) => row.disposition === 'draft'), []);
+  const governed = new Set(doc.dispositions.map((row) => row.id));
   const index = freshIndex();
   const runtimeIds = runtimeIdsOf(index);
-  const forbidden = forbiddenListedIds(doc);
-  for (const id of tombstones) {
-    assert.equal(runtimeIds.includes(id), false, `${id} must not be a runtime id`);
-    assert.equal(forbidden.has(id), true, `${id} must be forbidden-listed`);
+  for (const id of withdrawn) {
+    assert.equal(governed.has(id), false, id + ' must have no disposition row');
+    // 仍有 YAML 契约行的 draft 型号（mj-v7 / mj-v8-1 / grok-imagine-image-quality）留在 runtime
+    // 宇宙内，但没有任何 listed 操作，因此结构上不可见。
+    if (runtimeIds.includes(id)) {
+      assert.deepEqual(index.get(id)?.listedOperations ?? [], [], id + ' must stay unlisted');
+    }
   }
-  // deprecated 与 unavailable 同属豁免集，但仓内不得出现 deprecated 行（防止悄悄换 kind 绕过白名单）。
+  // deprecated 同属豁免集，但仓内不得出现 deprecated 行（防止悄悄换 kind 绕过白名单）。
   assert.deepEqual(doc.dispositions.filter((row) => row.disposition === 'deprecated'), []);
 });

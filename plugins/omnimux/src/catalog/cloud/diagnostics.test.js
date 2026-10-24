@@ -47,7 +47,11 @@ test('the real diagnostics body reports the diff summary and leaks nothing local
       groupUnregistered: expected.summary.groupExtra,
       priceChanged: expected.summary.priceChanged,
     })
-    assert.ok(body.drift.groupUnregistered > 0, 'the live gateway has groups the hub has not registered')
+    // P1b: membership, lines and prices all come from this snapshot, so the only
+    // remaining drift category is "the gateway sells it but no contract op is callable".
+    assert.equal(body.drift.groupUnregistered, 0, 'the hub now registers every gateway group')
+    assert.equal(body.drift.unreachable, 0, 'nothing can be listed that the gateway does not sell')
+    assert.equal(body.drift.priceChanged, 0, 'prices come from the snapshot, not a local table')
 
     // Shape: stable codes only, never raw paths or upstream error text.
     assert.equal(body.schemaVersion, 1)

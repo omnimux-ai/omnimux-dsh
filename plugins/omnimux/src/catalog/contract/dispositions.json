@@ -26,12 +26,6 @@
       "notes": "产品 id 精确映射 seedance-2.0-mini；参考上限 9 图/3 视频/3 音频；不自动切换渠道"
     },
     {
-      "id": "gpt-image-2",
-      "disposition": "unavailable",
-      "reason": "2026-09-14 #1751 移除：公开接口文档明写「旧 model ID 不再接受；这不是兼容别名」；生产渠道目录无此 public_id，仅作渠道内部 upstream 名（生产基线 \"2026-09-14 #1751 移除：公开变更日志 2026-09-10 条目（tags 为「不兼容变更 / 图像」）原文「将 gpt-image-2 替换为 gpt-image-2.5 …… 旧 ID 不是兼容别名，也不支持 gpt-image-2-5 拼写」；生产渠道目录无此 public_id，仅作渠道内部 upstream 名（生产基线 gpt-image-2.5 映射到 gpt-image-2）。此前登记的 canonical 冲突已由上游裁定",
-      "notes": "原 dated live 证据早于上游 08-31/09-12/09-14 三次变动，不再作为在售依据；已就绪状态撤销"
-    },
-    {
       "id": "gpt-image-2.5",
       "disposition": "canonical",
       "batch": "B",
@@ -268,11 +262,6 @@
       "reason": "命中 runtime；H1 已有契约；无独立 dated live 证据保持 draft"
     },
     {
-      "id": "veo-3.1",
-      "disposition": "unavailable",
-      "reason": "2026-09-14 #1751 移除：上游提交 8322e941f（2026-09-12）从渠道 32/34 与生产配置基线 models/channels 一并移除。证据强度须如实记录：依据是提交差分 + 渠道解绑，公开接口文档中「没有」该模型的退役公告（文档滞后）；生产配置基线 options.json 仍有活定价行 0.1143，但无任何渠道绑定，故不具备可售性"
-    },
-    {
       "id": "grok-imagine-video-1-5",
       "disposition": "canonical",
       "reason": "APIMart 官方文档确认 Grok Imagine Video 1.5 文生和有序参考图模式；适配与离线合同已补齐",
@@ -318,18 +307,6 @@
       ]
     },
     {
-      "id": "minimax-h3-max",
-      "disposition": "unavailable",
-      "reason": "2026-09-14 上游幽灵清理提交 c8d134c4f 收敛：minimax/h3-max 移出 models，改列为 minimax-h3 的 model_mapping 目标；生产渠道目录与生产配置基线均无该 public_id",
-      "notes": "上架状态撤销；对外取值应走 minimax-h3"
-    },
-    {
-      "id": "minimax-h3-max-turbo",
-      "disposition": "unavailable",
-      "reason": "2026-09-14 上游幽灵清理提交 c8d134c4f 收敛：该 SKU 由 minimax-h3-task ← minimax/h3-max 承载；生产渠道目录与生产配置基线均无该 public_id",
-      "notes": "上架状态撤销；对外取值应走 minimax-h3"
-    },
-    {
       "id": "seed-audio-1.0",
       "disposition": "canonical",
       "reason": "火山引擎 HTTP v3 语音合成接口已在网关验证",
@@ -345,12 +322,6 @@
       "evidence": [
         "docs/evidence/2026-09-29-model-gemini-3-8-flash-tts-text_to_speech.md"
       ]
-    },
-    {
-      "id": "google-vids-omni",
-      "disposition": "unavailable",
-      "reason": "2026-10-06 #3209 移除：产品决定下线 Google Vids（谷歌 AI 视频生成，走本机 vids2api 无头通道）；提供该通道的 omnimux-video 插件一并摘除，中枢已无该通道实现，故撤销在售状态。历史依据如实保留：docs/evidence/2026-10-06-model-google-vids-omni-text_to_video.md 与 docs/evidence/2026-10-06-model-google-vids-omni-modes.md 记录的是移除前的 dated live 生成，不再是上架依据",
-      "notes": "墓碑行（同 veo-3.1-fast 口径）：YAML 契约行按设计删除，id 有意不在 runtime 宇宙内，禁止出现在对外模型列表"
     },
     {
       "id": "doubao-seed-audio-1.0",
@@ -392,31 +363,6 @@
       "reason": "契约行更名承接：公开文档已公告的更名后高清型号；因无 dated live 证据不上架（op 保持 draft/none）"
     },
     {
-      "id": "grok-imagine-image-quality",
-      "disposition": "draft",
-      "reason": "runtime 存在；H2 补合法契约占位；证据不足不上架"
-    },
-    {
-      "id": "midjourney",
-      "disposition": "unavailable",
-      "reason": "2026-09-14 #1751 移除：上游摘除 midjourney-v8.2 → midjourney 映射；公开变更日志 2026-09-13 条目标注 tags 为「不兼容变更 / 图像」，原文要求把旧的 midjourney ID 以及所有按动作 ID（例如 mj-v7-upscale）替换为 mj-v7 或 mj-v8-1，并明写「旧 ID 不是兼容别名」；网关 relaykit/types/midjourney.go 白名单只剩 mj-v7 / mj-v8-1 两个键"
-    },
-    {
-      "id": "mj-v8-1",
-      "disposition": "draft",
-      "reason": "2026-09-14 #1751 改名：canonical 换为上游在册的 mj-v8-1（生产渠道目录在册，另有 6 个 mj-v8-1-* 动作变体）。上游明示旧 ID 不是兼容别名，故旧 ID 不保留"
-    },
-    {
-      "id": "mj-v7",
-      "disposition": "draft",
-      "reason": "2026-09-14 #1751 改名：canonical 换为上游在册的 mj-v7（生产渠道目录在册，另有 11 个 mj-v7-* 动作变体）。上游明示旧 ID 不是兼容别名，故旧 ID 不保留"
-    },
-    {
-      "id": "midjourney-niji-7",
-      "disposition": "unavailable",
-      "reason": "2026-09-14 #1751 移除：niji 在生产渠道目录、生产配置基线、公开接口文档、网关源码白名单四处全部零命中"
-    },
-    {
       "id": "nano-banana-2",
       "disposition": "canonical",
       "reason": "2026-09-14 #1751 改名：canonical 换为上游在册的连字符形 nano-banana-2（生产渠道目录在册、公开文档有 nano-banana-2 页、生产配置基线渠道 46/54/57 绑定）。网关不做下划线归一闪查，方向须以连字符形为准",
@@ -450,21 +396,6 @@
       "disposition": "alias",
       "target": "seedream-5-0-pro",
       "reason": "点号形为已弃用的历史写法（网关命名检查 naming-lint 报 R08 ALIAS_RETIRED_STILL_PRESENT 与 R03 MEDIA_DOT_VERSION 两条 error，suggest 连字符形）；登记为别名以打通别名归一：此前该行是 draft 而非 alias，别名桥未建立，导致仓内产品面在用的连字符形在不存在的模型上被拒（unknown_model），点号形则只命中当时自己的 draft 行"
-    },
-    {
-      "id": "seedream-4.5",
-      "disposition": "unavailable",
-      "reason": "2026-09-14 #1751 移除：三方真源零命中；上游 Seedream 图像线在册为 seedream-5-0-pro"
-    },
-    {
-      "id": "seedance2.5-stable-max-720p",
-      "disposition": "unavailable",
-      "reason": "2026-09-14 #1751 移除：三方真源零命中；seedance2.5-stable-480p 系上游线路名，本 ID 为线路名误作模型 ID（定价账本记 public_id == upstream_id、status: reserve 未启用）"
-    },
-    {
-      "id": "veo-3.1-fast",
-      "disposition": "unavailable",
-      "reason": "2026-09-14 #1751 移除：与 veo-3.1 同一次上游提交 8322e941f 移除。证据强度须如实记录：依据是提交差分 + 渠道解绑，公开接口文档无退役公告（文档滞后）；options.json 仍有活定价行 0.05，但无渠道绑定，不具备可售性"
     },
     {
       "id": "nanobanana-2",
@@ -574,23 +505,6 @@
       "evidence": [
         "docs/evidence/2026-10-21-model-whisper-1-speech_to_text.md"
       ]
-    },
-    {
-      "id": "kling-avatar",
-      "disposition": "unavailable",
-      "reason": "2026-09-14 #1751 移除：上游提交 7fa7c9d04（2026-09-11）判为无效模型（fix-catalog-integrity.js 原文「无效模型 kling-avatar (118)」）并从 models/abilities 与渠道 32/34 删除；生产配置基线零命中",
-      "notes": "公开接口文档页为 L2 滞后，不作为在售依据"
-    },
-    {
-      "id": "omni_flash",
-      "disposition": "unavailable",
-      "reason": "2026-09-14 #1751 移除：生产渠道目录/生产配置基线零命中；上游提交 56c67da2c（2026-09-11）「full audit and hard purge of duplicate, legacy, and stale models」点名 omni_flash* 硬删除；命名规范判为 LEGACY_UNDERSCORE",
-      "notes": "上游同品牌另有 gemini-omni-1.1-flash(-task)，与 omni_flash 只是同品牌不同 ID，不构成改名关系"
-    },
-    {
-      "id": "kling-o1",
-      "disposition": "unavailable",
-      "reason": "2026-09-14 #1751 移除：三方真源零命中；上游 Kling 在册为 kling-o3 / kling-v2-6 / kling-v3 / kling-v3-motion-control"
     },
     {
       "id": "kling-o3",

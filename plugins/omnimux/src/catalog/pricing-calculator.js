@@ -1,196 +1,228 @@
 /**
- * OmniMux Dynamic Pricing & Billing Calculator Engine.
- * 
- * Single source of truth for converting upstream model prices (USD)
- * to platform credits/points based on the standard conversion rate:
- * 1 USD = 10 Points (i.e. 1 Point = $0.10 USD).
+ * OmniMux points derivation from the gateway snapshot (P1b).
+ *
+ * Single source of truth for turning the gateway's own numbers — per-model
+ * billing and the per-line group ratio — into platform credits/points:
+ *
+ *   1 USD = 10 Points (1 Point = $0.10 USD).
+ *
+ * There is deliberately NO local price table here. The hand-copied baselines
+ * that used to live in this file drifted from the gateway and made the hub
+ * quote prices nobody charged; every number now comes from the snapshot the
+ * runtime already fetches (P1a). When the gateway bills by an expression, or by
+ * reported tokens, no comparable number exists — the caller marks the line as
+ * "无法比对" instead of inventing one.
  */
+
+import { resolveCurrentSnapshot } from './cloud/current.js'
+import { findSnapshotModel, snapshotGroupRatio } from './cloud/view.js'
 
 export const USD_TO_POINTS_RATE = 10
 
 /**
- * Known baseline model unit prices from gateway catalog.
- * Updated to reflect gateway truth (GET /api/pricing).
+ * Points are quoted on a 5-second reference package for per-second billing.
+ * It is a comparison baseline, not a product rule (the diff uses the same one).
  */
-/**
- * Text LLM baseline typical turn points (standard ~1k tokens reference package).
- * Ratio strictly aligned with gateway model_ratio and official provider pricing tiers:
- * gemini-3.8-flash (0.375) -> 100
- * claude-sonnet-4-6 (1.500) -> 400 (strictly 4x gemini)
- * claude-opus-4-6 (7.500 tier) -> 500
- * deepseek-v4-flash -> 50
- * gpt-5.5 -> 600
- */
-export const TEXT_MODEL_BASE_PRICING = Object.freeze({
-  "gemini-3.8-flash": { basePoints: 100, billingMode: "per_token" },
-  "claude-sonnet-4-6": { basePoints: 400, billingMode: "per_token" },
-  "claude-opus-4-6": { basePoints: 500, billingMode: "per_token" },
-  "deepseek-v4-flash": { basePoints: 50, billingMode: "per_token" },
-  "gpt-5.5": { basePoints: 600, billingMode: "per_token" },
+export const POINTS_REFERENCE_SECONDS = 5
+
+/** Why a line has no comparable points estimate. */
+export const PRICE_COMPARISON_UNAVAILABLE = Object.freeze({
+  EXPR: '网关按计费表达式计价，无法逐项比对',
+  PER_TOKEN: '网关按词元用量计价，无法给出固定积分预估',
+  MISSING: '网关未公布可推导的单价或分组倍率',
 })
 
-export const MODEL_BASE_PRICING = Object.freeze({
-  // Video - Per Second
-  'seedance-2-5': { unitPrice: 0.8, billingMode: 'per_second', defaultDuration: 5 },
-  'seedance-2-0': { unitPrice: 0.0971, billingMode: 'per_second', defaultDuration: 5 },
-  'seedance-2-0-fast': { unitPrice: 0.059022, billingMode: 'per_second', defaultDuration: 5 },
-  'seedance-2-0-mini': { unitPrice: 0.0157, billingMode: 'per_second', defaultDuration: 5 },
-  'minimax-h3': { unitPrice: 0.0714, billingMode: 'per_second', defaultDuration: 5 },
-  'minimax-h3-turbo': { unitPrice: 0.035, billingMode: 'per_second', defaultDuration: 5 },
-  'minimax-h3-video': { unitPrice: 0.025, billingMode: 'per_second', defaultDuration: 5 },
-  'minimax-h3-lip-sync': { unitPrice: 0.125, billingMode: 'per_second', defaultDuration: 5 },
-  
-  // Video - Per Task (Fixed duration packages)
-  'seedance-2-5-task': { unitPrice: 0.558824, billingMode: 'per_task', defaultDuration: 30 },
-  'seedance-2-0-task': { unitPrice: 0.294118, billingMode: 'per_task', defaultDuration: 30 },
-  'minimax-h3-task': { unitPrice: 0.3781, billingMode: 'per_task', defaultDuration: 15 },
+/** @param {unknown} value */
+function text(value) {
+  return typeof value === 'string' ? value.trim() : ''
+}
 
-  // Image - Per Task (Per Image)
-  'gpt-image-2.5': { unitPrice: 0.013072, billingMode: 'per_task' },
-  'gpt-image-2.5-flare': { unitPrice: 0.014706, billingMode: 'per_task' },
-  'gpt-image-2.5-sunburst': { unitPrice: 0.014706, billingMode: 'per_task' },
-  'seedream-5-0-pro': { unitPrice: 0.064286, billingMode: 'per_task' },
-
-  // Audio / Speech - Per Second or Token
-  'seed-audio-1.0': { unitPrice: 0.001, billingMode: 'per_second', defaultDuration: 10 },
-  'doubao-asr-bigmodel': { unitPrice: 0.0005, billingMode: 'per_second', defaultDuration: 60 },
-  'seedasr-auc': { unitPrice: 0.0005, billingMode: 'per_second', defaultDuration: 60 },
-  'bigasr-auc': { unitPrice: 0.0005, billingMode: 'per_second', defaultDuration: 60 },
-  'suno': { unitPrice: 0.075556, billingMode: 'per_task' },
-  'suno-sounds': { unitPrice: 0.010667, billingMode: 'per_task' },
-  'whisper-1': { unitPrice: 0.015, billingMode: 'per_task' },
-})
-
-/**
- * Calculate estimated points for a given model and parameters.
- *
- * @param {object} params
- * @param {string} params.modelId
- * @param {string} [params.billingMode] 'per_second' | 'per_task' | 'per_token'
- * @param {number} [params.unitPrice] in USD
- * @param {number} [params.groupRatio=1]
- * @param {number} [params.duration] in seconds (for per_second)
- * @param {number} [params.tokens] token count (for per_token)
- * @returns {{ usdCost: number, points: number, formattedPoints: string }}
- */
-export function calculatePoints(params = {}) {
-  const modelId = typeof params.modelId === 'string' ? params.modelId.trim() : ''
-  const base = MODEL_BASE_PRICING[modelId] || {}
-  
-  const unitPrice = typeof params.unitPrice === 'number' && Number.isFinite(params.unitPrice)
-    ? params.unitPrice
-    : (base.unitPrice ?? 0)
-
-  const billingMode = params.billingMode || base.billingMode || 'per_task'
-  const groupRatio = typeof params.groupRatio === 'number' && Number.isFinite(params.groupRatio)
-    ? params.groupRatio
-    : 1
-
-  let usdCost = 0
-
-  if (billingMode === 'per_second') {
-    const duration = typeof params.duration === 'number' && params.duration > 0
-      ? params.duration
-      : (base.defaultDuration || 5)
-    usdCost = unitPrice * duration * groupRatio
-  } else if (billingMode === 'per_task') {
-    usdCost = unitPrice * groupRatio
-  } else if (billingMode === 'per_token') {
-    const tokens = typeof params.tokens === 'number' && params.tokens > 0 ? params.tokens : 1000
-    usdCost = (unitPrice / 1000) * tokens * groupRatio
+/** @param {unknown} value @returns {number|null} */
+function finiteNumber(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value.trim())
+    if (Number.isFinite(parsed)) return parsed
   }
+  return null
+}
 
-  const points = Math.round(usdCost * USD_TO_POINTS_RATE * 100) / 100
-  const formattedPoints = points >= 10 ? `≈${Math.round(points)} 积分` : `≈${points.toFixed(1)} 积分`
+/** @param {unknown} value @returns {Record<string, unknown>} */
+function objectOrEmpty(value) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? /** @type {Record<string, unknown>} */ (value)
+    : {}
+}
 
-  return {
-    usdCost,
-    points,
-    formattedPoints,
-  }
+/** @param {number} value */
+function round2(value) {
+  return Math.round(value * 100) / 100
 }
 
 /**
- * Produce a human-readable billing description for Agent context injection.
- * Enables the Agent to directly understand unit price, billing mode, and typical costs.
+ * How the gateway charges for one model, expressed in the hub's billing-mode
+ * vocabulary. Read from the gateway's own fields only:
  *
- * @param {string} modelId
- * @param {object} [channelGroup]
- * @returns {string}
+ *   - the gateway contract's `billing.unit` when it publishes one
+ *     (`per_image` is the gateway's name for a per-call fixed price);
+ *   - otherwise `quota_type`, where 1 means a fixed per-call price and 0 means
+ *     a ratio applied to reported token usage.
+ *
+ * Returns `null` when the gateway says nothing usable, so the caller can mark
+ * the line as uncomparable instead of guessing.
+ *
+ * @param {unknown} snapshotModel
+ * @returns {'per_second'|'per_task'|'per_token'|null}
  */
-export function describeModelBilling(modelId, channelGroup) {
-  if (!modelId) return ''
-  const base = MODEL_BASE_PRICING[modelId]
-  if (!base) return ''
+export function gatewayBillingMode(snapshotModel) {
+  const contract = objectOrEmpty(objectOrEmpty(snapshotModel).contract)
+  const unit = text(objectOrEmpty(contract.billing).unit)
+  if (unit === 'per_second') return 'per_second'
+  if (unit === 'per_task' || unit === 'per_image') return 'per_task'
+  if (unit === 'per_token') return 'per_token'
+  const quotaType = finiteNumber(objectOrEmpty(snapshotModel).billing?.quotaType)
+  if (quotaType === 1) return 'per_task'
+  if (quotaType === 0) return 'per_token'
+  return null
+}
 
-  const ratio = channelGroup?.pricing?.discountRate ?? channelGroup?.pricing?.priceRatio ?? 1
+/** The gateway's per-model base price in USD, or `null` when it publishes none. */
+export function gatewayUnitPriceUsd(snapshotModel) {
+  return finiteNumber(objectOrEmpty(objectOrEmpty(snapshotModel).billing).modelPrice)
+}
 
-  if (base.billingMode === 'per_second') {
-    const cost5s = calculatePoints({ modelId, duration: 5, groupRatio: ratio })
-    const cost30s = calculatePoints({ modelId, duration: 30, groupRatio: ratio })
-    const perSec = (base.unitPrice * ratio * USD_TO_POINTS_RATE).toFixed(1)
-    
-    return `按秒计费（基准每秒约 ${perSec} 积分；生成 5 秒约 ${Math.round(cost5s.points)} 积分，30 秒约 ${Math.round(cost30s.points)} 积分）`
-  }
-
-  if (base.billingMode === 'per_task') {
-    const cost = calculatePoints({ modelId, groupRatio: ratio })
-    return `按条/按次计费（固定每次 ${cost.formattedPoints}）`
-  }
-
-  return '按量计费'
+/** The gateway's billing expression for a model, or `''`. */
+export function gatewayBillingExpr(snapshotModel) {
+  return text(objectOrEmpty(objectOrEmpty(snapshotModel).billing).expr)
 }
 
 /**
- * 依据网关真实单价与分组声明，推导该分组的权威真实预估积分。
- * 单轨真源核心推导器：杜绝任何手工填写失真数字。
+ * Reproduce the hub's points estimate from the gateway's own numbers.
  *
- * @param {string} modelId 产品模型 ID
- * @param {object} group 分组配置对象
- * @returns {number|null} 预估积分（遵循统一四舍五入：>=10 取整，<10 保留 1 位小数；无法推导返回 null）
+ * Returns `null` whenever the two sides are not comparable: an expression
+ * overrides `model_price` upstream, token billing has no fixed package, and a
+ * missing unit price or group ratio cannot be derived.
+ *
+ * @param {{
+ *   billing?: object,
+ *   billingMode?: string|null,
+ *   groupRatio?: number|null,
+ *   baselineSeconds?: number,
+ * }} input
+ * @returns {number|null}
  */
-export function resolveGroupEstimatedPoints(modelId, group) {
-  if (!modelId || !group) return null
-
-  // 1. Text LLM models: resolve from authoritative basePoints * discountRate/priceRatio
-  const textBase = TEXT_MODEL_BASE_PRICING[modelId]
-  if (textBase) {
-    const ratio = typeof group.pricing?.discountRate === "number"
-      ? group.pricing.discountRate
-      : (typeof group.pricing?.priceRatio === "number" ? group.pricing.priceRatio : 1)
-    const points = textBase.basePoints * ratio
-    return points >= 10 ? Math.round(points) : Math.round(points * 10) / 10
+export function estimatePointsFromGateway(input = {}) {
+  const billing = objectOrEmpty(input.billing)
+  if (text(billing.expr)) return null
+  const modelPrice = finiteNumber(billing.modelPrice)
+  const ratio = finiteNumber(input.groupRatio)
+  if (modelPrice === null || ratio === null) return null
+  const baselineSeconds = finiteNumber(input.baselineSeconds) ?? POINTS_REFERENCE_SECONDS
+  if (input.billingMode === 'per_second') {
+    return round2(modelPrice * ratio * baselineSeconds * USD_TO_POINTS_RATE)
   }
+  if (input.billingMode === 'per_task') return round2(modelPrice * ratio * USD_TO_POINTS_RATE)
+  return null
+}
 
-  // 2. Media / Audio models: resolve from USD unit price
-  let wireModel = group.wireModel || modelId
-  const base0 = MODEL_BASE_PRICING[wireModel] || MODEL_BASE_PRICING[modelId]
-  if (!base0) return null
-
-  const mode = group.pricing?.billingMode || base0.billingMode || 'per_task'
-  // 若按次计费但未显式声明 task 后缀，自动关联 task 路线独立定价
-  if (mode === 'per_task' && !wireModel.endsWith('-task') && MODEL_BASE_PRICING[`${wireModel}-task`]) {
-    wireModel = `${wireModel}-task`
-  }
-
-  const base = MODEL_BASE_PRICING[wireModel] || base0
-  const ratio = typeof group.pricing?.discountRate === 'number'
-    ? group.pricing.discountRate
-    : (typeof group.pricing?.priceRatio === 'number' ? group.pricing.priceRatio : 1)
-  
-  const duration = group.constraints?.parameters?.duration?.fixed ?? base.defaultDuration ?? 5
-
-  const res = calculatePoints({
-    modelId: wireModel,
-    billingMode: mode,
+/**
+ * The pricing block one channel group carries, derived entirely from the
+ * snapshot. `pointsEstimate` stays `null` (with a `pointsNote` explaining why)
+ * whenever the gateway's own billing cannot be turned into a comparable number.
+ *
+ * @param {unknown} snapshotModel
+ * @param {number|null} groupRatio the gateway's `group_ratio` for this line
+ * @param {number} [baselineSeconds]
+ * @returns {{
+ *   billingMode: string|null,
+ *   unitPriceUsd: number|null,
+ *   groupRatio: number|null,
+ *   pointsEstimate: number|null,
+ *   pointsNote?: string,
+ * }}
+ */
+export function gatewayPricingBlock(snapshotModel, groupRatio, baselineSeconds = POINTS_REFERENCE_SECONDS) {
+  const billing = objectOrEmpty(objectOrEmpty(snapshotModel).billing)
+  const billingMode = gatewayBillingMode(snapshotModel)
+  const unitPriceUsd = gatewayUnitPriceUsd(snapshotModel)
+  const ratio = finiteNumber(groupRatio)
+  const pointsEstimate = estimatePointsFromGateway({ billing, billingMode, groupRatio: ratio, baselineSeconds })
+  /** @type {Record<string, unknown>} */
+  const block = {
+    billingMode,
+    unitPriceUsd,
     groupRatio: ratio,
-    duration,
-  })
-
-  if (typeof res.points !== 'number' || !Number.isFinite(res.points)) return null
-
-  if (res.points >= 10) {
-    return Math.round(res.points)
+    pointsEstimate,
   }
-  return Math.round(res.points * 10) / 10
+  if (pointsEstimate === null) {
+    block.pointsNote = text(billing.expr)
+      ? PRICE_COMPARISON_UNAVAILABLE.EXPR
+      : billingMode === 'per_token'
+        ? PRICE_COMPARISON_UNAVAILABLE.PER_TOKEN
+        : PRICE_COMPARISON_UNAVAILABLE.MISSING
+  }
+  return /** @type {any} */ (block)
+}
+
+/** @param {unknown} value */
+function usd(value) {
+  const parsed = finiteNumber(value)
+  return parsed === null ? '?' : parsed.toFixed(4).replace(/0+$/, '').replace(/\.$/, '')
+}
+
+/** @param {unknown} value */
+function points(value) {
+  const parsed = finiteNumber(value)
+  return parsed === null ? '?' : String(parsed)
+}
+
+/**
+ * One-line billing description for the agent context block.
+ *
+ * P1b: derived from the gateway snapshot instead of the deleted local price
+ * tables. When the gateway bills by an expression or by reported tokens the
+ * description says so and gives no number, so the model can never quote a price
+ * the platform does not charge.
+ *
+ * @param {string} modelId runtime id, optionally `model@group`
+ * @param {number} [groupRatio] explicit group multiplier
+ * @returns {string|null} null when the gateway does not sell the model at all
+ */
+export function describeModelBilling(modelId, groupRatio) {
+  const raw = text(modelId)
+  if (!raw) return null
+  const at = raw.indexOf('@')
+  const baseId = at > 0 ? raw.slice(0, at).trim() : raw
+  const inlineGroup = at > 0 ? raw.slice(at + 1).trim() : ''
+  const snapshot = resolveCurrentSnapshot().snapshot
+  const model = findSnapshotModel(snapshot, baseId)
+  if (!model) return null
+
+  const billingMode = gatewayBillingMode(model)
+  const unitPriceUsd = gatewayUnitPriceUsd(model)
+  const ratio = finiteNumber(groupRatio)
+    ?? (inlineGroup ? snapshotGroupRatio(snapshot, inlineGroup) : null)
+    ?? snapshotGroupRatio(snapshot, 'default')
+    ?? 1
+  const estimate = estimatePointsFromGateway({
+    billing: model.billing,
+    billingMode,
+    groupRatio: ratio,
+  })
+  const scope = inlineGroup ? `线路「${inlineGroup}」分组倍率 ×${ratio}` : `分组倍率 ×${ratio}`
+  if (estimate === null) {
+    const reason = text(objectOrEmpty(model.billing).expr)
+      ? PRICE_COMPARISON_UNAVAILABLE.EXPR
+      : billingMode === 'per_token'
+        ? PRICE_COMPARISON_UNAVAILABLE.PER_TOKEN
+        : PRICE_COMPARISON_UNAVAILABLE.MISSING
+    return `${scope}；${reason}`
+  }
+  if (billingMode === 'per_second') {
+    return `按秒计费，网关单价 ${usd(unitPriceUsd)} USD/秒，${scope} ≈ ${points(estimate)} 积分/${POINTS_REFERENCE_SECONDS}秒`
+  }
+  if (billingMode === 'per_task') {
+    return `按次计费，网关单价 ${usd(unitPriceUsd)} USD/次，${scope} ≈ ${points(estimate)} 积分/次`
+  }
+  return null
 }

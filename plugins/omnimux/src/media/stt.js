@@ -52,7 +52,16 @@ export async function executeOmnimuxSpeechToText(input) {
       seam: 'speechToText',
       capability: 'stt',
     },
-    { seam: 'speechToText', capability: 'stt', outputType: 'text' },
+    {
+      seam: 'speechToText',
+      capability: 'stt',
+      outputType: 'text',
+      // P1b: the gateway snapshot's anonymous floor publishes no transcription model,
+      // so gating transcription on it would refuse the shipped whisper-1 default. The
+      // operation's own contract admission still applies. Revisit once the account
+      // view (or a refreshed snapshot) publishes speech_to_text models.
+      gatewayMembership: false,
+    },
   )
   const auth = await resolveMediaAuth(route, {
     env: input.env,

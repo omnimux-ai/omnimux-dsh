@@ -19,7 +19,7 @@ import { CANONICAL_SCHEMA_VERSION } from './contract/schema.js';
 import { resolveDisposition } from './contract/dispositions.js';
 import { resolveModelId } from './contract/index.js';
 import { getModelChannelGroups } from './serving/channel-groups.js';
-import { resolveGroupEstimatedPoints } from './pricing-calculator.js';
+import { findSnapshotModel, hasUsableGatewayGroups } from './cloud/view.js';
 import { sortCatalogRows } from './sort.js';
 
 export { resolveModelId };
@@ -145,9 +145,10 @@ export function mergeInputCapability(ops) {
  * Project one legacy-shaped catalog row from a model + the ops that justify it.
  * @param {object} model
  * @param {object[]} ops
+ * @param {object} [snapshot] gateway snapshot that owns membership, lines and prices
  * @returns {object}
  */
-export function projectRow(model, ops) {
+export function projectRow(model, ops, snapshot) {
   /** @type {Record<string, unknown>} */
   const row = { id: model.id, label: model.label };
   if (typeof model.badge === 'string') row.badge = model.badge;
@@ -172,7 +173,7 @@ export function projectRow(model, ops) {
   }
   // The composer's model picker reads these rows, so pricing has to travel
   // with them — not only on the flat `models[]` DTO.
-  row.channelGroups = projectChannelGroups(model.id);
+  row.channelGroups = projectChannelGroups(model.id, snapshot);
   return row;
 }
 
@@ -182,14 +183,15 @@ export function projectRow(model, ops) {
  * are normalized away upstream — a model.id appears at most once).
  * @param {import('./contract/index.js').ContractIndex} index
  * @param {'text'|'image'|'video'|'audio'} kind
+ * @param {object} [snapshot]
  * @returns {object[]}
  */
-export function projectKindRows(index, kind) {
+export function projectKindRows(index, kind, snapshot) {
   const rows = [];
   for (const model of index.all()) {
     const ops = visibleOps(model).filter((op) => op.output?.type === kind);
     if (ops.length === 0) continue;
-    rows.push(projectRow(model, ops));
+    rows.push(projectRow(model, ops, snapshot));
   }
   return sortCatalogRows(rows);
 }
@@ -199,13 +201,14 @@ export function projectKindRows(index, kind) {
  * contracted-but-unlisted models; inputCapability merges ALL ops.
  * @param {import('./contract/index.js').ContractIndex} index
  * @param {'image'|'video'|'audio'} managementGroup
+ * @param {object} [snapshot]
  * @returns {object[]}
  */
-export function projectDirectoryRows(index, managementGroup) {
+export function projectDirectoryRows(index, managementGroup, snapshot) {
   const rows = index
     .all()
     .filter((m) => m.managementGroup === managementGroup)
-    .map((m) => projectRow(m, m.operations ?? []));
+    .map((m) => projectRow(m, m.operations ?? [], snapshot));
   return sortCatalogRows(rows);
 }
 
@@ -239,30 +242,27 @@ export function projectChatRows(index) {
 /**
  * The channel groups a model can be served on, with their pricing.
  *
- * `serving/channel-groups.js` is the single source of truth for what a line
- * costs. Surfacing it here lets the composer's model picker and any later
+ * P1b: `serving/channel-groups.js` derives the lines from the gateway
+ * snapshot's `enable_groups` and the prices from the snapshot's
+ * `group_ratio` + per-model billing, so this projection is the gateway's own
+ * answer. Surfacing it here lets the composer's model picker and any later
  * caller read one authority instead of re-declaring prices, which is how the
  * canvas mirror drifted from the hub before.
  *
  * Only the fields a caller can act on are projected: the internal record may
  * grow fields that are not part of this contract. The result is always an
- * array — a model with no configured pool reports `[]` rather than a missing
- * key, so callers never need both an optional-chain and a default.
+ * array — a model the gateway does not sell reports `[]` rather than a
+ * missing key, so callers never need both an optional-chain and a default.
  *
  * @param {string} modelId
+ * @param {object} [snapshot] gateway snapshot; defaults to the read-only current one
  * @returns {object[]}
  */
-export function projectChannelGroups(modelId) {
-  return getModelChannelGroups(modelId).map((group) => {
+export function projectChannelGroups(modelId, snapshot) {
+  return getModelChannelGroups(modelId, snapshot).map((group) => {
     const pricing = group.pricing && typeof group.pricing === 'object'
       ? structuredClone(group.pricing)
       : null;
-    if (pricing && pricing.pointsEstimate == null) {
-      const autoPoints = resolveGroupEstimatedPoints(modelId, group);
-      if (typeof autoPoints === 'number') {
-        pricing.pointsEstimate = autoPoints;
-      }
-    }
     return {
       id: group.id,
       label: group.label,
@@ -283,9 +283,10 @@ export function projectChannelGroups(modelId) {
  * Authoritative model DTO: contract passthrough + disposition governance.
  * @param {object} model
  * @param {object} dispositionsDoc
+ * @param {object} [snapshot]
  * @returns {object}
  */
-export function projectModelDto(model, dispositionsDoc) {
+export function projectModelDto(model, dispositionsDoc, snapshot) {
   const row = resolveDisposition(dispositionsDoc, model.id);
   return {
     id: model.id,
@@ -313,7 +314,11 @@ export function projectModelDto(model, dispositionsDoc) {
     listed: model.listed === true,
     listedOperations: [...(model.listedOperations ?? [])],
     ...(model.routing ? { routing: structuredClone(model.routing) } : {}),
-    channelGroups: projectChannelGroups(model.id),
+    channelGroups: projectChannelGroups(model.id, snapshot),
+    // P1b: whether the hub can offer this model right now - the gateway sells it on a
+    // usable line AND the local contract exposes a callable operation. The contract's
+    // own `listed` is left untouched (it describes the contract alone).
+    gatewayListed: hasUsableGatewayGroups(findSnapshotModel(snapshot, model.id)) && model.listed === true,
     disposition: typeof row?.disposition === 'string' ? row.disposition : 'draft',
   };
 }
@@ -324,10 +329,11 @@ export function projectModelDto(model, dispositionsDoc) {
  * @param {import('./contract/index.js').ContractIndex} index
  * @param {object} dispositionsDoc
  * @param {object} [defaultsCfg]
+ * @param {object} [snapshot] gateway snapshot that owns membership, lines and prices
  * @returns {object}
  */
-export function projectCatalog(index, dispositionsDoc, defaultsCfg = {}) {
-  const models = index.all().map((m) => projectModelDto(m, dispositionsDoc));
+export function projectCatalog(index, dispositionsDoc, defaultsCfg = {}, snapshot) {
+  const models = index.all().map((m) => projectModelDto(m, dispositionsDoc, snapshot));
   /** @type {Record<string, object[]>} */
   const lists = { text: [], image: [], video: [], audio: [] };
   for (const model of index.all()) {
@@ -336,7 +342,7 @@ export function projectCatalog(index, dispositionsDoc, defaultsCfg = {}) {
       CATALOG_BUCKET_KINDS.includes(/** @type {any} */ (k)),
     );
     for (const kind of kinds) {
-      lists[kind].push(projectRow(model, ops.filter((op) => op.output?.type === kind)));
+      lists[kind].push(projectRow(model, ops.filter((op) => op.output?.type === kind), snapshot));
     }
   }
   for (const kind of CATALOG_BUCKET_KINDS) {

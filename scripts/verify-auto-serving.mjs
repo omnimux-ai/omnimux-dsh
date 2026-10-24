@@ -30,9 +30,9 @@ export function verifyAutoServing(options = {}) {
   const governed = new Map(dispositions.dispositions.map((row) => [row.id, row.disposition]))
   for (const row of manifest.models) {
     if (!row || typeof row.productId !== 'string' || !row.productId.trim() || row.productId !== row.productId.trim()
-      || !Object.hasOwn(policy, row.kind) || typeof row.requiredInAuto !== 'boolean'
+      || !Object.hasOwn(policy, row.kind)
       || !['P0', 'P1'].includes(row.priority)) {
-      issue('manifest_invalid', 'Each model requires productId, kind, priority and requiredInAuto')
+      issue('manifest_invalid', 'Each model requires productId, kind and priority')
       continue
     }
     const { productId, kind, gatewayIds } = row
@@ -45,13 +45,9 @@ export function verifyAutoServing(options = {}) {
     if (!policy[kind].allowedModelIds.includes(productId) && row.canvasExcluded !== true) {
       issue('not_allowed', 'Model is not in its canvas whitelist or explicitly canvasExcluded', productId)
     }
-    const listed = contract?.operations?.some((op) => op.listed === true && op.output?.type === kind)
-    if (row.requiredInAuto && (!listed || governed.get(productId) !== 'canonical')) {
-      issue('not_listed', 'Required auto models must have a canonical disposition and a listed output operation', productId)
-    }
-    if (listed && policy[kind].allowedModelIds.includes(productId) && !row.requiredInAuto) {
-      issue('required', 'Listed whitelist models must be requiredInAuto', productId)
-    }
+    // P1b: whether a model is actually on sale is decided by the gateway
+    // snapshot at runtime, so this offline gate no longer asserts a local
+    // "required in auto" flag; it validates the registration itself.
     if (!Array.isArray(gatewayIds) || !gatewayIds.length || !gatewayIds.includes(productId)
       || new Set(gatewayIds).size !== gatewayIds.length
       || gatewayIds.some((id) => typeof id !== 'string' || id !== id.trim() || resolveModelId(index, id) !== productId)) {
@@ -77,7 +73,6 @@ function finish(issues, models) {
     source: 'offline-manifest',
     onlineVerified: false,
     registeredCount: models.length,
-    requiredCount: models.filter((row) => row.requiredInAuto).length,
     issues,
   }
 }
@@ -89,7 +84,7 @@ export function runAutoServingCli(argv = process.argv.slice(2)) {
     : verifyAutoServing()
   if (argv.includes('--json')) console.log(JSON.stringify(report, null, 2))
   else {
-    console.log(`auto-serving offline ok=${report.ok} registered=${report.registeredCount ?? 0} required=${report.requiredCount ?? 0}`)
+    console.log(`auto-serving offline ok=${report.ok} registered=${report.registeredCount ?? 0}`)
     for (const issue of report.issues) console.error(`${issue.code}${issue.modelId ? ` model=${issue.modelId}` : ''}: ${issue.message}`)
   }
   return report

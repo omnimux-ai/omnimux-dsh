@@ -129,13 +129,14 @@ test('3312: the delisted H3 series exposes no channel groups while the listed mu
   assert.deepEqual(resolveChannelPlan('minimax-h3@standard', { allowedGroups: ['standard', 'task'] }), {
     candidates: [], unresolvedGroups: ['standard', 'task'],
   })
-  // 现役多线路模型 seedance-2-5：720p 标准版是默认档，两档各锁定自己的固定分辨率。
+  // P1b：线路取自快照 enable_groups（本地覆盖表命名 480p/720p，网关另发布两条专线）。
+  // 720p 标准版仍是默认档，两档各锁定自己的固定分辨率。
   const groups = getModelChannelGroups('seedance-2-5')
-  assert.deepEqual(groups.map((group) => group.id), ['480p', '720p'])
+  assert.deepEqual(groups.map((group) => group.id), ['480p', '720p', 'seedance-2-5-480p', 'seedance-2-5-720p'])
   assert.equal(groups[0].default, undefined)
   assert.equal(groups[1].default, true)
   assert.deepEqual(groups.map((group) => group.constraints?.parameters?.resolution), [
-    { fixed: '480p' }, { fixed: '720p' },
+    { fixed: '480p' }, { fixed: '720p' }, undefined, undefined,
   ])
   assert.deepEqual(resolveChannelPlan('seedance-2-5@720p', { allowedGroups: ['480p', '720p'] }).candidates,
     ['seedance-2-5@desktop-720p', 'seedance-2-5@desktop-480p'])

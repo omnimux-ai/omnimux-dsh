@@ -25,6 +25,8 @@ import {
 } from './admission.js'
 import { mapValidatedPlanToVendor, resolveProfilePayloadContract } from './map.js'
 import { validateVendorResult } from './output.js'
+import { resolveCurrentSnapshot } from '../../cloud/current.js'
+import { findSnapshotModel, hasUsableGatewayGroups } from '../../cloud/view.js'
 
 /**
  * @typedef {object} GuardRejection
@@ -115,6 +117,41 @@ function reject(partial) {
 }
 
 /**
+ * P1b membership gate: the gateway snapshot is the authority for what is on
+ * sale, so a model the gateway no longer sells is refused outright instead of
+ * silently succeeding (or being swapped for a different model).
+ *
+ * A caller that passes `requireListed: false` is explicitly asking for
+ * contract-only validation (payload mapping of an unlisted model), so the
+ * listing check is skipped there — the runtime submit paths all keep the
+ * default. `gatewayMembership: false` is the narrower opt-out for a capability
+ * whose models the anonymous gateway view does not publish (transcription); it
+ * relaxes only this gate, never the operation's own listed requirement.
+ *
+ * @param {string} modelId canonical contract id
+ * @param {{ snapshot?: object }} [opts]
+ * @returns {{ code: string, message: string, extra: Record<string, unknown> } | null}
+ */
+function gatewayMembershipRejection(modelId, opts = {}) {
+  const snapshot = typeof opts.snapshot === 'object' && opts.snapshot !== null
+    ? opts.snapshot
+    : resolveCurrentSnapshot().snapshot
+  // No snapshot at all (bundled floor and disk cache both unreadable) means the
+  // catalog itself is empty; the guard must not add a second failure mode.
+  if (!snapshot) return null
+  const model = findSnapshotModel(snapshot, modelId)
+  if (model && hasUsableGatewayGroups(model)) return null
+  return {
+    code: GUARD_CODES.NOT_LISTED,
+    message: `该模型已下架：模型「${modelId}」不在网关当前在售目录中，请重新选择在售模型。`,
+    extra: {
+      reason: 'gateway-delisted',
+      gatewaySource: typeof snapshot.source === 'string' ? snapshot.source : null,
+    },
+  }
+}
+
+/**
  * Core admit + validate + map.
  *
  * @param {object} request  logical hub request (media/text/stt fields)
@@ -129,6 +166,8 @@ function reject(partial) {
  *   capability?: string,
  *   outputType?: string,
  *   skipVendorMap?: boolean,
+ *   snapshot?: object,
+ *   gatewayMembership?: boolean,
  * }} [opts]
  * @returns {GuardPlan | GuardRejection}
  */
@@ -200,6 +239,24 @@ export function guardSubmit(request, opts = {}) {
   })
   if (!opAdmit.ok) {
     return reject({ ...opAdmit, modelId: modelAdmit.modelId })
+  }
+
+  // P1b membership gate, deliberately after model+operation admission so the most
+  // specific contract reason wins: a delisted model whose operation is also
+  // unverified reports the operation problem, and only an otherwise-admissible
+  // request is refused with "该模型已下架".
+  if (opts.requireListed !== false && opts.gatewayMembership !== false) {
+    const delisted = gatewayMembershipRejection(modelAdmit.modelId, opts)
+    if (delisted) {
+      return reject({
+        code: delisted.code,
+        message: delisted.message,
+        modelId: modelAdmit.modelId,
+        operationId: opAdmit.operationId,
+        extra: delisted.extra,
+        diagnostics,
+      })
+    }
   }
 
   if (modelAdmit.modelId.startsWith('minimax-h3')
