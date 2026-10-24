@@ -374,3 +374,42 @@ test('old-standard declarations must match both path and case name', () => {
     { ok: false, missing: ['keeps contract'] },
   )
 })
+
+// 旧式跳过/聚焦别名与 `test.skip` / `test.only` 语义等价，必须同样被识别。
+test('legacy skip and focus aliases are rejected like test.skip / test.only', () => {
+  const aliasSources = [
+    "xit('case', () => {})",
+    "xtest('case', () => {})",
+    "xdescribe('case', () => {})",
+    "fit('case', () => {})",
+    "ftest('case', () => {})",
+    "fdescribe('case', () => {})",
+    "xit.each([1])('case', () => {})",
+  ]
+  for (const source of aliasSources) {
+    const inspection = inspectTestAuthoring(source)
+    assert.equal(inspection.allowed, false, `${source} 必须被拒绝`)
+    assert.equal(inspection.reason, 'test-execution-selector-needs-review', `${source} 的原因应为选择器审查`)
+  }
+})
+
+test('legacy alias detection does not change the existing selector verdicts', () => {
+  for (const source of [
+    "test.skip('case', () => {})",
+    "it.only('case', () => {})",
+    "test.concurrent.skip('case', () => {})",
+    "describe.only('case', () => {})",
+  ]) {
+    assert.equal(inspectTestAuthoring(source).reason, 'test-execution-selector-needs-review', `${source} 的判定不应变化`)
+  }
+  // 普通用例与普通成员调用不受影响。
+  assert.equal(inspectTestAuthoring("test('case', () => {})").allowed, true)
+  assert.equal(inspectTestAuthoring("describe('group', () => {})").allowed, true)
+  assert.equal(inspectTestAuthoring("import assert from 'node:assert/strict'\nassert.equal(a, b)").allowed, true)
+})
+
+test('legacy aliases are non-declarable, so the old-standard channel cannot open them', () => {
+  const inspection = inspectTestStandardChange("xit('case', () => { assert.equal(a, 1) })", "xit('case', () => { assert.equal(a, 2) })")
+  assert.equal(inspection.allowed, false)
+  assert.notEqual(inspection.reason, 'test-assertion-removed-or-rewritten')
+})

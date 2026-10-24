@@ -68,6 +68,9 @@ function collectRisks(code, { resolveImport } = {}) {
   const references = referenceIdentifiers(ast)
   const risks = []
   const runners = new Set(['test', 'it', 'describe'])
+  // jasmine / mocha / jest 的旧式跳过与聚焦别名：调用它们本身就是一个跳过/聚焦选择，
+  // 语义与 `test.skip` / `test.only` 等价，所以按运行器选择器处理，不可经声明放行。
+  const legacySelectors = new Set(['xit', 'xtest', 'xdescribe', 'fit', 'ftest', 'fdescribe'])
   const imports = new Map()
   for (const statement of ast.body) {
     if (statement.type !== 'ImportDeclaration') continue
@@ -125,6 +128,8 @@ function collectRisks(code, { resolveImport } = {}) {
       const property = node.computed ? node.property.type === 'Literal' ? node.property.value : null : node.property.name
       if (property === null) risk('dynamic-test-member-needs-review')
       else if (blocked.has(property) || execution.has(property) || node.object.type === 'Identifier' && node.object.name === 'Reflect') risk('test-execution-selector-needs-review')
+      // 旧式别名的成员形态，例如 `xit.each(...)` / `fdescribe.each(...)`。
+      else if (node.object.type === 'Identifier' && legacySelectors.has(node.object.name)) risk('test-execution-selector-needs-review')
     }
     if (node.type === 'Property' || node.type === 'MethodDefinition' || node.type === 'PropertyDefinition') {
       const key = node.computed ? node.key.type === 'Literal' ? node.key.value : null : node.key.name ?? node.key.value
@@ -134,6 +139,8 @@ function collectRisks(code, { resolveImport } = {}) {
     }
     if (node.type === 'CallExpression') {
       if (node.callee.type === 'Identifier' && publicBindings.has(node.callee.name) && (parent?.type === 'CallExpression' && parent.callee === node || parent?.type === 'NewExpression' && parent.callee === node)) risk('public-plugin-result-execution-needs-review')
+      // `xit(...)` / `fit(...)` 这类旧式别名调用本身就是跳过/聚焦选择。
+      if (node.callee.type === 'Identifier' && legacySelectors.has(node.callee.name)) risk('test-execution-selector-needs-review')
       const directRunner = node.callee.type === 'Identifier' && runners.has(node.callee.name)
       const namespaceRunner = node.callee.type === 'MemberExpression' && node.callee.object.type === 'Identifier' && runners.has(node.callee.object.name)
       if (directRunner || namespaceRunner) {
