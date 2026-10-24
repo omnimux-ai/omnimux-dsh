@@ -19,6 +19,7 @@ import { captureCandidate, sealEvidence, validateEvidence } from './evidence-con
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { startTestEnvironment, diagnoseWorktreeRoot } from './test-env-bootstrap.mjs';
 import { findChromePath, assertPng } from './worktree-web-qa.mjs';
+import { stopOwnedChild } from './lib/child-lifecycle.mjs';
 import { validateTaskPeerResolution } from './task-runtime-proof.mjs';
 
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -625,6 +626,7 @@ export async function runJourney(journeyPath, { send, sleep, evidenceDir, origin
 /** 真实无头 Chrome 驱动：动态 CDP 端口、同源 cookie 注入、正几何断言、PNG 取证。 */
 async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, mode = 'ui', journey = null, installation = null, io = fs, chromePath = findChromePath() }) {
   let chrome; let socket; let privateDir; let exited = false; let closed = false; let cleaning = false;
+  let chromeStderrTail = '';
   const assertions = [];
   const state = { assertions, cleanup: [], observations: { events: [], rawOutputRetained: false } };
   const cdpPort = { value: null };
@@ -646,7 +648,10 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
       const unavailable = () => { clearTimeout(timer); reject(new Error('chrome-start-failed')); };
       chrome.once('error', unavailable); chrome.once('exit', unavailable);
       chrome.stderr.on('data', chunk => {
-        buffer += chunk.toString();
+        const text = chunk.toString();
+        // Bounded tail kept for failure diagnostics; the port probe below owns the `buffer` reset.
+        chromeStderrTail = (chromeStderrTail + text).slice(-4000);
+        buffer += text;
         if (buffer.length > 65536) { buffer = ''; clearTimeout(timer); reject(new Error('chrome-output-limit')); return; }
         const match = /DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\//.exec(buffer);
         if (match) { clearTimeout(timer); resolve(Number(match[1])); }
@@ -692,11 +697,26 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
 
     await send('Network.enable');
     await send('Page.enable');
-    const sameSiteCookie = await send('Network.setCookie', {
+    const applyCookie = () => send('Network.setCookie', {
       name: cookie.name, value: cookie.value, domain: new URL(origin).hostname, path: '/',
       url: `${origin}/`, secure: false, sameSite: 'Lax',
     });
-    assertions.push({ name: 'auth-cookie-applied', pass: sameSiteCookie.success !== false });
+    let sameSiteCookie = await applyCookie();
+    let cookieRetried = false;
+    if (sameSiteCookie?.success === false) {
+      // A rejected injection poisons every later assertion, so retry once before failing the run.
+      // The postcondition is unchanged: the cookie still has to be applied for the assertion to pass.
+      cookieRetried = true;
+      await sleep(300);
+      try { await send('Network.enable'); }
+      catch (error) { state.observations.cookieRetryNetworkEnableError = sanitizeFailureText(String(error?.message ?? error)); }
+      sameSiteCookie = await applyCookie();
+    }
+    // Only the cookie name travels into evidence; the value stays in memory.
+    assertions.push({
+      name: 'auth-cookie-applied', pass: sameSiteCookie?.success !== false,
+      cookieName: cookie.name, retried: cookieRetried, success: sameSiteCookie?.success ?? null,
+    });
 
     const targetUrl = seededWorkspace ? `${origin}/#/workspace/${seededWorkspace}` : `${origin}/`;
     await send('Page.navigate', { url: targetUrl });
@@ -709,6 +729,20 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
       if (isAppReady(geometry)) break;
     }
     assertions.push({ name: 'app-dom-mounted', pass: Boolean(geometry && geometry.bodyTextLength > 0), geometry });
+    if (!isAppReady(geometry)) {
+      // A red mount used to carry no evidence at all, which made an intermittent failure
+      // indistinguishable from a product regression. Record what the page and browser actually said.
+      const navState = await send('Runtime.evaluate', {
+        expression: 'JSON.stringify({ url: location.href, readyState: document.readyState, title: document.title })',
+        returnByValue: true,
+      }).catch(() => null);
+      state.observations.browserDiagnostics = {
+        targetUrl,
+        navigation: navState?.result?.value ?? null,
+        cookie: { name: cookie.name, success: sameSiteCookie?.success ?? null, retried: cookieRetried },
+        chromeStderrTail: sanitizeFailureText(chromeStderrTail, { tail: true, limit: 400 }),
+      };
+    }
     assertions.push({
       name: 'visible-geometry-positive',
       pass: isAppReady(geometry),
@@ -806,24 +840,17 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
         record('cdp-transport', 'completed');
       } catch { record('cdp-transport', 'failed', 'cdp-close-unconfirmed'); }
     }
-    const waitClosed = async () => {
-      if (exited && closed) return true;
-      return new Promise(yes => {
-        const finish = value => { clearTimeout(timer); chrome.off('exit', check); chrome.off('close', check); yes(value); };
-        const check = () => { if (exited && closed) finish(true); };
-        const timer = setTimeout(() => finish(false), 5000);
-        chrome.on('exit', check); chrome.on('close', check); check();
-      });
-    };
     let stopped = !chrome;
     if (!chrome) record('browser-child', 'not-applicable', 'not-created');
     else {
-      try {
-        if (!exited) chrome.kill('SIGTERM');
-        stopped = await waitClosed();
-        if (!stopped && !exited) { chrome.kill('SIGKILL'); stopped = await waitClosed(); }
-      } catch { stopped = false; }
-      record('browser-child', stopped ? 'completed' : 'failed', stopped ? null : 'exit-or-close-unconfirmed');
+      // Stop verdict comes from the process exiting. `closed` stays telemetry: a helper that
+      // inherited the stderr pipe can keep stdio open long after the browser is gone.
+      const verdict = await stopOwnedChild(chrome, { timeoutMs: 5000, isExited: () => exited });
+      stopped = verdict.stopped;
+      state.observations.browserStop = {
+        stopped, signals: verdict.signals, killErrors: verdict.killErrors, exited, closed,
+      };
+      record('browser-child', stopped ? 'completed' : 'failed', stopped ? null : 'exit-unconfirmed');
     }
     if (!privateDir) record('browser-private-directory', 'not-applicable', 'not-created');
     else if (!stopped) record('browser-private-directory', 'failed', 'owned-child-still-unconfirmed');

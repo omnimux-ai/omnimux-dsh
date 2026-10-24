@@ -106,6 +106,7 @@ jobs:
           node --test scripts/lib/silent-catch-delta.test.mjs scripts/report-blocker.test.mjs
           node --test scripts/verify-agents-md.test.mjs
           node --test scripts/verify-governance-registry.test.mjs scripts/lib/governance-registry.test.mjs
+          node --test scripts/lib/child-lifecycle.test.mjs
           node --test scripts/guard-anti-cheat.test.mjs
 
       # 旧测试标准声明闭环：写入时刻的门禁只能做早期反馈——声明被消费之后没人再校验它，
