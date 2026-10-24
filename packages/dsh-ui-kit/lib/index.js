@@ -7,8 +7,16 @@ import { createPortal } from "react-dom";
 /** Renders nothing when neither generation provides the glyph. */
 const MissingIcon = () => null;
 const registry = primitives;
+/** Names already reported, so a missing glyph warns once instead of per render. */
+const warned = /* @__PURE__ */ new Set();
 function resolve(legacy, modern) {
-	return registry[legacy] ?? registry[modern] ?? MissingIcon;
+	const component = registry[legacy] ?? registry[modern];
+	if (component) return component;
+	if (!warned.has(legacy)) {
+		warned.add(legacy);
+		console.warn(`[dsh-ui-kit] icon ${legacy}/${modern} is missing from the running Host`);
+	}
+	return MissingIcon;
 }
 const IconCheckOutline16 = resolve("IconCheckOutline16", "IconCheckOutlineRegular");
 const IconChevronDownOutline14 = resolve("IconChevronDownOutline14", "IconChevronDownOutlineRegular");
