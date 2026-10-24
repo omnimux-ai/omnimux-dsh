@@ -2,11 +2,23 @@
   "narrowViewports": [
     {
       "width": 900,
-      "height": 560
+      "height": 560,
+      "kind": "short"
     },
     {
       "width": 900,
-      "height": 480
+      "height": 480,
+      "kind": "short"
+    },
+    {
+      "width": 900,
+      "height": 400,
+      "kind": "short"
+    },
+    {
+      "width": 900,
+      "height": 1400,
+      "kind": "tall"
     }
   ],
   "narrowThresholds": {
@@ -18,7 +30,8 @@
     {
       "viewport": {
         "width": 900,
-        "height": 560
+        "height": 560,
+        "kind": "short"
       },
       "measured": {
         "viewport": {
@@ -27,10 +40,10 @@
         },
         "topbarHeight": 48,
         "gridColumns": "220px 59px",
-        "gridRows": "180px 115px 168px",
+        "gridRows": "180px 123px 168px",
         "grid": {
-          "clientHeight": 463,
-          "scrollHeight": 463,
+          "clientHeight": 471,
+          "scrollHeight": 471,
           "overflowY": "auto"
         },
         "middleColumn": {
@@ -41,23 +54,25 @@
         },
         "rightDock": {
           "top": 269,
-          "bottom": 384,
+          "bottom": 392,
           "width": 279,
-          "height": 115
+          "height": 123
         },
         "sequencer": {
-          "top": 384,
-          "bottom": 552,
+          "top": 392,
+          "bottom": 560,
           "width": 279,
           "height": 168
-        }
+        },
+        "sequencerMaxHeight": 168
       },
       "failures": []
     },
     {
       "viewport": {
         "width": 900,
-        "height": 480
+        "height": 480,
+        "kind": "short"
       },
       "measured": {
         "viewport": {
@@ -66,10 +81,10 @@
         },
         "topbarHeight": 48,
         "gridColumns": "220px 59px",
-        "gridRows": "180px 43px 160px",
+        "gridRows": "180px 51px 160px",
         "grid": {
-          "clientHeight": 383,
-          "scrollHeight": 383,
+          "clientHeight": 391,
+          "scrollHeight": 391,
           "overflowY": "auto"
         },
         "middleColumn": {
@@ -80,16 +95,99 @@
         },
         "rightDock": {
           "top": 269,
-          "bottom": 312,
+          "bottom": 320,
           "width": 279,
-          "height": 43
+          "height": 51
         },
         "sequencer": {
-          "top": 312,
-          "bottom": 472,
+          "top": 320,
+          "bottom": 480,
           "width": 279,
           "height": 160
-        }
+        },
+        "sequencerMaxHeight": 144
+      },
+      "failures": []
+    },
+    {
+      "viewport": {
+        "width": 900,
+        "height": 400,
+        "kind": "short"
+      },
+      "measured": {
+        "viewport": {
+          "width": 900,
+          "height": 400
+        },
+        "topbarHeight": 48,
+        "gridColumns": "220px 51px",
+        "gridRows": "180px 0px 160px",
+        "grid": {
+          "clientHeight": 311,
+          "scrollHeight": 340,
+          "overflowY": "auto"
+        },
+        "middleColumn": {
+          "top": 89,
+          "bottom": 269,
+          "width": 51,
+          "height": 180
+        },
+        "rightDock": {
+          "top": 269,
+          "bottom": 269,
+          "width": 271,
+          "height": 0
+        },
+        "sequencer": {
+          "top": 269,
+          "bottom": 429,
+          "width": 271,
+          "height": 160
+        },
+        "sequencerMaxHeight": 120
+      },
+      "failures": []
+    },
+    {
+      "viewport": {
+        "width": 900,
+        "height": 1400,
+        "kind": "tall"
+      },
+      "measured": {
+        "viewport": {
+          "width": 900,
+          "height": 1400
+        },
+        "topbarHeight": 48,
+        "gridColumns": "220px 59px",
+        "gridRows": "655px 420px 236px",
+        "grid": {
+          "clientHeight": 1311,
+          "scrollHeight": 1311,
+          "overflowY": "auto"
+        },
+        "middleColumn": {
+          "top": 89,
+          "bottom": 744,
+          "width": 59,
+          "height": 655
+        },
+        "rightDock": {
+          "top": 744,
+          "bottom": 1164,
+          "width": 279,
+          "height": 420
+        },
+        "sequencer": {
+          "top": 1164,
+          "bottom": 1400,
+          "width": 279,
+          "height": 236
+        },
+        "sequencerMaxHeight": 840
       },
       "failures": []
     }

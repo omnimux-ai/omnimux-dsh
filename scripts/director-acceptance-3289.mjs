@@ -53,8 +53,14 @@ const LAYOUT_THRESHOLDS = {
   fontSizes: [11, 12, 13, 15],
   radii: [4, 6, 8, 10, 12, 999],
 };
-// 窄屏两档高度：560 是常规矮视口，480 是 spec 里的极端下限（必须仍不裁不塌）。
-const NARROW_VIEWPORTS = [{ width: 900, height: 560 }, { width: 900, height: 480 }];
+// 窄屏四档：560 常规矮视口、480 spec 极端下限、400 保证溢出分支（可滚动）真的被走到、
+// 1400 是「窄而高」反例——空间充足，时间轴上限不能被收窄。
+const NARROW_VIEWPORTS = [
+  { width: 900, height: 560, kind: 'short' },
+  { width: 900, height: 480, kind: 'short' },
+  { width: 900, height: 400, kind: 'short' },
+  { width: 900, height: 1400, kind: 'tall' },
+];
 const NARROW_THRESHOLDS = { middleMinHeight: 180, sequencerMinHeight: 160, sequencerMaxHeight: 236 };
 const baseExpected = ['normal-project-entry', 'portrait-selected', 'managed-media-decoded', 'saved-scene', 'play-seek', 'decoded-motion', 'scene-reopened', 'aspect-reopened'];
 // 测量断言紧跟入口阶段记录，窄屏断言在旅程末尾（切视口会重排，放在最后不影响其它步骤）。
@@ -576,11 +582,35 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle, palett
       // ego 的 Page 没有 setViewportSize，走 CDP 的 Emulation 覆盖视口（媒体查询随之生效）。
       await page.cdp('Emulation.setDeviceMetricsOverride', { width: narrowViewport.width, height: narrowViewport.height, deviceScaleFactor: 1, mobile: false });
       await page.waitForFunction(viewport => window.innerWidth === viewport.width && window.innerHeight === viewport.height, narrowViewport, { timeout: 10000 });
-      const narrowTimelineOpen = await page.evaluate(() => Boolean(document.querySelector('.wf-director-root .director-sequencer')));
-      if (!narrowTimelineOpen) {
-        await clickOrActivate('loc=css:.wf-director-root button[aria-label="动画时间轴"]', '.wf-director-root', { kind: 'aria', value: '动画时间轴' });
-        await visible('.wf-director-root .director-sequencer', 15000);
+      // 用 aria-pressed 判断开关状态，避免把「已展开」当成「要再点一次」而误收起；
+      // 渲染慢时最多重试一次（有界，不无限点）。
+      const timelineState = () => page.evaluate(() => {
+        const button = document.querySelector('.wf-director-root button[aria-label="动画时间轴"]');
+        return { pressed: button?.getAttribute('aria-pressed') === 'true', rendered: Boolean(document.querySelector('.wf-director-root .director-sequencer')) };
+      });
+      let timelineReady = await timelineState();
+      for (let attempt = 0; attempt < 2 && !timelineReady.rendered; attempt += 1) {
+        if (!timelineReady.pressed) {
+          await clickOrActivate('loc=css:.wf-director-root button[aria-label="动画时间轴"]', '.wf-director-root', { kind: 'aria', value: '动画时间轴' });
+        }
+        try { await visible('.wf-director-root .director-sequencer', 8000); } catch {}
+        timelineReady = await timelineState();
       }
+      if (!timelineReady.rendered) throw new Error(`layout-narrow-thresholds: 无法展开时间轴（aria-pressed=${timelineReady.pressed}）`);
+      const anchors = await page.evaluate(() => {
+        const root = document.querySelector('.wf-director-root');
+        const workbench = root?.querySelector('[data-director-workbench="true"]');
+        return {
+          root: Boolean(root),
+          workbench: Boolean(workbench),
+          grid: Boolean(workbench && [...workbench.children].some(node => getComputedStyle(node).display === 'grid')),
+          leftDock: Boolean(root?.querySelector('[data-director-left-dock="true"]')),
+          rightDock: Boolean(root?.querySelector('[data-director-right-dock="true"]')),
+          sequencer: Boolean(root?.querySelector('.director-sequencer')),
+        };
+      });
+      const missingAnchors = Object.entries(anchors).filter(([, present]) => !present).map(([name]) => name);
+      if (missingAnchors.length) throw new Error(`layout-narrow-thresholds: 缺少测量锚点 ${missingAnchors.join(', ')}`);
       await page.screenshot({ path: `${evidence}/layout-narrow-${narrowViewport.height}.png` });
       const narrowMeasured = await page.evaluate(() => {
         const root = document.querySelector('.wf-director-root');
@@ -601,10 +631,17 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle, palett
           middleColumn: rect(middleColumn),
           rightDock: rect(rightDock),
           sequencer: rect(sequencer),
+          sequencerMaxHeight: round(getComputedStyle(sequencer).maxHeight),
         };
       });
       const narrowFailures = [];
       const at = message => `${narrowViewport.width}x${narrowViewport.height} ${message}`;
+      if (narrowViewport.kind === 'tall') {
+        // 窄而高：空间充足，时间轴上限必须保持宽屏的 60vh，不能被窄屏断点误伤。
+        if (!(narrowMeasured.sequencerMaxHeight > narrowThresholds.sequencerMaxHeight)) {
+          narrowFailures.push(at(`sequencer max-height: 实测 ${narrowMeasured.sequencerMaxHeight} vs 期望 > ${narrowThresholds.sequencerMaxHeight}（窄屏断点误伤了高窗口）`));
+        }
+      }
       if (narrowMeasured.middleColumn.height < narrowThresholds.middleMinHeight) {
         narrowFailures.push(at(`middle column height: 实测 ${narrowMeasured.middleColumn.height} vs 期望 >= ${narrowThresholds.middleMinHeight}`));
       }
@@ -614,7 +651,11 @@ async function browserJourney({ loginUrl, evidence, origin, projectTitle, palett
       if (narrowMeasured.rightDock.bottom > narrowMeasured.sequencer.top + 1) {
         narrowFailures.push(at(`right dock bottom ${narrowMeasured.rightDock.bottom} > sequencer top ${narrowMeasured.sequencer.top}（行重叠）`));
       }
-      // 矮到放不下时允许栅格滚动；但不允许「内容超高且不可滚动」——那才是被裁掉。
+      // 统一口径：允许溢出，但溢出时必须可滚动（不可滚动 = 被裁掉）。是否溢出本身不算失败，
+      // 由证据如实记录；测试文件对同一规则做镜像断言。
+      if (narrowMeasured.middleColumn.width <= 0) {
+        narrowFailures.push(at(`middle column width: 实测 ${narrowMeasured.middleColumn.width}（画布退化为 0 宽）`));
+      }
       const scrollable = narrowMeasured.grid.overflowY === 'auto' || narrowMeasured.grid.overflowY === 'scroll';
       if (narrowMeasured.grid.scrollHeight > narrowMeasured.grid.clientHeight + 1 && !scrollable) {
         narrowFailures.push(at(`grid 内容 ${narrowMeasured.grid.scrollHeight} > 可视 ${narrowMeasured.grid.clientHeight} 且 overflow-y=${narrowMeasured.grid.overflowY}（内容被裁且不可滚动）`));

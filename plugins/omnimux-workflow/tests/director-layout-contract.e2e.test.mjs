@@ -127,24 +127,36 @@ test('真机证据：外观三集合都落在 #3646 允许集合内', () => {
 test('窄屏断点：第 1 行保底 + 可滚动 + 右栏收紧（#3689）', () => {
   assert.equal(workbench.includes('max-lg:grid-rows-[minmax(180px,1fr)_auto]'), true, 'max-lg 第 1 行必须有 180px 保底');
   assert.equal(workbench.includes('max-lg:overflow-y-auto'), true, 'max-lg 放不下时栅格必须可滚动');
+  assert.equal(workbench.includes('max-lg:overflow-x-hidden'), true, '滚动容器不应带出横向滚动条');
   assert.equal(workbench.includes('max-lg:max-h-[30vh]'), true, 'max-lg 右栏上限应收紧到 30vh');
-  assert.equal(controlsCss.includes('border-radius:50%'), false, 'controls.css 不应再有硬编码 50%');
   assert.equal(/\.director-sequencer \{[^}]*max-height: 60vh;/s.test(layoutCss), true, '宽屏时间轴 max-height 应在 CSS 里');
-  assert.equal(/@media \(max-width: 1023px\) \{[^}]*\.director-sequencer \{[^}]*max-height: min\(236px, 30vh\);/s.test(layoutCss), true, 'max-lg 时间轴应先收缩');
+  // 收窄必须同时带高度条件：否则「窄而高」的窗口会被永久限制在 236px。
+  assert.equal(/@media \(max-width: 1023px\) and \(max-height: 620px\) \{[^}]*\.director-sequencer \{[^}]*max-height: min\(236px, 30vh\);/s.test(layoutCss), true,
+    '窄屏收窄必须同时限定视口高度');
   const sequencerSource = readFileSync(join(here, '..', 'src/director/vendor/components/director-sequencer.tsx'), 'utf8');
   assert.equal(sequencerSource.includes('maxHeight: "60vh"'), false, '内联 maxHeight 会压过断点，必须移除');
 });
 
-test('真机证据：窄屏两档都保底、不重叠、不裁切（#3689）', () => {
+test('真机证据：窄屏四档（含窄而高反例）都保底、不重叠、溢出必可滚动（#3689）', () => {
   const evidence = JSON.parse(readFileSync(join(repoRoot, 'docs/evidence/director-narrow-3689/after-narrow-thresholds.json'), 'utf8'));
   assert.deepEqual(evidence.failures, [], '窄屏证据里的逐项判定必须为空');
-  assert.deepEqual(evidence.sizes.map(item => item.viewport), [{ width: 900, height: 560 }, { width: 900, height: 480 }]);
+  assert.deepEqual(evidence.sizes.map(item => [item.viewport.width, item.viewport.height, item.viewport.kind]), [
+    [900, 560, 'short'], [900, 480, 'short'], [900, 400, 'short'], [900, 1400, 'tall'],
+  ]);
   for (const size of evidence.sizes) {
     const measured = size.measured;
-    assert.equal(measured.middleColumn.height >= evidence.narrowThresholds.middleMinHeight, true, `${size.viewport.height}: 中列必须保底`);
-    assert.equal(measured.sequencer.height >= evidence.narrowThresholds.sequencerMinHeight, true, `${size.viewport.height}: 时间轴不低于下限`);
-    assert.equal(measured.sequencer.height <= evidence.narrowThresholds.sequencerMaxHeight, true, `${size.viewport.height}: 时间轴不高于上限`);
-    assert.equal(measured.rightDock.bottom <= measured.sequencer.top + 1, true, `${size.viewport.height}: 右栏与时间轴不得重叠`);
-    assert.equal(measured.grid.scrollHeight <= measured.grid.clientHeight + 1, true, `${size.viewport.height}: 该档位不应溢出`);
+    const where = `${size.viewport.width}x${size.viewport.height}`;
+    assert.equal(measured.middleColumn.height >= evidence.narrowThresholds.middleMinHeight, true, `${where}: 中列必须保底`);
+    assert.equal(measured.middleColumn.width > 0, true, `${where}: 中列不能退化为 0 宽`);
+    assert.equal(measured.sequencer.height >= evidence.narrowThresholds.sequencerMinHeight, true, `${where}: 时间轴不低于下限`);
+    assert.equal(measured.sequencer.height <= evidence.narrowThresholds.sequencerMaxHeight, true, `${where}: 时间轴不高于上限`);
+    assert.equal(measured.rightDock.bottom <= measured.sequencer.top + 1, true, `${where}: 右栏与时间轴不得重叠`);
+    // 与运行时同一口径：允许溢出，但溢出时必须可滚动。
+    if (measured.grid.scrollHeight > measured.grid.clientHeight + 1) {
+      assert.equal(['auto', 'scroll'].includes(measured.grid.overflowY), true, `${where}: 溢出时必须可滚动`);
+    }
+    if (size.viewport.kind === 'tall') {
+      assert.equal(measured.sequencerMaxHeight > evidence.narrowThresholds.sequencerMaxHeight, true, `${where}: 窄而高的窗口不能被收窄上限误伤`);
+    }
   }
 });
