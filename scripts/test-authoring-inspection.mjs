@@ -1,7 +1,7 @@
 import { parse } from 'acorn'
 
 const scope = 'syntax-only; changed test standards still require independent review'
-const blocked = new Set(['skip', 'only', 'todo'])
+const blocked = new Set(['skip', 'only', 'todo', 'skipIf', 'runIf'])
 const execution = new Set(['eval', 'Function', 'constructor', 'defineProperty', 'defineProperties', 'call', 'apply', 'bind', 'getBuiltinModule', 'binding', '_linkedBinding', 'dlopen', 'createRequire'])
 const functions = new Set(['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression'])
 
@@ -70,7 +70,10 @@ function collectRisks(code, { resolveImport } = {}) {
   const runners = new Set(['test', 'it', 'describe'])
   // jasmine / mocha / jest 的旧式跳过与聚焦别名：调用它们本身就是一个跳过/聚焦选择，
   // 语义与 `test.skip` / `test.only` 等价，所以按运行器选择器处理，不可经声明放行。
-  const legacySelectors = new Set(['xit', 'xtest', 'xdescribe', 'fit', 'ftest', 'fdescribe'])
+  // 集合取自三个框架公布的 globals 并取**保守超集**：mocha 有 xcontext/xdescribe/xit/xspecify，
+  // jasmine 与 jest 有 fdescribe/fit/xdescribe/xit，jest 另有 xtest；`ftest` 未必存在于任何
+  // 框架，但它是聚焦别名的常见拼写，宁可多拒一个不存在的名字。
+  const legacySelectors = new Set(['xit', 'xtest', 'xdescribe', 'xcontext', 'xspecify', 'fit', 'ftest', 'fdescribe'])
   const imports = new Map()
   for (const statement of ast.body) {
     if (statement.type !== 'ImportDeclaration') continue

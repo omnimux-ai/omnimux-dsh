@@ -40,7 +40,8 @@
 
 - 假设 1：仓库现有测试文件里没有任何旧别名调用，因此新增识别不会让任何既有文件突然被拒。依据：`grep -rlE "^[[:space:]]*(fit|xit|xtest|ftest|fdescribe|xdescribe)[[:space:]]*\("` 在全部 `*.test.*` / `*.spec.ts` 上命中 **0** 个文件。
 - 假设 2：`fit` 作为普通函数名在测试文件里出现会误拒。这是**有意的保守**：`it` / `test` 早就是运行器名，同名标识符一律按运行器处理；且仓库里 `fit(` 的命中都在 vendored bundle 的字符串内，不在测试文件里。
-- 假设 3：别名集合是闭集。依据：jasmine / mocha / jest 的旧式别名就是这六个；vitest 不额外提供别的跳过别名（它主推 `test.skip` / `test.skipIf`，两者已被覆盖）。
+- 假设 3：别名集合取**保守超集**。依据：mocha 公布的 globals 含 `xcontext`/`xdescribe`/`xit`/`xspecify`，jasmine 与 jest 含 `fdescribe`/`fit`/`xdescribe`/`xit`，jest 另有 `xtest`；`ftest` 未必存在于任何框架，但它是聚焦别名的常见拼写，宁可多拒一个不存在的名字。反向地，`context`/`specify` 是 describe/it 别名而非跳过/聚焦，不纳入（实测 `context('c', () => {})` 仍放行）。
+- 假设 4：`skipIf`/`runIf` 纳入 `blocked` 后，任何 `X.skipIf` 成员访问都被拒，因此「条件恰好是对象字面量」的形态不再绕过。依据：原先 `it.skipIf({a:1})('c', () => {})` 被放行——`{a:1}` 看起来像合法 options 对象，绕过了「参数形状」那条检查。仓库里零处使用 `skipIf`/`runIf`，无既有文件受影响。
 
 ## 证伪方式
 
@@ -53,23 +54,33 @@
 
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
-| 语法层评估测试 | `node --test scripts/test-authoring-inspection.test.mjs` | **50/50 通过**（新增 3 条：别名识别、不溢出、不可声明） |
-| 门禁自身测试 | `node --test scripts/guard-anti-cheat.test.mjs` | **32/32 通过**（未改动，无回归） |
+| 语法层评估测试 | `node --test scripts/test-authoring-inspection.test.mjs` | **51/51 通过**（47 → 51，新增 4 条：别名识别、不溢出、不可声明、mocha 别名与 skipIf 对象条件） |
+| 门禁自身测试 | `node --test scripts/guard-anti-cheat.test.mjs` | **34/34 通过**（32 → 34，新增 2 条：纯新增路径的别名兜底、成员调用不误伤） |
 | 声明校验测试 | `node --test scripts/verify-test-standard-declarations.test.mjs` | **19/19 通过**（未改动） |
-| 门禁套件 | `pnpm test:gates` | 468 / 456 通过；**12 条失败与改动前逐条同名**（既有环境/内容问题） |
+| 门禁套件 | `pnpm test:gates` | 469 / 457 通过；**12 条失败与改动前逐条同名**（既有环境/内容问题） |
 
 逐条实测（`inspectTestAuthoring`）：
 
 | 写法 | 改动前 | 改动后 |
 | --- | --- | --- |
 | `xit(...)` / `xtest(...)` / `xdescribe(...)` | allow | **deny** |
+| `xcontext(...)` / `xspecify(...)`（复核补充） | allow | **deny** |
 | `fit(...)` / `ftest(...)` / `fdescribe(...)` | allow | **deny** |
 | `xit.each([1])(...)` | allow | **deny** |
+| `it.skipIf({a:1})(...)` / `test.runIf({a:1})(...)`（复核补充） | allow | **deny** |
 | `test.skip(...)` / `it.only(...)` / `test.concurrent.skip(...)` / `describe.only(...)` | deny | deny（不变） |
 | 普通 `test(...)` / `describe(...)` / 纯 `assert` | allow | allow（不变） |
 | 测试文件里的本地函数 `fit(3)` | allow | **deny**（保守，见假设 2） |
 
 端到端：写入时刻把既有测试的 `test('keeps', ...)` 改写为 `xit('keeps', ...)` → `handle()` 返回 **deny**。
+
+纯新增的**不可解析**文件（走字面兜底）：
+
+| 内容 | 改动前 | 改动后 |
+| --- | --- | --- |
+| `xit(...)` / `xcontext(...)` / `globalThis.xit(...)` | allow | **deny**（复核补充） |
+| `test.skip(...)` | deny | deny（不变） |
+| 普通 `test(...)` / `obj.fit(3)` | allow | allow（不变，成员调用不误伤） |
 
 ## 新产品基线
 

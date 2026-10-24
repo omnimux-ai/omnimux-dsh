@@ -413,3 +413,19 @@ test('legacy aliases are non-declarable, so the old-standard channel cannot open
   assert.equal(inspection.allowed, false)
   assert.notEqual(inspection.reason, 'test-assertion-removed-or-rewritten')
 })
+
+// 独立复核指出：mocha 的 xcontext / xspecify 与 xdescribe / xit 是同一族别名；
+// 另外 `it.skipIf(条件)` 的「条件恰好是对象字面量」形态原先能绕过。
+test('mocha BDD aliases and skipIf-with-object condition are rejected too', () => {
+  for (const source of ["xcontext('case', () => {})", "xspecify('case', () => {})"]) {
+    const inspection = inspectTestAuthoring(source)
+    assert.equal(inspection.allowed, false, `${source} 必须被拒绝`)
+    assert.equal(inspection.reason, 'test-execution-selector-needs-review', `${source} 的原因应为选择器审查`)
+  }
+  // 条件不是回调而是对象字面量时，不能因为「看起来像 options」就放行。
+  for (const source of ["it.skipIf({a:1})('case', () => {})", "test.runIf({a:1})('case', () => {})"]) {
+    assert.equal(inspectTestAuthoring(source).allowed, false, `${source} 必须被拒绝`)
+  }
+  // mocha 的 `context` 是 describe 别名而非跳过/聚焦，不应被拒。
+  assert.equal(inspectTestAuthoring("context('case', () => {})").allowed, true)
+})
