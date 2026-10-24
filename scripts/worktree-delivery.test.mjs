@@ -773,3 +773,77 @@ test('测试文件与源码同时改时照常安装有源码改动的插件', ()
     assert.equal(readFileSync(join(repo, 'sync_receipt.txt'), 'utf8').trim(), 'omnimux')
   } finally { rmSync(fixture, { recursive: true, force: true }) }
 })
+
+// ---------------------------------------------------------------------------
+// 收尾横幅必须复述真实物化结果（Issue #3700）
+// 旧行为：sync 失败时仍打印「开发版已物化」，与上一行的失败提示自相矛盾。
+// ---------------------------------------------------------------------------
+
+/** 建一个 ship 场景：单个插件提交已合入 main，sync-to-app.sh 按传入脚本决定成败。 */
+function shipRepoWithSyncScript(label, syncScript) {
+  const fixture = mkdtempSync(join(tmpdir(), `omnimux-${label}-`))
+  const repo = join(fixture, 'repo')
+  const remote = join(fixture, 'origin.git')
+  const bin = join(fixture, 'bin')
+  const git = (...args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+  mkdirSync(repo)
+  mkdirSync(bin)
+  git('init', '--bare', '-b', 'main', remote)
+  git('init', '-b', 'main')
+  git('config', 'user.name', 'delivery-test')
+  git('config', 'user.email', 'delivery@example.test')
+  mkdirSync(join(repo, 'scripts'))
+  copyFileSync(join(root, 'scripts/worktree.sh'), join(repo, 'scripts/worktree.sh'))
+  writeFileSync(join(repo, '.gitignore'), '.worktrees/\n')
+  writeFileSync(join(repo, 'scripts/sync-to-app.sh'), syncScript, { mode: 0o755 })
+  git('add', '.')
+  git('commit', '-m', 'seed')
+  git('remote', 'add', 'origin', remote)
+  git('push', '-u', 'origin', 'main')
+
+  const worktree = join(repo, '.worktrees/plugin-feature')
+  git('worktree', 'add', '-b', 'agent/plugin-feature', worktree)
+  mkdirSync(join(worktree, 'plugins/omnimux/src'), { recursive: true })
+  writeFileSync(join(worktree, 'plugins/omnimux/src/panel.jsx'), 'export const panel = 1\n')
+  git('-C', worktree, 'add', '.')
+  git('-C', worktree, 'commit', '-m', 'feat: panel')
+  const head = git('-C', worktree, 'rev-parse', 'HEAD')
+  git('push', 'origin', 'agent/plugin-feature:main')
+  writeFileSync(
+    join(bin, 'gh'),
+    `#!/bin/sh\ncase "$*" in\n  *'--json state -q .state'*) echo 'MERGED' ;;\n  *) printf 'MERGED\\tagent/plugin-feature\\t${head}\\tmain\\t${head}\\n' ;;\nesac\n`,
+    { mode: 0o755 },
+  )
+  const result = spawnSync('bash', ['scripts/worktree.sh', 'ship', 'plugin-feature', '--pr', '3700'], {
+    cwd: repo,
+    encoding: 'utf8',
+    env: Object.assign({}, process.env, {
+      PATH: `${bin}:${process.env.PATH}`,
+      // 与同文件其它物化用例一致：不要让用例读真实 ~/.omnimux-dev。
+      OMNIMUX_DEV_SNAPSHOT: join(fixture, 'absent-dev'),
+    }),
+  })
+  return { fixture, result }
+}
+
+test('ship 物化失败时横幅如实说明开发版未更新（Issue #3700）', () => {
+  const { fixture, result } = shipRepoWithSyncScript('ship-sync-fail', '#!/bin/sh\necho "dsh-ui-kit 漂移" >&2\nexit 1\n')
+  try {
+    assert.equal(result.status, 0, `合并已确认时 ship 仍应返回 0：\n${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /交付全链路闭环完成/i, '收尾框架句保留，但分句必须是真话')
+    assert.match(result.stdout, /开发版未更新/, '失败路径必须说明开发版未更新')
+    assert.match(result.stdout, /materialize=failed/, '默认横幅必须给出机器可读的物化状态')
+    assert.doesNotMatch(result.stdout, /开发版已物化/, '失败路径不得宣称开发版已物化')
+    assert.match(result.stdout, /sync-to-app\.sh/, '失败路径必须给出补救命令')
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
+
+test('ship 物化成功时横幅说明开发版已物化（Issue #3700）', () => {
+  const { fixture, result } = shipRepoWithSyncScript('ship-sync-ok', '#!/bin/sh\nexit 0\n')
+  try {
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /交付全链路闭环完成/i)
+    assert.match(result.stdout, /开发版已物化/, '成功路径必须说明开发版已物化')
+    assert.doesNotMatch(result.stdout, /开发版未更新/, '成功路径不得出现未更新提示')
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
