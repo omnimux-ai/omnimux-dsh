@@ -19,7 +19,7 @@
 ## 相对上游的改动
 
 - 身份：包名与两个半边的 `name` 导出统一为 `omnimux-viewer`；资产路由改为 `/omnimux-viewer/asset`。
-- 设置席随宿主世代：0.1.x 用 `installSettingsSection` 注册在 `crosery-viewer` 命名空间；0.2.1-rc.3 起改为「插件自身 `Config` 即配置席」，由 `SettingsForms` 服务按 profile 条目 id（`omnimux-viewer`）投影与写回。**已知代价**：宿主的旧文档迁移表里没有 `crosery-viewer`，所以 0.1.x 写下的 `settings.yaml` 段在 rc.3 上不会被导入，四个开关回落默认值；`VIEWER_SETTINGS_NAMESPACE` 因此成为仅为兼容而保留的常量。命名空间取值由宿主侧决定，插件内无法保住旧数据，故在 README 与兼容文档里明示，不做静默降级。
+- 设置席随宿主世代：0.1.x 用 `installSettingsSection` 注册在 `crosery-viewer` 命名空间；0.2.1-rc.3 起改为「插件自身 `Config` 即配置席」，由 `SettingsForms` 服务按 profile 条目 id 投影与写回（本插件条目 id 是 `viewer`，见 `cordis.patch.yml`）。**已知代价**：宿主的旧文档迁移会把 `settings.yaml` 改名为 `settings.yaml.imported` 后逐段写进 profile，id 匹配不到可配置条目的段只 warn 跳过（`No configurable plugin entry "<id>"`），因此 0.1.x 写下的 `crosery-viewer:` 段在 rc.3 上不生效，四个开关回落默认值；`VIEWER_SETTINGS_NAMESPACE` 因此成为仅为兼容而保留的常量。命名空间取值由宿主侧决定，插件内无法保住旧数据，故在 README 与兼容文档里明示，不做静默降级。
 - 卡片注册 rank（本仓库新增）：`display_file` 归本插件（rank 0）；`read_image` 以 rank 1 让位给官方自带的同名行；官方没有该行时仍由本插件提供卡片。见 `src/client/registration.ts`。
 - 移除上游 `.github/`、`package-lock.json`、`AGENTS.md`、`CLAUDE.md`（上游仓库的 CI 与自身协作规范不适用本仓库；本仓库规则以根 `AGENTS.md` 为准）。
 

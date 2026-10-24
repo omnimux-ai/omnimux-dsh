@@ -84,9 +84,9 @@ The route **never accepts a path from the browser.** At tool time the host signs
 
 ## Configuration
 
-Settings are this plugin's own `Config` (`ViewerSettingsSchema`), projected by the harness's settings service. On the 0.2.x generation the form is keyed by this plugin's profile entry id (`omnimux-viewer`) and written into the active profile patch; on the 0.1.x generation it was the `crosery-viewer` namespace inside `$DSH_HOME/settings.yaml`.
+Settings are this plugin's own `Config` (`ViewerSettingsSchema`), projected by the harness's settings service. On the 0.2.x generation the form is keyed by this plugin's profile entry id (`viewer`; `omnimux-viewer` is the package name) and written into the active profile patch; on the 0.1.x generation it was the `crosery-viewer` namespace inside `$DSH_HOME/settings.yaml`.
 
-> **Upgrading from 0.1.x:** the old `crosery-viewer:` section is *not* imported — the harness migrates only its own built-in sections — so the four flags fall back to their defaults. Set them once in the settings UI.
+> **Upgrading from 0.1.x:** the harness renames `settings.yaml` to `settings.yaml.imported` and then writes each section into the profile; a section whose id matches no configurable entry is skipped with a `No configurable plugin entry "<id>"` warning. That is what happens to the old `crosery-viewer:` section, because this plugin's entry id is now `viewer`. The four flags therefore fall back to their defaults — set them once in the settings UI.
 
 Every default is the behaviour the plugin exists to provide; each flag gives one piece back.
 
