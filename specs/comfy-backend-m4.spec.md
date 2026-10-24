@@ -69,11 +69,11 @@ M2a–M3 把 mac arm64 这条路走通。要 1:1 对齐 MiniMax 的平台矩阵�
   - 原断言：`checkDriver(DARWIN) === 'not-required'`，并断言 linux 目标解析失败。
   - 必须改的理由：M4 把驱动判定从三态（`not-required`/`unknown`/`unsupported`）升级为四态（`satisfied`/`unsatisfied`/`unknown`/`not-required`）并返回详情对象；同时 linux-x64 从「不支持」变成「有候选方案」。
   - 新期望证据：darwin-arm64 → `not-required`；win32-x64 的 nvidia 变体在注入低版本驱动时 → `unsatisfied` 且带下限；注入探测失败 → `unknown`；`unknown` 不阻断预检。
-- 同文件 :: `预检全通过时 ok，且给出需求体积与驱动结论`
+- `plugins/omnimux-workflow/src/workflow/comfyBackend/comfyBackendPreflight.test.mjs` :: `预检全通过时 ok，且给出需求体积与驱动结论`
   - 原断言：`runPreflight(...).driver === 'not-required'`。
   - 必须改的理由：M4 起预检不再自己判驱动，而是接受 `driverVerdict` 输入（判定在 `driver.ts`，要注入探测）；不注入时结论是 `unknown`，**绝不能默认成通过**。
   - 新期望证据：不注入 → `unknown`；注入 `not-required` → `not-required` 且 `ok` 为真。
-- 同文件 :: `设置解析与安装根：坏文件回落默认值，用户值优先`
+- `plugins/omnimux-workflow/src/workflow/comfyBackend/comfyBackendPreflight.test.mjs` :: `设置解析与安装根：坏文件回落默认值，用户值优先`
   - 原断言：`parseSettings` 结果与 `{installRoot, modelsPath}` 深比。
   - 必须改的理由：设置新增 `variant`（M4 方案选择），解析结果多一个字段。
   - 新期望证据：`parseSettings` 结果含 `variant: ''`；坏值回落仍成立。
@@ -81,7 +81,7 @@ M2a–M3 把 mac arm64 这条路走通。要 1:1 对齐 MiniMax 的平台矩阵�
   - 原断言：`target.torch.wheel` 与 `target.torch.sha256`。
   - 必须改的理由：`torch` 从单个 wheel 变成 wheel 数组（AMD 那条要装 torch 2.4.1 + torchvision + torch-directml 三个）。
   - 新期望证据：`target.torch.wheels[0].wheel` 含 `cp312`，`wheels[0].sha256` 长度 64。
-- 同文件 :: `不支持的平台显式拒绝，不回退到别的平台产物`
+- `plugins/omnimux-workflow/src/workflow/comfyBackend/plan.test.mjs` :: `不支持的平台显式拒绝，不回退到别的平台产物`
   - 原断言：`win32/x64` → `unsupported-platform`；`linux/x64` → 不支持。
   - 必须改的理由：M4 起 win32/x64 有四套显卡方案（未选方案时不猜，返回 `variant-required` + 选项），linux/x64 有一个候选方案。
   - 新期望证据：`win32/x64` → `variant-required` 且 `options.length > 1`；`linux/x64` → ok 且 `support === 'candidate'`；`darwin/x64`（Rosetta）仍 `unsupported-platform`。
