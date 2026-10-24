@@ -19,6 +19,14 @@ import { taskSpecs, readSpecSections, SPEC_SECTION_MIN_CHARS } from './guard-qua
 
 const isTestPath = path => /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(path.replace(/\\/g, '/')) && !/\.md$/i.test(path);
 const isFixturePath = path => /(^|\/)(fixtures?|mocks?|test-data)(\/|$)|(\.|\/)(fixture|mock)\.[a-zA-Z0-9]+$/i.test(path.replace(/\\/g, '/'));
+
+/**
+ * 受评估契约保护的路径：测试文件且非夹具。
+ * hook 与 CI 侧声明校验共用同一判定，避免两处口径漂移。
+ */
+export function isProtectedTestPath(path) {
+  return isTestPath(path) && !isFixturePath(path);
+}
 function testDecision(inspection) {
   return inspection.allowed ? { permissionDecision: 'allow' } : {
     permissionDecision: 'deny',
@@ -454,7 +462,7 @@ export function handle(rawInput) {
     const target = resolve(cwd, filePath.replace(/\\/g, '/'));
     if (target === REPO_ROOT) return formatHookOutput({ permissionDecision: 'deny', reason: 'Repository root is not a file target' }, hookEventName);
     const repoPath = repoRelativePath;
-    const protectedPath = path => { const ownedPath = repoPath(path); return isTestPath(ownedPath) && !isFixturePath(ownedPath); };
+    const protectedPath = path => isProtectedTestPath(repoPath(path));
     let actualTarget = target;
     if (!protectedPath(target)) {
       try { actualTarget = realpathSync(target); }

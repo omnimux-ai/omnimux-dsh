@@ -112,7 +112,28 @@
 - **M1（中）** `evaluateAntiCheat` 会被攻击者自建的嵌套 `.git` 当作声明来源而放行；同一目标经 `handle()` 会 deny。变更点 5 宣称的「两入口判定一致」因此不成立（该函数目前未接入 hook/CI，属潜在缺口）。
 - **L1/L2/L3/L5** 「≥20 非空白字符」几乎不设防；同名用例一条声明覆盖全部；声明不绑定某次编辑或提交；新增测试**没有**覆盖 `handle()` + 真读磁盘 spec 的放行路径。
 
-**结论：本 PR 在修复 H1 之前不得合入。** 写入时刻的门禁天然只能提供早期反馈；真正闭环需要 CI 侧按 commit range 复核声明（见 `scripts/test-change-review.mjs`，其 `scan` 目前从未被 CI 调用）。该修复属设计变更，需先确认方向。
+**结论：本 PR 在修复 H1 之前不得合入。** 写入时刻的门禁天然只能提供早期反馈；真正闭环需要 CI 侧按 commit range 复核声明。
+
+### H1 的闭环（已实现）
+
+按「补 CI 侧校验」落地，写入时刻的门禁保留为早期反馈：
+
+- 新增 `scripts/verify-test-standard-declarations.mjs`：对**本提交范围**内被削弱的既有测试用例，要求**同一范围**的 spec 里有逐条声明；否则退出码 1 并点名缺失用例。
+- 声明只从**已提交**内容读取（`readEvaluationChanges` 的 blob），未跟踪的 `specs/*.md` 与事后删除的声明都不算数。判定口径与 hook 共用 `isProtectedTestPath` / `inspectTestStandardChange` / `parseOldStandardDeclarations` / `matchOldStandardDeclarations`，避免两处漂移。
+- `scripts/test-change-review.mjs` 抽出 `readEvaluationChanges(root, base, { requireClean })`：`scan` 保持「候选必须干净」的既有契约；声明校验只读已提交范围，因此显式关闭该要求（HEAD 身份仍前后各校验一次），否则本地脏检出无法预览结论。
+- 接线：`.github/workflows/quality-gate.yml` 新增步骤，用仓库既有的 `QA_BASE`（PR base / merge_group base / push before / origin/main）作为范围基线；`fetch-depth: 0` 已满足历史需求。
+- 新增 `scripts/lib/git-fixture-repo.mjs`（临时 git 仓库夹具，登记为 `ciRequired`）：测试文件受评估契约保护，不允许新增 `node:child_process` 之类高风险导入，故夹具单独成模块。
+
+### 已知盲区（显式报告，不阻断）
+
+acorn 解析不了 TypeScript 注解，因此 `.test.ts` / `.spec.ts` 一律得到 `unsupported-or-incomplete-test-syntax`。实测仓库有 **254 个** TS 测试文件，抽样 3 个全部无法解析；hook 同样处理不了它们——这是既有机制的限制，不是本次引入。校验器把这类文件计入 `unevaluable` 并在输出中列出，**不因此判失败**，否则任何触碰其中之一的 PR 都会挂。关闭它需要 TS 感知的解析器，属独立任务。
+
+## 旧标准变更
+
+- `scripts/verify-test-standard-declarations.test.mjs` :: `未跟踪的 spec 声明不算数（H1：声明必须进本范围）`
+  - 原断言：该用例把「声明只写在工作区、未提交」构造成可评估场景，并断言得到违规。
+  - 必须改的理由：`readEvaluationChanges` 要求候选检出干净（CI 前提），未跟踪文件本身就会让它抛 `candidate-has-uncommitted-changes`，因此该用例**断言不到目标性质**——它断言的是我的测试设计缺陷，不是实现行为。同一性质有等价且更准确的表达：把声明放进 base 提交（属于范围之外），断言它不被计入授权。
+  - 新期望与证据：改用例名「范围外的旧声明不算数（声明必须随本范围提交）」，断言 `declarationCount === 0` 且缺失 `keeps contract`。证据：`node --test scripts/verify-test-standard-declarations.test.mjs` 全绿。
 
 ## 假设
 
