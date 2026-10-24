@@ -18,7 +18,7 @@ const result = await esbuild.build({
   external: [
     'react', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'react-dom', 'react-dom/client',
     '@deepseek-ai/cordis', '@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-client-locale',
-    '@deepseek-ai/dsh-client-runtime', '@deepseek-ai/dsh-client-ui-primitives',
+    '@deepseek-ai/dsh-client-ui-renderer', '@deepseek-ai/dsh-client-ui-primitives',
   ],
 })
 

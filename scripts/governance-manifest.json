@@ -111,6 +111,7 @@
     "verify-bilingual-docs.mjs",
     "verify-cross-plugin-model-alignment.mjs",
     "verify-cross-plugin-model-alignment.test.mjs",
+    "verify-dsh-declaration-range.mjs",
     "verify-dsh-lockfile-uniform.mjs",
     "verify-dsh-lockfile-uniform.test.mjs",
     "verify-governance-registry.test.mjs",

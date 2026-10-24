@@ -81,7 +81,7 @@ importers:
         specifier: 5.2.0
         version: 5.2.0
       '@deepseek-ai/dsh-client-ui-primitives':
-        specifier: '>=0.1.0-rc.6'
+        specifier: '>=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0'
         version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
       '@deepseek-ai/schemastery':
         specifier: 3.18.4
@@ -148,7 +148,7 @@ importers:
   plugins/omnimux-accounts:
     dependencies:
       '@deepseek-ai/dsh-client-ui-primitives':
-        specifier: '>=0.1.0-rc.6'
+        specifier: '>=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0'
         version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
       dsh-ui-kit:
         specifier: file:../../packages/dsh-ui-kit
@@ -167,7 +167,7 @@ importers:
   plugins/omnimux-analytics:
     dependencies:
       '@deepseek-ai/dsh-client-ui-primitives':
-        specifier: '>=0.1.0-rc.6'
+        specifier: '>=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0'
         version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
       dsh-ui-kit:
         specifier: file:../../packages/dsh-ui-kit
@@ -214,7 +214,7 @@ importers:
   plugins/omnimux-assets:
     dependencies:
       '@deepseek-ai/dsh-client-ui-primitives':
-        specifier: '>=0.1.0-rc.6'
+        specifier: '>=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0'
         version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
       dsh-ui-kit:
         specifier: file:../../packages/dsh-ui-kit
@@ -236,7 +236,7 @@ importers:
         specifier: '>=4.0.1'
         version: 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
       '@deepseek-ai/dsh-client-ui-primitives':
-        specifier: '>=0.1.0-rc.6'
+        specifier: '>=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0'
         version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
       dsh-ui-kit:
         specifier: file:../../packages/dsh-ui-kit
@@ -289,40 +289,40 @@ importers:
         specifier: ^4.0.2
         version: 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
       '@deepseek-ai/dsh-agent':
-        specifier: ^0.1.5-rc.3
+        specifier: ^0.1.5-rc.3 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.5-rc.3(8d75d7cb534b53315dab40af8db9c2e2)
       '@deepseek-ai/dsh-api-gateway':
-        specifier: ^0.1.5-rc.3
+        specifier: ^0.1.5-rc.3 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.5-rc.3(@deepseek-ai/cordis@4.0.2)
       '@deepseek-ai/dsh-attachment':
-        specifier: ^0.1.5-rc.3
+        specifier: ^0.1.5-rc.3 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.5-rc.3(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-brand@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
       '@deepseek-ai/dsh-client-connection':
-        specifier: ^0.1.5-rc.3
+        specifier: ^0.1.5-rc.3 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.5-rc.3(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
       '@deepseek-ai/dsh-client-locale':
-        specifier: ^0.1.5-rc.3
+        specifier: ^0.1.5-rc.3 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.5-rc.3(@deepseek-ai/cordis@4.0.2)
       '@deepseek-ai/dsh-client-ui-settings':
-        specifier: ^0.1.5-rc.3
+        specifier: ^0.1.5-rc.3 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.5-rc.3(@deepseek-ai/cordis@4.0.2)
       '@deepseek-ai/dsh-client-ui-slots':
-        specifier: ^0.1.5-rc.3
+        specifier: ^0.1.5-rc.3 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.5-rc.3(@deepseek-ai/cordis@4.0.2)
       '@deepseek-ai/dsh-home-paths':
-        specifier: ^0.1.5-rc.3
+        specifier: ^0.1.5-rc.3 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.5-rc.3(@deepseek-ai/cordis@4.0.2)
       '@deepseek-ai/dsh-host-webserver':
-        specifier: ^0.1.5-rc.3
+        specifier: ^0.1.5-rc.3 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.5-rc.3(@deepseek-ai/cordis@4.0.2)
       '@deepseek-ai/dsh-llm':
-        specifier: ^0.1.5-rc.3
+        specifier: ^0.1.5-rc.3 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.5-rc.3(@deepseek-ai/cordis@4.0.2)
       '@deepseek-ai/dsh-session-persistence':
-        specifier: ^0.1.5-rc.3
+        specifier: ^0.1.5-rc.3 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.5-rc.3(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-brand@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))(@deepseek-ai/dsh-session@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-scope@0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))))(@deepseek-ai/dsh-timeout@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
       '@deepseek-ai/dsh-tools':
-        specifier: ^0.1.5-rc.3
+        specifier: ^0.1.5-rc.3 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.5-rc.3(de9a4278320d06bc9f4d9e1dd4310962)
       '@deepseek-ai/schemastery':
         specifier: ^3.18.2
@@ -402,7 +402,7 @@ importers:
   plugins/omnimux-clip:
     dependencies:
       '@deepseek-ai/dsh-client-ui-primitives':
-        specifier: '>=0.1.0-rc.6'
+        specifier: '>=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0'
         version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
       '@gsap/react':
         specifier: ^2.1.2
@@ -574,7 +574,7 @@ importers:
   plugins/omnimux-inspiration:
     dependencies:
       '@deepseek-ai/dsh-client-ui-primitives':
-        specifier: '>=0.1.0-rc.6'
+        specifier: '>=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0'
         version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
       dsh-ui-kit:
         specifier: file:../../packages/dsh-ui-kit
@@ -599,7 +599,7 @@ importers:
   plugins/omnimux-intercept:
     dependencies:
       '@deepseek-ai/dsh-base':
-        specifier: ^0.1.5-rc.3
+        specifier: ^0.1.5-rc.3 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.5-rc.3(e05e2337ba7ecd0ed16185fd69464e03)
     devDependencies:
       '@types/node':
@@ -661,7 +661,7 @@ importers:
   plugins/omnimux-products:
     dependencies:
       '@deepseek-ai/dsh-client-ui-primitives':
-        specifier: '>=0.1.0-rc.6'
+        specifier: '>=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0'
         version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
       dsh-ui-kit:
         specifier: file:../../packages/dsh-ui-kit
@@ -720,10 +720,10 @@ importers:
   plugins/omnimux-studio:
     dependencies:
       '@deepseek-ai/dsh-client-locale':
-        specifier: 0.1.2-rc.1
+        specifier: 0.1.2-rc.1 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.2-rc.1(@deepseek-ai/cordis@4.0.2)
       '@deepseek-ai/dsh-client-ui-primitives':
-        specifier: 0.1.2-rc.1
+        specifier: 0.1.2-rc.1 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.2-rc.1(@deepseek-ai/cordis@4.0.2)
       dsh-better-sidebar:
         specifier: 0.18.0
@@ -750,7 +750,7 @@ importers:
   plugins/omnimux-video-preview:
     dependencies:
       '@deepseek-ai/dsh-client-ui-primitives':
-        specifier: '>=0.1.0-rc.6'
+        specifier: '>=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0'
         version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
       dsh-ui-kit:
         specifier: file:../../packages/dsh-ui-kit
@@ -866,7 +866,7 @@ importers:
         specifier: ^6.43.9
         version: 6.43.9
       '@deepseek-ai/dsh-client-ui-primitives':
-        specifier: '>=0.1.0-rc.6'
+        specifier: '>=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0'
         version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
       '@lezer/highlight':
         specifier: ^1.2.3
@@ -6279,7 +6279,7 @@ packages:
     resolution: {directory: packages/dsh-ui-kit, type: directory}
     engines: {node: '>=22.19.0'}
     peerDependencies:
-      '@deepseek-ai/dsh-client-ui-primitives': '>=0.1.0-rc.6'
+      '@deepseek-ai/dsh-client-ui-primitives': '>=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0'
       react: '>=18.2.0'
       react-dom: '>=18.2.0'
 
@@ -8860,8 +8860,8 @@ snapshots:
       '@babel/code-frame': 7.29.7
       '@deepseek-ai/cordis': 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
       '@deepseek-ai/cordis-plugin-timer': 1.1.4(@deepseek-ai/cordis@4.0.2)
-      '@deepseek-ai/cosmokit': 1.8.3
-      '@deepseek-ai/schemastery': 3.18.2
+      '@deepseek-ai/cosmokit': 1.8.6
+      '@deepseek-ai/schemastery': 3.18.4
       chokidar: 4.0.3
       picomatch: 4.0.7
 
@@ -8880,7 +8880,7 @@ snapshots:
   '@deepseek-ai/cordis-plugin-timer@1.1.4(@deepseek-ai/cordis@4.0.2)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
-      '@deepseek-ai/cosmokit': 1.8.3
+      '@deepseek-ai/cosmokit': 1.8.6
 
   '@deepseek-ai/cordis@4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)':
     dependencies:
@@ -9273,7 +9273,7 @@ snapshots:
   '@deepseek-ai/dsh-client-locale@0.1.2-rc.1(@deepseek-ai/cordis@4.0.2)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
-      '@deepseek-ai/schemastery': 3.18.2
+      '@deepseek-ai/schemastery': 3.18.4
 
   '@deepseek-ai/dsh-client-locale@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2)':
     dependencies:
