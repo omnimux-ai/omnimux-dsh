@@ -140,7 +140,11 @@ dsh 出厂只有 `read_image`：它存在的目的是把图片塞进**模型上�
 
 ## 配置
 
-`crosery-viewer` 命名空间，四个开关，默认值都是「插件该有的行为」：
+设置就是本插件自己的 `Config`（`ViewerSettingsSchema`），由 harness 的设置服务投影成表单。0.2.x 世代按本插件的 profile 条目 id（`omnimux-viewer`）定位，写进当前 profile patch；0.1.x 世代是 `$DSH_HOME/settings.yaml` 里的 `crosery-viewer` 命名空间。
+
+> **从 0.1.x 升级上来**：旧的 `crosery-viewer:` 段**不会**被导入（harness 只迁移它自己的内置段），四个开关会回落到默认值。请在设置界面里重新设一次。
+
+四个开关，默认值都是「插件该有的行为」：
 
 | 字段 | 默认 | 关掉之后 |
 | --- | --- | --- |

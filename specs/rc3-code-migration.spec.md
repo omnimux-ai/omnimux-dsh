@@ -68,6 +68,26 @@
 
 **界面改动的端到端证据（新增）**：viewer 的卡片没有任何页面入口（它经 `ctx.slots.register('tool.call.toolview', …)` 注册），既有工作树 Web 验收只覆盖侧边栏应用页，所以补了一个专用场景 `node scripts/worktree-web-qa.mjs viewer-card`：把插件客户端半边连同 React 编译后在真实 Chrome 内核里 `apply()`、注册、渲染运行中的 `display_file` 调用，读 DOM 断言卡片头部出现路径，并留存截图与报告。裁决文件是 `plugins/omnimux-viewer/tests/e2e/viewer-card-rc3.e2e.test.js`（与 `flow-alignment.e2e.test.js` 同一约定：只裁决证据，不自己起浏览器）。实测：场景 PASS，截图 1280x713 渲染出 `title.video /tmp/qa-viewer-card.mp4 state.running`，e2e 测试 1/1 通过。
 
+## 独立审查的整改（第一轮 FAIL → 已修）
+
+| 缺陷 | 整改 |
+| --- | --- |
+| D1 `plugins/omnimux-browser/tests/browser-context.spec.ts` 断言过期（rc.3 删除共享 `plugin` kind） | 断言改为自有 kind `'omnimux-browser-context'`（旧标准变更见下节）；`npx vitest run tests/browser-context.spec.ts` 5/5 通过。该包**没有** `test` 脚本、CI 也不跑它的 27 个 spec 是既有缺口，另开 issue 跟踪，不在本 PR 内顺手接一个必然发红的套件 |
+| D2 端到端证据未入库、未接门禁 | `docs/evidence/viewer-card-qa-report.json` 与 `viewer-card-qa.png` 强制入库（同 `flow-alignment` 约定）；并把 `tests/e2e/viewer-card-rc3.e2e.test.js` **显式**写进 viewer 的 `test` 脚本，使 CI 的 workspace 测试会裁决这份证据（不带上既有的 #3054 真实浏览器用例，避免受其抖动影响） |
+| D3 设置持久化 key 变更未披露、文档仍写旧机制 | README / README.zh / VENDOR.md 改为 rc.3 语义（设置席=插件 `Config`，按 profile 条目 id 定位，写 profile patch），并明示「0.1.x 的 `crosery-viewer:` 段不会被导入，四个开关回落默认值，请在设置界面重设一次」；`VIEWER_SETTINGS_NAMESPACE` 标注为兼容保留常量 |
+| O2 `plugins/omnimux-automation` 的 schemastery 仍 `^3.18.1` | 改为 `^3.18.5`，与全仓一致 |
+
+**观察项（不阻塞，留作后续）**：market 的 `src/client/tool-views.js` 仍是迁移前的两臂读法（无 `phase` 判断，且该文件不在 market 的 tsconfig include 内）；已安装树里仍有约 110 个 `0.1.5-rc.3` 条目，来源是 `omnimux-intercept` 的 peer 范围加 `autoInstallPeers`（本 PR 只声称 dependencies/devDependencies 统一，不声称已安装树全为 rc.3）；browser 包无 `typecheck` 脚本，其类型检查用 `tsc -b` 复现。
+
+## 旧标准变更
+
+rc.3 删除了共享的消息来源 kind `plugin`（`MessageSourceMap` 改为各插件自行合并声明），browser 插件随之声明自有 kind。以下既有断言的标准被更新，原断言与新期望如下：
+
+- `plugins/omnimux-browser/tests/browser-context.spec.ts` :: `browser page context > builds plugin-owned snapshot context for the model`
+  - 原断言：快照消息的 `source.kind` 深度等于 `'plugin'`。
+  - 必须改的理由：rc.3 起 `'plugin'` 已不是合法 kind（宿主侧类型里不存在），继续断言它等于在断言一个已被删除的契约；实现已按 rc.3 的 merge-extensible 方式声明自有 kind。
+  - 新期望证据：`source.kind === 'omnimux-browser-context'`，其余字段（plugin / form / sections）保持不变；`npx vitest run tests/browser-context.spec.ts` 通过。
+
 ## 残留
 
 - 声明面双代范围（#3725）独立保留，可单独回滚本 issue 的提交。

@@ -84,7 +84,11 @@ The route **never accepts a path from the browser.** At tool time the host signs
 
 ## Configuration
 
-Settings namespace `crosery-viewer`. Every default is the behaviour the plugin exists to provide; each flag gives one piece back.
+Settings are this plugin's own `Config` (`ViewerSettingsSchema`), projected by the harness's settings service. On the 0.2.x generation the form is keyed by this plugin's profile entry id (`omnimux-viewer`) and written into the active profile patch; on the 0.1.x generation it was the `crosery-viewer` namespace inside `$DSH_HOME/settings.yaml`.
+
+> **Upgrading from 0.1.x:** the old `crosery-viewer:` section is *not* imported — the harness migrates only its own built-in sections — so the four flags fall back to their defaults. Set them once in the settings UI.
+
+Every default is the behaviour the plugin exists to provide; each flag gives one piece back.
 
 | Field | Default | Turning it off |
 | --- | --- | --- |
