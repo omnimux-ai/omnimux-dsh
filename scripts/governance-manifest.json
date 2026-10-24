@@ -46,6 +46,8 @@
     "impact-matrix.test.mjs",
     "import-gxgen-inspirations.mjs",
     "import-gxgen-inspirations.test.mjs",
+    "lib/child-lifecycle.mjs",
+    "lib/child-lifecycle.test.mjs",
     "lib/git-fixture-repo.mjs",
     "lib/governance-registry.mjs",
     "lib/governance-registry.test.mjs",

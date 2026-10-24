@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { parseDocument } from 'yaml';
 import { readDevDeepSeekCredential, readDevCredentialsBundle } from './test-env-credentials.mjs';
+import { stopOwnedChild } from './lib/child-lifecycle.mjs';
 import { captureCandidate } from './evidence-contract.mjs';
 import { runPnpm } from './managed-tarball.mjs';
 import { privatePnpmEnvironment } from './materialize-cache.mjs';
@@ -622,13 +623,6 @@ async function startFreshTaskRuntime({ options, io, deps }) {
   const signals = deps.signals ?? process;
   const timeout = deps.shutdownTimeoutMs ?? 5000;
   const runtimePrefix = `omnimux-task-${options.evidenceContext.taskId}-${options.evidenceContext.runId}-`;
-  const waitExit = milliseconds => new Promise(yes => {
-    if (!child || (exited && closed)) return yes(true);
-    let timer;
-    const finish = value => { clearTimeout(timer); child.off('exit', check); child.off('close', check); yes(value); };
-    const check = () => { if (exited && closed) finish(true); };
-    child.on('exit', check); child.on('close', check); timer = setTimeout(() => finish(false), milliseconds); check();
-  });
   const onSignal = () => { observations.interrupted = true; void cleanup(); };
   const cleanup = () => cleanupPromise ??= (async () => {
     cleaning = true;
@@ -637,13 +631,11 @@ async function startFreshTaskRuntime({ options, io, deps }) {
     const record = (name, status, reason = null) => resources.push({ name, owner: 'app-environment', status, reason });
     if (!child) record('app-child', 'not-applicable', 'not-created');
     else {
-      let stopped = exited && closed;
-      try {
-        if (!exited) child.kill('SIGTERM');
-        stopped = await waitExit(timeout);
-        if (!stopped && !exited) { child.kill('SIGKILL'); stopped = await waitExit(timeout); }
-      } catch { stopped = false; }
-      record('app-child', stopped ? 'completed' : 'failed', stopped ? null : 'exit-or-close-unconfirmed');
+      // Stop verdict comes from the process exiting; `closed` stays telemetry. Requiring stdio
+      // closure reported a helper-held pipe as an unstopped child.
+      const verdict = await stopOwnedChild(child, { timeoutMs: timeout, isExited: () => exited });
+      observations.appStop = { stopped: verdict.stopped, signals: verdict.signals, killErrors: verdict.killErrors, exited, closed };
+      record('app-child', verdict.stopped ? 'completed' : 'failed', verdict.stopped ? null : 'exit-unconfirmed');
     }
     if (!mock) record('mock-server', 'not-applicable', 'not-created');
     else { try { await mock.close(); record('mock-server', 'completed'); } catch { record('mock-server', 'failed', 'close-failed'); } }
@@ -834,16 +826,6 @@ export function createTestEnvironmentStarter(deps = {}) {
     const observations = { contract: 'none', userFresh: 'unknown', taskBinding: 'unknown', runtimeStarted: false, unexpectedExit: false, events: [], rawOutputRetained: false };
     let releaseOutput = () => {};
     const shutdownMs = deps.shutdownTimeoutMs ?? 5000;
-    const waitExit = async milliseconds => {
-      if (!child || (exited && closed)) return true;
-      return new Promise(yes => {
-        const finish = value => { clearTimeout(timer); child.off('exit', check); child.off('close', check); yes(value); };
-        const check = () => { if (exited && closed) finish(true); };
-        const timer = setTimeout(() => finish(false), milliseconds);
-        child.on('exit', check); child.on('close', check);
-        check();
-      });
-    };
     const onSignal = () => { observations.interrupted = true; startupReject?.(failure('INTERRUPTED')); void cleanup().catch(() => {}); };
     const cleanup = () => cleanupPromise ??= Promise.resolve().then(async () => {
       cleaning = true;
@@ -853,13 +835,9 @@ export function createTestEnvironmentStarter(deps = {}) {
       try { releaseOutput(); } catch { observations.outputReleaseFailed = true; }
       if (!child) record('app-child', 'not-applicable', 'not-created');
       else {
-        let stopped = exited && closed;
-        try {
-          if (!exited) child.kill('SIGTERM');
-          stopped = await waitExit(shutdownMs);
-          if (!stopped && !exited) { child.kill('SIGKILL'); stopped = await waitExit(shutdownMs); }
-        } catch { stopped = false; }
-        record('app-child', stopped ? 'completed' : 'failed', stopped ? null : 'exit-or-close-unconfirmed');
+        const verdict = await stopOwnedChild(child, { timeoutMs: shutdownMs, isExited: () => exited });
+        observations.appStop = { stopped: verdict.stopped, signals: verdict.signals, killErrors: verdict.killErrors, exited, closed };
+        record('app-child', verdict.stopped ? 'completed' : 'failed', verdict.stopped ? null : 'exit-unconfirmed');
       }
       if (!mock) record('mock-server', 'not-applicable', 'not-created');
       else {
