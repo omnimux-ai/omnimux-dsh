@@ -395,7 +395,8 @@ export type ComfyBackendFailure =
   | 'install-failed'
   | 'start-timeout'
   | 'driver-unsatisfied'
-  | 'variant-required';
+  | 'variant-required'
+  | 'unsupported-variant';
 
 export const COMFY_BACKEND_FAILURES: readonly ComfyBackendFailure[] = [
   'unsupported-platform',
@@ -408,6 +409,7 @@ export const COMFY_BACKEND_FAILURES: readonly ComfyBackendFailure[] = [
   'start-timeout',
   'driver-unsatisfied',
   'variant-required',
+  'unsupported-variant',
 ];
 
 /** 已装 pin 与当前目标 pin 是否一致（不一致 = 需要更新）。 */

@@ -11,6 +11,10 @@ import {
 } from './plan.ts';
 import { checkDriver, compareVersions } from './driver.ts';
 import { failureAction, runPreflight } from './preflight.ts';
+import { createComfyBackendService } from './service.ts';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { parseSettings } from './settings.ts';
 
 const DARWIN = resolveComfyBackendTarget('darwin', 'arm64').target;
@@ -165,4 +169,50 @@ test('设置：variant 解析与坏值回落', () => {
   assert.equal(parseSettings('{"variant":"win32-x64-cuda13"}').variant, 'win32-x64-cuda13');
   assert.equal(parseSettings('{"variant":42}').variant, '');
   assert.equal(parseSettings(null).variant, '');
+});
+
+test('选了本平台没有的方案：状态如实报 unsupported-variant，不显示成「已装」', async () => {
+  const dataRoot = mkdtempSync(join(tmpdir(), 'comfy-m4-'));
+  const root = join(dataRoot, 'comfyui-backend');
+  mkdirSync(join(root, 'logs'), { recursive: true });
+  // 假装装过（.ready 在，pin 与 darwin 方案一致），但用户选的方案在本平台不存在。
+  writeFileSync(
+    join(root, '.ready'),
+    JSON.stringify({
+      variant: 'darwin-arm64',
+      comfyui: { commit: DARWIN.comfyui.commit },
+      python: DARWIN.python.version,
+      torch: DARWIN.torch.version,
+    }),
+  );
+  const service = createComfyBackendService({ dataRoot, platform: 'darwin', arch: 'arm64' });
+  const bad = service.updateSettings({ variant: 'win32-x64-cuda13' });
+  assert.equal(bad.ok, true);
+  assert.equal(bad.settings.variant, 'win32-x64-cuda13');
+  const status = await service.status();
+  assert.equal(status.state, 'failed');
+  assert.equal(status.failure, 'unsupported-variant');
+  assert.match(status.message, /不适用/);
+  assert.equal(failureAction('unsupported-variant'), 'choose-variant');
+  // 换回本机方案后恢复正常判定（.ready 的 variant 与本机方案一致 → 已装未启动）。
+  const good = service.updateSettings({ variant: 'darwin-arm64' });
+  assert.equal(good.ok, true);
+  const back = await service.status();
+  assert.equal(back.state, 'installed');
+  assert.equal(back.failure, null);
+  rmSync(dataRoot, { recursive: true, force: true });
+});
+
+test('多候选没选方案：状态报 variant-required（不猜也不显示成可用）', async () => {
+  const dataRoot = mkdtempSync(join(tmpdir(), 'comfy-m4b-'));
+  const root = join(dataRoot, 'comfyui-backend');
+  mkdirSync(join(root, 'logs'), { recursive: true });
+  writeFileSync(join(root, '.ready'), JSON.stringify({ variant: 'win32-x64-cuda12' }));
+  // 用 win32 平台构造 service（模拟 Windows 机器上没选方案）。
+  const service = createComfyBackendService({ dataRoot, platform: 'win32', arch: 'x64' });
+  const status = await service.status();
+  assert.equal(status.state, 'failed');
+  assert.equal(status.failure, 'variant-required');
+  assert.equal(failureAction('variant-required'), 'choose-variant');
+  rmSync(dataRoot, { recursive: true, force: true });
 });

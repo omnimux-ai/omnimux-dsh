@@ -93,7 +93,9 @@ export function failureAction(
 ): 'retry-install' | 'retry-start' | 'choose-dir' | 'update' | 'choose-variant' | 'none' {
   if (failure === 'insufficient-disk' || failure === 'install-dir-not-writable') return 'choose-dir';
   if (failure === 'version-mismatch') return 'update';
-  if (failure === 'driver-unsatisfied' || failure === 'variant-required') return 'choose-variant';
+  if (failure === 'driver-unsatisfied' || failure === 'variant-required' || failure === 'unsupported-variant') {
+    return 'choose-variant';
+  }
   if (failure === 'start-timeout') return 'retry-start';
   if (failure === 'install-failed' || failure === 'port-occupied') return 'retry-install';
   return 'none';

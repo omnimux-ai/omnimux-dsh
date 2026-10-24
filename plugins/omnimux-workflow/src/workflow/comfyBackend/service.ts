@@ -56,6 +56,9 @@ export interface ComfyBackendServiceOptions {
   onLog?: (line: string) => void;
   /** 注入点：驱动探测（测试用假实现；生产由 service 内部按平台探测）。 */
   driverProbe?: DriverProbe;
+  /** 注入点：平台/架构（测试用；生产用 process.platform / process.arch）。 */
+  platform?: string;
+  arch?: string;
 }
 
 export interface ComfyBackendService {
@@ -162,7 +165,11 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
   const resolveTarget = () => {
     const result = options.target
       ? ({ ok: true, target: options.target } as const)
-      : resolveLocalComfyBackendTarget(process.platform, process.arch, settings.variant);
+      : resolveLocalComfyBackendTarget(
+          options.platform ?? process.platform,
+          options.arch ?? process.arch,
+          settings.variant,
+        );
     target = result.ok ? result.target : null;
     targetProblem = result.ok ? null : result;
   };
@@ -387,6 +394,19 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     if (!existsSync(join(root, '.ready'))) {
       return current.state === 'not-installed' ? current : writeState({ state: 'not-installed', stage: null, percent: 0, pid: null });
     }
+    // 目标解析不出来（选了本平台没有的方案 / 多候选没选）→ 如实报错，不能因为
+    // `.ready` 还在就显示成「已装未启动」（实测踩到：界面会说可用，其实用不了）。
+    if (!target && targetProblem) {
+      const mapped = targetFailure(targetProblem);
+      return writeState({
+        state: 'failed',
+        failure: mapped.failure,
+        error: mapped.failure,
+        message: mapped.message,
+        stage: null,
+        percent: 0,
+      });
+    }
     // 已装版本与当前固定目标不一致 → 需要更新，不能当成正常就绪继续跑（M3）。
     if (target && !versionMatches(readReady(), target)) {
       return writeState({
@@ -407,16 +427,12 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
   const install = async (): Promise<ComfyBackendStatus> => {
     if (installing) return readState();
     if (!target && targetProblem) {
-      const failure: ComfyBackendFailure =
-        targetProblem.reason === 'variant-required' ? 'variant-required' : 'unsupported-platform';
+      const mapped = targetFailure(targetProblem);
       return writeState({
         state: 'failed',
-        failure,
-        error: failure,
-        message:
-          failure === 'variant-required'
-            ? '这台机器有多套显卡方案，请先选一个（例如 NVIDIA CUDA 12.8 / CUDA 13.0 / AMD DirectML / Intel XPU）'
-            : '当前设备暂不支持托管后端',
+        failure: mapped.failure,
+        error: mapped.failure,
+        message: mapped.message,
         stage: null,
         percent: 0,
       });
@@ -442,14 +458,12 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
 
   const start = async (): Promise<ComfyBackendStatus> => {
     if (!target) {
-      const failure: ComfyBackendFailure =
-        targetProblem && targetProblem.reason === 'variant-required' ? 'variant-required' : 'unsupported-platform';
+      const mapped = targetFailure(targetProblem);
       return writeState({
         state: 'failed',
-        failure,
-        error: failure,
-        message:
-          failure === 'variant-required' ? '这台机器有多套显卡方案，请先选一个' : '当前设备暂不支持托管后端',
+        failure: mapped.failure,
+        error: mapped.failure,
+        message: mapped.message,
         stage: null,
         percent: 0,
       });
@@ -571,6 +585,11 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     }
     applyRoot(resolveInstallRoot(dataRoot, settings));
     resolveTarget();
+    // 用户改了设置（换方案/换目录）说明在回应上一次失败：清掉粘住的失败标记，
+    // 让状态按新配置重新判定，否则界面会一直显示旧的失败原因。
+    if (readState().state === 'failed') {
+      writeState({ state: 'not-installed', stage: null, percent: 0, pid: null, failure: null, error: null, message: '' });
+    }
     return { ok: true, code: null, settings: settingsApi() };
   };
 
@@ -603,6 +622,17 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
   };
 }
 
+/** 目标解析失败 → 失败码与文案（选到本平台没有的方案不能被折叠成「平台不支持」）。 */
+function targetFailure(problem: { reason: string } | null): { failure: ComfyBackendFailure; message: string } {
+  if (problem && problem.reason === 'variant-required') {
+    return { failure: 'variant-required', message: '这台机器有多套显卡方案，请先选一个' };
+  }
+  if (problem && problem.reason === 'unsupported-variant') {
+    return { failure: 'unsupported-variant', message: '这个方案不适用于当前设备，请换一个方案' };
+  }
+  return { failure: 'unsupported-platform', message: '当前设备暂不支持托管后端' };
+}
+
 function preflightMessage(failure: ComfyBackendFailure, requiredBytes: number, freeBytes: number | null): string {
   if (failure === 'unsupported-platform') return '当前设备暂不支持托管后端';
   if (failure === 'install-dir-not-writable') return '安装目录不可写，请换一个目录';
@@ -616,6 +646,7 @@ function preflightMessage(failure: ComfyBackendFailure, requiredBytes: number, f
   if (failure === 'start-timeout') return '启动超时，请看后端日志';
   if (failure === 'driver-unsatisfied') return '当前驱动不满足这个方案的要求，请换一个方案或先升级驱动';
   if (failure === 'variant-required') return '这台机器有多套显卡方案，请先选一个';
+  if (failure === 'unsupported-variant') return '这个方案不适用于当前设备，请换一个方案';
   return '安装失败';
 }
 
