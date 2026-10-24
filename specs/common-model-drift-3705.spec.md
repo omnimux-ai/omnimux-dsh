@@ -28,7 +28,7 @@
 
 ## 2. 方案
 
-1. `plugins/omnimux-viewer/src/media-viewer/MediaViewerComposerData.js`：把 seedance-2-5 的 480p/720p 两档 label 与 default 对齐中枢真源（4 个字段）。
+1. `plugins/omnimux-viewer/src/media-viewer/MediaViewerComposerData.js`：把 seedance-2-5 的 480p/720p 两档 label 与 default 对齐中枢真源（4 个字段）；并把 `seedream-5-0-pro` 的 `subtitle`/`badge` 也对齐中枢（回退「文生图 / 垫图 · 官方专线」+ badge「官方」vs 中枢「1K-2K」无 badge，经 `parseCatalogToCascade` 映射为 `desc`，同样用户可见）。
 2. `plugins/omnimux-workflow/src/workflow/speechToText/schema.ts`：缺省 model 由 `doubao-asr-bigmodel` 改为 `whisper-1`。
 3. `plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/nodeMediaOperations.ts`：去掉硬编码的 `model`，改由 schema 缺省决定（请求类型里 `model` 本就是可选）。
 4. `plugins/omnimux-workflow/src/shared/api.ts` 注释同步更正，避免文档继续撒谎。
@@ -38,7 +38,7 @@
 
 ## 3. 验收
 
-- [ ] 用同一份脚本对比「查看器回退目录」与「中枢目录」，逐字段差异为 0（当前是 4 处，全在 seedance-2-5）。
+- [ ] 用同一份脚本对比「查看器回退目录」与「中枢目录」，**用户可见字段**（模型 label/subtitle/badge + 分组 label/badge/wireGroup/default/pointsEstimate）差异为 0（改动前：seedance-2-5 4 处 + seedream-5-0-pro 2 处）。
 - [ ] 查看器侧新增用例断言 480p=经济版且非默认、720p=标准版且默认。
 - [ ] 工作流侧新增用例断言缺省 model 为 `whisper-1`；调用方不再出现 `doubao-asr-bigmodel`。
 - [ ] `pnpm --filter omnimux-viewer test`、`pnpm --filter omnimux-workflow test` 通过。

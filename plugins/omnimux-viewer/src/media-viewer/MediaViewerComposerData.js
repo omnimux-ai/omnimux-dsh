@@ -107,8 +107,7 @@ export const DEFAULT_FALLBACK_CATALOG = {
     {
       "id": "seedream-5-0-pro",
       "label": "Seedream 5.0 Pro",
-      "badge": "官方",
-      "subtitle": "文生图 / 垫图 · 官方专线",
+      "subtitle": "1K-2K",
       "family": "seedream",
       "parameters": {
         "aspectRatio": {
