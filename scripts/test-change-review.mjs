@@ -72,7 +72,7 @@ function nulFields(bytes) {
  * `requireClean` 默认 true（`scan` 的既有契约：候选检出必须干净）。声明校验只需已提交
  * 范围，工作区是否脏不影响结论，因此可显式关闭——HEAD 身份仍会被前后各校验一次。
  */
-export function readEvaluationChanges(root, base = 'origin/main', { requireClean = true } = {}) {
+export function readEvaluationChanges(root, base = 'origin/main', { requireClean = true, includePath = null } = {}) {
   root = realpathSync(root)
   if (realpathSync(git(root, ['rev-parse', '--show-toplevel']).trim()) !== root) throw new Error('not-repository-root')
   const clean = () => !git(root, ['status', '--porcelain', '-z', '--untracked-files=all'])
@@ -96,7 +96,10 @@ export function readEvaluationChanges(root, base = 'origin/main', { requireClean
     const oldPath = fields[i++]
     const path = /^[RC]/.test(status) ? fields[i++] : oldPath
     if (!path || !oldPath) throw new Error('truncated-change-list')
-    if (!isEvaluationPath(path) && !isEvaluationPath(oldPath)) continue
+    // 默认只收评估域；`includePath` 供调用方按同一份提交范围额外收拢路径
+    // （声明校验需要 `specs/*.md`，而它不在评估域内）。
+    const wanted = value => isEvaluationPath(value) || (typeof includePath === 'function' && includePath(value))
+    if (!wanted(path) && !wanted(oldPath)) continue
     changes.push({ status, path, oldPath,
       before: status === 'A' ? null : blob(comparisonBase, oldPath), after: status === 'D' ? null : blob(candidate, path),
       beforeMode: status === 'A' ? null : mode(comparisonBase, oldPath), afterMode: status === 'D' ? null : mode(candidate, path) })

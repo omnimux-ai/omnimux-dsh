@@ -37,7 +37,7 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { readEvaluationChanges } from './test-change-review.mjs'
 import { inspectTestAuthoring, inspectTestStandardChange, parseOldStandardDeclarations, matchOldStandardDeclarations } from './test-authoring-inspection.mjs'
-import { readSpecSections, SPEC_SECTION_MIN_CHARS } from './guard-quality-loop.mjs'
+import { readSpecSections, SPEC_SECTION_MIN_CHARS, isSpecPath } from './guard-quality-loop.mjs'
 import { OLD_STANDARD_SECTION, isProtectedTestPath, DECLARABLE_TEST_STANDARD_REASONS } from './guard-anti-cheat.mjs'
 
 const UNEVALUABLE_REASON = 'unsupported-or-incomplete-test-syntax'
@@ -81,7 +81,9 @@ function missingFor({ declarations, path, cases }) {
  */
 export function verifyTestStandardDeclarations({ root, base = 'origin/main' } = {}) {
   // 只读已提交范围，因此不需要工作区干净；HEAD 身份仍由 readEvaluationChanges 前后校验。
-  const { comparisonBase, candidate, changes } = readEvaluationChanges(root, base, { requireClean: false })
+  // `includePath: isSpecPath` 让声明来源与 hook 一致：`specs/*.md` 不在评估域内，
+  // 不额外收拢就会出现「hook 认、CI 不认」的漂移（`specs/<feature>.md` 无 `.spec` 后缀）。
+  const { comparisonBase, candidate, changes } = readEvaluationChanges(root, base, { requireClean: false, includePath: isSpecPath })
   const declarations = collectRangeDeclarations(changes)
   const violations = []
   const unevaluable = []
@@ -90,8 +92,11 @@ export function verifyTestStandardDeclarations({ root, base = 'origin/main' } = 
     const newProtected = isProtectedTestPath(change.path)
     const oldProtected = isProtectedTestPath(change.oldPath)
     if (!newProtected && !oldProtected) continue
-    // 新增受保护测试文件只做加法，不涉及既有标准。
-    if (change.status === 'A' && newProtected && !oldProtected) continue
+    // 新增文件没有 baseline，只可能做加法。不能用 `status === 'A'` 之外的条件判断：
+    // `A` 记录的 `oldPath` 等于 `path`，所以「新路径受保护而旧路径不受保护」永不成立。
+    // 也正因 baseline 缺失会被读成空串（合法 JS），否则新增 TS 测试会被误判成
+    // 「把可解析的测试改成不可解析」而硬拒。
+    if (change.before === null) continue
     // 移出保护集 = 丢弃既有覆盖，按删除处理。
     const movedOut = oldProtected && !newProtected
     // 声明点名的始终是「原本受保护的那个文件」：改名时旧路径才是契约的来处，

@@ -92,7 +92,7 @@
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
 | CI 声明校验（真实范围） | `node scripts/verify-test-standard-declarations.mjs . origin/main` | 退出码 0；`declarationCount: 0`，无违规 |
-| 声明校验测试 | `node --test scripts/verify-test-standard-declarations.test.mjs` | **9/9 通过** |
+| 声明校验测试 | `node --test scripts/verify-test-standard-declarations.test.mjs` | **19/19 通过** |
 | 通道端到端（真实 `handle()`） | 有声明 → allow；撤声明 → deny 并点名缺失用例 | **符合预期** |
 | 门禁自身测试 | `node --test scripts/guard-anti-cheat.test.mjs` | **24/24 通过** |
 | 语法层评估测试 | `node --test scripts/test-authoring-inspection.test.mjs` | 全绿（含既有 `deepEqual` 契约用例） |
@@ -137,6 +137,17 @@
 - **H2「声明跨 PR 复用」**：原先只要求「范围内 spec 有改动」且候选内容里有匹配声明，于是 base 上遗留的旧声明 + 给 spec 加个空行即可放行，diff 里看不到任何新声明。现只统计 **after 相对 before 新增**的声明行。
 - **H5「校验器与 CI 步骤可被同一 PR 改写」**：补上元门禁断言——CLI 对未声明削弱必须退出码 1、对已声明必须 0；`quality-gate.yml` 中必须存在该步骤。
 - **L1**：可声明原因集合收敛为 `guard-anti-cheat.mjs` 单一导出 `DECLARABLE_TEST_STANDARD_REASONS`，CI 侧不再另写一份。
+
+### 第三轮评审后的修正
+
+第三轮确认 H1–H4 的安全方向成立（无零声明削弱通道），但指出**本轮新引入一条阻断级误报**与三处口径/表述问题：
+
+- **F1（已修，阻断级）**：新增任何 acorn 解析不了的受保护测试文件（`.test.ts`、`.test.tsx`、带类型注解的 `.test.mjs`）被判 `evaluation-made-unparseable` 且不可声明 → CI 直接红。仓库最近 800 个提交新增了 9 个 `.test.ts`，属常见动作。根因是 `A` 的 `before` 为 `null` → 读成空串 → 空串是合法 JS 程序，于是误入「销毁可评估性」分支；而本意的跳过条件 `status === 'A' && newProtected && !oldProtected` 是死代码（`A` 记录的 `oldPath` 等于 `path`）。现改为按 `change.before === null` 判定「无 baseline = 纯加法」。
+- **F2（已修）**：`specs/<feature>.md`（无 `.spec` 后缀）不在评估域内，因此被 `readEvaluationChanges` 丢弃，出现「hook 认、CI 不认」。现给 `readEvaluationChanges` 加 `includePath` 选参，声明校验传 `isSpecPath`，让声明来源与 hook 一致。
+- **F3（已加固，但仍不是锁）**：原元门禁只做子串匹配，`echo node scripts/...` 或给步骤加 `if: ${{ false }}` 仍能匹配。现补一条断言，要求该命令**以独立行原样出现**（挡住 echo/注释）。`if:` 条件在文本层无法判定，且 `.github/` 与校验器自身都不在评估保护路径内——同一 PR 移除该步骤不需要声明，唯一会发现的测试恰好由那个步骤自己执行。**因此它是跨 PR 漂移的绊线，不是同 PR 移除的锁**；真正的锁属分支保护 / CODEOWNERS，超出本任务范围，此处如实标注而非宣称已闭环。
+- **F4（如实标注）**：门禁实际覆盖是「受保护 ∩ 评估域」，比 hook 的保护集小——origin/main 上有 48 个受保护但永不被评估的路径（`docs/specs/**` 的非测试产物、`plugins/omnimux-workflow/src/shared/specs/*.ts` 等）。它们今天不是测试契约，可利用性低，但两个集合确实不等。
+- **F5（如实标注）**：fixture 与真实测试路径之间的改名（`tests/fixtures/x.test.mjs → tests/real.test.mjs`）会按 fixture 内容比较并要求为 fixture 的用例名声明，保守但会误导。
+- **F6（已补）**：`docs/contracts/anti-agent-fake-completion-guard.md` §3.1 / §4.2 中「旧标准审查闭环尚未机械接入」的表述已更新为现状，并写明三处已知边界。
 
 ### 已知盲区（显式报告，不阻断）
 

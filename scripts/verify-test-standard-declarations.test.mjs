@@ -229,3 +229,37 @@ test('quality-gate 中存在声明校验步骤（H5：元门禁）', () => {
   assert.match(workflow, /node scripts\/verify-test-standard-declarations\.mjs/)
   assert.match(workflow, /node --test scripts\/verify-test-standard-declarations\.test\.mjs/)
 })
+
+// —— 第三轮评审：F1 误报、F2 口径漂移、F3 元门禁强度 ——
+
+test('新增无法解析的测试文件属于纯加法，不得误报（F1）', () => {
+  withFixtureRepo(repo => {
+    repo.write('README.md', 'base\n')
+    const base = repo.commit('base')
+    // 新增 .test.ts 是仓库里的常见动作（origin/main 上已有数十个），必须零违规。
+    repo.write(TS_FILE, TS_SOURCE)
+    repo.commit('add a TS test')
+    assert.deepEqual(verifyTestStandardDeclarations({ root: repo.root, base }).violations, [])
+  })
+})
+
+test('声明写在 specs/<feature>.md（无 .spec 后缀）同样有效（F2）', () => {
+  withFixtureRepo(repo => {
+    repo.write(TEST_FILE, BEFORE)
+    const base = repo.commit('base')
+    repo.write(TEST_FILE, AFTER)
+    // `isSpecPath` 认 `specs/*.md`；声明来源必须与 hook 一致，否则出现「hook 认、CI 不认」。
+    repo.write('specs/demo.md', `${SPEC_HEADER}\n## 旧标准变更\n\n- \`${TEST_FILE}\` :: \`keeps contract\`\n  - 理由：本次授权。\n`)
+    repo.commit('weaken with a declaration in specs/demo.md')
+    const result = verifyTestStandardDeclarations({ root: repo.root, base })
+    assert.deepEqual(result.violations, [])
+    assert.equal(result.declarationCount, 1)
+  })
+})
+
+test('声明校验步骤必须真的执行该命令，而不是被 echo 或注释掉（F3 加固）', () => {
+  const workflow = readRepoFile(REPO_ROOT, '.github/workflows/quality-gate.yml')
+  assert.ok(workflow)
+  assert.match(workflow, /^\s*node scripts\/verify-test-standard-declarations\.mjs \. "\$QA_BASE"\s*$/m)
+  assert.match(workflow, /^\s*node --test scripts\/verify-test-standard-declarations\.test\.mjs\s*$/m)
+})
