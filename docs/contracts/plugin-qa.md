@@ -215,6 +215,7 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 ## 静态与测试证据
 
 - 按上一节选出的最小命令集合执行，记录命令、退出码、真实用例数与 skip 数。代码变更但测试命令缺失、0 tests、失败或未声明 skip 均不能通过。
+- 行为修复（bug fix）优先先落一个会失败的回归测试再改实现：回归测试即该修复的验收证据，复现旧行为为失败、新行为为通过。这与 Quality Loop 顺序一致——它不是全量 test-first，也不改变 Spec→Code→Verify→Test 的门禁。
 - `pnpm verify:stages` 证明静态 Stage/adapter 合同，不替代隔离工作树浏览器证据。实际 sidebar adapter 仍须覆盖 `getSnapshot`、`subscribe`、`open`、`close`、`set`、`readBox` 及会话隔离/关闭重开行为。
 - 模型研究和参数合同只使用官方文档与离线 `pnpm verify:model-contracts`；不得发真实模型请求探测支持情况。
 - 文档检查的实际能力边界见 [docs governance](docs-governance-standard.md)；没有执行的检查不得写进报告。
