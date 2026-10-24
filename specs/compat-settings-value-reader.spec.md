@@ -10,8 +10,9 @@ DSH `0.2.1-rc.3` 移除了客户端服务 `settingsScope`，改为 `configForms`
 
 ## 范围
 
-- 新增 `plugins/omnimux/src/client/settings-value-reader.js`：注入 `configForms` 与 `settingsScope`，优先 `configForms`，返回一个实时 `read()`（每次调用重新取快照）。
-- 新增 `plugins/omnimux/src/client/settings-value-reader.test.js`：覆盖仅旧服务、仅新服务、两者并存、无服务、服务形状残缺五种情况。
+- 新增 `plugins/omnimux/src/client/settings-value-reader.js`：注入 `configForms` 与 `settingsScope`，优先 `configForms`，返回一个实时 `read()`（每次调用重新取快照）；快照带 `status` 时只有 `ready` 才算可读（Host 停服后残留的旧值不算选择）。
+- 新增 `plugins/omnimux/src/client/settings-value-reader.test.js`、`settings-value-reader-status.test.js`：覆盖仅旧服务、仅新服务、两者并存、无服务、服务形状残缺、缺 inject、loading/unavailable 不读旧值。
+- 新增 `plugins/omnimux/tests/e2e/settings-value-reader.e2e.test.js`（跨模块：reader → 登录门放行/提示）与 `settings-value-reader-wiring.e2e.test.js`（入口接线断言）。
 - 修改 `plugins/omnimux/src/client/index.js`：用该模块替换内联的 `settingsScope` 注入块，仍调用 `setRuntimeChoiceReader(read)`。
 - 不改 `auth-gate.js` 的读取契约，不改设置 UI/schema，不改其他插件。
 

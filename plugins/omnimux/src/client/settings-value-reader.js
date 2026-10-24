@@ -26,17 +26,24 @@ function valueOf(snapshot) {
  * @param {object} options.ctx - client context carrying `ctx.inject`.
  * @param {string} options.namespace - settings namespace owned by this plugin.
  * @param {string} [options.entryId] - Host plugin entry id for `configForms`; defaults to the namespace.
- * @returns {(() => unknown) | null} live reader, or null when no supported service is present.
+ * @returns {(() => unknown) | null} live reader, or null when the context cannot inject at all.
  */
 export function installSettingsValueReader({ ctx, namespace, entryId = namespace }) {
   if (!ctx || typeof ctx.inject !== 'function') return null
   /** @type {{ controller: { getSnapshot?: () => unknown } | null, fromConfigForms: boolean }} */
   const state = { controller: null, fromConfigForms: false }
 
-  /** @returns {unknown} */
+  /**
+   * Read the namespace value. A namespace the Host stopped serving reports
+   * `status: 'unavailable'` while its last value may still sit in the snapshot,
+   * so a stale value never counts as a readable choice.
+   * @returns {unknown}
+   */
   const read = () => {
     if (!state.controller || typeof state.controller.getSnapshot !== 'function') return undefined
-    return valueOf(state.controller.getSnapshot())
+    const snapshot = state.controller.getSnapshot()
+    if (snapshot && typeof snapshot === 'object' && 'status' in snapshot && snapshot.status !== 'ready') return undefined
+    return valueOf(snapshot)
   }
 
   /**
@@ -51,15 +58,16 @@ export function installSettingsValueReader({ ctx, namespace, entryId = namespace
     state.fromConfigForms = fromConfigForms
   }
 
-  ctx.inject(['settingsScope'], scopeCtx => {
-    const binder = scopeCtx?.settingsScope
-    if (!binder || typeof binder.bind !== 'function') return
-    adopt(binder.bind({ namespace }), false)
-  })
+  // Newer service first, so the guard below is the one that actually protects it.
   ctx.inject(['configForms'], formCtx => {
     const forms = formCtx?.configForms
     if (!forms || typeof forms.get !== 'function') return
     adopt(forms.get(entryId), true)
+  })
+  ctx.inject(['settingsScope'], scopeCtx => {
+    const binder = scopeCtx?.settingsScope
+    if (!binder || typeof binder.bind !== 'function') return
+    adopt(binder.bind({ namespace }), false)
   })
 
   return read
