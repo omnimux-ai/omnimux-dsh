@@ -787,6 +787,14 @@ EOF
     exit 1
   fi
 
+  # 物化后依赖快照校验（Issue #3761）：新版宿主启动断言 preset owned 依赖必须指向受管快照；
+  # 这里提前指名失败（缺快照 / 悬空插件清单条目），避免只能等 App 启动才发现。
+  if ! node "$ROOT/scripts/verify-profile-dependency-snapshots.mjs" "$PROFILE"; then
+    restore_refresh_entries
+    echo "✗ Profile 依赖快照校验失败（存在未快照化的 owned 依赖或悬空插件清单条目）；已恢复暂存的安装入口，中止物化。" >&2
+    exit 1
+  fi
+
   # 执行物化后启动演练预检（Materialize Pre-flight / Dry Run）：模拟真实 apply(ctx) 执行与工具契约校验
   if ! node "$ROOT/scripts/verify-profile-preflight.mjs" "$PROFILE"; then
     restore_refresh_entries

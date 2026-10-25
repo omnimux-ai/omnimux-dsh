@@ -234,7 +234,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     const runner = join(fixtureRoot, 'alias-runner')
     mkdirSync(join(runner, 'scripts'), { recursive: true })
     mkdirSync(join(runner, 'plugins/omnimux/src'), { recursive: true })
-    for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'resolve-omnimux-profile.sh', 'sync-main.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py', 'verify-profile-preflight.mjs']) {
+    for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'resolve-omnimux-profile.sh', 'sync-main.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py', 'verify-profile-preflight.mjs', 'verify-profile-dependency-snapshots.mjs']) {
       copyFileSync(join(root, 'scripts', name), join(runner, 'scripts', name))
     }
     cpSync(fixturePlugins, join(runner, 'plugins'), { recursive: true })
