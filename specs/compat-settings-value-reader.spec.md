@@ -39,3 +39,16 @@ DSH `0.2.1-rc.3` 移除了客户端服务 `settingsScope`，改为 `configForms`
 ## 风险
 
 R2。读取失败时登录门维持旧行为（仍提示登录），不会拦截生成或产生错误态；不影响支付、凭据或发布。
+
+## 旧标准变更
+
+- `plugins/omnimux/src/client/settings-value-reader.test.js` :: `settingsScope: reads the live namespace value`
+- `plugins/omnimux/src/client/settings-value-reader-status.test.js` :: `settingsScope: snapshots without a status field keep reading their value`
+
+**原断言**：两个用例都按已退役的 `settingsScope` 服务命名，`fakeCtx` 用 `settingsScope` inject 驱动；`settingsScope` 服务在 DSH 0.2.1 已不存在，原实现也已改为 `configForms`，用例名与实际不再匹配。
+
+**必须改的理由**：`settingsScope` 被上游移除，`configForms` 是兼容两代服务的新接口；用例名与覆盖路径要跟着接口走。按门禁要求，改动只涉及**用例命名与桩的类型**，读取行为不变。
+
+**实际改法**：用例名改成 `configForms:` 前缀，`fakeCtx` 改用 `configForms` 驱动（`forms.get(entryId)` 返回带 `getSnapshot` 的 controller）；`read()` 的行为与断言期望值全部不变。`configForms` 单测原本就在同一文件里（`configForms: reads through get(entryId) and prefers the newer service`），本变更只补齐**另一处 settingsScope 前缀的用例**的命名一致性。
+
+**新期望证据**：`node --test src/client/settings-value-reader*.test.js` 在本机全过（8 用例）。
