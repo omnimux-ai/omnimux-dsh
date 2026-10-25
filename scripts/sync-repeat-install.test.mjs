@@ -44,9 +44,13 @@ function createFixture(t, linker) {
   const env = {
     ...process.env, HOME: home, OMNIMUX_SYNC_VIA: 'internal', OMNIMUX_PLUGINS_DIR: plugins,
     PATH: fakeGitPath(home, home),
-    COREPACK_ENABLE_NETWORK: '0', COREPACK_ENABLE_AUTO_PIN: '0', COREPACK_DEFAULT_TO_LATEST: '0',
-    // Isolated HOME has no pnpm tarball; point corepack at the developer cache so
-    // COREPACK_ENABLE_NETWORK=0 still resolves the pinned 11.7.0 shim.
+    COREPACK_ENABLE_AUTO_PIN: '0', COREPACK_DEFAULT_TO_LATEST: '0',
+    // 隔离的 HOME 里没有 pnpm tarball，所以把 corepack 指到开发者缓存。
+    //
+    // 刻意**不**设 COREPACK_ENABLE_NETWORK=0：关掉联网后，这条回落路径一旦落空
+    // （缓存不在、或 corepack 认的是别的 XDG_CACHE_HOME），用例就变成「缓存不在时
+    // 必然红」——干净机器上第一次跑就是红的，而它验的是「重复 install 幂等」，红得
+    // 与要验的东西无关。保留联网，缺缓存时能自己补回来。
     COREPACK_HOME: process.env.COREPACK_HOME ?? `${process.env.HOME}/.cache/node/corepack`,
     npm_config_offline: 'true', npm_config_ignore_scripts: 'true', npm_config_ignore_pnpmfile: 'true',
     npm_config_verify_deps_before_run: 'false', npm_config_manage_package_manager_versions: 'false',

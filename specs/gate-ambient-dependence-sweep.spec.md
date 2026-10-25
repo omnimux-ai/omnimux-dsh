@@ -16,23 +16,27 @@
 
 ## 结论
 
-| 类别 | 命中 | 判定 |
-| --- | --- | --- |
-| 可能联网（corepack） | 4 个同步类文件 | 上一条已处理 3 个；第 4 个（`sync-repeat-install`）本来就是对的 |
-| 重定向用户目录 | 9 个 | 3 个没查过的逐个实测：都不引用 corepack，也不因此变红 |
-| 依赖本机绝对路径 | 8 个 | 全部只是 fixture 里写死路径，没有一个**要求**某台机器上的路径必须存在 |
-| 要求外部环境变量 | 4 个 | 由 `test:gates` 自带的 preload 满足；单文件裸跑才红，属已知前置条件 |
-| 起服务/占端口 | 8 个 | 逐个实测无影响（用固定/随机端口，不抢外部资源） |
-| git 远端/网络命令 | 1 个（`worktree-delivery`） | 实测死代理下 34/34 通过——用的是本地临时远端 |
+**完整验收面 = 36 个直接测试文件 + 17 个嵌套测试文件 = 53 个**（`test:gates` 直接列出的，加上 `verify-ci-gates.test.mjs` 嵌套跑的那一层）。
 
-**验收面里没有发现新的同类缺陷。** 另外三项对抗性实测一并通过：`qa-label` 5/5、`ci-verdict` 10/10、`guard-worktree.qa` 17/17。
+| 类别 | 命中文件 | 判定 |
+| --- | --- | --- |
+| 可能联网（corepack） | `sync-release-policy`、`sync-targets`、`sync-source-identity`、`sync-repeat-install` | 前两条已修；`sync-source-identity` 的 `sync-stable.sh` 被 stub、`--skip-build` 跳过构建，压根不碰 corepack（死代理下 15/15）；`sync-repeat-install` **是缺陷，已修**（见下） |
+| 重定向用户目录 | `sync-release-policy`、`sync-targets`、`sync-refresh-scope`、`sync-repeat-install`、`sync-source-identity`、`sync-plugin-scope`、`guard-worktree.qa`、`managed-tarball`、`resolve-omnimux-profile` | 后三个逐个实测：都不引用 corepack，也不因此变红 |
+| 依赖本机绝对路径 | `guard-worktree`、`simulate-multi-agent-lifecycle`、`sync-targets`、`test-env-root-diagnosis`、`verify-product-baseline`、`worktree-app-qa-task`、`worktree-app-qa`、`worktree-delivery` | 全部只是 fixture 写死路径，没有一个**要求**某台机器上的路径存在 |
+| 要求外部环境变量 | `evidence-contract`、`guard-quality-loop`、`managed-tarball-transaction`（+ preload 本身） | 由 `test:gates` 自带的 preload 满足；只有报 `EVIDENCE_FIXTURE_ENV_REQUIRED` 时才可判为前置条件问题 |
+| 起服务/占端口 | `dev-replay`、`evidence-contract`、`guard-quality-loop`、`import-gxgen-inspirations`、`managed-tarball-t02.qa`、`materialize-cache`、`style-dom-probe`、`task-runtime-install` | 全验收面只有 `verify-dev-smoke` 真绑端口，且是 `listen(0, '127.0.0.1')` 随机端口，无占用风险 |
+| git 远端/网络命令 | `worktree-delivery`（另 `auto-pipeline`、`ci-verdict`、`git-wt`、`qa-label` 只把 `gh` 当字符串 fixture） | 死代理下 `worktree-delivery` 34/34、`qa-label` 5/5、`ci-verdict` 10/10——用的是本地临时远端 |
+
+**验收面里只发现一个真缺陷**（`sync-repeat-install`，见下），其余同类项均不成立。另有三项对抗性实测一并通过：`guard-worktree.qa` 17/17、`resolve-omnimux-profile` 6/6、`managed-tarball` 44/44。
 
 ## 变更点
 
-扫描过程中发现**一个真实缺陷**（在验收面之外，但属同类）：
+扫描过程中发现**两个真实缺陷**：
 
-- `scripts/managed-tarball.test.mjs`：**在 macOS 上 14/44 必红，与网络无关**。它用系统临时目录建 scratch 目录，而 macOS 的 `/var` 是指向 `/private/var` 的符号链接；归档/物化脚本里的 `assertPath` 会（**正确地**）以 `symlink ancestor` 拒绝任何带符号链接祖先的路径——那是防越权检查。**该改的是测试自己别把符号链接路径喂进去**，而不是放宽那道检查。改为 `realpathSync(tmpdir())`，Linux 上是空操作。
-- `docs/contracts/plugin-qa.md`：把四类「环境红」写进「本机门禁前置条件」旁边的对照表，让后来者先对照再判断，别把环境红当成改动红。
+- `scripts/sync-repeat-install.test.mjs`（**在 `test:gates` 里**）：它同时关掉 corepack 联网、又把缓存位置回落到 `$HOME/.cache/node/corepack`。缓存一旦落空（缓存不在，或 corepack 认的是别的 `XDG_CACHE_HOME`），用例就 **4/4 必红**，报的还是「网络被禁用」——而它验的是「重复 install 幂等」。这正是本次新写进契约的那条反模式，**却是我在扫描里判成「本来就对」的那一个**，由独立复核实测抓出。改为保留联网，缺缓存时自行补齐；实测空缓存 4/4、正常 4/4。
+- `scripts/managed-tarball.test.mjs`：**在 macOS 上 14/44 必红，与网络无关**。它用系统临时目录建 scratch 目录，而 macOS 的 `/var` 是指向 `/private/var` 的符号链接；归档/物化脚本里的 `assertPath` 会（**正确地**）以 `symlink ancestor` 拒绝任何带符号链接祖先的路径——那是防越权检查。**该改的是测试自己别把符号链接路径喂进去**，而不是放宽那道检查。改为 `realpathSync(tmpdir())`，Linux 上是空操作。附带效果：该文件里那条「符号链接输入与解包祖先被拒」的用例**改前其实是假绿**（scratch 自身的 `/var` 祖先先触发），改后才真正测到它本意。
+- `docs/contracts/plugin-qa.md`：把四类「环境红」写进「本机门禁前置条件」旁边的对照表，区分「偶发」与「确定」两种变体，并把「裸跑红可忽略」严格限定到 `EVIDENCE_FIXTURE_ENV_REQUIRED`。
+
 
 ## 假设
 
@@ -58,11 +62,14 @@
 | 死代理下 `worktree-delivery` / `qa-label` / `ci-verdict` | 34/34、5/5、10/10 |
 | 死代理下 `guard-worktree.qa` / `resolve-omnimux-profile` | 17/17、6/6 |
 | 无网络下 `evidence-contract` | 6/7，红的那条是 `EVIDENCE_FIXTURE_ENV_REQUIRED`——走 `test:gates` 即满足，与网络无关 |
+| 空缓存 + 有网络下 `sync-repeat-install`（改前 → 改后） | 4/4 红 → **4/4 绿** |
+| 完整验收面 53 个文件在死代理下（独立复核跑的） | **全绿** |
 | `pnpm test:gates` | **485/485 全绿** |
 
 ## 已知边界
 
-- `materialize-cache.test.mjs`、`managed-tarball-preparation.test.mjs` 在无网络时会红（前者要真装公共包，后者同类），**未修**：它们的联网是设计前提，不在 `test:gates` 执行链里，且修法要么造假、要么改变它们验的东西。已在契约里记录，避免误判。
+- `materialize-cache.test.mjs`、`managed-tarball-preparation.test.mjs` 在无网络时会红，**未修**：它们的联网是设计前提（先真装公共包、再验离线迁移），不在 `test:gates` 执行链里，修法要么造假、要么改变它们验的东西。已在契约里记录，避免误判。
+- `sync-refresh-scope.test.mjs` 不在 `test:gates` 执行链里；上一轮对它的修补属同类正确性修补，不计入验收面的修复数量。
 - 本次只扫 `scripts/*.test.mjs` 这一层（`test:gates` 的实际验收面）。`tests/e2e/`、插件包内测试、Python 侧未扫。
 - 端口类只做了逐条实测，没有做「端口被占用」的对抗条件；这一类若将来出问题，现象会是绑定失败而非偶发红。
 

@@ -206,8 +206,8 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 
 | 形态 | 现象 | 处理 |
 | --- | --- | --- |
-| 检查为隔离环境把子进程的用户目录改到临时目录，而包管理器缓存正好在用户目录下——缓存一丢，每次都要重新下载 | 同步类检查**偶发**报 corepack 下载失败（网络抖动时红、重跑又绿） | 固定缓存位置（`COREPACK_HOME`）。**不要**顺手关掉 corepack 联网：那会把偶发红换成「缓存不在时必然红」，干净机器上第一次跑就是红的 |
-| 检查需要 fixture 环境变量 | 单独跑某个检查文件报 `EVIDENCE_FIXTURE_ENV_REQUIRED` | 用 `pnpm test:gates` 跑（它带 `--import ./scripts/local-evidence-fixture-preload.mjs`）；单文件裸跑的红不代表改动有问题 |
+| 检查为隔离环境把子进程的用户目录改到临时目录，而包管理器缓存正好在用户目录下——缓存一丢，每次都要重新下载 | **偶发**：同步类检查报 corepack 下载失败（网络抖动时红、重跑又绿）。**确定**：缓存位置落空时报同一条错，每次都红 | 固定缓存位置（`COREPACK_HOME`）。**不要**顺手关掉 corepack 联网：那会把偶发红换成「缓存不在时必然红」，干净机器上第一次跑就是红的。已知确定性实例：`scripts/sync-repeat-install.test.mjs` 曾同时关网并回落到 `$HOME/.cache/node/corepack`，缓存一旦不在（或 corepack 认的是别的 `XDG_CACHE_HOME`）就 4/4 必红，而它验的是「重复 install 幂等」——已改为保留联网 |
+| 检查需要 fixture 环境变量 | 单独跑某个检查文件报 `EVIDENCE_FIXTURE_ENV_REQUIRED` | 用 `pnpm test:gates` 跑（它带 `--import ./scripts/local-evidence-fixture-preload.mjs`）；**只有报这个错时**，单文件裸跑的红才不代表改动有问题——其他任何红都要当真。链内需要它的文件如 `scripts/guard-quality-loop.test.mjs` |
 | 检查**故意**先联网装真实公共包、再验离线迁移（如 `scripts/materialize-cache.test.mjs`） | 无网络时必红 | 不是缺陷；这类文件不在 `test:gates` 的执行链里，别拿它的红当验收结论 |
 | macOS 的临时目录路径含符号链接（`/var` → `/private/var`），而归档/物化脚本会**正确地**拒绝符号链接祖先 | 报 `symlink ancestor` | 测试侧把临时目录解析成真实路径（`realpathSync(tmpdir())`）；不要放宽那道防越权检查 |
 
