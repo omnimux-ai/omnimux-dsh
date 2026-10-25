@@ -10,10 +10,13 @@
  * - 每个下载都校验 sha256（错一个字节就失败，不留半成品可用状态）；
  * - 启动用 detached 子进程，只记我们自己的 pid，停止只结束这个 pid；
  * - `userdata/` 与源码目录分离，升级/重装不碰用户数据。
+ * - 宿主退出时关闭本服务启动的后端：`backend-owner.json` 记录宿主与后端 pid，
+ *   退出钩子只对「自己是 owner」的后端发 SIGTERM 并清文件；宿主被 SIGKILL 留下
+ *   残留时，下一次 start 探测到旧宿主已死后先回收再启动（对齐 MiniMax Design）。
  */
 
 import { createHash } from 'node:crypto';
-import { accessSync, closeSync, constants as fsConstants, createWriteStream, existsSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, rmSync, statfsSync, statSync, writeFileSync } from 'node:fs';
+import { accessSync, closeSync, constants as fsConstants, createWriteStream, existsSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, rmSync, statfsSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
@@ -51,6 +54,8 @@ export interface ComfyBackendServiceOptions {
   /** 注入点：测试用假实现，生产用 globalThis.fetch。 */
   fetchImpl?: typeof fetch;
   spawnImpl?: typeof spawn;
+  /** 注入点：端口空闲探测（测试用假实现，避免依赖真实端口环境）。 */
+  portIsFreeImpl?: (port: number) => Promise<boolean>;
   now?: () => number;
   /** 安装/启动过程中的日志行（同时写 `<root>/logs/install.log`）。 */
   onLog?: (line: string) => void;
@@ -62,7 +67,7 @@ export interface ComfyBackendServiceOptions {
 }
 
 export interface ComfyBackendService {
-  paths: { root: string; state: string; log: string; userdata: string; comfyui: string; venv: string; settings: string };
+  paths: { root: string; state: string; log: string; userdata: string; comfyui: string; venv: string; settings: string; owner: string };
   status: () => Promise<ComfyBackendStatus>;
   install: () => Promise<ComfyBackendStatus>;
   start: () => Promise<ComfyBackendStatus>;
@@ -76,6 +81,8 @@ export interface ComfyBackendService {
   targetProblem: () => Extract<ComfyBackendTargetResult, { ok: false }> | null;
   /** 驱动判定（当前目标）。 */
   driverVerdict: () => Promise<{ status: string; detail: string; required: string | null }>;
+  /** 摘除退出钩子；宿主卸载/重建 service 时调用，不杀后端。 */
+  dispose: () => void;
 }
 
 const READY_TIMEOUT_MS = 120_000;
@@ -151,10 +158,12 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     comfyui: join(root, 'ComfyUI'),
     venv: join(root, 'venv'),
     settings: settingsPath,
+    owner: join(root, 'backend-owner.json'),
   };
   const downloads = () => join(paths.root, 'downloads');
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
   const spawnImpl = options.spawnImpl ?? spawn;
+  const checkPortFree = options.portIsFreeImpl ?? portIsFree;
   const now = options.now ?? Date.now;
 
   // 目标解析：用户选的方案优先；没选时「有实测方案」或「只有一个候选」才自动选，
@@ -184,6 +193,7 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     paths.userdata = join(nextRoot, 'userdata');
     paths.comfyui = join(nextRoot, 'ComfyUI');
     paths.venv = join(nextRoot, 'venv');
+    paths.owner = join(nextRoot, 'backend-owner.json');
     mkdirSync(dirname(paths.log), { recursive: true });
     mkdirSync(downloads(), { recursive: true });
     // `--base-directory` 指向 userdata；ComfyUI 启动时会直接 os.listdir 这些子目录，
@@ -315,6 +325,112 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
       clearTimeout(timer);
     }
   };
+
+  // ---- 后端 ownership：宿主退出时关闭本服务启动的后端 ----
+  // `<root>/backend-owner.json` 记录 { hostPid, backendPid }。宿主退出（exit /
+  // SIGINT / SIGTERM）时若文件里的 hostPid 是自己，就对 backendPid 发 SIGTERM
+  // 并清文件；宿主被 SIGKILL 留下的残留，在下次 start 时按 hostPid 死活判定回收。
+  interface BackendOwner {
+    hostPid: number;
+    backendPid: number;
+    claimedAt: number;
+  }
+  const readOwner = (): BackendOwner | null => {
+    const text = readTextOrNull(paths.owner);
+    if (text === null) return null;
+    try {
+      const parsed = JSON.parse(text) as Partial<BackendOwner>;
+      if (typeof parsed.hostPid !== 'number' || typeof parsed.backendPid !== 'number') return null;
+      return { hostPid: parsed.hostPid, backendPid: parsed.backendPid, claimedAt: typeof parsed.claimedAt === 'number' ? parsed.claimedAt : 0 };
+    } catch {
+      return null;
+    }
+  };
+  const writeOwner = (backendPid: number) => {
+    const owner: BackendOwner = { hostPid: process.pid, backendPid, claimedAt: now() };
+    try {
+      writeFileSync(paths.owner, JSON.stringify(owner));
+    } catch (error) {
+      log(`owner 记录写入失败（不影响后端运行）：${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+  const clearOwner = () => {
+    try {
+      unlinkSync(paths.owner);
+    } catch {
+      // 文件本来就不在：正常路径。
+    }
+  };
+  /** 退出钩子：只杀「owner 文件里登记宿主是自己」的后端。同步执行，供 'exit'/信号处理复用。 */
+  const cleanupOwnedBackend = () => {
+    const owner = readOwner();
+    if (!owner || owner.hostPid !== process.pid) return;
+    if (isProcessAlive(owner.backendPid)) {
+      try {
+        process.kill(owner.backendPid, 'SIGTERM');
+        log(`宿主退出：已关闭后端 pid ${owner.backendPid}`);
+      } catch {
+        // 后端在 kill 前已退出：按已清理处理。
+      }
+    }
+    clearOwner();
+  };
+  const onProcessExit = () => cleanupOwnedBackend();
+  // 存自己的 handler，dispose 时只摘自己的，不误删宿主注册的其它信号处理。
+  const signalListeners: Array<{ signal: NodeJS.Signals; listener: () => void }> = [];
+  let exitHookInstalled = false;
+  const installExitHook = () => {
+    if (exitHookInstalled) return;
+    exitHookInstalled = true;
+    process.on('exit', onProcessExit);
+    for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+      const listener = () => {
+        cleanupOwnedBackend();
+        // 清完后把信号重发给进程自身，让默认语义（退出码/父进程看到的信号）不变。
+        process.kill(process.pid, signal);
+      };
+      signalListeners.push({ signal, listener });
+      process.on(signal, listener);
+    }
+  };
+  const dispose = () => {
+    if (!exitHookInstalled) return;
+    exitHookInstalled = false;
+    process.removeListener('exit', onProcessExit);
+    for (const { signal, listener } of signalListeners.splice(0)) {
+      process.removeListener(signal, listener);
+    }
+  };
+  /** 等后端真正退出（SIGTERM 不是瞬时）：最多等 5 秒，期间每 100ms 探一次。 */
+  const waitForExit = async (pid: number, timeoutMs = 5000) => {
+    const deadline = now() + timeoutMs;
+    while (now() < deadline && isProcessAlive(pid)) {
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
+    }
+    return !isProcessAlive(pid);
+  };
+  /**
+   * 孤儿回收：owner 宿主已死但后端还活着时，kill 它并等它退出，再清 owner 文件。
+   * owner 文件缺失的后端（老版本/手工启动）不动——不是本服务拉的，不替用户做杀决定；
+   * owner 宿主还活着时也不动（另一个宿主在用，退出时它自己会收）。
+   */
+  const reapOrphanedBackend = async () => {
+    const owner = readOwner();
+    if (!owner) return;
+    if (owner.hostPid === process.pid) return;
+    if (isProcessAlive(owner.hostPid)) return;
+    if (isProcessAlive(owner.backendPid)) {
+      try {
+        process.kill(owner.backendPid, 'SIGTERM');
+        log(`回收旧宿主遗留的后端 pid ${owner.backendPid}（旧宿主 ${owner.hostPid} 已退出）`);
+        await waitForExit(owner.backendPid);
+      } catch {
+        // 后端在 kill 前已退出：按已清理处理。
+      }
+    }
+    clearOwner();
+  };
+  // ---- ownership end ----
 
   let installing = false;
 
@@ -480,8 +596,11 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
         percent: 0,
       });
     }
+    // 先回收「旧宿主已死的孤儿后端」：上一个宿主被 SIGKILL 留下的实例，端口
+    // 还占着但没人会在它退出时收尾——这里杀掉重启，保证后端属于本进程。
+    await reapOrphanedBackend();
     if (await probeReady()) return writeState({ state: 'ready', message: 'ComfyUI 已就绪' });
-    const portFree = await portIsFree(target.port);
+    const portFree = await checkPortFree(target.port);
     if (!portFree) {
       return writeState({
         state: 'failed',
@@ -507,6 +626,10 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     );
     closeSync(logFd);
     child.unref?.();
+    if (typeof child.pid === 'number') {
+      writeOwner(child.pid);
+      installExitHook();
+    }
     writeState({ state: 'starting', pid: child.pid ?? null, message: '正在启动 ComfyUI' });
     log(`启动 ComfyUI pid=${child.pid ?? 'unknown'}`);
     const deadline = now() + READY_TIMEOUT_MS;
@@ -521,7 +644,7 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
   const preflightFor = async (t: ComfyBackendTarget | null, forInstall: boolean) => {
     const writable = isWritableDir(paths.root);
     const free = forInstall ? freeBytesAt(paths.root) : null;
-    const freePort = t ? await portIsFree(t.port) : true;
+    const freePort = t ? await checkPortFree(t.port) : true;
     const owned = !freePort && (await probeReady());
     const driverVerdict = t ? await checkDriver(t, options.driverProbe ?? {}) : undefined;
     return runPreflight({
@@ -603,6 +726,8 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
         log(`stop: pid ${current.pid} 已不在：${error instanceof Error ? error.message : String(error)}`);
       }
     }
+    // 手动停止＝后端没了，owner 记录同步清掉，避免退出钩子和下次 start 误判。
+    clearOwner();
     writeState({ state: 'installed', pid: null, message: '已停止' });
     return readState();
   };
@@ -619,6 +744,7 @@ export function createComfyBackendService(options: ComfyBackendServiceOptions): 
     currentTarget: () => target,
     targetProblem: () => targetProblem,
     driverVerdict: async () => (target ? checkDriver(target, options.driverProbe ?? {}) : { status: 'unknown', detail: '未解析到目标', required: null }),
+    dispose,
   };
 }
 

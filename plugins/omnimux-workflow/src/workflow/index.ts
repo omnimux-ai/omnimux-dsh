@@ -143,6 +143,8 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
       registerGenerated: (workspaceId, payload) => assetsStore.registerGenerated(workspaceId, payload),
     }),
   });
+  // Issue #3690 M4：宿主退出时关闭 ComfyUI 后端；dispose 只摘钩子，不杀后端。
+  const comfyBackendService = createComfyBackendService({ dataRoot: paths.root });
   const dispatcher = createWorkflowDispatcher({
     getSeam: (name) => ctx.get?.(name),
     getTool: (name) => (ctx as any).tools?.get?.(name) ?? (typeof ctx.get === 'function' ? (ctx.get('tools') as any)?.get?.(name) : undefined),
@@ -162,7 +164,7 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
     // 缺失即登记，保证工作区始终有项目。
     resolveSessionWorkspaceDir: readSessionWorkspaceDir,
     // Issue #3690 M2a：ComfyUI 托管后端（安装/启动/状态）挂在同一 dispatcher 上。
-    comfyBackend: createComfyBackendService({ dataRoot: paths.root }),
+    comfyBackend: comfyBackendService,
   });
 
   // Issue #3237: dev-only failure recorder behind one-command replay. Off
@@ -286,6 +288,8 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
     disposers.length = 0;
     // Flush + detach in-memory executions (persisted state stays recoverable).
     executionManager.disposeAll();
+    // 摘除 ComfyUI 后端的宿主退出钩子；不杀后端，owner 机制管它的生命周期。
+    comfyBackendService.dispose();
   };
 }
 
