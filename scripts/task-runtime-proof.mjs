@@ -5,6 +5,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import semver from 'semver'
 import { compareClientProofBundles, prepareClientProofBundle } from './live-runtime-proof.mjs'
+import { assertSupportPeerExemptionCoverage, exemptionKey, readSupportPeerExemptions, supportPeerExemptionDecision } from './task-runtime-install.mjs'
 
 const SCRIPT_METHOD = 'Debugger.scriptParsed'
 const HASH = /^[a-f0-9]{64}$/
@@ -131,6 +132,49 @@ const prereleasePolicy = spec => /\d+\.\d+\.\d+-[0-9A-Za-z]/.test(spec) ? 'expli
 const samePeerFields = peer => ({ parentName: peer.parentName, parentRoot: peer.parentRoot, name: peer.name,
   spec: peer.spec, optional: peer.optional, versionPolicy: peer.versionPolicy, ...(peer.privateRoot ? { privateRoot: peer.privateRoot } : {}) })
 
+/** The only peer names the host's generation-keyed exemption may relax. */
+const HOST_PEER_NAME = /^@deepseek-ai\/dsh(?:-[a-z0-9._-]+)?$/
+
+/** The verified installed manifest of one declared peer parent, read back from its payload. */
+function installedParentManifest(installation, parentRoot) {
+  const record = installation.packages.find(pkg => pkg.installedRoot === parentRoot)
+  assert.ok(record, 'Task peer parent is outside the installed graph')
+  const manifestRecord = record.payload.find(item => item.path === 'package.json')
+  assert.ok(manifestRecord, 'Installed package manifest is absent from payload')
+  return JSON.parse(installedFile(installation, record, manifestRecord).source)
+}
+
+/**
+ * Resolve one failing host peer against the identity's declared exact-version exemption.
+ *
+ * The truth source and the decision are the installer's own (`readSupportPeerExemptions` /
+ * `supportPeerExemptionDecision`); nothing here restates an exemption list or a host generation.
+ * Only a peer resolved from the shipping app carries a host generation, and the generation used is
+ * the one it actually resolved to, so a declaration written for another generation is stale and
+ * fails with the installer's own code instead of quietly covering it. A private-graph peer is the
+ * installer's own choice, never a host-generation gap, so it is never exempted. A granted outcome
+ * relaxes the peer version range only — every other assertion in `validateTaskPeerResolution` still
+ * runs.
+ */
+function hostPeerExemption(installation, peer, exemptions) {
+  if (!HOST_PEER_NAME.test(peer.name) || peer.scope !== 'shipping-app') return { exempted: false, detail: null }
+  const manifest = installedParentManifest(installation, peer.parentRoot)
+  const key = exemptionKey(manifest.name, manifest.version)
+  // A parent with no exact package@version identity can never be exempted; keep the plain failure.
+  if (key === null) return { exempted: false, detail: null }
+  const decision = supportPeerExemptionDecision({ manifest, hostVersion: peer.version, exemptions })
+  assertSupportPeerExemptionCoverage(decision)
+  if (decision.status === 'granted' && Object.hasOwn(decision.unmet, peer.name)) {
+    return { exempted: true, record: { exempted: true, exemptionKey: decision.key,
+      exemptionHostSpec: decision.row.hostSpec, exemptionReviewedAt: decision.row.reviewedAt } }
+  }
+  if (decision.status === 'undeclared') {
+    return { exempted: false, detail: `${key} declares ${peer.name} ${peer.spec} on dsh ${peer.version} `
+      + 'with no declared peer exemption for that generation' }
+  }
+  return { exempted: false, detail: null }
+}
+
 function validatePeerExpectations(installation) {
   assert.ok(Array.isArray(installation.hostPeerExpectations), 'Task host peer expectations are required')
   const seen = new Set()
@@ -161,11 +205,18 @@ function assertPeerDeclarations(installation) {
 }
 
 /** Pure receipt validation shared by the proof producer and report consumer. */
-export function validateTaskPeerResolution(installation, peers) {
+export function validateTaskPeerResolution(installation, peers, context = {}) {
   validatePeerExpectations(installation)
   assert.ok(Array.isArray(peers), 'Task peer resolution receipts are required')
   assert.equal(peers.length, installation.hostPeerExpectations.length, 'Task peer resolution set is incomplete')
   const expected = new Map(installation.hostPeerExpectations.map(peer => [peerKey(peer), peer]))
+  // The declaration is read only once a version range actually fails, so a task without host peers
+  // never depends on the exemption file. `context.identity` drives the same reader in tests.
+  let exemptions = null
+  const declaredExemptions = () => {
+    if (exemptions === null) exemptions = readSupportPeerExemptions(context.identity)
+    return exemptions
+  }
   const seen = new Set()
   for (const peer of peers) {
     try {
@@ -182,8 +233,17 @@ export function validateTaskPeerResolution(installation, peers) {
       continue
     }
     assert.equal(peer.status, 'resolved', 'Task peer resolution status is invalid')
-    assert.ok(semver.valid(peer.version) && semver.satisfies(peer.version, peer.spec,
-      { includePrerelease: peer.versionPolicy === 'explicit-prerelease-bounds' }), 'Task peer version does not satisfy its declaration')
+    const satisfied = semver.valid(peer.version) && semver.satisfies(peer.version, peer.spec,
+      { includePrerelease: peer.versionPolicy === 'explicit-prerelease-bounds' })
+    if (!satisfied) {
+      // A structurally unmet host peer is exactly what the identity's exact-version exemption
+      // covers; anything undeclared, stale, expired or malformed still fails loudly below.
+      const outcome = hostPeerExemption(installation, peer, declaredExemptions())
+      assert.ok(outcome.exempted, outcome.detail
+        ? `Task peer version does not satisfy its declaration: ${outcome.detail}`
+        : 'Task peer version does not satisfy its declaration')
+      Object.assign(peer, outcome.record)
+    }
     for (const key of ['manifestSha256', 'entrySha256']) assert.match(peer[key], HASH, 'Task peer file digest is invalid')
     assert.ok(typeof peer.packageRoot === 'string' && isAbsolute(peer.packageRoot)
       && resolve(peer.packageRoot) === peer.packageRoot, 'Task peer package root is invalid')

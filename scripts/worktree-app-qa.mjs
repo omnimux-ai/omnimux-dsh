@@ -1009,6 +1009,10 @@ export function validateTaskRuntimeBinding({ root, taskId, runId, taskPlugins, c
     pid: installation.pid, origin, runtimeExecutable: installation.runtimeExecutable, appAnchor: installation.appAnchor,
     dependencyCount: installation.packages.length - plugins.length,
     peerCount: installation.hostPeerExpectations.length,
+    // Declared exact-version exemptions the proof actually applied, so the report carries the
+    // relaxation next to the peer count instead of only inside the raw receipts.
+    peerExemptions: serverLoading.peers.filter(peer => peer?.exempted === true).map(peer => ({ name: peer.name,
+      exemptionKey: peer.exemptionKey, hostSpec: peer.exemptionHostSpec, reviewedAt: peer.exemptionReviewedAt })),
     packages: plugins.map(({ name, version, installedRoot, payload, serverEntry, clientBundle }) => ({ name, version, installedRoot,
       publishedFiles: payload.length, serverEntry, ...(clientBundle ? { clientBundle } : {}) })) } };
 }

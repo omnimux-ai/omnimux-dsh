@@ -163,6 +163,20 @@ export function supportPeerExemptionDecision({ manifest, hostVersion, exemptions
 }
 
 /**
+ * Fail loudly when a declared exemption no longer covers the running host generation.
+ *
+ * Shared by the installer (which writes the profile-local `compatibility.json`) and the runtime
+ * proof (which accepts the relaxed peer range), so both stages refuse a stale or expired
+ * declaration with the same code and detail instead of degrading quietly. A decision that is
+ * neither stale nor expired is returned untouched.
+ */
+export function assertSupportPeerExemptionCoverage(decision) {
+  if (decision.status !== 'stale' && decision.status !== 'expired') return decision;
+  failDetail('INSTALL_SUPPORT_EXEMPTION_STALE', `${decision.key} is declared but does not cover this host (${decision.detail}); `
+    + 're-review scripts/sidebar-support-identity.json peerExemptions instead of falling back silently');
+}
+
+/**
  * Write the profile-local `compatibility.json` the host reads, granting only the exemptions the
  * identity explicitly declares for this exact host generation.
  *
@@ -178,10 +192,7 @@ export function applySupportPeerExemptions({ profile, manifests, hostVersion, id
     assertSidebarSupportIdentity(manifest, identity);
     const decision = supportPeerExemptionDecision({ manifest, hostVersion, exemptions, now });
     if (decision.status === 'not-needed') continue;
-    if (decision.status === 'stale' || decision.status === 'expired') {
-      failDetail('INSTALL_SUPPORT_EXEMPTION_STALE', `${decision.key} is declared but does not cover this host (${decision.detail}); `
-        + 're-review scripts/sidebar-support-identity.json peerExemptions instead of falling back silently');
-    }
+    assertSupportPeerExemptionCoverage(decision);
     if (decision.status === 'undeclared') {
       warnings.push({ code: 'support_exemption_undeclared', package: manifest.name, version: manifest.version, unmet: decision.unmet,
         detail: `${decision.key} has unmet host requirements on dsh ${hostVersion} and no declared exemption; the host will refuse it` });

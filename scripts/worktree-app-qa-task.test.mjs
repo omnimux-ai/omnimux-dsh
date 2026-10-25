@@ -169,3 +169,27 @@ test('consumer requires actual peer receipts that bind declared dependency versi
     assert.throws(() => validateTaskRuntimeBinding(changed), { code: 'TEST_APP_QA_TASK_BINDING' });
   }
 });
+
+test('consumer re-validation preserves applied peer exemptions in the installation summary', () => {
+  const value = bindingFixture();
+  const installedRoot = join(value.installation.privateRoot, 'packages/helper');
+  const payload = [{ path: 'package.json', sha256: '6'.repeat(64), size: 30 },
+    { path: 'index.js', sha256: '7'.repeat(64), size: 10 }];
+  value.installation.packages.push({ name: 'helper', version: '1.2.3', installedRoot, payload });
+  const expectation = { parentName: 'omnimux', parentRoot: value.installation.packages[0].installedRoot,
+    name: 'helper', spec: '^1.0.0', optional: false, versionPolicy: 'semver', privateRoot: installedRoot };
+  value.installation.hostPeerExpectations = [expectation];
+  value.installation.peerProbe = { path: join(value.installation.profile, '.omnimux-task-peers.mjs'), sha256: '8'.repeat(64) };
+  value.serverLoading.peerObserver = Object.assign({}, value.installation.peerProbe,
+    { loadedScriptUrl: pathToFileURL(value.installation.peerProbe.path).href,
+      loadedScriptSha256: value.installation.peerProbe.sha256, matchingScriptCount: 1 });
+  value.serverLoading.peers = [Object.assign({}, expectation, { status: 'resolved', scope: 'private', version: '1.2.3',
+    packageRoot: installedRoot, manifestPath: join(installedRoot, 'package.json'), manifestSha256: payload[0].sha256,
+    entryPath: join(installedRoot, 'index.js'), entrySha256: payload[1].sha256, anchorResolution: null,
+    exempted: true, exemptionKey: 'helper@1.2.3', exemptionHostSpec: '1.2.3', exemptionReviewedAt: '2026-10-25' })];
+  const summary = validateTaskRuntimeBinding(value).installation;
+  assert.deepEqual(summary.peerExemptions, [{ name: 'helper', exemptionKey: 'helper@1.2.3', hostSpec: '1.2.3', reviewedAt: '2026-10-25' }]);
+  const plain = structuredClone(value);
+  plain.serverLoading.peers[0].exempted = false;
+  assert.deepEqual(validateTaskRuntimeBinding(plain).installation.peerExemptions, []);
+});

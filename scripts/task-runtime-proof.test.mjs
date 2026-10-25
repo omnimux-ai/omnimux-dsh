@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, copyFileSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, test } from 'node:test'
 import { assertTaskProofStable, captureTaskClientProof, createTaskPeerProbeSource, validateTaskPeerResolution, verifyTaskServerLoading } from './task-runtime-proof.mjs'
+import { readSidebarSupportIdentity, readSupportPeerExemptions } from './task-runtime-install.mjs'
 
 const roots = []
 afterEach(() => roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })))
@@ -203,10 +204,10 @@ test('client rejects task identity and payload metadata changing during asynchro
   }
 })
 
-async function ownedProcess(installation, body) {
+async function ownedProcess(installation, body, execPath = process.execPath) {
   const runner = join(installation.privateRoot, 'runner.mjs')
   writeFileSync(runner, `${body}\nconsole.log('TASK_PROOF_READY'); setInterval(()=>{},1000);\n`)
-  const child = spawn(process.execPath, ['--inspect=127.0.0.1:0', runner], {
+  const child = spawn(execPath, ['--inspect=127.0.0.1:0', runner], {
     env: { HOME: installation.privateRoot, PATH: '/usr/bin:/bin' }, cwd: installation.privateRoot, stdio: ['ignore', 'pipe', 'pipe'],
   })
   const closed = new Promise(resolve => child.once('close', resolve))
@@ -409,4 +410,184 @@ test('same-PID peer proof rejects a real ancestor package outside the declared p
     .map(pkg => `import ${JSON.stringify(pathToFileURL(join(pkg.installedRoot, pkg.serverEntry.path)).href)};`).join('\n'))
   try { await assert.rejects(verifyTaskServerLoading({ ...child, installation }), /outside its declared private graph/) }
   finally { await child.cleanup() }
+})
+
+// ---------------------------------------------------------------- 声明驱动的精确版本豁免（proof 侧）
+
+// The blocker shape (Issue #3762): a packaged support package whose non-optional host peers
+// declare an older generation than the shipping app actually resolves. The parent identity is
+// always taken from the shipped declaration, never restated as a host version literal here.
+function addHostPeerFixture(installation, options) {
+  const parentRoot = join(installation.privateRoot, options.parentName)
+  mkdirSync(parentRoot, { recursive: true })
+  const spec = '^0.1.5-rc.1'
+  writeFileSync(join(parentRoot, 'package.json'), JSON.stringify({ name: options.parentName, version: options.parentVersion,
+    peerDependencies: { '@deepseek-ai/dsh-agent': spec } }))
+  const parentBytes = readFileSync(join(parentRoot, 'package.json'))
+  installation.packages.push({ name: options.parentName, version: options.parentVersion, installedRoot: parentRoot,
+    payload: [{ path: 'package.json', sha256: hash(parentBytes), size: parentBytes.length }] })
+  installation.appAnchor = join(installation.privateRoot, 'Host.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh/package.json')
+  mkdirSync(dirname(installation.appAnchor), { recursive: true })
+  writeFileSync(installation.appAnchor, JSON.stringify({ name: '@deepseek-ai/dsh', version: options.hostVersion }))
+  const appRoot = installation.appAnchor.split('/app.asar/')[0] + '/app.asar'
+  const peerRoot = join(appRoot, 'node_modules/@deepseek-ai/dsh-agent')
+  mkdirSync(peerRoot, { recursive: true })
+  writeFileSync(join(peerRoot, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh-agent', version: options.hostVersion, main: 'index.js' }))
+  writeFileSync(join(peerRoot, 'index.js'), 'module.exports = 1;\n')
+  mkdirSync(join(parentRoot, 'node_modules/@deepseek-ai'), { recursive: true })
+  symlinkSync(peerRoot, join(parentRoot, 'node_modules/@deepseek-ai/dsh-agent'))
+  installation.hostPeerExpectations = [{ parentName: options.parentName, parentRoot, name: '@deepseek-ai/dsh-agent',
+    spec, optional: false, versionPolicy: 'explicit-prerelease-bounds' }]
+}
+
+function addHostPeerProbe(installation) {
+  installation.profile = join(installation.privateRoot, 'profile')
+  mkdirSync(installation.profile, { recursive: true })
+  const source = createTaskPeerProbeSource({ expectations: installation.hostPeerExpectations, appAnchor: installation.appAnchor })
+  const path = join(installation.profile, 'task-peer-probe.mjs')
+  writeFileSync(path, source)
+  installation.peerProbe = { path, sha256: hash(source) }
+}
+
+function hostPeerReceipt(installation, hostVersion) {
+  const packageRoot = installation.appAnchor.split('/app.asar/')[0] + '/app.asar/node_modules/@deepseek-ai/dsh-agent'
+  const anchorResolution = { packageRoot, version: hostVersion, manifestPath: join(packageRoot, 'package.json'),
+    manifestSha256: '1'.repeat(64), entryPath: join(packageRoot, 'index.js'), entrySha256: '2'.repeat(64) }
+  return Object.assign({}, installation.hostPeerExpectations[0], anchorResolution,
+    { status: 'resolved', scope: 'shipping-app', anchorResolution })
+}
+
+// The shipped identity file is the only exemption truth source; the cases below drive the same
+// reader with an injected identity rather than restating an exemption list of their own.
+function shippedDeclaration() {
+  const identity = readSidebarSupportIdentity()
+  const rows = readSupportPeerExemptions(identity)
+  assert.ok(rows.length, 'the shipped identity must declare at least one peer exemption')
+  return { identity, declared: rows[0] }
+}
+
+function declaredHostFixture(declared) {
+  const installation = fixture()
+  addHostPeerFixture(installation, { parentName: declared.package, parentVersion: declared.version, hostVersion: declared.hostSpec })
+  return installation
+}
+
+test('proof accepts the shipped host peer exemption and records it for audit', () => {
+  const { declared } = shippedDeclaration()
+  const installation = declaredHostFixture(declared)
+  const receipt = hostPeerReceipt(installation, declared.hostSpec)
+  const peers = validateTaskPeerResolution(installation, [receipt])
+  assert.equal(peers[0].exempted, true)
+  assert.equal(peers[0].exemptionKey, `${declared.package}@${declared.version}`)
+  assert.equal(peers[0].exemptionHostSpec, declared.hostSpec)
+  assert.equal(peers[0].exemptionReviewedAt, declared.reviewedAt)
+  assert.equal(peers[0].version, declared.hostSpec)
+  assert.equal(peers[0].spec, '^0.1.5-rc.1')
+  assert.equal(peers[0].scope, 'shipping-app')
+  // The consumer re-validates the very same receipts; audit fields must not disturb that.
+  assert.equal(validateTaskPeerResolution(installation, [receipt])[0].exempted, true)
+})
+
+test('proof still refuses an undeclared host peer and names the missing exemption', () => {
+  const { identity, declared } = shippedDeclaration()
+  const installation = declaredHostFixture(declared)
+  const receipt = hostPeerReceipt(installation, declared.hostSpec)
+  assert.throws(() => validateTaskPeerResolution(installation, [receipt],
+    { identity: Object.assign({}, identity, { peerExemptions: [] }) }), error => {
+    assert.match(error.message, /version does not satisfy/)
+    assert.match(error.message, /with no declared peer exemption/)
+    assert.equal(error.peerResolutionFailure.name, '@deepseek-ai/dsh-agent')
+    assert.equal(error.peerResolutionFailure.spec, '^0.1.5-rc.1')
+    assert.equal(error.peerResolutionFailure.version, declared.hostSpec)
+    assert.equal(error.peerResolutionFailure.scope, 'shipping-app')
+    return true
+  })
+})
+
+test('proof refuses a stale, expired or malformed exemption declaration', () => {
+  const { identity, declared } = shippedDeclaration()
+  const changes = [
+    { name: 'stale host generation', peerExemptions: [Object.assign({}, declared, { hostSpec: '9.9.9' })],
+      code: 'TEST_ENV_INSTALL_SUPPORT_EXEMPTION_STALE' },
+    { name: 'expired review', peerExemptions: [Object.assign({}, declared, { reviewedAt: '2020-01-01' })],
+      code: 'TEST_ENV_INSTALL_SUPPORT_EXEMPTION_STALE' },
+    { name: 'malformed declaration', peerExemptions: 'not-a-list', code: 'TEST_ENV_INSTALL_SUPPORT_EXEMPTION_INVALID' },
+  ]
+  for (const change of changes) {
+    const installation = declaredHostFixture(declared)
+    const receipt = hostPeerReceipt(installation, declared.hostSpec)
+    const injected = Object.assign({}, identity, { peerExemptions: change.peerExemptions })
+    assert.throws(() => validateTaskPeerResolution(installation, [receipt], { identity: injected }), { code: change.code }, change.name)
+  }
+})
+
+test('a granted exemption still rejects changed digests, foreign roots and anchor drift', () => {
+  const { identity, declared } = shippedDeclaration()
+  const granted = Object.assign({}, identity, { peerExemptions: [Object.assign({}, declared)] })
+  const changes = [
+    { name: 'manifest digest', pattern: /digest is invalid/, mutate: peer => { peer.manifestSha256 = 'not-a-digest' } },
+    { name: 'entry digest', pattern: /differs from shipping anchor/, mutate: peer => { peer.entrySha256 = '0'.repeat(64) } },
+    { name: 'foreign package root', pattern: /outside the shipping app/, mutate: peer => {
+      peer.packageRoot = '/repository/node_modules/@deepseek-ai/dsh-agent'
+      peer.manifestPath = join(peer.packageRoot, 'package.json')
+      peer.entryPath = join(peer.packageRoot, 'index.js')
+    } },
+  ]
+  for (const change of changes) {
+    const installation = declaredHostFixture(declared)
+    const receipt = hostPeerReceipt(installation, declared.hostSpec)
+    change.mutate(receipt)
+    assert.throws(() => validateTaskPeerResolution(installation, [receipt], { identity: granted }), change.pattern, change.name)
+  }
+})
+
+test('same-PID server proof accepts the shipped exemption for the blocker peer shape', async () => {
+  const { declared } = shippedDeclaration()
+  const installation = declaredHostFixture(declared)
+  addHostPeerProbe(installation)
+  // The shipping anchor must belong to the actual server executable, so the child runs a copy of
+  // this Node binary placed at the same fake App layout the fixture's anchor describes.
+  const executable = join(installation.privateRoot, 'Host.app/Contents/MacOS/OmniMux')
+  mkdirSync(dirname(executable), { recursive: true })
+  copyFileSync(process.execPath, executable)
+  installation.runtimeExecutable = executable
+  const child = await ownedProcess(installation, installation.packages.filter(pkg => pkg.serverEntry)
+    .map(pkg => `import ${JSON.stringify(pathToFileURL(join(pkg.installedRoot, pkg.serverEntry.path)).href)};`).join('\n'), executable)
+  try {
+    const proof = await verifyTaskServerLoading(Object.assign({}, child, { installation }))
+    assert.equal(proof.runtimeExecutable, executable)
+    assert.equal(proof.peers.length, 1)
+    assert.equal(proof.peers[0].exempted, true)
+    assert.equal(proof.peers[0].scope, 'shipping-app')
+    assert.equal(proof.peers[0].version, declared.hostSpec)
+    assert.equal(proof.peers[0].exemptionKey, `${declared.package}@${declared.version}`)
+    assert.equal(proof.peers[0].exemptionHostSpec, declared.hostSpec)
+    assert.equal(proof.peerObserver.matchingScriptCount, 1)
+    // Counterexamples on the very same real observations: with no declaration the observed peer is
+    // still refused, and a tampered digest stays refused even though the exemption is granted.
+    assert.throws(() => validateTaskPeerResolution(installation, proof.peers, { identity: {} }), /version does not satisfy/, 'undeclared')
+    const tampered = Object.assign({}, proof.peers[0], { entrySha256: '0'.repeat(64) })
+    assert.throws(() => validateTaskPeerResolution(installation, [tampered]), /differs from shipping anchor/, 'tampered digest')
+  } finally { await child.cleanup() }
+})
+
+test('the exemption never covers a private-graph host peer the installer chose itself', () => {
+  const { declared } = shippedDeclaration()
+  const installation = declaredHostFixture(declared)
+  const privateRoot = join(installation.privateRoot, 'private-dsh-agent')
+  mkdirSync(privateRoot)
+  writeFileSync(join(privateRoot, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh-agent', version: declared.hostSpec, main: 'index.js' }))
+  writeFileSync(join(privateRoot, 'index.js'), 'module.exports = 1;\n')
+  const payload = ['package.json', 'index.js'].map(path => {
+    const bytes = readFileSync(join(privateRoot, path))
+    return { path, sha256: hash(bytes), size: bytes.length }
+  })
+  installation.packages.push({ name: '@deepseek-ai/dsh-agent', version: declared.hostSpec, installedRoot: privateRoot, payload })
+  installation.hostPeerExpectations[0].privateRoot = privateRoot
+  const receipt = Object.assign({}, installation.hostPeerExpectations[0], { status: 'resolved', scope: 'private',
+    version: declared.hostSpec, packageRoot: privateRoot, manifestPath: join(privateRoot, 'package.json'),
+    manifestSha256: payload[0].sha256, entryPath: join(privateRoot, 'index.js'), entrySha256: payload[1].sha256,
+    anchorResolution: null })
+  assert.throws(() => validateTaskPeerResolution(installation, [receipt]), /version does not satisfy/, 'private peer')
+  assert.equal(receipt.exempted, undefined)
 })
