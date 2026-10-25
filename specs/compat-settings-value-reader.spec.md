@@ -53,6 +53,27 @@ R2。读取失败时登录门维持旧行为（仍提示登录），不会拦截
 
 **新期望证据**：`node --test src/client/settings-value-reader*.test.js` 在本机全过（8 用例）。
 
+### 0.1.5 分支移除（#3773 追认，#3775 收尾）
+
+本文档 §目标/§范围 描述的「同时支持两代服务」已不再成立：#3773 删除了本模块的
+`ctx.inject(['settingsScope'], …)` 分支，只保留 `configForms`。`settingsScope` 在 DSH
+`0.2.1` 全量运行时包中 0 命中，产品宿主（OmniMux Dev.app，声明宿主代际 `0.2.1-rc.3`）
+不提供该服务，因此「旧宿主兜底」不再是产品契约。
+
+- **仍遗留（本次未改，已登记）**：`plugins/omnimux/src/client/settings-value-reader.js:1-12`
+  的模块头仍按「跨两代服务」叙述（含「新服务胜出」的措辞），`ModelsSettingsCard.jsx:51`
+  仍称写入走 `settingsScope.set / unset`（该组件实际用服务无关的 `scope` prop）。两处都只是
+  注释、无行为影响；它们位于 `src/client/`，改动会把本任务变成客户端变更并触发隔离工作树
+  功能路径浏览器证据门禁，而本任务没有任何可对应的功能路径——用侧栏几何证据顶替就是伪造。
+  因此留到下一个本就携带浏览器证据的客户端 PR 一并修，不在本次范围。
+- 遗留的 e2e 用例 `E2E: 0.1.5 settingsScope value keeps the same bypass behaviour`
+  已改为移除回归用例 `E2E: retired settingsScope service no longer bypasses the login gate`
+  （改前 2/3 通过，改后 3/3）。变更声明见
+  [issue-3775-settings-scope-leftover.spec.md](issue-3775-settings-scope-leftover.spec.md) §旧标准变更。
+- `adopt()` 的 `fromConfigForms` 优先保护**保留**：当前只有一代服务，该分支不可达，
+  但它把「未来若旧服务回归也不得覆盖新服务」写成显式不变量；删除它需要单独评估，
+  不在本次范围。
+
 ### 已知不稳定
 
 - `plugins/omnimux/src/client/ModelsSettingsCard.e2e.test.js` :: `offers hub-listed models only, and shows a hidden one as unchecked`
