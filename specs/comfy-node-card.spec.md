@@ -70,7 +70,7 @@
 ## 旧标准变更
 
 本次**没有删除或削弱任何既有用例**（`ComfyPageOverlay` 与其 `wf-comfy-page-overlay*` 类名、`COMFY_PAGE_OPEN_EVENT`、`comfyPage.card.open` 文案键都无测试引用，已核对）。
-新增用例：`plugins/omnimux-workflow/src/canvas/editor/utils/comfyPageCard.test.mjs`（8 例，纯逻辑）、`plugins/omnimux-workflow/src/canvas/nodes/definitions/comfyPage.test.mjs`（7 例，源码契约）。
+新增用例：`plugins/omnimux-workflow/src/canvas/editor/utils/comfyPageCard.test.mjs`（9 例，纯逻辑）、`plugins/omnimux-workflow/src/canvas/nodes/definitions/comfyPage.test.mjs`（7 例，源码契约）、`plugins/omnimux-workflow/tests/comfy-node-card.e2e.test.mjs`（5 例，端到端契约：可见性坐标、单宿主、全屏不重建、缩放落盘、挂载双向）。
 
 ## 验证证据
 
