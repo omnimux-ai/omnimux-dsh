@@ -237,6 +237,10 @@
   - 原断言：最近手动偏好 `seedance-2-5` / `gpt-image-2.5` 的胜出与「不回写」语义。
   - 理由：夹具改后 `row.fallback` 变为 `gpt-image-2.5`（图像）与 `seedance-2-5`（视频），断言对象随夹具变化。
   - 新期望：语义不变（偏好胜出、目录不被回写），仅型号随新真值调整。
+- `scripts/verify-cross-plugin-model-alignment.test.mjs` :: `baseline repository contracts pass cross-plugin model alignment verification`
+  - 原断言：`whitelistModelsChecked === 8`（文本 1 + 图片 2 + 视频 4 + 音频 1）。
+  - 理由：白名单随网关在售集合收敛（#3734），计数随之变化；该数字仍作金丝雀保留。
+  - 新期望：`whitelistModelsChecked === 5`（文本 1 + 图片 1 + 视频 2 + 音频 1），其余断言不变。
 
 ## 实现期偏离与例外
 

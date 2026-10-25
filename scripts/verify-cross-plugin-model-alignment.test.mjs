@@ -20,9 +20,9 @@ test('baseline repository contracts pass cross-plugin model alignment verificati
   assert.equal(report.ok, true, JSON.stringify(report.issues));
   assert.equal(report.exitCode, 0);
   assert.equal(report.issues.length, 0);
-  // 2026-10-21 网关对账 #3516：画布白名单收敛为 8 款已上架型号
-  // （文本 1 + 图片 2 + 视频 4 + 音频 1；seedance-2-5 / seedance-2-0 各计一次）。
-  assert.equal(report.alignment.whitelistModelsChecked, 8);
+  // 2026-10-25 网关快照（#3734）：成员资格来自网关，画布白名单随之收敛为 5 款
+  // （文本 1 + 图片 1 + 视频 2 + 音频 1）。数字仍作为金丝雀钉住，防止白名单被悄悄改回去。
+  assert.equal(report.alignment.whitelistModelsChecked, 5);
   assert.equal(report.alignment.defaultModelsChecked, 4);
   assert.ok(report.alignment.aspectRatiosChecked >= 8);
   // #1789 / #3516：能力 seam 现在只有 whisper-1 以 listed speech_to_text 进入画布。
