@@ -209,6 +209,35 @@
   - 理由：计费描述改由快照生成，文案格式变为「网关单价 … ≈ 40 积分/5秒」。
   - 新期望：匹配 `/40 积分\/5秒/` 与 `/按秒计费/`，型号与操作指引部分不变。
 
+### F. 画布消费方原子闭环（`omnimux-workflow`，跨插件闭合要求）
+
+网关不再出售 `seedream-5-0-pro`、`seedance-2-0-fast`、`seedance-2-0-mini`，画布侧的可选集合必须同步收敛，否则 CI 的 `omnimux-workflow` 套件红。改动：`generationPolicy.ts` 图像白名单收敛为 `gpt-image-2.5`、视频收敛为 `seedance-2-5` / `seedance-2-0`；测试夹具的「配置默认 vs 策略默认」对照项随之调整（text/image/audio 各只剩一个在售型号，只有 video 仍有两个可选型号，因此 `ALTERNATIVE_CASES` 只剩 video 一项）。
+
+- `plugins/omnimux-workflow/src/shared/generationPolicy.hub.test.mjs` :: `configured defaults survive public catalog projection, adaptation and new nodes for all four outputs (#3312)`
+  - 原断言：配置默认 `seedream-5-0-pro`（图像）/`seedance-2-0-fast`（视频）必须原样出现在投影、适配与新节点上。
+  - 理由：这两个型号已不在网关在售集合内，目录不再列出它们；配置值不再被采纳。
+  - 新期望：图像默认收敛为 `gpt-image-2.5`；视频默认改用 `seedance-2-0`（与策略默认 `seedance-2-5` 仍是不同型号，对照语义保留）。
+- `plugins/omnimux-workflow/src/shared/generationPolicy.hub.test.mjs` :: `adaptation respects a legal catalog default even when the attached policy prefers another model (#3312)`
+  - 原断言：显式注入的目录默认 `seedream-5-0-pro` / `seedance-2-0-fast` 必须被适配采纳。
+  - 理由：同上，这两个型号不再是合法目录项。
+  - 新期望：注入 `gpt-image-2.5` / `seedance-2-0`，断言与原先一致。
+- `plugins/omnimux-workflow/src/shared/generationPolicy.hub.test.mjs` :: `missing policy models fall back only to real remaining rows for all four outputs (#3312)`
+  - 原断言：删掉回退型号后，图像回退到 `seedream-5-0-pro`、视频回退到 `seedance-2-0-fast`。
+  - 理由：回退目标必须是真实在售行；这两个型号已下架。
+  - 新期望：只有 video 仍有「另一个真实行」可回退（`seedance-2-0`），图像与 text/audio 一样无替代项。
+- `plugins/omnimux-workflow/src/shared/generationPolicy.hub.test.mjs` :: `operation recommendations cannot impersonate a model preference or override an explicit operation (#3312)`
+  - 原断言：显式节点参数使用 `seedream-5-0-pro` / `seedance-2-0-fast`。
+  - 理由：同上。
+  - 新期望：改用 `gpt-image-2.5` / `seedance-2-0`，断言不变。
+- `plugins/omnimux-workflow/src/shared/generationPolicy.hub.test.mjs` :: `same-model valid operation recommendations initialize new nodes while invalid recommendations are removed (#3312)`
+  - 原断言：`defaultOperations` 里图像/视频推荐分别指向 `seedream-5-0-pro` / `seedance-2-0-fast`。
+  - 理由：推荐必须指向在售型号，否则会被丢弃，用例语义随之失效。
+  - 新期望：指向 `gpt-image-2.5` / `seedance-2-0`；「无效推荐被移除」的第二段改用 `seedance-2-0`。
+- `plugins/omnimux-workflow/src/shared/generationPolicy.hub.test.mjs` :: `compatible recent manual preferences win only for new nodes and are never rewritten (#3312)`
+  - 原断言：最近手动偏好 `seedance-2-5` / `gpt-image-2.5` 的胜出与「不回写」语义。
+  - 理由：夹具改后 `row.fallback` 变为 `gpt-image-2.5`（图像）与 `seedance-2-5`（视频），断言对象随夹具变化。
+  - 新期望：语义不变（偏好胜出、目录不被回写），仅型号随新真值调整。
+
 ## 实现期偏离与例外
 
 1. **STT 暂不纳入成员资格门禁**：随包快照（匿名口径）不发布任何转写型号，若对 STT 套用「不在快照即下架」，
