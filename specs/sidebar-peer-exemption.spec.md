@@ -107,4 +107,3 @@ node /tmp/omnimux-exemption-proof.mjs no-declaration  # 反例：exit=1 + "Exact
 | 空白检查 | `git diff --check` | 通过 |
 
 环境性失败的证据（与本次改动无关）：该用例断言「向主检出 `scripts/` 写新测试文件应放行」，而 `guard-anti-cheat.mjs` 的 `readSource()` 要求读到的字节等于 `git ls-tree <treeRoot HEAD>` 的 blob。主检出（HEAD `870715aff`）当前有他人未提交改动（含 `plugins/omnimux/src/host/apply.js`），故 `readConfirmedSource` 抛「Source is not confirmed at fixed repository HEAD」→ 判定 deny。同一候选内容：干净树（本工作树）`allow`、主检出树 `deny`；且主检出自身（不含本 diff）跑同一文件也失败（14/19）。本工作树不修改主检出，无法消除该外部条件。
-
