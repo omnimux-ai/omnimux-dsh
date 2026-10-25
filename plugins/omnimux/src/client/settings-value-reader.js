@@ -64,11 +64,7 @@ export function installSettingsValueReader({ ctx, namespace, entryId = namespace
     if (!forms || typeof forms.get !== 'function') return
     adopt(forms.get(entryId), true)
   })
-  ctx.inject(['settingsScope'], scopeCtx => {
-    const binder = scopeCtx?.settingsScope
-    if (!binder || typeof binder.bind !== 'function') return
-    adopt(binder.bind({ namespace }), false)
-  })
+  // settingsScope 服务在 0.2.1 已不存在；configForms 分支已覆盖新路径。
 
   return read
 }

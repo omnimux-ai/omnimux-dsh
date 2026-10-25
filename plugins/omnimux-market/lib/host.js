@@ -403,10 +403,14 @@ export function apply(ctx, config) {
     });
     // 插件配置页按 Host settings 命名空间分发 settings.plugin.item。
     // 不登记 omnimux-market 的话，客户端卡片永远不会被 dispatch。
-    ctx.inject(['settings'], (c) => {
-        const settings = c.settings;
-        settings.register('omnimux-market', Config, { base: config });
-    });
+    // settings 服务仅在组合了 profileContext 时存在（官方 settings 行在无上下文时 disabled），
+    // 桌面宿主没有它：改为按需取用，缺席时不注册命名空间，不阻塞激活。
+    const settingsService = typeof ctx.get === 'function'
+        ? ctx.get('settings')
+        : undefined;
+    if (settingsService && typeof settingsService.register === 'function') {
+        settingsService.register('omnimux-market', Config, { base: config });
+    }
     registerCatalogSkillProvider(ctx);
     // 注入官方 AgentPresets 服务，作为专家市场的唯一动态权威数据源
     ctx.inject(['agentPresets'], (c) => {

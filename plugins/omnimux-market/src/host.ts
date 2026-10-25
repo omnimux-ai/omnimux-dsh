@@ -451,12 +451,14 @@ export function apply(ctx: Context, config: Config): void {
 
   // 插件配置页按 Host settings 命名空间分发 settings.plugin.item。
   // 不登记 omnimux-market 的话，客户端卡片永远不会被 dispatch。
-  ctx.inject(['settings'], (c) => {
-    const settings = (c as unknown as {
-      settings: { register: (ns: string, schema: typeof Config, options?: { base?: Config }) => void }
-    }).settings
-    settings.register('omnimux-market', Config, { base: config })
-  })
+  // settings 服务仅在组合了 profileContext 时存在（官方 settings 行在无上下文时 disabled），
+  // 桌面宿主没有它：改为按需取用，缺席时不注册命名空间，不阻塞激活。
+  const settingsService = typeof ctx.get === 'function'
+    ? (ctx.get('settings') as { register?: (ns: string, schema: typeof Config, options?: { base?: Config }) => void } | undefined)
+    : undefined
+  if (settingsService && typeof settingsService.register === 'function') {
+    settingsService.register('omnimux-market', Config, { base: config })
+  }
 
   registerCatalogSkillProvider(ctx)
 

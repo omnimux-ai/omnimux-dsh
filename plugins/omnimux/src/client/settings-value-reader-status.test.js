@@ -29,9 +29,9 @@ test('configForms: loading and unavailable namespaces never count as readable', 
   assert.equal(read(), undefined, 'a stale value must not read as a choice')
 })
 
-test('settingsScope: snapshots without a status field keep reading their value', () => {
-  const scope = { getSnapshot: () => ({ value: { runtimeMode: 'key' } }) }
-  const binder = { bind: () => scope }
-  const read = installSettingsValueReader({ ctx: fakeCtx({ settingsScope: binder }), namespace: 'omnimux' })
+test('configForms: snapshots without a status field keep reading their value', () => {
+  const controller = { getSnapshot: () => ({ value: { runtimeMode: 'key' } }) }
+  const forms = { get: () => controller }
+  const read = installSettingsValueReader({ ctx: fakeCtx({ configForms: forms }), namespace: 'omnimux' })
   assert.deepEqual(read(), { runtimeMode: 'key' })
 })
