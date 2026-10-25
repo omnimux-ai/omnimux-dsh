@@ -84,6 +84,20 @@ function stripComments(text) {
     .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ')
 }
 
+/** 客户端构建脚本：`plugins/*` 与 `packages/*` 都要覆盖，缺目录不抛错。 */
+function buildClientFiles(root) {
+  const files = []
+  for (const dir of ['plugins', 'packages']) {
+    const base = join(root, dir)
+    if (!existsSync(base)) continue
+    for (const name of readdirSync(base)) {
+      const file = join(base, name, 'scripts', 'build-client.mjs')
+      if (existsSync(file)) files.push(file)
+    }
+  }
+  return files
+}
+
 function readManifestPackages(manifestPath) {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
   const names = new Set()
@@ -156,9 +170,8 @@ export function collectFailures(root, options = {}) {
     }
   }
 
-  for (const name of readdirSync(join(root, 'plugins'))) {
-    const file = join(root, 'plugins', name, 'scripts', 'build-client.mjs')
-    if (!existsSync(file)) continue
+  const externalFiles = new Set(buildClientFiles(root).map((file) => resolve(file)))
+  for (const file of buildClientFiles(root)) {
     const text = readFileSync(file, 'utf8')
     const rel = file.replace(`${root}/`, '')
     for (const entry of REMOVED_PACKAGES) {
@@ -177,7 +190,7 @@ export function collectFailures(root, options = {}) {
   // #3737：源码与类型导入面（viewer 的 `import type { ToolCallBlock } from '…/client'` 属此类）。
   for (const file of sourceFiles(root)) {
     // build-client.mjs 的外部名由上面那条专用检查负责，别把同一处引用报两遍。
-    if (file.endsWith(join('scripts', 'build-client.mjs'))) continue
+    if (externalFiles.has(resolve(file))) continue
     // 注释里提到旧包名（例如「官方 X 发现服务」这类说明）不算引用，
     // 否则真问题会被说明性文字淹掉。
     const text = stripComments(readFileSync(file, 'utf8'))
@@ -212,6 +225,12 @@ export function collectFailures(root, options = {}) {
     manifestStatus = 'missing'
   }
 
+  // 预发布陷阱本身也要钉住：单分支范围必须判为不满足 0.2.1-rc.3，
+  // 否则本校验赖以成立的前提（npm 不开 includePrerelease）已经不成立。
+  if (semver.satisfies(NEW_HOST, '>=0.1.5-rc.3 <0.3.0-0')) {
+    failures.push('semver 语义异常：单分支范围意外容纳了 0.2.1-rc.3，本校验的前提不再成立')
+  }
+
   if (peersChecked === 0 || injectChecked === 0) {
     failures.push(`校验范围可疑：peer=${peersChecked}、inject=${injectChecked}`)
   }
@@ -229,6 +248,8 @@ function main() {
     console.log(`⏭ 底座清单差集未运行：OMNIMUX_VENDOR_MANIFEST 指向的文件不存在（${process.env.OMNIMUX_VENDOR_MANIFEST}）`)
   } else if (result.manifestMissing.length > 0) {
     console.log(`⚠️ 底座清单差集已运行：${result.manifestChecked} 个 dsh-* 引用名中 ${result.manifestMissing.length} 个不在清单内（见下方失败项）`)
+  } else if (result.manifestChecked === 0) {
+    console.log('⚠️ 底座清单差集已运行，但一个 dsh-* 引用名都没收集到——检查收集面是否失效')
   } else {
     console.log(`✅ 底座清单差集已运行：${result.manifestChecked} 个 dsh-* 引用名全部在清单内`)
   }

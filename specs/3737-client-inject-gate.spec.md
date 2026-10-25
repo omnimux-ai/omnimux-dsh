@@ -54,3 +54,16 @@
 **清单差集抓到的第一个真问题**：`plugins/omnimux-automation/scripts/register-dsh-stubs.mjs` 仍登记 `@deepseek-ai/dsh-agent-presets`（复数）。实测 npm：复数包 0.2.1 系列**不存在**（latest 仅 `0.0.1-rc.1`），rc.3 提供的是单数 `@deepseek-ai/dsh-agent-preset` 与 `@deepseek-ai/dsh-agent-preset-registry`；仓内没有任何代码 import 复数包，属死条目。已从 stub 集合移除，`omnimux-automation` 测试 132/132 通过。
 
 **验证（本机，2026-10-25）**：`node --test scripts/verify-dsh-declaration-range.test.mjs` 7/7；不带清单 → 显式 skip 且 exit 0；带真实清单（`vendor/dsh-runtime/0.2.1-rc.3/manifest.json`）→ 48 个 dsh-* 引用名全部在清单内、exit 0；`pnpm --filter omnimux-automation test` 132/132；`pnpm test:gates` 见提交时的实测输出。
+
+## 9. 独立审查整改（2026-10-25）
+
+| 缺陷 | 整改 |
+| --- | --- |
+| **阻断 A**：预发布陷阱 canary（单分支 `>=0.1.5-rc.3 <0.3.0-0` 必须判为不满足 `0.2.1-rc.3`）在重写中被删，文件头却仍宣称它在 | 已恢复该 canary；`grep -c "semver 语义异常"` = 1 |
+| B：`packages/*/scripts/build-client.mjs` 落在两个扫描面之间（源码面无条件跳过、external 面只扫 `plugins/`） | 新增 `buildClientFiles()` 同时覆盖 `plugins/` 与 `packages/`，源码面按实际文件集合跳过；fixture 实测 `packages/demo-kit/scripts/build-client.mjs` 里的已删包现在会被报出 |
+| D：external 面 `readdirSync(join(root,'plugins'))` 无 `existsSync` 保护，合成 fixture 会 ENOENT | 随 B 一并修掉（统一走 `buildClientFiles()` 的守卫） |
+| E：`manifestChecked === 0` 时会打印「✅ 0 个引用名全部在清单内」，存在真空通过路径 | 改为独立提示「一个 dsh-* 引用名都没收集到——检查收集面是否失效」 |
+
+**F（设计事实，已写进流程）**：全仓没有任何地方设置 `OMNIMUX_VENDOR_MANIFEST`，所以清单差集在 CI 里**永远 skipped**——「下次底座删包自动报警」只在升级时手动跑才生效。已在 `.agents/skills/omnimux-rc-upgrade/SKILL.md` 的契约核查第 1 条里显式挂上这一步（含为什么 CI 跑不了、覆盖范围只到 `@deepseek-ai/dsh-*`）。
+
+**复审仍留的观察（不阻塞）**：剥注释对「字符串里未闭合的 `/*`」或「同一行字符串里的 `//`」有理论假阴性（当前仓无实际损失）；`scripts/governance-manifest.json` 的排序搬动属噪声（registry 自己会 sort）。
