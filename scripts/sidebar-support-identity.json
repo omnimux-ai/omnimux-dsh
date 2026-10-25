@@ -9,6 +9,15 @@
     "verifiedAt": "2026-10-25",
     "verifiedAgainst": "~/.omnimux-dev/profiles/omnimux 与 ~/.omnimux/profiles/omnimux 的 .materialize-snapshots/plugins/dsh-better-sidebar/omnimux-build.json"
   },
+  "peerExemptions": [
+    {
+      "package": "dsh-better-sidebar",
+      "version": "0.19.1",
+      "hostSpec": "0.2.1-rc.3",
+      "reason": "0.19.1 的 14 个 @deepseek-ai/dsh-* peer 声明为 ^0.1.5-rc.1（= >=0.1.5-rc.1 <0.2.0-0），当前宿主代际 0.2.1-rc.3 结构性落在区间外，不是漏升级。该包在 0.1.5-rc.3 宿主上验证可用（omnimux-studio 40/40、verify:stages PASS），故按宿主提供的精确版本豁免放行任务沙箱安装；仅放宽 peer 兼容判定，不放宽包名/版本/字节校验。",
+      "reviewedAt": "2026-10-25"
+    }
+  ],
   "ownership": {
     "pinPatchBuildContract": "omnimux-desktop-fork/docs/contracts/better-sidebar-source.md",
     "builder": "omnimux-desktop-fork/dsh-plugin-desktop/scripts/better-sidebar/build-patched-sidebar.ts",

@@ -4,7 +4,7 @@ import * as fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { assertPreparedTaskArchives, assertSidebarSupportIdentity, assertTaskPeerSearchBoundary, matchesTaskPeerVersion, preparePrivateTaskPackages, readSidebarSupportIdentity, taskPackagePayload } from './task-runtime-install.mjs';
+import { assertPreparedTaskArchives, assertSidebarSupportIdentity, assertTaskPeerSearchBoundary, applySupportPeerExemptions, exemptionKey, isReviewFresh, matchesTaskPeerVersion, preparePrivateTaskPackages, readHostRuntimeVersion, readSidebarSupportIdentity, readSupportPeerExemptions, SUPPORT_EXEMPTION_REVIEW_WINDOW_DAYS, supportPeerExemptionDecision, taskPackagePayload, unmetHostRequirements } from './task-runtime-install.mjs';
 import { runPnpm } from './managed-tarball.mjs';
 import { privatePnpmEnvironment } from './materialize-cache.mjs';
 import { hashFile } from './materialize-graph.mjs';
@@ -209,5 +209,199 @@ test('sidebar support gate reads the identity file when no identity argument is 
   // The production call site passes no identity: this exercises the file read itself.
   const identity = readSidebarSupportIdentity();
   assert.equal(assertSidebarSupportIdentity({ name: identity.name, version: identity.version }).version, identity.version);
+  assert.throws(() => assertSidebarSupportIdentity({ name: identity.name, version: '0.0.0' }), /INSTALL_SUPPORT_REQUIRED/);
+});
+
+// ---------------------------------------------------------------- 精确版本豁免（宿主 compatibility.json）
+
+/** The support package the installer actually admits: the identity is checked against this manifest. */
+function installedSupportManifest() {
+  const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const path = join(repositoryRoot, 'plugins/omnimux-studio/node_modules/dsh-better-sidebar/package.json');
+  if (!fs.existsSync(path)) assert.fail(`run pnpm install first: ${path} is the installer input`);
+  return JSON.parse(fs.readFileSync(path, 'utf8'));
+}
+
+function tempProfile(t) {
+  const profile = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), 'omnimux-exemption-')));
+  t.after(() => fs.rmSync(profile, { recursive: true, force: true }));
+  return join(profile, 'profiles', 'web');
+}
+
+function isExactVersion(value) {
+  return exemptionKey('probe', value) === `probe@${value}`;
+}
+
+test('the declared exemption covers the shipped support package on the running host', () => {
+  const identity = readSidebarSupportIdentity();
+  const manifest = assertSidebarSupportIdentity(installedSupportManifest(), identity);
+  const rows = readSupportPeerExemptions(identity);
+  assert.equal(rows.length, 1, 'exactly one reviewed exemption is declared');
+  const [row] = rows;
+  assert.equal(row.package, identity.name);
+  assert.equal(row.version, identity.version);
+  assert.ok(row.reason.length > 20, 'the declaration records why the risk was accepted');
+  assert.ok(isReviewFresh(row.reviewedAt), `reviewed ${row.reviewedAt} must stay inside the ${SUPPORT_EXEMPTION_REVIEW_WINDOW_DAYS}-day window`);
+  // The declaration exists because the requirements are structurally unmet, not because someone
+  // forgot to upgrade: the same peer set was satisfied by the previous generation.
+  assert.deepEqual(unmetHostRequirements(manifest, '0.1.5-rc.3'), {});
+  const unmet = unmetHostRequirements(manifest, row.hostSpec);
+  assert.ok(Object.keys(unmet).length >= 1, 'the running generation must leave the declared peers unmet');
+  assert.equal(supportPeerExemptionDecision({ manifest, hostVersion: row.hostSpec, exemptions: rows }).status, 'granted');
+});
+
+test('an undeclared support package is reported loudly and gets no exemption file', t => {
+  const profile = tempProfile(t);
+  const identity = readSidebarSupportIdentity();
+  const result = applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: identity.peerExemptions[0].hostSpec, identity: { ...identity, peerExemptions: [] } });
+  assert.deepEqual(result.grants, {});
+  assert.equal(result.filename, null);
+  assert.deepEqual(result.warnings.map(warning => warning.code), ['support_exemption_undeclared']);
+  assert.ok(!fs.existsSync(join(profile, 'compatibility.json')), 'an undeclared pair writes nothing for the host to read');
+});
+
+test('a declared exemption is written exactly as the host reads it, keyed by package and host', t => {
+  const profile = tempProfile(t);
+  const identity = readSidebarSupportIdentity();
+  const hostSpec = identity.peerExemptions[0].hostSpec;
+  const result = applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: hostSpec, identity });
+  const key = `${identity.name}@${identity.version}`;
+  assert.deepEqual(result.grants, { [key]: [hostSpec] });
+  assert.equal(result.filename, join(profile, 'compatibility.json'));
+  assert.equal(fs.readFileSync(result.filename, 'utf8'), JSON.stringify({ [key]: [hostSpec] }, undefined, 2) + '\n');
+  assert.equal(fs.statSync(result.filename).mode & 0o777, 0o600);
+  assert.equal(hashFile(result.filename), result.sha256);
+  assert.deepEqual(result.applied.map(item => item.key), [key]);
+  // The host's own record shape: exact package@version keys mapping to exact DSH version lists.
+  for (const [name, versions] of Object.entries(JSON.parse(fs.readFileSync(result.filename, 'utf8')))) {
+    assert.equal(exemptionKey(name.slice(0, name.lastIndexOf('@')), name.slice(name.lastIndexOf('@') + 1)), name);
+    assert.ok(Array.isArray(versions) && versions.length > 0);
+    for (const version of versions) assert.ok(isExactVersion(version), `${version} must be an exact semver`);
+  }
+});
+
+test('a declaration for another host generation or an expired review refuses instead of granting', t => {
+  const profile = tempProfile(t);
+  const identity = readSidebarSupportIdentity();
+  const manifest = installedSupportManifest();
+  const [declared] = readSupportPeerExemptions(identity);
+  // The plugin upgrade does not inherit permission: another generation is stale, not granted.
+  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [manifest], hostVersion: '0.2.2-rc.1', identity }),
+    { code: 'TEST_ENV_INSTALL_SUPPORT_EXEMPTION_STALE' });
+  // Nor does a review older than the agreed window.
+  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [manifest], hostVersion: declared.hostSpec, identity: { ...identity, peerExemptions: [{ ...declared, reviewedAt: '2020-01-01' }] } }),
+    { code: 'TEST_ENV_INSTALL_SUPPORT_EXEMPTION_STALE' });
+  assert.ok(!fs.existsSync(join(profile, 'compatibility.json')), 'a stale declaration must not leave a half-effective grant behind');
+  assert.equal(isReviewFresh(declared.reviewedAt), true);
+  assert.equal(isReviewFresh('2020-01-01'), false);
+  assert.equal(isReviewFresh('2999-01-01'), false, 'a future review date is not a review');
+});
+
+test('a malformed declaration is a coded failure, never a silently dropped record', () => {
+  const identity = readSidebarSupportIdentity();
+  const [base] = identity.peerExemptions;
+  const malformed = [
+    { ...identity, peerExemptions: 'not-a-list' },
+    { ...identity, peerExemptions: [null] },
+    { ...identity, peerExemptions: [{ ...base, version: '^0.19.1' }] },
+    { ...identity, peerExemptions: [{ ...base, hostSpec: '>=0.2.0' }] },
+    { ...identity, peerExemptions: [{ ...base, package: 'Dsh-Better-Sidebar' }] },
+    { ...identity, peerExemptions: [{ ...base, reason: '   ' }] },
+    { ...identity, peerExemptions: [{ ...base, reviewedAt: '2026-02-30' }] },
+    { ...identity, peerExemptions: [{ ...base, reviewedAt: '2026/10/25' }] },
+  ];
+  for (const candidate of malformed) {
+    assert.throws(() => readSupportPeerExemptions(candidate), { code: 'TEST_ENV_INSTALL_SUPPORT_EXEMPTION_INVALID' });
+  }
+  assert.deepEqual(readSupportPeerExemptions({}), [], 'a missing declaration authorizes nothing');
+});
+
+test('peer exemptions never relax the support identity, and cannot be minted for another package', t => {
+  const profile = tempProfile(t);
+  const identity = readSidebarSupportIdentity();
+  const manifest = installedSupportManifest();
+  const hostSpec = identity.peerExemptions[0].hostSpec;
+  // The exemption path re-asserts identity first, so a drifted manifest never reaches it.
+  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [{ ...manifest, version: '0.0.0' }], hostVersion: hostSpec, identity }),
+    { code: 'TEST_ENV_INSTALL_SUPPORT_REQUIRED' });
+  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [{ ...manifest, name: 'dsh-other-sidebar' }], hostVersion: hostSpec, identity }),
+    { code: 'TEST_ENV_INSTALL_SUPPORT_REQUIRED' });
+  // A declaration naming another package grants nothing for this one.
+  const foreign = { ...identity, peerExemptions: [{ ...identity.peerExemptions[0], package: 'dsh-other-sidebar' }] };
+  const result = applySupportPeerExemptions({ profile, manifests: [manifest], hostVersion: hostSpec, identity: foreign });
+  assert.deepEqual(result.grants, {});
+  assert.deepEqual(result.warnings.map(warning => warning.code), ['support_exemption_undeclared']);
+  assert.ok(!fs.existsSync(join(profile, 'compatibility.json')));
+});
+
+test('an existing compatibility file is never overwritten by the installer', t => {
+  const profile = tempProfile(t);
+  const identity = readSidebarSupportIdentity();
+  fs.mkdirSync(profile, { recursive: true });
+  const filename = join(profile, 'compatibility.json');
+  fs.writeFileSync(filename, '{ "hand-written": ["0.1.0"] }\n');
+  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: identity.peerExemptions[0].hostSpec, identity }),
+    { code: 'TEST_ENV_INSTALL_SUPPORT_EXEMPTION_CONFLICT' });
+  assert.equal(fs.readFileSync(filename, 'utf8'), '{ "hand-written": ["0.1.0"] }\n');
+});
+
+test('exemption keys are the exact package@version pairs the host looks up', () => {
+  assert.equal(exemptionKey('dsh-better-sidebar', '0.19.1'), 'dsh-better-sidebar@0.19.1');
+  assert.equal(exemptionKey('@scope/pkg', '0.1.0-rc.1'), '@scope/pkg@0.1.0-rc.1');
+  assert.equal(exemptionKey('dsh-better-sidebar', '^0.19.1'), null);
+  assert.equal(exemptionKey('dsh-better-sidebar', 'v0.19.1'), null);
+  assert.equal(exemptionKey('dsh-better-sidebar', ' 0.19.1'), null);
+  assert.equal(exemptionKey('Dsh-Better-Sidebar', '0.19.1'), null);
+});
+
+test('exemption decisions mirror the host: engines.dsh decides alone and prereleases participate', () => {
+  const peers = { '@deepseek-ai/dsh-tools': '^0.1.5-rc.1', react: '^18.0.0' };
+  assert.deepEqual(unmetHostRequirements({ peerDependencies: peers }, '0.1.5-rc.3'), {});
+  assert.deepEqual(Object.keys(unmetHostRequirements({ peerDependencies: peers }, '0.2.1-rc.3')), ['@deepseek-ai/dsh-tools']);
+  assert.deepEqual(unmetHostRequirements({ engines: { dsh: '>=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0' }, peerDependencies: peers }, '0.2.1-rc.3'), {});
+  assert.deepEqual(unmetHostRequirements({ engines: { dsh: '^0.1.0' }, peerDependencies: {} }, '0.2.1-rc.3'), { 'engines.dsh': '^0.1.0' });
+  assert.deepEqual(Object.keys(unmetHostRequirements({ peerDependencies: { '@deepseek-ai/dsh-tools': '' } }, '0.2.1-rc.3')), ['@deepseek-ai/dsh-tools']);
+});
+
+test('host generation is read from the launcher itself, never restated in code', () => {
+  const calls = [];
+  const run = (executable, args, options) => { calls.push({ executable, args, cwd: options.cwd }); return { status: 0, stdout: '0.2.1-rc.3\n', stderr: '' }; };
+  const version = readHostRuntimeVersion({ executable: '/tmp/launcher', wrapper: '/tmp/not-a-bundle/lib/desktop-cli.js', env: { HOME: '/tmp/home' }, run });
+  assert.equal(version, '0.2.1-rc.3');
+  assert.deepEqual(calls, [{ executable: '/tmp/launcher', args: ['--expose-internals', '/tmp/not-a-bundle/lib/desktop-cli.js', '--version'], cwd: '/tmp/home' }]);
+});
+
+test('a launcher that cannot answer --version fails loudly instead of guessing', () => {
+  const attempt = run => () => readHostRuntimeVersion({ executable: '/tmp/launcher', wrapper: '/tmp/not-a-bundle/lib/desktop-cli.js', env: { HOME: '/tmp/home' }, run });
+  assert.throws(attempt(() => ({ status: 1, stdout: '', stderr: '' })), { code: 'TEST_ENV_INSTALL_HOST_GENERATION_REQUIRED' });
+  assert.throws(attempt(() => ({ status: 0, stdout: 'v0.2.1\n', stderr: '' })), { code: 'TEST_ENV_INSTALL_HOST_GENERATION_REQUIRED' });
+  assert.throws(attempt(() => ({ error: Object.assign(new Error('spawn failed'), { code: 'ENOENT' }), status: null })), { code: 'TEST_ENV_INSTALL_HOST_GENERATION_REQUIRED' });
+});
+
+test('a bundle whose build record disagrees with the launcher fails instead of minting a wrong key', t => {
+  const app = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), 'omnimux-bundle-')));
+  t.after(() => fs.rmSync(app, { recursive: true, force: true }));
+  const resources = join(app, 'Contents', 'Resources');
+  fs.mkdirSync(join(resources, 'app.asar', 'lib'), { recursive: true });
+  const wrapper = join(resources, 'app.asar', 'lib', 'desktop-cli.js');
+  const launcher = stdout => () => ({ status: 0, stdout: `${stdout}\n`, stderr: '' });
+  fs.writeFileSync(join(resources, 'build-info.json'), JSON.stringify({ dsh: { packageSpec: '0.2.1-rc.3' } }));
+  assert.equal(readHostRuntimeVersion({ executable: '/tmp/launcher', wrapper, env: { HOME: '/tmp/home' }, run: launcher('0.2.1-rc.3') }), '0.2.1-rc.3');
+  assert.throws(() => readHostRuntimeVersion({ executable: '/tmp/launcher', wrapper, env: { HOME: '/tmp/home' }, run: launcher('0.2.2') }),
+    { code: 'TEST_ENV_INSTALL_HOST_GENERATION_MISMATCH' });
+  fs.writeFileSync(join(resources, 'build-info.json'), 'not json');
+  assert.equal(readHostRuntimeVersion({ executable: '/tmp/launcher', wrapper, env: { HOME: '/tmp/home' }, run: launcher('0.2.1-rc.3') }), '0.2.1-rc.3',
+    'an unreadable build record is not a generation: the launcher answer stands alone');
+});
+
+test('a peer exemption never touches the admitted package payload or archive checks', t => {
+  const profile = tempProfile(t);
+  const identity = readSidebarSupportIdentity();
+  const support = join(dirname(fileURLToPath(import.meta.url)), '..', 'plugins/omnimux-studio/node_modules/dsh-better-sidebar');
+  const before = taskPackagePayload(support);
+  assert.ok(before.length > 0, 'the admitted support payload is what the installer hashes');
+  applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: identity.peerExemptions[0].hostSpec, identity });
+  assert.deepEqual(taskPackagePayload(support), before, 'the exemption is profile metadata, never a package mutation');
+  // Identity and bytes stay the gates: the exemption only ever relaxes the peer judgement.
   assert.throws(() => assertSidebarSupportIdentity({ name: identity.name, version: '0.0.0' }), /INSTALL_SUPPORT_REQUIRED/);
 });
