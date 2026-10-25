@@ -157,7 +157,7 @@ test('archive bytes and extracted published files are both rechecked before inst
   const f = fixture(t), plugin = f.pkg('omnimux');
   const tarball = join(f.privateRoot, 'candidate.tgz'); fs.writeFileSync(tarball, 'verified-archive');
   plugin.tarball = tarball; plugin.sha256 = hashFile(tarball);
-  plugin.inspection = { entries: taskPackagePayload(plugin.extractedRoot).map(item => ({ ...item, type: 'file' })) };
+  plugin.inspection = { entries: taskPackagePayload(plugin.extractedRoot).map(item => (Object.assign({}, item, { type: 'file' }))) };
   assertPreparedTaskArchives(f.preparation);
   fs.writeFileSync(join(plugin.extractedRoot, 'index.js'), 'substituted');
   assert.throws(() => assertPreparedTaskArchives(f.preparation), { code: 'TEST_ENV_INSTALL_ARCHIVE_CHANGED' });
@@ -302,13 +302,13 @@ test('a malformed declaration is a coded failure, never a silently dropped recor
   const [base] = identity.peerExemptions;
   const malformed = [
     Object.assign({}, identity, { peerExemptions: 'not-a-list' }),
-    { ...identity, peerExemptions: [null] },
-    { ...identity, peerExemptions: [{ ...base, version: '^0.19.1' }] },
-    { ...identity, peerExemptions: [{ ...base, hostSpec: '>=0.2.0' }] },
-    { ...identity, peerExemptions: [{ ...base, package: 'Dsh-Better-Sidebar' }] },
-    { ...identity, peerExemptions: [{ ...base, reason: '   ' }] },
-    { ...identity, peerExemptions: [{ ...base, reviewedAt: '2026-02-30' }] },
-    { ...identity, peerExemptions: [{ ...base, reviewedAt: '2026/10/25' }] },
+    Object.assign({}, identity, { peerExemptions: [null] }),
+    Object.assign({}, identity, { peerExemptions: [Object.assign({}, base, { version: '^0.19.1' })] }),
+    Object.assign({}, identity, { peerExemptions: [Object.assign({}, base, { hostSpec: '>=0.2.0' })] }),
+    Object.assign({}, identity, { peerExemptions: [Object.assign({}, base, { package: 'Dsh-Better-Sidebar' })] }),
+    Object.assign({}, identity, { peerExemptions: [Object.assign({}, base, { reason: '   ' })] }),
+    Object.assign({}, identity, { peerExemptions: [Object.assign({}, base, { reviewedAt: '2026-02-30' })] }),
+    Object.assign({}, identity, { peerExemptions: [Object.assign({}, base, { reviewedAt: '2026/10/25' })] }),
   ];
   for (const candidate of malformed) {
     assert.throws(() => readSupportPeerExemptions(candidate), { code: 'TEST_ENV_INSTALL_SUPPORT_EXEMPTION_INVALID' });
@@ -322,12 +322,12 @@ test('peer exemptions never relax the support identity, and cannot be minted for
   const manifest = installedSupportManifest();
   const hostSpec = identity.peerExemptions[0].hostSpec;
   // The exemption path re-asserts identity first, so a drifted manifest never reaches it.
-  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [{ ...manifest, version: '0.0.0' }], hostVersion: hostSpec, identity }),
+  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [Object.assign({}, manifest, { version: '0.0.0' })], hostVersion: hostSpec, identity }),
     { code: 'TEST_ENV_INSTALL_SUPPORT_REQUIRED' });
-  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [{ ...manifest, name: 'dsh-other-sidebar' }], hostVersion: hostSpec, identity }),
+  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [Object.assign({}, manifest, { name: 'dsh-other-sidebar' })], hostVersion: hostSpec, identity }),
     { code: 'TEST_ENV_INSTALL_SUPPORT_REQUIRED' });
   // A declaration naming another package grants nothing for this one.
-  const foreign = { ...identity, peerExemptions: [{ ...identity.peerExemptions[0], package: 'dsh-other-sidebar' }] };
+  const foreign = Object.assign({}, identity, { peerExemptions: [Object.assign({}, identity.peerExemptions[0], { package: 'dsh-other-sidebar' })] });
   const result = applySupportPeerExemptions({ profile, manifests: [manifest], hostVersion: hostSpec, identity: foreign });
   assert.deepEqual(result.grants, {});
   assert.deepEqual(result.warnings.map(warning => warning.code), ['support_exemption_undeclared']);
