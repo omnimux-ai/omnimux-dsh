@@ -35,7 +35,7 @@ export function assertCorepackOnPath() {
 export function copySyncScripts(root) {
   const here = dirname(fileURLToPath(import.meta.url))
   mkdirSync(join(root, 'scripts'), { recursive: true })
-  for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'sync-main.sh', 'resolve-omnimux-profile.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py', 'verify-profile-preflight.mjs']) {
+  for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'sync-main.sh', 'resolve-omnimux-profile.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py', 'verify-profile-preflight.mjs', 'verify-profile-dependency-snapshots.mjs']) {
     copyFileSync(join(here, name), join(root, 'scripts', name))
   }
   mkdirSync(join(root, 'plugins/omnimux/src'), { recursive: true })
