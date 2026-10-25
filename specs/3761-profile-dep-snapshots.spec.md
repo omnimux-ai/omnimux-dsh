@@ -17,7 +17,7 @@
 
 ## 3. 改动
 
-- 新增 `scripts/verify-profile-dependency-snapshots.mjs`（只读）：硬失败＝受管快照声明缺目录/缺 `package.json`、插件清单条目无来源、owned 依赖未指向存在的受管快照；警告＝非 owned 依赖仍是版本号；拿不到 owned 清单时打印原因并显式标记 `ownedStatus=skipped`。
+- 新增 `scripts/verify-profile-dependency-snapshots.mjs`（只读）：硬失败＝受管快照声明缺目录/缺 `package.json`、owned 依赖未指向存在的受管快照；警告＝非 owned 依赖仍是版本号、插件清单条目无来源；拿不到 owned 清单时打印原因并显式标记 `ownedStatus=skipped`。
 - 新增 `scripts/verify-profile-dependency-snapshots.test.mjs`（11 个用例）。
 - 接线：`scripts/sync-stable.sh` 在启动预检之前调用（失败即恢复暂存入口并中止物化）。
 - `package.json` 的 `test:gates` 挂上新测试；`scripts/governance-manifest.json` 登记两个新脚本（verify→manual、test→ciRequired）。

@@ -10,13 +10,13 @@
  * 物化阶段，只读列出违规项，避免只能在 App 启动时才发现。
  *
  * 三级判定：
- *  1. **硬失败**：`dependencies` 里声明了受管快照却缺目录 / 缺 `package.json`；
- *     `dsh.profile.bundles` 里非 `@deepseek-ai/*`（App 自带宿主包）的条目既不在 dependencies
- *     的受管快照也不在 `node_modules`；提供 owned 清单时，owned 依赖未指向存在的受管快照。
- *  2. **警告（不失败）**：非 owned 依赖仍是版本号——宿主从 `node_modules` 解析即可，拦下会
- *     比宿主本身更严；但仍列出，便于人工判断要不要补快照。
+ *  1. **硬失败**：`dependencies` 里声明了受管快照却缺目录 / 缺 `package.json`；提供 owned 清单时，
+ *     owned 依赖未指向存在的受管快照（这两类正是宿主启动断言与 pnpm pack 会炸的）。
+ *  2. **警告（不失败）**：非 owned 依赖仍是版本号（宿主从 `node_modules` 解析即可，拦下比宿主更严）；
+ *     `dsh.profile.bundles` 里非 `@deepseek-ai/*`（App 自带宿主包）且无来源的条目——命名插件同步会
+ *     保留未被点名的 bundle，硬失败会破坏该受支持行为，真实缺失会在加载期响亮失败。两者都逐条列出。
  *  3. **显式跳过**：拿不到 owned 清单（目标 App 未安装或没有 preset）时打印原因，
- *     只做第 1 级的快照完整性与插件清单可解析性校验，不静默当作通过。
+ *     只做第 1 级的快照完整性与 owned 断言之外的可解析性校验，不静默当作通过。
  *
  * 只读：不写 profile、不创建快照、不回填依赖。首次建立缺失快照归官方完整 profile rebuild。
  *
@@ -145,7 +145,9 @@ export function inspectProfile(profileDir, options = {}) {
     const declared = typeof dependencies[name] === 'string' && dependencies[name].startsWith(MANAGED_SPEC_PREFIX)
     const installed = existsSync(join(profileDir, 'node_modules', name))
     if (!declared && !installed) {
-      failures.push(`插件清单条目 ${name} 没有任何来源：既不在 dependencies 的受管快照，也不在 node_modules`)
+      // 命名插件同步只物化被点名的插件，会保留其它 bundle 条目；宿主也不断言这一项，
+      // 因此只警告（真实缺失会在加载期响亮失败），不阻断物化。
+      warnings.push(`插件清单条目 ${name} 没有任何来源：既不在 dependencies 的受管快照，也不在 node_modules（命名同步保留的条目属正常；真实缺失会在加载期失败）`)
     }
   }
 

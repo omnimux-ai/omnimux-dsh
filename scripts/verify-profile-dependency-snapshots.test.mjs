@@ -99,11 +99,12 @@ test('受管快照缺少 package.json 时失败（pnpm pack 会报 NO_IMPORTER_M
   })
 })
 
-test('插件清单条目没有任何来源时失败（悬空 bundle）', () => {
+test('插件清单条目没有任何来源时只警告（命名同步会保留未点名 bundle）', () => {
   withProfile({ dependencies: {}, snapshots: [], bundles: ['@dsh-external/dsh-translator'] }, (root) => {
     const result = inspectProfile(root, { ownedPackages: [] })
-    assert.equal(result.failures.length, 1)
-    assert.match(result.failures[0], /没有任何来源/)
+    assert.deepEqual(result.failures, [])
+    assert.equal(result.warnings.length, 1)
+    assert.match(result.warnings[0], /没有任何来源/)
   })
 })
 
