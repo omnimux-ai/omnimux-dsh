@@ -292,9 +292,35 @@ test('guard ignores claimed source facts and rejects unrelated relative sources'
   assert.equal(result.hookSpecificOutput.permissionDecision, 'deny')
 })
 
+/**
+ * 仓内临时夹具登记表。
+ *
+ * 这些夹具必须建在**仓内**（用例要验证"仓内未跟踪的插件目录不得获得仓库权威"），
+ * 但只靠 `finally` 清理不够：测试运行被中断或提前失败时 `finally` 不会执行，
+ * 残留的未跟踪文件会被 `scripts/sync-to-app.sh` 判定为"会进入物化产物"并
+ * 直接拒绝开发版物化。这里再加一层进程退出兜底。
+ */
+const fixtures = new Set()
+
+function makeFixture(prefix) {
+  const dir = mkdtempSync(prefix)
+  fixtures.add(dir)
+  return dir
+}
+
+process.on('exit', () => {
+  for (const dir of fixtures) {
+    try {
+      rmSync(dir, { recursive: true, force: true })
+    } catch {
+      // 退出阶段尽力而为：清理失败不能反过来影响测试结论。
+    }
+  }
+})
+
 test('external mirror, other checkout, and untracked repo plugin cannot establish identity', () => {
-  const temporary = mkdtempSync(resolve(tmpdir(), 'public-apply-'))
-  const untracked = mkdtempSync(resolve(root, 'plugins/public-apply-untracked-'))
+  const temporary = makeFixture(resolve(tmpdir(), 'public-apply-'))
+  const untracked = makeFixture(resolve(root, 'plugins/public-apply-untracked-'))
   try {
     const fakeSrc = resolve(temporary, 'plugins/omnimux/src')
     mkdirSync(resolve(fakeSrc, 'host'), { recursive: true })
@@ -321,8 +347,10 @@ test('external mirror, other checkout, and untracked repo plugin cannot establis
   } finally {
     assert.equal(temporary.startsWith(resolve(tmpdir(), 'public-apply-')), true)
     assert.equal(untracked.startsWith(resolve(root, 'plugins/public-apply-untracked-')), true)
-    rmSync(temporary, { recursive: true })
-    rmSync(untracked, { recursive: true })
+    rmSync(temporary, { recursive: true, force: true })
+    rmSync(untracked, { recursive: true, force: true })
+    fixtures.delete(temporary)
+    fixtures.delete(untracked)
   }
 })
 
@@ -460,7 +488,7 @@ test('source replacement during final HEAD child return is still rejected', (t) 
 })
 
 test('full edit candidate is reconstructed before binding and selector inspection', () => {
-  const temporary = mkdtempSync(resolve(root, 'scripts/public-apply-edit-'))
+  const temporary = makeFixture(resolve(root, 'scripts/public-apply-edit-'))
   try {
     const path = resolve(temporary, 'candidate.test.mjs')
     const original = "import { apply } from '../../plugins/omnimux/src/index.js'; test('install', () => apply(ctx))"
@@ -472,6 +500,7 @@ test('full edit candidate is reconstructed before binding and selector inspectio
     assert.equal(readFileSync(path, 'utf8'), original)
   } finally {
     assert.equal(temporary.startsWith(resolve(root, 'scripts/public-apply-edit-')), true)
-    rmSync(temporary, { recursive: true })
+    rmSync(temporary, { recursive: true, force: true })
+    fixtures.delete(temporary)
   }
 })
