@@ -17,7 +17,6 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
-import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
 // Type-only: pulls the ctx.webServer / ctx.tools / ctx.systemPrompt merges.
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-tools'
@@ -41,9 +40,6 @@ export { guardHeaders, parseRange } from './asset-route.ts'
 export { artifactName, convertDocument, resolveConverter } from './convert.ts'
 export { isMisdirectedRead, mediaReadValue, readPathOf } from './read-redirect.ts'
 export { applySupersedeReadImage } from './supersede-read-image.ts'
-
-/** Settings namespace this plugin owns. */
-export const VIEWER_NAMESPACE = settingsNamespace(VIEWER_SETTINGS_NAMESPACE)
 
 export const name = 'omnimux-viewer'
 
@@ -146,13 +142,11 @@ export function apply(ctx: Context, config: Config): void {
     disposeTool = undefined
   }, 'omnimux-viewer: display tool')
 
-  installSettingsSection(ctx, VIEWER_NAMESPACE, ViewerSettingsSchema, config, {
-    setSource: (current) => { source = current },
-    onChange: reconcile,
-  })
-  // A composition with no settings provider never reaches `onChange`, so the
-  // entry-config state has to be established here too. Reconciliation is
-  // idempotent, which makes the redundant call in the provider case harmless.
+  // rc.3 removed `installSettingsSection`/`settingsNamespace`: a plugin's own
+  // `Config` schema is the settings section, projected by the `SettingsForms`
+  // service, and a form write edits the Loader entry's config, which re-applies
+  // this plugin. `config` is therefore always the live value and `reconcile()`
+  // runs on every apply — the same state the old `onChange` callback produced.
   reconcile()
 
   // The redirect is a listener, not a schema fact, so it reads the setting live

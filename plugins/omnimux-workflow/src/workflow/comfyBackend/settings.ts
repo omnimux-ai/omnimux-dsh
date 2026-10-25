@@ -12,9 +12,11 @@ export interface ComfyBackendSettings {
   installRoot: string;
   /** 用户已有的模型目录；空 = 不使用外部模型目录。 */
   modelsPath: string;
+  /** 用户选的方案（`plan.ts` 的 variant）；空 = 按本机解析（多候选时必须显式选）。 */
+  variant: string;
 }
 
-export const EMPTY_SETTINGS: ComfyBackendSettings = { installRoot: '', modelsPath: '' };
+export const EMPTY_SETTINGS: ComfyBackendSettings = { installRoot: '', modelsPath: '', variant: '' };
 
 export type SettingsValidationCode =
   | 'not-absolute'
@@ -62,6 +64,7 @@ export function parseSettings(text: string | null): ComfyBackendSettings {
     return {
       installRoot: typeof parsed.installRoot === 'string' ? parsed.installRoot : '',
       modelsPath: typeof parsed.modelsPath === 'string' ? parsed.modelsPath : '',
+      variant: typeof parsed.variant === 'string' ? parsed.variant : '',
     };
   } catch {
     return { ...EMPTY_SETTINGS };

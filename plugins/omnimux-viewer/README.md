@@ -84,7 +84,11 @@ The route **never accepts a path from the browser.** At tool time the host signs
 
 ## Configuration
 
-Settings namespace `crosery-viewer`. Every default is the behaviour the plugin exists to provide; each flag gives one piece back.
+Settings are this plugin's own `Config` (`ViewerSettingsSchema`), projected by the harness's settings service. On the 0.2.x generation the form is keyed by this plugin's profile entry id (`viewer`; `omnimux-viewer` is the package name) and written into the active profile patch; on the 0.1.x generation it was the `crosery-viewer` namespace inside `$DSH_HOME/settings.yaml`.
+
+> **Upgrading from 0.1.x:** the harness renames `settings.yaml` to `settings.yaml.imported` and then writes each section into the profile; a section whose id matches no configurable entry is skipped with a `No configurable plugin entry "<id>"` warning. That is what happens to the old `crosery-viewer:` section, because this plugin's entry id is now `viewer`. The four flags therefore fall back to their defaults — set them once in the settings UI.
+
+Every default is the behaviour the plugin exists to provide; each flag gives one piece back.
 
 | Field | Default | Turning it off |
 | --- | --- | --- |
@@ -136,9 +140,9 @@ The same record covers successful `read` redirection without an error row, neste
 
 ## Harness compatibility
 
-Built and tested against the newest **coherent** harness train, `next` = `0.1.1-rc.2`. The peer ranges now carry an explicit prerelease branch per generation — this plugin's own is `>=0.1.0-rc.1 <0.1.1-0 || >=0.1.1-rc.0 <0.1.2-0 || >=0.2.1-rc.3 <0.3.0-0` — because a single broad range silently excludes prereleases whose `major.minor.patch` tuple has no tagged comparator. The second branch says the host may be 0.2.x; it does not claim the 0.2.x runtime work is finished (settings/fs migration is tracked separately).
+Built and tested against the newest **coherent** harness train, `next` = `0.1.1-rc.2`. The peer ranges now carry an explicit prerelease branch per generation — this plugin's own is `>=0.1.0-rc.1 <0.1.1-0 || >=0.1.1-rc.0 <0.1.2-0 || >=0.2.1-rc.3 <0.3.0-0` — because a single broad range silently excludes prereleases whose `major.minor.patch` tuple has no tagged comparator. The second branch says the host may be 0.2.x, and the 0.2.x runtime work has since landed: the settings section is the plugin's own `Config` projected by the harness's settings service, and durable reads go through the session-scoped service. Both generations are exercised by the same source.
 
-`0.1.2-alpha.2` is deliberately **not** claimed. That train is published incomplete (`@deepseek-ai/dsh-client-runtime` has no build on it, so it cannot install as a set) and it drops `installSettingsSection` and `settingsNamespace` from `@deepseek-ai/dsh-settings` with no replacement in the published types. Claiming support would hand users an `ERESOLVE` or a runtime crash, so it stays outside the range. A scheduled CI job (`.github/workflows/harness-compat.yml`) re-tests against the `next` and `alpha` tags weekly and opens an issue the moment upstream moves — so the range widens on evidence, not optimism.
+`0.1.2-alpha.2` is deliberately **not** claimed. That train is published incomplete (`@deepseek-ai/dsh-client-runtime` has no build on it, so it cannot install as a set) and it drops `installSettingsSection` and `settingsNamespace` from `@deepseek-ai/dsh-settings` without the replacement mechanism that `0.2.1-rc.3` later introduced. Claiming support would hand users an `ERESOLVE` or a runtime crash, so it stays outside the range. A scheduled CI job (`.github/workflows/harness-compat.yml`) re-tests against the `next` and `alpha` tags weekly and opens an issue the moment upstream moves — so the range widens on evidence, not optimism.
 
 ## Known limitations
 

@@ -81,6 +81,9 @@ export function applySupersedeReadImage(ctx: Context, enabled: () => boolean): v
     } catch {
       // Never block an agent over a presentation preference.
     }
+    // rc.3 types this listener as returning `Promise<undefined> | undefined`;
+    // an implicit `void` no longer satisfies it.
+    return undefined
   })
 
   // The tool set changed: `read_image` may have just appeared behind its

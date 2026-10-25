@@ -108,13 +108,15 @@
     "verify:app:live": "node scripts/worktree-app-qa.mjs --mode=live"
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-util-code-language": "0.2.1-rc.3",
     "acorn": "8.15.0",
     "esbuild": "0.28.2",
-    "pngjs": "7.0.0",
     "jsdom": "30.0.1",
+    "pngjs": "7.0.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "semver": "7.8.5",
+    "simple-icons": "^15.0.0",
     "yaml": "2.9.0"
   }
 }

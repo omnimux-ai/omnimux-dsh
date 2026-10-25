@@ -326,8 +326,12 @@ function mountBridge(
   const deferral = createSessionDeferral(workspaceApi, resolved.deferSessionCreate, ctx.get('attachments')?.imageLimits)
   const api = deferral?.api ?? workspaceApi
   const browserContext = new BrowserContextInjector(ctx.agents)
-  ctx.on('agent/session-start', ({ agent }) => {
+  // rc.3 dropped `agent/session-start`; `agent/created` is the registry event a
+  // new Agent is published through, and its listener contract requires an
+  // explicit `undefined` return.
+  ctx.on('agent/created', ({ agent }) => {
     browserContext.activate(agent)
+    return undefined
   })
 
   const purgeSession = async (sessionId: string): Promise<void> => {
@@ -487,7 +491,17 @@ function mountBridge(
   // Pairing: the host's own page approves a pending request, and the extension
   // picks the token up from a loopback poll. Admission rules live in pairing.ts.
   for (const route of createPairingRoutes({
-    port: () => ctx.webServer.port,
+    // rc.3 types the getter as `number | undefined` (the server may not be
+    // listening yet). A pairing route only runs while a request is in flight,
+    // so an unknown port here is a real fault and must fail loudly rather than
+    // compare an origin against a placeholder port.
+    port: () => {
+      const port = ctx.webServer.port
+      if (port === undefined) {
+        throw new Error('bridge-browser: host webserver port is unknown while serving a pairing route')
+      }
+      return port
+    },
     token: () => tokenRes.token,
     isLoopback: isLoopbackAddress,
   })) {

@@ -758,14 +758,83 @@ export function resolveGitTargetPath(seg, cwd) {
   return isAbsolute(raw) ? raw : resolve(cwd, raw)
 }
 
-export function decideMainBranchGitOp(command, cwd) {
+const GUARD_SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
+
+/** Test hook: override the owning repository root; leave null to resolve from the script path. */
+export let OWNER_REPO_ROOT = null
+
+export function setOwnerRepoRoot(root) {
+  OWNER_REPO_ROOT = root
+}
+
+/**
+ * Repository that owns this guard script (the omnimux-dsh checkout that installed it).
+ * For a linked worktree the script lives at <repo>/.worktrees/<task>/scripts/, so the
+ * owning root is still the directory two levels above the script. Returns null when the
+ * script is not inside a Git work tree — the main-branch gate then protects nothing.
+ */
+function guardOwnerRepoRoot() {
+  if (OWNER_REPO_ROOT !== null) return OWNER_REPO_ROOT
+  const scriptsParent = resolve(GUARD_SCRIPT_DIR, '..')
+  const result = spawnSync('git', ['-C', scriptsParent, 'rev-parse', '--show-toplevel'], {
+    encoding: 'utf8',
+    timeout: 3000,
+  })
+  if (result.status !== 0 || result.error) return null
+  const top = result.stdout.trim()
+  if (!top) return null
+  try {
+    return realpathSync(top)
+  } catch {
+    return top
+  }
+}
+
+/** Git top-level of the directory a command effectively runs in, or null when not in a repo. */
+function commandTargetRepoRoot(target) {
+  const result = spawnSync('git', ['-C', target, 'rev-parse', '--show-toplevel'], {
+    encoding: 'utf8',
+    timeout: 3000,
+  })
+  if (result.status !== 0 || result.error) return null
+  const top = result.stdout.trim()
+  if (!top) return null
+  try {
+    return realpathSync(top)
+  } catch {
+    return top
+  }
+}
+
+export function decideMainBranchGitOp(command, cwd, options = {}) {
   if (!command || typeof command !== 'string') return { decision: 'allow' }
   const sessionCwd = resolve(cwd || process.cwd())
+  const rawOwnerRoot = options.ownerRoot !== undefined ? options.ownerRoot : guardOwnerRepoRoot()
+  let ownerRoot = rawOwnerRoot
+  if (typeof rawOwnerRoot === 'string' && rawOwnerRoot) {
+    try {
+      ownerRoot = realpathSync(rawOwnerRoot)
+    } catch {
+      ownerRoot = rawOwnerRoot
+    }
+  }
   // 在「未剥离引号」的原始命令上解析 -C；commandSegments() 会剥掉引号内容，
   // 只在剥离后的片段上查找会漏掉 `git -C "<path>"` 这种最常用的写法。
   const rawTarget = resolveGitTargetPath(command, sessionCwd)
+  const rawSegments = rawCommandSegments(command)
   const segments = commandSegments(command)
-  for (const seg of segments) {
+  let effectiveCwd = sessionCwd
+  for (let i = 0; i < segments.length; i += 1) {
+    const seg = segments[i]
+    // cd 只改变后续命令段的执行目录，不改变显式 git -C 的目标；
+    // 目标取自未剥离引号的原始段，commandSegments() 里引号内容已被抹掉。
+    const rawSeg = rawSegments[i] || ''
+    const cdMatch = /^\s*cd\s+(?:"([^"]+)"|'([^']+)'|(\S+))/.exec(rawSeg)
+    if (cdMatch) {
+      const targetDir = (cdMatch[1] || cdMatch[2] || cdMatch[3] || '').trim()
+      if (targetDir) effectiveCwd = isAbsolute(targetDir) ? targetDir : resolve(effectiveCwd, targetDir)
+      continue
+    }
     if (!looksLikeGitInvocation(seg)) continue
     const isMerge = /(?:^|\s)merge\b/.test(seg)
     const isCommit = /(?:^|\s)commit\b/.test(seg)
@@ -777,9 +846,13 @@ export function decideMainBranchGitOp(command, cwd) {
     }
 
     // hook 收到的 cwd 是会话工作目录，不代表命令真正的执行目录；
-    // 必须优先采用命令里显式声明的 -C 目标，否则会误伤在独立工作树内的合法提交。
-    const target = rawTarget || resolveGitTargetPath(seg, sessionCwd) || sessionCwd
+    // 必须优先采用命令里显式声明的 -C 目标，其次是已生效的 cd 目录，最后才是会话 cwd。
+    const target = rawTarget || resolveGitTargetPath(seg, effectiveCwd) || effectiveCwd
     if (isWorktreePath(target)) continue
+
+    // 只保护本脚本所属仓库：目标目录不属于 omnimux-dsh 时不拦截外部仓的 main 操作。
+    const targetRoot = commandTargetRepoRoot(target)
+    if (!ownerRoot || targetRoot !== ownerRoot) continue
 
     const branchResult = spawnSync('git', ['-C', target, 'symbolic-ref', '--quiet', '--short', 'HEAD'], {
       encoding: 'utf8',
@@ -1108,7 +1181,7 @@ export function decideSearchTarget({ toolName, toolInput = {}, homeDir = homedir
   }
 }
 
-export function decideBashCommand({ command, cwd }) {
+export function decideBashCommand({ command, cwd, ownerRoot }) {
   if (!command || typeof command !== 'string') return { decision: 'allow' }
 
   if(command.includes('recover-media-build-3288.mjs')&&command.trim()!=='node scripts/recover-media-build-3288.mjs --apply')return {decision:'deny',reason:'scoped-media-build-recovery-invalid-command'}
@@ -1173,7 +1246,7 @@ export function decideBashCommand({ command, cwd }) {
   }
 
   // 4. 检查在主仓本地 main 分支上执行 git merge 或 git commit
-  const mainBranchOps = decideMainBranchGitOp(command, cwd)
+  const mainBranchOps = decideMainBranchGitOp(command, cwd, { ownerRoot })
   if (mainBranchOps.decision === 'deny') {
     return mainBranchOps
   }
@@ -1361,7 +1434,9 @@ function handle(rawInput) {
     const command = String(toolInput.command || '').trim()
     const workdir = typeof toolInput.workdir === 'string' && toolInput.workdir.trim()
       ? resolve(cwd, toolInput.workdir) : cwd
-    const result = decideBashCommand({ command, cwd: workdir })
+    const ownerRoot = typeof toolInput.ownerRoot === 'string' && toolInput.ownerRoot.trim()
+      ? realpathSync(resolve(cwd, toolInput.ownerRoot)) : undefined
+    const result = decideBashCommand({ command, cwd: workdir, ownerRoot })
     return decisionJson(hookEventName, result.decision, result.reason, result)
   }
 

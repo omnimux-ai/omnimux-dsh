@@ -23,8 +23,8 @@ test('mac arm64 命中固定目标：Python 3.12 + torch 2.9.1 + ComfyUI 固定 
   assert.equal(result.target.python.version, PYTHON_VERSION);
   assert.equal(result.target.python.sha256.length, 64);
   assert.equal(result.target.torch.version, TORCH_VERSION);
-  assert.equal(result.target.torch.wheel.includes('cp312'), true);
-  assert.equal(result.target.torch.sha256.length, 64);
+  assert.equal(result.target.torch.wheels[0].wheel.includes('cp312'), true);
+  assert.equal(result.target.torch.wheels[0].sha256.length, 64);
   assert.equal(result.target.comfyui.tag, COMFYUI_TAG);
   assert.equal(result.target.comfyui.commit, COMFYUI_COMMIT);
   assert.equal(result.target.comfyui.tarball.includes(COMFYUI_COMMIT), true);
@@ -34,12 +34,18 @@ test('mac arm64 命中固定目标：Python 3.12 + torch 2.9.1 + ComfyUI 固定 
 });
 
 test('不支持的平台显式拒绝，不回退到别的平台产物', () => {
+  // M4 起 win32/x64 有三套显卡方案：没选方案时不猜，要求显式选择。
   const win = resolveComfyBackendTarget('win32', 'x64');
-  assert.deepEqual(win, { ok: false, reason: 'unsupported-platform', platform: 'win32', arch: 'x64' });
+  assert.equal(win.ok, false);
+  assert.equal(win.reason, 'variant-required');
+  assert.equal((win.options ?? []).length > 1, true);
+  // linux/x64 从「不支持」变成「有一个候选方案」。
   const linux = resolveComfyBackendTarget('linux', 'x64');
-  assert.equal(linux.ok, false);
+  assert.equal(linux.ok, true);
+  assert.equal(linux.target.support, 'candidate');
   const rosetta = resolveComfyBackendTarget('darwin', 'x64');
   assert.equal(rosetta.ok, false);
+  assert.equal(rosetta.reason, 'unsupported-platform');
 });
 
 test('进度：阶段权重单调递增，done 恒为 100，越界被夹住', () => {

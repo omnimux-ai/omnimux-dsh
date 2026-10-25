@@ -63,3 +63,18 @@ test('CSS：中性 32×32 icon-box、Badge token 化、无旧彩虹 popover 规�
   assert.equal(cssSrc.includes('.wf-dock-add-popover__desc'), false);
   assert.match(cssSrc, /\.wf-template-picker\s*\{/);
 });
+
+test('ComfyUI 工作流导入入口已删除：无入口行、无 comfy 视图、无 comfy prop', () => {
+  // 组件不再持有入口视图状态与入口行（Issue 3741）。
+  assert.equal(menuSrc.includes('comfy.entry.'), false);
+  assert.equal(menuSrc.includes('comfy.panel.'), false);
+  assert.equal(menuSrc.includes('wf-node-menu__entry'), false);
+  assert.equal(menuSrc.includes('wf-node-menu__footer'), false);
+  assert.equal(menuSrc.includes('AddNodeComfyProps'), false);
+  assert.equal(menuSrc.includes('comfyRecents'), false);
+  assert.equal(/comfy\?\./.test(menuSrc), false);
+  assert.equal(menuSrc.includes("setView('comfy')"), false);
+  // 调色板视图与两个入口的形态不受影响：搜索仍只在 dock，返回箭头仍只在 context。
+  assert.match(menuSrc, /const showSearch = scope === 'dock';/);
+  assert.match(menuSrc, /wf-node-menu__item/);
+});

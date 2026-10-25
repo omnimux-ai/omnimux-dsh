@@ -12,7 +12,7 @@
  * @module omnimux-viewer/client/card-model
  */
 
-import type { ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ToolCallBlock } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import {
   DISPLAY_TOOL, classifyPath, displayValueFrom, modelImageFrom,
   type DisplayValue,
@@ -47,7 +47,12 @@ function isSettled(block: ToolCallBlock): block is Extract<ToolCallBlock, { kind
  * @returns the requested path, or `undefined` when it cannot be read.
  */
 export function argumentPathOf(block: ToolCallBlock): string | undefined {
-  const raw = isSettled(block) ? block.call?.argsRaw : block.argsRaw
+  // rc.3 splits the running arm by phase: only a dispatched call carries raw
+  // arguments (`start`), while a preparing call has none yet. A settled result
+  // keeps the paired call head, which is where its raw arguments survive.
+  const raw = isSettled(block)
+    ? block.call?.argsRaw
+    : block.phase === 'start' ? block.argsRaw : undefined
   if (typeof raw !== 'string' || raw.length === 0) return undefined
   try {
     const parsed: unknown = JSON.parse(raw)

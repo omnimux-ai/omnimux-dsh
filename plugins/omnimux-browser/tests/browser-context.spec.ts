@@ -16,7 +16,9 @@ describe('browser page context', () => {
 
     expect(message.role).toBe('user')
     expect(message.source).toEqual({
-      kind: 'plugin',
+      // rc.3 删除了共享的 `plugin` kind：来源类型改为各插件自行合并声明，
+      // 本插件声明的是 'omnimux-browser-context'（见 src/message-source.ts）。
+      kind: 'omnimux-browser-context',
       plugin: BROWSER_CONTEXT_PLUGIN,
       form: 'snapshot',
       sections: [{

@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { resolveComfyBackendTarget, versionMatches } from './plan.ts';
+import { checkDriver } from './driver.ts';
 import {
-  checkDriver,
   launchArgs,
   estimateRequiredBytes,
   failureAction,
@@ -30,7 +30,8 @@ test('预检全通过时 ok，且给出需求体积与驱动结论', () => {
   assert.equal(result.ok, true);
   assert.deepEqual(result.failures, []);
   assert.equal(result.requiredBytes, estimateRequiredBytes(DARWIN));
-  assert.equal(result.driver, 'not-required');
+  // M4 起驱动结论由调用方注入（driver.ts 产出）；不注入时是 unknown，绝不默认「通过」。
+  assert.equal(result.driver, 'unknown');
   assert.equal(result.backendAlreadyRunning, false);
 });
 
@@ -66,10 +67,12 @@ test('可用空间探测不到时不阻断（freeBytes=null）', () => {
   assert.equal(result.ok, true);
 });
 
-test('驱动：mac arm64 明确「不需要」，其它平台 unknown 而不是假装通过', () => {
-  assert.equal(checkDriver(DARWIN), 'not-required');
+test('驱动：mac arm64 明确「不需要」，其它平台 unknown 而不是假装通过', async () => {
+  // M4 起驱动判定返回结论对象（四态），且 linux/x64 有候选方案。
+  assert.equal((await checkDriver(DARWIN)).status, 'not-required');
   const linux = resolveComfyBackendTarget('linux', 'x64');
-  assert.equal(linux.ok, false);
+  assert.equal(linux.ok, true);
+  assert.equal((await checkDriver(linux.target)).status, 'unknown');
 });
 
 test('失败码有文案键与下一步动作，覆盖全部码', () => {
@@ -109,10 +112,14 @@ test('目录校验：相对路径 / 不存在 / 不是目录 / 不可写 / 与�
 test('设置解析与安装根：坏文件回落默认值，用户值优先', () => {
   assert.deepEqual(parseSettings(null), EMPTY_SETTINGS);
   assert.deepEqual(parseSettings('not json'), EMPTY_SETTINGS);
-  assert.deepEqual(parseSettings('{"installRoot":"/data","modelsPath":"/models"}'), { installRoot: '/data', modelsPath: '/models' });
+  assert.deepEqual(parseSettings('{"installRoot":"/data","modelsPath":"/models"}'), {
+    installRoot: '/data',
+    modelsPath: '/models',
+    variant: '',
+  });
   assert.deepEqual(parseSettings('{"installRoot":123}'), EMPTY_SETTINGS);
   assert.equal(resolveInstallRoot('/root', EMPTY_SETTINGS), '/root/comfyui-backend');
-  assert.equal(resolveInstallRoot('/root', { installRoot: '/custom/backend', modelsPath: '' }), '/custom/backend');
+  assert.equal(resolveInstallRoot('/root', { installRoot: '/custom/backend', modelsPath: '', variant: '' }), '/custom/backend');
 });
 
 test('模型目录 YAML：空目录不给配置，非空只指向用户目录（不复制文件）', () => {

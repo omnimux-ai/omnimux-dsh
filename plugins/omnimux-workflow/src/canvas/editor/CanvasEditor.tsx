@@ -72,7 +72,6 @@ import { CreateWorkflowModal } from './components/CreateWorkflowModal';
 import { calculateGroupBounds, childIdsOfGroup, planAlignLayout } from './utils/nodeVisualMath';
 import { resolveWorkflowTemplateScope, toFlatTemplateSnapshot } from './utils/workflowTemplateScope';
 import { useWorkflowTransferStore } from '../store/workflowTransferStore';
-import type { AddNodeComfyProps } from './components/AddNodeMenu';
 import { createTemplate, getTemplate, listTemplates } from '../bridge/templateApi';
 import { sanitizeEdges, sanitizeNodes } from '../bridge/persistSanitize';
 import { planInstantiateTemplate } from './utils/planInstantiateTemplate';
@@ -198,9 +197,6 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   const reactFlowInstance = useReactFlow();
   const { nodes, edges, onNodesChange, onEdgesChange } = useGraphStore();
   // 右键钻取面板底部的 ComfyUI 工作流入口（Issue 3669）读同一份 transfer store。
-  const transferRecents = useWorkflowTransferStore((state) => state.recents);
-  const requestImport = useWorkflowTransferStore((state) => state.requestImport);
-  const applyRecent = useWorkflowTransferStore((state) => state.applyRecent);
   const applyCanvasInputMutation = useCanvasStore((state) => state.applyCanvasInputMutation);
   const setNodes = useCanvasStore((state) => state.setNodes);
   const setSelectedElement = useCanvasStore((state) => state.setSelectedElement);
@@ -399,9 +395,9 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         return;
       }
 
-      // 空白画布或单节点右键：在当前鼠标坐标处创建空工作流组容器
+      // 空白画布或单节点右键：在当前鼠标坐标处创建空模板组容器
       const existingGroups = nodes.filter((n) => n.type === 'group');
-      const groupTitle = `工作流-${existingGroups.length + 1}`;
+      const groupTitle = `模板-${existingGroups.length + 1}`;
       const groupId = `group_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       const width = 640;
       const height = 360;
@@ -768,22 +764,6 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
     setSelectedElement,
   });
 
-  /**
-   * 右键钻取面板底部的 ComfyUI 工作流入口（Issue 3669）：数据与动作来自共享
-   * transfer store，点完关菜单，避免菜单与导入预览面板叠在一起。
-   */
-  const contextComfyMenu = useMemo<AddNodeComfyProps>(() => ({
-    recents: transferRecents,
-    onImport: () => {
-      requestImport();
-      closeMenu();
-    },
-    onApplyRecent: (name: string) => {
-      applyRecent(name);
-      closeMenu();
-    },
-  }), [transferRecents, requestImport, applyRecent, closeMenu]);
-
   // 项目资产按所属工作区解析相对路径；原生导入仍使用绝对路径。
   const mountImportFromAsset = useCallback(
     (asset: AssetRecord | Record<string, unknown>, position: { x: number; y: number }) => {
@@ -993,7 +973,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         </div>
       )}
 
-      {/* ComfyUI 页面节点全屏层（Issue #3681）：与画布同根，关闭即卸载 iframe */}
+      {/* ComfyUI 工作流节点全屏层（Issue #3681）：与画布同根，关闭即卸载 iframe */}
       <ComfyPageOverlay />
 
       {/* 底部悬浮控制坞 */}
@@ -1038,7 +1018,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         onClose={() => setIsShortcutsOpen(false)}
       />
 
-      {/* 发布为 AI 应用向导弹窗 (精准收敛至工作流打组) */}
+      {/* 发布为 AI 应用向导弹窗 (精准收敛至模板打组) */}
       <PublishWizardModal
         isOpen={isPublishModalOpen}
         onClose={() => {
@@ -1077,7 +1057,6 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         onClose={closeMenu}
         onAction={handleMenuAction}
         onAddNode={handleAddNodeFromMenu}
-        comfy={contextComfyMenu}
         canUndo={canUndo}
         canRedo={canRedo}
         hasClipboard={clipboard.hasClipboard}
@@ -1107,7 +1086,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         items={batchAssetItems}
       />
 
-      {/* 创建可复用工作流弹窗 */}
+      {/* 创建可复用模板弹窗 */}
       <CreateWorkflowModal
         isOpen={createWorkflowModalOpen}
         onClose={() => {

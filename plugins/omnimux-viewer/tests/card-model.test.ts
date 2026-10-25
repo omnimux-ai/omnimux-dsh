@@ -8,7 +8,7 @@
 
 import { equal, ok } from 'node:assert/strict'
 import { test } from 'node:test'
-import type { ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ToolCallBlock } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { argumentPathOf, cardModel, contentImageOf, envelopeValueOf } from '../src/client/card-model.ts'
 import { formatDisplayOutput } from '../src/contract.ts'
 import { ASSET_ROUTE, DISPLAY_TOOL, READ_IMAGE_TOOL } from '../src/contract.ts'
@@ -17,7 +17,9 @@ const IMAGE = { attachmentId: 'att-1', mediaType: 'image/png', bytes: 100, width
 
 /** A running call, as the tree hands it over before the result lands. */
 function running(args: string): ToolCallBlock {
-  return { callId: 'c1', name: DISPLAY_TOOL, argsRaw: args, turn: 1, step: 1, time: 0, callView: null, subCalls: [] } as unknown as ToolCallBlock
+  // rc.3 splits the running arm by `phase`; only a dispatched call carries raw
+  // arguments, so the fixture must declare the stage it stands for.
+  return { phase: 'start', callId: 'c1', name: DISPLAY_TOOL, argsRaw: args, turn: 1, step: 1, time: 0, callView: null, subCalls: [] } as unknown as ToolCallBlock
 }
 
 /** A settled call. */

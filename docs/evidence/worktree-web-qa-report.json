@@ -1,27 +1,27 @@
 {
-  "runId": "98a9ce0f-3a1f-40e8-ac23-c4158ca79c47",
+  "runId": "b20408a3-19aa-4ba8-b2c9-5084c2ded784",
   "stage": "analytics",
   "plugin": "omnimux-analytics",
-  "startedAt": "2026-10-24T13:37:06.070Z",
-  "completedAt": "2026-10-24T13:37:08.438Z",
+  "startedAt": "2026-10-24T15:44:46.683Z",
+  "completedAt": "2026-10-24T15:44:50.320Z",
   "pass": true,
-  "serverPort": 62829,
-  "cdpPort": 62830,
+  "serverPort": 51420,
+  "cdpPort": 51424,
   "assertions": [
     {
       "name": "bundle-client-code",
       "pass": true,
-      "size": 5480436
+      "size": 5480580
     },
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 62829
+      "port": 51420
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 62830
+      "port": 51424
     },
     {
       "name": "runner-page-ready",
@@ -52,7 +52,7 @@
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/common-dsh-rc3-declarations-issue-3688-v2/.workbuddy/evidence/worktree-qa/98a9ce0f-3a1f-40e8-ac23-c4158ca79c47/analytics.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/rc3-code-migration-issue-3715/.workbuddy/evidence/worktree-qa/b20408a3-19aa-4ba8-b2c9-5084c2ded784/analytics.png",
     "width": 1280,
     "height": 713,
     "bytes": 37555

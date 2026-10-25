@@ -44,14 +44,70 @@ export const COMFY_BACKEND_FAILURES = [
   'version-mismatch',
   'install-failed',
   'start-timeout',
+  'driver-unsatisfied',
+  'variant-required',
+  'unsupported-variant',
 ] as const;
 
 export type ComfyBackendFailure = (typeof COMFY_BACKEND_FAILURES)[number];
 
-/** 驱动结论（宿主 `checkDriver`）：不检查也要说出来，沉默等于假装检查过。 */
-export const COMFY_BACKEND_DRIVERS = ['not-required', 'unknown', 'unsupported'] as const;
+/**
+ * 驱动结论（镜像宿主 `driver.ts` 的 `DriverStatus`）：不检查也要说出来，
+ * 沉默等于假装检查过。`unsupported` 是 M3 老宿主的遗留取值——保留解析与文案，
+ * 让画布在旧宿主上仍然说人话，而不是把它当未知。
+ */
+export const COMFY_BACKEND_DRIVERS = [
+  'not-required',
+  'satisfied',
+  'unsatisfied',
+  'unknown',
+  'unsupported',
+] as const;
 
 export type ComfyBackendDriver = (typeof COMFY_BACKEND_DRIVERS)[number];
+
+/** 方案支持度（宿主 `ComfyBackendSupport`）：supported = 真机装过，candidate = pin 齐全但未验证。 */
+export const COMFY_BACKEND_SUPPORTS = ['supported', 'candidate'] as const;
+
+export type ComfyBackendSupport = (typeof COMFY_BACKEND_SUPPORTS)[number];
+
+/** 方案需要的驱动类型（宿主 `ComfyBackendDriverRequirement`）。 */
+export const COMFY_BACKEND_DRIVER_REQUIREMENTS = ['none', 'nvidia', 'directml', 'xpu'] as const;
+
+export type ComfyBackendDriverRequirement = (typeof COMFY_BACKEND_DRIVER_REQUIREMENTS)[number];
+
+/** 目标解析不出来的原因（宿主 `ComfyBackendTargetResult`）。 */
+export const COMFY_BACKEND_TARGET_PROBLEMS = [
+  'variant-required',
+  'unsupported-platform',
+  'unsupported-variant',
+] as const;
+
+export type ComfyBackendTargetProblem = (typeof COMFY_BACKEND_TARGET_PROBLEMS)[number];
+
+/** 矩阵摘要里的一行（宿主 `listComfyBackendTargets()`）：给用户看「能选哪些方案」。 */
+export interface ComfyBackendVariantRow {
+  id: string;
+  variant: string;
+  platform: string;
+  arch: string;
+  support: ComfyBackendSupport;
+  /** 宿主给的名称（zh）。画布优先用自己的 i18n 名称，未知 id 才回落这个。 */
+  label: string;
+  /** 宿主给的实话（基座差异、未真机验证等）：原样展示，不藏。 */
+  notes: string;
+  driver: ComfyBackendDriverRequirement;
+  minDriver: string | null;
+  estimatedBytes: number;
+  torchVersion: string;
+}
+
+/** 所选方案的驱动判定（宿主 `driverVerdict()`）：结论 + 人话 + 下限。 */
+export interface ComfyBackendDriverVerdict {
+  status: ComfyBackendDriver;
+  detail: string;
+  required: string | null;
+}
 
 /** 用户设置：空串 = 用默认（安装根 = 插件数据目录；模型目录 = 不接外部目录）。 */
 export interface ComfyBackendSettings {
@@ -112,8 +168,22 @@ export interface ComfyBackendStatusEnvelope extends ApiErrorEnvelope {
   settings?: unknown;
   /** 装之前需要的字节数（预检口径）。 */
   requiredBytes?: unknown;
-  /** 本机是否需要额外驱动。 */
+  /** 本机是否需要额外驱动（四态）。 */
   driver?: unknown;
+  /** 驱动判定的人话说明（宿主给的原文，作为补充信息）。 */
+  driverDetail?: unknown;
+  /** 该方案要求的驱动下限。 */
+  driverRequired?: unknown;
+  /** 当前方案 id（null = 还没定）。 */
+  variant?: unknown;
+  /** 当前方案的支持度。 */
+  support?: unknown;
+  /** 目标解析不出来的原因（多候选/不支持）。 */
+  targetProblem?: unknown;
+  /** `variant-required` 时的候选方案 id。 */
+  targetOptions?: unknown;
+  /** 平台矩阵摘要（6 行）。 */
+  variants?: unknown;
 }
 
 export interface ComfyBackendSettingsEnvelope extends ApiErrorEnvelope {
@@ -211,6 +281,92 @@ export function parseComfyBackendSettingsCode(raw: unknown): ComfyBackendSetting
   return isSettingsCode(raw) ? raw : null;
 }
 
+function isSupport(value: unknown): value is ComfyBackendSupport {
+  return typeof value === 'string' && (COMFY_BACKEND_SUPPORTS as readonly string[]).includes(value);
+}
+
+function isDriverRequirement(value: unknown): value is ComfyBackendDriverRequirement {
+  return typeof value === 'string' && (COMFY_BACKEND_DRIVER_REQUIREMENTS as readonly string[]).includes(value);
+}
+
+/** 目标解析失败原因：未知/缺失给 null（当作「解析正常」处理，不猜原因）。 */
+export function parseComfyBackendTargetProblem(raw: unknown): ComfyBackendTargetProblem | null {
+  return typeof raw === 'string' && (COMFY_BACKEND_TARGET_PROBLEMS as readonly string[]).includes(raw)
+    ? (raw as ComfyBackendTargetProblem)
+    : null;
+}
+
+/**
+ * 当前所选方案 id：非字符串/缺失给空串（空串 = 还没定，界面据此要求用户选）。
+ * 从 `settings.variant` 或 `state` 信封顶层的 `variant` 都能读。
+ */
+export function parseComfyBackendVariant(raw: unknown): string {
+  const source = asRecord(raw);
+  if (!source) return '';
+  return readString(source, 'variant') ?? '';
+}
+
+/** 当前方案的支持度：未知给 null（不声称「支持」）。 */
+export function parseComfyBackendSupport(raw: unknown): ComfyBackendSupport | null {
+  return isSupport(raw) ? raw : null;
+}
+
+/**
+ * 驱动判定：从 `state` 信封读 `driver` / `driverDetail` / `driverRequired`。
+ * 缺失一律 `unknown`（不假装检查过），不编下限。
+ */
+export function parseComfyBackendDriverVerdict(raw: unknown): ComfyBackendDriverVerdict {
+  const source = asRecord(raw);
+  if (!source) return { status: 'unknown', detail: '', required: null };
+  return {
+    status: parseComfyBackendDriver(source.driver),
+    detail: readString(source, 'driverDetail') ?? '',
+    required: readString(source, 'driverRequired'),
+  };
+}
+
+/** 候选方案 id 列表：非字符串元素丢弃（顺序即宿主给的顺序）。 */
+export function parseComfyBackendTargetOptions(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const result: string[] = [];
+  for (const item of raw) {
+    if (typeof item === 'string' && item !== '') result.push(item);
+  }
+  return result;
+}
+
+/**
+ * 平台矩阵摘要解析：形状不认识的行整行丢弃（宁可少一行，也不显示半行假数据）。
+ * 支持度与驱动要求都必须是宿主声明过的取值，否则这一行不可信。
+ */
+export function parseComfyBackendVariants(raw: unknown): ComfyBackendVariantRow[] {
+  if (!Array.isArray(raw)) return [];
+  const rows: ComfyBackendVariantRow[] = [];
+  for (const item of raw) {
+    const source = asRecord(item);
+    if (!source) continue;
+    const variant = readString(source, 'variant');
+    const label = readString(source, 'label');
+    const support = source.support;
+    const driver = source.driver;
+    if (!variant || !label || !isSupport(support) || !isDriverRequirement(driver)) continue;
+    rows.push({
+      id: readString(source, 'id') ?? variant,
+      variant,
+      platform: readString(source, 'platform') ?? '',
+      arch: readString(source, 'arch') ?? '',
+      support,
+      label,
+      notes: readString(source, 'notes') ?? '',
+      driver,
+      minDriver: readString(source, 'minDriver'),
+      estimatedBytes: readNumber(source, 'estimatedBytes') ?? 0,
+      torchVersion: readString(source, 'torchVersion') ?? '',
+    });
+  }
+  return rows;
+}
+
 /**
  * 把 `{ status }` 解析成状态；形状不认识时返回 null —— 调用方据此显示可读错误，
  * 不猜状态、不把未知形状当成「未安装」。
@@ -304,10 +460,10 @@ export function fetchComfyBackendSettings(signal?: AbortSignal) {
 
 /**
  * 写设置。只发用户真正改过的字段（`undefined` 不出现），因此「只改模型目录」
- * 不会顺手把安装根重置。400 时 body 带 `code`，界面按码给原因。
+ * 不会顺手把安装根或所选方案重置。400 时 body 带 `code`，界面按码给原因。
  */
 export function updateComfyBackendSettings(
-  patch: { installRoot?: string; modelsPath?: string },
+  patch: { installRoot?: string; modelsPath?: string; variant?: string },
   signal?: AbortSignal,
 ) {
   return safeRequest<ComfyBackendSettingsEnvelope>(WORKFLOW_API_ROUTES.comfyBackendSettings, {
@@ -331,7 +487,20 @@ export type ComfyBackendPrimaryAction =
   | 'update'
   /** 磁盘不够/目录不可写 → 打开设置换安装目录（不是「重试」，重试一定再失败）。 */
   | 'change-dir'
+  /** 多候选方案没定 / 驱动不满足 → 打开方案列表让用户换一个（不自动挑）。 */
+  | 'choose-variant'
   | 'none';
+
+/** 面板之外还要用的信封信息（矩阵、驱动判定、目标问题）：都是可选的纯数据。 */
+export interface ComfyBackendEnvelopeContext {
+  targetProblem: ComfyBackendTargetProblem | null;
+  targetOptions: string[];
+  driver: ComfyBackendDriverVerdict;
+  variant: string;
+  support: ComfyBackendSupport | null;
+  variants: ComfyBackendVariantRow[];
+  requiredBytes: number;
+}
 
 export interface ComfyBackendView {
   state: ComfyBackendState;
@@ -357,6 +526,8 @@ export interface ComfyBackendView {
   showDiskRequired: boolean;
   /** 是否展示驱动结论（用户正在决定装不装 / 刚失败时）。 */
   showDriverNote: boolean;
+  /** 目标解析问题的说明 i18n key（多候选/平台不支持/方案不可用）；无问题为 null。 */
+  problemKey: string | null;
 }
 
 const STATE_KEYS: Record<ComfyBackendState, string> = {
@@ -386,7 +557,7 @@ const ERROR_KEYS: Record<string, string> = {
   'start-timeout': 'comfyPage.backend.error.startTimeout',
 };
 
-/** 失败分类 → 人话原因 i18n key（八选一，M3 的核心）。 */
+/** 失败分类 → 人话原因 i18n key（十一个码，M3/M4 的核心）。 */
 const FAILURE_KEYS: Record<ComfyBackendFailure, string> = {
   'unsupported-platform': 'comfyPage.backend.failure.unsupportedPlatform',
   'install-dir-not-writable': 'comfyPage.backend.failure.installDirNotWritable',
@@ -396,13 +567,49 @@ const FAILURE_KEYS: Record<ComfyBackendFailure, string> = {
   'version-mismatch': 'comfyPage.backend.failure.versionMismatch',
   'install-failed': 'comfyPage.backend.failure.installFailed',
   'start-timeout': 'comfyPage.backend.failure.startTimeout',
+  'driver-unsatisfied': 'comfyPage.backend.failure.driverUnsatisfied',
+  'variant-required': 'comfyPage.backend.failure.variantRequired',
+  'unsupported-variant': 'comfyPage.backend.failure.unsupportedVariant',
 };
 
-/** 驱动结论 → 文案 i18n key：三态都要说出来，`unknown` 不假装检查过。 */
+/** 驱动结论 → 文案 i18n key：每态都要说出来，`unknown` 不假装检查过。 */
 const DRIVER_KEYS: Record<ComfyBackendDriver, string> = {
   'not-required': 'comfyPage.backend.driver.notRequired',
+  satisfied: 'comfyPage.backend.driver.satisfied',
+  unsatisfied: 'comfyPage.backend.driver.unsatisfied',
   unknown: 'comfyPage.backend.driver.unknown',
   unsupported: 'comfyPage.backend.driver.unsupported',
+};
+
+/** 方案支持度 → 徽标文案 key。 */
+const SUPPORT_KEYS: Record<ComfyBackendSupport, string> = {
+  supported: 'comfyPage.backend.support.supported',
+  candidate: 'comfyPage.backend.support.candidate',
+};
+
+/** 方案要求的驱动类型 → 文案 key（矩阵每行的「驱动结论」列）。 */
+const DRIVER_REQUIREMENT_KEYS: Record<ComfyBackendDriverRequirement, string> = {
+  none: 'comfyPage.backend.driverReq.none',
+  nvidia: 'comfyPage.backend.driverReq.nvidia',
+  directml: 'comfyPage.backend.driverReq.directml',
+  xpu: 'comfyPage.backend.driverReq.xpu',
+};
+
+/** 目标解析问题 → 说明文案 key。 */
+const PROBLEM_KEYS: Record<ComfyBackendTargetProblem, string> = {
+  'variant-required': 'comfyPage.backend.problem.variantRequired',
+  'unsupported-platform': 'comfyPage.backend.problem.unsupportedPlatform',
+  'unsupported-variant': 'comfyPage.backend.problem.unsupportedVariant',
+};
+
+/** 方案 id → 画布自己的名称 key（宿主 label 只有中文，英文界面回落它）。 */
+const VARIANT_KEYS: Record<string, string> = {
+  'darwin-arm64': 'comfyPage.backend.variant.darwinArm64',
+  'win32-x64-cuda12': 'comfyPage.backend.variant.win32X64Cuda12',
+  'win32-x64-cuda13': 'comfyPage.backend.variant.win32X64Cuda13',
+  'win32-x64-amd-directml': 'comfyPage.backend.variant.win32X64AmdDirectml',
+  'win32-x64-intel-xpu': 'comfyPage.backend.variant.win32X64IntelXpu',
+  'linux-x64-cuda12': 'comfyPage.backend.variant.linuxX64Cuda12',
 };
 
 /** 设置校验失败码 → 原因 i18n key。 */
@@ -435,10 +642,63 @@ export function comfyBackendDriverKey(driver: ComfyBackendDriver): string {
   return DRIVER_KEYS[driver];
 }
 
+/**
+ * 驱动结论怎么显示：结论文案 + 精确原因 + 结构化下限兜底。
+ *
+ * - `unknown` / `unsatisfied` 时把宿主 `driverDetail`（「查不到 NVIDIA 驱动版本」这类
+ *   精确原因）**行内**显示，不能只藏在悬停里——否则用户看到「尚未判定」却不知道为什么；
+ * - 已经行内显示原因时不再重复「（需要不低于 X）」；宿主没给原因时才用结构化下限兜底
+ *   （`driverRequired` 是语言无关的版本号）；
+ * - 结论本身是画布自己的双语文案，不受宿主文本语言影响。
+ */
+export function comfyBackendDriverDisplay(verdict: ComfyBackendDriverVerdict): {
+  key: string;
+  detail: string;
+  requirement: string | null;
+} {
+  const detail = verdict.detail.trim();
+  const needsReason = verdict.status === 'unknown' || verdict.status === 'unsatisfied';
+  const inlineDetail = needsReason ? detail : '';
+  const requirement = verdict.status === 'unsatisfied' && !inlineDetail ? verdict.required : null;
+  return { key: DRIVER_KEYS[verdict.status], detail: inlineDetail, requirement };
+}
+
 /** 设置校验失败码 → 原因 key；未知码给通用原因，不编一个具体理由。 */
 export function comfyBackendSettingsCodeKey(code: ComfyBackendSettingsCode | null): string {
   if (!code) return 'comfyPage.backend.settingsCode.unknown';
   return SETTINGS_CODE_KEYS[code];
+}
+
+export function comfyBackendSupportKey(support: ComfyBackendSupport): string {
+  return SUPPORT_KEYS[support];
+}
+
+export function comfyBackendDriverRequirementKey(requirement: ComfyBackendDriverRequirement): string {
+  return DRIVER_REQUIREMENT_KEYS[requirement];
+}
+
+/** 目标解析问题 → 说明 key；没问题返回 null。 */
+export function comfyBackendProblemKey(problem: ComfyBackendTargetProblem | null): string | null {
+  if (!problem) return null;
+  return PROBLEM_KEYS[problem];
+}
+
+/** 方案名称 key；未知 id 返回 null（调用方回落宿主 label，不编名称）。 */
+export function comfyBackendVariantKey(variant: string): string | null {
+  if (!variant) return null;
+  return VARIANT_KEYS[variant] ?? null;
+}
+
+/**
+ * 候选方案在驱动不满足时不能装：返回必须让用户先解决的问题，否则 null。
+ * 只判「候选 + 驱动不满足」这一种已知阻塞，`unknown` 不阻断（宿主也不阻断）。
+ */
+export function comfyBackendVariantBlocker(
+  support: ComfyBackendSupport | null,
+  driver: ComfyBackendDriver,
+): ComfyBackendTargetProblem | null {
+  if (support === 'candidate' && driver === 'unsatisfied') return 'unsupported-variant';
+  return null;
 }
 
 /**
@@ -447,6 +707,7 @@ export function comfyBackendSettingsCodeKey(code: ComfyBackendSettingsCode | nul
  *  - `version-mismatch` → 更新（宿主用新固定版本重装，保留用户数据）；
  *  - `install-failed` / `port-occupied` → 重试安装；
  *  - `start-timeout` → 重试启动；
+ *  - `driver-unsatisfied` / `variant-required` → 换方案（重试只会再失败一次）；
  *  - `unsupported-platform` / `driver-unsupported` → 不给动作，只说明；
  *  - 未知码 → 回到安装（最保守的一步，安装会重新跑预检）。
  */
@@ -459,6 +720,10 @@ export function resolveFailureAction(
     case 'insufficient-disk':
     case 'install-dir-not-writable':
       return 'change-dir';
+    case 'driver-unsatisfied':
+    case 'variant-required':
+    case 'unsupported-variant':
+      return 'choose-variant';
     case 'version-mismatch':
       return 'update';
     case 'start-timeout':
@@ -486,8 +751,23 @@ export function resolveFailedRetry(error: string | null): ComfyBackendPrimaryAct
   return resolveFailureAction(null, error);
 }
 
-/** 状态机 → 界面。纯函数：不读网络、不读 store，可离线断言六个状态。 */
-export function resolveComfyBackendView(status: ComfyBackendStatus): ComfyBackendView {
+/**
+ * 状态机 → 界面。纯函数：不读网络、不读 store，可离线断言六个状态。
+ *
+ * `context` 是信封里的矩阵/驱动/目标问题（可选，M3 的调用方只传 status）。
+ * 目标解析不出来时**不自动挑方案**：多候选（`variant-required`）与选到不可用方案
+ * （`unsupported-variant`）都只给「选择方案」，让用户自己定。
+ */
+export function resolveComfyBackendView(
+  status: ComfyBackendStatus,
+  context?: ComfyBackendEnvelopeContext,
+): ComfyBackendView {
+  const problem = context ? context.targetProblem : null;
+  /** 候选方案 + 驱动不满足：装下去一定失败，别让用户白等一次下载。 */
+  const blocked = comfyBackendVariantBlocker(
+    context ? context.support : null,
+    context ? context.driver.status : 'unknown',
+  );
   const base = {
     state: status.state,
     stateKey: STATE_KEYS[status.state],
@@ -500,12 +780,21 @@ export function resolveComfyBackendView(status: ComfyBackendStatus): ComfyBacken
     showLog: false,
     showDiskRequired: false,
     showDriverNote: false,
+    problemKey: comfyBackendProblemKey(problem),
+  };
+  /** 目标问题压过默认主行动：多候选/方案不可用/驱动不满足时不装，先让用户选。 */
+  const problemAction = (fallback: ComfyBackendPrimaryAction): ComfyBackendPrimaryAction => {
+    if (problem === 'variant-required' || problem === 'unsupported-variant') return 'choose-variant';
+    if (problem === 'unsupported-platform') return 'none';
+    if (problem === null && blocked) return 'choose-variant';
+    return fallback;
   };
 
   switch (status.state) {
     case 'not-installed':
       // 装之前正是「本机要不要额外驱动」该被说出来的时刻（沉默 = 假装检查过）。
-      return { ...base, primaryAction: 'install', showDriverNote: true };
+      // 但方案还没定时驱动结论是针对某个方案的，没有结论可说——只留「请先选一个」。
+      return { ...base, primaryAction: problemAction('install'), showDriverNote: problem === null };
     case 'installing':
       return {
         ...base,
@@ -516,7 +805,7 @@ export function resolveComfyBackendView(status: ComfyBackendStatus): ComfyBacken
         stageKey: comfyBackendStageKey(status.stage),
       };
     case 'installed':
-      return { ...base, primaryAction: 'start' };
+      return { ...base, primaryAction: problemAction('start') };
     case 'starting':
       return { ...base, primaryAction: 'none', showStarting: true, showLog: true };
     case 'ready':
@@ -556,7 +845,10 @@ export type ComfyBackendPanel =
   | { kind: 'unavailable'; state: 'unavailable'; stateKey: string; view: null };
 
 /** 纯函数：状态缺失 → unavailable；有状态 → 状态机面板。可离线断言。 */
-export function resolveComfyBackendPanel(status: ComfyBackendStatus | null): ComfyBackendPanel {
+export function resolveComfyBackendPanel(
+  status: ComfyBackendStatus | null,
+  context?: ComfyBackendEnvelopeContext,
+): ComfyBackendPanel {
   if (!status) {
     return {
       kind: 'unavailable',
@@ -565,7 +857,7 @@ export function resolveComfyBackendPanel(status: ComfyBackendStatus | null): Com
       view: null,
     };
   }
-  const view = resolveComfyBackendView(status);
+  const view = resolveComfyBackendView(status, context);
   return { kind: 'state', state: status.state, stateKey: view.stateKey, view };
 }
 

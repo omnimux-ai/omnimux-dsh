@@ -1,0 +1,61 @@
+{
+  "runId": "949131ea-e1eb-4583-8b0a-c810951b298c",
+  "scenario": "viewer-card",
+  "plugin": "omnimux-viewer",
+  "startedAt": "2026-10-24T16:00:59.185Z",
+  "completedAt": "2026-10-24T16:01:00.888Z",
+  "pass": true,
+  "serverPort": 57885,
+  "cdpPort": 57889,
+  "assertions": [
+    {
+      "name": "bundle-viewer-card-page",
+      "pass": true,
+      "size": 5958966
+    },
+    {
+      "name": "ephemeral-server-listen",
+      "pass": true,
+      "port": 57885
+    },
+    {
+      "name": "ephemeral-cdp-listen",
+      "pass": true,
+      "port": 57889
+    },
+    {
+      "name": "viewer-client-apply",
+      "pass": true
+    },
+    {
+      "name": "toolview-registrations",
+      "pass": true,
+      "keys": [
+        "display_file",
+        "read_image"
+      ]
+    },
+    {
+      "name": "running-call-shows-path",
+      "pass": true,
+      "expectedPath": "/tmp/qa-viewer-card.mp4",
+      "text": "title.video⁨/tmp/qa-viewer-card.mp4⁩state.running"
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 9136
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/rc3-code-migration-issue-3715/docs/evidence/viewer-card-qa.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 9136
+  },
+  "errors": []
+}

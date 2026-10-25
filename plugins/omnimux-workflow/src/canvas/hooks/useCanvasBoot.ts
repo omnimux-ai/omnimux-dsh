@@ -137,7 +137,7 @@ export function useCanvasBoot(opts: UseCanvasBootOptions = {}) {
           return;
         }
         // 专属工作区尚不存在，创建属于该 ID 的纯净新工作区
-        const created = await createWorkspace('工作流', targetWorkspaceId);
+        const created = await createWorkspace('模板', targetWorkspaceId);
         if (cancelled) return;
         if (!created.ok || !created.body.workspace) {
           throw new Error(created.body.message ?? t('error.createWorkspaceFailed'));

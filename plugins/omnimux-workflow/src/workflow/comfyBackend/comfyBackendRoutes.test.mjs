@@ -45,8 +45,11 @@ function fakeService(calls) {
       calls.push('stop');
       return NOT_INSTALLED;
     },
-    settings: () => ({ installRoot: '', modelsPath: '' }),
-    updateSettings: () => ({ ok: true, code: null, settings: { installRoot: '', modelsPath: '' } }),
+    settings: () => ({ installRoot: '', modelsPath: '', variant: '' }),
+    currentTarget: () => null,
+    targetProblem: () => null,
+    driverVerdict: async () => ({ status: 'unknown', detail: '未解析到目标', required: null }),
+    updateSettings: () => ({ ok: true, code: null, settings: { installRoot: '', modelsPath: '', variant: '' } }),
   };
 }
 
