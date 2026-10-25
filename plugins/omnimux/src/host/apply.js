@@ -265,9 +265,11 @@ export function apply(ctx, config = {}) {
     mountHttp(ctx)
   }
 
-  if (typeof ctx.inject === 'function') {
-    ctx.inject(['settings'], (sctx) => {
-      const settings = sctx.settings
+  // settings 服务仅在组合了 profileContext 时存在；桌面宿主没有它。改为按需取用，
+  // 缺席时跳过 BYOK 命名空间注册，不阻塞激活。
+  const omnimuxSettingsService = typeof ctx.get === 'function' ? ctx.get('settings') : undefined
+  if (omnimuxSettingsService && typeof omnimuxSettingsService.register === 'function') {
+    const settings = omnimuxSettingsService
       httpDeps.settings = settings
       if (!settings || typeof settings.register !== 'function') return
       // The settings service arrives after httpDeps is built; hand it to the
@@ -361,7 +363,6 @@ export function apply(ctx, config = {}) {
       }
 
       void syncComposerList(0)
-    })
   }
 
   const jsonOut = JSON_TOOL_OUTPUT
