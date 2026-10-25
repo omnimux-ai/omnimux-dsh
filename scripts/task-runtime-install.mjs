@@ -25,7 +25,12 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url));
  * verified against. Nothing here may fall back to a dev-machine path.
  */
 export function readSidebarSupportIdentity() {
-  return json(join(scriptDirectory, 'sidebar-support-identity.json'));
+  try {
+    return json(join(scriptDirectory, 'sidebar-support-identity.json'));
+  } catch {
+    // Missing or unparsable identity is a coded failure, never a silent fallback to a literal.
+    fail('INSTALL_SUPPORT_IDENTITY_REQUIRED');
+  }
 }
 
 /** Reject any support package that is not the identity's package at the identity's version. */

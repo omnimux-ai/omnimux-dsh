@@ -204,3 +204,10 @@ test('sidebar support gate rejects any package that drifts from the identity', (
   assert.throws(() => assertSidebarSupportIdentity({ name: 'dsh-other-sidebar', version: identity.version }, identity), /INSTALL_SUPPORT_REQUIRED/);
   assert.throws(() => assertSidebarSupportIdentity(undefined, identity), /INSTALL_SUPPORT_REQUIRED/);
 });
+
+test('sidebar support gate reads the identity file when no identity argument is given', () => {
+  // The production call site passes no identity: this exercises the file read itself.
+  const identity = readSidebarSupportIdentity();
+  assert.equal(assertSidebarSupportIdentity({ name: identity.name, version: identity.version }).version, identity.version);
+  assert.throws(() => assertSidebarSupportIdentity({ name: identity.name, version: '0.0.0' }), /INSTALL_SUPPORT_REQUIRED/);
+});
