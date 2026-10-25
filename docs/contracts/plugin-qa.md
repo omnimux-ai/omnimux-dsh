@@ -202,6 +202,15 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 | 不经 `pnpm <script>` 自动安装：在工作树里用 `node` 直接执行脚本里的命令 | 自动安装构建失败，或误删已跟踪的 `plugins/*/lib/` 文件 | 用 `git -C <worktree> checkout -- .` 恢复后改为直接执行 |
 | 新建工作树没有被忽略的构建产物（如 `plugins/omnimux-forms/assets/examples/`） | 表单准备与 `verify-package-files` 相关用例只在工作树里失败 | 在工作树里完成依赖安装和表单构建，或只在主检出对比这几项 |
 
+以下四类是**检查自身**会因「与它要验的东西无关的原因」变红的已知形态。排查时先对照，别把环境红当成改动红：
+
+| 形态 | 现象 | 处理 |
+| --- | --- | --- |
+| 检查为隔离环境把子进程的用户目录改到临时目录，而包管理器缓存正好在用户目录下——缓存一丢，每次都要重新下载 | 同步类检查**偶发**报 corepack 下载失败（网络抖动时红、重跑又绿） | 固定缓存位置（`COREPACK_HOME`）。**不要**顺手关掉 corepack 联网：那会把偶发红换成「缓存不在时必然红」，干净机器上第一次跑就是红的 |
+| 检查需要 fixture 环境变量 | 单独跑某个检查文件报 `EVIDENCE_FIXTURE_ENV_REQUIRED` | 用 `pnpm test:gates` 跑（它带 `--import ./scripts/local-evidence-fixture-preload.mjs`）；单文件裸跑的红不代表改动有问题 |
+| 检查**故意**先联网装真实公共包、再验离线迁移（如 `scripts/materialize-cache.test.mjs`） | 无网络时必红 | 不是缺陷；这类文件不在 `test:gates` 的执行链里，别拿它的红当验收结论 |
+| macOS 的临时目录路径含符号链接（`/var` → `/private/var`），而归档/物化脚本会**正确地**拒绝符号链接祖先 | 报 `symlink ancestor` | 测试侧把临时目录解析成真实路径（`realpathSync(tmpdir())`）；不要放宽那道防越权检查 |
+
 `scripts/verify-ci-gates.test.mjs` 会对全仓跑静态门禁，因此会暴露 `main` 上**已有**的问题（如插件边界越界、双语哈希过期、包文件声明缺失）。它不在 CI 必跑列表里，判断本次改动是否引入新问题，要与干净 `origin/main` 的同一命令结果对比。
 
 ### 样例（走读）
