@@ -90,7 +90,7 @@ export function verifyAutoServing(options = {}) {
       if (registered.get(productId)?.kind !== kind) issue('missing', `Missing ${kind} whitelist registration`, productId)
     }
   }
-  return finish(issues, [...registered.values()], offlineGatewayCheck(options, issue, warning), warnings)
+  return finish(issues, [...registered.values()], offlineGatewayCheck({ ...options, manifest }, issue, warning), warnings)
 }
 
 /**
@@ -137,9 +137,10 @@ export function readBaselineBundledSnapshot(options = {}) {
 }
 
 /**
- * Offline gateway check: the bundled snapshot must be usable, every model the
- * catalog actually lists must be on sale in it, and no model the baseline sold
- * may have disappeared.
+ * Offline gateway check: the bundled snapshot must be usable, and no model the
+ * baseline sold may have disappeared. A disappearance the manifest records as
+ * reviewed (`snapshotDropAcknowledged`) stays visible as a warning instead of
+ * failing: the decision has to live in git, not in a silent threshold.
  *
  * Two different disappearance notions, deliberately:
  *   - `disappearance()` (the runtime refresh guard's own helper) counts raw
@@ -171,6 +172,11 @@ function offlineGatewayCheck(options, issue, warning) {
   } else {
     const baselineOnSale = usableSnapshotModels(baseline.snapshot)
     const gone = disappearance(baseline.snapshot, read.snapshot)
+    if (baselineOnSale.size === 0 && (baseline.snapshot.models ?? []).length > 0) {
+      warning('baseline_shape_unexpected',
+        `Baseline ${baseline.ref} has ${baseline.snapshot.models.length} model rows but none on sale; `
+          + 'a schema change may have silently disabled drop detection.')
+    }
     baselineInfo = {
       ref: baseline.ref,
       code: baseline.code,
@@ -178,13 +184,20 @@ function offlineGatewayCheck(options, issue, warning) {
       onSale: baselineOnSale.size,
       disappearance: gone,
     }
+    const acknowledged = acknowledgedDrops(options)
     for (const id of baselineOnSale.keys()) {
       if (onSale.has(id)) continue
       dropped.push(id)
+      if (acknowledged.has(id)) {
+        warning('snapshot_model_dropped_acknowledged',
+          `Reviewed drop: ${id} — ${acknowledged.get(id)}`)
+        continue
+      }
       issue(
         'snapshot_model_dropped',
         'The shipped gateway snapshot no longer sells a model the baseline sold; '
-          + 'commit-time is stricter than the runtime ratio guard, so this must be decided explicitly.',
+          + 'commit-time is stricter than the runtime ratio guard, so record the decision in '
+          + 'auto-serving-manifest.json snapshotDropAcknowledged (id + reason + reviewedAt).',
         id,
       )
     }
@@ -197,12 +210,33 @@ function offlineGatewayCheck(options, issue, warning) {
     issue('catalog_unavailable', `Catalog could not be built from the bundled snapshot: ${error.message}`)
     return { snapshotModels: read.snapshot.models.length, onSale: onSale.size, baseline: baselineInfo, dropped }
   }
-  for (const kind of ['text', 'image', 'video', 'audio']) {
-    for (const row of catalog[kind] ?? []) {
-      if (!onSale.has(row.id)) issue('listed_not_on_sale', 'Catalog lists a model the gateway does not sell', row.id)
-    }
-  }
+  // The catalog is built from this same snapshot, so "listed but not on sale"
+  // cannot happen by construction; asserting it was a tautology. The live
+  // checks are the snapshot itself and the baseline comparison above.
   return { snapshotModels: read.snapshot.models.length, onSale: onSale.size, baseline: baselineInfo, dropped }
+}
+
+/**
+ * Reviewed drop decisions, keyed by model id.
+ *
+ * The declaration is the explicit channel: a legitimate delisting (or a
+ * `model_name` rename) must be recorded in the manifest with a reason and a
+ * review date, where reviewers see it, instead of being waived by a threshold.
+ *
+ * @param {{ manifest?: { snapshotDropAcknowledged?: unknown } }} options
+ * @returns {Map<string, string>}
+ */
+function acknowledgedDrops(options) {
+  const rows = options?.manifest?.snapshotDropAcknowledged
+  const out = new Map()
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const id = typeof row?.id === 'string' ? row.id.trim() : ''
+    if (!id) continue
+    const reason = typeof row?.reason === 'string' ? row.reason.trim() : ''
+    const reviewedAt = typeof row?.reviewedAt === 'string' ? row.reviewedAt.trim() : ''
+    out.set(id, [reason || 'no reason given', reviewedAt ? `reviewed ${reviewedAt}` : 'no review date'].join(' · '))
+  }
+  return out
 }
 
 function finish(issues, models, gateway = null, warnings = []) {

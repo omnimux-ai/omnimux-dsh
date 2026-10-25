@@ -123,6 +123,39 @@ test('the shipped snapshot may not silently drop a model the baseline sold', () 
   assert.equal(verifyAutoServing({ baseline, bundled: { snapshot: baseline } }).ok, true)
 })
 
+test('a reviewed drop is recorded in git and stays visible instead of failing the gate', () => {
+  const baseline = bundled()
+  const dropped = 'suno'
+  assert.ok(baseline.models.some((row) => row.id === dropped), 'fixture expectation: suno is on sale today')
+  const current = structuredClone(baseline)
+  current.models = current.models.filter((row) => row.id !== dropped)
+
+  // Undeclared: hard failure that names the model and says where to record the decision.
+  const undeclared = verifyAutoServing({ baseline, bundled: { snapshot: current } })
+  assert.equal(undeclared.ok, false)
+  const issue = undeclared.issues.find((row) => row.code === 'auto_serving_snapshot_model_dropped')
+  assert.equal(issue.modelId, dropped)
+  assert.match(issue.message, /snapshotDropAcknowledged/)
+
+  // Declared with reason and review date: visible as a warning, not a failure.
+  const manifest = JSON.parse(readFileSync(MANIFEST_URL, 'utf8'))
+  manifest.snapshotDropAcknowledged = [{ id: dropped, reason: 'gateway retired the line', reviewedAt: '2026-11-25' }]
+  const declared = verifyAutoServing({ baseline, bundled: { snapshot: current }, manifest })
+  assert.equal(declared.ok, true)
+  assert.equal(declared.issues.length, 0)
+  const warning = declared.warnings.find((row) => row.code === 'auto_serving_snapshot_model_dropped_acknowledged')
+  assert.match(warning.message, /gateway retired the line/)
+  assert.match(warning.message, /reviewed 2026-11-25/)
+  assert.deepEqual(declared.gateway.dropped, [dropped])
+})
+
+test('a baseline whose rows sell nothing warns instead of silently disabling drop detection', () => {
+  const baseline = structuredClone(bundled())
+  for (const row of baseline.models) row.enableGroups = []
+  const report = verifyAutoServing({ baseline, bundled: { snapshot: bundled() } })
+  assert.equal(report.warnings.some((row) => row.code === 'auto_serving_baseline_shape_unexpected'), true)
+})
+
 test('a baseline that cannot be read is a warning, never a fake failure', () => {
   const missing = verifyAutoServing({ baseline: null })
   assert.equal(missing.ok, true, JSON.stringify(missing.issues))

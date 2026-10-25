@@ -60,6 +60,19 @@
 - 若 `node scripts/verify-models.mjs` 的源码或运行时仍会发起网络请求（含 `fetch(`、`homedir()`、
   `OMNIMUX_API_KEY`），说明联网分支没有真正退役。
 
+## 评审后补充：合法下架的可评审通道
+
+评审指出「严格丢型号校验没有放行通道」会让网关合法下架当天无法合入。补法是把决策落到 **git 里可评审的声明位**，而不是加阈值或自动豁免：
+
+- `plugins/omnimux/src/catalog/contract/auto-serving-manifest.json` 新增顶层 `snapshotDropAcknowledged: [{ id, reason, reviewedAt }]`（初始为空数组）。
+- 门禁命中基线消失的型号时：未声明的 → `auto_serving_snapshot_model_dropped` 硬红，并在消息里指向该字段；已声明的 → 降为 `auto_serving_snapshot_model_dropped_acknowledged` warning（原因与复核日期照原样显示），`gateway.dropped` 仍列出该型号，评审者一眼可见。
+- 基线 `models` 非空但在售集合为空时新增 `auto_serving_baseline_shape_unexpected` warning，避免未来 schema 改名字段导致丢型号检测静默关闭。
+- 顺带删掉 `listed_not_on_sale` 恒真死检查（目录由同一份快照构建，构造上不可能触发），并修正 JSDoc 不再把它当真实断言宣传。
+- `plugins/omnimux/scripts/catalog-snapshot.mjs`：`--baseline` 不带 `--check` 时直接报用法错误并退出 2，避免落入「联网 + 写文件」路径。
+- `docs/contracts/model-capabilities-matrix.md` 的双否定病句改为「也不是官方文档之外的模型能力发现手段」。
+
+新增用例：①未声明 → 硬红并指向声明位；②已声明（含原因与复核日期）→ 通过 + warning + `gateway.dropped` 仍可见；③基线在售为空 → `baseline_shape_unexpected` warning。
+
 ## 旧标准变更
 
 - `scripts/verify-cross-plugin-model-alignment.test.mjs` :: `baseline repository contracts pass cross-plugin model alignment verification`

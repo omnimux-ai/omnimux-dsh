@@ -159,6 +159,10 @@ async function main() {
     console.log(usage())
     return
   }
+  if (options.baseline && !options.check) {
+    console.error('catalog-snapshot: --baseline only applies with --check; refusing to fetch and write')
+    return 2
+  }
   if (options.check) {
     check(options)
     return
