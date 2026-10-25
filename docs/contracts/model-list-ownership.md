@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-18"
-updated: "2026-10-08"
+updated: "2026-10-25"
 authors: ["x", "agent-architect", "gao-jianyuan"]
 subsystem: "omnimux"
 tags:
@@ -25,7 +25,7 @@ related:
 
 This contract owns the internal directory and retained technical selectors. It does not make every registered model a public product choice. Ordinary character creation follows [product positioning](product-positioning.md); hiding IDs and automatic group matching are product requirements, not proof that existing selectors or request schemas have changed.
 
-The app's OmniMux model list has one **field authority**: `plugins/omnimux/cordis.patch.yml` says what every model looks like — wire parameters, modalities, context windows, reasoning efforts. Membership of the chat composer list is a separate, dynamic concern: at runtime the hub narrows the list to the models it currently lists, and the `composerHiddenModels` setting can subtract further. See [Composer list membership](#composer-list-membership).
+The app's OmniMux model list has one **field authority**: `plugins/omnimux/cordis.patch.yml` says what every model looks like — wire parameters, modalities, context windows, reasoning efforts. **Who is on sale is a different truth, owned by the gateway snapshot.** The hub's four catalog lists are the projection of `snapshot on-sale ∩ call contract`, and the `composerHiddenModels` setting can subtract further. Neither the patch nor any local table or flag decides membership. See [Composer list membership](#composer-list-membership).
 
 Model modes, input modalities, limits and wire parameters MUST follow the selected channel's official API documentation under [model API authority](model-api-authority.md). EvoLink and APIMart are the primary channels. Do not issue real model requests for research or contract acceptance. Historical measurements below do not define current channel support.
 
@@ -67,15 +67,16 @@ it that way: user layers set `agent-default-model` only.
   for channel documentation. A narrower current adapter is an implementation
   gap, not evidence that the channel lacks the capability.
 - The one-shot expert whitelist (`plugins/omnimux/src/text/catalog.js`
-  `CHAT_MODELS`) is a subset of this patch list, and its `input` matrix must
-  agree with the patch. `verify:models` fails on any mismatch, if a
-  whitelist id is missing from the patch, or if a patch id is not sold by the
-  shipped bundled gateway snapshot. It is fully offline since #3763: it reads
-  `plugins/omnimux/src/catalog/cloud/bundled/pricing.json` instead of probing
-  the service, so it needs no credential. Since 2026-10-21 (#3527) the chat
-  directory projects only text models with a **listed** text output, so a
-  contracted-but-unlisted model never re-enters the expert whitelist; the
-  patch itself only advertises models the configured gateway currently serves.
+  `CHAT_MODELS`) is a projection of the chat directory, and its `input` matrix
+  must agree with the patch. Since 2026-10-21 (#3527) the chat directory
+  projects only text models with a **listed** text output, so a
+  contracted-but-unlisted model never re-enters the expert whitelist. The patch
+  owns the **field shape** of the rows it declares; whether a row is actually on
+  sale comes from the gateway snapshot at runtime — never from the patch, and
+  never from a local flag. `pnpm verify:models` stays an offline self-check of
+  patch ↔ projection ↔ shipped snapshot agreement (it reads
+  `plugins/omnimux/src/catalog/cloud/bundled/pricing.json`, needs no credential
+  and makes no request since #3763); it is not a membership authority.
 - Deployment / instance gating for the expert whitelist only:
   `Config.gate.models.textComplete.<id>` can hide a whitelist row from
   `omnimux_text_complete` without editing `cordis.patch.yml`. A model is
@@ -147,10 +148,11 @@ visibility setting changes.
   wire parameters. A hub-listed model the profile does not describe is added with
   its id and label only: no context window, modality, or reasoning level is
   guessed, because a wrong one fails mid-conversation rather than at startup.
-- **Membership truth** — the hub's listed `text` bucket
+- **Membership truth** — the hub's `text` bucket
   (`plugins/omnimux/src/catalog/list.js`, the directory the canvas also
-  consumes). A model the hub does not list is never written, whatever local
-  configuration says.
+  consumes), which is the **gateway snapshot's on-sale set ∩ the call
+  contract**. A model the snapshot does not sell — or one with no callable
+  contract — is never written, whatever local configuration says.
 - **User subtraction** — the `composerHiddenModels` settings field. It removes
   ids from the hub's set and can never add one, which is what makes an unlisted
   model unrecoverable by configuration.
@@ -164,7 +166,13 @@ visibility setting changes.
 
 ## Changing the list
 
-1. Edit `plugins/omnimux/cordis.patch.yml` (provider row + models).
+0. Confirm the model is on sale in the shipped snapshot — read
+   `plugins/omnimux/src/catalog/cloud/bundled/pricing.json`, or run
+   `pnpm catalog:snapshot:check`. A row the snapshot does not sell never reaches
+   any list, so editing the patch for it is wasted work; if the gateway just
+   started selling it, refresh the snapshot first.
+1. Edit `plugins/omnimux/cordis.patch.yml` (provider row + models) for the
+   **field shape** only.
 2. Compare the patch and mapper against the selected channel documentation; run
    offline `pnpm verify:model-contracts`, `pnpm verify:models` (patch ↔
    `CHAT_MODELS` ↔ shipped snapshot, no credential, no network) and relevant
@@ -181,8 +189,8 @@ When the user requests listing or making a model available to the canvas/consume
 1. **Contract definition**: Register the canonical runtime model ID, brand, operation IDs, inputs, and defaults in the corresponding specs YAML (`plugins/omnimux/src/catalog/specs/*.yaml`).
 2. **Authorized live probe**: With user authorization, run a minimal live generation probe against the production gateway to verify existence and minimal response, recording the report in `docs/evidence/`.
 3. **Status activation (listed: true)**: Promote the operation's `research.status` from `"draft"` to `"verified"` and set `docUrl` to the evidence doc. The contract loader computes `op.listed = true` only when research is verified with a valid docUrl.
-4. **Manifest and consumers**: Register the model in `auto-serving-manifest.json` and canvas whitelists (`generationPolicy.ts`), and keep the channel-group display names in `channel-groups.js` / `channelGroups.ts`. Whether the model is actually on sale is decided by the gateway snapshot, not by a local flag (`requiredInAuto` was removed in #3734); the catalog lists only models the snapshot sells and the contract can call.
-5. **Gate verification and materialization**: Run `pnpm verify:model-contracts --strict` and `verify:cross-plugin-models`, land via PR, and run `sync-to-app.sh` so canvas/consumers immediately expose the listed model.
+4. **Manifest and consumers**: Register the model in `auto-serving-manifest.json` and canvas whitelists (`generationPolicy.ts`), and keep the channel-group display names in `channel-groups.js` / `channelGroups.ts`. Whether the model is actually on sale is decided by the gateway snapshot, not by a local flag (`requiredInAuto` was removed in #3734); the catalog lists only models the snapshot sells and the contract can call, so confirm the shipped snapshot sells it (step 0 above) before claiming it is listed.
+5. **Gate verification and materialization**: Run `pnpm verify:model-contracts --strict` (it already includes the cross-plugin alignment pass), land via PR, and run `sync-to-app.sh` so canvas/consumers immediately expose the listed model.
 
 ## User layers
 
@@ -193,9 +201,18 @@ reference shape.
 
 ## Verify
 
-- `pnpm verify:model-contracts` — offline contract/schema/profile consistency.
-  Verify patch-specific field mapping with isolated fixtures as needed.
-  Online existence and real-generation scripts are not acceptance requirements.
+- `pnpm catalog:snapshot:check` — the shipped gateway snapshot is present,
+  readable and current. Run it whenever the gateway catalogue may have moved;
+  the snapshot is the on-sale floor every install serves.
+- `pnpm verify:model-contracts` — offline contract/schema/profile consistency,
+  **plus the snapshot gates it already runs**: the baseline drop gate
+  (`auto_serving_snapshot_model_dropped` — a model the previous shipped snapshot
+  sold may not silently disappear, only a reviewed
+  `snapshotDropAcknowledged` entry may), and the listed ↔ on-sale
+  reconciliation (`gateway_missing_contract_drift`, comparing
+  `catalog.gateway.missingContract` against the bundled snapshot). Verify
+  patch-specific field mapping with isolated fixtures as needed. Online
+  existence and real-generation scripts are not acceptance requirements.
 - `dsh --profile <name> --dump-config` — the composed `llm-pi-ai` provider
   block must come from `omnimux` (dump headers name the patching layer),
   and no `omnimux-compat` provider may exist anywhere.

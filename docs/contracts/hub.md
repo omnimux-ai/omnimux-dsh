@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-16"
-updated: "2026-10-09"
+updated: "2026-10-25"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 ---
@@ -146,7 +146,7 @@ Top-level `prompt` and explicit `parameters.prompt`, when both supplied, must be
 
 ### Current authority and full-candidate judgment
 
-Each call must read one current canonical-contract/registry/registered-options/real-group snapshot and derive every candidate from it. Public DTOs, caller hints, `listed`, document URLs and a live profile are not qualification evidence. Private candidate identity binds canonical model, channel, real group, wire group/model, operation, purpose, protocol and current mapping. A group must exist and be explicitly enabled; no cross-group fallback may supply missing capabilities.
+Each call must read one current canonical-contract/registry/registered-options/real-group snapshot **plus the gateway on-sale snapshot**, and derive every candidate from them. A model the gateway snapshot does not sell is not a candidate however complete its contract is: `listed` is the call-contract admission set, never an on-sale claim, and the submit guard refuses a delisted model (`gateway-delisted`). Public DTOs, caller hints, `listed`, document URLs and a live profile are not qualification evidence. Private candidate identity binds canonical model, channel, real group, wire group/model, operation, purpose, protocol and current mapping. A group must exist and be explicitly enabled; no cross-group fallback may supply missing capabilities.
 
 Qualification requires current active evidence matching that complete identity, a fixed official-source/version identity, live-task/output facts and the applicable full input/parameter domain. A historical sample does not prove a larger domain. Missing production qualification is `pending`, not unsupported or ready; known disabled/identity-purpose mismatches are rejected. Explicitly injected eligible fixtures may establish preflight behavior only and must never activate production state.
 
@@ -192,26 +192,18 @@ Preview is stateless and performs zero provider/auth network calls or task/state
 
 `textComplete` is a one-shot expert call, not a second chat. It does not inherit parent messages, does not pass tools, and does not write the image/video into the parent session. Authorization is the enabled whitelist plus the tool's required `reason`. The hub does not prompt the user.
 
-The callable set is `Config.text.models`. Every `id` must already be a `cordis.patch.yml` `omnimux` chat model. `enabled: false` hides that row from the tool. Omitted `models` uses the eleven chat-directory defaults, all enabled. `defaultModel` is what an omitted `model` resolves to on text-only, image, and video requests; `OMNIMUX_TEXT_DEFAULT_MODEL` overlays it. Image / video are not separate seams: the selected row must declare the corresponding `input`, and the mapper must support that payload; `image` and `video` are mutually exclusive in the current seam. Model/channel capabilities and wire constraints are determined by the selected channel's official API documentation under [model API authority](model-api-authority.md), then checked against this implementation offline. Historical modality, video-spike and per-key 403 observations are dated execution records, not current channel support rules. Do not repeat real calls to determine the input matrix or treat a missing mapper as a channel limitation.
+The callable set is `Config.text.models`. Every `id` must already be a `cordis.patch.yml` `omnimux` chat model. `enabled: false` hides that row from the tool. Omitted `models` uses the chat-directory defaults — currently a single row, `gemini-3.8-flash` — all enabled. `defaultModel` is what an omitted `model` resolves to on text-only, image, and video requests; `OMNIMUX_TEXT_DEFAULT_MODEL` overlays it. Image / video are not separate seams: the selected row must declare the corresponding `input`, and the mapper must support that payload; `image` and `video` are mutually exclusive in the current seam. Model/channel capabilities and wire constraints are determined by the selected channel's official API documentation under [model API authority](model-api-authority.md), then checked against this implementation offline. Historical modality, video-spike and per-key 403 observations are dated execution records, not current channel support rules. Do not repeat real calls to determine the input matrix or treat a missing mapper as a channel limitation.
 
 ```text
 text:
   defaultProvider: omnimux
-  defaultModel: gemini-3.7-flash
+  defaultModel: gemini-3.8-flash
   maxTokens: 4096
   models:
-    - { id: claude-opus-5,            brand: anthropic, role: flagship, enabled: true }
-    - { id: claude-opus-4-6,          brand: anthropic, role: flagship, enabled: true }
-    - { id: gpt-5.6-sol,              brand: openai,    role: flagship, enabled: true }
-    - { id: gpt-5.5,                  brand: openai,    role: flagship, enabled: true }
-    - { id: grok-4.6,                 brand: xai,       role: flagship, enabled: true }
-    - { id: kimi-k3,                  brand: moonshot,  role: flagship, enabled: true }
-    - { id: deepseek-v4-pro,          brand: deepseek,  role: flagship, enabled: true }
-    - { id: deepseek-v4-flash-vision-exp, brand: deepseek, role: classic, enabled: true }
-    - { id: gemini-3.7-flash,         brand: google,    role: flagship, enabled: true }
-    - { id: gemini-3.1-pro-preview,   brand: google,    role: flagship, enabled: true }
-    - { id: glm-5.3,                  brand: zhipu,     role: flagship, enabled: true }
+    - { id: gemini-3.8-flash, brand: google, role: flagship, enabled: true }
 ```
+
+The row shape is `{ id, brand, role, enabled }`. The rows come from the contract chat directory, and only ids the gateway snapshot currently sells survive into the catalog: an id the snapshot does not sell stays out of `textComplete` even when it is written here.
 
 A request may name `model` or omit it for `defaultModel`. Images accept an absolute path, `http(s)` URL, or data URI. Videos accept an absolute path (`.mp4` / `.webm` / `.mov`) or `data:video/…` URI. The official account route sends these inputs through Hub chat completions using an explicit API credential or the account-bound credential selected in Profile; only explicit API credentials may use a custom `OMNIMUX_BASE_URL`. Session tool-model text/image requests retain the `ctx.llm.stream` and attachment contract. Missing account execution credentials produce `official-credential-required`; an unconfirmed analysis service produces `analysis-service-unconfigured`, before any model request. The text HTTP endpoint never retries an existing execution seam's failure through another route.
 
@@ -233,7 +225,7 @@ A request may name `model` or omit it for `defaultModel`. Images accept an absol
 | `omnimux_speech_to_text` | hub tool over `speechToText` | same as the seam | same | same |
 | `textComplete` | neutral provide | `{ prompt, model?, image?, video?, system?, maxTokens?, signal? }` | `{ mode: "live", model, text }` | `capability-disabled`, `needs-provider`, `omnimux-unconfigured` (video), `unknown-model`, `omnimux-invalid-request`, stream / HTTP errors |
 | `omnimux_text_complete` | hub tool over `textComplete` | same plus required `reason` | same | same |
-| `modelCatalog` | neutral provide | `list()` (no args) | `{ source, fingerprint, defaults, text, image, video, audio }` — lists sorted by display name; defaults = env → settings → config → first sorted | never throws for empty lists; gate may empty a media kind |
+| `modelCatalog` | neutral provide | `list()` (no args) | `{ source, fingerprint, contractFingerprint, models, defaults, defaultsByOperation, defaultOperations, text, image, video, audio, gateway }` — lists sorted by display name; each list is `gateway on-sale ∩ listed contract`; defaults = env → settings → config → `defaultsByOperation[primary op]` → first sorted; `gateway` = `{ source, digest, models, missingContract }` (P1b truth) | never throws for empty lists; gate may empty a media kind |
 | `GET /omnimux/model-catalog` | public Host HTTP | GET | same body as `modelCatalog.list()` | 503 when catalog unavailable |
 | `generationProducts` | hub provide | `list()` / `preparePreview(RequestV1)` | `ListV1` / `PreviewV1`; see generation-products contract above | fixed public codes; never execution authority |
 | `GET /omnimux/generation-products` | authenticated exact-origin Host HTTP | GET | `ListV1` | existing Host rejection; 503 `catalog_unavailable` |
@@ -253,7 +245,7 @@ A request may name `model` or omit it for `defaultModel`. Images accept an absol
 | `POST /omnimux/workbench/viewport` | hub Host HTTP | Envelope JSON; `assertLocalWrite` | `{ ok: true }` | 403 `not-local` |
 | `POST /omnimux/workbench/rpc/ack` | hub Host HTTP | `{ requestId, ok, applied, code, tabId }` | `{ ok: true }` | 403 `not-local` |
 
-`audioGenerate` exposes audio generation / TTS / music capabilities (Suno, GPT 4o Mini TTS). Speech-to-text is the separate `speechToText` seam (Whisper-1 class): one synchronous multipart POST to `/v1/audio/transcriptions` (file bytes + model) → `{ text }`; no task poll, no dest download. Its gate key is `gate.tools.omnimux_speech_to_text` (there is no `gate.media.stt` kind). Digital-human / talking-head is a `videoGenerate` request on a digital-human model (kling-avatar): reference image + duration + `audioTrack`; the mapper passes `audioTrack` through only for `DIGITAL_HUMAN_MODEL_IDS` and still strips it from generic video requests (#429/#538). Not a third HTTP client.
+`audioGenerate` exposes audio generation / TTS / music capabilities (Suno, GPT 4o Mini TTS). Speech-to-text is the separate `speechToText` seam (Whisper-1 class): one synchronous multipart POST to `/v1/audio/transcriptions` (file bytes + model) → `{ text }`; no task poll, no dest download. Its gate key is `gate.tools.omnimux_speech_to_text` (there is no `gate.media.stt` kind). **The transcription model is currently not in the shipped (anonymous) snapshot's on-sale set**: `whisper-1` rides the account-only line (channel 31 default), which the anonymous snapshot does not publish, so it is explicitly waived by `gatewayMembershipExempt` on its `auto-serving-manifest.json` row (reason + review date, #3763). That waiver relaxes only the gateway-membership gate — the operation's own call-contract admission is unchanged, and the waiver must be removed as soon as a refreshed snapshot publishes a speech-to-text model. Digital-human / talking-head is a `videoGenerate` request on a digital-human model (kling-avatar): reference image + duration + `audioTrack`; the mapper passes `audioTrack` through only for `DIGITAL_HUMAN_MODEL_IDS` and still strips it from generic video requests (#429/#538). Not a third HTTP client.
 
 ### 可信域产物附件
 

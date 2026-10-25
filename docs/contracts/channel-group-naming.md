@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-16"
-updated: "2026-10-08"
+updated: "2026-10-25"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 related:
@@ -19,7 +19,7 @@ related:
 角色创作的现行体验见[产品定位](product-positioning.md)。下列词表约束既有分组名称，不要求新增对外多档位菜单；历史“客户自选渠道组”方向已被替代。内部路由 ID、上游分组与契约继续保留，本次不宣称选择器已改造。
 
 > **历史命名依据（2026-09-12）**：网关侧 `docs/ops/group-pricing-governance-2026-09-12.md` 第 2 节「分组必须切成三层语义」与第 5 节裁决记录（2026-09-12，已裁决采纳对外多档位入口）、网关 `AGENTS.md` 双档约定（Standard / Economy）。
-> **级别**：**强制 (MANDATORY)** —— `pnpm verify:group-naming` 门禁必检项。
+> **级别**：**强制 (MANDATORY)** —— `pnpm verify:group-naming` 门禁必检项（**离线、本地按需执行**；未接入 `test:gates` 或 CI，现状见 [plugin QA · 模型与渠道门禁的自动化归属](plugin-qa.md#模型与渠道门禁的自动化归属)）。
 
 ## 一分清三份规范的边界
 

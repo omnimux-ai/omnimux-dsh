@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-04"
-updated: "2026-10-08"
+updated: "2026-10-25"
 authors: ["qi-huolin", "xu-qingchu", "gao-jianyuan"]
 subsystem: "omnimux/catalog"
 tags:
@@ -34,6 +34,8 @@ related:
 > **R1.1 合同纠偏**：model capability YAML/normalized **根字段 canonical 名是 `schemaVersion`**（值精确 `"1.1"`），**不是**根 `version`。把批准 Contract v1.1 改名为 `version` 属**未授权漂移**。
 
 > **渠道接口准据**：[模型接口准据](model-api-authority.md) 规定以 EvoLink、APIMart 各自官方 API 文档确定模式和输入限制；不发真实模型请求。下述机器字段与历史阶段记录不构成实测要求。
+
+> **上架（listed operation）≠ 在售**：`listedOperations` 是**调用契约准入集合**——它只说中枢「能调」；**谁在售由网关快照决定**。目录四列表的最终可见性 = `listed operation ∩ 网关快照在售集合`（P1b）。契约 listed 而快照不售的型号留在契约里，但不进任何列表。
 
 ## 1. 核心治理原则
 
@@ -172,8 +174,8 @@ Normative JSON Schema（`model-capability.schema.json`）`required` = **`["schem
 
 - YAML 可按管理分组拆分文件（text/image/video/audio/reader-models.yaml），**分组不是 output 真源**。
 - Catalog v1.1 权威集合为 **`models[]`**。
-- 面向内部消费者的四列表（text/image/video/audio）仅为 **按 `output.type` 的兼容投影**（H2 起；H1 shadow 不改 runtime 列表实现）。
-- 投影与画布过滤必须以 **listed operation** 为准。
+- 面向内部消费者的四列表（text/image/video/audio）是 **listed operation 按 `output.type` 的投影，再 ∩ 网关快照在售集合**（P1b；H2 起为契约投影，H1 shadow 不改 runtime 列表实现）。**上架（listed operation）≠ 在售**。
+- 投影与画布过滤必须以 **listed operation** 为准，并在运行时由网关快照收窄。
 
 ### 3.4 Adapter profile
 
@@ -225,8 +227,9 @@ Model 级 `research` / `implementation` / `execution` **仅作 defaults**：norm
 
 派生：
 
-- `listedOperations`: `modelId#operationId` 列表（**权威上架集合**）
-- `model.listed`: `listedOperations` 对该 model 非空（**仅摘要**）
+- `listedOperations`: `modelId#operationId` 列表 —— **调用契约准入集合**（契约侧权威）。它表达「中枢能调」，**不表达「网关在售」**。
+- `model.listed`: `listedOperations` 对该 model 非空（**仅摘要**）。
+- **最终可见性 = listed operation ∩ 网关快照在售集合**（P1b）：目录四列表只列「快照在售 ∧ 有可调用契约」的型号。契约 listed 而快照不售的型号保留契约行，但不进任何列表；manifest 侧以 `canvasExcluded` / `gatewayMembershipExempt` 显式登记其状态与理由。
 
 推论：
 
@@ -256,16 +259,17 @@ UI 必须可解释；**Hide, Don't Grey**。
 
 以下数量及处置结论是该日期的历史快照，当前状态须读机器目录；历史实测不是后续输入限制或上架验收规范。
 
-- **处置表机器真源**：`plugins/omnimux/src/catalog/contract/dispositions.json` 覆盖全部 **43** 个 runtime ID（契约 model.id + wire alias 归一宇宙），每行一个治理处置 + 必填 `reason`。处置枚举：`canonical`（契约行完整）/ `draft`（合法占位、证据不足不上架）/ `alias`（须 `target` 指向表内 canonical 行）/ `unavailable` / `deprecated` / `quarantine`。处置只表达治理意图；**上架与否仍由 op 级五元判定**（verified+live 不是处置值）。
-- **一致性规则 D1–D7**（`dispositions.js`，`--strict` 下全部 error）：runtime ID 无处置行（`disposition_missing`）；canonical/draft 缺契约行（`disposition_contract_missing`）；alias 双列/target 未声明（`disposition_alias_inconsistent`）；禁上架集合出现 listed op（`disposition_listed_forbidden`）；幽灵处置行（`disposition_unknown_id`）；extra YAML 未清理（`coverage_extra`，H2 升级为 strict error）；`catalog-defaults.json` `byOperation` 指向非 canonical 或不存在 op（`defaults_unknown`）。机器真源 shape 错误（`disposition_invalid` / `defaults_invalid` / cordis 读取失败）在 `--audit` 下也失败。
+- **处置表机器真源**：`plugins/omnimux/src/catalog/contract/dispositions.json`（H2 落地时 **43** 行；P1b 后 **67** 行，见下），每行一个治理处置 + 必填 `reason`。处置枚举：`canonical`（契约行完整）/ `draft`（合法占位、证据不足不上架）/ `alias`（须 `target` 指向表内 canonical 行）/ `unavailable` / `deprecated` / `quarantine`。处置只表达治理意图；**上架与否仍由 op 级五元判定**（verified+live 不是处置值）。
+- **一致性规则 D1–D7**（`dispositions.js`，`--strict` 下全部 error）：**有 listed 操作的 runtime ID** 无处置行（`disposition_missing`；P1b 收窄口径——成员资格改为「网关快照 ∩ 可调用契约」后，只有契约、未上架的 id 不会被陈列，D1 要防的「可售 id 无治理」风险不变）；canonical/draft 缺契约行（`disposition_contract_missing`）；alias 双列/target 未声明（`disposition_alias_inconsistent`）；禁上架集合出现 listed op（`disposition_listed_forbidden`）；幽灵处置行（`disposition_unknown_id`）；extra YAML 未清理（`coverage_extra`，H2 升级为 strict error）；`catalog-defaults.json` `byOperation` 指向非 canonical 或不存在 op（`defaults_unknown`）。机器真源 shape 错误（`disposition_invalid` / `defaults_invalid` / cordis 读取失败）在 `--audit` 下也失败。
+- **P1b 现状（2026-10-25）**：成员资格、线路、价格已切换为网关快照；`dispositions.json` 由 83 行收敛到 **67** 行（删 16 行），`requiredInAuto` 已删除（#3734）。D1 收窄为「有 listed 操作的 runtime ID 才必须有行」。**上架（listed operation）≠ 在售**：契约 `listed` 只表示中枢可调，四列表还要 ∩ 快照在售集合。
 - **43 处置结论**：Batch A 三键（`seedance-2-0-fast#text_to_video`、`gpt-image-2#text_to_image`、`grok-imagine-image#text_to_image`）凭仓内 dated live 证据（`docs/evidence/2026-08-14-omnimux-video.md`、`2026-08-16-omnimux-image.md`）verified+live；text chat/vision_chat 按 `2026-08-18-omnimux-modality.md` / `2026-08-20-omnimux-reasoning.md` / `2026-08-23-omnimux-brand-four.md` 逐 op 补证（`claude-opus-5` chat 因 chat-completions group 403 保持 stub 不上架；`deepseek-v4-flash-vision-exp` vision_chat 保持 draft）；`whisper-1` / `kling-avatar` unavailable；`omni_flash` / `kling-o1` / `kling-o3` / `kling-v3-motion-control` quarantine；`nanobanana-2` / `nanobanana-pro` 为 underscore canonical 的 alias（禁止双列）；extra 三 ID（`deepseek-v3` / `deepseek-r1` / `gpt-4o`）无 runtime/wire 引用已删除。
 - **历史限制纠正**：当时对 Grok/Seedance 参考图采用 `max: 1` 的保守策略，不是渠道 API 上限。取消「dated 复测后才放宽」要求；后续逐渠道核对官方数量、角色与组合限制并离线修正实现，不沿用跨渠道的 max4/max8 推断。
-- **投影切换**：`buildModelCatalog()` 以契约 `models[]` 为权威（Catalog v1.1，含 `schemaVersion`/`contractFingerprint`/`defaultsByOperation`/per-model `disposition`）；四列表（text/image/video/audio）**仅**按可见（listed）op 的 `output.type` 派生——`speech_to_text` 产出 text → 入 text 桶；旧 `media/catalog.js` SPECS / `text/catalog.js` `CHAT_MODELS` 硬编码行已物理删除，改为投影 facade（目录语义，含未上架契约行）；契约/处置表失败**顶层 throw**，无回退路径。
+- **投影切换**：`buildModelCatalog()` 以契约 `models[]` 为权威（Catalog v1.1，含 `schemaVersion`/`contractFingerprint`/`defaultsByOperation`/per-model `disposition`）；四列表（text/image/video/audio）按可见（listed）op 的 `output.type` 派生**并 ∩ 网关快照在售集合**（P1b）——`speech_to_text` 产出 text → 入 text 桶；旧 `media/catalog.js` SPECS / `text/catalog.js` `CHAT_MODELS` 硬编码行已物理删除，改为投影 facade（目录语义，含未上架契约行）；契约/处置表失败**顶层 throw**，无回退路径。
 - **fingerprint**：目录指纹输入 = contract contentFingerprint + listedOperations + defaults + defaultsByOperation + dispositions + schemaVersion；改任一 MIME/数量/大小/时长/op/output/准入/处置必变。
 - **cordis 交叉验证**：composer id 必须 resolve 到契约 canonical/alias（`cordis_unresolvable_model`）；`cordis.patch.yml` 内容不动。
 - **CI 红灯**：根 `verify:model-contracts` 与 quality-gate 均已切 `--strict`；稳态目标 extra=0、未处置 missing=0、禁上架 listed=0；禁止用改回 `--audit` 修复红灯。
 
-相关命令：`pnpm verify:model-contracts`（离线契约校验）、`pnpm verify:models`（离线 patch × `CHAT_MODELS` × 随包快照；#3763 起不再查询在线模型存在性）。两者都不发真实模型请求，也不是官方文档之外的模型能力发现手段。
+相关命令：`pnpm verify:model-contracts`（离线契约校验；含跨插件对齐、模态对账、随包快照丢型号门禁与 listed ↔ 在售对账）、`pnpm catalog:snapshot:check`（随包快照可读且新鲜）、`pnpm verify:models`（离线 patch × `CHAT_MODELS` × 随包快照；#3763 起不再查询在线模型存在性，无密钥、无网络）。三者都不发真实模型请求，也不是官方文档之外的模型能力发现手段。
 
 ## 7. 非目标（指向 PRD / 设计）
 

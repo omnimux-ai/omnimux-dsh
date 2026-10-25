@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-28"
-updated: "2026-10-18"
+updated: "2026-10-25"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 ---
@@ -180,11 +180,17 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 | 单插件业务逻辑（非 UI） | `pnpm --filter <package> test` | 该插件边界/registry 小测 | 默认不跑 `pnpm -r test` / `test:all` |
 | Agent Tools / Schema | `pnpm test:agent-tools` | `pnpm verify:tools` | — |
 | DSH 合同 / inject（运行时加载校验） | `pnpm verify:plugin-load` + `pnpm test:plugin-load` | 触及的插件包测 | — |
-| 模型契约 / 路由 / 白名单 / 模型面定价 | `pnpm verify:model-contracts` | 下游：`pnpm verify:cross-plugin-models`、`pnpm verify:models`（离线 patch × `CHAT_MODELS` × 随包快照，#3763 起不联网不取密钥）、相关 submission/whitelist 检查；需要面板时 `pnpm hub:interfaces` | 禁止用真实付费探测发现能力 |
+| 模型契约 / 路由 / 白名单 / 模型面定价 | `pnpm verify:model-contracts`（**含**跨插件对齐、模态对账、随包快照丢型号门禁与 listed ↔ 在售对账；`verify:cross-plugin-models` 已在其中，不必单跑） | 快照新鲜度：`pnpm catalog:snapshot:check`；`pnpm verify:models`（离线 patch × `CHAT_MODELS` × 随包快照，#3763 起不联网不取密钥）；相关 submission/whitelist 检查；需要面板时 `pnpm hub:interfaces` | 禁止用真实付费探测发现能力；`verify:models` 已离线化，不是联网存在性探测 |
 | Client / Stage / 侧栏 / 文案 / CSS | 先读 design 与文案规范；`pnpm verify:stages`（及触及的 `verify:stage-scroll` / `verify:slots` / `test:ui`） | **必做**隔离工作树功能路径浏览器证据（`pnpm test:worktree-web` 或 ego-browser + 截图/结构化报告） | 禁止首页打卡冒充；禁止单测绿替代浏览器证据；Dev `verify:live@45120` 归人工，非 Agent 必做 |
 | 表单合同 | `pnpm verify:forms` | 相关包测 | — |
 | 壳层 / Electron 门控 | 相关静态/包测；若有页面则加隔离 Web | 仅 Electron-only 行为时 `pnpm verify:cdp` | 不能只用网页替代 Electron |
 | 多面混合 | 上表并集 | 仅对真实触及面加跑 | 仍禁止无差别全仓 |
+
+### 模型与渠道门禁的自动化归属
+
+- `pnpm verify:model-contracts` 是模型契约的**唯一必跑入口**，已包含跨插件对齐（`verify-cross-plugin-model-alignment`）、模态对账（Issue #3236）、随包快照丢型号门禁（`auto_serving_snapshot_model_dropped`）与 listed ↔ 在售对账（`gateway_missing_contract_drift`）。不要再把这些当独立下游重复跑。
+- `pnpm verify:models` 已**离线化**（#3763）：只读随包快照 `plugins/omnimux/src/catalog/cloud/bundled/pricing.json`，不联网、不取密钥。它的输出里 `existence: "bundled-snapshot"` / `network: "not-used"` / `credential: "not-used"` 就是这条口径。
+- `pnpm verify:group-naming` / `pnpm verify:group-pricing` **有脚本、有自测**（`scripts/verify-channel-group-*.test.mjs`），但**未接入 `test:gates`，也不在 CI**：它们是本地按需执行的离线门禁，不是自动强制门禁。两个 owning contract（`channel-group-naming.md` / `channel-group-pricing.md`）已按此现状更正，不再声称「CI 必检 / 自动阻断合入」。
 
 ### 假绿与世界态
 
@@ -226,7 +232,7 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 - 按上一节选出的最小命令集合执行，记录命令、退出码、真实用例数与 skip 数。代码变更但测试命令缺失、0 tests、失败或未声明 skip 均不能通过。
 - 行为修复（bug fix）优先先落一个会失败的回归测试再改实现：回归测试即该修复的验收证据，复现旧行为为失败、新行为为通过。这与 Quality Loop 顺序一致——它不是全量 test-first，也不改变 Spec→Code→Verify→Test 的门禁。
 - `pnpm verify:stages` 证明静态 Stage/adapter 合同，不替代隔离工作树浏览器证据。实际 sidebar adapter 仍须覆盖 `getSnapshot`、`subscribe`、`open`、`close`、`set`、`readBox` 及会话隔离/关闭重开行为。
-- 模型研究和参数合同只使用官方文档与离线 `pnpm verify:model-contracts`；不得发真实模型请求探测支持情况。
+- 模型研究和参数合同只使用官方文档、离线 `pnpm verify:model-contracts` 与 `pnpm catalog:snapshot:check`（在售真源）；不得发真实模型请求探测支持情况。
 - 文档检查的实际能力边界见 [docs governance](docs-governance-standard.md)；没有执行的检查不得写进报告。
 
 ## 评审与验收结论

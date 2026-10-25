@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-10-05"
-updated: "2026-10-08"
+updated: "2026-10-25"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 related:
@@ -18,7 +18,7 @@ related:
 本规范保留既有 `pointsEstimate` 的来源与对账要求，不是角色创作的对外价目表。下列倍率和折扣是 2026-10-05 的基准记录，不能当当前金额或恢复旧分组选价入口的依据。统一对外口径与内部低价优先是不同层面，见[产品定位](product-positioning.md)；本次未改计费或路由。
 
 > **上游依据**：执行网关官方定价元数据 `GET https://api.omnimux.ai/api/pricing`（`data[].model_ratio`, `group_ratio.pool`）。
-> **级别**：**强制 (MANDATORY)** —— 由 `pnpm verify:group-pricing` 机械门禁强制拦截。
+> **级别**：**强制 (MANDATORY)** —— 由 `pnpm verify:group-pricing` 离线门禁拦截（**本地按需执行**，未接入 `test:gates` 或 CI）。
 
 ## 一、核心原则：消灭手工臆造，统一算价推导
 
@@ -36,4 +36,4 @@ related:
    - 执行中枢（`plugins/omnimux/src/catalog/serving/channel-groups.js`）与创作画布镜像（`plugins/omnimux-workflow/.../channelGroups.ts`）的 `pointsEstimate` 序列必须严格逐字匹配。
 
 3. **机械门禁防御**：
-   - CI 与代码提交时执行 `pnpm verify:group-pricing`，发现脱离网关底表比值或两端不一致时立即阻断合入。
+   - `pnpm verify:group-pricing` 是**离线**门禁，本地按需执行；它**未接入 `test:gates`，也不在 CI**（现状见 [plugin QA · 模型与渠道门禁的自动化归属](plugin-qa.md#模型与渠道门禁的自动化归属)）。发现脱离网关底表比值或两端不一致时判红，须在合入前确认已实际执行，不得写成自动阻断。

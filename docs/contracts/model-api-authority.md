@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-05"
-updated: "2026-10-08"
+updated: "2026-10-25"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux/catalog"
 tags: ["model-contract", "official-docs", "evolink", "apimart"]
@@ -74,7 +74,7 @@ related:
 
 ## 5. 与当前目录实现的关系
 
-`computeOperationListed` 将渠道文档确认与实现就绪作为目录准入条件，并继续检查兼容 profile 与 gate；`execution.live` 只保留历史真实执行事实，不再是上架前提。这一拆分不授权真实请求，也不能把离线 fixture 标成真实执行。
+`computeOperationListed` 将渠道文档确认与实现就绪作为目录准入条件，并继续检查兼容 profile 与 gate；`execution.live` 只保留历史真实执行事实，不再是上架前提。这一拆分不授权真实请求，也不能把离线 fixture 标成真实执行。**能力真源 ≠ 在售真源**：本文与契约只回答「该渠道文档是否支持、实现是否就绪」；**谁在售由网关快照决定**，目录四列表是「快照在售 ∩ 调用契约」的投影（见 [model-list ownership](model-list-ownership.md)）。
 
 后续接入应依据官方文档和离线实现证据调整目录准入表达，将实现覆盖与历史真实执行分开。不得伪造 `execution.live`、批量标绿或仅改文档宣称模式已可用；保留 schema、mapper、profile 相容和提交前校验要求。
 
