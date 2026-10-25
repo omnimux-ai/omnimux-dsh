@@ -265,11 +265,11 @@ UI 必须可解释；**Hide, Don't Grey**。
 - **43 处置结论**：Batch A 三键（`seedance-2-0-fast#text_to_video`、`gpt-image-2#text_to_image`、`grok-imagine-image#text_to_image`）凭仓内 dated live 证据（`docs/evidence/2026-08-14-omnimux-video.md`、`2026-08-16-omnimux-image.md`）verified+live；text chat/vision_chat 按 `2026-08-18-omnimux-modality.md` / `2026-08-20-omnimux-reasoning.md` / `2026-08-23-omnimux-brand-four.md` 逐 op 补证（`claude-opus-5` chat 因 chat-completions group 403 保持 stub 不上架；`deepseek-v4-flash-vision-exp` vision_chat 保持 draft）；`whisper-1` / `kling-avatar` unavailable；`omni_flash` / `kling-o1` / `kling-o3` / `kling-v3-motion-control` quarantine；`nanobanana-2` / `nanobanana-pro` 为 underscore canonical 的 alias（禁止双列）；extra 三 ID（`deepseek-v3` / `deepseek-r1` / `gpt-4o`）无 runtime/wire 引用已删除。
 - **历史限制纠正**：当时对 Grok/Seedance 参考图采用 `max: 1` 的保守策略，不是渠道 API 上限。取消「dated 复测后才放宽」要求；后续逐渠道核对官方数量、角色与组合限制并离线修正实现，不沿用跨渠道的 max4/max8 推断。
 - **投影切换**：`buildModelCatalog()` 以契约 `models[]` 为权威（Catalog v1.1，含 `schemaVersion`/`contractFingerprint`/`defaultsByOperation`/per-model `disposition`）；四列表（text/image/video/audio）按可见（listed）op 的 `output.type` 派生**并 ∩ 网关快照在售集合**（P1b）——`speech_to_text` 产出 text → 入 text 桶；旧 `media/catalog.js` SPECS / `text/catalog.js` `CHAT_MODELS` 硬编码行已物理删除，改为投影 facade（目录语义，含未上架契约行）；契约/处置表失败**顶层 throw**，无回退路径。
-- **fingerprint**：目录指纹输入 = contract contentFingerprint + listedOperations + defaults + defaultsByOperation + dispositions + schemaVersion；改任一 MIME/数量/大小/时长/op/output/准入/处置必变。
+- **fingerprint**：目录指纹输入 = contract contentFingerprint + listedOperations + defaults + defaultsByOperation + defaultOperations + channelGroups + gateway（来源/摘要/在售集合/缺契约集合）+ dispositions + schemaVersion；改任一 MIME/数量/大小/时长/op/output/准入/处置必变。
 - **cordis 交叉验证**：composer id 必须 resolve 到契约 canonical/alias（`cordis_unresolvable_model`）；`cordis.patch.yml` 内容不动。
 - **CI 红灯**：根 `verify:model-contracts` 与 quality-gate 均已切 `--strict`；稳态目标 extra=0、未处置 missing=0、禁上架 listed=0；禁止用改回 `--audit` 修复红灯。
 
-相关命令：`pnpm verify:model-contracts`（离线契约校验；含跨插件对齐、模态对账、随包快照丢型号门禁与 listed ↔ 在售对账）、`pnpm catalog:snapshot:check`（随包快照可读且新鲜）、`pnpm verify:models`（离线 patch × `CHAT_MODELS` × 随包快照；#3763 起不再查询在线模型存在性，无密钥、无网络）。三者都不发真实模型请求，也不是官方文档之外的模型能力发现手段。
+相关命令：`pnpm verify:model-contracts`（离线契约校验；含跨插件对齐、模态对账、随包快照丢型号门禁与 listed ↔ 在售对账）、`pnpm catalog:snapshot:check`（随包快照**可读、非空**，并打印 `generatedAt` 供人工判断新鲜度；它不是新鲜度阈值门禁）、`pnpm verify:models`（离线 patch × `CHAT_MODELS` × 随包快照；#3763 起不再查询在线模型存在性，无密钥、无网络）。三者都不发真实模型请求，也不是官方文档之外的模型能力发现手段。
 
 ## 7. 非目标（指向 PRD / 设计）
 

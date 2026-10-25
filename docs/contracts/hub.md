@@ -203,7 +203,7 @@ text:
     - { id: gemini-3.8-flash, brand: google, role: flagship, enabled: true }
 ```
 
-The row shape is `{ id, brand, role, enabled }`. The rows come from the contract chat directory, and only ids the gateway snapshot currently sells survive into the catalog: an id the snapshot does not sell stays out of `textComplete` even when it is written here.
+The row shape is `{ id, brand, role, enabled }`. The rows come from the contract chat directory, and only ids the gateway snapshot currently sells survive into the catalog: an id the snapshot does not sell cannot be **submitted** successfully even when it is written here — the official route refuses it as `gateway-delisted` (BYOK routes skip that gate); this is a submit-time gate, not candidate filtering.
 
 A request may name `model` or omit it for `defaultModel`. Images accept an absolute path, `http(s)` URL, or data URI. Videos accept an absolute path (`.mp4` / `.webm` / `.mov`) or `data:video/…` URI. The official account route sends these inputs through Hub chat completions using an explicit API credential or the account-bound credential selected in Profile; only explicit API credentials may use a custom `OMNIMUX_BASE_URL`. Session tool-model text/image requests retain the `ctx.llm.stream` and attachment contract. Missing account execution credentials produce `official-credential-required`; an unconfirmed analysis service produces `analysis-service-unconfigured`, before any model request. The text HTTP endpoint never retries an existing execution seam's failure through another route.
 

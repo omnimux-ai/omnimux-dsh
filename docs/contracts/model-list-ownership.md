@@ -201,8 +201,9 @@ reference shape.
 
 ## Verify
 
-- `pnpm catalog:snapshot:check` — the shipped gateway snapshot is present,
-  readable and current. Run it whenever the gateway catalogue may have moved;
+- `pnpm catalog:snapshot:check` — the shipped gateway snapshot is present and readable
+  (it prints `generatedAt`; freshness stays a human judgement, and only `--baseline`
+  performs a drop comparison). Run it whenever the gateway catalogue may have moved;
   the snapshot is the on-sale floor every install serves.
 - `pnpm verify:model-contracts` — offline contract/schema/profile consistency,
   **plus the snapshot gates it already runs**: the baseline drop gate
