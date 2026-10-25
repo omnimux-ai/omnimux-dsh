@@ -126,9 +126,9 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.gateway.source, 'bundled')
     assert.ok(catalog.gateway.models > 0, 'the gateway snapshot must report its own membership')
     assert.ok(catalog.gateway.missingContract.length > 0, 'gateway-only models must be counted, not silently dropped')
-    const sold = new Set([
-      ...catalog.text, ...catalog.image, ...catalog.video, ...catalog.audio,
-    ].map((row) => row.id))
+    const sold = new Set(
+      Object.assign([], catalog.text, catalog.image, catalog.video, catalog.audio).map((row) => row.id),
+    )
     for (const id of catalog.gateway.missingContract) {
       assert.equal(sold.has(id), false, id + ' has no callable contract, so it must not be listed')
     }

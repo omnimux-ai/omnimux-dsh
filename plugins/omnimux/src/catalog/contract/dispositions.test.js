@@ -227,8 +227,8 @@ test('negative: listed op on forbidden disposition triggers disposition_listed_f
   // P1b: 仓内不再有墓碑行，D4 用一份合成的 unavailable 行验证（判定口径不变）。
   const forbiddenId = 'omni_flash';
   const docWithTombstone = {
-    ...doc,
-    dispositions: [...doc.dispositions, { id: forbiddenId, disposition: 'unavailable', reason: 'P1b D4 fixture row' }],
+    dispositions: doc.dispositions.concat([{ id: forbiddenId, disposition: 'unavailable', reason: 'P1b D4 fixture row' }]),
+    version: doc.version,
   };
   const fakeIndex = {
     ...index,

@@ -66,7 +66,7 @@ describe('Pricing Three Defenses: Pricing Points Integrity Gate', () => {
     assert.ok(snapshot, 'the bundled gateway snapshot must be readable offline');
 
     const catalog = buildModelCatalog({ env: {}, snapshot });
-    const rows = [...catalog.text, ...catalog.image, ...catalog.video, ...catalog.audio];
+    const rows = catalog.text.concat(catalog.image, catalog.video, catalog.audio);
     assert.ok(rows.length > 0, 'the gateway-backed catalog must not be empty');
 
     for (const row of rows) {
