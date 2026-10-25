@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-31"
-updated: "2026-09-21"
+updated: "2026-10-25"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 related:
@@ -32,6 +32,8 @@ Normative seat for plugin GUIs that must sit **beside** the official conversatio
 | **Overlay** | Hub 登录门；Apps 货架（未挂载）；Clip **画布节点 portal**；Google Vids 生成舞台 | `shell.overlay` | Google Vids 是唯一的创作 stage 例外：左侧入口 MUST first await `window.__omnimuxWorkbench.open({ tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' })`，并且仅当该调用的返回值严格等于 `true` 时才 claim `omnimux-vids`（`false`、拒绝或其他结果均不 claim）；Vids 不得注册为 `betterSidebar` Tab。Clip portal **MUST NOT** claim |
 
 Official AppFrame is already `sidebar | conversation | details`. Workbench does **not** replace `conversation`. Ordinary Workbench GUIs live in the community `dsh-better-sidebar` panel (width up to the viewport); Google Vids' generation stage instead occupies `shell.overlay`, while Clip studio remains a Workbench Tab in that right panel. Official `details` stays at 300–520px and is closed (`layout.closeDetails`) when a workbench tab opens.
+
+**Sidebar package identity.** The `dsh-better-sidebar` package itself is produced by the shipping shell fork (its pin/patch/build contract is `docs/contracts/better-sidebar-source.md` there); this repository owns only the identity it must agree with, recorded once in [`scripts/sidebar-support-identity.json`](../../scripts/sidebar-support-identity.json) and read by the task-runtime support gate. Consuming plugins use the public `ctx.betterSidebar` API and **MUST NOT** restate a version literal of their own.
 
 ## Layout
 

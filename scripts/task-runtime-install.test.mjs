@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { assertPreparedTaskArchives, assertTaskPeerSearchBoundary, matchesTaskPeerVersion, preparePrivateTaskPackages, taskPackagePayload } from './task-runtime-install.mjs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { assertPreparedTaskArchives, assertSidebarSupportIdentity, assertTaskPeerSearchBoundary, matchesTaskPeerVersion, preparePrivateTaskPackages, readSidebarSupportIdentity, taskPackagePayload } from './task-runtime-install.mjs';
 import { runPnpm } from './managed-tarball.mjs';
 import { privatePnpmEnvironment } from './materialize-cache.mjs';
 import { hashFile } from './materialize-graph.mjs';
@@ -184,4 +185,29 @@ test('installation supervision terminates an owned SIGTERM-resistant grandchild 
   t.after(() => { try { process.kill(pid, 'SIGKILL'); } catch {} });
   const state = spawnSync('ps', ['-p', String(pid), '-o', 'stat='], { encoding: 'utf8' }).stdout.trim();
   assert.ok(!state || /^Z/.test(state), 'pnpm grandchild must have terminated before owned directory cleanup');
+});
+
+test('sidebar support identity is the single source the studio peer must agree with', () => {
+  const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const identity = readSidebarSupportIdentity();
+  assert.equal(identity.name, 'dsh-better-sidebar');
+  assert.match(identity.version, /^\d+\.\d+\.\d+$/);
+  const studio = JSON.parse(fs.readFileSync(join(repositoryRoot, 'plugins/omnimux-studio/package.json'), 'utf8'));
+  assert.equal(studio.peerDependencies['dsh-better-sidebar'], identity.version,
+    'omnimux-studio must declare the identity version; a version literal anywhere else drifts silently');
+});
+
+test('sidebar support gate rejects any package that drifts from the identity', () => {
+  const identity = readSidebarSupportIdentity();
+  assert.equal(assertSidebarSupportIdentity({ name: identity.name, version: identity.version }, identity).version, identity.version);
+  assert.throws(() => assertSidebarSupportIdentity({ name: identity.name, version: '0.0.0' }, identity), /INSTALL_SUPPORT_REQUIRED/);
+  assert.throws(() => assertSidebarSupportIdentity({ name: 'dsh-other-sidebar', version: identity.version }, identity), /INSTALL_SUPPORT_REQUIRED/);
+  assert.throws(() => assertSidebarSupportIdentity(undefined, identity), /INSTALL_SUPPORT_REQUIRED/);
+});
+
+test('sidebar support gate reads the identity file when no identity argument is given', () => {
+  // The production call site passes no identity: this exercises the file read itself.
+  const identity = readSidebarSupportIdentity();
+  assert.equal(assertSidebarSupportIdentity({ name: identity.name, version: identity.version }).version, identity.version);
+  assert.throws(() => assertSidebarSupportIdentity({ name: identity.name, version: '0.0.0' }), /INSTALL_SUPPORT_REQUIRED/);
 });
