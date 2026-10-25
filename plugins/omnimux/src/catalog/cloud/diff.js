@@ -81,12 +81,13 @@ export function hubCatalogView(hub) {
         pointsEstimate: finiteNumber(pricing.pointsEstimate),
       }
     })
-    byId.set(id, {
-      id,
-      listed: model.listed === true || listedOperations.length > 0 || bucketIds.has(id),
-      listedOperations,
-      groups,
-    })
+    // P1b: a catalog built from a gateway snapshot carries `gatewayListed`, which
+    // already folds in "the gateway sells it on a usable line". When the field is
+    // absent the P1a rule stands unchanged, so this stays a pure read.
+    const listed = typeof model.gatewayListed === 'boolean'
+      ? model.gatewayListed
+      : (model.listed === true || listedOperations.length > 0 || bucketIds.has(id))
+    byId.set(id, { id, listed, listedOperations, groups })
   }
 
   // Bucket rows can exist without a `models[]` entry in a partial projection.

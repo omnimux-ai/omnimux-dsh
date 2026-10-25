@@ -36,6 +36,7 @@ import { executeOmnimuxSpeechToText } from '../media/stt.js'
 import { mountTextComplete } from '../text/mount.js'
 import { buildModelCatalog } from '../catalog/list.js'
 import { createLiveCatalog } from '../catalog/cloud/live.js'
+import { setCurrentSnapshotResolver } from '../catalog/cloud/current.js'
 import { createCatalogRefresher } from '../catalog/cloud/refresh.js'
 import { resolvePricingUrl } from '../catalog/cloud/config.js'
 import { createCatalogDiagnostics } from '../catalog/cloud/diagnostics.js'
@@ -99,8 +100,9 @@ export function apply(ctx, config = {}) {
     ctx.effect(() => () => appsStore.dispose(), 'omnimux: apps catalog')
   }
   appsStore.maybeRefresh()
-  // Gateway snapshot (P1a): resolved for diagnostics only — membership still
-  // comes from the contract index, so the served catalog is unchanged.
+  // Gateway snapshot (P1a, now the catalog's authority since P1b): resolved for
+  // diagnostics, for membership/lines/prices, and shared with every catalog
+  // consumer through the current-snapshot seam below.
   const liveCatalog = createLiveCatalog({
     home: homeDir,
     bundledDir: hub.catalog.bundledDir || undefined,
@@ -112,9 +114,21 @@ export function apply(ctx, config = {}) {
     timeoutMs: hub.catalog.timeoutMs,
     origin: siteBaseUrl,
     onChanged: () => {
+      refreshCurrentCatalogView()
       ctx.emit?.('omnimux/model-catalog-updated')
     },
   })
+  // P1b: one resolution per catalog change, shared by the served catalog, the
+  // submit guard and channel routing. Resolving on every call would re-read the
+  // bundled file and the disk cache per request; refreshing here keeps the
+  // account view authoritative without that cost.
+  let currentCatalogView = liveCatalog.resolve()
+  const refreshCurrentCatalogView = () => {
+    currentCatalogView = liveCatalog.resolve()
+    return currentCatalogView
+  }
+  setCurrentSnapshotResolver(() => currentCatalogView)
+
   let catalogTimer
   const kickCatalogRefresh = () => {
     catalogRefresher.maybeRefresh().catch((error) => {
@@ -129,6 +143,7 @@ export function apply(ctx, config = {}) {
   if (typeof ctx.effect === 'function') {
     ctx.effect(() => () => {
       if (catalogTimer) clearInterval(catalogTimer)
+      setCurrentSnapshotResolver(null)
     }, 'omnimux: gateway catalog')
   }
   const avatarStore = createAvatarStore({ home: homeDir })
@@ -161,6 +176,11 @@ export function apply(ctx, config = {}) {
         gate: hub.gate,
         env: process.env,
         settingsDefaults,
+        // P1b: the runtime catalog follows the refreshed gateway view, so the
+        // composer, the canvas and the submit guard all read one snapshot.
+        snapshot: currentCatalogView.snapshot,
+        snapshotSource: currentCatalogView.source,
+        snapshotDigest: currentCatalogView.digest,
       }),
       // Session-reachable provider:model pairs for the tool-model picker.
       tools: listSessionModels(settingsService),

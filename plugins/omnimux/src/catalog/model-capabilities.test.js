@@ -37,23 +37,27 @@ test('MCC 契约门禁: 视频模型能力声明文件完备性（contract loade
   }
 });
 
-test('H2: 处置表 83 行 + implementation-ready 集合与处置一致', () => {
+test('H2: 处置表 67 行 + implementation-ready 集合与处置一致', () => {
   resetContractCache();
   const index = loadAll(DEFAULT_SPECS_DIR, { useCache: false });
   assert.equal(index.schemaVersion, '1.1');
 
   const doc = loadDispositions();
-  assert.equal(doc.dispositions.length, 83); // #3209 google-vids-omni 转墓碑行，行数不变 → 83
+  assert.equal(doc.dispositions.length, 67); // P1b：13 条 unavailable + 3 条 draft 行删除 → 67
   const byId = new Map(doc.dispositions.map((r) => [r.id, r]));
   const forbidden = forbiddenListedIds(doc);
-  // #1751：撤架型号（unavailable）不再有 YAML 契约行，故 listed 门禁恒不命中。
-  // #3209：google-vids-omni 加入墓碑集合 → 13，且必须同样没有契约行。
-  assert.equal(forbidden.size, 13);
+  // P1b：13 条墓碑行与 3 条 draft 行已删除，禁止 listed 集合为空。
+  assert.equal(forbidden.size, 0);
   for (const id of forbidden) assert.equal(index.get(id), undefined, id);
 
   for (const model of index.all()) {
     const row = byId.get(model.id);
-    assert.ok(row, `model ${model.id} must have a disposition row`);
+    // P1b: only ids that expose a listed operation need a disposition row; the three
+    // withdrawn draft ids stay contracted but can never be offered.
+    if (!row) {
+      assert.deepEqual(model.listedOperations ?? [], [], `${model.id} has no disposition row, so it must not list`);
+      continue;
+    }
     if (forbidden.has(model.id)) {
       assert.deepEqual(model.listedOperations ?? [], [], `${model.id} must not list (disposition ${row.disposition})`);
     }
@@ -101,7 +105,7 @@ test('H2: 处置表 83 行 + implementation-ready 集合与处置一致', () => 
   assert.equal(report.schemaVersion, '1.1');
   assert.equal(Object.prototype.hasOwnProperty.call(report, 'version'), false);
   assert.ok(report.listedOperations.length > 0);
-  assert.equal(report.dispositions.total, 83); // #3209 google-vids-omni 转墓碑行，行数不变 → 83
+  assert.equal(report.dispositions.total, 67); // P1b：13 条 unavailable + 3 条 draft 行删除 → 67
   assert.deepEqual(report.dispositions.unresolvedDispositions, []);
 });
 

@@ -1,4 +1,5 @@
 import { parseModelAndGroup, resolveRequestChannelIntent, resolveChannelPlan } from '../catalog/serving/channel-groups.js'
+import { resolveCurrentSnapshot } from '../catalog/cloud/current.js'
 import { DEFAULT_MEDIA } from './route.js'
 import { findMediaModel } from './catalog.js'
 import { resolveScenarioChoice, assertScenarioRequestIntent } from '../settings/runtime-mode.js'
@@ -14,7 +15,11 @@ import { buildModelCatalog } from '../catalog/list.js'
 export function resolveExecutionPlan({ kind, req, current, media, env }) {
   try { assertScenarioRequestIntent(req) }
   catch (cause) { throw new OmnimuxError('omnimux-invalid-request', cause.message) }
-  const channelIntent = resolveRequestChannelIntent(req)
+  // P1b: the gateway snapshot is the authority for "which lines exist", so a
+  // dedicated line only the gateway publishes must still classify as official
+  // instead of being rejected as an unknown channel.
+  const snapshot = resolveCurrentSnapshot().snapshot
+  const channelIntent = resolveRequestChannelIntent(req, snapshot)
   const serverEnv = Object.fromEntries(['OMNIMUX_API_KEY', 'OMNIMUX_TOKEN']
     .filter((key) => typeof process.env[key] === 'string' && process.env[key].trim().startsWith('sk-'))
     .map((key) => [key, process.env[key]]))
@@ -32,7 +37,7 @@ export function resolveExecutionPlan({ kind, req, current, media, env }) {
   const explicitOfficial = channelIntent.isOfficialChannel || explicitProvider === 'omnimux'
     || Boolean(requestModelId && findMediaModel(kind, requestModelId) && !target && !explicitProvider)
   if (channelIntent.isOfficialChannel && target && requestModelId) {
-    const lines = resolveChannelPlan(req.model, { group: req.group, allowedGroups: req.allowedGroups })
+    const lines = resolveChannelPlan(req.model, { group: req.group, allowedGroups: req.allowedGroups, snapshot })
     if (!lines.candidates.length) throw new OmnimuxError('unknown-group', '所选线路尚未配置或已停用')
   }
   const explicitByok = channelIntent.isByokChannel || (explicitProvider && explicitProvider !== 'omnimux')

@@ -74,7 +74,10 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       assert.equal(standard.wireGroup, 'default')
       assert.equal(standard.default, true)
       assert.equal(standard.enabled, true)
-      assert.equal(standard.pricing?.pointsEstimate, 4.9)
+      // P1b：积分改由网关快照单价 × 分组倍率推导（0.0971 × 1 × 5s × 10）。
+      assert.equal(standard.pricing?.pointsEstimate, 4.86)
+      assert.equal(standard.pricing?.unitPriceUsd, 0.0971)
+      assert.equal(standard.pricing?.groupRatio, 1)
       assert.equal(standard.pricing?.billingMode, 'per_second')
       // 旧的多分组线路（pro / preferred / cheap / official）已随上游对账退场。
       for (const retired of ['pro', 'preferred', 'cheap', 'official']) {
@@ -85,9 +88,17 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     it('returns the 480p economy and 720p standard(default) lines for seedance-2-5', () => {
       const groups = getModelChannelGroups('seedance-2-5')
       assert.ok(Array.isArray(groups))
-      assert.equal(groups.length, 2)
-      assert.deepEqual(groups.map((g) => g.id), ['480p', '720p'])
-      const [p480, p720] = groups
+      // P1b：线路取自快照 enable_groups —— 本地覆盖表命名 480p/720p，网关另发布两条
+      // seedance-2-5-480p / -720p 专线，两者都必须在册。
+      assert.equal(groups.length, 4)
+      assert.deepEqual(groups.map((g) => g.id), ['480p', '720p', 'seedance-2-5-480p', 'seedance-2-5-720p'])
+      const [p480, p720, gateway480, gateway720] = groups
+      assert.equal(gateway480.wireGroup, 'seedance-2-5-480p')
+      assert.equal(gateway480.pricing?.pointsEstimate, 20.96)
+      assert.equal(gateway480.pricing?.groupRatio, 0.524)
+      assert.equal(gateway720.wireGroup, 'seedance-2-5-720p')
+      assert.equal(gateway720.pricing?.pointsEstimate, 28.82)
+      assert.equal(gateway720.pricing?.groupRatio, 0.7206)
       // #3516 评审修正：默认档位是 720p 标准版；480p 是经济版（非默认）。
       assert.equal(p480.label, '经济版')
       assert.equal(p480.wireGroup, 'desktop-480p')
@@ -159,11 +170,13 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     })
 
     it('sorts by cost_first (lowest points estimate first)', () => {
-      // #3516：seedance-2-5 是唯一仍有多线路的模型：480p (21) < 720p (29)。
+      // P1b：价格取自快照，四条线路按积分升序：6.8 / 9.6 / 20.96 / 28.82。
       const candidates = resolveChannelCandidates('seedance-2-5', { strategy: 'cost_first' })
       assert.deepEqual(candidates, [
         'seedance-2-5@desktop-480p',
         'seedance-2-5@desktop-720p',
+        'seedance-2-5@seedance-2-5-480p',
+        'seedance-2-5@seedance-2-5-720p',
       ])
       assert.ok(
         candidates.indexOf('seedance-2-5@desktop-480p') < candidates.indexOf('seedance-2-5@desktop-720p'),
@@ -174,12 +187,14 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       const groups = getModelChannelGroups('seedance-2-5')
       // #3516 评审修正：只有 480p 经济版公布了 SLA（100% / 60s）；720p 默认档未公布，
       // 按「未公布 SLA 用中性默认值参与排序」的既有规则排在后面。
-      assert.deepEqual(groups.map((g) => g.sla?.stability24h), [100, undefined])
-      assert.deepEqual(groups.map((g) => g.sla?.avgWaitTimeSec), [60, undefined])
+      assert.deepEqual(groups.map((g) => g.sla?.stability24h), [100, undefined, undefined, undefined])
+      assert.deepEqual(groups.map((g) => g.sla?.avgWaitTimeSec), [60, undefined, undefined, undefined])
       const candidates = resolveChannelCandidates('seedance-2-5', { strategy: 'stability_first' })
-      assert.deepEqual(candidates, [
-        'seedance-2-5@desktop-480p',
+      assert.equal(candidates[0], 'seedance-2-5@desktop-480p', 'the only line with a published SLA ranks first')
+      assert.deepEqual(candidates.slice(1), [
         'seedance-2-5@desktop-720p',
+        'seedance-2-5@seedance-2-5-480p',
+        'seedance-2-5@seedance-2-5-720p',
       ])
     })
 

@@ -321,12 +321,15 @@ describe('resolveMediaAuth (dual-track auth)', () => {
 
   it('resolves channel candidates by cost_first and stability_first strategy', () => {
     const media = parseMediaConfig(undefined)
-    // #3516：seedance-2-5 是现役唯一多线路模型：480p (21 积分) / 720p (29 积分)。
+    // P1b：线路与积分都取自网关快照，seedance-2-5 有 4 条线路，按积分升序
+    // 6.8 / 9.6 / 20.96 / 28.82。
     const costRoute = resolveMediaRoute('video', { model: 'seedance-2-5', strategy: 'cost_first' }, media)
     assert.equal(costRoute.strategy, 'cost_first')
     assert.deepEqual(costRoute.candidates, [
       'seedance-2-5@desktop-480p',
       'seedance-2-5@desktop-720p',
+      'seedance-2-5@seedance-2-5-480p',
+      'seedance-2-5@seedance-2-5-720p',
     ])
     assert.equal(costRoute.candidates[0], 'seedance-2-5@desktop-480p')
 

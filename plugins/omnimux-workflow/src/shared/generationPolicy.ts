@@ -16,15 +16,15 @@ export const CANVAS_GENERATION_POLICY: Readonly<Record<MaterialType, GenerationP
     modeSelection: 'model',
   },
   image: {
-    // 2026-10-21 网关对账 #3516：Flare/Sunburst 渠道 63-66 全部停用；
-    // 仅保留现役 GPT Image 2.5（default + economy）与 Seedream 5.0 Pro（default）。
-    allowedModelIds: ['gpt-image-2.5', 'seedream-5-0-pro'],
+    // 2026-10-25 网关快照（#3734）：Seedream 5.0 Pro 已无可用线路，图像侧只剩 GPT Image 2.5。
+    // 名单以中枢目录为准，此处只是画布侧的策略副本；P0 会把可选集合改为从目录推导。
+    allowedModelIds: ['gpt-image-2.5'],
     defaultModelId: 'gpt-image-2.5',
     modeSelection: 'model',
   },
   video: {
-    // 2026-10-21 网关对账 #3516：MiniMax H3 全部渠道停用；仅保留现役 Seedance 2.5/2.0/2.0 Fast/2.0 Mini。
-    allowedModelIds: ['seedance-2-5', 'seedance-2-0', 'seedance-2-0-fast', 'seedance-2-0-mini'],
+    // 2026-10-25 网关快照（#3734）：2.0 Fast / 2.0 Mini 已无可用线路；视频侧只剩 Seedance 2.5 / 2.0。
+    allowedModelIds: ['seedance-2-5', 'seedance-2-0'],
     defaultModelId: 'seedance-2-5',
     modeSelection: 'model',
   },

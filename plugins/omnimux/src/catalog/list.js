@@ -16,6 +16,9 @@ import {
 } from './contract/dispositions.js'
 import { CANONICAL_SCHEMA_VERSION } from './contract/schema.js'
 import { DEFAULT_OPERATION_AUTO } from '../settings/schema.js'
+import { resolveCurrentSnapshot } from './cloud/current.js'
+import { snapshotContentDigest } from './cloud/snapshot.js'
+import { gatewayCatalogSummary, usableSnapshotModels } from './cloud/view.js'
 
 export const CATALOG_KINDS = Object.freeze(['text', 'image', 'video', 'audio'])
 
@@ -119,6 +122,8 @@ export function resolveDefaultOperation(input) {
  * @param {Record<string, string | undefined>} [opts.env]
  * @param {Record<string, unknown>} [opts.settingsDefaults]
  * @param {object} [opts.contractIndex] internal test seam: inject a preloaded index
+ * @param {object} [opts.snapshot] resolved gateway snapshot; defaults to the
+ *   read-only current snapshot (bundled floor to disk cache, never the network)
  */
 export function buildModelCatalog(opts = {}) {
   const text = opts.text ?? DEFAULT_TEXT
@@ -139,19 +144,51 @@ export function buildModelCatalog(opts = {}) {
     throw new Error(`model dispositions invalid: ${first.code} ${first.path ?? ''}: ${first.message}`)
   }
   const defaultsCfg = loadCatalogDefaults()
-  const dto = projectCatalog(index, dispositionsDoc, defaultsCfg)
 
-  // Text bucket: projected listed rows ∩ config/gate-enabled directory rows.
+  // P1b: the gateway snapshot decides membership. An explicit snapshot wins
+  // (the runtime shares P1a's refreshed copy); otherwise the read-only current
+  // snapshot serves, so an offline machine still gets the bundled floor and a
+  // damaged snapshot can never produce an empty catalog.
+  const resolved = typeof opts.snapshot === 'object' && opts.snapshot !== null
+    ? {
+        snapshot: opts.snapshot,
+        source: opts.snapshotSource ?? 'injected',
+        digest: typeof opts.snapshotDigest === 'string' && opts.snapshotDigest
+          ? opts.snapshotDigest
+          : snapshotContentDigest(opts.snapshot),
+      }
+    : resolveCurrentSnapshot()
+  const snapshot = resolved.snapshot
+  const gatewayIds = new Set(usableSnapshotModels(snapshot).keys())
+
+  const dto = projectCatalog(index, dispositionsDoc, defaultsCfg, snapshot)
+
+  // "Missing call contract": the gateway sells the model but no local contract
+  // operation is callable. Counted against the contract projection, so a model
+  // that merely loses its config/gate enablement is not misreported.
+  const contractedIds = new Set(
+    [...dto.text, ...dto.image, ...dto.video, ...dto.audio].map((row) => row.id),
+  )
+  const gateway = {
+    source: resolved.source ?? 'none',
+    digest: resolved.digest ?? null,
+    ...gatewayCatalogSummary(snapshot, contractedIds),
+  }
+
+  // Text bucket: projected listed rows ∩ gateway membership ∩ config/gate-enabled rows.
   const enabledTextIds = new Set(enabledTextModels(text, gate).map((row) => row.id))
   const textRows = dto.text
-    .filter((row) => enabledTextIds.has(row.id))
+    .filter((row) => gatewayIds.has(row.id) && enabledTextIds.has(row.id))
     .map((row) => ({ ...row, label: textModelLabel(row.id) }))
+
+  /** Only models the gateway sells, with a usable line, may enter a list. */
+  const listed = (rows) => rows.filter((row) => gatewayIds.has(row.id))
 
   const lists = {
     text: textRows,
-    image: isMediaEnabled(gate, 'image') ? dto.image : [],
-    video: isMediaEnabled(gate, 'video') ? dto.video : [],
-    audio: isMediaEnabled(gate, 'audio') ? dto.audio : [],
+    image: isMediaEnabled(gate, 'image') ? listed(dto.image) : [],
+    video: isMediaEnabled(gate, 'video') ? listed(dto.video) : [],
+    audio: isMediaEnabled(gate, 'audio') ? listed(dto.audio) : [],
   }
 
   const configDefaults = {
@@ -214,6 +251,7 @@ export function buildModelCatalog(opts = {}) {
         row?.disposition,
         row?.target ?? null,
       ]),
+      gateway: { source: gateway.source, digest: gateway.digest, missingContract: gateway.missingContract },
     }),
     contractFingerprint: index.contentFingerprint,
     /** Raw sha256 of the official voice preview mapping from the same loaded snapshot. */
@@ -226,6 +264,8 @@ export function buildModelCatalog(opts = {}) {
     image: lists.image,
     video: lists.video,
     audio: lists.audio,
+    /** Gateway truth this catalog was built against (P1b). */
+    gateway,
   }
 }
 
@@ -269,6 +309,7 @@ function trimId(value) {
  *   defaultOperations?: Record<string, { modelId: string, operationId: string, rule: string }>,
  *   channelGroups?: Array<{ modelId: string, groups: object[] }>,
  *   dispositions: unknown[],
+ *   gateway?: { source: string, digest: string|null, missingContract: string[] },
  * }} [contract]
  */
 export function fingerprintOf(lists, defaults, contract) {
@@ -288,6 +329,7 @@ export function fingerprintOf(lists, defaults, contract) {
           defaultOperations: contract.defaultOperations ?? {},
           channelGroups: contract.channelGroups ?? [],
           dispositions: contract.dispositions ?? [],
+          gateway: contract.gateway ?? null,
           lists: listIds,
           defaults,
         }

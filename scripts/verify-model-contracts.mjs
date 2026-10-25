@@ -376,7 +376,7 @@ export async function runVerify(opts = {}, deps = {}) {
     process.stdout.write(
       [
         `model-contracts mode=${report.mode} ok=${report.ok}`,
-        `auto-serving offline ok=${autoServing.ok} registered=${autoServing.registeredCount} required=${autoServing.requiredCount}`,
+        `auto-serving offline ok=${autoServing.ok} registered=${autoServing.registeredCount}`,
         `cross-plugin offline ok=${crossPlugin.ok} whitelistChecked=${crossPlugin.alignment?.whitelistModelsChecked ?? 0}`,
         `schemaVersion=${schemaVersion}`,
         `fingerprint=${report.contentFingerprint}`,

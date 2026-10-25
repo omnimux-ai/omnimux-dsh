@@ -49,12 +49,18 @@ test('the diagnostics view rides the catalog route without changing the catalog 
  * diff said 3 (the caller read a category name that does not exist).
  */
 test('drift counters come from the diff summary, including unregistered groups', () => {
-  const read = readBundledSnapshot(defaultBundledDir())
-  assert.ok(read.snapshot, 'bundled snapshot must parse')
-  const drift = diffGatewayAgainstHub({ gateway: read.snapshot, hub: buildModelCatalog({}) })
+  // P1b: the served catalog now registers every gateway group, so the regression this
+  // test guards is pinned with an explicit gateway/hub pair instead of depending on
+  // whatever drift this checkout happens to have.
+  const gateway = snapshotOf(['a-1'])
+  const hub = {
+    models: [{ id: 'a-1', listed: true, listedOperations: ['a-1#chat'], channelGroups: [] }],
+    text: [{ id: 'a-1' }],
+  }
+  const drift = diffGatewayAgainstHub({ gateway, hub })
   const counts = driftSummaryCounts(drift)
   assert.equal(counts.groupUnregistered, drift.summary.groupExtra)
-  assert.ok(drift.summary.groupExtra > 0, 'the live gateway has groups the hub has not registered')
+  assert.ok(drift.summary.groupExtra > 0, 'a gateway group the hub does not register must be reported')
   assert.ok(counts.groupUnregistered > 0, 'the reader-facing count must not be zero')
   assert.equal(counts.unreachable, drift.summary.unreachable)
   assert.equal(counts.gatewayOnly, drift.summary.gatewayOnly)

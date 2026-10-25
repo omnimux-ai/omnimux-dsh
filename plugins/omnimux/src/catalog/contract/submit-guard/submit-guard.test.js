@@ -12,6 +12,8 @@ import {
   resolveProfilePayloadContract,
 } from './index.js'
 import { getContractIndex, loadAdapterProfiles, verifyContracts } from '../index.js'
+import { resolveReadOnlySnapshot } from '../../cloud/current.js'
+import { usableSnapshotModels } from '../../cloud/view.js'
 
 const index = getContractIndex()
 const profiles = loadAdapterProfiles()
@@ -40,6 +42,11 @@ describe('SubmitGuard listed profile coverage (#468)', () => {
     // 2026-10-21 网关对账 #3516：上架面收敛为 9 模型 / 24 operation。
     assert.equal(report.listedOperations.length, 24)
     const profileById = new Map((profiles.profiles ?? []).map((p) => [p.id, p]))
+    // P1b: membership is the gateway snapshot's call, so a listed operation can still
+    // belong to a model the gateway does not sell. The profile-coverage loop below
+    // asks for contract-only admission and then proves the default still refuses it.
+    const soldIds = new Set(usableSnapshotModels(resolveReadOnlySnapshot().snapshot).keys())
+    let delistedChecked = 0
     for (const key of report.listedOperations) {
       const [modelId, opId] = key.split('#')
       const model = index.get(modelId)
@@ -94,11 +101,21 @@ describe('SubmitGuard listed profile coverage (#468)', () => {
           appendSlotAssets(slot, group.min - count)
         }
       }
-      const plan = guardSubmit(req, { index, profiles, seam: profile.seam, outputType: op.output.type })
+      const plan = guardSubmit(req, {
+        index, profiles, seam: profile.seam, outputType: op.output.type, requireListed: false,
+      })
       assert.equal(plan.ok, true, `${key} should admit: ${plan.ok === false ? plan.message : ''}`)
       assert.equal(plan.operationId, opId)
       assert.equal(plan.profileId, profileId)
+      if (!soldIds.has(modelId)) {
+        delistedChecked += 1
+        const refused = guardSubmit(req, { index, profiles, seam: profile.seam, outputType: op.output.type })
+        assert.equal(refused.ok, false, `${key} must be refused by default`)
+        assert.equal(refused.code, GUARD_CODES.NOT_LISTED, key)
+        assert.match(refused.message, /该模型已下架/, key)
+      }
     }
+    assert.ok(delistedChecked > 0, 'the fixture must cover at least one gateway-delisted listed operation')
   })
 
   it('DEFAULT_PROFILE_PAYLOADS covers every registered profile id', () => {

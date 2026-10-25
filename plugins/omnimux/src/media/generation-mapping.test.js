@@ -18,7 +18,9 @@ const parsed = (id = 'omnimux', baseUrl = 'https://transport.example.invalid/v1'
 
 test('#3272 actual image and Mini standard identities agree with the unchanged single-group resolver', () => {
   const media = parsed(), mapping = createGenerationMapping(media)
-  for (const c of [candidate(), candidate('seedance-2-0-mini', 'standard', 'video')]) {
+  // P1b: seedance-2-0-mini is no longer sold, so the single-group video identity is
+  // asserted on the still-sold seedance-2-0 (same standard/default shape).
+  for (const c of [candidate(), candidate('seedance-2-0', 'standard', 'video')]) {
     const expected = resolveMediaRoute(c.operation.output.type, { model: c.model.id, group: 'default', allowedGroups: ['standard'] }, media, {})
     const current = mapping(c)
     assert.equal(current.providerId, 'omnimux'); assert.equal(current.protocol, expected.protocol)
@@ -29,6 +31,11 @@ test('#3272 actual image and Mini standard identities agree with the unchanged s
     assert.deepEqual(Object.keys(current).sort(), ['protocol', 'providerId', 'sourceVersion', 'transportTarget', 'wireGroup', 'wireModel'])
     assert.ok(Object.isFrozen(current) && Object.isFrozen(current.transportTarget))
   }
+  // The delisted Mini has no gateway line left, so it cannot be routed at all.
+  assert.throws(
+    () => resolveMediaRoute('video', { model: 'seedance-2-0-mini', group: 'default', allowedGroups: ['standard'] }, media, {}),
+    /所选渠道分组不可用/,
+  )
 })
 
 test('#3272 custom provider retains execute bare-candidate group fallback without supplier or channel invention', () => {

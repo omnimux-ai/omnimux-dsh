@@ -9,20 +9,21 @@ import { planCanvasInputMutation } from './graph/canvasInputMutationGateway.ts';
 import { reconcileCanvasForCatalog } from './graph/catalogReconcile.ts';
 
 // These fixtures use the offline public catalog, never a provider request or a private index.
-// 2026-10-21 网关对账 #3516：text/audio 各只剩一个在售模型，image/video 仍有一个可配置的合法替代项。
+// 2026-10-25 网关快照（#3734）：成员资格来自网关，text/image/audio 各只剩一个在售模型，
+// 只有 video 仍有一个可配置的合法替代项（Seedance 2.0 与 2.5）。
 const DEFAULT_CASES = [
   { kind: 'text', setting: 'defaultTextModel', selected: 'gemini-3.8-flash', fallback: 'gemini-3.8-flash', operation: 'chat' },
-  { kind: 'image', setting: 'defaultImageModel', selected: 'seedream-5-0-pro', fallback: 'gpt-image-2.5', operation: 'text_to_image' },
-  { kind: 'video', setting: 'defaultVideoModel', selected: 'seedance-2-0-fast', fallback: 'seedance-2-5', operation: 'text_to_video' },
+  { kind: 'image', setting: 'defaultImageModel', selected: 'gpt-image-2.5', fallback: 'gpt-image-2.5', operation: 'text_to_image' },
+  { kind: 'video', setting: 'defaultVideoModel', selected: 'seedance-2-0', fallback: 'seedance-2-5', operation: 'text_to_video' },
   { kind: 'audio', setting: 'defaultAudioModel', selected: 'suno', fallback: 'suno', operation: 'text_to_music' },
 ];
 // A case exercises "configured default vs policy default" only when both models exist.
 const ALTERNATIVE_CASES = DEFAULT_CASES.filter((row) => row.selected !== row.fallback);
-const SELECTED_DEFAULTS = { text: 'gemini-3.8-flash', image: 'seedream-5-0-pro', video: 'seedance-2-0-fast', audio: 'suno' };
+const SELECTED_DEFAULTS = { text: 'gemini-3.8-flash', image: 'gpt-image-2.5', video: 'seedance-2-0', audio: 'suno' };
 function configuredHub() {
   return buildModelCatalog({ env: {}, settingsDefaults: {
-    defaultTextModel: 'gemini-3.8-flash', defaultImageModel: 'seedream-5-0-pro',
-    defaultVideoModel: 'seedance-2-0-fast', defaultAudioModel: 'suno',
+    defaultTextModel: 'gemini-3.8-flash', defaultImageModel: 'gpt-image-2.5',
+    defaultVideoModel: 'seedance-2-0', defaultAudioModel: 'suno',
   } });
 }
 function bridge(hub) {
@@ -266,8 +267,8 @@ test('same-model valid operation recommendations initialize new nodes while inva
   const hub = configuredHub();
   hub.defaultOperations = {
     text: { modelId: 'gemini-3.8-flash', operationId: 'vision_chat', rule: 'configured' },
-    image: { modelId: 'seedream-5-0-pro', operationId: 'text_to_image', rule: 'configured' },
-    video: { modelId: 'seedance-2-0-fast', operationId: 'video_multi_ref', rule: 'configured' },
+    image: { modelId: 'gpt-image-2.5', operationId: 'text_to_image', rule: 'configured' },
+    video: { modelId: 'seedance-2-0', operationId: 'video_multi_ref', rule: 'configured' },
     audio: { modelId: 'suno', operationId: 'text_to_music', rule: 'configured' },
   };
   const catalog = bridge(hub);
@@ -278,11 +279,11 @@ test('same-model valid operation recommendations initialize new nodes while inva
   }
   hub.defaultOperations = {
     text: { modelId: 'missing-model', operationId: 'chat' },
-    image: { modelId: 'seedream-5-0-pro', operationId: 'missing-operation' },
+    image: { modelId: 'gpt-image-2.5', operationId: 'missing-operation' },
     video: { modelId: 'gemini-3.8-flash', operationId: 'chat' },
     audio: { modelId: 'suno', operationId: 'missing-operation' },
   };
-  hub.defaultsByOperation = { missing_operation: 'seedance-2-0-fast', chat: 'gemini-3.8-flash' };
+  hub.defaultsByOperation = { missing_operation: 'seedance-2-0', chat: 'gemini-3.8-flash' };
   const filtered = bridge(hub);
   assert.deepEqual(filtered.defaultOperations, {});
   assert.equal(filtered.defaultsByOperation.missing_operation, undefined);

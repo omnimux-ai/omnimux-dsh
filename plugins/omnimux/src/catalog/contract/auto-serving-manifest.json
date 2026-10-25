@@ -9,7 +9,6 @@
       "gatewayIds": [
         "claude-opus-4-6"
       ],
-      "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
@@ -20,7 +19,6 @@
       "gatewayIds": [
         "claude-sonnet-4-6"
       ],
-      "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。"
     },
@@ -30,8 +28,7 @@
       "priority": "P0",
       "gatewayIds": [
         "gemini-3.8-flash"
-      ],
-      "requiredInAuto": true
+      ]
     },
     {
       "productId": "deepseek-v4-flash",
@@ -41,7 +38,6 @@
         "deepseek-v4-flash",
         "deepseek-v4-flash-vision-exp"
       ],
-      "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
@@ -52,7 +48,6 @@
       "gatewayIds": [
         "gpt-5.5"
       ],
-      "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
@@ -62,8 +57,7 @@
       "priority": "P0",
       "gatewayIds": [
         "gpt-image-2.5"
-      ],
-      "requiredInAuto": true
+      ]
     },
     {
       "productId": "gpt-image-2.5-flare",
@@ -72,7 +66,6 @@
       "gatewayIds": [
         "gpt-image-2.5-flare"
       ],
-      "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。"
     },
@@ -83,7 +76,6 @@
       "gatewayIds": [
         "gpt-image-2.5-sunburst"
       ],
-      "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。"
     },
@@ -95,8 +87,8 @@
         "seedream-5-0-pro",
         "seedream-5.0-pro"
       ],
-      "requiredInAuto": true,
-      "note": "2026-10-05 #3148：真机验证通过（文生图 + 2 图垫图），上架为 listed；同时修掉 doubao-seedream 家族不支持 resolution 的载荷缺陷。"
+      "note": "2026-10-05 #3148：真机验证通过（文生图 + 2 图垫图），上架为 listed；同时修掉 doubao-seedream 家族不支持 resolution 的载荷缺陷。 2026-10-25 网关快照（#3734）：该型号已无可用线路，画布准入收回（canvasExcluded）。",
+      "canvasExcluded": true
     },
     {
       "productId": "grok-imagine-image-2-0",
@@ -108,7 +100,6 @@
         "grok-imagine-image",
         "grok-imagine-image-2.0"
       ],
-      "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-09-14 #1751：上游两份独立清单零命中，已由已就绪降为已登记（无 listed 操作），不再是自动调度必需项；登记保留承载历史别名归一。"
     },
@@ -120,8 +111,7 @@
         "seedance-2-0",
         "seedance-2.0"
       ],
-      "upstreamWireId": "seedance-2.0",
-      "requiredInAuto": true
+      "upstreamWireId": "seedance-2.0"
     },
     {
       "productId": "seedance-2-0-fast",
@@ -132,9 +122,8 @@
         "seedance-2.0-fast"
       ],
       "upstreamWireId": "seedance-2.0-fast",
-      "requiredInAuto": true,
-      "canvasExcluded": false,
-      "note": "2026-10-05: 以当前映射契约真机验证通过（文生视频 / 首帧 / 全能参考），操作升格为 listed 并加入画布准入（#3152）。此前「下架收敛」记录已失效。"
+      "canvasExcluded": true,
+      "note": "2026-10-05: 以当前映射契约真机验证通过（文生视频 / 首帧 / 全能参考），操作升格为 listed 并加入画布准入（#3152）。此前「下架收敛」记录已失效。 2026-10-25 网关快照（#3734）：该型号已无可用线路，画布准入收回（canvasExcluded）。"
     },
     {
       "productId": "seedance-2-0-mini",
@@ -145,9 +134,8 @@
         "seedance-2.0-mini"
       ],
       "upstreamWireId": "seedance-2.0-mini",
-      "requiredInAuto": true,
-      "canvasExcluded": false,
-      "note": "2026-10-05: 以当前映射契约真机验证通过（文生视频 / 首帧 / 全能参考），操作升格为 listed 并加入画布准入（#3152）。此前「下架收敛」记录已失效。"
+      "canvasExcluded": true,
+      "note": "2026-10-05: 以当前映射契约真机验证通过（文生视频 / 首帧 / 全能参考），操作升格为 listed 并加入画布准入（#3152）。此前「下架收敛」记录已失效。 2026-10-25 网关快照（#3734）：该型号已无可用线路，画布准入收回（canvasExcluded）。"
     },
     {
       "productId": "seedance-2-5",
@@ -157,8 +145,7 @@
         "seedance-2-5",
         "seedance-2.5"
       ],
-      "upstreamWireId": "seedance-2.5",
-      "requiredInAuto": true
+      "upstreamWireId": "seedance-2.5"
     },
     {
       "productId": "wan-3.0",
@@ -169,7 +156,6 @@
         "wan3.0-video"
       ],
       "upstreamWireId": "wan3.0-video",
-      "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
@@ -182,7 +168,6 @@
         "MiniMax-H3"
       ],
       "upstreamWireId": "MiniMax-H3",
-      "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。"
     },
@@ -195,7 +180,6 @@
         "grok-imagine-video-1.5"
       ],
       "upstreamWireId": "grok-imagine-video-1.5",
-      "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
@@ -209,7 +193,6 @@
         "seed-audio",
         "tts"
       ],
-      "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。"
     },
@@ -220,7 +203,6 @@
       "gatewayIds": [
         "indextts-2"
       ],
-      "requiredInAuto": false,
       "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。",
       "canvasExcluded": true
     },
@@ -231,7 +213,6 @@
       "gatewayIds": [
         "gemini-3.8-flash-tts"
       ],
-      "requiredInAuto": false,
       "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。",
       "canvasExcluded": true
     },
@@ -242,7 +223,6 @@
       "gatewayIds": [
         "suno"
       ],
-      "requiredInAuto": true,
       "note": "2026-10-21 网关对账 #3516：渠道 32 default 现役；text_to_music 上架"
     },
     {
@@ -252,7 +232,6 @@
       "gatewayIds": [
         "gpt-4o-mini-tts"
       ],
-      "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "No listed audio operation; registration is not a serving claim. canvasExcluded: draft+stub 无 listed 操作，不得出现在画布白名单里。"
     },
@@ -263,7 +242,6 @@
       "gatewayIds": [
         "seedasr-auc"
       ],
-      "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-09-14 #1789：独立在售的语音识别型号（官方直连-火山 渠道 43，upstream_id 与公开 ID 相同），以独立 canonical 登记；speech_to_text 产出 text，不属于任何画布产出桶，故 canvasExcluded。登记只声明网关注册名，不改变默认语音识别型号（仍为 doubao-asr-bigmodel，见 catalog-defaults.json）。"
     },
@@ -274,7 +252,6 @@
       "gatewayIds": [
         "whisper-1"
       ],
-      "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-10-21 网关对账 #3516：渠道 31 default 现役语音识别能力模型；经 speechToText seam 进入画布，不进入文本生成白名单"
     }

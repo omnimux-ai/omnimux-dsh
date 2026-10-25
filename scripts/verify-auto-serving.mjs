@@ -3,10 +3,23 @@ import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { CANVAS_GENERATION_POLICY } from '../plugins/omnimux-workflow/src/shared/generationPolicy.ts'
 import { getContractIndex, loadDispositions, resolveModelId } from '../plugins/omnimux/src/catalog/contract/index.js'
+import { defaultBundledDir, readBundledSnapshot } from '../plugins/omnimux/src/catalog/cloud/bundled.js'
+import { usableSnapshotModels } from '../plugins/omnimux/src/catalog/cloud/view.js'
+import { buildModelCatalog } from '../plugins/omnimux/src/catalog/list.js'
 
 export const MANIFEST_URL = new URL('../plugins/omnimux/src/catalog/contract/auto-serving-manifest.json', import.meta.url)
 
-/** Offline desired-state validation only; never contacts the gateway. */
+/**
+ * Offline desired-state validation only; never contacts the gateway.
+ *
+ * P1b moved "is this model on sale" to the gateway snapshot. The bundled
+ * snapshot is readable offline, so the gate keeps a real assertion: the
+ * snapshot must be present, and every model the catalog actually lists must be
+ * on sale in it. Registered-but-not-yet-sold models are reported as
+ * information, not errors — the manifest is a registration list (it also holds
+ * models still being promoted), and the runtime hides anything the gateway does
+ * not sell. `requiredInAuto` is gone: it no longer decides anything.
+ */
 export function verifyAutoServing(options = {}) {
   const issues = []
   const issue = (code, message, modelId) => issues.push({
@@ -30,9 +43,9 @@ export function verifyAutoServing(options = {}) {
   const governed = new Map(dispositions.dispositions.map((row) => [row.id, row.disposition]))
   for (const row of manifest.models) {
     if (!row || typeof row.productId !== 'string' || !row.productId.trim() || row.productId !== row.productId.trim()
-      || !Object.hasOwn(policy, row.kind) || typeof row.requiredInAuto !== 'boolean'
+      || !Object.hasOwn(policy, row.kind)
       || !['P0', 'P1'].includes(row.priority)) {
-      issue('manifest_invalid', 'Each model requires productId, kind, priority and requiredInAuto')
+      issue('manifest_invalid', 'Each model requires productId, kind and priority')
       continue
     }
     const { productId, kind, gatewayIds } = row
@@ -45,13 +58,9 @@ export function verifyAutoServing(options = {}) {
     if (!policy[kind].allowedModelIds.includes(productId) && row.canvasExcluded !== true) {
       issue('not_allowed', 'Model is not in its canvas whitelist or explicitly canvasExcluded', productId)
     }
-    const listed = contract?.operations?.some((op) => op.listed === true && op.output?.type === kind)
-    if (row.requiredInAuto && (!listed || governed.get(productId) !== 'canonical')) {
-      issue('not_listed', 'Required auto models must have a canonical disposition and a listed output operation', productId)
-    }
-    if (listed && policy[kind].allowedModelIds.includes(productId) && !row.requiredInAuto) {
-      issue('required', 'Listed whitelist models must be requiredInAuto', productId)
-    }
+    // P1b: whether a model is actually on sale is decided by the gateway
+    // snapshot at runtime, so this offline gate no longer asserts a local
+    // "required in auto" flag; it validates the registration itself.
     if (!Array.isArray(gatewayIds) || !gatewayIds.length || !gatewayIds.includes(productId)
       || new Set(gatewayIds).size !== gatewayIds.length
       || gatewayIds.some((id) => typeof id !== 'string' || id !== id.trim() || resolveModelId(index, id) !== productId)) {
@@ -67,17 +76,47 @@ export function verifyAutoServing(options = {}) {
       if (registered.get(productId)?.kind !== kind) issue('missing', `Missing ${kind} whitelist registration`, productId)
     }
   }
-  return finish(issues, [...registered.values()])
+  return finish(issues, [...registered.values()], offlineGatewayCheck(options, issue))
 }
 
-function finish(issues, models) {
+/**
+ * Offline gateway check: the bundled snapshot must be usable, and every model
+ * the catalog actually lists must be on sale in it. Models registered in the
+ * manifest but not yet sold are counted, not failed — the manifest is a
+ * registration list (it also carries models still being promoted), and the
+ * runtime hides whatever the gateway does not sell.
+ */
+function offlineGatewayCheck(options, issue) {
+  const read = options.bundled ?? readBundledSnapshot(options.bundledDir ?? defaultBundledDir())
+  if (!read.snapshot) {
+    issue('snapshot_unreadable', `Bundled gateway snapshot is not usable: ${read.code ?? 'unknown'}`)
+    return { snapshotModels: 0, onSale: 0 }
+  }
+  const onSale = new Set(usableSnapshotModels(read.snapshot).keys())
+  if (onSale.size === 0) issue('snapshot_empty', 'Bundled gateway snapshot lists no sellable model')
+  let catalog
+  try {
+    catalog = (options.buildCatalog ?? buildModelCatalog)({ snapshot: read.snapshot })
+  } catch (error) {
+    issue('catalog_unavailable', `Catalog could not be built from the bundled snapshot: ${error.message}`)
+    return { snapshotModels: read.snapshot.models.length, onSale: onSale.size }
+  }
+  for (const kind of ['text', 'image', 'video', 'audio']) {
+    for (const row of catalog[kind] ?? []) {
+      if (!onSale.has(row.id)) issue('listed_not_on_sale', 'Catalog lists a model the gateway does not sell', row.id)
+    }
+  }
+  return { snapshotModels: read.snapshot.models.length, onSale: onSale.size }
+}
+
+function finish(issues, models, gateway = null) {
   return {
     ok: issues.length === 0,
     exitCode: issues.length ? 1 : 0,
     source: 'offline-manifest',
     onlineVerified: false,
     registeredCount: models.length,
-    requiredCount: models.filter((row) => row.requiredInAuto).length,
+    ...(gateway ? { gateway } : {}),
     issues,
   }
 }
@@ -89,7 +128,7 @@ export function runAutoServingCli(argv = process.argv.slice(2)) {
     : verifyAutoServing()
   if (argv.includes('--json')) console.log(JSON.stringify(report, null, 2))
   else {
-    console.log(`auto-serving offline ok=${report.ok} registered=${report.registeredCount ?? 0} required=${report.requiredCount ?? 0}`)
+    console.log(`auto-serving offline ok=${report.ok} registered=${report.registeredCount ?? 0}`)
     for (const issue of report.issues) console.error(`${issue.code}${issue.modelId ? ` model=${issue.modelId}` : ''}: ${issue.message}`)
   }
   return report

@@ -177,7 +177,7 @@ When the user requests listing or making a model available to the canvas/consume
 1. **Contract definition**: Register the canonical runtime model ID, brand, operation IDs, inputs, and defaults in the corresponding specs YAML (`plugins/omnimux/src/catalog/specs/*.yaml`).
 2. **Authorized live probe**: With user authorization, run a minimal live generation probe against the production gateway to verify existence and minimal response, recording the report in `docs/evidence/`.
 3. **Status activation (listed: true)**: Promote the operation's `research.status` from `"draft"` to `"verified"` and set `docUrl` to the evidence doc. The contract loader computes `op.listed = true` only when research is verified with a valid docUrl.
-4. **Manifest and consumers**: Set `requiredInAuto: true` in `auto-serving-manifest.json`, configure channel groups (`channel-groups.js` and `channelGroups.ts`), and register the model in canvas whitelists (`generationPolicy.ts`).
+4. **Manifest and consumers**: Register the model in `auto-serving-manifest.json` and canvas whitelists (`generationPolicy.ts`), and keep the channel-group display names in `channel-groups.js` / `channelGroups.ts`. Whether the model is actually on sale is decided by the gateway snapshot, not by a local flag (`requiredInAuto` was removed in #3734); the catalog lists only models the snapshot sells and the contract can call.
 5. **Gate verification and materialization**: Run `pnpm verify:model-contracts --strict` and `verify:cross-plugin-models`, land via PR, and run `sync-to-app.sh` so canvas/consumers immediately expose the listed model.
 
 ## User layers

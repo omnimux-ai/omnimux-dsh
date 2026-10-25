@@ -124,8 +124,9 @@ test('3312: saved defaults pointing at delisted models resolve only to the fixed
   // 2026-10-21 网关对账 #3516：四个保存默认分别指向 Claude / Flare / H3 / Gemini-TTS，
   // 其上游渠道全部停用 → 目录桶中不再出现，默认回落到合法在架型号。
   assert.deepEqual(catalog.text.map(row => row.id), ['gemini-3.8-flash'])
-  assert.deepEqual(catalog.image.map(row => row.id), ['gpt-image-2.5', 'seedream-5-0-pro'])
-  assert.deepEqual(catalog.video.map(row => row.id), ['seedance-2-0', 'seedance-2-0-fast', 'seedance-2-0-mini', 'seedance-2-5'])
+  // P1b：成员资格改为与网关快照求交，seedream-5-0-pro / seedance-2-0-fast / -mini 已不在在售集合。
+  assert.deepEqual(catalog.image.map(row => row.id), ['gpt-image-2.5'])
+  assert.deepEqual(catalog.video.map(row => row.id), ['seedance-2-0', 'seedance-2-5'])
   assert.deepEqual(catalog.audio.map(row => row.id), ['suno'])
   assert.deepEqual(catalog.defaults, { text: 'gemini-3.8-flash', image: 'gpt-image-2.5', video: 'seedance-2-5', audio: 'suno' })
 }))
@@ -220,10 +221,11 @@ test('3312: omitted image model keeps legal environment and current Config prior
   input.dest = join(home, 'env-delisted.png')
   await executeOmnimuxMedia('image', input)
   assert.equal(seen[1].input.model, 'gpt-image-2.5')
+  // P1b：seedream-5-0-pro 已下架，环境里指定它同样不采纳。
   input.env = { OMNIMUX_IMAGE_MODEL: 'seedream-5-0-pro' }
   input.dest = join(home, 'env-priority.png')
   await executeOmnimuxMedia('image', input)
-  assert.equal(seen[2].input.model, 'seedream-5-0-pro')
+  assert.equal(seen[2].input.model, 'gpt-image-2.5')
 }))
 
 test('3312: saved official defaults cannot steal BYOK or agent selections and trusted custom media config keeps its positive route', async () => isolated(async (home) => {

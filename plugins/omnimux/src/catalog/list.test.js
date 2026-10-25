@@ -64,12 +64,9 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       assert.equal(catalog.models.some((m) => m.id === gone), false, gone)
     }
 
-    // four lists derive ONLY from listed ops' output.type
-    // #3516: gpt-image-2.5-flare / sunburst 上游渠道停用，只剩 2 个在架图片模型。
-    assert.deepEqual(catalog.image.map((row) => row.id).sort(), [
-      'gpt-image-2.5',
-      'seedream-5-0-pro',
-    ])
+    // four lists derive ONLY from listed ops' output.type, intersected with the gateway
+    // snapshot (P1b): seedream-5-0-pro has a listed op but the gateway does not sell it.
+    assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gpt-image-2.5'])
     const imageRow = catalog.image.find((row) => row.id === 'gpt-image-2.5')
     assert.equal(imageRow.label, 'GPT Image 2.5')
     assert.equal(imageRow.subtitle, '标准版 1K · 高分档依渠道')
@@ -82,13 +79,8 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       'grok-imagine-image-2', 'grok-imagine-image', 'grok-imagine-image-2.0',
     ])
     assert.equal(catalog.image.some((row) => row.id === 'grok-imagine-image-2-0'), false)
-    // #3516: minimax-h3 上游渠道停用；seedance 四行保持上架。
-    assert.deepEqual(catalog.video.map((row) => row.id), [
-      'seedance-2-0',
-      'seedance-2-0-fast',
-      'seedance-2-0-mini',
-      'seedance-2-5',
-    ])
+    // #3516: minimax-h3 上游渠道停用；P1b：seedance-2-0-fast / -mini 契约仍在但网关不售。
+    assert.deepEqual(catalog.video.map((row) => row.id), ['seedance-2-0', 'seedance-2-5'])
     // #3516: 音频桶收敛为在架 suno；TTS 三行转为仅登记不上架。
     assert.deepEqual(catalog.audio.map((row) => row.id), ['suno'])
     // Text bucket includes implementation-ready models without requiring live history.
@@ -128,6 +120,20 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal('text_to_speech' in catalog.defaultsByOperation, false)
 
     assert.equal(catalog.text.length, 1)
+
+    // P1b: the catalog reports the gateway truth it was built against, including the
+    // models the gateway sells with no callable local contract.
+    assert.equal(catalog.gateway.source, 'bundled')
+    assert.ok(catalog.gateway.models > 0, 'the gateway snapshot must report its own membership')
+    assert.ok(catalog.gateway.missingContract.length > 0, 'gateway-only models must be counted, not silently dropped')
+    const sold = new Set(
+      Object.assign([], catalog.text, catalog.image, catalog.video, catalog.audio).map((row) => row.id),
+    )
+    for (const id of catalog.gateway.missingContract) {
+      assert.equal(sold.has(id), false, id + ' has no callable contract, so it must not be listed')
+    }
+    assert.equal(catalog.models.find((row) => row.id === 'seedance-2-0-fast')?.gatewayListed, false)
+    assert.equal(catalog.models.find((row) => row.id === 'gpt-image-2.5')?.gatewayListed, true)
   })
 
   it('forbids ASCII hyphen-minus in every catalog model label', () => {
