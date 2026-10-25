@@ -1,6 +1,7 @@
 import { OmnimuxError } from './errors.js'
 import { classifyQuotaFailure } from '../errors/quota-classifier.js'
 import { assertGuardOutput, assertGuardSubmit } from '../catalog/contract/submit-guard/index.js'
+import { gatewayMembershipExemptReason } from '../catalog/serving/id-universe.js'
 import { parseMediaConfig, resolveMediaAuth, resolveMediaRoute } from './route.js'
 import { pickTranscriptionText, TRANSCRIPTION_PATH } from './vendors/omnimux.js'
 import { isPublicAudioUrl, loadAudioBytes } from './stt-audio.js'
@@ -15,8 +16,27 @@ export const STT_CAPABILITY = 'stt'
 // NOT an alias of doubao-asr-bigmodel, so both ids stay listed independently and neither
 // normalizes onto the other.
 const URL_FIRST_MODELS = new Set(['doubao-asr-bigmodel', 'seedasr-auc'])
-const FILE_UPLOAD_MODEL = 'whisper-1'
+/** File-transport fallback for admitted STT requests (#780); also the fourth declared default. */
+export const FILE_UPLOAD_MODEL = 'whisper-1'
 const URL_REQUIRED_ERROR = /audio url is required|URL-first mode/i
+
+/**
+ * SubmitGuard options for one transcription model.
+ *
+ * P1b made the gateway snapshot the membership authority. The anonymous snapshot
+ * publishes no transcription model, so a transcription default would be refused
+ * as "delisted" — but the waiver is a **manifest declaration**
+ * (`gatewayMembershipExempt` on the model's `auto-serving-manifest.json` row),
+ * not a hardcoded relaxation in this file. An undeclared model keeps the
+ * default: the membership gate stays closed and the operation's own listed
+ * requirement is never relaxed.
+ *
+ * @param {unknown} modelId
+ * @returns {{ gatewayMembership?: false }}
+ */
+export function speechToTextMembershipOptions(modelId) {
+  return gatewayMembershipExemptReason(modelId) ? { gatewayMembership: false } : {}
+}
 
 /**
  * Speech-to-text execution: synchronous multipart response, no task poll.
@@ -56,11 +76,12 @@ export async function executeOmnimuxSpeechToText(input) {
       seam: 'speechToText',
       capability: 'stt',
       outputType: 'text',
-      // P1b: the gateway snapshot's anonymous floor publishes no transcription model,
-      // so gating transcription on it would refuse the shipped whisper-1 default. The
-      // operation's own contract admission still applies. Revisit once the account
-      // view (or a refreshed snapshot) publishes speech_to_text models.
-      gatewayMembership: false,
+      // The gateway snapshot's anonymous floor publishes no transcription model, so
+      // gating transcription on it would refuse the shipped whisper-1 default. The
+      // waiver lives in auto-serving-manifest.json (reason + review date) and is read
+      // here; an undeclared model keeps the membership gate closed. The operation's
+      // own contract admission still applies either way.
+      ...speechToTextMembershipOptions(route.modelId),
     },
   )
   const auth = await resolveMediaAuth(route, {

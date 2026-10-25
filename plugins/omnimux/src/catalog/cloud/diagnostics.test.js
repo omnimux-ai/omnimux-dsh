@@ -62,6 +62,13 @@ test('the real diagnostics body reports the diff summary and leaks nothing local
     assert.equal(serialized.includes('ENOTFOUND'), false)
     assert.equal(serialized.includes('config.json'), false)
     assert.equal(serialized.includes('staleReason'), false)
+
+    // #3763: the gateway-membership waiver set is user-visible instead of living in code.
+    // Only the declared transcription model is excused, and the declaration carries its
+    // own reason (including the review date) so a reviewer can act on it.
+    assert.deepEqual(body.membershipExemptions.map((row) => row.modelId), ['whisper-1'])
+    assert.equal(body.membershipExemptions[0].reason.includes('#3763'), true)
+    assert.equal(body.membershipExemptions[0].reason.includes('2026-11-25'), true)
   })
 })
 

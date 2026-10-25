@@ -13,15 +13,18 @@
  */
 
 import { diffGatewayAgainstHub, driftSummaryCounts } from './diff.js'
+import { gatewayMembershipExemptionsList } from '../serving/id-universe.js'
 
 /**
  * @param {{
  *   live: { resolve: () => object },
  *   refresher: { state: () => object },
  *   listCatalog: () => object,
+ *   gatewayMembershipExemptions?: () => Array<{ modelId: string, reason: string }>,
  * }} deps
  */
 export function createCatalogDiagnostics(deps) {
+  const exemptions = deps.gatewayMembershipExemptions ?? gatewayMembershipExemptionsList
   return function catalogDiagnostics() {
     const resolved = deps.live.resolve()
     const state = deps.refresher.state()
@@ -46,6 +49,10 @@ export function createCatalogDiagnostics(deps) {
         fetchedAt: state.fetchedAt,
         due: state.due,
       },
+      // #3763: which models are excused from the gateway membership gate, and why.
+      // Declared in auto-serving-manifest.json; the settings card reads this body
+      // verbatim, so the waiver set is user-visible instead of living in code.
+      membershipExemptions: exemptions(),
       drift: drift ? driftSummaryCounts(drift) : null,
     }
   }

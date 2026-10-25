@@ -68,8 +68,11 @@ it that way: user layers set `agent-default-model` only.
   gap, not evidence that the channel lacks the capability.
 - The one-shot expert whitelist (`plugins/omnimux/src/text/catalog.js`
   `CHAT_MODELS`) is a subset of this patch list, and its `input` matrix must
-  agree with the patch. `verify:models` fails on any mismatch or if a
-  whitelist id is missing from the patch. Since 2026-10-21 (#3527) the chat
+  agree with the patch. `verify:models` fails on any mismatch, if a
+  whitelist id is missing from the patch, or if a patch id is not sold by the
+  shipped bundled gateway snapshot. It is fully offline since #3763: it reads
+  `plugins/omnimux/src/catalog/cloud/bundled/pricing.json` instead of probing
+  the service, so it needs no credential. Since 2026-10-21 (#3527) the chat
   directory projects only text models with a **listed** text output, so a
   contracted-but-unlisted model never re-enters the expert whitelist; the
   patch itself only advertises models the configured gateway currently serves.
@@ -163,8 +166,9 @@ visibility setting changes.
 
 1. Edit `plugins/omnimux/cordis.patch.yml` (provider row + models).
 2. Compare the patch and mapper against the selected channel documentation; run
-   offline `pnpm verify:model-contracts` and relevant isolated fixture checks.
-   Do not run `verify:models`: it can load a key and query the real service.
+   offline `pnpm verify:model-contracts`, `pnpm verify:models` (patch ↔
+   `CHAT_MODELS` ↔ shipped snapshot, no credential, no network) and relevant
+   isolated fixture checks. Never probe the service to discover support.
 3. Restart the app (patches resolve at every launch) and check the Settings →
    Models list shows the new set.
 

@@ -25,6 +25,20 @@ export const PRODUCT_ID_ALIASES = Object.freeze({
 })
 const registrations = new Map(manifest.models.map((row) => [row.productId, row.gatewayIds]))
 
+/**
+ * Gateway-membership waivers, declared in the manifest — never in code.
+ *
+ * The anonymous bundled snapshot publishes no transcription model, so gating
+ * transcription on it would refuse the shipped default. The waiver is a
+ * deliberate, reviewable declaration carrying its reason and review date; a
+ * model without one keeps the default (membership enforced).
+ */
+const gatewayMembershipExemptions = new Map(
+  manifest.models
+    .filter((row) => typeof row.gatewayMembershipExempt === 'string' && row.gatewayMembershipExempt.trim())
+    .map((row) => [row.productId, row.gatewayMembershipExempt.trim()]),
+)
+
 /** @param {unknown} modelId @returns {string} */
 export function toProductId(modelId) {
   if (typeof modelId !== 'string') return ''
@@ -32,6 +46,24 @@ export function toProductId(modelId) {
   const atIndex = trimmed.indexOf('@')
   const baseId = atIndex > 0 ? trimmed.slice(0, atIndex).trim() : trimmed
   return Object.hasOwn(PRODUCT_ID_ALIASES, baseId) ? PRODUCT_ID_ALIASES[baseId] : baseId
+}
+
+/**
+ * The declared gateway-membership waiver for one model, or null when it is not
+ * exempt. Aliases resolve to their canonical product id first.
+ * @param {unknown} modelId
+ * @returns {string|null}
+ */
+export function gatewayMembershipExemptReason(modelId) {
+  const canonical = toProductId(modelId)
+  return canonical ? gatewayMembershipExemptions.get(canonical) ?? null : null
+}
+
+/** @returns {Array<{ modelId: string, reason: string }>} every declared waiver, sorted by model id */
+export function gatewayMembershipExemptionsList() {
+  return [...gatewayMembershipExemptions.entries()]
+    .map(([modelId, reason]) => ({ modelId, reason }))
+    .sort((left, right) => left.modelId.localeCompare(right.modelId))
 }
 
 /**

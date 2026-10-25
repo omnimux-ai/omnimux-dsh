@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import {
   formatCrossPluginImpactNotice,
   MANIFEST_URL,
+  speechToTextDefaultSources,
   verifyCrossPluginModelAlignment,
 } from './verify-cross-plugin-model-alignment.mjs';
 import {
@@ -23,7 +24,9 @@ test('baseline repository contracts pass cross-plugin model alignment verificati
   // 2026-10-25 网关快照（#3734）：成员资格来自网关，画布白名单随之收敛为 5 款
   // （文本 1 + 图片 1 + 视频 2 + 音频 1）。数字仍作为金丝雀钉住，防止白名单被悄悄改回去。
   assert.equal(report.alignment.whitelistModelsChecked, 5);
-  assert.equal(report.alignment.defaultModelsChecked, 4);
+  assert.equal(report.alignment.defaultModelsChecked, 5);
+  // #3763: the four speech-to-text default declarations are all read and compared.
+  assert.equal(report.alignment.sttDefaultsChecked, 4);
   assert.ok(report.alignment.aspectRatiosChecked >= 8);
   // #1789 / #3516：能力 seam 现在只有 whisper-1 以 listed speech_to_text 进入画布。
   assert.equal(report.alignment.capabilityModelsChecked, 1);
@@ -133,6 +136,67 @@ test('fails when media route and catalog-defaults diverge', () => {
     report.issues.some((i) => i.code === 'cross_plugin_media_route_mismatch'),
     JSON.stringify(report.issues),
   );
+});
+
+test('the four speech-to-text default declarations are read from the real modules', () => {
+  const sources = speechToTextDefaultSources();
+  assert.deepEqual(sources.map((entry) => entry.source), [
+    'hub catalog-defaults (speech_to_text)',
+    'hub media route (providers.omnimux.models.stt)',
+    'workflow speechToText request schema',
+    'hub stt file-upload fallback',
+  ]);
+  for (const entry of sources) assert.equal(entry.modelId, 'whisper-1', entry.source);
+});
+
+test('fails when any one of the four speech-to-text defaults drifts', () => {
+  // (a) hub catalog-defaults drifts → the media-route comparison reports it.
+  const hubDrift = structuredClone(loadCatalogDefaults());
+  hubDrift.byOperation.speech_to_text = 'seedasr-auc';
+  const hubReport = verifyCrossPluginModelAlignment({ catalogDefaults: hubDrift, changedFiles: [] });
+  assert.equal(hubReport.ok, false);
+  assert.ok(
+    hubReport.issues.some((i) => i.code === 'cross_plugin_media_route_mismatch' && i.modelId === 'whisper-1'),
+    JSON.stringify(hubReport.issues),
+  );
+
+  // (b) the workflow request schema drifts.
+  const schemaReport = verifyCrossPluginModelAlignment({
+    changedFiles: [],
+    seamDefaults: { workflowSchema: 'seedasr-auc', hubFileUpload: 'whisper-1' },
+  });
+  assert.equal(schemaReport.ok, false);
+  assert.ok(
+    schemaReport.issues.some((i) => i.code === 'cross_plugin_stt_default_mismatch' && i.modelId === 'seedasr-auc'),
+    JSON.stringify(schemaReport.issues),
+  );
+
+  // (c) the hub's file-upload fallback drifts.
+  const fallbackReport = verifyCrossPluginModelAlignment({
+    changedFiles: [],
+    seamDefaults: { workflowSchema: 'whisper-1', hubFileUpload: 'doubao-asr-bigmodel' },
+  });
+  assert.equal(fallbackReport.ok, false);
+  assert.ok(
+    fallbackReport.issues.some((i) => i.code === 'cross_plugin_stt_default_mismatch' && i.modelId === 'doubao-asr-bigmodel'),
+    JSON.stringify(fallbackReport.issues),
+  );
+
+  // (d) a declaration that disappears is a missing default, never a silent pass.
+  const missingReport = verifyCrossPluginModelAlignment({
+    changedFiles: [],
+    seamDefaults: { workflowSchema: null, hubFileUpload: 'whisper-1' },
+  });
+  assert.equal(missingReport.ok, false);
+  assert.ok(
+    missingReport.issues.some((i) => i.code === 'cross_plugin_stt_default_missing'),
+    JSON.stringify(missingReport.issues),
+  );
+
+  // Every case still reads and counts all four declarations.
+  assert.equal(hubReport.alignment.sttDefaultsChecked, 4);
+  assert.equal(schemaReport.alignment.sttDefaultsChecked, 4);
+  assert.equal(missingReport.alignment.sttDefaultsChecked, 4);
 });
 
 test('fails when listed model declares an aspect ratio without SVG geometry in canvas', () => {

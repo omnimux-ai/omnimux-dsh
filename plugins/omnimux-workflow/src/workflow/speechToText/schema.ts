@@ -1,5 +1,5 @@
 import { isAbsolute } from 'node:path';
-import { TRANSCRIPTION_FORMATS, type SpeechToTextRequest, type TranscriptionFormat } from '../../shared/speechToText.ts';
+import { DEFAULT_SPEECH_TO_TEXT_MODEL, TRANSCRIPTION_FORMATS, type SpeechToTextRequest, type TranscriptionFormat } from '../../shared/speechToText.ts';
 import { SpeechToTextError } from './errors.ts';
 
 function invalid(message: string): never {
@@ -34,7 +34,9 @@ export function parseSpeechToTextRequest(raw: unknown): Required<SpeechToTextReq
   return {
     nodeId: body.nodeId.trim(), audioPath,
     // 缺省必须是中枢当前唯一上架的转写模型；doubao-asr-bigmodel 自 #3516 起仅登记不上架。
-    model: typeof body.model === 'string' && body.model.trim() ? body.model.trim() : 'whisper-1',
+    // #3763：该默认值与中枢 catalog-defaults / media route / stt 文件回退四处共用同一常量，
+    // 跨插件对齐门禁会在任一处漂移时报红。
+    model: typeof body.model === 'string' && body.model.trim() ? body.model.trim() : DEFAULT_SPEECH_TO_TEXT_MODEL,
     responseFormat: responseFormat as TranscriptionFormat,
   };
 }

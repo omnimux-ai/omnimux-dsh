@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { MANIFEST_URL, verifyAutoServing } from './verify-auto-serving.mjs'
+import { MANIFEST_URL, readBaselineBundledSnapshot, verifyAutoServing } from './verify-auto-serving.mjs'
 import { runVerify } from './verify-model-contracts.mjs'
 import { loadDispositions } from '../plugins/omnimux/src/catalog/contract/index.js'
+import { defaultBundledDir, readBundledSnapshot } from '../plugins/omnimux/src/catalog/cloud/bundled.js'
 import { CANVAS_GENERATION_POLICY } from '../plugins/omnimux-workflow/src/shared/generationPolicy.ts'
 
 const fixture = () => JSON.parse(readFileSync(MANIFEST_URL, 'utf8'))
+const bundled = () => readBundledSnapshot(defaultBundledDir()).snapshot
 function checkMutation(mutate, code) {
   const manifest = fixture()
   mutate(manifest)
@@ -94,6 +96,92 @@ test('malformed or unreadable manifests fail closed', () => {
   checkMutation((m) => { m.models.push(null) }, 'manifest_invalid')
   checkMutation((m) => { m.models[0].priority = 'P2' }, 'manifest_invalid')
   assert.equal(verifyAutoServing({ manifestPath: new URL('./does-not-exist.json', import.meta.url) }).exitCode, 1)
+})
+
+test('the shipped snapshot may not silently drop a model the baseline sold', () => {
+  const baseline = bundled()
+  assert.ok(baseline.models.some((row) => row.id === 'suno'), 'fixture expectation: suno is on sale today')
+
+  // A model that vanishes from the file, and a model that stays but loses every
+  // enabled line, are the same product outcome: the catalog can no longer serve it.
+  for (const shrink of [
+    (snapshot) => { snapshot.models = snapshot.models.filter((row) => row.id !== 'suno') },
+    (snapshot) => { snapshot.models.find((row) => row.id === 'suno').enableGroups = [] },
+  ]) {
+    const current = structuredClone(baseline)
+    shrink(current)
+    const report = verifyAutoServing({ baseline, bundled: { snapshot: current } })
+    assert.equal(report.exitCode, 1)
+    assert.equal(report.ok, false)
+    const dropped = report.issues.filter((issue) => issue.code === 'auto_serving_snapshot_model_dropped')
+    assert.deepEqual(dropped.map((issue) => issue.modelId), ['suno'], JSON.stringify(report.issues))
+    assert.deepEqual(report.gateway.dropped, ['suno'])
+    assert.equal(report.gateway.baseline.ref, 'injected')
+  }
+
+  // Restoring the model is the same check going green again.
+  assert.equal(verifyAutoServing({ baseline, bundled: { snapshot: baseline } }).ok, true)
+})
+
+test('a reviewed drop is recorded in git and stays visible instead of failing the gate', () => {
+  const baseline = bundled()
+  const dropped = 'suno'
+  assert.ok(baseline.models.some((row) => row.id === dropped), 'fixture expectation: suno is on sale today')
+  const current = structuredClone(baseline)
+  current.models = current.models.filter((row) => row.id !== dropped)
+
+  // Undeclared: hard failure that names the model and says where to record the decision.
+  const undeclared = verifyAutoServing({ baseline, bundled: { snapshot: current } })
+  assert.equal(undeclared.ok, false)
+  const issue = undeclared.issues.find((row) => row.code === 'auto_serving_snapshot_model_dropped')
+  assert.equal(issue.modelId, dropped)
+  assert.match(issue.message, /snapshotDropAcknowledged/)
+
+  // Declared with reason and review date: visible as a warning, not a failure.
+  const manifest = JSON.parse(readFileSync(MANIFEST_URL, 'utf8'))
+  manifest.snapshotDropAcknowledged = [{ id: dropped, reason: 'gateway retired the line', reviewedAt: '2026-11-25' }]
+  const declared = verifyAutoServing({ baseline, bundled: { snapshot: current }, manifest })
+  assert.equal(declared.ok, true)
+  assert.equal(declared.issues.length, 0)
+  const warning = declared.warnings.find((row) => row.code === 'auto_serving_snapshot_model_dropped_acknowledged')
+  assert.match(warning.message, /gateway retired the line/)
+  assert.match(warning.message, /reviewed 2026-11-25/)
+  assert.deepEqual(declared.gateway.dropped, [dropped])
+})
+
+test('a baseline whose rows sell nothing warns instead of silently disabling drop detection', () => {
+  const baseline = structuredClone(bundled())
+  for (const row of baseline.models) row.enableGroups = []
+  const report = verifyAutoServing({ baseline, bundled: { snapshot: bundled() } })
+  assert.equal(report.warnings.some((row) => row.code === 'auto_serving_baseline_shape_unexpected'), true)
+})
+
+test('a baseline that cannot be read is a warning, never a fake failure', () => {
+  const missing = verifyAutoServing({ baseline: null })
+  assert.equal(missing.ok, true, JSON.stringify(missing.issues))
+  assert.equal(missing.exitCode, 0)
+  assert.deepEqual(missing.warnings.map((warning) => warning.code), ['auto_serving_baseline_unavailable'])
+  assert.equal(missing.gateway.dropped.length, 0)
+
+  const bogusRef = verifyAutoServing({ baselineRef: 'definitely-not-a-revision' })
+  assert.equal(bogusRef.ok, true, JSON.stringify(bogusRef.issues))
+  assert.equal(bogusRef.warnings.some((warning) => warning.code === 'auto_serving_baseline_unavailable'), true)
+  assert.equal(readBaselineBundledSnapshot({ baselineRef: 'definitely-not-a-revision' }).snapshot, undefined)
+})
+
+test('the baseline revision is read from git, offline and without touching the worktree', () => {
+  const read = readBaselineBundledSnapshot({ baselineRef: 'HEAD' })
+  assert.equal(read.code, 'read')
+  assert.equal(read.ref, 'HEAD')
+  assert.ok(read.snapshot.models.length > 0)
+
+  const report = verifyAutoServing({ baselineRef: 'HEAD' })
+  assert.equal(report.ok, true, JSON.stringify(report.issues))
+  assert.deepEqual(report.warnings, [])
+  assert.equal(report.gateway.baseline.code, 'read')
+  assert.equal(report.gateway.baseline.models, report.gateway.snapshotModels)
+  assert.deepEqual(report.gateway.dropped, [])
+  assert.equal(report.gateway.baseline.disappearance.ratio, 0)
 })
 
 test('strict model-contract CLI combines the serving failure and emits it as pure JSON', async () => {

@@ -14,7 +14,10 @@
  *    decided by the gateway snapshot at runtime, so there is no local "required in auto"
  *    flag left to judge here.
  * 2. Default Alignment: Central catalog-defaults.json, canvas policy defaultModelId,
- *    and media route defaults must agree on default models.
+ *    and media route defaults must agree on default models. #3763 adds the
+ *    speech-to-text capability seam, whose default is declared in four places (hub
+ *    catalog-defaults, media route, workflow request schema, hub file-upload
+ *    fallback) and must agree in all four.
  * 3. Aspect Ratio UI Coverage: All aspect ratios declared by listed models must have
  *    SVG geometries in omnimux-workflow's aspectRatioGeometry.ts.
  * 4. Diff-Aware Notice: Detects Git modifications to model files and outputs an
@@ -32,7 +35,9 @@ import {
   loadCatalogDefaults,
 } from '../plugins/omnimux/src/catalog/contract/index.js';
 import { DEFAULT_MEDIA } from '../plugins/omnimux/src/media/route.js';
+import { FILE_UPLOAD_MODEL as STT_FILE_UPLOAD_MODEL } from '../plugins/omnimux/src/media/stt.js';
 import { CANVAS_GENERATION_POLICY, CANVAS_CAPABILITY_TOOLS, CANVAS_INPUT_CAPABILITY_SEAMS } from '../plugins/omnimux-workflow/src/shared/generationPolicy.ts';
+import { DEFAULT_SPEECH_TO_TEXT_MODEL } from '../plugins/omnimux-workflow/src/shared/speechToText.ts';
 import { ASPECT_RATIO_GEOMETRIES } from '../plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/cfg/aspectRatioGeometry.ts';
 import { MODEL_CHANNEL_GROUPS as HUB_CHANNEL_GROUPS } from '../plugins/omnimux/src/catalog/serving/channel-groups.js';
 import { MODEL_CHANNEL_GROUPS as PICKER_CHANNEL_GROUPS } from '../plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.ts';
@@ -45,7 +50,34 @@ export const PRIMARY_KIND_OPERATIONS = Object.freeze({
   video: 'text_to_video',
   text: 'chat',
   audio: 'text_to_music',
+  // #3763: transcription is a capability seam, not a canvas whitelist entry, so it
+  // never appeared in this table and the four places that declare its default could
+  // drift apart with no gate noticing. `stt` is the media-route key.
+  stt: 'speech_to_text',
 });
+
+/**
+ * The four places that declare the speech-to-text default.
+ *
+ * The canvas policy has no `stt` whitelist, so the kind-level triad above only
+ * covers two of them (hub catalog-defaults and the media route). The workflow
+ * request schema and the hub's file-upload fallback are read here as well: one
+ * of the four drifting alone must be a red gate.
+ */
+export function speechToTextDefaultSources(options = {}) {
+  const catalogDefaults = options.catalogDefaults ?? loadCatalogDefaults();
+  const mediaConfig = options.mediaConfig ?? DEFAULT_MEDIA;
+  const seamDefaults = options.seamDefaults ?? {
+    workflowSchema: DEFAULT_SPEECH_TO_TEXT_MODEL,
+    hubFileUpload: STT_FILE_UPLOAD_MODEL,
+  };
+  return [
+    { source: 'hub catalog-defaults (speech_to_text)', modelId: catalogDefaults?.byOperation?.speech_to_text ?? null },
+    { source: 'hub media route (providers.omnimux.models.stt)', modelId: mediaConfig?.providers?.omnimux?.models?.stt ?? null },
+    { source: 'workflow speechToText request schema', modelId: seamDefaults.workflowSchema ?? null },
+    { source: 'hub stt file-upload fallback', modelId: seamDefaults.hubFileUpload ?? null },
+  ];
+}
 
 /**
  * Detect files in Git diff that touch model contracts.
@@ -113,6 +145,7 @@ export function formatCrossPluginImpactNotice(changedFiles) {
  *   alignment: {
  *     whitelistModelsChecked: number,
  *     defaultModelsChecked: number,
+ *     sttDefaultsChecked: number,
  *     aspectRatiosChecked: number,
  *   }
  * }}
@@ -138,7 +171,7 @@ export function verifyCrossPluginModelAlignment(options = {}) {
     manifest = options.manifest ?? JSON.parse(readFileSync(options.manifestPath ?? MANIFEST_URL, 'utf8'));
   } catch (err) {
     issue('load_failed', err.message);
-    return finish(issues, null, { whitelistModelsChecked: 0, defaultModelsChecked: 0, aspectRatiosChecked: 0 });
+    return finish(issues, null, { whitelistModelsChecked: 0, defaultModelsChecked: 0, sttDefaultsChecked: 0, aspectRatiosChecked: 0 });
   }
 
   const governed = new Map((dispositions?.dispositions ?? []).map((row) => [row.id, row.disposition]));
@@ -220,6 +253,31 @@ export function verifyCrossPluginModelAlignment(options = {}) {
           mediaDefault,
         );
       }
+    }
+  }
+
+  // 2b. Capability-seam default alignment (speech-to-text, #3763).
+  // Transcription has no canvas whitelist, so the triad above reaches only two of its
+  // four declarations. All four are read as one set here — the media route is counted
+  // but not re-reported, so a single drift produces a single issue. A model the
+  // anonymous snapshot does not sell still needs all four to name the same id.
+  const sttSources = speechToTextDefaultSources({ catalogDefaults, mediaConfig, seamDefaults: options.seamDefaults });
+  const sttDefault = catalogDefaults?.byOperation?.speech_to_text ?? null;
+  let sttDefaultsChecked = 0;
+  for (const entry of sttSources) {
+    sttDefaultsChecked++;
+    if (!entry.modelId) {
+      issue('stt_default_missing', `Speech-to-text default is not declared by ${entry.source}.`);
+      continue;
+    }
+    if (entry.source.includes('media route')) continue; // already reported by the triad above
+    if (sttDefault && entry.modelId !== sttDefault) {
+      issue(
+        'stt_default_mismatch',
+        `Speech-to-text default mismatch: ${entry.source} declares "${entry.modelId}" but hub ` +
+        `catalog-defaults has "${sttDefault}". All four declarations must name the same model.`,
+        entry.modelId,
+      );
     }
   }
 
@@ -332,7 +390,7 @@ export function verifyCrossPluginModelAlignment(options = {}) {
   const changedFiles = options.changedFiles ?? detectGitModelChanges();
   const notice = changedFiles.length > 0 ? formatCrossPluginImpactNotice(changedFiles) : null;
 
-  return finish(issues, notice, { whitelistModelsChecked, defaultModelsChecked, aspectRatiosChecked, channelGroupsChecked, capabilityModelsChecked });
+  return finish(issues, notice, { whitelistModelsChecked, defaultModelsChecked, sttDefaultsChecked, aspectRatiosChecked, channelGroupsChecked, capabilityModelsChecked });
 }
 
 function finish(issues, notice, alignment) {

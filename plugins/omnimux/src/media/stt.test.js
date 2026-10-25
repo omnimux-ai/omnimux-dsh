@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { GUARD_CODES, guardSubmit } from '../catalog/contract/submit-guard/index.js'
-import { executeOmnimuxSpeechToText, transcribeSpeechToTextRequest } from './stt.js'
+import { executeOmnimuxSpeechToText, speechToTextMembershipOptions, transcribeSpeechToTextRequest } from './stt.js'
 
 const AUDIO_BYTES = Buffer.from([0x49, 0x44, 0x33, 0x04, 0x00, 0x00])
 const M4A_BYTES = Buffer.from([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x4d, 0x34, 0x41, 0x20])
@@ -254,3 +254,44 @@ for (const [status, body, code] of [
     }), { code })
   })
 }
+
+// #3763: the transcription waiver is a manifest declaration, not a hardcoded opt-out.
+// The anonymous bundled snapshot publishes no transcription model at all, so this is
+// the difference between "the shipped default works" and "every transcription is
+// refused as delisted".
+const EMPTY_GATEWAY_SNAPSHOT = { source: 'test-fixture', models: [] }
+
+test('the transcription waiver comes from the manifest and leaves undeclared models closed', () => {
+  // Declared in auto-serving-manifest.json (reason + review date) → only this gate is relaxed.
+  assert.deepEqual(speechToTextMembershipOptions('whisper-1'), { gatewayMembership: false })
+  // Registered but undeclared → the membership gate stays closed.
+  assert.deepEqual(speechToTextMembershipOptions('seedasr-auc'), {})
+  assert.deepEqual(speechToTextMembershipOptions('doubao-asr-bigmodel'), {})
+})
+
+test('the declared waiver is exactly what admits the shipped transcription default', () => {
+  const submitRequest = {
+    model,
+    operation: 'speech_to_text',
+    audio: dataAudio,
+    response_format: 'json',
+    seam: 'speechToText',
+    capability: 'stt',
+  }
+
+  // Without the declaration the identical request is refused as delisted.
+  const refused = guardSubmit(submitRequest, { snapshot: EMPTY_GATEWAY_SNAPSHOT })
+  assert.equal(refused.ok, false)
+  assert.equal(refused.code, GUARD_CODES.NOT_LISTED)
+  assert.equal(refused.details.reason, 'gateway-delisted')
+
+  // With the declaration read from the manifest the same request is admitted; the
+  // operation's own listed admission still had to pass on its own merits.
+  const admitted = guardSubmit(
+    submitRequest,
+    Object.assign({ snapshot: EMPTY_GATEWAY_SNAPSHOT }, speechToTextMembershipOptions(model)),
+  )
+  assert.equal(admitted.ok, true, JSON.stringify(admitted))
+  assert.equal(admitted.modelId, model)
+  assert.equal(admitted.operationId, 'speech_to_text')
+})

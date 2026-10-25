@@ -253,7 +253,9 @@
         "whisper-1"
       ],
       "canvasExcluded": true,
+      "gatewayMembershipExempt": "2026-10-25 #3763：匿名随包快照不发布任何转写型号（whisper-1 走账户专线，渠道 31 default），套用「不在快照即下架」会拒绝已上架的默认转写型号；只放宽网关成员资格这一道闸，操作契约准入不变。复核时间 2026-11-25，或账户视图/刷新后的快照发布 speech_to_text 型号时立即回收。",
       "note": "2026-10-21 网关对账 #3516：渠道 31 default 现役语音识别能力模型；经 speechToText seam 进入画布，不进入文本生成白名单"
     }
-  ]
+  ],
+  "snapshotDropAcknowledged": []
 }

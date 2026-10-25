@@ -265,7 +265,7 @@ UI 必须可解释；**Hide, Don't Grey**。
 - **cordis 交叉验证**：composer id 必须 resolve 到契约 canonical/alias（`cordis_unresolvable_model`）；`cordis.patch.yml` 内容不动。
 - **CI 红灯**：根 `verify:model-contracts` 与 quality-gate 均已切 `--strict`；稳态目标 extra=0、未处置 missing=0、禁上架 listed=0；禁止用改回 `--audit` 修复红灯。
 
-相关命令：`pnpm verify:model-contracts`（离线契约校验）。`pnpm verify:models` 会查询在线模型存在性，不属于本合同的研究或验收步骤，不执行。
+相关命令：`pnpm verify:model-contracts`（离线契约校验）、`pnpm verify:models`（离线 patch × `CHAT_MODELS` × 随包快照；#3763 起不再查询在线模型存在性）。两者都不发真实模型请求，也不是官方文档之外的模型能力发现手段。
 
 ## 7. 非目标（指向 PRD / 设计）
 
