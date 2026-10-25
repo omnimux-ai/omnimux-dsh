@@ -27,6 +27,7 @@ import {
 import { useT } from '../../i18n';
 import { CustomDropdown, type DropdownMenuItem } from '../../ui';
 import { useClickOutside } from '../hooks/useClickOutside';
+import { COMFY_PAGE_TEMPLATE_EVENT } from '../../nodes/definitions/comfyPage';
 import { useWorkflowTransferStore, type TransferState } from '../../store/workflowTransferStore';
 import {
   preventToolbarAddContextMenu,
@@ -349,6 +350,17 @@ const Toolbar: React.FC<ToolbarProps> = ({
   }, [importNonce]);
 
   /** 底部 ComfyUI 工作流入口已删除（Issue 3741）：文件导入仍走工具栏按钮与拖拽。 */
+
+  /** ComfyUI 工作流卡片底部的「使用模板」（Issue #3751）：打开画布已有的模板面板。 */
+  useEffect(() => {
+    const listener = (event: Event) => {
+      const nodeId = (event as CustomEvent<{ nodeId?: unknown }>).detail?.nodeId;
+      if (typeof nodeId !== 'string') return;
+      setIsTemplateMenuOpen(true);
+    };
+    window.addEventListener(COMFY_PAGE_TEMPLATE_EVENT, listener);
+    return () => window.removeEventListener(COMFY_PAGE_TEMPLATE_EVENT, listener);
+  }, []);
 
   useClickOutside({
     refs: addMenuRef,

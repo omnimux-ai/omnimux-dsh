@@ -12,6 +12,7 @@ import type { Edge, Node } from '@xyflow/react';
 import CanvasEditor from '../editor/CanvasEditor';
 import { injectCanvasStyles } from '../injectStyles';
 import { useCanvasStore } from '../store/canvasStore';
+import { useComfyFrameSlots } from '../store/comfyFrameSlots';
 import { useExecutionStore } from '../store/executionStore';
 import { setLocale, getLocale, type Locale } from '../i18n';
 import { createDefaultMaterialNodeData, type MaterialType } from '../types/materialNode';
@@ -328,8 +329,10 @@ const Harness: React.FC = () => {
     }
   }, []);
 
+  const fullscreenComfyNode = useComfyFrameSlots((state) => state.fullscreenNodeId);
+
   return (
-    <div className="wf-canvas-root">
+    <div className={`wf-canvas-root${fullscreenComfyNode ? ' wf-canvas-root--comfy-fullscreen' : ''}`}>
       <div style={BAR_STYLE}>
         <strong style={{ color: 'var(--wb-text-primary)' }}>W4 harness</strong>
         <button type="button" style={BTN_STYLE} onClick={toggleLocale}>

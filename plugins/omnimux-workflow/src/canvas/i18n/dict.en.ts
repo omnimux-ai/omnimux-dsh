@@ -683,7 +683,10 @@ const en: Record<DictKey, string> = {
   'palette.keyword.comfyPage': 'ComfyUI workflow, local 8188, node editor',
   'node.type.comfy-page': 'ComfyUI workflow',
   'comfyPage.card.title': 'ComfyUI workflow',
-  'comfyPage.card.open': 'Open',
+  'comfyPage.card.unnamedWorkflow': 'Untitled workflow',
+  'comfyPage.card.useTemplate': 'Use template',
+  'comfyPage.card.exitFullscreen': 'Exit fullscreen',
+  'comfyPage.card.framePaused': 'Page paused',
   'comfyPage.status.idle': 'Not checked',
   'comfyPage.status.probing': 'Checking',
   'comfyPage.status.connected': 'Connected',
@@ -783,7 +786,7 @@ const en: Record<DictKey, string> = {
   'transfer.reason.field-type-mismatch': 'Field type mismatch (original value kept in the file)',
   'transfer.reason.link-field-type-mismatch': 'Link field type mismatch (original value kept in the file)',
   'transfer.reason.reroute-field-type-mismatch': 'Reroute field type mismatch (original value kept in the file)',
-  // Managed backend state UI (Issue 3701 M2c: ComfyPageOverlay state machine)
+  // Managed backend state UI (Issue 3701 M2c: ComfyPagePanel state machine)
   'comfyPage.backend.state.notInstalled': 'Not installed',
   'comfyPage.backend.state.installing': 'Installing',
   'comfyPage.backend.state.installed': 'Installed, not running',

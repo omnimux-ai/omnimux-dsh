@@ -17,6 +17,7 @@ import { useExecutionController } from './hooks/useExecutionController';
 import { useCanvasBoot } from './hooks/useCanvasBoot';
 import { setLocale, useT, type Locale } from './i18n';
 import { useWorkspacePersistence } from './bridge/useWorkspacePersistence';
+import { useComfyFrameSlots } from './store/comfyFrameSlots';
 import { useTablePersistence } from './bridge/useTablePersistence';
 import { prepareDirectorClose } from './bridge/directorLifecycle';
 import { DirectorPanel } from './components/director-panel/DirectorPanel.tsx';
@@ -41,6 +42,8 @@ const App: React.FC<CanvasAppProps> = ({ locale, workspaceId: propWorkspaceId, f
   }, [propWorkspaceId]);
 
   const t = useT();
+  // 有卡片整屏时给画布根节点加类：`.react-flow` 自带层叠上下文，只有抬它才能盖住页头。
+  const fullscreenComfyNode = useComfyFrameSlots((state) => state.fullscreenNodeId);
   // persist 第一轮尚未挂上时 no-op；cleanup 时 flushRef 已指向同步 capture
   const flushRef = useRef(() => {});
   const { boot, setBoot, catalog } = useCanvasBoot({
@@ -123,7 +126,7 @@ const App: React.FC<CanvasAppProps> = ({ locale, workspaceId: propWorkspaceId, f
   }
 
   return (
-    <div className="wf-canvas-root">
+    <div className={`wf-canvas-root${fullscreenComfyNode ? ' wf-canvas-root--comfy-fullscreen' : ''}`}>
       {persistence.status === 'conflict' ? (
         <div className="wf-canvas-conflict-banner" role="alert">
           <span>

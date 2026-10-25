@@ -65,7 +65,6 @@ import { videoCompositionNodeDefinition } from '../nodes/definitions/videoCompos
 import { groupNodeDefinition } from '../nodes/definitions/group';
 import { directorNodeDefinition } from '../nodes/definitions/director.tsx';
 import { comfyPageNodeDefinition } from '../nodes/definitions/comfyPage.tsx';
-import { ComfyPageOverlay } from './components/ComfyPageOverlay.tsx';
 import { FloatingSelectionToolbar } from './components/FloatingSelectionToolbar';
 import { BatchCreateAssetModal, type MediaAssetItem } from './components/BatchCreateAssetModal';
 import { CreateWorkflowModal } from './components/CreateWorkflowModal';
@@ -972,9 +971,6 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
           <MiniMap pannable zoomable />
         </div>
       )}
-
-      {/* ComfyUI 工作流节点全屏层（Issue #3681）：与画布同根，关闭即卸载 iframe */}
-      <ComfyPageOverlay />
 
       {/* 底部悬浮控制坞 */}
       <Toolbar
