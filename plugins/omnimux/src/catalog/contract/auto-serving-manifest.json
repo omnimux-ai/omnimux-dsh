@@ -87,7 +87,8 @@
         "seedream-5-0-pro",
         "seedream-5.0-pro"
       ],
-      "note": "2026-10-05 #3148：真机验证通过（文生图 + 2 图垫图），上架为 listed；同时修掉 doubao-seedream 家族不支持 resolution 的载荷缺陷。"
+      "note": "2026-10-05 #3148：真机验证通过（文生图 + 2 图垫图），上架为 listed；同时修掉 doubao-seedream 家族不支持 resolution 的载荷缺陷。 2026-10-25 网关快照（#3734）：该型号已无可用线路，画布准入收回（canvasExcluded）。",
+      "canvasExcluded": true
     },
     {
       "productId": "grok-imagine-image-2-0",
@@ -121,8 +122,8 @@
         "seedance-2.0-fast"
       ],
       "upstreamWireId": "seedance-2.0-fast",
-      "canvasExcluded": false,
-      "note": "2026-10-05: 以当前映射契约真机验证通过（文生视频 / 首帧 / 全能参考），操作升格为 listed 并加入画布准入（#3152）。此前「下架收敛」记录已失效。"
+      "canvasExcluded": true,
+      "note": "2026-10-05: 以当前映射契约真机验证通过（文生视频 / 首帧 / 全能参考），操作升格为 listed 并加入画布准入（#3152）。此前「下架收敛」记录已失效。 2026-10-25 网关快照（#3734）：该型号已无可用线路，画布准入收回（canvasExcluded）。"
     },
     {
       "productId": "seedance-2-0-mini",
@@ -133,8 +134,8 @@
         "seedance-2.0-mini"
       ],
       "upstreamWireId": "seedance-2.0-mini",
-      "canvasExcluded": false,
-      "note": "2026-10-05: 以当前映射契约真机验证通过（文生视频 / 首帧 / 全能参考），操作升格为 listed 并加入画布准入（#3152）。此前「下架收敛」记录已失效。"
+      "canvasExcluded": true,
+      "note": "2026-10-05: 以当前映射契约真机验证通过（文生视频 / 首帧 / 全能参考），操作升格为 listed 并加入画布准入（#3152）。此前「下架收敛」记录已失效。 2026-10-25 网关快照（#3734）：该型号已无可用线路，画布准入收回（canvasExcluded）。"
     },
     {
       "productId": "seedance-2-5",
