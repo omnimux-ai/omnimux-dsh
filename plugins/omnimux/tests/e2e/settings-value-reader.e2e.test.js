@@ -71,9 +71,15 @@ test('E2E: 0.2.x configForms value lets a custom key generate without the offici
   cleanup()
 })
 
-test('E2E: 0.1.5 settingsScope value keeps the same bypass behaviour', async () => {
+test('E2E: retired settingsScope service no longer bypasses the login gate', async () => {
+  // Regression for the #3773 removal: DSH 0.2.1 ships no `settingsScope` service, so
+  // this module installs nothing on a host that exposes only the retired binder. The
+  // reader must stay empty and the gate must keep prompting — a silent bypass here
+  // would let an unconfigured account generate.
   const binder = { bind: () => ({ getSnapshot: () => ({ value: customKeyValue() }) }) }
   const read = installSettingsValueReader({ ctx: fakeCtx({ settingsScope: binder }), namespace: 'omnimux' })
+  assert.equal(typeof read, 'function')
+  assert.equal(read(), undefined, 'the retired service must never be read')
   setRuntimeChoiceReader(read)
 
   const win = installGate()
@@ -85,8 +91,8 @@ test('E2E: 0.1.5 settingsScope value keeps the same bypass behaviour', async () 
       bypassed = profile
     },
   })
-  assert.equal(bypassed?.runtimeBypass, true)
-  assert.equal(getSnapshot().phase, 'closed')
+  assert.equal(bypassed, null, 'a retired-settingsScope host must not bypass the gate')
+  assert.equal(getSnapshot().phase, 'prompt')
   cleanup()
 })
 
