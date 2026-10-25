@@ -278,6 +278,29 @@ describe('AI Agent 防造假与自适应门禁系统测试 (guard-anti-cheat.tes
       assert.equal(decideOldStandardDeclaration({ filePath: FILE, inspection: allowed, declarations: [] }), null);
     });
 
+    it('调用位展开是执行风险且声明通道打不开，数组/对象展开是数据拷贝已放行', () => {
+      // ① 调用位展开（`f(...args)` / `new C(...args)`）：硬拒，原因不在可声明集合里。
+      const spread = inspectTestStandardChange(
+        "test('keeps contract', () => { assert.equal(actual(), 1) })",
+        "test('keeps contract', () => { assert.equal(actual(), 1); fn(...args) })"
+      );
+      assert.equal(spread.allowed, false);
+      assert.equal(spread.reason, 'dynamic-test-execution-needs-review');
+      assert.deepEqual(spread.changedCases, []);
+      assert.equal(
+        decideOldStandardDeclaration({ filePath: FILE, inspection: spread, declarations: [{ path: FILE, caseName: 'keeps contract' }] }),
+        null,
+        '执行风险不得经「## 旧标准变更」放行'
+      );
+
+      // ③ 数组/对象展开是数据拷贝：不产生风险，也不需要任何声明。
+      const copy = inspectTestStandardChange(
+        "test('keeps contract', () => { assert.equal(actual(), 1) })",
+        "test('keeps contract', () => { const clone = { ...row }; assert.equal(actual(), 1) })"
+      );
+      assert.equal(copy.allowed, true);
+    });
+
     it('声明汇总返回结构化条目（当前任务规格未声明时为空数组）', () => {
       const declarations = collectOldStandardDeclarations();
       assert.ok(Array.isArray(declarations), '声明汇总必须是数组');

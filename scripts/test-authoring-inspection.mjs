@@ -186,7 +186,16 @@ function collectRisks(code, { resolveImport } = {}) {
     }
     if (node.type === 'ImportDeclaration' && /^(?:node:)?(?:vm|child_process|worker_threads|module)$/.test(node.source.value)) risk('runtime-code-execution-import-needs-review')
     if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'require') risk('dynamic-test-execution-needs-review')
-    if (node.type === 'SpreadElement' || node.type === 'ImportExpression' || node.type === 'WithStatement') risk('dynamic-test-execution-needs-review')
+    // 数组/对象字面量里的展开是**数据拷贝**（`[...arr]`、`{ ...obj }`），不是执行；
+    // 只有**调用位**展开（`f(...args)`、`new C(...args)`）能把任意实参交给任意被调用者，才算执行风险。
+    // 判定只看 AST 父节点：`SpreadElement` 只可能出现在 ArrayExpression.elements /
+    // ObjectExpression.properties / CallExpression.arguments / NewExpression.arguments，因此
+    // 「父节点是调用且自己位于其 arguments」即调用位，不做文本匹配，嵌套位置由父节点自然区分
+    // （`f([...a])` 里的 `[...a]` 父节点是 ArrayExpression → 放行；`f(...a)` 父节点是 CallExpression → 拦）。
+    const callPositionSpread = node.type === 'SpreadElement'
+      && (parent?.type === 'CallExpression' || parent?.type === 'NewExpression')
+      && parent.arguments.includes(node)
+    if (callPositionSpread || node.type === 'ImportExpression' || node.type === 'WithStatement') risk('dynamic-test-execution-needs-review')
     if (node.type === 'Identifier' && ['eval', 'Function'].includes(node.name)) risk('dynamic-test-execution-needs-review')
     if (node.type === 'ImportSpecifier' && (blocked.has(node.imported.name ?? node.imported.value) || execution.has(node.imported.name ?? node.imported.value)) && !publicImports.has(node)) risk('test-execution-import-needs-review')
     if (node.type === 'Identifier' && publicBindings.has(node.name) && !publicImports.has(parent) && !(parent?.type === 'CallExpression' && parent.callee === node && !parent.optional)) risk('public-plugin-binding-escape-needs-review')
