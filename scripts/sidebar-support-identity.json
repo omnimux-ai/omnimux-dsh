@@ -1,0 +1,17 @@
+{
+  "name": "dsh-better-sidebar",
+  "version": "0.19.1",
+  "repository": "https://github.com/omdsh-dev/DSH-better-sidebar.git",
+  "commit": "8753096a583ff2891d57a0074f1ac71cd5c6003e",
+  "shippedBuild": {
+    "presetPatchSha256": "d608b3eefa572aca0f1022a7b7eb41c3bb16d8c6e967bef40b4c2adf1bb16a5e",
+    "pinnedLockSha256": "589e7c61b7676444446f15d5eac93216c278d46564c812b57b54915c86ce12f2",
+    "verifiedAt": "2026-10-25",
+    "verifiedAgainst": "~/.omnimux-dev 与 ~/.omnimux 的 .materialize-snapshots/plugins/dsh-better-sidebar/omnimux-build.json"
+  },
+  "ownership": {
+    "pinPatchBuildContract": "omnimux-desktop-fork/docs/contracts/better-sidebar-source.md",
+    "builder": "omnimux-desktop-fork/dsh-plugin-desktop/scripts/better-sidebar/build-patched-sidebar.ts",
+    "note": "壳仓 patch 文件在本记录核对之后有未提交改动，presetPatchSha256 只描述核对时 profile 实装的那份构建，不是壳仓 patch 的当前哈希。"
+  }
+}

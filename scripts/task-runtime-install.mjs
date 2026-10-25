@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { hashFile, stable } from './materialize-graph.mjs';
 import { captureCandidate } from './evidence-contract.mjs';
 import { privatePnpmEnvironment } from './materialize-cache.mjs';
@@ -14,6 +15,24 @@ const fail = code => { throw Object.assign(new Error(`TEST_ENV_${code}`), { code
 const inside = (root, path) => path === root || path.startsWith(root + sep);
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const json = path => JSON.parse(fs.readFileSync(path, 'utf8'));
+const scriptDirectory = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Single source of truth for the optional sidebar support package (Issue #3766).
+ *
+ * The sidebar ships from the shipping shell fork's preset build, so this repository only records
+ * the identity it must agree with: version, upstream revision, and the shipped build it was
+ * verified against. Nothing here may fall back to a dev-machine path.
+ */
+export function readSidebarSupportIdentity() {
+  return json(join(scriptDirectory, 'sidebar-support-identity.json'));
+}
+
+/** Reject any support package that is not the identity's package at the identity's version. */
+export function assertSidebarSupportIdentity(manifest, identity = readSidebarSupportIdentity()) {
+  if (!manifest || manifest.name !== identity.name || manifest.version !== identity.version) fail('INSTALL_SUPPORT_REQUIRED');
+  return manifest;
+}
 
 export function matchesTaskPeerVersion(version, spec) {
   if (typeof spec !== 'string' || !semver.validRange(spec)) return false;
@@ -154,11 +173,12 @@ export function preparePrivateTaskPackages({ preparation, root, repository, priv
   // The packaged host does not ship the optional sidebar seam; first-party workbench plugins
   // (assets, workflow, automation) register their tabs through ctx.inject(['betterSidebar']), so the
   // reviewed support package must be installed whenever any of them is part of the task graph.
+  // The accepted identity comes from scripts/sidebar-support-identity.json, never a literal here.
   if (['omnimux-assets', 'omnimux-workflow', 'omnimux-automation'].some(name => byName.has(name))) {
     const source = join(root, 'plugins/omnimux-studio/node_modules/dsh-better-sidebar');
     if (!fs.existsSync(join(source, 'package.json'))) fail('INSTALL_SUPPORT_REQUIRED');
     const actual = fs.realpathSync(source), manifest = json(join(actual, 'package.json'));
-    if (manifest.name !== 'dsh-better-sidebar' || manifest.version !== '0.18.0') fail('INSTALL_SUPPORT_REQUIRED');
+    assertSidebarSupportIdentity(manifest);
     support.push(visit({ source: actual, resolveRoot: actual }));
   }
   const peerSupport = [];

@@ -4,7 +4,7 @@
 
 ## 依赖与构建
 
-- 社区 `dsh-better-sidebar` 0.18.0 提供 betterSidebar；不是官方内置服务。
+- 社区 `dsh-better-sidebar` 提供 betterSidebar；不是官方内置服务。当前应有的版本与来源身份以 [`scripts/sidebar-support-identity.json`](../../scripts/sidebar-support-identity.json) 为唯一真源（pin/patch/构建契约在壳仓 `docs/contracts/better-sidebar-source.md`）。
 - 已核实官方 locale/ui-primitives 0.1.2-rc.1，使用 locale.register/bind。
 - pnpm 11.7.0、React 18.3.1、esbuild 0.28.2、jsdom 30.0.1。插件自带独立 workspace 与 lock，避免嵌套工作树解析其他插件的历史外部 file 依赖。
 - 在本插件目录执行 `pnpm install --frozen-lockfile --ignore-scripts --store-dir ../../.pnpm-store/studio`，然后 `pnpm test && pnpm build`。构建输出 lib/client.js，不含机器路径兜底或缓存扫描。
