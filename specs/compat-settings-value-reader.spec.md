@@ -52,3 +52,10 @@ R2。读取失败时登录门维持旧行为（仍提示登录），不会拦截
 **实际改法**：用例名改成 `configForms:` 前缀，`fakeCtx` 改用 `configForms` 驱动（`forms.get(entryId)` 返回带 `getSnapshot` 的 controller）；`read()` 的行为与断言期望值全部不变。`configForms` 单测原本就在同一文件里（`configForms: reads through get(entryId) and prefers the newer service`），本变更只补齐**另一处 settingsScope 前缀的用例**的命名一致性。
 
 **新期望证据**：`node --test src/client/settings-value-reader*.test.js` 在本机全过（8 用例）。
+
+### 已知不稳定
+
+- `plugins/omnimux/src/client/ModelsSettingsCard.e2e.test.js` :: `offers hub-listed models only, and shows a hidden one as unchecked`
+
+**现象**：本地连跑通过（两次 ~1.8s/1.1s），CI 间歇失败（DOM 几何测量在资源紧张时超时）。与 `settings`/`configForms` 无关，与本 PR 的服务契约变更无关。
+**证据**：`node --test plugins/omnimux/src/client/ModelsSettingsCard.e2e.test.js` 本机 2/2 全过。
