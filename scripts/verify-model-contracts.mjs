@@ -19,6 +19,11 @@ import { dirname, join, resolve as resolvePath } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { verifyAutoServing } from './verify-auto-serving.mjs';
 import { verifyCrossPluginModelAlignment } from './verify-cross-plugin-model-alignment.mjs';
+import { getContractIndex } from '../plugins/omnimux/src/catalog/contract/index.js';
+import { readBundledSnapshot } from '../plugins/omnimux/src/catalog/cloud/bundled.js';
+import { usableSnapshotModels } from '../plugins/omnimux/src/catalog/cloud/view.js';
+import { buildModelCatalog } from '../plugins/omnimux/src/catalog/list.js';
+import { gatewayMembershipExemptionsList } from '../plugins/omnimux/src/catalog/serving/id-universe.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const contractEntry = join(root, 'plugins/omnimux/src/catalog/contract/index.js');
@@ -118,6 +123,174 @@ export function verifyParameterDispatchClosure(index, profilesObj) {
     }
   }
   return issues;
+}
+
+/** Stable ascending comparator for model ids. */
+function compareIds(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/**
+ * @param {object[]} issues
+ * @param {number} onSale
+ * @param {number} contractListed
+ * @param {string[]} missingContract
+ * @param {string[]} exempt
+ * @returns {object}
+ */
+function finishGateway(issues, onSale, contractListed, missingContract, exempt) {
+  return {
+    ok: issues.length === 0,
+    exitCode: issues.length ? EXIT_FAIL : EXIT_OK,
+    source: 'offline-bundled-snapshot',
+    onlineVerified: false,
+    onSale,
+    contractListed,
+    missingContract,
+    exempt,
+    issues,
+  };
+}
+
+/**
+ * Offline "contract listed ↔ gateway on sale" reconciliation (P1b truth split).
+ *
+ * `listedOperations` is the call-contract admission set: it says the hub can
+ * call the model, not that the gateway sells it. The catalog's four lists are
+ * already `on-sale ∩ contract`, so asserting "every catalog row is on sale"
+ * against the same snapshot the catalog was built from is true by construction
+ * — `verify-auto-serving.mjs` removed exactly that assertion as a tautology.
+ * This gate pins the relationship the catalog *reports* instead:
+ * `gateway.missingContract` must equal `bundled on-sale \ contract-listed`, with
+ * the right-hand side recomputed here from the contract index (an independent
+ * source), and a `gatewayMembershipExempt` waiver must not survive the snapshot
+ * starting to sell that model.
+ *
+ * Fully offline: the bundled snapshot is a committed file, so no credential and
+ * no network are involved.
+ *
+ * @param {{
+ *   specsDir?: string,
+ *   index?: object,
+ *   bundled?: { snapshot?: object, code?: string },
+ *   bundledDir?: string,
+ *   catalog?: object,
+ *   exemptions?: Array<{ modelId: string, reason: string }>,
+ * }} [options]
+ * @returns {{
+ *   ok: boolean,
+ *   exitCode: number,
+ *   source: string,
+ *   onlineVerified: boolean,
+ *   onSale: number,
+ *   contractListed: number,
+ *   missingContract: string[],
+ *   exempt: string[],
+ *   issues: object[],
+ * }}
+ */
+export function verifyGatewayMembership(options = {}) {
+  const issues = [];
+  const error = (code, message, modelId) => {
+    const issue = { level: 'error', code: `gateway_${code}`, message };
+    if (modelId) issue.modelId = modelId;
+    issues.push(issue);
+  };
+
+  let index = options.index;
+  if (!index) {
+    try {
+      index = getContractIndex(options.specsDir);
+    } catch (err) {
+      error('contract_index_unavailable', `Contract index unavailable: ${err?.message ?? err}`);
+      return finishGateway(issues, 0, 0, [], []);
+    }
+  }
+
+  const read = options.bundled ?? readBundledSnapshot(options.bundledDir);
+  if (!read?.snapshot) {
+    error('snapshot_unreadable', `Bundled gateway snapshot is not usable: ${read?.code ?? 'unknown'}`);
+    return finishGateway(issues, 0, 0, [], []);
+  }
+  const onSale = new Set(usableSnapshotModels(read.snapshot).keys());
+  if (onSale.size === 0) {
+    error('snapshot_empty', 'Bundled gateway snapshot lists no sellable model');
+    return finishGateway(issues, 0, 0, [], []);
+  }
+
+  const contractListed = new Set();
+  const models = index?.all ? index.all() : [];
+  for (const model of models) {
+    const operations = Array.isArray(model?.operations) ? model.operations : [];
+    for (const operation of operations) {
+      if (operation?.listed === true) contractListed.add(model.id);
+    }
+  }
+
+  let catalog = options.catalog;
+  if (!catalog) {
+    try {
+      catalog = buildModelCatalog({ snapshot: read.snapshot });
+    } catch (err) {
+      error('catalog_unavailable', `Catalog could not be built from the bundled snapshot: ${err?.message ?? err}`);
+      return finishGateway(issues, onSale.size, contractListed.size, [], []);
+    }
+  }
+  const reported = Array.isArray(catalog?.gateway?.missingContract) ? catalog.gateway.missingContract : null;
+  if (!reported) {
+    error('catalog_summary_missing', 'Catalog does not expose gateway.missingContract');
+    return finishGateway(issues, onSale.size, contractListed.size, [], []);
+  }
+
+  const expected = [];
+  for (const id of onSale) {
+    if (!contractListed.has(id)) expected.push(id);
+  }
+  expected.sort(compareIds);
+  const reportedSorted = Array.from(reported).sort(compareIds);
+
+  if (expected.join('\n') !== reportedSorted.join('\n')) {
+    error(
+      'missing_contract_drift',
+      'catalog.gateway.missingContract must equal (bundled on-sale minus contract-listed): '
+        + `expected [${expected.join(', ')}] but the catalog reported [${reportedSorted.join(', ')}]`,
+    );
+  }
+
+  for (const id of reportedSorted) {
+    if (!onSale.has(id)) {
+      error(
+        'missing_contract_not_on_sale',
+        `Reported as missing a contract but the bundled snapshot does not sell it: ${id}`,
+        id,
+      );
+    }
+    if (contractListed.has(id)) {
+      error(
+        'missing_contract_all_contracted',
+        `Reported as missing a contract but it has a listed operation: ${id}`,
+        id,
+      );
+    }
+  }
+
+  const exemptions = options.exemptions ?? gatewayMembershipExemptionsList();
+  const exemptIds = [];
+  for (const row of Array.isArray(exemptions) ? exemptions : []) {
+    const id = typeof row?.modelId === 'string' ? row.modelId : '';
+    if (!id) continue;
+    exemptIds.push(id);
+    if (onSale.has(id)) {
+      error(
+        'exempt_now_sold',
+        `gatewayMembershipExempt waiver for "${id}" is stale: the bundled snapshot now sells it, `
+          + 'so the waiver must be removed from auto-serving-manifest.json',
+        id,
+      );
+    }
+  }
+
+  return finishGateway(issues, onSale.size, contractListed.size, reportedSorted, exemptIds);
 }
 
 /**
@@ -245,7 +418,7 @@ function usageFailure(message, json) {
  *   usageError?: string,
  *   exitCode?: number,
  * }} opts
- * @param {{ verifyContracts?: Function, verifyAutoServing?: Function }} [deps]
+ * @param {{ verifyContracts?: Function, verifyAutoServing?: Function, verifyCrossPluginModelAlignment?: Function, verifyGatewayMembership?: Function }} [deps]
  */
 export async function runVerify(opts = {}, deps = {}) {
   if (opts.usageError || opts.exitCode === EXIT_USAGE) {
@@ -270,6 +443,9 @@ export async function runVerify(opts = {}, deps = {}) {
     specsDir: opts.specsDir,
     strict: Boolean(opts.strict) || opts.mode === 'strict',
   });
+  const gatewayMembership = (deps.verifyGatewayMembership ?? verifyGatewayMembership)({
+    specsDir: opts.specsDir,
+  });
 
   let extraGateIssues = [];
   try {
@@ -290,6 +466,7 @@ export async function runVerify(opts = {}, deps = {}) {
     ...(contractReport.issues ?? []),
     ...autoServing.issues,
     ...crossPlugin.issues,
+    ...gatewayMembership.issues,
     ...extraGateIssues,
   ];
   const seenKeys = new Set();
@@ -302,7 +479,7 @@ export async function runVerify(opts = {}, deps = {}) {
     }
   }
 
-  const isOverallOk = contractReport.ok && autoServing.ok && crossPlugin.ok && !hasGateError;
+  const isOverallOk = contractReport.ok && autoServing.ok && crossPlugin.ok && gatewayMembership.ok && !hasGateError;
   const resolvedExitCode = !isOverallOk ? EXIT_FAIL : (contractReport.exitCode ?? EXIT_OK);
 
   const report = {
@@ -311,6 +488,7 @@ export async function runVerify(opts = {}, deps = {}) {
     exitCode: resolvedExitCode,
     autoServing,
     crossPlugin,
+    gatewayMembership,
     issues: dedupedIssues,
   };
 
@@ -330,6 +508,7 @@ export async function runVerify(opts = {}, deps = {}) {
       exitCode: report.exitCode,
       autoServing,
       crossPlugin,
+      gatewayMembership,
       admission: {
         ok: report.admission?.ok,
         errorCount: report.admission?.errorCount ?? 0,
@@ -378,6 +557,7 @@ export async function runVerify(opts = {}, deps = {}) {
         `model-contracts mode=${report.mode} ok=${report.ok}`,
         `auto-serving offline ok=${autoServing.ok} registered=${autoServing.registeredCount}`,
         `cross-plugin offline ok=${crossPlugin.ok} whitelistChecked=${crossPlugin.alignment?.whitelistModelsChecked ?? 0}`,
+        `gateway-membership offline ok=${gatewayMembership.ok} onSale=${gatewayMembership.onSale} contractListed=${gatewayMembership.contractListed} missingContract=${gatewayMembership.missingContract.length}`,
         `schemaVersion=${schemaVersion}`,
         `fingerprint=${report.contentFingerprint}`,
         `admission errors=${adm.errorCount ?? 0} warnings=${adm.warningCount ?? 0}`,

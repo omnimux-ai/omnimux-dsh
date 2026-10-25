@@ -29,10 +29,13 @@
 // pricing fetch and the keyed model-list probe. Model truth comes from the
 // selected channel's official docs plus the bundled snapshot ([model API
 // authority]); this gate must never contact the real service, so it needs no
-// gateway credential and reads no key file. See
+// gateway credential and reads no key file. There is no fetch/http/apiKey path
+// left in this file: existence is decided by the shipped snapshot at
+// plugins/omnimux/src/catalog/cloud/bundled/pricing.json — the same floor the
+// runtime catalog intersects with. See
 // docs/contracts/model-list-ownership.md and docs/contracts/plugin-qa.md.
 import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { CHAT_MODELS } from '../plugins/omnimux/src/text/catalog.js'
 import { readBundledSnapshot } from '../plugins/omnimux/src/catalog/cloud/bundled.js'
@@ -203,7 +206,10 @@ process.stdout.write(`${JSON.stringify({
   whitelistMissing,
   reasoningMissing,
   reasoningDefaultWrong,
+  existence: 'bundled-snapshot',
+  snapshotPath: relative(root, read.path).split('\\').join('/'),
   network: 'not-used',
+  credential: 'not-used',
   checkedAt: new Date().toISOString(),
 })}\n`)
 
@@ -211,4 +217,4 @@ if (missing.length > 0 || mismatches.length > 0 || whitelistMissing.length > 0 |
   process.stderr.write(`verify-models: not in the shipped snapshot (${missing.join(', ')}); modality mismatch (${mismatches.map((row) => row.id).join(', ')}); whitelist not on patch (${whitelistMissing.join(', ')}); missing reasoning max (${reasoningMissing.join(', ')}); route reasoning (${reasoning})\n`)
   process.exit(1)
 }
-process.stderr.write('verify-models: ok (offline: modality + whitelist + reasoning + shipped snapshot)\n')
+process.stderr.write('verify-models: ok (offline, no credential, no network; existence = bundled gateway snapshot; modality + whitelist + reasoning)\n')

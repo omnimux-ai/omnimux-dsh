@@ -370,6 +370,7 @@
     "verify-media-hover-video-visibility.mjs",
     "verify-modal-unification-browser.mjs",
     "verify-model-console-test-browser.mjs",
+    "verify-model-contracts.test.mjs",
     "verify-multimodal-contract-completeness.test.mjs",
     "verify-no-external-builtin-assets.mjs",
     "verify-no-external-builtin-assets.test.mjs",

@@ -33,5 +33,6 @@ The hub is the only place OmniMux talks to providers. Root [AGENTS.md](../../AGE
 | --- | --- |
 | Any hub source | `pnpm --filter omnimux test` + `pnpm check:boundaries` |
 | Routes, providers, local paths | `pnpm verify:product-baseline` |
-| Model rows, operations, aliases | `pnpm verify:model-contracts` |
+| Model rows, operations, aliases | `pnpm verify:model-contracts` — already includes cross-plugin alignment (`verify:cross-plugin-models`), the modality matrix, the bundled-snapshot drop gate and the listed ↔ on-sale reconciliation |
+| On-sale truth (gateway snapshot) | `pnpm catalog:snapshot:check`; the snapshot is the membership floor, not `cordis.patch.yml` |
 | Agent tools | `pnpm test:agent-tools` |
