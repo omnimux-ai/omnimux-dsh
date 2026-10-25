@@ -59,7 +59,7 @@ export interface ConversationPayloadInput {
 
 export interface NodeConversationPayload {
   sourcePlugin: 'omnimux-workflow';
-  kind: 'image' | 'video' | 'audio' | 'table' | 'document';
+  kind: 'image' | 'video' | 'audio' | 'table' | 'document' | 'canvas';
   entityId: string;
   title: string;
   extension?: string;
@@ -542,6 +542,19 @@ export function buildConversationPayloadFromNode(
 ): NodeConversationPayload | null {
   const nodeId = input.nodeId;
   if (!nodeId) return null;
+
+  // ComfyUI 工作流节点（Issue #3751）：带进会话的是「这条工作流」，不是素材文件，
+  // 因此走画布/工作流这一类（kind=canvas），名字用卡片上的工作流名（缺省未命名）。
+  if (input.nodeType === 'comfy-page') {
+    const name = input.label && input.label.trim().length > 0 ? input.label.trim() : '未命名工作流';
+    return {
+      sourcePlugin: 'omnimux-workflow',
+      kind: 'canvas',
+      entityId: nodeId,
+      title: name,
+      relativePath: input.relativePath || `workflows/${nodeId}.workflow.json`,
+    };
+  }
 
   if (input.nodeType === 'table') {
     const title = `${input.label || '表格'}.htable`;

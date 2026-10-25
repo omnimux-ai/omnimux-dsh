@@ -1,77 +1,16 @@
-/* ComfyUI 工作流节点卡 + 全屏层（Issue #3681 M1）：节点只做入口，全屏层承载 iframe。 */
-.wf-comfy-page-card {
+/* ComfyUI 工作流节点：卡片内嵌真页面 + 整屏（Issue #3681 M1；#3751 卡片承载）。 */
+.wf-comfy-page-panel {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 300px;
+  flex: 1 1 auto;
+  min-height: 0;
   height: 100%;
-  box-sizing: border-box;
-  padding: 26px 24px;
-  text-align: center;
-  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
-}
-
-.wf-comfy-page-card__icon {
-  display: grid;
-  place-items: center;
-  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
-}
-
-.wf-comfy-page-card__url {
-  margin: 0;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
-  font-family: var(--wf-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.wf-comfy-page-card__status {
-  margin: 0;
-  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.wf-comfy-page-card__status[data-status='connected'] {
-  color: var(--dsw-alias-state-success, var(--wb-text-success, #2f9e6b));
-}
-
-.wf-comfy-page-card__cta {
-  height: 32px;
-  margin-top: 6px;
-  padding: 0 18px;
-  border: 1px solid var(--dsw-alias-border-l2, var(--wb-border-strong));
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
-  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.wf-comfy-page-card__cta:hover {
-  background: var(--dsw-alias-interactive-bg-hover, var(--wb-dock-item-hover));
-}
-
-.wf-comfy-page-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: flex;
-  flex-direction: column;
   background: var(--dsw-alias-bg-layer-0, var(--wb-surface-base, #111));
-  /* 883 高度下「六行方案 + 目录 + 保存」排不下：内容区自己滚，别让用户够不到。 */
+  /* 卡片再小也要能滚到「保存 / 日志」：内容区自己滚，别让用户够不到。 */
   overflow-y: auto;
 }
 
-.wf-comfy-page-overlay__bar {
+.wf-comfy-page-panel__bar {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
@@ -85,13 +24,13 @@
   z-index: 1;
 }
 
-.wf-comfy-page-overlay__title {
+.wf-comfy-page-panel__title {
   font-size: 13px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary, var(--wb-text-primary));
 }
 
-.wf-comfy-page-overlay__url {
+.wf-comfy-page-panel__url {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -102,16 +41,16 @@
   font-size: 12px;
 }
 
-.wf-comfy-page-overlay__status {
+.wf-comfy-page-panel__status {
   flex: 0 0 auto;
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
   font-size: 12px;
 }
 
-.wf-comfy-page-overlay__external,
-.wf-comfy-page-overlay__retry,
-.wf-comfy-page-overlay__close,
-.wf-comfy-page-overlay__apply {
+.wf-comfy-page-panel__external,
+.wf-comfy-page-panel__retry,
+.wf-comfy-page-panel__close,
+.wf-comfy-page-panel__apply {
   flex: 0 0 auto;
   height: 28px;
   padding: 0 12px;
@@ -126,14 +65,14 @@
   cursor: pointer;
 }
 
-.wf-comfy-page-overlay__frame {
+.wf-comfy-page-panel__frame {
   flex: 1 1 auto;
   width: 100%;
   border: 0;
   background: #fff;
 }
 
-.wf-comfy-page-overlay__guide {
+.wf-comfy-page-panel__guide {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
@@ -144,14 +83,14 @@
   text-align: center;
 }
 
-.wf-comfy-page-overlay__guide-title {
+.wf-comfy-page-panel__guide-title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary, var(--wb-text-primary));
 }
 
-.wf-comfy-page-overlay__guide-body {
+.wf-comfy-page-panel__guide-body {
   margin: 0;
   max-width: 420px;
   color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
@@ -159,19 +98,19 @@
   line-height: 20px;
 }
 
-.wf-comfy-page-overlay__address {
+.wf-comfy-page-panel__address {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 4px;
 }
 
-.wf-comfy-page-overlay__address-label {
+.wf-comfy-page-panel__address-label {
   color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
   font-size: 12px;
 }
 
-.wf-comfy-page-overlay__input {
+.wf-comfy-page-panel__input {
   width: 320px;
   height: 30px;
   padding: 0 10px;
@@ -183,7 +122,7 @@
   font-size: 13px;
 }
 
-.wf-comfy-page-overlay__guide-error {
+.wf-comfy-page-panel__guide-error {
   margin: 0;
   color: var(--dsw-alias-state-error, #d9534f);
   font-size: 12px;
@@ -193,15 +132,15 @@
  * 未安装 / 安装中 / 已装未启动 / 启动中 / 失败五种非就绪态共用一套面板骨架，
  * 差异只由 data-state 与各自的小部件表达；就绪态不渲染面板（直接 iframe）。 */
 
-.wf-comfy-page-overlay__status[data-status='ready'] {
+.wf-comfy-page-panel__status[data-status='ready'] {
   color: var(--dsw-alias-state-success, var(--wb-text-success, #2f9e6b));
 }
 
-.wf-comfy-page-overlay__status[data-status='failed'] {
+.wf-comfy-page-panel__status[data-status='failed'] {
   color: var(--dsw-alias-state-error, #d9534f);
 }
 
-.wf-comfy-page-overlay__log-toggle {
+.wf-comfy-page-panel__log-toggle {
   height: 26px;
   padding: 0 10px;
   border: 1px solid var(--dsw-alias-border-l2, var(--wb-border-strong));
@@ -213,11 +152,11 @@
   cursor: pointer;
 }
 
-.wf-comfy-page-overlay__log-toggle:hover {
+.wf-comfy-page-panel__log-toggle:hover {
   background: var(--dsw-alias-interactive-bg-hover, var(--wb-dock-item-hover));
 }
 
-.wf-comfy-page-overlay__panel {
+.wf-comfy-page-panel__panel {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -228,14 +167,14 @@
   text-align: center;
 }
 
-.wf-comfy-page-overlay__panel-state {
+.wf-comfy-page-panel__panel-state {
   margin: 0;
   color: var(--dsw-alias-label-primary, var(--wb-text-primary));
   font-size: 16px;
   font-weight: 600;
 }
 
-.wf-comfy-page-overlay__progress {
+.wf-comfy-page-panel__progress {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -243,7 +182,7 @@
   max-width: 420px;
 }
 
-.wf-comfy-page-overlay__progress-track {
+.wf-comfy-page-panel__progress-track {
   flex: 1 1 auto;
   height: 6px;
   border-radius: 999px;
@@ -251,14 +190,14 @@
   overflow: hidden;
 }
 
-.wf-comfy-page-overlay__progress-fill {
+.wf-comfy-page-panel__progress-fill {
   height: 100%;
   border-radius: 999px;
   background: var(--dsw-alias-brand-primary, var(--wb-accent));
   transition: width 200ms ease;
 }
 
-.wf-comfy-page-overlay__progress-value {
+.wf-comfy-page-panel__progress-value {
   flex: 0 0 auto;
   min-width: 40px;
   text-align: right;
@@ -267,13 +206,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-.wf-comfy-page-overlay__stage {
+.wf-comfy-page-panel__stage {
   margin: 0;
   color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
   font-size: 13px;
 }
 
-.wf-comfy-page-overlay__facts {
+.wf-comfy-page-panel__facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px 24px;
@@ -282,19 +221,19 @@
   text-align: left;
 }
 
-.wf-comfy-page-overlay__fact {
+.wf-comfy-page-panel__fact {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
 }
 
-.wf-comfy-page-overlay__fact dt {
+.wf-comfy-page-panel__fact dt {
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
   font-size: 12px;
 }
 
-.wf-comfy-page-overlay__fact dd {
+.wf-comfy-page-panel__fact dd {
   margin: 0;
   color: var(--dsw-alias-label-primary, var(--wb-text-primary));
   font-size: 12px;
@@ -302,11 +241,11 @@
 }
 
 /* 安装根是绝对路径，可能很长：允许在任意字符处折行，不撑破面板。 */
-.wf-comfy-page-overlay__fact-value {
+.wf-comfy-page-panel__fact-value {
   word-break: break-all;
 }
 
-.wf-comfy-page-overlay__primary {
+.wf-comfy-page-panel__primary {
   height: 34px;
   padding: 0 22px;
   border: 1px solid var(--dsw-alias-border-l2, var(--wb-border-strong));
@@ -319,12 +258,12 @@
   cursor: pointer;
 }
 
-.wf-comfy-page-overlay__primary:disabled {
+.wf-comfy-page-panel__primary:disabled {
   opacity: 0.6;
   cursor: default;
 }
 
-.wf-comfy-page-overlay__log {
+.wf-comfy-page-panel__log {
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
@@ -335,24 +274,24 @@
   background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
 }
 
-.wf-comfy-page-overlay__log-head {
+.wf-comfy-page-panel__log-head {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.wf-comfy-page-overlay__log-title {
+.wf-comfy-page-panel__log-title {
   color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
   font-size: 12px;
   font-weight: 600;
 }
 
-.wf-comfy-page-overlay__log-body {
+.wf-comfy-page-panel__log-body {
   overflow: auto;
   margin: 0;
 }
 
-.wf-comfy-page-overlay__log-line {
+.wf-comfy-page-panel__log-line {
   margin: 0;
   color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
   font-family: var(--wf-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
@@ -362,7 +301,7 @@
   word-break: break-all;
 }
 
-.wf-comfy-page-overlay__log-empty {
+.wf-comfy-page-panel__log-empty {
   margin: 0;
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
   font-size: 12px;
@@ -372,7 +311,7 @@
  * 失败面板复用上面的骨架，只多两行事实：磁盘需求与驱动结论。
  * 设置区与日志同层：贴在面板下方，展开才占位。 */
 
-.wf-comfy-page-overlay__settings-toggle {
+.wf-comfy-page-panel__settings-toggle {
   height: 26px;
   padding: 0 10px;
   border: 1px solid var(--dsw-alias-border-l2, var(--wb-border));
@@ -384,18 +323,18 @@
   cursor: pointer;
 }
 
-.wf-comfy-page-overlay__settings-toggle[aria-expanded='true'] {
+.wf-comfy-page-panel__settings-toggle[aria-expanded='true'] {
   color: var(--dsw-alias-label-primary, var(--wb-text-primary));
 }
 
 /* 驱动结论：三态都明说，不用颜色暗示「通过」。 */
-.wf-comfy-page-overlay__driver {
+.wf-comfy-page-panel__driver {
   margin: 0;
   color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
   font-size: 12px;
 }
 
-.wf-comfy-page-overlay__settings {
+.wf-comfy-page-panel__settings {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
@@ -407,7 +346,7 @@
 
 /* 面板是 flex:1 的整屏容器，设置区必须自带列宽：否则输入框 flex:1 会横铺整屏、
    把「选择目录」挤出可视区。 */
-.wf-comfy-page-overlay__setting {
+.wf-comfy-page-panel__setting {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -415,19 +354,19 @@
   max-width: 480px;
 }
 
-.wf-comfy-page-overlay__setting-label {
+.wf-comfy-page-panel__setting-label {
   color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
   font-size: 12px;
   font-weight: 600;
 }
 
-.wf-comfy-page-overlay__setting-row {
+.wf-comfy-page-panel__setting-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.wf-comfy-page-overlay__setting-input {
+.wf-comfy-page-panel__setting-input {
   flex: 1;
   min-width: 0;
   height: 30px;
@@ -440,12 +379,12 @@
   font-size: 12px;
 }
 
-.wf-comfy-page-overlay__setting-input::placeholder {
+.wf-comfy-page-panel__setting-input::placeholder {
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
 }
 
-.wf-comfy-page-overlay__setting-pick,
-.wf-comfy-page-overlay__setting-save {
+.wf-comfy-page-panel__setting-pick,
+.wf-comfy-page-panel__setting-save {
   height: 30px;
   padding: 0 12px;
   border: 1px solid var(--dsw-alias-border-l2, var(--wb-border-strong));
@@ -458,29 +397,29 @@
 }
 
 /* 与节点卡的主行动同款底：深色主题下透明底会让「选择目录」看起来像不可点。 */
-.wf-comfy-page-overlay__setting-pick {
+.wf-comfy-page-panel__setting-pick {
   background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
 }
 
-.wf-comfy-page-overlay__setting-save {
+.wf-comfy-page-panel__setting-save {
   background: var(--dsw-alias-brand-primary, var(--wb-accent));
   color: var(--dsw-alias-label-primary-foreground, var(--dsw-alias-label-primary));
 }
 
-.wf-comfy-page-overlay__setting-save:disabled {
+.wf-comfy-page-panel__setting-save:disabled {
   opacity: 0.6;
   cursor: default;
 }
 
 /* 默认值可见：空串代表「用默认」，这里显示当前生效路径而不是留白。 */
-.wf-comfy-page-overlay__setting-hint {
+.wf-comfy-page-panel__setting-hint {
   margin: 0;
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
   font-size: 11px;
   word-break: break-all;
 }
 
-.wf-comfy-page-overlay__setting-error {
+.wf-comfy-page-panel__setting-error {
   margin: 0;
   max-width: 480px;
   color: var(--dsw-alias-state-error, #d9534f);
@@ -488,7 +427,7 @@
 }
 
 /* M4：方案矩阵 + 驱动结论。每行是一个可点的方案，选中态用边框表达（不靠颜色单独承载）。 */
-.wf-comfy-page-overlay__problem {
+.wf-comfy-page-panel__problem {
   margin: 0;
   max-width: 480px;
   color: var(--dsw-alias-state-warning, var(--wb-text-secondary));
@@ -496,7 +435,7 @@
   line-height: 18px;
 }
 
-.wf-comfy-page-overlay__variants {
+.wf-comfy-page-panel__variants {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -504,7 +443,7 @@
   max-width: 480px;
 }
 
-.wf-comfy-page-overlay__variant {
+.wf-comfy-page-panel__variant {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -518,49 +457,170 @@
   cursor: pointer;
 }
 
-.wf-comfy-page-overlay__variant:hover {
+.wf-comfy-page-panel__variant:hover {
   border-color: var(--dsw-alias-border-l3, var(--wb-border-strong));
 }
 
-.wf-comfy-page-overlay__variant[aria-pressed='true'] {
+.wf-comfy-page-panel__variant[aria-pressed='true'] {
   border-color: var(--dsw-alias-brand-primary, var(--wb-accent));
 }
 
-.wf-comfy-page-overlay__variant-head {
+.wf-comfy-page-panel__variant-head {
   display: flex;
   align-items: baseline;
   gap: 8px;
 }
 
-.wf-comfy-page-overlay__variant-name {
+.wf-comfy-page-panel__variant-name {
   font-size: 13px;
   font-weight: 600;
 }
 
-.wf-comfy-page-overlay__variant-support,
-.wf-comfy-page-overlay__variant-current {
+.wf-comfy-page-panel__variant-support,
+.wf-comfy-page-panel__variant-current {
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
   font-size: 11px;
 }
 
-.wf-comfy-page-overlay__variant-meta {
+.wf-comfy-page-panel__variant-meta {
   color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
   font-size: 12px;
 }
 
 /* 宿主给的实话（基座差异、未真机验证）原样显示，不藏。 */
-.wf-comfy-page-overlay__variant-notes {
+.wf-comfy-page-panel__variant-notes {
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
   font-size: 11px;
   line-height: 16px;
 }
 
 /* 驱动结论的精确原因（宿主 driverDetail）：行内可见，不能只藏在悬停里。 */
-.wf-comfy-page-overlay__driver-required,
-.wf-comfy-page-overlay__driver-detail {
+.wf-comfy-page-panel__driver-required,
+.wf-comfy-page-panel__driver-detail {
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
 }
 
-.wf-comfy-page-overlay__driver-detail {
+.wf-comfy-page-panel__driver-detail {
   font-size: 11px;
+}
+
+/* ==================== 卡片内嵌页面（Issue #3751）====================
+ * 卡片自己承载状态机与真页面；整屏只是给同一张卡片加整屏几何，
+ * 不移动 DOM、不重建 iframe（用户已打开的工作流必须留着）。 */
+
+.wf-comfy-page-node__card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--dsw-alias-bg-layer-0, var(--wb-surface-base, #111));
+  /* 缩放手柄贴在四边/四角，会被裁掉就点不中；内容自己滚（面板有 overflow-y）。 */
+  overflow: visible;
+}
+
+/* 缩放手柄要能被点中：手柄贴在卡片四边/四角，必须压住卡片内容（面板/iframe）。 */
+.wf-comfy-page-node .wf-comfy-page-node__body {
+  position: relative;
+  z-index: 0;
+}
+
+.wf-comfy-page-node .react-flow__resize-control {
+  z-index: 10;
+}
+
+.wf-comfy-page-node__body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.wf-comfy-page-node__footer {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--dsw-alias-border-l2, var(--wb-border-subtle));
+  background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
+}
+
+.wf-comfy-page-node__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+}
+
+.wf-comfy-page-node__template {
+  flex: 0 0 auto;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l2, var(--wb-border-strong));
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-layer-2, var(--wb-surface-raised));
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.wf-comfy-page-node__template:hover {
+  background: var(--dsw-alias-interactive-bg-hover, var(--wb-dock-item-hover));
+}
+
+/* iframe 未挂载（不可见 / 缩太小 / 名额已满）时的占位：不留白屏，说明页面已暂停。 */
+.wf-comfy-page-panel__frame-paused {
+  display: grid;
+  flex: 1 1 auto;
+  place-items: center;
+  margin: 0;
+  padding: 16px;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  font-size: 12px;
+}
+
+/* 整屏：卡片铺满视口、置顶、不透明底（几何由组件按画布坐标算，这里只管观感）。 */
+.wf-comfy-page-node--fullscreen {
+  background: var(--dsw-alias-bg-layer-0, var(--wb-surface-base, #111));
+}
+
+.wf-comfy-page-node--fullscreen .wf-comfy-page-node__card {
+  border-radius: 0;
+  /* 画布被缩放时内容会跟着变小：整屏时按 1/zoom 反向缩放回自然大小。
+   * 卡片布局尺寸取 100%/inverse（= 100% × zoom），乘上自身缩放后正好铺满屏幕。 */
+  width: calc(100% / var(--wf-comfy-inverse, 1));
+  height: calc(100% / var(--wf-comfy-inverse, 1));
+  transform: scale(var(--wf-comfy-inverse, 1));
+  transform-origin: top left;
+}
+
+/* 整屏卡片要盖住画布与画布浮层（工具栏 z-index 20、页头控件 30）。
+ * 卡片在 `.react-flow` 里面，而 `.react-flow` 自己带 z-index 形成层叠上下文，
+ * 里面的节点再怎么抬也盖不住外面的工具栏/页头，所以必须把容器本身抬起来。
+ * `!important` 是必需的、不是噪音：React Flow 在容器上写了**内联** z-index，
+ * 内联样式优先级高于任何普通选择器，去掉 `!important` 这条规则就会静默失效。 */
+.wf-canvas-root--comfy-fullscreen .react-flow {
+  z-index: 40 !important;
+}
+
+/* 全屏时把 React Flow 的署名水印移进整屏层：卡片是不透明的，水印留在原处就被盖住了。
+ * xyflow 明确要求保留署名（`hideAttribution` 属付费项），所以**不能** `display:none`；
+ * 这里只改定位——固定到屏幕右下角、层级抬到卡片之上，署名照样可见。
+ * 水印是 `.react-flow` 的直接子元素（不在被缩放的 `.react-flow__viewport` 里），
+ * 所以 `position: fixed` 就是相对窗口定位，正好落在整屏卡片内。 */
+.wf-canvas-root--comfy-fullscreen .react-flow__attribution {
+  position: fixed;
+  right: 8px;
+  bottom: 6px;
+  z-index: 3000;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
+  font-size: 10px;
+}
+
+.wf-comfy-page-node--fullscreen .wf-comfy-page-panel__frame {
+  height: 100%;
 }

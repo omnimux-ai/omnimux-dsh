@@ -1,17 +1,20 @@
 /**
- * ComfyUI 工作流全屏层（Issue #3681 M1；托管状态机 #3701 M2c）。
+ * ComfyUI 工作流面板（Issue #3681 M1；托管状态机 #3701 M2c；卡片内嵌 #3751）。
  *
- * 与导演台同款约定：监听 `COMFY_PAGE_OPEN_EVENT`（detail: { nodeId }），从画布 store
- * 解析该节点的目标地址。地址决定走哪条路径：
+ * 卡片自己的内容区组件：由调用方传入 `nodeId` 与 `url`，不再监听打开事件、不再自己
+ * 定位到全屏层（全屏由卡片加整屏样式实现，见 `nodes/definitions/comfyPage.tsx`）。
+ *
+ * 地址决定走哪条路径：
  *
  *  - **托管后端路径**（地址 = `DEFAULT_COMFY_PAGE_URL`，新节点默认）：读宿主状态机
  *    （未安装 / 安装中 / 已装未启动 / 启动中 / 就绪 / 失败），按状态给出**唯一**主行动
  *    （安装 / 启动 / 重试），就绪时直接渲染 iframe（真编辑器）。安装中与启动中按
- *    `COMFY_BACKEND_POLL_MS` 轮询；关闭或卸载即 `clearInterval` + `abort` 在途请求。
+ *    `COMFY_BACKEND_POLL_MS` 轮询；卸载即 `clearInterval` + `abort` 在途请求。
  *  - **手动地址路径**（用户自己填了别的地址，例如自装 8188）：保持 M1 行为 —— 探测
  *    目标是否有人应答，可达渲染 iframe，不可达给引导层。托管状态不吞这条路径。
  *
- * 同一时刻最多一个全屏层：再次打开只切换 nodeId；关闭时卸载 iframe（不留后台连接）。
+ * 同一时刻每个节点各有一份面板；iframe 是否挂载由卡片按「可见/选中」决定，面板只负责
+ * 在 `showFrame` 时渲染它（`frameMounted`）。
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -61,7 +64,6 @@ import {
   type ComfyBackendTargetProblem,
   type ComfyBackendVariantRow,
 } from '../utils/comfyBackendClient';
-import { COMFY_PAGE_OPEN_EVENT } from '../../nodes/definitions/comfyPage';
 
 type ProbeState = 'probing' | 'connected' | 'unreachable';
 
@@ -84,11 +86,34 @@ const PRIMARY_KEY: Record<Exclude<ComfyBackendPrimaryAction, 'none'>, string> = 
 
 const NO_VERDICT: ComfyBackendDriverVerdict = { status: 'unknown', detail: '', required: null };
 
-export function ComfyPageOverlay() {
+export interface ComfyPagePanelProps {
+  /** 承载该面板的节点 id（状态写回、设置保存都按它定位）。 */
+  nodeId: string;
+  /** 目标地址（来自节点数据）。 */
+  url: string;
+  /** 是否处于整屏态：整屏时把内容按 1/zoom 反向缩放，保证面板不被画布缩放带走。 */
+  fullscreen?: boolean;
+  /** 整屏态的「关闭」按钮：由卡片退出整屏（面板自己不持有整屏状态）。 */
+  onExitFullscreen?: () => void;
+  /**
+   * iframe 是否已挂载（由卡片按「可见/选中 + 同屏名额」决定）。
+   * false 时页面降级为占位，避免不可见的节点也跑一个真页面。
+   */
+  frameMounted?: boolean;
+  /** 把「页面是否就绪」报给卡片：卡片据此决定要不要申请挂载名额。 */
+  onReadyChange?: (ready: boolean) => void;
+}
+
+export function ComfyPagePanel({
+  nodeId,
+  url,
+  fullscreen = false,
+  onExitFullscreen,
+  frameMounted = true,
+  onReadyChange,
+}: ComfyPagePanelProps) {
   const t = useT();
-  const [nodeId, setNodeId] = useState<string | null>(null);
-  const [url, setUrl] = useState('');
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState(url);
   const [probe, setProbe] = useState<ProbeState>('probing');
   const [reason, setReason] = useState<ComfyPageUrlReason | null>(null);
   /** 每次「重试」/轮询递增，驱动重新取状态。 */
@@ -127,6 +152,7 @@ export function ComfyPageOverlay() {
   /** 动作请求的 abort 句柄：关闭全屏层时一并中止。 */
   const actionRef = useRef<AbortController | null>(null);
 
+
   const patchNodeStatus = useCallback((id: string, status: string) => {
     const store = useCanvasStore.getState();
     const node = store.nodes.find((item) => item.id === id);
@@ -137,6 +163,7 @@ export function ComfyPageOverlay() {
       nodes.map((item) => (item.id === id ? { ...item, data: { ...item.data, status } } : item)),
     );
   }, []);
+
 
   /** 信封里的矩阵/驱动/目标问题：纯数据，喂给状态 → 界面映射。 */
   const context: ComfyBackendEnvelopeContext = {
@@ -153,33 +180,23 @@ export function ComfyPageOverlay() {
   /** 读不到托管状态时回落 M1 探测/引导，而不是给死胡同面板。 */
   const useProbe = shouldProbeComfyPage(managed, backend);
 
-  // 打开事件：解析节点地址，重置草稿、探测态与托管状态。
+
+  // 地址或节点变化：重置草稿、探测态与托管状态（旧全屏层靠打开事件做同一件事）。
   useEffect(() => {
-    const listener = (event: Event) => {
-      const id = (event as CustomEvent<{ nodeId?: unknown }>).detail?.nodeId;
-      if (typeof id !== 'string') return;
-      const node = useCanvasStore.getState().nodes.find((item) => item.id === id);
-      if (!node || node.type !== 'comfy-page') return;
-      const target = comfyPageUrlFromData(node.data as Record<string, unknown>);
-      setNodeId(id);
-      setUrl(target);
-      setDraft(target);
-      setReason(null);
-      setProbe('probing');
-      setManaged(target === DEFAULT_COMFY_PAGE_URL);
-      setBackend(null);
-      setBackendError(null);
-      setLogOpen(false);
-      setLogLines([]);
-      setLogError(null);
-      setSettingsOpen(false);
-      setSettingsErrorKey(null);
-      setSettingsErrorCode(null);
-      setAttempt((value) => value + 1);
-    };
-    window.addEventListener(COMFY_PAGE_OPEN_EVENT, listener);
-    return () => window.removeEventListener(COMFY_PAGE_OPEN_EVENT, listener);
-  }, []);
+    setDraft(url);
+    setReason(null);
+    setProbe('probing');
+    setManaged(url === DEFAULT_COMFY_PAGE_URL);
+    setBackend(null);
+    setBackendError(null);
+    setLogOpen(false);
+    setLogLines([]);
+    setLogError(null);
+    setSettingsOpen(false);
+    setSettingsErrorKey(null);
+    setSettingsErrorCode(null);
+    setAttempt((value) => value + 1);
+  }, [nodeId, url]);
 
   // M1 手动地址路径（用户手填地址，或托管状态读不到时的回落）：探测目标是否有人
   // 应答；不依赖目标站 CORS，超时按不可达处理。
@@ -378,30 +395,26 @@ export function ComfyPageOverlay() {
     [nodeId, patchNodeStatus, t],
   );
 
-  const close = useCallback(() => {
+  // 卸载：中止在途动作请求（轮询与状态/日志请求由各自 effect 的清理负责），
+  // 并把节点卡上的状态标记复位（否则卡片会停在「检测中 / 不可达」）。
+  useEffect(() => () => {
     actionRef.current?.abort();
-    actionRef.current = null;
-    if (nodeId) patchNodeStatus(nodeId, 'idle');
-    setNodeId(null);
-    setBackend(null);
-    setBackendError(null);
-    setBusyAction(null);
-    setLogOpen(false);
-    setLogLines([]);
-    setLogError(null);
+    patchNodeStatus(nodeId, 'idle');
   }, [nodeId, patchNodeStatus]);
 
-  // ESC 退出；只在打开时监听。
+  const exitFullscreen = useCallback(() => {
+    onExitFullscreen?.();
+  }, [onExitFullscreen]);
+
+  // ESC 退出整屏；不在整屏态时不抢 Esc（画布自己有 Esc 语义）。
   useEffect(() => {
-    if (!nodeId) return undefined;
+    if (!fullscreen) return undefined;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
+      if (event.key === 'Escape') exitFullscreen();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [nodeId, close]);
-
-  if (!nodeId) return null;
+  }, [fullscreen, exitFullscreen]);
 
   const applyAddress = () => {
     const normalized = normalizeComfyPageUrl(draft);
@@ -410,7 +423,6 @@ export function ComfyPageOverlay() {
       return;
     }
     setReason(null);
-    setUrl(normalized.url);
     setDraft(normalized.url);
     setManaged(normalized.url === DEFAULT_COMFY_PAGE_URL);
     setBackend(null);
@@ -428,6 +440,12 @@ export function ComfyPageOverlay() {
     ? t(panel.stateKey)
     : t(`comfyPage.status.${probe}`);
   const headerState = panel && panel.kind === 'state' ? panel.state : probe;
+
+  /** 页面是否就绪：托管态 ready，或手动地址探测连通。卡片据此决定挂载名额。 */
+  const pageReady = managed ? Boolean(view && view.showFrame) : useProbe && probe === 'connected';
+  useEffect(() => {
+    onReadyChange?.(pageReady);
+  }, [onReadyChange, pageReady]);
 
   /** 方案名称：画布自己的 i18n 名称；未知 id 回落宿主 label（不编名称）。 */
   const variantName = (id: string, label: string): string => {
@@ -452,12 +470,12 @@ export function ComfyPageOverlay() {
   };
 
   return (
-    <div className="wf-comfy-page-overlay" role="dialog" aria-modal="true" aria-label={t('comfyPage.card.title')}>
-      <header className="wf-comfy-page-overlay__bar">
-        <span className="wf-comfy-page-overlay__title">{t('comfyPage.card.title')}</span>
-        <code className="wf-comfy-page-overlay__url" title={url}>{url}</code>
+    <div className="wf-comfy-page-panel" data-fullscreen={fullscreen ? 'true' : undefined}>
+      <header className="wf-comfy-page-panel__bar">
+        <span className="wf-comfy-page-panel__title">{t('comfyPage.card.title')}</span>
+        <code className="wf-comfy-page-panel__url" title={url}>{url}</code>
         <span
-          className="wf-comfy-page-overlay__status"
+          className="wf-comfy-page-panel__status"
           data-status={headerState}
         >
           {headerStatus}
@@ -465,7 +483,7 @@ export function ComfyPageOverlay() {
         {managed && panel && panel.kind === 'state' ? (
           <button
             type="button"
-            className="wf-comfy-page-overlay__settings-toggle"
+            className="wf-comfy-page-panel__settings-toggle"
             aria-expanded={settingsOpen}
             onClick={() => setSettingsOpen((value) => !value)}
           >
@@ -475,78 +493,86 @@ export function ComfyPageOverlay() {
         {view && view.showLog ? (
           <button
             type="button"
-            className="wf-comfy-page-overlay__log-toggle"
+            className="wf-comfy-page-panel__log-toggle"
             aria-expanded={logOpen}
             onClick={() => setLogOpen((value) => !value)}
           >
             {logOpen ? t('comfyPage.backend.hideLog') : t('comfyPage.backend.showLog')}
           </button>
         ) : null}
-        <a className="wf-comfy-page-overlay__external" href={url} target="_blank" rel="noreferrer noopener">
+        <a className="wf-comfy-page-panel__external" href={url} target="_blank" rel="noreferrer noopener">
           {t('comfyPage.overlay.openExternal')}
         </a>
         {!managed ? (
-          <button type="button" className="wf-comfy-page-overlay__retry" onClick={() => setAttempt((value) => value + 1)}>
+          <button type="button" className="wf-comfy-page-panel__retry" onClick={() => setAttempt((value) => value + 1)}>
             {t('comfyPage.overlay.retry')}
           </button>
         ) : null}
-        <button type="button" className="wf-comfy-page-overlay__close" onClick={close} aria-label={t('comfyPage.overlay.close')}>
-          {t('comfyPage.overlay.close')}
-        </button>
+        {onExitFullscreen ? (
+          <button type="button" className="wf-comfy-page-panel__close" onClick={exitFullscreen} aria-label={t('comfyPage.overlay.close')}>
+            {t('comfyPage.overlay.close')}
+          </button>
+        ) : null}
       </header>
 
       {view && view.showFrame ? (
-        <iframe
-          className="wf-comfy-page-overlay__frame"
-          src={url}
-          title={t('comfyPage.card.title')}
-          allow="clipboard-read; clipboard-write; fullscreen"
-        />
+        frameMounted ? (
+          <iframe
+            className="wf-comfy-page-panel__frame"
+            src={url}
+            title={t('comfyPage.card.title')}
+            allow="clipboard-read; clipboard-write; fullscreen"
+          />
+        ) : (
+          <p className="wf-comfy-page-panel__frame-paused" role="status">
+            {t('comfyPage.card.framePaused')}
+          </p>
+        )
       ) : null}
 
       {managed && view && !view.showFrame ? (
-        <div className="wf-comfy-page-overlay__panel" data-state={view.state}>
-          <p className="wf-comfy-page-overlay__panel-state">{t(view.stateKey)}</p>
+        <div className="wf-comfy-page-panel__panel" data-state={view.state}>
+          <p className="wf-comfy-page-panel__panel-state">{t(view.stateKey)}</p>
 
           {view.showProgress ? (
             <div
-              className="wf-comfy-page-overlay__progress"
+              className="wf-comfy-page-panel__progress"
               role="progressbar"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={view.percent}
             >
-              <div className="wf-comfy-page-overlay__progress-track">
+              <div className="wf-comfy-page-panel__progress-track">
                 <div
-                  className="wf-comfy-page-overlay__progress-fill"
+                  className="wf-comfy-page-panel__progress-fill"
                   style={{ width: `${view.percent}%` }}
                 />
               </div>
-              <span className="wf-comfy-page-overlay__progress-value">{view.percent}%</span>
+              <span className="wf-comfy-page-panel__progress-value">{view.percent}%</span>
             </div>
           ) : null}
 
           {view.showStarting ? (
-            <p className="wf-comfy-page-overlay__stage">{t('comfyPage.backend.starting')}</p>
+            <p className="wf-comfy-page-panel__stage">{t('comfyPage.backend.starting')}</p>
           ) : null}
 
           {view.stageKey ? (
-            <p className="wf-comfy-page-overlay__stage" title={backend ? backend.message : undefined}>
+            <p className="wf-comfy-page-panel__stage" title={backend ? backend.message : undefined}>
               {t(view.stageKey)}
             </p>
           ) : null}
 
           {view.errorKey ? (
-            <p className="wf-comfy-page-overlay__guide-error" role="alert">
+            <p className="wf-comfy-page-panel__guide-error" role="alert">
               {backend && backend.error ? `${t(view.errorKey)}（${backend.error}）` : t(view.errorKey)}
             </p>
           ) : null}
 
           {view.showDiskRequired && requiredBytes > 0 ? (
-            <dl className="wf-comfy-page-overlay__facts">
-              <div className="wf-comfy-page-overlay__fact">
+            <dl className="wf-comfy-page-panel__facts">
+              <div className="wf-comfy-page-panel__fact">
                 <dt>{t('comfyPage.backend.factRequired')}</dt>
-                <dd className="wf-comfy-page-overlay__fact-value" data-fact="required-bytes">
+                <dd className="wf-comfy-page-panel__fact-value" data-fact="required-bytes">
                   {formatComfyBackendBytes(requiredBytes)}
                 </dd>
               </div>
@@ -554,46 +580,46 @@ export function ComfyPageOverlay() {
           ) : null}
 
           {view.problemKey ? (
-            <p className="wf-comfy-page-overlay__problem" role="alert" data-problem={targetProblem}>
+            <p className="wf-comfy-page-panel__problem" role="alert" data-problem={targetProblem}>
               {t(view.problemKey)}
             </p>
           ) : null}
 
           {view.showDriverNote ? (
             <p
-              className="wf-comfy-page-overlay__driver"
+              className="wf-comfy-page-panel__driver"
               data-driver={driver.status}
               title={driver.detail || undefined}
             >
               {t(driverLine.key)}
               {driverLine.requirement ? (
-                <span className="wf-comfy-page-overlay__driver-required">
+                <span className="wf-comfy-page-panel__driver-required">
                   {`（${t('comfyPage.backend.driver.requiredAtLeast')} ${driverLine.requirement}）`}
                 </span>
               ) : null}
               {driverLine.detail ? (
-                <span className="wf-comfy-page-overlay__driver-detail">{`· ${driverLine.detail}`}</span>
+                <span className="wf-comfy-page-panel__driver-detail">{`· ${driverLine.detail}`}</span>
               ) : null}
             </p>
           ) : null}
 
           {view.state === 'not-installed' && backend && backend.target ? (
-            <dl className="wf-comfy-page-overlay__facts">
-              <div className="wf-comfy-page-overlay__fact">
+            <dl className="wf-comfy-page-panel__facts">
+              <div className="wf-comfy-page-panel__fact">
                 <dt>{t('comfyPage.backend.factPlatform')}</dt>
                 <dd>{`${backend.target.platform}/${backend.target.arch}`}</dd>
               </div>
-              <div className="wf-comfy-page-overlay__fact">
+              <div className="wf-comfy-page-panel__fact">
                 <dt>{t('comfyPage.backend.factSize')}</dt>
                 <dd>{formatComfyBackendBytes(backend.target.estimatedBytes)}</dd>
               </div>
-              <div className="wf-comfy-page-overlay__fact">
+              <div className="wf-comfy-page-panel__fact">
                 <dt>{t('comfyPage.backend.factLocation')}</dt>
-                <dd className="wf-comfy-page-overlay__fact-value" data-fact="location">
+                <dd className="wf-comfy-page-panel__fact-value" data-fact="location">
                   {backend.installRoot ? backend.installRoot : `targets/${backend.target.id}`}
                 </dd>
               </div>
-              <div className="wf-comfy-page-overlay__fact">
+              <div className="wf-comfy-page-panel__fact">
                 <dt>{t('comfyPage.backend.factVersions')}</dt>
                 <dd>{`Python ${backend.target.pythonVersion} · PyTorch ${backend.target.torchVersion} · ComfyUI ${backend.target.comfyuiTag}`}</dd>
               </div>
@@ -603,7 +629,7 @@ export function ComfyPageOverlay() {
           {view.primaryAction !== 'none' ? (
             <button
               type="button"
-              className="wf-comfy-page-overlay__primary"
+              className="wf-comfy-page-panel__primary"
               onClick={runPrimary}
               disabled={busyAction !== null}
             >
@@ -614,54 +640,54 @@ export function ComfyPageOverlay() {
       ) : null}
 
       {managed && settingsOpen && panel && panel.kind === 'state' ? (
-        <div className="wf-comfy-page-overlay__settings">
+        <div className="wf-comfy-page-panel__settings">
           {variants.length > 0 ? (
-            <div className="wf-comfy-page-overlay__variants">
-              <p className="wf-comfy-page-overlay__setting-label">{t('comfyPage.backend.variants')}</p>
+            <div className="wf-comfy-page-panel__variants">
+              <p className="wf-comfy-page-panel__setting-label">{t('comfyPage.backend.variants')}</p>
               {variants.map((row) => (
                 <button
                   type="button"
-                  className="wf-comfy-page-overlay__variant"
+                  className="wf-comfy-page-panel__variant"
                   key={row.id}
                   data-variant={row.variant}
                   data-support={row.support}
                   aria-pressed={row.variant === variant}
                   onClick={() => void saveSettings({ variant: row.variant })}
                 >
-                  <span className="wf-comfy-page-overlay__variant-head">
-                    <span className="wf-comfy-page-overlay__variant-name">
+                  <span className="wf-comfy-page-panel__variant-head">
+                    <span className="wf-comfy-page-panel__variant-name">
                       {variantName(row.variant, row.label)}
                     </span>
-                    <span className="wf-comfy-page-overlay__variant-support">
+                    <span className="wf-comfy-page-panel__variant-support">
                       {t(comfyBackendSupportKey(row.support))}
                     </span>
                     {row.variant === variant ? (
-                      <span className="wf-comfy-page-overlay__variant-current">
+                      <span className="wf-comfy-page-panel__variant-current">
                         {t('comfyPage.backend.variant.current')}
                       </span>
                     ) : null}
                   </span>
-                  <span className="wf-comfy-page-overlay__variant-meta">
+                  <span className="wf-comfy-page-panel__variant-meta">
                     {`${t(comfyBackendDriverRequirementKey(row.driver))}${
                       row.minDriver ? ` ≥ ${row.minDriver}` : ''
                     } · ${formatComfyBackendBytes(row.estimatedBytes)}`}
                   </span>
                   {row.notes ? (
-                    <span className="wf-comfy-page-overlay__variant-notes">{row.notes}</span>
+                    <span className="wf-comfy-page-panel__variant-notes">{row.notes}</span>
                   ) : null}
                 </button>
               ))}
             </div>
           ) : null}
 
-          <div className="wf-comfy-page-overlay__setting" data-field="install-root">
-            <label className="wf-comfy-page-overlay__setting-label" htmlFor="wf-comfy-install-root">
+          <div className="wf-comfy-page-panel__setting" data-field="install-root">
+            <label className="wf-comfy-page-panel__setting-label" htmlFor="wf-comfy-install-root">
               {t('comfyPage.backend.settings.installRoot')}
             </label>
-            <div className="wf-comfy-page-overlay__setting-row">
+            <div className="wf-comfy-page-panel__setting-row">
               <input
                 id="wf-comfy-install-root"
-                className="wf-comfy-page-overlay__setting-input"
+                className="wf-comfy-page-panel__setting-input"
                 value={installRootDraft}
                 spellCheck={false}
                 placeholder={backend ? backend.installRoot : ''}
@@ -672,27 +698,27 @@ export function ComfyPageOverlay() {
               />
               <button
                 type="button"
-                className="wf-comfy-page-overlay__setting-pick"
+                className="wf-comfy-page-panel__setting-pick"
                 onClick={() => void pickDirectory('installRoot')}
               >
                 {t('comfyPage.backend.settings.pick')}
               </button>
             </div>
-            <p className="wf-comfy-page-overlay__setting-hint">
+            <p className="wf-comfy-page-panel__setting-hint">
               {settings.installRoot
                 ? settings.installRoot
                 : `${t('comfyPage.backend.settings.installRootDefault')}${backend && backend.installRoot ? ` · ${backend.installRoot}` : ''}`}
             </p>
           </div>
 
-          <div className="wf-comfy-page-overlay__setting" data-field="models-path">
-            <label className="wf-comfy-page-overlay__setting-label" htmlFor="wf-comfy-models-path">
+          <div className="wf-comfy-page-panel__setting" data-field="models-path">
+            <label className="wf-comfy-page-panel__setting-label" htmlFor="wf-comfy-models-path">
               {t('comfyPage.backend.settings.modelsPath')}
             </label>
-            <div className="wf-comfy-page-overlay__setting-row">
+            <div className="wf-comfy-page-panel__setting-row">
               <input
                 id="wf-comfy-models-path"
-                className="wf-comfy-page-overlay__setting-input"
+                className="wf-comfy-page-panel__setting-input"
                 value={modelsPathDraft}
                 spellCheck={false}
                 onChange={(event) => setModelsPathDraft(event.target.value)}
@@ -702,23 +728,23 @@ export function ComfyPageOverlay() {
               />
               <button
                 type="button"
-                className="wf-comfy-page-overlay__setting-pick"
+                className="wf-comfy-page-panel__setting-pick"
                 onClick={() => void pickDirectory('modelsPath')}
               >
                 {t('comfyPage.backend.settings.pick')}
               </button>
             </div>
-            <p className="wf-comfy-page-overlay__setting-hint">
+            <p className="wf-comfy-page-panel__setting-hint">
               {settings.modelsPath
                 ? settings.modelsPath
                 : t('comfyPage.backend.settings.modelsPathDefault')}
             </p>
           </div>
 
-          <div className="wf-comfy-page-overlay__setting-actions">
+          <div className="wf-comfy-page-panel__setting-actions">
             <button
               type="button"
-              className="wf-comfy-page-overlay__setting-save"
+              className="wf-comfy-page-panel__setting-save"
               disabled={settingsSaving}
               onClick={() =>
                 void saveSettings({ installRoot: installRootDraft, modelsPath: modelsPathDraft })
@@ -730,7 +756,7 @@ export function ComfyPageOverlay() {
 
           {settingsErrorKey ? (
             <p
-              className="wf-comfy-page-overlay__setting-error"
+              className="wf-comfy-page-panel__setting-error"
               role="alert"
               data-code={settingsErrorCode ?? ''}
             >
@@ -741,19 +767,19 @@ export function ComfyPageOverlay() {
       ) : null}
 
       {managed && logOpen && view && view.showLog ? (
-        <div className="wf-comfy-page-overlay__log">
-          <div className="wf-comfy-page-overlay__log-head">
-            <span className="wf-comfy-page-overlay__log-title">{t('comfyPage.backend.showLog')}</span>
+        <div className="wf-comfy-page-panel__log">
+          <div className="wf-comfy-page-panel__log-head">
+            <span className="wf-comfy-page-panel__log-title">{t('comfyPage.backend.showLog')}</span>
           </div>
           {logError ? (
-            <p className="wf-comfy-page-overlay__guide-error" role="alert">{logError}</p>
+            <p className="wf-comfy-page-panel__guide-error" role="alert">{logError}</p>
           ) : null}
           {logLines.length === 0 ? (
-            <p className="wf-comfy-page-overlay__log-empty">{t('comfyPage.backend.logEmpty')}</p>
+            <p className="wf-comfy-page-panel__log-empty">{t('comfyPage.backend.logEmpty')}</p>
           ) : (
-            <div className="wf-comfy-page-overlay__log-body">
+            <div className="wf-comfy-page-panel__log-body">
               {logLines.map((line, index) => (
-                <p className="wf-comfy-page-overlay__log-line" key={`${String(index)}`}>{line}</p>
+                <p className="wf-comfy-page-panel__log-line" key={`${String(index)}`}>{line}</p>
               ))}
             </div>
           )}
@@ -762,30 +788,36 @@ export function ComfyPageOverlay() {
 
       {useProbe ? (
         probe === 'connected' ? (
-          <iframe
-            className="wf-comfy-page-overlay__frame"
-            src={url}
-            title={t('comfyPage.card.title')}
-            allow="clipboard-read; clipboard-write; fullscreen"
-          />
+          frameMounted ? (
+            <iframe
+              className="wf-comfy-page-panel__frame"
+              src={url}
+              title={t('comfyPage.card.title')}
+              allow="clipboard-read; clipboard-write; fullscreen"
+            />
+          ) : (
+            <p className="wf-comfy-page-panel__frame-paused" role="status">
+              {t('comfyPage.card.framePaused')}
+            </p>
+          )
         ) : (
-          <div className="wf-comfy-page-overlay__guide" role="status">
+          <div className="wf-comfy-page-panel__guide" role="status">
             {probe === 'probing' ? (
-              <p className="wf-comfy-page-overlay__guide-title">{t('comfyPage.overlay.opening')}</p>
+              <p className="wf-comfy-page-panel__guide-title">{t('comfyPage.overlay.opening')}</p>
             ) : (
               <>
-                <p className="wf-comfy-page-overlay__guide-title">{t('comfyPage.guide.title')}</p>
-                <p className="wf-comfy-page-overlay__guide-body">{t('comfyPage.guide.body')}</p>
+                <p className="wf-comfy-page-panel__guide-title">{t('comfyPage.guide.title')}</p>
+                <p className="wf-comfy-page-panel__guide-body">{t('comfyPage.guide.body')}</p>
                 {managed && backendError ? (
-                  <p className="wf-comfy-page-overlay__guide-error" role="alert">{backendError}</p>
+                  <p className="wf-comfy-page-panel__guide-error" role="alert">{backendError}</p>
                 ) : null}
-                <div className="wf-comfy-page-overlay__address">
-                  <label className="wf-comfy-page-overlay__address-label" htmlFor="wf-comfy-page-address">
+                <div className="wf-comfy-page-panel__address">
+                  <label className="wf-comfy-page-panel__address-label" htmlFor="wf-comfy-page-address">
                     {t('comfyPage.overlay.addressLabel')}
                   </label>
                   <input
                     id="wf-comfy-page-address"
-                    className="wf-comfy-page-overlay__input"
+                    className="wf-comfy-page-panel__input"
                     value={draft}
                     spellCheck={false}
                     onChange={(event) => setDraft(event.target.value)}
@@ -793,12 +825,12 @@ export function ComfyPageOverlay() {
                       if (event.key === 'Enter') applyAddress();
                     }}
                   />
-                  <button type="button" className="wf-comfy-page-overlay__apply" onClick={applyAddress}>
+                  <button type="button" className="wf-comfy-page-panel__apply" onClick={applyAddress}>
                     {t('comfyPage.overlay.retry')}
                   </button>
                 </div>
                 {reason ? (
-                  <p className="wf-comfy-page-overlay__guide-error" role="alert">
+                  <p className="wf-comfy-page-panel__guide-error" role="alert">
                     {t(REASON_KEY[reason])}
                   </p>
                 ) : null}

@@ -708,7 +708,10 @@ const zh = {
   'palette.keyword.comfyPage': 'ComfyUI 工作流、本机 8188、节点编辑器',
   'node.type.comfy-page': 'ComfyUI 工作流',
   'comfyPage.card.title': 'ComfyUI 工作流',
-  'comfyPage.card.open': '打开',
+  'comfyPage.card.unnamedWorkflow': '未命名工作流',
+  'comfyPage.card.useTemplate': '使用模板',
+  'comfyPage.card.exitFullscreen': '退出全屏',
+  'comfyPage.card.framePaused': '页面已暂停',
   'comfyPage.status.idle': '未检测',
   'comfyPage.status.probing': '正在检测',
   'comfyPage.status.connected': '已连接',
@@ -808,7 +811,7 @@ const zh = {
   'transfer.reason.field-type-mismatch': '字段类型不符（原值已保留在文件中）',
   'transfer.reason.link-field-type-mismatch': '连线字段类型不符（原值已保留在文件中）',
   'transfer.reason.reroute-field-type-mismatch': '中转字段类型不符（原值已保留在文件中）',
-  // 托管后端状态界面（Issue 3701 M2c：ComfyPageOverlay 状态机）
+  // 托管后端状态界面（Issue 3701 M2c：ComfyPagePanel 状态机）
   'comfyPage.backend.state.notInstalled': '未安装',
   'comfyPage.backend.state.installing': '正在安装',
   'comfyPage.backend.state.installed': '已安装，未启动',
