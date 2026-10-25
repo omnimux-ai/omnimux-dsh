@@ -1,0 +1,802 @@
+{
+  "runId": "0df86a43-1512-4c6d-8a4c-c2380e9bb593",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-remove-explore-entry-issue-3785",
+  "origin": "http://127.0.0.1:58221",
+  "appPort": 58221,
+  "cdpPort": 58290,
+  "startedAt": "2026-10-25T14:59:29.253Z",
+  "completedAt": "2026-10-25T15:02:24.442Z",
+  "pass": false,
+  "scope": "task",
+  "producer": "controlled-runner",
+  "contract": "candidate",
+  "taskBinding": "installed-loaded",
+  "userFresh": true,
+  "inputClosure": "unknown",
+  "summary": {
+    "mode": "ui",
+    "evidenceLevel": "unknown",
+    "taskPluginsInstalled": true,
+    "realModelRequest": false,
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": false
+    },
+    {
+      "name": "journey:explore-entry-absent",
+      "pass": true
+    },
+    {
+      "name": "journey:more-menu-ten-items-in-order",
+      "pass": true
+    },
+    {
+      "name": "journey:more-menu-separators-match",
+      "pass": true
+    },
+    {
+      "name": "journey:runtime-item-appended-and-removed",
+      "pass": true
+    },
+    {
+      "name": "journey:observation-recorded",
+      "pass": true
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true
+    },
+    {
+      "name": "task-source-installed-loaded",
+      "pass": true
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-remove-explore-entry-issue-3785/.workbuddy/evidence/contract/omnimux-remove-explore-entry-issue-3785/0df86a43-1512-4c6d-8a4c-c2380e9bb593/app-home.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 213554
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true,
+    "resources": [
+      {
+        "name": "app-child",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "mock-server",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "app-private-directory",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "browser-child",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "cdp-transport",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "browser-private-directory",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      }
+    ]
+  },
+  "observations": {
+    "rawOutputRetained": false,
+    "appEvents": [
+      {
+        "event": "spawn",
+        "code": null,
+        "signal": null,
+        "pid": 58952,
+        "parentPid": 53615
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      }
+    ],
+    "browserEvents": [
+      {
+        "event": "spawn",
+        "code": null,
+        "signal": null,
+        "pid": 61744,
+        "parentPid": 53615
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      },
+      {
+        "event": "close",
+        "code": 0,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      }
+    ],
+    "skippedInputCount": 3
+  },
+  "beforeCaptureMs": 12806,
+  "hubPath": {
+    "clickedNewSession": false,
+    "exploreVisible": true,
+    "assetHubOpened": false,
+    "librarySelected": false,
+    "workbenchRequestAccepted": false
+  },
+  "installation": {
+    "taskId": "omnimux-remove-explore-entry-issue-3785",
+    "runId": "0df86a43-1512-4c6d-8a4c-c2380e9bb593",
+    "sourceRoot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-remove-explore-entry-issue-3785",
+    "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL",
+    "profile": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/dsh/profiles/web",
+    "base": "dfc4e58e0e5bb1ac4855ab02d8df30da7c62d0b3",
+    "head": "dfc4e58e0e5bb1ac4855ab02d8df30da7c62d0b3",
+    "candidateDigest": "3ab8c5b62ef95bf831eacf8c01acbf8678dcd84343e0ea2660a1564d91809839",
+    "inputsDigest": "95e85e3b29cd1f3bb84b4390392643a72ecbb8b65a65357dc45c38ad05defb9c",
+    "pid": 58952,
+    "origin": "http://127.0.0.1:58221",
+    "runtimeExecutable": "/Applications/OmniMux Dev.app/Contents/MacOS/OmniMux",
+    "appAnchor": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh/package.json",
+    "dependencyCount": 30,
+    "peerCount": 14,
+    "packages": [
+      {
+        "name": "omnimux",
+        "version": "0.1.2",
+        "installedRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/1",
+        "publishedFiles": 930,
+        "serverEntry": {
+          "path": "src/index.js",
+          "sha256": "c223512ae1042d1010328fa94e9fe15680ecc2ceb59033ba6160781bbbfbcef7"
+        },
+        "clientBundle": {
+          "path": "lib/client.js",
+          "sha256": "855c751051bb3eebbf96e72937ead08e43430a2281e2f0e886954e851b4fb17a",
+          "bytes": 1428683
+        }
+      },
+      {
+        "name": "omnimux-inspiration",
+        "version": "0.1.0",
+        "installedRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/26",
+        "publishedFiles": 325,
+        "serverEntry": {
+          "path": "src/index.js",
+          "sha256": "7ce2acdbaf2fdfbb18197c2da06fe63c19ebb05681d44b05ac59cf6f221296b0"
+        },
+        "clientBundle": {
+          "path": "lib/client.js",
+          "sha256": "61cc145c6122c73e2b489d94dbf50e87e26d6e037fa44eb946ab23882aa4092d",
+          "bytes": 2459108
+        }
+      }
+    ]
+  },
+  "runtimeLoading": {
+    "server": {
+      "kind": "task-server-loading",
+      "taskId": "omnimux-remove-explore-entry-issue-3785",
+      "runId": "0df86a43-1512-4c6d-8a4c-c2380e9bb593",
+      "origin": "http://127.0.0.1:58221",
+      "pid": 58952,
+      "sourceRoot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-remove-explore-entry-issue-3785",
+      "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL",
+      "profile": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/dsh/profiles/web",
+      "base": "dfc4e58e0e5bb1ac4855ab02d8df30da7c62d0b3",
+      "head": "dfc4e58e0e5bb1ac4855ab02d8df30da7c62d0b3",
+      "candidateDigest": "3ab8c5b62ef95bf831eacf8c01acbf8678dcd84343e0ea2660a1564d91809839",
+      "inputsDigest": "95e85e3b29cd1f3bb84b4390392643a72ecbb8b65a65357dc45c38ad05defb9c",
+      "runtimeExecutable": "/Applications/OmniMux Dev.app/Contents/MacOS/OmniMux",
+      "modules": [
+        {
+          "name": "omnimux",
+          "path": "src/index.js",
+          "sha256": "c223512ae1042d1010328fa94e9fe15680ecc2ceb59033ba6160781bbbfbcef7",
+          "bytes": 198,
+          "loadedScriptUrl": "file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/1/src/index.js",
+          "loadedScriptSha256": "c223512ae1042d1010328fa94e9fe15680ecc2ceb59033ba6160781bbbfbcef7",
+          "matchingScriptCount": 1
+        },
+        {
+          "name": "omnimux-inspiration",
+          "path": "src/index.js",
+          "sha256": "7ce2acdbaf2fdfbb18197c2da06fe63c19ebb05681d44b05ac59cf6f221296b0",
+          "bytes": 22147,
+          "loadedScriptUrl": "file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/26/src/index.js",
+          "loadedScriptSha256": "7ce2acdbaf2fdfbb18197c2da06fe63c19ebb05681d44b05ac59cf6f221296b0",
+          "matchingScriptCount": 1
+        }
+      ],
+      "peers": [
+        {
+          "parentName": "dsh-ui-kit",
+          "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/0",
+          "name": "@deepseek-ai/dsh-client-ui-primitives",
+          "spec": ">=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0",
+          "optional": false,
+          "versionPolicy": "explicit-prerelease-bounds",
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+          "version": "0.2.1-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+          "manifestSha256": "42126913d3ad10238aece4d0ac96eeec91df8ab6f22d76320e7bf1d3f346cf4a",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+          "entrySha256": "6e52c633c75e408d79d01754606aa7bd2f470eff720197862fb9f777076867a7",
+          "status": "resolved",
+          "scope": "shipping-app",
+          "anchorResolution": {
+            "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+            "version": "0.2.1-rc.3",
+            "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+            "manifestSha256": "42126913d3ad10238aece4d0ac96eeec91df8ab6f22d76320e7bf1d3f346cf4a",
+            "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+            "entrySha256": "6e52c633c75e408d79d01754606aa7bd2f470eff720197862fb9f777076867a7"
+          }
+        },
+        {
+          "parentName": "dsh-ui-kit",
+          "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/0",
+          "name": "react",
+          "spec": ">=18.2.0",
+          "optional": false,
+          "versionPolicy": "semver",
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+          "status": "resolved",
+          "scope": "shipping-app",
+          "anchorResolution": {
+            "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+            "version": "18.3.1",
+            "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+            "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+            "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+            "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+          }
+        },
+        {
+          "parentName": "dsh-ui-kit",
+          "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/0",
+          "name": "react-dom",
+          "spec": ">=18.2.0",
+          "optional": false,
+          "versionPolicy": "semver",
+          "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/28",
+          "packageRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/28",
+          "version": "18.3.1",
+          "manifestPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/28/package.json",
+          "manifestSha256": "da395978eb5d81a95f7b071db8da72942f1eaa40eb63223a77900ce0529e63f6",
+          "entryPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/28/index.js",
+          "entrySha256": "f26fcb81b5d1dc32c6edea34645c75b60d259916293d3208c8be48ac33e882e4",
+          "status": "resolved",
+          "scope": "private",
+          "anchorResolution": null
+        },
+        {
+          "parentName": "omnimux",
+          "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/1",
+          "name": "@deepseek-ai/dsh-client-ui-primitives",
+          "spec": ">=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0",
+          "optional": false,
+          "versionPolicy": "explicit-prerelease-bounds",
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+          "version": "0.2.1-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+          "manifestSha256": "42126913d3ad10238aece4d0ac96eeec91df8ab6f22d76320e7bf1d3f346cf4a",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+          "entrySha256": "6e52c633c75e408d79d01754606aa7bd2f470eff720197862fb9f777076867a7",
+          "status": "resolved",
+          "scope": "shipping-app",
+          "anchorResolution": {
+            "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+            "version": "0.2.1-rc.3",
+            "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+            "manifestSha256": "42126913d3ad10238aece4d0ac96eeec91df8ab6f22d76320e7bf1d3f346cf4a",
+            "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+            "entrySha256": "6e52c633c75e408d79d01754606aa7bd2f470eff720197862fb9f777076867a7"
+          }
+        },
+        {
+          "parentName": "omnimux",
+          "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/1",
+          "name": "react",
+          "spec": "^18.2.0",
+          "optional": true,
+          "versionPolicy": "semver",
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+          "status": "resolved",
+          "scope": "shipping-app",
+          "anchorResolution": {
+            "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+            "version": "18.3.1",
+            "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+            "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+            "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+            "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+          }
+        },
+        {
+          "parentName": "omnimux",
+          "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/1",
+          "name": "react-dom",
+          "spec": "^18.2.0",
+          "optional": true,
+          "versionPolicy": "semver",
+          "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/28",
+          "packageRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/28",
+          "version": "18.3.1",
+          "manifestPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/28/package.json",
+          "manifestSha256": "da395978eb5d81a95f7b071db8da72942f1eaa40eb63223a77900ce0529e63f6",
+          "entryPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/28/index.js",
+          "entrySha256": "f26fcb81b5d1dc32c6edea34645c75b60d259916293d3208c8be48ac33e882e4",
+          "status": "resolved",
+          "scope": "private",
+          "anchorResolution": null
+        },
+        {
+          "parentName": "blobatar",
+          "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/18",
+          "name": "react",
+          "spec": ">=18",
+          "optional": true,
+          "versionPolicy": "semver",
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+          "status": "resolved",
+          "scope": "shipping-app",
+          "anchorResolution": {
+            "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+            "version": "18.3.1",
+            "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+            "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+            "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+            "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+          }
+        },
+        {
+          "parentName": "ws",
+          "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/24",
+          "name": "bufferutil",
+          "spec": "^4.0.1",
+          "optional": true,
+          "versionPolicy": "semver",
+          "status": "missing",
+          "scope": null,
+          "version": null,
+          "packageRoot": null,
+          "manifestPath": null,
+          "manifestSha256": null,
+          "entryPath": null,
+          "entrySha256": null,
+          "anchorResolution": null
+        },
+        {
+          "parentName": "ws",
+          "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/24",
+          "name": "utf-8-validate",
+          "spec": ">=5.0.2",
+          "optional": true,
+          "versionPolicy": "semver",
+          "status": "missing",
+          "scope": null,
+          "version": null,
+          "packageRoot": null,
+          "manifestPath": null,
+          "manifestSha256": null,
+          "entryPath": null,
+          "entrySha256": null,
+          "anchorResolution": null
+        },
+        {
+          "parentName": "omnimux-inspiration",
+          "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/26",
+          "name": "@deepseek-ai/dsh-client-ui-primitives",
+          "spec": ">=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0",
+          "optional": false,
+          "versionPolicy": "explicit-prerelease-bounds",
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+          "version": "0.2.1-rc.3",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+          "manifestSha256": "42126913d3ad10238aece4d0ac96eeec91df8ab6f22d76320e7bf1d3f346cf4a",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+          "entrySha256": "6e52c633c75e408d79d01754606aa7bd2f470eff720197862fb9f777076867a7",
+          "status": "resolved",
+          "scope": "shipping-app",
+          "anchorResolution": {
+            "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives",
+            "version": "0.2.1-rc.3",
+            "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/package.json",
+            "manifestSha256": "42126913d3ad10238aece4d0ac96eeec91df8ab6f22d76320e7bf1d3f346cf4a",
+            "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js",
+            "entrySha256": "6e52c633c75e408d79d01754606aa7bd2f470eff720197862fb9f777076867a7"
+          }
+        },
+        {
+          "parentName": "omnimux-inspiration",
+          "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/26",
+          "name": "react",
+          "spec": "^18.2.0",
+          "optional": true,
+          "versionPolicy": "semver",
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+          "status": "resolved",
+          "scope": "shipping-app",
+          "anchorResolution": {
+            "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+            "version": "18.3.1",
+            "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+            "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+            "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+            "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+          }
+        },
+        {
+          "parentName": "omnimux-inspiration",
+          "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/26",
+          "name": "react-dom",
+          "spec": "^18.2.0",
+          "optional": true,
+          "versionPolicy": "semver",
+          "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/28",
+          "packageRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/28",
+          "version": "18.3.1",
+          "manifestPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/28/package.json",
+          "manifestSha256": "da395978eb5d81a95f7b071db8da72942f1eaa40eb63223a77900ce0529e63f6",
+          "entryPath": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/28/index.js",
+          "entrySha256": "f26fcb81b5d1dc32c6edea34645c75b60d259916293d3208c8be48ac33e882e4",
+          "status": "resolved",
+          "scope": "private",
+          "anchorResolution": null
+        },
+        {
+          "parentName": "lucide-react",
+          "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/27",
+          "name": "react",
+          "spec": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0",
+          "optional": false,
+          "versionPolicy": "semver",
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+          "status": "resolved",
+          "scope": "shipping-app",
+          "anchorResolution": {
+            "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+            "version": "18.3.1",
+            "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+            "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+            "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+            "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+          }
+        },
+        {
+          "parentName": "react-dom",
+          "parentRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/task-packages/28",
+          "name": "react",
+          "spec": "^18.3.1",
+          "optional": false,
+          "versionPolicy": "semver",
+          "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+          "version": "18.3.1",
+          "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+          "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+          "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+          "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3",
+          "status": "resolved",
+          "scope": "shipping-app",
+          "anchorResolution": {
+            "packageRoot": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react",
+            "version": "18.3.1",
+            "manifestPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/package.json",
+            "manifestSha256": "9a394ce4f81b3df64aedfc9ee91eb7f3fc02063c5a52ad4161170d3b55b76ac1",
+            "entryPath": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/react/index.js",
+            "entrySha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+          }
+        }
+      ],
+      "peerObserver": {
+        "path": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/dsh/profiles/web/task-peer-probe.mjs",
+        "sha256": "1d4f010b2df70c999ea8b098f1a91aabd2316c94fd4bd9f572d417664113a6de",
+        "loadedScriptUrl": "file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/dsh/profiles/web/task-peer-probe.mjs",
+        "loadedScriptSha256": "1d4f010b2df70c999ea8b098f1a91aabd2316c94fd4bd9f572d417664113a6de",
+        "matchingScriptCount": 1
+      }
+    },
+    "clientBefore": {
+      "kind": "task-client-loading",
+      "taskId": "omnimux-remove-explore-entry-issue-3785",
+      "runId": "0df86a43-1512-4c6d-8a4c-c2380e9bb593",
+      "origin": "http://127.0.0.1:58221",
+      "pid": 58952,
+      "sourceRoot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-remove-explore-entry-issue-3785",
+      "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL",
+      "profile": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/dsh/profiles/web",
+      "base": "dfc4e58e0e5bb1ac4855ab02d8df30da7c62d0b3",
+      "head": "dfc4e58e0e5bb1ac4855ab02d8df30da7c62d0b3",
+      "candidateDigest": "3ab8c5b62ef95bf831eacf8c01acbf8678dcd84343e0ea2660a1564d91809839",
+      "inputsDigest": "95e85e3b29cd1f3bb84b4390392643a72ecbb8b65a65357dc45c38ad05defb9c",
+      "scriptCount": 3,
+      "bundles": [
+        {
+          "plugin": "omnimux",
+          "bundlePath": "lib/client.js",
+          "bundleSha256": "855c751051bb3eebbf96e72937ead08e43430a2281e2f0e886954e851b4fb17a",
+          "bundleRegistrationSha256": "77ac1f2179c4eb4d3848f6f141a4ed914ab2570b95b9ec4d46dc9f6594c54237",
+          "bundleCodeSha256": "2db778c427e114d0557ae50da594a7011287d59a03d87a6dd10fda93789c5e0b",
+          "bundleBytes": 1428683,
+          "loadedScriptUrl": "http://127.0.0.1:58221/plugins/??@deepseek-ai/dsh-client-ui-trajectory/client.js,@deepseek-ai/dsh-api-remote-access/client.js,@deepseek-ai/dsh-session-log-export/client.js,@deepseek-ai/dsh-client-file-upload/client.js,@deepseek-ai/dsh-api-remotes/client.js,@deepseek-ai/dsh-client-ui-deliverables/client.js,omnimux-inspiration/client.js,@deepseek-ai/dsh-typert-registry/client.js,@deepseek-ai/dsh-client-connection/client.js,@deepseek-ai/dsh-api-workspace-controller/client.js,@deepseek-ai/dsh-api-session-controller/client.js,omnimux/client.js,@deepseek-ai/dsh-client-ui-directory-picker-native/client.js&rev=3e89cab10488",
+          "loadedScriptSha256": "0a0d9a72c8d5932ef775e8b3aa78d3271a67785502dde34fdef23bcde7c89743",
+          "loadedScriptCodeSha256": "0294121239572cbf91b34d05c3401c7dfff4eaa4773802647fc68d2427d51c2e",
+          "loadedRegistrationSha256": "77ac1f2179c4eb4d3848f6f141a4ed914ab2570b95b9ec4d46dc9f6594c54237",
+          "loadedRegistrationCodeSha256": "2db778c427e114d0557ae50da594a7011287d59a03d87a6dd10fda93789c5e0b",
+          "match": "raw-registration",
+          "matchingRegistrationCount": 1
+        },
+        {
+          "plugin": "omnimux-inspiration",
+          "bundlePath": "lib/client.js",
+          "bundleSha256": "61cc145c6122c73e2b489d94dbf50e87e26d6e037fa44eb946ab23882aa4092d",
+          "bundleRegistrationSha256": "6b7da806377c669f7af27b0d283b304e56df350527433eb4d8c3d42ba53882dc",
+          "bundleCodeSha256": "f467ce976c7ac13cd784df62f61618dc4f0a27444ef49d9b9130727dd8daa1c4",
+          "bundleBytes": 2459108,
+          "loadedScriptUrl": "http://127.0.0.1:58221/plugins/??@deepseek-ai/dsh-client-ui-trajectory/client.js,@deepseek-ai/dsh-api-remote-access/client.js,@deepseek-ai/dsh-session-log-export/client.js,@deepseek-ai/dsh-client-file-upload/client.js,@deepseek-ai/dsh-api-remotes/client.js,@deepseek-ai/dsh-client-ui-deliverables/client.js,omnimux-inspiration/client.js,@deepseek-ai/dsh-typert-registry/client.js,@deepseek-ai/dsh-client-connection/client.js,@deepseek-ai/dsh-api-workspace-controller/client.js,@deepseek-ai/dsh-api-session-controller/client.js,omnimux/client.js,@deepseek-ai/dsh-client-ui-directory-picker-native/client.js&rev=3e89cab10488",
+          "loadedScriptSha256": "0a0d9a72c8d5932ef775e8b3aa78d3271a67785502dde34fdef23bcde7c89743",
+          "loadedScriptCodeSha256": "0294121239572cbf91b34d05c3401c7dfff4eaa4773802647fc68d2427d51c2e",
+          "loadedRegistrationSha256": "6b7da806377c669f7af27b0d283b304e56df350527433eb4d8c3d42ba53882dc",
+          "loadedRegistrationCodeSha256": "f467ce976c7ac13cd784df62f61618dc4f0a27444ef49d9b9130727dd8daa1c4",
+          "match": "raw-registration",
+          "matchingRegistrationCount": 1
+        }
+      ]
+    },
+    "clientAfter": {
+      "kind": "task-client-loading",
+      "taskId": "omnimux-remove-explore-entry-issue-3785",
+      "runId": "0df86a43-1512-4c6d-8a4c-c2380e9bb593",
+      "origin": "http://127.0.0.1:58221",
+      "pid": 58952,
+      "sourceRoot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-remove-explore-entry-issue-3785",
+      "privateRoot": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL",
+      "profile": "/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-task-omnimux-remove-explore-entry-issue-3785-0df86a43-1512-4c6d-8a4c-c2380e9bb593-EDNOZL/dsh/profiles/web",
+      "base": "dfc4e58e0e5bb1ac4855ab02d8df30da7c62d0b3",
+      "head": "dfc4e58e0e5bb1ac4855ab02d8df30da7c62d0b3",
+      "candidateDigest": "3ab8c5b62ef95bf831eacf8c01acbf8678dcd84343e0ea2660a1564d91809839",
+      "inputsDigest": "95e85e3b29cd1f3bb84b4390392643a72ecbb8b65a65357dc45c38ad05defb9c",
+      "scriptCount": 3,
+      "bundles": [
+        {
+          "plugin": "omnimux",
+          "bundlePath": "lib/client.js",
+          "bundleSha256": "855c751051bb3eebbf96e72937ead08e43430a2281e2f0e886954e851b4fb17a",
+          "bundleRegistrationSha256": "77ac1f2179c4eb4d3848f6f141a4ed914ab2570b95b9ec4d46dc9f6594c54237",
+          "bundleCodeSha256": "2db778c427e114d0557ae50da594a7011287d59a03d87a6dd10fda93789c5e0b",
+          "bundleBytes": 1428683,
+          "loadedScriptUrl": "http://127.0.0.1:58221/plugins/??@deepseek-ai/dsh-client-ui-trajectory/client.js,@deepseek-ai/dsh-api-remote-access/client.js,@deepseek-ai/dsh-session-log-export/client.js,@deepseek-ai/dsh-client-file-upload/client.js,@deepseek-ai/dsh-api-remotes/client.js,@deepseek-ai/dsh-client-ui-deliverables/client.js,omnimux-inspiration/client.js,@deepseek-ai/dsh-typert-registry/client.js,@deepseek-ai/dsh-client-connection/client.js,@deepseek-ai/dsh-api-workspace-controller/client.js,@deepseek-ai/dsh-api-session-controller/client.js,omnimux/client.js,@deepseek-ai/dsh-client-ui-directory-picker-native/client.js&rev=3e89cab10488",
+          "loadedScriptSha256": "0a0d9a72c8d5932ef775e8b3aa78d3271a67785502dde34fdef23bcde7c89743",
+          "loadedScriptCodeSha256": "0294121239572cbf91b34d05c3401c7dfff4eaa4773802647fc68d2427d51c2e",
+          "loadedRegistrationSha256": "77ac1f2179c4eb4d3848f6f141a4ed914ab2570b95b9ec4d46dc9f6594c54237",
+          "loadedRegistrationCodeSha256": "2db778c427e114d0557ae50da594a7011287d59a03d87a6dd10fda93789c5e0b",
+          "match": "raw-registration",
+          "matchingRegistrationCount": 1
+        },
+        {
+          "plugin": "omnimux-inspiration",
+          "bundlePath": "lib/client.js",
+          "bundleSha256": "61cc145c6122c73e2b489d94dbf50e87e26d6e037fa44eb946ab23882aa4092d",
+          "bundleRegistrationSha256": "6b7da806377c669f7af27b0d283b304e56df350527433eb4d8c3d42ba53882dc",
+          "bundleCodeSha256": "f467ce976c7ac13cd784df62f61618dc4f0a27444ef49d9b9130727dd8daa1c4",
+          "bundleBytes": 2459108,
+          "loadedScriptUrl": "http://127.0.0.1:58221/plugins/??@deepseek-ai/dsh-client-ui-trajectory/client.js,@deepseek-ai/dsh-api-remote-access/client.js,@deepseek-ai/dsh-session-log-export/client.js,@deepseek-ai/dsh-client-file-upload/client.js,@deepseek-ai/dsh-api-remotes/client.js,@deepseek-ai/dsh-client-ui-deliverables/client.js,omnimux-inspiration/client.js,@deepseek-ai/dsh-typert-registry/client.js,@deepseek-ai/dsh-client-connection/client.js,@deepseek-ai/dsh-api-workspace-controller/client.js,@deepseek-ai/dsh-api-session-controller/client.js,omnimux/client.js,@deepseek-ai/dsh-client-ui-directory-picker-native/client.js&rev=3e89cab10488",
+          "loadedScriptSha256": "0a0d9a72c8d5932ef775e8b3aa78d3271a67785502dde34fdef23bcde7c89743",
+          "loadedScriptCodeSha256": "0294121239572cbf91b34d05c3401c7dfff4eaa4773802647fc68d2427d51c2e",
+          "loadedRegistrationSha256": "6b7da806377c669f7af27b0d283b304e56df350527433eb4d8c3d42ba53882dc",
+          "loadedRegistrationCodeSha256": "f467ce976c7ac13cd784df62f61618dc4f0a27444ef49d9b9130727dd8daa1c4",
+          "match": "raw-registration",
+          "matchingRegistrationCount": 1
+        }
+      ]
+    }
+  },
+  "checks": [
+    {
+      "name": "app-environment",
+      "scope": "task",
+      "required": true,
+      "status": "completed",
+      "reason": null,
+      "exitCode": 0,
+      "tests": 3,
+      "skipped": 0,
+      "assertions": [
+        {
+          "name": "app-runtime-ready",
+          "pass": true
+        },
+        {
+          "name": "same-origin-login",
+          "pass": true
+        },
+        {
+          "name": "task-source-installed-loaded",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "app-browser",
+      "scope": "task",
+      "required": true,
+      "status": "completed",
+      "reason": null,
+      "exitCode": 1,
+      "tests": 10,
+      "skipped": 0,
+      "assertions": [
+        {
+          "name": "chrome-cdp-listen",
+          "pass": true
+        },
+        {
+          "name": "auth-cookie-applied",
+          "pass": true
+        },
+        {
+          "name": "app-dom-mounted",
+          "pass": true
+        },
+        {
+          "name": "visible-geometry-positive",
+          "pass": true
+        },
+        {
+          "name": "runtime-modal-bypassed",
+          "pass": true
+        },
+        {
+          "name": "blank-session-guide-visible",
+          "pass": true
+        },
+        {
+          "name": "explore-section-visible",
+          "pass": true
+        },
+        {
+          "name": "explore-cards-present",
+          "pass": true
+        },
+        {
+          "name": "asset-hub-reachable-via-library",
+          "pass": false
+        },
+        {
+          "name": "screenshot-png-verified",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "task-journey",
+      "scope": "task",
+      "required": true,
+      "status": "completed",
+      "reason": null,
+      "exitCode": 0,
+      "tests": 5,
+      "skipped": 0,
+      "assertions": [
+        {
+          "name": "journey:explore-entry-absent",
+          "pass": true
+        },
+        {
+          "name": "journey:more-menu-ten-items-in-order",
+          "pass": true
+        },
+        {
+          "name": "journey:more-menu-separators-match",
+          "pass": true
+        },
+        {
+          "name": "journey:runtime-item-appended-and-removed",
+          "pass": true
+        },
+        {
+          "name": "journey:observation-recorded",
+          "pass": true
+        }
+      ]
+    }
+  ],
+  "executionPassed": false,
+  "evidenceStatus": "unsealed"
+}

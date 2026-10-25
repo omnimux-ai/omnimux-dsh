@@ -1,13 +1,23 @@
 /**
- * sidebar-coordinator 回归测试（P0）与探索菜单收敛专项测试：
+ * sidebar-coordinator 回归测试（P0）：
  *   1. 注册 below（rank 5）+ inline（kind:'inline'）后，连续 place() 不抛；
- *   2. 常驻探索行 rank 3.9，排在项目（rank 4）上方；
- *   3. 浮动菜单展示 10 项白名单，点击激活对应 Workbench Tab 并关闭菜单；
- *   4. 收敛所有非常驻插件，不作为独立行挂入侧栏 DOM。
+ *   2. 收敛项不作为独立行挂入侧栏 DOM；官方「更多」菜单是这批入口的唯一渲染面；
+ *   3. 运行时注册接缝（集合语义）与激活三段委托；
+ *   4. 探索行与浮动菜单已退役：侧栏不得再渲染它们，源码不得残留实现。
  */
 import { JSDOM } from 'jsdom'
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import {
+  EXPLORE_MENU_ITEMS,
+  SIDEBAR_GLOBAL,
+  activateExploreItem,
+  installSidebarGlobal,
+  resolveExploreMenuItems,
+} from './sidebar-coordinator.js'
 
 // install() 会 setInterval(2s) 轮询；测试里替换为 no-op，避免挂住测试进程。
 globalThis.setInterval = () => 1
@@ -77,7 +87,7 @@ test('below + inline 并存时 place() 幂等不抛，且 below 行落在 wrappe
   }
 })
 
-test('仅 below 行（无 inline）时保持原有锚点行为，探索行首发居前', async () => {
+test('仅 below 行（无 inline）时行紧挨新对话，不插在品牌钮后', async () => {
   setup()
   const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
   installSidebarGlobal()
@@ -94,12 +104,11 @@ test('仅 below 行（无 inline）时保持原有锚点行为，探索行首发
 
     const root = document.querySelector('[data-pane="sidebar"]')
     const sessionBtn = root.querySelector('.newSession')
-    const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
-    assert.ok(exploreBtn, '常驻探索行存在')
-    assert.equal(exploreBtn.parentElement, root)
+    const brand = root.querySelector('.x-Wl6W_brand')
+    assert.ok(brand, '夹具含品牌钮')
     assert.equal(belowBtn.parentElement, root, 'below 行是 root 直接子节点')
-    assert.equal(belowBtn.previousElementSibling, sessionBtn, 'rank 5 below 行排在新会话后、探索行前')
-    assert.equal(exploreBtn.previousElementSibling, belowBtn, '探索行（rank 7.2）排在 rank 5 below 行之后（最下方）')
+    assert.equal(belowBtn.previousElementSibling, sessionBtn, 'below 行排在新会话后，不得插在品牌钮后')
+    assert.notEqual(belowBtn.previousElementSibling, brand)
     assert.equal(root.querySelector('[data-omnimux-inline-row]'), null, '无 inline wrapper')
   } finally {
     disposeBelow()
@@ -347,23 +356,6 @@ test('Alpha entries are excluded from sidebar placement while retaining source r
   for (const { dispose } of rows) dispose()
 })
 
-test('品牌按钮不得抢占新对话锚点，常驻探索行紧挨新对话且不插在品牌钮后', async () => {
-  setup()
-  const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
-  installSidebarGlobal()
-  const api = SIDEBAR_GLOBAL()
-  for (let i = 0; i < 4; i++) assert.doesNotThrow(() => { api.place() })
-  const root = document.querySelector('[data-pane="sidebar"]')
-  const sessionBtn = root.querySelector('.newSession')
-  const brand = root.querySelector('.x-Wl6W_brand')
-  const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
-  assert.ok(brand, '夹具含品牌钮')
-  assert.ok(exploreBtn, '探索行已挂入 DOM')
-  assert.equal(exploreBtn.parentElement, root)
-  assert.equal(exploreBtn.previousElementSibling, sessionBtn, '探索行必须紧挨新对话，不得插在品牌钮后')
-  assert.notEqual(exploreBtn.previousElementSibling, brand)
-})
-
 test('desktop 外壳包住内层 pane 时仍把 extra row 插在新对话下方', async () => {
   setup(`<!doctype html><html><body>
     <div class="dshDesktopSidebarSurface">
@@ -387,12 +379,10 @@ test('desktop 外壳包住内层 pane 时仍把 extra row 插在新对话下方'
   try {
     const pane = document.querySelector('[data-pane="sidebar"]')
     const sessionBtn = pane.querySelector('.newSession')
-    const exploreBtn = pane.querySelector('[data-omnimux-explore-entry]')
-    assert.equal(exploreBtn.parentElement, pane, '探索行必须插在 inner pane')
     assert.equal(belowBtn.parentElement, pane, 'assets 必须插在 inner pane')
     assert.equal(belowBtn.previousElementSibling, sessionBtn, 'rank 6 assets 行排在新会话后')
-    assert.equal(exploreBtn.previousElementSibling, belowBtn, 'rank 7.2 探索行排在 assets 之后（最下方）')
-    assert.equal(exploreBtn.nextElementSibling?.className, 'workspace')
+    assert.equal(belowBtn.nextElementSibling?.className, 'workspace', 'assets 行落在工作区之前')
+    assert.equal(pane.querySelector('[data-omnimux-explore-entry]'), null, '探索行已退役')
   } finally {
     dispose()
   }
@@ -409,12 +399,38 @@ test('coordinator 源码不得把 brand 类写进新对话选择器', async () =
 })
 
 /* ========================================================================= */
-/* 探索行与探索浮动菜单专项测试                                                */
+/* 探索行 / 浮动菜单退役回归                                                   */
 /* ========================================================================= */
 
-test('探索行 rank 严格为 7.2，位于最下方，且技能专家（rank 4.1）常驻保留', async () => {
+test('移除回归：侧栏不再渲染探索行，源码不再残留浮动菜单实现', async () => {
   setup()
-  const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+  api.place()
+
+  const root = document.querySelector('[data-pane="sidebar"]')
+  assert.equal(root.querySelector('[data-omnimux-explore-entry]'), null, '侧栏不得再渲染探索行')
+  assert.equal(document.getElementById('omnimux-explore-entry'), null)
+  assert.equal(document.getElementById('omnimux-explore-menu'), null, '不得再有浮动菜单')
+  assert.equal(document.getElementById('omnimux-sidebar-explore-styles'), null, '不得再注入探索样式节点')
+
+  // 真源与激活委托必须保留：官方「更多」菜单仍复用它们
+  assert.equal(typeof resolveExploreMenuItems, 'function', '合并函数是真源，必须保留')
+  assert.equal(typeof activateExploreItem, 'function', '激活委托必须保留')
+  assert.equal(resolveExploreMenuItems().length, 10)
+
+  const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'sidebar-coordinator.js'), 'utf8')
+  assert.doesNotMatch(source, /omnimux-explore-entry/, '源码不得残留探索行 id')
+  assert.doesNotMatch(source, /omnimux-explore-menu/, '源码不得残留浮动菜单 id')
+  assert.doesNotMatch(source, /ensureExploreRow|createExploreIcon|EXPLORE_STYLES|handleExploreFocusOut/)
+  assert.doesNotMatch(source, /getExploreEntryForTests|openExploreMenu|toggleExploreMenu|closeExploreMenu/)
+  assert.doesNotMatch(source, /computeExploreMenuPosition|EXPLORE_HOVER_/)
+  assert.match(source, /export function resolveExploreMenuItems/)
+  assert.match(source, /export function activateExploreItem/)
+})
+
+test('常驻行按 rank 挂载在侧栏，探索行不再出现在最下方', async () => {
+  setup()
   installSidebarGlobal()
   const api = SIDEBAR_GLOBAL()
 
@@ -437,48 +453,22 @@ test('探索行 rank 严格为 7.2，位于最下方，且技能专家（rank 4.
   try {
     api.place()
     const root = document.querySelector('[data-pane="sidebar"]')
-    const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
-    assert.ok(exploreBtn, '探索行已常驻渲染')
-    assert.equal(exploreBtn.parentElement, root)
+    assert.equal(root.querySelector('[data-omnimux-explore-entry]'), null, '探索行已退役，不得再占位')
     assert.equal(workflowBtn.parentElement, root)
     assert.equal(marketBtn.parentElement, root, '技能专家必须作为常驻项正常挂载在侧栏')
     assert.equal(assetsBtn.parentElement, root)
     assert.equal(inspirationBtn.parentElement, root)
 
-    // 相对顺序：workflow (4) -> market (4.1) -> assets (6) -> inspiration (7) -> explore (7.2)
+    // 相对顺序：workflow (4) -> market (4.1) -> assets (6) -> inspiration (7)
     assert.equal(workflowBtn.nextElementSibling, marketBtn, '项目后紧接技能专家')
-    assert.equal(inspirationBtn.nextElementSibling, exploreBtn, '探索行必须排在最下方（灵感社区正下方）')
-    assert.equal(exploreBtn.previousElementSibling, inspirationBtn)
+    assert.equal(marketBtn.nextElementSibling, assetsBtn)
+    assert.equal(assetsBtn.nextElementSibling, inspirationBtn, '灵感社区排在最下方')
   } finally {
     disposeWorkflow()
     disposeMarket()
     disposeAssets()
     disposeInspiration()
   }
-})
-
-test('探索行折叠态展示为居中图标，隐藏文案标签', async () => {
-  setup()
-  const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
-  installSidebarGlobal()
-  const api = SIDEBAR_GLOBAL()
-  api.place()
-
-  const root = document.querySelector('[data-pane="sidebar"]')
-  const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
-  const label = exploreBtn.querySelector('.omnimux-explore-entry-label')
-  const icon = exploreBtn.querySelector('.omnimux-explore-entry-icon')
-
-  assert.ok(label && icon, '展开态包含图标与标签')
-  assert.equal(label.textContent, '探索', '文案严格为「探索」')
-
-  const frame = document.querySelector('[data-omnimux-frame]')
-  frame.setAttribute('data-sidebar-collapsed', '')
-  api.place()
-
-  const css = document.getElementById('omnimux-sidebar-explore-styles')?.textContent ?? ''
-  assert.match(css, /\[data-sidebar-collapsed\][\s\S]*\.omnimux-explore-entry[\s\S]*width:\s*36px/)
-  assert.match(css, /\[data-sidebar-collapsed\][\s\S]*\.omnimux-explore-entry-label[\s\S]*display:\s*none/)
 })
 
 test('非核心插件（video, products, device, clip, social-harvest, apps 等）收敛，不渲染独立行', async () => {
@@ -513,59 +503,15 @@ test('非核心插件（video, products, device, clip, social-harvest, apps 等�
   for (const { dispose } of disposers) dispose()
 })
 
-test('点击探索行弹出浮动菜单，包含 Spec 锁定 10 项白名单与纯矢量 SVG', async () => {
+test('激活委托：命中已注册收敛元素时优先其 click，未注册时回落 tabId', async () => {
   setup()
-  const { installSidebarGlobal, SIDEBAR_GLOBAL, closeExploreMenu } = await import('./sidebar-coordinator.js')
-  installSidebarGlobal()
-  const api = SIDEBAR_GLOBAL()
-  api.place()
-
-  const root = document.querySelector('[data-pane="sidebar"]')
-  const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
-
-  exploreBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }))
-
-  const menu = document.getElementById('omnimux-explore-menu')
-  assert.ok(menu, '浮动菜单必须挂入 document.body')
-  assert.equal(menu.getAttribute('role'), 'menu')
-  assert.equal(exploreBtn.getAttribute('aria-expanded'), 'true')
-
-  const items = [...menu.querySelectorAll('.omnimux-explore-menu-item')]
-  assert.equal(items.length, 10, '菜单项必须严格为 10 项')
-
-  const expectedLabels = [
-    '应用', '视频剪辑', '产品库', '发布',
-    '账号', '手机管理', '数据分析', '自动化', '任务表单', '社交采收',
-  ]
-  const actualLabels = items.map((el) => el.querySelector('.omnimux-explore-menu-item-label')?.textContent?.trim())
-  assert.deepEqual(actualLabels, expectedLabels, '10项文案必须逐字匹配白名单')
-
-  // 严禁 Emoji（UI04 门禁硬规则），每项必须包含矢量 SVG
-  for (const item of items) {
-    const svg = item.querySelector('svg')
-    assert.ok(svg, '每项必须包含矢量 SVG 图标')
-    assert.equal(svg.getAttribute('viewBox'), '0 0 16 16')
-    assert.doesNotMatch(item.textContent, /[\u{1F300}-\u{1F9FF}]/u, '严禁任何 Emoji')
-  }
-
-  const dividers = menu.querySelectorAll('.omnimux-explore-menu-divider')
-  assert.ok(dividers.length >= 2, '包含细分割线')
-
-  // 再次点击探索行，切换关闭菜单
-  exploreBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }))
-  assert.equal(document.getElementById('omnimux-explore-menu'), null, '再次点击关闭菜单')
-})
-
-test('点击菜单项激活对应 Tab 并关闭菜单，支持委托收敛元素 click', async () => {
-  setup()
-  const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
   installSidebarGlobal()
   const api = SIDEBAR_GLOBAL()
 
   let clipClicks = 0
   const clipBtn = document.createElement('button')
   clipBtn.addEventListener('click', () => { clipClicks += 1 })
-  // 必须用 omnimux-clip 插件真实注册的 row.id；用旧 id 会让探索菜单 entryId 匹配不上而落到 tabId 兜底
+  // 必须用 omnimux-clip 插件真实注册的 row.id；用旧 id 会让菜单项 entryId 匹配不上而落到 tabId 兜底
   const disposeClip = api.register({ id: 'omnimux-clip-entry', rank: 8.2, create: () => clipBtn })
 
   let wbOpenedTab = null
@@ -575,26 +521,20 @@ test('点击菜单项激活对应 Tab 并关闭菜单，支持委托收敛元素
 
   try {
     api.place()
-    const root = document.querySelector('[data-pane="sidebar"]')
-    const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
+    const clipItem = EXPLORE_MENU_ITEMS.find((item) => item.id === 'clip')
+    assert.ok(clipItem, '真源清单含视频剪辑项')
 
-    // 1. 点击已注册的「视频剪辑」，委托触发 clipBtn.click()，不得回落到 open() 兜底
-    exploreBtn.click()
-    let menu = document.getElementById('omnimux-explore-menu')
-    const clipItem = menu.querySelector('[data-explore-id="clip"]')
-    clipItem.click()
+    // 1. 命中已注册的「视频剪辑」：委托触发 clipBtn.click()，不得回落到 open() 兜底
+    activateExploreItem(clipItem)
     assert.equal(clipClicks, 1, '优先触发已注册收敛元素的 click 处理器')
-    assert.equal(document.getElementById('omnimux-explore-menu'), null, '选后关闭菜单')
     assert.equal(wbOpenedTab, null, '命中已注册条目时不得回落到 window.__omnimuxWorkbench.open')
 
-    // 2. 点击未注册实际元素的「数据分析」，fallback 到 window.__omnimuxWorkbench.open
-    exploreBtn.click()
-    menu = document.getElementById('omnimux-explore-menu')
-    const analyticsItem = menu.querySelector('[data-explore-id="analytics"]')
-    analyticsItem.click()
+    // 2. 未注册实际元素的「数据分析」：fallback 到 window.__omnimuxWorkbench.open
+    const analyticsItem = EXPLORE_MENU_ITEMS.find((item) => item.id === 'analytics')
+    assert.ok(analyticsItem, '真源清单含数据分析项')
+    activateExploreItem(analyticsItem)
     assert.equal(wbOpenedTab?.tabId, 'omnimux-analytics:library')
     assert.equal(wbOpenedTab?.title, '数据分析')
-    assert.equal(document.getElementById('omnimux-explore-menu'), null, '选后关闭菜单')
   } finally {
     disposeClip()
     delete window.__omnimuxWorkbench
@@ -603,7 +543,6 @@ test('点击菜单项激活对应 Tab 并关闭菜单，支持委托收敛元素
 
 test('激活 apps 项时其 element.click 仅被调用一次，绝无重复点击', async () => {
   setup()
-  const { installSidebarGlobal, SIDEBAR_GLOBAL, activateExploreItem, EXPLORE_MENU_ITEMS } = await import('./sidebar-coordinator.js')
   installSidebarGlobal()
   const api = SIDEBAR_GLOBAL()
 
@@ -614,25 +553,16 @@ test('激活 apps 项时其 element.click 仅被调用一次，绝无重复点�
 
   try {
     api.place()
-    const root = document.querySelector('[data-pane="sidebar"]')
-    const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
-
-    // 1. 通过探索菜单点击「应用」项，验证 element.click 仅被调用一次，绝无重复点击
-    exploreBtn.click()
-    const menu = document.getElementById('omnimux-explore-menu')
-    assert.ok(menu, '探索菜单已打开')
-    const appsItemEl = menu.querySelector('[data-explore-id="apps"]')
-    assert.ok(appsItemEl, '找到应用菜单项')
-
-    appsItemEl.click()
-    assert.equal(appsClicks, 1, 'apps.action 执行并触发 element.click 仅 1 次，绝无重复点击')
-    assert.equal(document.getElementById('omnimux-explore-menu'), null, '选后关闭菜单')
-
-    // 2. 直接调用 activateExploreItem(appsItem)，再次验证仅触发 1 次（累计 2 次）
     const appsItem = EXPLORE_MENU_ITEMS.find((it) => it.id === 'apps')
     assert.ok(appsItem, 'EXPLORE_MENU_ITEMS 包含 apps')
+
+    // 1. 激活「应用」项：验证 element.click 仅被调用一次，绝无重复点击
     activateExploreItem(appsItem)
-    assert.equal(appsClicks, 2, '直接激活 apps 项时其 element.click 同样仅被调用 1 次')
+    assert.equal(appsClicks, 1, 'apps.action 执行并触发 element.click 仅 1 次，绝无重复点击')
+
+    // 2. 再次激活，同样仅触发 1 次（累计 2 次）
+    activateExploreItem(appsItem)
+    assert.equal(appsClicks, 2, '再次激活 apps 项时其 element.click 同样仅被调用 1 次')
   } finally {
     disposeApps()
   }
@@ -677,88 +607,8 @@ test('activateExploreItem 中 item.action 返回非 false 时阻止后续 regist
   }
 })
 
-test('按 Escape 键或点击外部可关闭探索浮动菜单', async () => {
+test('运行时注册接缝：未注册与内置 10 项完全一致，注册后追加末尾、注销即消失', async () => {
   setup()
-  const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
-  installSidebarGlobal()
-  const api = SIDEBAR_GLOBAL()
-  api.place()
-
-  const root = document.querySelector('[data-pane="sidebar"]')
-  const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
-
-  // 1. 按 Escape 键关闭
-  exploreBtn.click()
-  assert.ok(document.getElementById('omnimux-explore-menu'))
-  document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
-  assert.equal(document.getElementById('omnimux-explore-menu'), null, 'Esc 键关闭菜单')
-
-  // 2. 点击外部区域关闭
-  exploreBtn.click()
-  assert.ok(document.getElementById('omnimux-explore-menu'))
-  document.body.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true }))
-  assert.equal(document.getElementById('omnimux-explore-menu'), null, '点击外部关闭菜单')
-})
-
-test('computeExploreMenuPosition 具备视口防溢出几何计算', async () => {
-  setup()
-  const { computeExploreMenuPosition } = await import('./sidebar-coordinator.js')
-  const anchor = document.createElement('button')
-  document.body.append(anchor)
-
-  // 正常位置：显示在 anchor 右侧 6px
-  anchor.getBoundingClientRect = () => ({
-    x: 50, y: 100, left: 50, top: 100, width: 36, height: 36, right: 86, bottom: 136,
-  })
-  const posNormal = computeExploreMenuPosition(anchor, { innerWidth: 1280, innerHeight: 800 })
-  assert.equal(posNormal.left, 92, 'right + gap 6')
-  assert.equal(posNormal.top, 100, 'top 对齐')
-
-  // 右侧溢出位置：翻转到 anchor 左侧
-  anchor.getBoundingClientRect = () => ({
-    x: 1200, y: 100, left: 1200, top: 100, width: 36, height: 36, right: 1236, bottom: 136,
-  })
-  const posRightOverflow = computeExploreMenuPosition(anchor, { innerWidth: 1280, innerHeight: 800 })
-  assert.ok(posRightOverflow.left < 1200, '右侧溢出时翻转到左侧')
-
-  // 底部溢出位置：向上贴合防溢出
-  anchor.getBoundingClientRect = () => ({
-    x: 50, y: 700, left: 50, top: 700, width: 36, height: 36, right: 86, bottom: 736,
-  })
-  const posBottomOverflow = computeExploreMenuPosition(anchor, { innerWidth: 1280, innerHeight: 800 })
-  assert.ok(posBottomOverflow.top <= 800 - 380 - 8, '底部溢出时向上翻转贴合')
-})
-
-test('computeExploreMenuPosition 用实测菜单尺寸定位：长菜单底边必须留在视口内', async () => {
-  setup()
-  const { computeExploreMenuPosition } = await import('./sidebar-coordinator.js')
-  const anchor = document.createElement('button')
-  document.body.append(anchor)
-
-  // 运行时注册项会让菜单长到远超旧的 380px 常量
-  anchor.getBoundingClientRect = () => ({
-    x: 50, y: 700, left: 50, top: 700, width: 36, height: 36, right: 86, bottom: 736,
-  })
-
-  const viewport = { innerWidth: 1280, innerHeight: 800 }
-  const measured = computeExploreMenuPosition(anchor, viewport, { width: 200, height: 700 })
-  assert.equal(measured.top, 800 - 700 - 8, '按实测高度向上贴合视口下沿')
-  assert.ok(measured.top + 700 <= 800 - 8, '实测 700px 高菜单的底边必须留在视口内')
-  assert.ok(measured.top >= 8, '不得越过视口上沿')
-
-  // 缺省或零尺寸仍回落保守常量，既有行为不变
-  const fallback = computeExploreMenuPosition(anchor, viewport)
-  assert.equal(fallback.top, 800 - 380 - 8, '未提供实测尺寸时沿用保守常量')
-  assert.equal(
-    computeExploreMenuPosition(anchor, viewport, { width: 0, height: 0 }).top,
-    fallback.top,
-    '零尺寸回落保守常量',
-  )
-})
-
-test('探索菜单运行时注册接缝：未注册与内置 10 项完全一致，注册后追加且可注销', async () => {
-  setup()
-  const { installSidebarGlobal, SIDEBAR_GLOBAL, EXPLORE_MENU_ITEMS, resolveExploreMenuItems } = await import('./sidebar-coordinator.js')
   installSidebarGlobal()
   const api = SIDEBAR_GLOBAL()
 
@@ -770,11 +620,7 @@ test('探索菜单运行时注册接缝：未注册与内置 10 项完全一致�
     '未注册时菜单项 id 序列与内置完全一致',
   )
 
-  api.place()
-  const root = document.querySelector('[data-pane="sidebar"]')
-  const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
-
-  // AC2：注册后打开菜单，注册项追加在末尾且沿用既有菜单项结构
+  // AC2：注册后追加在末尾，字段白名单与内置项同形
   const unregister = api.registerExploreItem({
     id: 'fast-news-workbench',
     label: '快讯中枢',
@@ -783,42 +629,36 @@ test('探索菜单运行时注册接缝：未注册与内置 10 项完全一致�
   })
   assert.equal(typeof unregister, 'function', '注册返回注销函数')
 
-  exploreBtn.click()
-  let menu = document.getElementById('omnimux-explore-menu')
-  assert.ok(menu, '探索菜单已打开')
-  const ids = [...menu.querySelectorAll('[data-explore-id]')].map((el) => el.dataset.exploreId)
-  assert.equal(ids.length, 11, '注册后共 11 项')
-  assert.equal(ids[ids.length - 1], 'fast-news-workbench', '注册项追加在末尾')
+  const registered = resolveExploreMenuItems()
+  assert.equal(registered.length, 11, '注册后共 11 项')
+  const last = registered.at(-1)
+  assert.equal(last.id, 'fast-news-workbench', '注册项追加在末尾')
+  assert.equal(last.label, '快讯中枢')
+  assert.ok(last.iconSvg.includes('<svg'), '注册项带既有 iconSvg')
+  assert.equal(last.tabId, 'fast-news-workbench')
 
-  const registered = menu.querySelector('[data-explore-id="fast-news-workbench"]')
-  assert.equal(registered.getAttribute('aria-label'), '快讯中枢')
-  assert.equal(registered.querySelector('.omnimux-explore-menu-item-label').textContent, '快讯中枢')
-  assert.ok(registered.querySelector('.omnimux-explore-menu-item-icon svg'), '注册项复用既有图标容器')
-
-  // AC3：点击注册项走 tabId 兜底打开对应 Workbench Tab
+  // AC3：点击注册项走 tabId 兜底打开对应 Workbench Tab（渲染面在官方「更多」菜单）
   const opened = []
   window.__omnimuxWorkbench = { open: (opts) => { opened.push(opts); return true } }
-  registered.click()
+  api.place()
+  activateExploreItem(last)
   assert.deepEqual(opened, [{ tabId: 'fast-news-workbench', title: '快讯中枢' }], 'tabId 兜底打开一次')
-  assert.equal(document.getElementById('omnimux-explore-menu'), null, '选后关闭菜单')
 
-  // AC6：注销后菜单不再包含该项
+  // AC6：注销后集合不再包含该项
   unregister()
-  exploreBtn.click()
-  menu = document.getElementById('omnimux-explore-menu')
-  assert.equal(menu.querySelectorAll('[data-explore-id]').length, 10, '注销后回到 10 项')
-  assert.equal(menu.querySelector('[data-explore-id="fast-news-workbench"]'), null, '注销项不再渲染')
+  assert.equal(resolveExploreMenuItems().length, 10, '注销后回到 10 项')
+  assert.equal(
+    resolveExploreMenuItems().some((item) => item.id === 'fast-news-workbench'),
+    false,
+    '注销项不再出现',
+  )
   delete window.__omnimuxWorkbench
 })
 
-test('探索菜单运行时注册接缝：action 优先于 tabId，非法形状与 id 冲突不产生脏项', async () => {
+test('运行时注册接缝：action 优先于 tabId，非法形状与 id 冲突不产生脏项', async () => {
   setup()
-  const { installSidebarGlobal, SIDEBAR_GLOBAL, resolveExploreMenuItems } = await import('./sidebar-coordinator.js')
   installSidebarGlobal()
   const api = SIDEBAR_GLOBAL()
-  api.place()
-  const root = document.querySelector('[data-pane="sidebar"]')
-  const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
 
   // AC7：非法形状不注册、不抛错，仍返回可调用注销函数
   const invalid = [
@@ -870,9 +710,9 @@ test('探索菜单运行时注册接缝：action 优先于 tabId，非法形状�
   // AC4：action 返回 true 时不再走 tabId 兜底
   const opened = []
   window.__omnimuxWorkbench = { open: (opts) => { opened.push(opts); return true } }
-  exploreBtn.click()
-  const menu = document.getElementById('omnimux-explore-menu')
-  menu.querySelector('[data-explore-id="fast-news-workbench"]').click()
+  const registered = resolveExploreMenuItems().find((item) => item.id === 'fast-news-workbench')
+  assert.ok(registered, '注册项在集合内')
+  activateExploreItem(registered)
   assert.equal(actionCalls, 1, 'action 被调用一次')
   assert.deepEqual(opened, [], 'action 返回 true 时不走 tabId 兜底')
 
@@ -880,107 +720,4 @@ test('探索菜单运行时注册接缝：action 优先于 tabId，非法形状�
   unregisterSecond()
   assert.equal(resolveExploreMenuItems().length, 10, '全部注销后回到 10 项')
   delete window.__omnimuxWorkbench
-})
-
-test('探索入口悬停即展开：意图延时后出现，扫过不误触，移入菜单不闪断', async (t) => {
-  setup()
-  t.mock.timers.enable({ apis: ['setTimeout'] })
-  const {
-    installSidebarGlobal,
-    SIDEBAR_GLOBAL,
-    EXPLORE_HOVER_OPEN_DELAY,
-    EXPLORE_HOVER_CLOSE_DELAY,
-  } = await import('./sidebar-coordinator.js')
-  installSidebarGlobal()
-  const api = SIDEBAR_GLOBAL()
-  for (let i = 0; i < 3; i++) api.place()
-  const btn = document.querySelector('[data-omnimux-explore-entry]')
-  const hover = (el, type) => el.dispatchEvent(new dom.window.MouseEvent(type))
-
-  // AC2：扫过不误触 —— 意图延时未到就离开，不产生菜单
-  hover(btn, 'mouseenter')
-  t.mock.timers.tick(EXPLORE_HOVER_OPEN_DELAY - 1)
-  assert.equal(document.getElementById('omnimux-explore-menu'), null, '延时未到不展开')
-  hover(btn, 'mouseleave')
-  t.mock.timers.tick(EXPLORE_HOVER_CLOSE_DELAY)
-  assert.equal(document.getElementById('omnimux-explore-menu'), null, '扫过不误触')
-
-  // AC1：悬停即展开（全程没有点击）
-  hover(btn, 'mouseenter')
-  t.mock.timers.tick(EXPLORE_HOVER_OPEN_DELAY)
-  const menu = document.getElementById('omnimux-explore-menu')
-  assert.ok(menu, '仅悬停即出现菜单')
-  assert.equal(btn.getAttribute('aria-expanded'), 'true')
-
-  // AC3：指针从按钮斜向移进菜单，菜单不闪断
-  hover(menu, 'mouseenter')
-  hover(btn, 'mouseleave')
-  t.mock.timers.tick(EXPLORE_HOVER_CLOSE_DELAY)
-  assert.ok(document.getElementById('omnimux-explore-menu'), '指针移入菜单后保持展开')
-
-  // 移出菜单后收起
-  hover(menu, 'mouseleave')
-  t.mock.timers.tick(EXPLORE_HOVER_CLOSE_DELAY)
-  assert.equal(document.getElementById('omnimux-explore-menu'), null, '移出后收起')
-  assert.equal(btn.getAttribute('aria-expanded'), 'false')
-})
-
-test('探索入口：点击仍可开关，点击收起后悬停不立即重开', async (t) => {
-  setup()
-  t.mock.timers.enable({ apis: ['setTimeout'] })
-  const { installSidebarGlobal, SIDEBAR_GLOBAL, EXPLORE_HOVER_OPEN_DELAY } = await import('./sidebar-coordinator.js')
-  installSidebarGlobal()
-  const api = SIDEBAR_GLOBAL()
-  for (let i = 0; i < 3; i++) api.place()
-  const btn = document.querySelector('[data-omnimux-explore-entry]')
-  const hover = (el, type) => el.dispatchEvent(new dom.window.MouseEvent(type))
-
-  btn.click()
-  assert.ok(document.getElementById('omnimux-explore-menu'), '点击可展开')
-  btn.click()
-  assert.equal(document.getElementById('omnimux-explore-menu'), null, '再次点击可收起')
-
-  // AC4：指针仍停在按钮上，悬停不得立刻重开
-  hover(btn, 'mouseenter')
-  t.mock.timers.tick(EXPLORE_HOVER_OPEN_DELAY * 3)
-  assert.equal(document.getElementById('omnimux-explore-menu'), null, '点击收起后悬停不重开')
-
-  // 指针离开后悬停能力恢复
-  hover(btn, 'mouseleave')
-  hover(btn, 'mouseenter')
-  t.mock.timers.tick(EXPLORE_HOVER_OPEN_DELAY)
-  assert.ok(document.getElementById('omnimux-explore-menu'), '指针离开后悬停恢复')
-})
-
-test('探索入口：Esc 与焦点移出收起，收起时不留挂起定时器', async (t) => {
-  setup()
-  t.mock.timers.enable({ apis: ['setTimeout'] })
-  const { installSidebarGlobal, SIDEBAR_GLOBAL, EXPLORE_HOVER_OPEN_DELAY, EXPLORE_HOVER_CLOSE_DELAY } = await import('./sidebar-coordinator.js')
-  installSidebarGlobal()
-  const api = SIDEBAR_GLOBAL()
-  for (let i = 0; i < 3; i++) api.place()
-  const btn = document.querySelector('[data-omnimux-explore-entry]')
-  const hover = (el, type) => el.dispatchEvent(new dom.window.MouseEvent(type))
-  const openByHover = () => {
-    hover(btn, 'mouseenter')
-    t.mock.timers.tick(EXPLORE_HOVER_OPEN_DELAY)
-  }
-
-  // AC5：Esc 收起
-  openByHover()
-  assert.ok(document.getElementById('omnimux-explore-menu'))
-  document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
-  assert.equal(document.getElementById('omnimux-explore-menu'), null, 'Esc 收起')
-
-  // AC5：焦点移出按钮与菜单之外收起
-  openByHover()
-  assert.ok(document.getElementById('omnimux-explore-menu'))
-  btn.dispatchEvent(new dom.window.FocusEvent('focusout', { relatedTarget: document.body }))
-  assert.equal(document.getElementById('omnimux-explore-menu'), null, '焦点移出收起')
-
-  // AC6：收起已清空挂起定时器 —— 再推进时间不产生新的开合
-  hover(btn, 'mouseleave')
-  t.mock.timers.tick(EXPLORE_HOVER_CLOSE_DELAY * 4)
-  assert.equal(document.getElementById('omnimux-explore-menu'), null, '无残留定时器')
-  assert.equal(btn.getAttribute('aria-expanded'), 'false')
 })

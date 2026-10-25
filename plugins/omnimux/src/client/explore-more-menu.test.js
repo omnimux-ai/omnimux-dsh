@@ -29,7 +29,7 @@ const source = readFileSync(sourceFile, 'utf8')
 const built = await build({
   absWorkingDir: here,
   stdin: {
-    contents: "export * from './explore-more-menu.jsx'\nexport * as React from 'react'\nexport * as ReactDOMClient from 'react-dom/client'\n",
+    contents: "export * from './explore-more-menu.jsx'\nexport * as coordinator from './sidebar-coordinator.js'\nexport * as React from 'react'\nexport * as ReactDOMClient from 'react-dom/client'\n",
     resolveDir: here,
     loader: 'js',
   },
@@ -43,7 +43,7 @@ const built = await build({
 })
 const BUNDLE = built.outputFiles[0].text
 
-/** 真源清单（与浮动菜单同一份）：行文案、顺序、分组、图标都从这里取。 */
+/** 真源清单（sidebar-coordinator 单一真源）：行文案、顺序、分组、图标都从这里取。 */
 const TRUTH = resolveExploreMenuItems()
 const EXPECTED_LABELS = TRUTH.map((item) => item.label)
 const EXPECTED_SEPARATORS = TRUTH.map((item, index) => index > 0 && TRUTH.at(index - 1).dividerAfter === true)
@@ -57,6 +57,9 @@ function loadMenuBundle() {
     url: 'http://localhost/',
   })
   dom.window.IS_REACT_ACT_ENVIRONMENT = true
+  // coordinator 的 install() 会 setInterval(2s) 轮询侧栏就绪；测试里换成 no-op，避免挂住进程。
+  dom.window.setInterval = () => 0
+  dom.window.clearInterval = () => {}
   dom.window.MessageChannel = class {
     constructor() {
       this.port1 = { onmessage: null }
@@ -92,9 +95,54 @@ async function renderMoreMenu(props) {
     container,
     cleanup: () => {
       api.React.act(() => { root.unmount() })
-      dom.window.close()
+      closeMenuBundle(dom, api)
     },
   }
+}
+
+/**
+ * 可重挂载的菜单渲染器：官方「更多」菜单每次展开重新挂载即读最新集合，
+ * 因此注册 / 注销后必须重新挂载才能观察到集合变化。
+ */
+function createMenuRenderer(dom, api, props) {
+  const rows = []
+  const StubMenuItemButton = (rowProps) => {
+    rows.push(rowProps)
+    return api.React.createElement('div', { 'data-stub-row': String(rowProps.children) }, rowProps.children)
+  }
+  const Content = api.createExploreMoreMenuContent({ MenuItemButton: StubMenuItemButton })
+  const container = dom.window.document.getElementById('root')
+  let root = null
+  return {
+    rows,
+    container,
+    async render() {
+      rows.length = 0
+      if (root) api.React.act(() => { root.unmount() })
+      root = api.ReactDOMClient.createRoot(container)
+      await api.React.act(async () => {
+        root.render(api.React.createElement(Content, props))
+      })
+    },
+    unmount() {
+      if (root) api.React.act(() => { root.unmount() })
+      root = null
+    },
+  }
+}
+
+/** 在 bundle realm 装上 sidebar 全局，返回运行时注册接缝（与菜单共用同一份集合）。 */
+function installRuntimeRegistry(dom, api) {
+  api.coordinator.installSidebarGlobal()
+  const registry = dom.window.__omnimuxSidebar
+  assert.ok(registry && typeof registry.registerExploreItem === 'function', '运行时注册接缝必须可用')
+  return registry
+}
+
+/** 关窗前先断开 coordinator 的 observer / 定时器，避免 jsdom teardown 后回调再访问 document。 */
+function closeMenuBundle(dom, api) {
+  api.coordinator.resetSidebarCoordinatorForTests()
+  dom.window.close()
 }
 
 describe('官方「更多」菜单注册形状', () => {
@@ -125,7 +173,7 @@ describe('官方「更多」菜单注册形状', () => {
       ])
       assert.equal(typeof registrations.at(0).component, 'function', '注册的是 React 组件')
     } finally {
-      dom.window.close()
+      closeMenuBundle(dom, api)
     }
   })
 
@@ -137,7 +185,7 @@ describe('官方「更多」菜单注册形状', () => {
       assert.equal(api.installExploreMoreMenu(ctx, { MenuItemButton: () => null }), true)
       assert.equal(registerCalls, 0, 'seat 未声明时不得注册')
     } finally {
-      dom.window.close()
+      closeMenuBundle(dom, api)
     }
   })
 
@@ -149,7 +197,7 @@ describe('官方「更多」菜单注册形状', () => {
         assert.equal(api.installExploreMoreMenu(ctx, { MenuItemButton: () => null }), false)
       }
     } finally {
-      dom.window.close()
+      closeMenuBundle(dom, api)
     }
   })
 
@@ -172,7 +220,7 @@ describe('官方「更多」菜单注册形状', () => {
       }
       assert.equal(registerCalls, 0, '没有可渲染的行原语时不得注册空壳菜单')
     } finally {
-      dom.window.close()
+      closeMenuBundle(dom, api)
     }
   })
 })
@@ -277,6 +325,80 @@ describe('依赖注入与单一真源', () => {
     assert.doesNotMatch(source, /export\s+function\s+activateExploreItem/)
     for (const label of EXPECTED_LABELS) {
       assert.ok(!source.includes("'" + label + "'"), '模块源码不得硬编码清单文案 ' + label)
+    }
+  })
+})
+
+describe('官方「更多」菜单运行时注册接缝', () => {
+  it('运行时注册项出现在菜单末尾', async () => {
+    const { dom, api } = loadMenuBundle()
+    try {
+      const registry = installRuntimeRegistry(dom, api)
+      const menu = createMenuRenderer(dom, api, { onDismiss: () => {} })
+
+      await menu.render()
+      assert.equal(menu.rows.length, 10, '未注册时 10 行')
+
+      const unregister = registry.registerExploreItem({
+        id: 'fast-news-workbench',
+        label: '快讯中枢',
+        iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2 3.5h12v9H2z"/></svg>',
+        tabId: 'fast-news-workbench',
+      })
+      assert.equal(typeof unregister, 'function', '注册返回注销函数')
+
+      await menu.render()
+      assert.equal(menu.rows.length, 11, '注册后 11 行')
+      const labels = Array.from(menu.rows, (row) => row.children)
+      assert.equal(labels.at(-1), '快讯中枢', '注册项追加在菜单末尾')
+      assert.equal(labels.at(0), '应用', '内置首项不变')
+      menu.unmount()
+    } finally {
+      closeMenuBundle(dom, api)
+    }
+  })
+
+  it('注销后注册项从菜单消失，回到 10 行', async () => {
+    const { dom, api } = loadMenuBundle()
+    try {
+      const registry = installRuntimeRegistry(dom, api)
+      const menu = createMenuRenderer(dom, api, { onDismiss: () => {} })
+      const unregister = registry.registerExploreItem({
+        id: 'fast-news-workbench',
+        label: '快讯中枢',
+        iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2 3.5h12v9H2z"/></svg>',
+        tabId: 'fast-news-workbench',
+      })
+      await menu.render()
+      assert.equal(menu.rows.length, 11, '注册后 11 行')
+
+      unregister()
+      await menu.render()
+      assert.equal(menu.rows.length, 10, '注销后回到 10 行')
+      const labels = Array.from(menu.rows, (row) => row.children)
+      assert.equal(labels.includes('快讯中枢'), false, '注销项不再渲染')
+      menu.unmount()
+    } finally {
+      closeMenuBundle(dom, api)
+    }
+  })
+
+  it('与内置 id 冲突的注册项不出现（内置文案不被冒充）', async () => {
+    const { dom, api } = loadMenuBundle()
+    try {
+      const registry = installRuntimeRegistry(dom, api)
+      const menu = createMenuRenderer(dom, api, { onDismiss: () => {} })
+      const conflict = registry.registerExploreItem({ id: 'apps', label: '伪装应用', iconSvg: '<svg></svg>' })
+      assert.equal(typeof conflict, 'function', '冲突注册仍返回注销函数')
+
+      await menu.render()
+      assert.equal(menu.rows.length, 10, '冲突注册不新增行')
+      const labels = Array.from(menu.rows, (row) => row.children)
+      assert.equal(labels.at(0), '应用', '内置首项文案仍为「应用」')
+      assert.equal(labels.includes('伪装应用'), false, '冒充项不出现')
+      menu.unmount()
+    } finally {
+      closeMenuBundle(dom, api)
     }
   })
 })

@@ -23,39 +23,22 @@ test('硬门禁 1: 全库实际代码防透底与 Token 兜底扫描 (0 违规�
   )
 })
 
-test('硬门禁 2: sidebar-coordinator.js 探索菜单纯实体深色背景断言 (解决透光透字缺陷)', () => {
+test('硬门禁 2: sidebar-coordinator.js 不得再定义自绘探索浮层（入口已迁至官方「更多」菜单）', () => {
   const coordinatorPath = path.join(root, 'plugins/omnimux/src/client/sidebar-coordinator.js')
   assert.ok(fs.existsSync(coordinatorPath), 'sidebar-coordinator.js 必须存在')
   const content = fs.readFileSync(coordinatorPath, 'utf8')
 
-  const menuMatch = content.match(/\.omnimux-explore-menu\s*\{([^}]+)\}/)
-  assert.ok(menuMatch, '必须找到 .omnimux-explore-menu 样式块')
-  const styleBody = menuMatch[1]
-
-  // 1. 严禁任何伪毛玻璃透底滤镜
+  // 自绘「探索」常驻行与浮动菜单已退役（#3785）：该浮层的深色底约束随之失去守卫对象。
+  // 若它被重新引入，就会在官方「更多」菜单之外多出一个不受本门禁约束的浮层 —— 这里挡回退。
   assert.equal(
-    /backdrop-filter/i.test(styleBody),
+    /\.omnimux-explore-menu\s*\{/.test(content),
     false,
-    '.omnimux-explore-menu 严禁声明 backdrop-filter，杜绝将中栏内容模糊透射出来'
+    'sidebar-coordinator.js 不得再定义 .omnimux-explore-menu 浮层样式（入口已在官方「更多」菜单）'
   )
-
-  // 2. 严禁裸用未定义的 --dsw-alias-bg-elevated
   assert.equal(
-    /var\(\s*--dsw-alias-bg-elevated\s*\)/.test(styleBody),
+    content.includes('omnimux-sidebar-explore-styles'),
     false,
-    '.omnimux-explore-menu 严禁裸写 var(--dsw-alias-bg-elevated)，防止计算值回退为 transparent'
-  )
-
-  // 3. 必须使用标准深色层级变量，严禁使用导致浅灰偏色的 --dsw-alias-bg-overlay
-  assert.equal(
-    /--dsw-alias-bg-overlay\b/.test(styleBody),
-    false,
-    '.omnimux-explore-menu 严禁包含 --dsw-alias-bg-overlay，避免在深色主题下退化为 #61666b 中浅灰'
-  )
-  assert.match(
-    styleBody,
-    /background:\s*var\(--dsw-alias-bg-layer-2,\s*var\(--dsw-alias-bg-base\)\)/,
-    '.omnimux-explore-menu 必须使用官方深色规范层级底色'
+    'sidebar-coordinator.js 不得再注入探索浮层样式节点'
   )
 })
 

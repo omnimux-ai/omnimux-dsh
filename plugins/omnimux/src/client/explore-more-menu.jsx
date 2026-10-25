@@ -4,7 +4,8 @@
  * 宿主 `0.2.1-rc.3` 起，官方左侧栏的 panel list 自带「更多」行：root 作用域的
  * list seat `sidebar.panellist.actions` 只要有注册就渲染该行，注册项**直接渲染成
  * 菜单行**（官方参考实现 `packages/client/ui-entry-customization/src/client/EntryMenuContent.tsx`）。
- * 本模块把 OmniMux 的同一份探索入口注册进那个官方菜单，与自绘「探索」浮动菜单并存。
+ * 本模块把 OmniMux 的探索入口注册进那个官方菜单：自绘「探索」常驻行与浮动菜单已在
+ * #3785 退役，这里是这批入口在侧栏的唯一渲染面。
  *
  * 单一真源：清单 / 图标 / 分组 / 激活语义全部取自 `sidebar-coordinator.js`，
  * 本模块不复制第二份实现（契约 docs/contracts/sidebar-extra-entries.md）。
@@ -35,7 +36,7 @@ function isRenderableComponent(value) {
 
 /**
  * 菜单行图标：沿用清单里的既有 `iconSvg`。
- * 与 DOM 浮动菜单同一信任边界（契约要求 14×14 纯矢量 HTML，无 Emoji）；
+ * 与真源清单同一信任边界（契约要求 14×14 纯矢量 HTML，无 Emoji）；
  * 行文案（`label`）一律按纯文本交给 React，绝不拼进 HTML。
  * @param {{ iconSvg: string }} item
  * @returns {import('react').ReactElement}
@@ -51,13 +52,12 @@ function exploreMoreMenuIcon(item) {
 }
 
 /**
- * 生成「更多」菜单内容组件：与浮动菜单同序、同分组、同激活委托。
+ * 生成「更多」菜单内容组件：顺序 / 分组 / 激活委托全部取自 sidebar-coordinator 真源。
  *
- * - 分组：`separatorBefore` 取「上一项的 `dividerAfter`」，与浮动菜单的分隔线同构；
+ * - 分组：`separatorBefore` 取「上一项的 `dividerAfter`」；
  * - 点击：先 `onDismiss()` 关掉官方菜单，再走 `activateExploreItem` 既有三段委托
  *   （`action` → 已挂载行 click → `__omnimuxWorkbench.open`），不另写导航；
- * - 不订阅注册变更：官方菜单每次展开重新挂载即读取最新集合，与浮动菜单
- *   「下次展开即最新集合」语义一致。
+ * - 不订阅注册变更：官方菜单每次展开重新挂载即读取最新集合。
  *
  * @param {{ MenuItemButton?: import('react').ComponentType<object> }} [primitives]
  *   官方 primitives 命名空间（只需 `MenuItemButton`）。

@@ -1,0 +1,32 @@
+{
+  "taskId": "omnimux-remove-explore-entry-issue-3785",
+  "base": "dfc4e58e0e5bb1ac4855ab02d8df30da7c62d0b3",
+  "head": "dfc4e58e0e5bb1ac4855ab02d8df30da7c62d0b3",
+  "scope": "task",
+  "taskPlugins": ["omnimux-inspiration"],
+  "journey": ".workbuddy/evidence/remove-explore-3785/journey-explore-removed.mjs",
+  "artifactNames": ["explore-removed-observation.json", "more-menu-baseline.png", "more-menu-runtime-item.png", "more-menu-after-unregister.png"],
+  "requiredChecks": ["app-environment", "app-browser", "task-journey"],
+  "expectedAssertions": {
+    "app-environment": ["app-runtime-ready", "same-origin-login", "task-source-installed-loaded"],
+    "app-browser": [
+      "chrome-cdp-listen",
+      "auth-cookie-applied",
+      "app-dom-mounted",
+      "visible-geometry-positive",
+      "runtime-modal-bypassed",
+      "blank-session-guide-visible",
+      "explore-section-visible",
+      "explore-cards-present",
+      "asset-hub-reachable-via-library",
+      "screenshot-png-verified"
+    ],
+    "task-journey": [
+      "journey:explore-entry-absent",
+      "journey:more-menu-ten-items-in-order",
+      "journey:more-menu-separators-match",
+      "journey:runtime-item-appended-and-removed",
+      "journey:observation-recorded"
+    ]
+  }
+}
