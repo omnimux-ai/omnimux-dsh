@@ -95,18 +95,18 @@ if (node.type === 'SpreadElement' || node.type === 'ImportExpression' || node.ty
 逐字节副本，仅追加 `export { collectRisks }`；`new-impl.mjs` 同法取自本工作树），
 `/tmp/gate-e2e/`（`git clone --shared` 的仓库副本，提交在里面造，仓库零改动）。
 
-**① 被豁免场景：收窄前红 → 收窄后绿（全仓真实文件，2030 个受保护测试文件）**
+**① 被豁免场景：收窄前红 → 收窄后绿（全仓真实文件；本机枚举 2030 个受保护测试文件，独立复核实测为 2053 个——口径是超集，221 个解析失败两边完全一致）**
 
 | 变异（追加到真实测试文件） | 收窄前拒绝 | 收窄后拒绝 | 翻绿 |
 | --- | --- | --- | --- |
-| `const omnimuxProbeArrayCopy = [...arr]` | 2030 | 221（全为解析失败） | **1809** |
-| `const omnimuxProbeObjectCopy = { ...obj }` | 2030 | 221（全为解析失败） | **1809** |
+| `const omnimuxProbeArrayCopy = [...arr]` | 2030（复核 2053） | 221（全为解析失败） | **1809** |
+| `const omnimuxProbeObjectCopy = { ...obj }` | 2030（复核 2053） | 221（全为解析失败） | **1809** |
 
-**② 范围外仍红（同一批 2030 个真实文件、同一命令）**
+**② 范围外仍红（同一批真实文件、同一命令；数字按本机 2030 口径）**
 
 | 变异 | 收窄前拒绝 | 收窄后拒绝 | 翻绿 | 反向新增拒绝 |
 | --- | --- | --- | --- | --- |
-| `fn(...args)` | 2030 | 2030 | 0 | 0 |
+| `fn(...args)` | 2030（复核 2053） | 2030（复核 2053） | 0 | 0 |
 | `new Ctor(...args)` | 2030 | 2030 | 0 | 0 |
 | `test.skip('added', () => {})` | 2030 | 2030 | 0 | 0 |
 | `eval(code)` | 2030 | 2030 | 0 | 0 |
@@ -116,9 +116,9 @@ if (node.type === 'SpreadElement' || node.type === 'ImportExpression' || node.ty
 
 **③ 只窄在这一处（风险多重集差集；1809 个可解析受保护测试文件中 641 个含非调用位展开）**
 
-- 旧实现风险 − 新实现风险 = **3020** 条；新实现风险 − 旧实现风险 = **0** 条。
-- 3020 条全部 `reason === 'dynamic-test-execution-needs-review'` 且锚点是 `SpreadElement`
-  （`diffReasonViolations = []`）；独立 acorn 遍历统计的非调用位 `SpreadElement` 数量同为 **3020**，
+- 旧实现风险 − 新实现风险 = **3020（复核实测 3056，口径为超集；方向与逐文件等式不变）** 条；新实现风险 − 旧实现风险 = **0** 条。
+- 3020（复核实测 3056，口径为超集；方向与逐文件等式不变） 条全部 `reason === 'dynamic-test-execution-needs-review'` 且锚点是 `SpreadElement`
+  （`diffReasonViolations = []`）；独立 acorn 遍历统计的非调用位 `SpreadElement` 数量同为 **3020（复核实测 3056，口径为超集；方向与逐文件等式不变）**，
   调用位 `SpreadElement`（例如 `packages/generation-capabilities/test/assignment.test.mjs` 的 1 处）
   一条都没被移除。反向差集为空 → 没有任何新增风险、也没有任何其它原因被顺手放行。
 
@@ -163,7 +163,7 @@ if (node.type === 'SpreadElement' || node.type === 'ImportExpression' || node.ty
    第二批 `18 tests / 18 pass / 0 fail`。`pnpm check:boundaries` → exit 0
    （`4510 source file(s) … verified`）。
 5. 真实文件差异：全仓 2030 个受保护测试文件（1809 可解析 / 221 解析失败）中，
-   「旧风险 − 新风险」= **3020** 条且**全部**是非调用位 `SpreadElement`，
+   「旧风险 − 新风险」= **3020（复核实测 3056，口径为超集；方向与逐文件等式不变）** 条且**全部**是非调用位 `SpreadElement`，
    「新风险 − 旧风险」= **0** 条 —— 只窄在这一处，无任何其它原因翻转。
 6. 合同措辞：`grep -rn '调用位|SpreadElement|任意展开' docs/ .agents/` 无命中，
    `docs/contracts/anti-agent-fake-completion-guard.md` §3.1 只写「已识别的动态成员或执行」，

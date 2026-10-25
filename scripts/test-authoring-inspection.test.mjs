@@ -427,9 +427,9 @@ test('call-position spread stays an execution risk while array and object spread
     'consume({ ...obj })',
     'consume([1, ...arr, 2])',
     'consume({ first: 1, ...obj })',
-    'function read(...rest) { return rest }',
-    'function read([first, ...rest]) { return rest }',
-    'function read({ first, ...rest }) { return rest }',
+    'function read(...rest) { return [...rest] }',
+    'function read([first, ...rest]) { return { ...rest } }',
+    'function read({ first, ...rest }) { return [...rest] }',
     "test('case', () => { assert.deepEqual([...actual], expected) })",
   ]) assert.equal(inspectTestAuthoring(source).allowed, true, source)
   const copyBefore = "test('case', () => { const copy = [...arr]; assert.deepEqual(copy, expected) })"
