@@ -62,8 +62,8 @@ test('unknown options and unsupported syntax are honestly refused', () => {
 })
 
 test('unused safe sibling imports preserve existing use-site risks only in delta inspection', () => {
-  const before = "import { values } from './domain.mjs'; consume([...values])"
-  const after = "import { values, safeApi } from './domain.mjs'; consume([...values])"
+  const before = "import { values } from './domain.mjs'; consume(...values)"
+  const after = "import { values, safeApi } from './domain.mjs'; consume(...values)"
   assert.equal(inspectTestAuthoringDelta(before, after).allowed, true)
   assert.equal(inspectTestAuthoring(after).allowed, false)
 
@@ -78,9 +78,9 @@ test('unused safe sibling imports preserve existing use-site risks only in delta
 
 test('default namespace and literal named bindings ignore unused safe siblings at use sites', () => {
   for (const [before, after] of [
-    ["import values from './domain.mjs'; consume([...values])", "import values, { safeApi } from './domain.mjs'; consume([...values])"],
-    ["import * as values from './domain.mjs'; consume([...values])", "import safeApi, * as values from './domain.mjs'; consume([...values])"],
-    ["import { 'values' as values } from './domain.mjs'; consume([...values])", "import { 'values' as values, safeApi } from './domain.mjs'; consume([...values])"],
+    ["import values from './domain.mjs'; consume(...values)", "import values, { safeApi } from './domain.mjs'; consume(...values)"],
+    ["import * as values from './domain.mjs'; consume(...values)", "import safeApi, * as values from './domain.mjs'; consume(...values)"],
+    ["import { 'values' as values } from './domain.mjs'; consume(...values)", "import { 'values' as values, safeApi } from './domain.mjs'; consume(...values)"],
   ]) {
     assert.equal(inspectTestAuthoringDelta(before, after).allowed, true, after)
     assert.equal(inspectTestAuthoring(after).allowed, false, after)
@@ -88,45 +88,45 @@ test('default namespace and literal named bindings ignore unused safe siblings a
 })
 
 test('supported import attributes preserve siblings but retain value raw and key identity', () => {
-  const before = "import { values } from './domain.mjs' with { type: 'json' }; consume([...values])"
-  const after = "import { values, safeApi } from './domain.mjs' with { type: 'json' }; consume([...values])"
+  const before = "import { values } from './domain.mjs' with { type: 'json' }; consume(...values)"
+  const after = "import { values, safeApi } from './domain.mjs' with { type: 'json' }; consume(...values)"
   assert.equal(inspectTestAuthoringDelta(before, after).allowed, true)
   for (const changed of [
-    "import { values } from './domain.mjs' with { type: 'text' }; consume([...values])",
-    'import { values } from \'./domain.mjs\' with { type: "json" }; consume([...values])',
-    "import { values } from './domain.mjs' with { format: 'json' }; consume([...values])",
-    "import { values } from './domain.mjs'; consume([...values])",
-    "import { values } from './domain.mjs' assert { type: 'json' }; consume([...values])",
+    "import { values } from './domain.mjs' with { type: 'text' }; consume(...values)",
+    'import { values } from \'./domain.mjs\' with { type: "json" }; consume(...values)',
+    "import { values } from './domain.mjs' with { format: 'json' }; consume(...values)",
+    "import { values } from './domain.mjs'; consume(...values)",
+    "import { values } from './domain.mjs' assert { type: 'json' }; consume(...values)",
   ]) assert.equal(inspectTestAuthoringDelta(before, changed).allowed, false, changed)
 })
 
 test('source literal imported local and binding kind changes still change existing risks', () => {
-  const before = "import { values } from './domain.mjs'; consume([...values])"
+  const before = "import { values } from './domain.mjs'; consume(...values)"
   for (const after of [
-    "import { values } from './other.mjs'; consume([...values])",
-    'import { values } from "./domain.mjs"; consume([...values])',
-    "import { otherValues as values } from './domain.mjs'; consume([...values])",
-    "import { values as renamed } from './domain.mjs'; consume([...renamed])",
-    "import values from './domain.mjs'; consume([...values])",
-    "import * as values from './domain.mjs'; consume([...values])",
-    "import { 'values' as values } from './domain.mjs'; consume([...values])",
+    "import { values } from './other.mjs'; consume(...values)",
+    'import { values } from "./domain.mjs"; consume(...values)',
+    "import { otherValues as values } from './domain.mjs'; consume(...values)",
+    "import { values as renamed } from './domain.mjs'; consume(...renamed)",
+    "import values from './domain.mjs'; consume(...values)",
+    "import * as values from './domain.mjs'; consume(...values)",
+    "import { 'values' as values } from './domain.mjs'; consume(...values)",
   ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
-  const literalBefore = "import { 'values' as values } from './domain.mjs'; consume([...values])"
-  assert.equal(inspectTestAuthoringDelta(literalBefore, "import { 'otherValues' as values } from './domain.mjs'; consume([...values])").allowed, false)
-  assert.equal(inspectTestAuthoringDelta("import values from './domain.mjs'; consume([...values])", "import * as values from './domain.mjs'; consume([...values])").allowed, false)
+  const literalBefore = "import { 'values' as values } from './domain.mjs'; consume(...values)"
+  assert.equal(inspectTestAuthoringDelta(literalBefore, "import { 'otherValues' as values } from './domain.mjs'; consume(...values)").allowed, false)
+  assert.equal(inspectTestAuthoringDelta("import values from './domain.mjs'; consume(...values)", "import * as values from './domain.mjs'; consume(...values)").allowed, false)
 })
 
-test('unused known execution imports new spreads and unsupported candidates remain denied', () => {
-  const before = "import { values } from './domain.mjs'; consume([...values])"
+test('unused known execution imports new call-position spreads and unsupported candidates remain denied', () => {
+  const before = "import { values } from './domain.mjs'; consume(...values)"
   for (const after of [
-    "import { values, eval as extraExecution } from './domain.mjs'; consume([...values])",
-    "import { values, constructor as extraExecution } from './domain.mjs'; consume([...values])",
-    "import { values } from './domain.mjs'; import vm from 'node:vm'; consume([...values])",
-    "import { values } from './domain.mjs'; import worker from 'node:worker_threads'; consume([...values])",
-    "import { values } from './domain.mjs'; consume([...values]); consume([...extra])",
-    "import { values } from './domain.mjs'; consume([...values]); const typed: number = 1",
-    "import { values } from './domain.mjs'; consume([...values]); test(",
-    "import type { values } from './domain.mjs'; consume([...values])",
+    "import { values, eval as extraExecution } from './domain.mjs'; consume(...values)",
+    "import { values, constructor as extraExecution } from './domain.mjs'; consume(...values)",
+    "import { values } from './domain.mjs'; import vm from 'node:vm'; consume(...values)",
+    "import { values } from './domain.mjs'; import worker from 'node:worker_threads'; consume(...values)",
+    "import { values } from './domain.mjs'; consume(...values); consume(...extra)",
+    "import { values } from './domain.mjs'; consume(...values); const typed: number = 1",
+    "import { values } from './domain.mjs'; consume(...values); test(",
+    "import type { values } from './domain.mjs'; consume(...values)",
   ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
 })
 
@@ -143,20 +143,20 @@ test('declarations and noncomputed names are not references in risk bodies or co
     "async function read() { const [safeApi = 1, ...rest] = await import('./data.mjs') }",
     "async function read() { const { other: safeApi } = await import('./data.mjs') }",
     "async function read() { const { nested: [safeApi, ...rest] } = await import('./data.mjs') }",
-    "function read(safeApi, { nested: [other] }, ...rest) { consume([...values]) }",
-    "function read(...safeApi) { consume([...values]) }",
-    "consume((safeApi) => [...values])",
-    "try { step() } catch (safeApi) { consume([...values]) }",
-    "consume(function safeApi() { return [...values] })",
-    "consume(class safeApi extends factory([...values]) {})",
-    "try { step() } catch ({ safeApi }) { consume([...values]) }",
-    "consume({ safeApi: [...values] })",
-    "consume({ safeApi() { return [...values] } })",
-    "class Example { safeApi = [...values] }",
-    "consume(object.safeApi, [...values])",
-    "safeApi: for (;;) { consume([...values]); break safeApi }",
-    "import { safeApi as local } from './data.mjs'; consume([...values])",
-    "const value = 'safeApi'; consume([...values])",
+    "function read(safeApi, { nested: [other] }, ...rest) { consume(...values) }",
+    "function read(...safeApi) { consume(...values) }",
+    "consume((safeApi) => consume(...values))",
+    "try { step() } catch (safeApi) { consume(...values) }",
+    "consume(function safeApi() { return consume(...values) })",
+    "consume(class safeApi extends factory(...values) {})",
+    "try { step() } catch ({ safeApi }) { consume(...values) }",
+    "consume({ safeApi: factory(...values) })",
+    "consume({ safeApi() { return consume(...values) } })",
+    "class Example { safeApi = factory(...values) }",
+    "consume(object.safeApi, ...values)",
+    "safeApi: for (;;) { consume(...values); break safeApi }",
+    "import { safeApi as local } from './data.mjs'; consume(...values)",
+    "const value = 'safeApi'; consume(...values)",
   ]) {
     const after = "import { safeApi } from './safeApi'; " + before
     assert.equal(inspectTestAuthoringDelta(before, after).allowed, true, before)
@@ -166,19 +166,19 @@ test('declarations and noncomputed names are not references in risk bodies or co
 
 test('shorthand computed and default expressions remain genuine references', () => {
   for (const before of [
-    'consume({ safeApi }, [...values])',
-    'consume({ [safeApi]: 1 }, [...values])',
-    'consume(object[safeApi], [...values])',
+    'consume({ safeApi }, ...values)',
+    'consume({ [safeApi]: 1 }, ...values)',
+    'consume(object[safeApi], ...values)',
     "async function read() { const { [safeApi]: local } = await import('./data.mjs') }",
     "async function read() { const { local = safeApi } = await import('./data.mjs') }",
     "async function read() { const [local = safeApi] = await import('./data.mjs') }",
-    'function read(local = safeApi) { consume([...values]) }',
-    'function read({ local = safeApi }) { consume([...values]) }',
-    'function read({ [safeApi]: local }) { consume([...values]) }',
-    'try { step() } catch ({ local = safeApi }) { consume([...values]) }',
-    'consume({ safeApi = fallback } = input, [...values])',
-    'consume({ safeApi }, [...safeApi])',
-    'consume(safeApi, [...values])',
+    'function read(local = safeApi) { consume(...values) }',
+    'function read({ local = safeApi }) { consume(...values) }',
+    'function read({ [safeApi]: local }) { consume(...values) }',
+    'try { step() } catch ({ local = safeApi }) { consume(...values) }',
+    'consume({ safeApi = fallback } = input, ...values)',
+    'consume({ safeApi }, ...safeApi)',
+    'consume(safeApi, ...values)',
   ]) {
     const after = "import { safeApi } from './domain.mjs'; " + before
     assert.equal(inspectTestAuthoringDelta(before, before).allowed, true, before)
@@ -188,25 +188,25 @@ test('shorthand computed and default expressions remain genuine references', () 
 
 test('genuine locally shadowed references remain conservatively associated without scope analysis', () => {
   for (const before of [
-    'function read(safeApi) { consume([...safeApi]) }',
-    'function read() { const safeApi = values; consume([...safeApi]) }',
-    '{ let safeApi = values; consume([...safeApi]) }',
-    'function read(safeApi, local = safeApi) { consume([...values]) }',
+    'function read(safeApi) { consume(...safeApi) }',
+    'function read() { const safeApi = values; consume(...safeApi) }',
+    '{ let safeApi = values; consume(...safeApi) }',
+    'function read(safeApi, local = safeApi) { consume(...values) }',
   ]) assert.equal(inspectTestAuthoringDelta(before, "import { safeApi } from './domain.mjs'; " + before).allowed, false, before)
 })
 
 test('role filtering preserves context slots and multiset excess while enclosing renames stay allowed', () => {
   // 位置身份不含文本：给包裹函数改名是维护动作，构造与位置结构都没变 → 放行（#3754）。
   assert.equal(inspectTestAuthoringDelta(
-    "function first(safeApi) { consume([...values]) }",
-    "function second(safeApi) { consume([...values]) }",
+    "function first(safeApi) { consume(...values) }",
+    "function second(safeApi) { consume(...values) }",
   ).allowed, true)
   for (const [before, after] of [
-    ["consume(() => [...values], () => 1)", "consume(() => 1, () => [...values])"],
-    ["function read() { consume([...values]) }", "function read() { consume([...values]) } function readAgain() { consume([...values]) }"],
-    ["consume([...values])", "consume([...values]); consume([...values])"],
-    ["consume([...values])", "consume([...values]); eval(code)"],
-    ["consume([...values])", "import vm from 'node:vm'; consume([...values])"],
+    ["consume(() => consume(...values), () => 1)", "consume(() => 1, () => consume(...values))"],
+    ["function read() { consume(...values) }", "function read() { consume(...values) } function readAgain() { consume(...values) }"],
+    ["consume(...values)", "consume(...values); consume(...values)"],
+    ["consume(...values)", "consume(...values); eval(code)"],
+    ["consume(...values)", "import vm from 'node:vm'; consume(...values)"],
   ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
 })
 
@@ -300,7 +300,7 @@ test('parent stability never absorbs changed imports options or new execution ri
     "test('new', options, async () => {})",
     "test(scenario.name, async () => {})",
     "new Example(...values)",
-    "consume([...values])",
+    "consume(...values)",
     "import vm from 'node:vm'",
     "import { constructor as create } from './domain.mjs'",
     "eval(code)",
@@ -391,6 +391,93 @@ test('old-standard declarations must match both path and case name', () => {
     matchOldStandardDeclarations({ declarations, filePath: 'plugins/demo/tests/unknown.test.mjs', changedCases: ['keeps contract'] }),
     { ok: false, missing: ['keeps contract'] },
   )
+})
+
+// 口径收窄：数组/对象展开是**数据拷贝**，只有**调用位**展开（`f(...args)` / `new C(...args)`）
+// 才是执行风险。判定基于 AST 父节点与 `arguments` 槽位，不做文本匹配。
+test('call-position spread stays an execution risk while array and object spread is data copy', () => {
+  // ① 调用位展开：硬拒，原因是执行风险，且该原因没有可点名的声明对象（通道打不开）。
+  for (const source of [
+    'consume(...values)',
+    'fn(...args)',
+    'new Example(...values)',
+    'consume([1], ...values)',
+    'consume(...values, 1)',
+    'consume(...first, ...second)',
+    'new (factory())(...values)',
+  ]) {
+    const inspection = inspectTestAuthoring(source)
+    assert.equal(inspection.allowed, false, source)
+    assert.equal(inspection.reason, 'dynamic-test-execution-needs-review', source)
+  }
+  // 原因不可声明：把同一处调用位展开加进既有用例，声明通道拿不到可点名的用例。
+  const spreadAdded = inspectTestStandardChange(
+    "test('case', () => {})",
+    "test('case', () => { fn(...args) })",
+  )
+  assert.equal(spreadAdded.allowed, false)
+  assert.equal(spreadAdded.reason, 'dynamic-test-execution-needs-review')
+  assert.deepEqual(spreadAdded.changedCases, [])
+
+  // ③ 数组/对象展开（既有构造与新增构造）都放行：不是执行风险，也不改变既有标准。
+  for (const source of [
+    'const copy = [...arr]',
+    'const clone = { ...obj }',
+    'consume([...arr])',
+    'consume({ ...obj })',
+    'consume([1, ...arr, 2])',
+    'consume({ first: 1, ...obj })',
+    'function read(...rest) { return [...rest] }',
+    'function read([first, ...rest]) { return { ...rest } }',
+    'function read({ first, ...rest }) { return [...rest] }',
+    "test('case', () => { assert.deepEqual([...actual], expected) })",
+  ]) assert.equal(inspectTestAuthoring(source).allowed, true, source)
+  const copyBefore = "test('case', () => { const copy = [...arr]; assert.deepEqual(copy, expected) })"
+  const copyAfter = "test('case', () => { const copy = [...arr]; const clone = { ...obj }; assert.deepEqual(copy, expected) })"
+  assert.equal(inspectTestAuthoringDelta(copyBefore, copyAfter).allowed, true)
+  assert.equal(inspectTestStandardChange(copyBefore, copyAfter).allowed, true)
+})
+
+// ④ 嵌套：`f([...a])` 的展开父节点是数组字面量 → 放行；`f(...a)` 的父节点是调用 → 拒绝。
+test('only the call position counts so nested array spread passes while call spread is denied', () => {
+  for (const source of [
+    'consume([...a])',
+    'consume({ ...a })',
+    'consume([[...a]])',
+    'consume({ key: [...a] })',
+    'consume(f([...a]))',
+    'new Example([...a])',
+    'const opts = { ...a }; consume(opts)',
+  ]) assert.equal(inspectTestAuthoring(source).allowed, true, source)
+  for (const source of [
+    'consume(...a)',
+    'consume(f(...a))',
+    'new Example(...a)',
+    'consume([...a], ...b)',
+  ]) {
+    const inspection = inspectTestAuthoring(source)
+    assert.equal(inspection.allowed, false, source)
+    assert.equal(inspection.reason, 'dynamic-test-execution-needs-review', source)
+  }
+})
+
+// ⑤ 回归护栏：收窄只碰「非调用位展开」，其余风险类别逐条保持原判。
+test('non-spread execution risks keep their verdicts after the narrowing', () => {
+  for (const [source, reason] of [
+    ['const value: number = 1', 'unsupported-or-incomplete-test-syntax'],
+    ["test.skip('case', () => {})", 'test-execution-selector-needs-review'],
+    ["it.only('case', () => {})", 'test-execution-selector-needs-review'],
+    ["xit('case', () => {})", 'test-execution-selector-needs-review'],
+    ['eval(code)', 'dynamic-test-execution-needs-review'],
+    ["new Function('code')", 'dynamic-test-execution-needs-review'],
+    ["require('./x')", 'dynamic-test-execution-needs-review'],
+    ['const module_ = import("./x")', 'dynamic-test-execution-needs-review'],
+    ['data[key]', 'dynamic-test-member-needs-review'],
+  ]) {
+    const inspection = inspectTestAuthoring(source)
+    assert.equal(inspection.allowed, false, source)
+    assert.equal(inspection.reason, reason, source)
+  }
 })
 
 // 旧式跳过/聚焦别名与 `test.skip` / `test.only` 语义等价，必须同样被识别。
