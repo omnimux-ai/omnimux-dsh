@@ -31,7 +31,7 @@
 ## 5. 证伪方式
 
 - 若默认套件里仍有 spec 无法收集：`npx vitest run` 必须 0 个 "Cannot find package"。
-- 若把 e2e 排除当成"掩盖失败"：`pnpm --filter omnimux-browser test:e2e` 必须真的列出并运行 5 个 e2e 文件（`vitest list --config vitest.e2e.config.ts` 数得出来），不得是空跑。
+- 若把 e2e 排除当成"掩盖失败"：`pnpm --filter omnimux-browser test:e2e` 必须真的跑到 5 个 e2e 文件（`test:e2e` 运行摘要显示 `Test Files … (5)`；`vitest list` 只列默认会跑到的用例，纯 skip 的两个文件不在其中），不得是空跑。
 - **如实描述 skip 语义**：这 5 个 e2e 内部用 `describe.skipIf(!runnable)`，前置条件（chromium 缓存、`extension/dist/manifest.json`）缺失时它们报 skip 而**不是** fail——也就是说这个入口不会替你发现环境没准备好，它只是显式的手动验收通道，不是门禁。本 spec 与 PR 正文按此描述，不写成"缺前置会如实报错"。
 - 若 devDep 引入重复单例：`pnpm verify:plugin-load` 与 `pnpm test:gates` 必须仍全绿。
 
@@ -74,5 +74,5 @@
 
 | 缺陷 | 整改 |
 | --- | --- |
-| **阻断**：`test:e2e` 是死入口——`vitest.config.ts` 的 `exclude: ['tests/e2e/**']` 连 CLI 位置参数一起挡死，实测 `No test files found, exiting with code 1`；且正文声称"缺前置会如实报错"被证伪（那 5 个 e2e 是 `describe.skipIf`，缺 chromium 时报 skip、exit 0） | 新增 `vitest.e2e.config.ts`（`include: ['tests/e2e/**/*.spec.ts']`，不带 e2e exclude），`test:e2e` 改为 `vitest run --config vitest.e2e.config.ts`；实测 `vitest list` 列出 **5 个** e2e 文件，`pnpm --filter omnimux-browser test:e2e` exit 0（3 文件通过 / 2 跳过，5 用例通过 / 4 跳过）。同时把 spec 与 PR 正文改成如实描述 skip 语义 |
+| **阻断**：`test:e2e` 是死入口——`vitest.config.ts` 的 `exclude: ['tests/e2e/**']` 连 CLI 位置参数一起挡死，实测 `No test files found, exiting with code 1`；且正文声称"缺前置会如实报错"被证伪（那 5 个 e2e 是 `describe.skipIf`，缺 chromium 时报 skip、exit 0） | 新增 `vitest.e2e.config.ts`（`include: ['tests/e2e/**/*.spec.ts']`，不带 e2e exclude），`test:e2e` 改为 `vitest run --config vitest.e2e.config.ts`；实测 `pnpm --filter omnimux-browser test:e2e` exit 0，运行摘要 `Test Files 3 passed | 2 skipped (5)`、`Tests 5 passed | 4 skipped (9)`。同时把 spec 与 PR 正文改成如实描述 skip 语义 |
 | 计数与理由不完整：正文按 27 个测试文件、把排除理由只写成 `bridge-extension.e2e.spec.ts` 一个文件 | 更正为 **30 个**（26 spec + 4 node:test）；被排除的是**全部 5 个** e2e spec，5 个都依赖 chromium，其中 4 个还依赖 `extension/dist/manifest.json` |
