@@ -1,0 +1,381 @@
+{
+  "issue": "3774",
+  "phase": "observe",
+  "origin": "http://127.0.0.1:65444",
+  "startedAt": "2026-10-25T11:56:34.096Z",
+  "expectedLabels": [
+    "应用",
+    "视频剪辑",
+    "产品库",
+    "发布",
+    "账号",
+    "手机管理",
+    "数据分析",
+    "自动化",
+    "任务表单",
+    "社交采收"
+  ],
+  "expectedSeparatorBefore": [
+    "产品库",
+    "数据分析"
+  ],
+  "steps": [
+    {
+      "step": "more-anchor-probed",
+      "found": true,
+      "ariaLabel": "更多",
+      "hitInsideAnchor": false,
+      "reason": null
+    },
+    {
+      "step": "more-menu-opened",
+      "openMethod": "dom-click",
+      "menuFound": true,
+      "rowCount": 12,
+      "anchorExpanded": "true"
+    },
+    {
+      "step": "item-clicked",
+      "clickedRow": null,
+      "clickMethod": "dom-click",
+      "attempts": 5,
+      "menuFoundAfter": false,
+      "anchorExpandedAfter": "false",
+      "appsStageVisibleAfter": false,
+      "productStageAfter": null
+    }
+  ],
+  "anchor": {
+    "found": true,
+    "ariaLabel": "更多",
+    "expanded": "false",
+    "visible": true,
+    "x": 140,
+    "y": 278,
+    "rect": {
+      "x": 14,
+      "y": 260,
+      "width": 252,
+      "height": 36
+    },
+    "hitTag": "DIV",
+    "hitInsideAnchor": false,
+    "hitSelector": "div._mask_o6lrb_18",
+    "hitText": ""
+  },
+  "menu": {
+    "menuFound": true,
+    "menuCount": 1,
+    "allMenuCount": 1,
+    "separatorCount": 2,
+    "anchorExpanded": "true",
+    "menuRect": {
+      "x": 12,
+      "y": 216,
+      "width": 288,
+      "height": 429
+    },
+    "rows": [
+      {
+        "text": "浏览更多插件",
+        "ariaCurrent": null,
+        "disabled": false,
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 220,
+          "width": 280,
+          "height": 34
+        },
+        "centerX": 156,
+        "centerY": 237
+      },
+      {
+        "text": "创建你的插件",
+        "ariaCurrent": null,
+        "disabled": false,
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 254,
+          "width": 280,
+          "height": 34
+        },
+        "centerX": 156,
+        "centerY": 271
+      },
+      {
+        "text": "应用",
+        "ariaCurrent": null,
+        "disabled": false,
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 288,
+          "width": 280,
+          "height": 34
+        },
+        "centerX": 156,
+        "centerY": 305
+      },
+      {
+        "text": "视频剪辑",
+        "ariaCurrent": null,
+        "disabled": false,
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 322,
+          "width": 280,
+          "height": 34
+        },
+        "centerX": 156,
+        "centerY": 339
+      },
+      {
+        "text": "产品库",
+        "ariaCurrent": null,
+        "disabled": false,
+        "visible": true,
+        "separatorBefore": true,
+        "rect": {
+          "x": 16,
+          "y": 363,
+          "width": 280,
+          "height": 34
+        },
+        "centerX": 156,
+        "centerY": 379.5
+      },
+      {
+        "text": "发布",
+        "ariaCurrent": null,
+        "disabled": false,
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 397,
+          "width": 280,
+          "height": 34
+        },
+        "centerX": 156,
+        "centerY": 413.5
+      },
+      {
+        "text": "账号",
+        "ariaCurrent": null,
+        "disabled": false,
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 431,
+          "width": 280,
+          "height": 34
+        },
+        "centerX": 156,
+        "centerY": 447.5
+      },
+      {
+        "text": "手机管理",
+        "ariaCurrent": null,
+        "disabled": false,
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 465,
+          "width": 280,
+          "height": 34
+        },
+        "centerX": 156,
+        "centerY": 481.5
+      },
+      {
+        "text": "数据分析",
+        "ariaCurrent": null,
+        "disabled": false,
+        "visible": true,
+        "separatorBefore": true,
+        "rect": {
+          "x": 16,
+          "y": 505,
+          "width": 280,
+          "height": 34
+        },
+        "centerX": 156,
+        "centerY": 522
+      },
+      {
+        "text": "自动化",
+        "ariaCurrent": null,
+        "disabled": false,
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 539,
+          "width": 280,
+          "height": 34
+        },
+        "centerX": 156,
+        "centerY": 556
+      },
+      {
+        "text": "任务表单",
+        "ariaCurrent": null,
+        "disabled": false,
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 573,
+          "width": 280,
+          "height": 34
+        },
+        "centerX": 156,
+        "centerY": 590
+      },
+      {
+        "text": "社交采收",
+        "ariaCurrent": null,
+        "disabled": false,
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 607,
+          "width": 280,
+          "height": 34
+        },
+        "centerX": 156,
+        "centerY": 624
+      }
+    ]
+  },
+  "openMethod": "dom-click",
+  "screenshots": {
+    "open": {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-explore-more-menu-issue-3774/.workbuddy/evidence/contract/omnimux-explore-more-menu-issue-3774/1fbda842-cce1-4a86-ac47-5137a861b794/more-menu-open.png",
+      "bytes": 243740
+    },
+    "afterClick": {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-explore-more-menu-issue-3774/.workbuddy/evidence/contract/omnimux-explore-more-menu-issue-3774/1fbda842-cce1-4a86-ac47-5137a861b794/more-menu-after-click.png",
+      "bytes": 228212
+    }
+  },
+  "rowTexts": [
+    "浏览更多插件",
+    "创建你的插件",
+    "应用",
+    "视频剪辑",
+    "产品库",
+    "发布",
+    "账号",
+    "手机管理",
+    "数据分析",
+    "自动化",
+    "任务表单",
+    "社交采收"
+  ],
+  "omnimuxBlockStart": 2,
+  "omnimuxBlockSeparators": [
+    "产品库",
+    "数据分析"
+  ],
+  "tenInOrder": true,
+  "separatorsMatch": true,
+  "stageBefore": {
+    "productStage": null,
+    "appsStagePresent": false,
+    "appsStageVisible": false,
+    "appsStageDataVisible": null,
+    "appsStageText": null,
+    "hubPanelVisible": false,
+    "overlayStages": []
+  },
+  "stageAfter": {
+    "productStage": null,
+    "appsStagePresent": false,
+    "appsStageVisible": false,
+    "appsStageDataVisible": null,
+    "appsStageText": null,
+    "hubPanelVisible": false,
+    "overlayStages": []
+  },
+  "workbenchApi": {
+    "hasWorkbench": true,
+    "openType": "function",
+    "openWorkbenchType": "function",
+    "appsEntryInDom": false
+  },
+  "clickedRow": null,
+  "clickMethod": "dom-click",
+  "clickAttempts": [
+    {
+      "label": "应用",
+      "rowClicked": true,
+      "menuFoundAfter": false,
+      "anchorExpandedAfter": "false",
+      "productStageAfter": null,
+      "appsStageVisibleAfter": false,
+      "hubPanelVisibleAfter": false,
+      "targetOpened": false
+    },
+    {
+      "label": "视频剪辑",
+      "rowClicked": true,
+      "menuFoundAfter": false,
+      "anchorExpandedAfter": "false",
+      "productStageAfter": null,
+      "appsStageVisibleAfter": false,
+      "hubPanelVisibleAfter": false,
+      "targetOpened": false
+    },
+    {
+      "label": "产品库",
+      "rowClicked": true,
+      "menuFoundAfter": false,
+      "anchorExpandedAfter": "false",
+      "productStageAfter": null,
+      "appsStageVisibleAfter": false,
+      "hubPanelVisibleAfter": false,
+      "targetOpened": false
+    },
+    {
+      "label": "自动化",
+      "rowClicked": true,
+      "menuFoundAfter": false,
+      "anchorExpandedAfter": "false",
+      "productStageAfter": null,
+      "appsStageVisibleAfter": false,
+      "hubPanelVisibleAfter": false,
+      "targetOpened": false
+    },
+    {
+      "label": "任务表单",
+      "rowClicked": true,
+      "menuFoundAfter": false,
+      "anchorExpandedAfter": "false",
+      "productStageAfter": null,
+      "appsStageVisibleAfter": false,
+      "hubPanelVisibleAfter": false,
+      "targetOpened": false
+    }
+  ],
+  "menuAfterClick": {
+    "menuFound": false,
+    "rows": [],
+    "separatorCount": 0,
+    "allMenuCount": 0,
+    "anchorExpanded": "false"
+  },
+  "menuClosedAfterClick": true,
+  "targetOpenedAfterClick": false,
+  "completedAt": "2026-10-25T11:57:16.801Z"
+}

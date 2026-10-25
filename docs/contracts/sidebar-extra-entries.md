@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-10-05"
+updated: "2026-10-25"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux-assets"
 ---
@@ -111,6 +111,22 @@ const unregister = window.__omnimuxSidebar.registerExploreItem({
 | 键盘仍可用 | 保留原生 button 语义：Enter / Space 展开，`Escape` 收起，焦点移出按钮与菜单后收起 |
 | 幂等收起 | 移除菜单会让其中获得焦点的项触发 blur / focusout 并重入收起：收起必须防重入，且只移除仍挂载（`isConnected`）的节点，重复收起不得抛错 |
 | 不新增全局监听 | 除既有文档级按下 / 按键监听外，只允许按钮与菜单自身的悬停与焦点事件；禁止为悬停再挂文档级 `mousemove` 轮询 |
+
+### 官方「更多」菜单（`sidebar.panellist.actions`，宿主 ≥ `0.2.1-rc.3`）
+
+宿主 `0.2.1-rc.3` 起，官方左侧栏自带 root 作用域列表 seat `sidebar.panellist.actions`：该列表有注册时渲染「更多」行，注册项**直接渲染为菜单行**（官方参考实现 `packages/client/ui-entry-customization/src/client/EntryMenuContent.tsx`）。OmniMux 的 10 项入口同时注册进这个官方菜单，与「探索」浮动菜单共用同一份真源。
+
+| Rule | Detail |
+|---|---|
+| 唯一注册点 | `plugins/omnimux/src/client/explore-more-menu.jsx`（`id: 'omnimux-explore'`，`order: 100`），由 hub `apply()` 安装；其它插件**不得**再注册该 seat 的 OmniMux 入口 |
+| 单一真源 | 清单 / 图标 / 分组 / 激活语义一律取 `sidebar-coordinator.js` 的 `EXPLORE_MENU_ITEMS`、`resolveExploreMenuItems()`、`activateExploreItem()`；MUST NOT 复制第二份清单、图标或三段委托 |
+| 行原语 | 用官方 `MenuItemButton`（`icon` + `separatorBefore`），不得自绘第二套行样式或字阶 |
+| 分组 | 与浮动菜单同构：`dividerAfter` 的项之后，下一行带 `separatorBefore` |
+| 点击 | 先 `onDismiss()` 关闭官方菜单，再 `activateExploreItem(item)` —— 与浮动菜单同一段委托，不得另写导航 |
+| 文本与 HTML 边界 | 行内 `iconSvg` 仍按受信 HTML 注入（14×14 纯矢量）；`label` 一律纯文本 |
+| 老宿主兼容 | 无 `slots` 服务或该 seat 不存在时静默 no-op（`ctx.slots.inject` 惰性语义）；MUST NOT 用空 `catch` 兜底 |
+| 与浮动菜单关系 | 常驻「探索」行与浮动菜单本次保留；两处入口共用同一清单，禁止任何一处单独漂移 |
+| 刷新语义 | 官方菜单每次展开重新挂载即读取最新集合，与浮动菜单「下次展开即最新集合」一致，不需要第二套订阅 |
 
 ## Alpha 内测标记
 

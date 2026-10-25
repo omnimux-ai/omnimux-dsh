@@ -31,6 +31,7 @@ import { AttachmentSubmitBridge } from './composer-add/AttachmentSubmitBridge.js
 import { installAgentPresetsI18n } from './agent-presets-i18n.js'
 import { installSessionCopyI18n } from './session-copy-i18n.js'
 import { installCommandsI18n } from './composer-commands-i18n.js'
+import { installExploreMoreMenu } from './explore-more-menu.jsx'
 import { ComposerModeTabs } from './composer-mode/ComposerModeTabs.jsx'
 import { ComposerQuickShortcuts, ComposerQuickShortcutControls } from './composer-quick-shortcuts/ComposerQuickShortcuts.jsx'
 import { registerLinkTriggerSource } from './attachments/linkTriggerSource.ts'
@@ -72,6 +73,9 @@ export function apply(ctx) {
   installAgentPresetsI18n(ctx)
   installSessionCopyI18n(ctx)
   installCommandsI18n(ctx, primitives)
+  // 官方侧栏「更多」菜单（sidebar.panellist.actions）：同一份 10 项入口。
+  // 老宿主没有该 seat 时靠 ctx.slots.inject 惰性语义 no-op。
+  installExploreMoreMenu(ctx, primitives)
   installQuotaGlobal(typeof window !== 'undefined' ? window : undefined)
   installHeroBrandSlot(ctx, HeroBrandMark)
   installStatsLineShadow(ctx)
