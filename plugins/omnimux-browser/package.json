@@ -50,7 +50,7 @@
     "build": "npm run build:server && npm run build:extension",
     "prepare": "npm run build:server",
     "test": "vitest run && node --experimental-transform-types --test tests/*.test.ts",
-    "test:e2e": "vitest run tests/e2e"
+    "test:e2e": "vitest run --config vitest.e2e.config.ts"
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.5",
