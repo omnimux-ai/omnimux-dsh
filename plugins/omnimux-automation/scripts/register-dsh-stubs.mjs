@@ -14,7 +14,6 @@ const runtimePackages = new Set([
   '@deepseek-ai/dsh-user-approval',
   '@deepseek-ai/dsh-workspace',
   '@deepseek-ai/dsh-agent-default-model',
-  '@deepseek-ai/dsh-agent-presets',
   '@deepseek-ai/dsh-permission-presets',
   '@deepseek-ai/schemastery',
 ])
