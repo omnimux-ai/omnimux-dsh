@@ -12,6 +12,47 @@ function canonical(value) {
   return Object.fromEntries(Object.entries(value).filter(([key]) => !['start', 'end', 'loc'].includes(key)).map(([key, child]) => [key, canonical(child)]))
 }
 
+/**
+ * 位置身份只保留**结构**：祖先节点类型、回调/参数槽位、分支边。
+ *
+ * 剔除的是位置上的**文本、数据与序号**——Literal 的值与 `raw`、Identifier 的名字、控制流语句的
+ * 数据字段（见 `projectContexts`）、以及同形兄弟的序号（见 `inspect`）。理由是这些内容在正常维护里最容易
+ * 变：用例改名、局部绑定改名、参数化数据表增删行、在既有用例前后插入同形用例，都会改动它们。
+ * 把它们算进身份，会让**同一处未改动的构造**在 candidate 里看起来像新增风险，于是既有构造本身
+ * 成为编辑阻断（#3754、#3718）。
+ *
+ * 构造自身的文本仍由 `canonical(anchor)` 保留：`data[key]` 与 `other[index]`、`eval(a)` 与 `eval(b)`
+ * 依旧是不同的构造；同形状构造的数量增长由多重集计数捕获——同一处复制两份、或新增一处 `.skip`
+ * 仍然因计数超出而被拒。
+ */
+function structural(value) {
+  if (Array.isArray(value)) return value.map(structural)
+  if (!value || typeof value !== 'object') return value
+  const out = {}
+  for (const [key, child] of Object.entries(value)) {
+    if (['start', 'end', 'loc', 'raw'].includes(key)) continue
+    if (key === 'value' && value.type === 'Literal') continue
+    if (key === 'name' && value.type === 'Identifier') continue
+    out[key] = structural(child)
+  }
+  return out
+}
+
+// 控制流语句的**数据**（`test`/`init`/`update`/`left`/`right`/`discriminant`/`param`）不参与位置身份：
+// 参数化数据表增删行（PR #3752 的 generation-fingerprint.test.js 就是如此）不该把循环体里的既有构造
+// 变成新增风险。这些字段仍保留在 `contextOf` 里，因为它们同时供**绑定扫描**使用（例如
+// `catch ({ local = safeApi })` 里的 `safeApi` 必须仍然被算作引用）。
+const controlFlowContexts = new Set(['IfStatement', 'ConditionalExpression', 'WhileStatement', 'DoWhileStatement', 'ForStatement', 'ForInStatement', 'ForOfStatement', 'SwitchStatement', 'SwitchCase', 'CatchClause'])
+
+/** 把祖先上下文投影成**位置身份**：结构 + 槽位/分支边，不含易变文本、数据与序号。 */
+function projectContexts(contexts) {
+  return contexts.map(entry => {
+    if (!entry || entry.node === undefined) return entry
+    const positional = controlFlowContexts.has(entry.node.type) ? { type: entry.node.type, await: entry.node.await } : structural(entry.node)
+    return { ...entry, node: positional }
+  })
+}
+
 function contextOf(node) {
   if (functions.has(node.type)) return { type: node.type, id: node.id, params: node.params, async: node.async, generator: node.generator }
   if (node.type === 'VariableDeclarator') return { type: node.type, id: node.id }
@@ -96,24 +137,10 @@ function collectRisks(code, { resolveImport } = {}) {
       }
     }
   }
-  const occurrenceDomains = new Map()
   function inspect(node, parent = null, contexts = []) {
     if (!node || typeof node !== 'object' || !node.type) return
     const context = contextOf(node)
-    let nextContexts = contexts
-    if (context) {
-      let occurrence
-      if (functions.has(node.type) || node.type === 'BlockStatement' || node.type === 'StaticBlock') {
-        // Complete parent chains separate unrelated calls without resetting repeated parents.
-        const domain = JSON.stringify(canonical(contexts))
-        let siblings = occurrenceDomains.get(domain)
-        if (!siblings) occurrenceDomains.set(domain, siblings = new Map())
-        const key = JSON.stringify(canonical(context))
-        occurrence = siblings.get(key) || 0
-        siblings.set(key, occurrence + 1)
-      }
-      nextContexts = [...contexts, { node: context, occurrence }]
-    }
+    const nextContexts = context ? [...contexts, { node: context }] : contexts
     function risk(reason) {
       const anchor = (parent?.type === 'CallExpression' || parent?.type === 'NewExpression') && parent.callee === node ? parent : node
       const names = new Set()
@@ -123,7 +150,10 @@ function collectRisks(code, { resolveImport } = {}) {
         for (const child of Object.values(value)) if (Array.isArray(child)) child.forEach(identifiers); else identifiers(child)
       }
       identifiers({ node: anchor, contexts: nextContexts })
-      const detail = canonical({ node: anchor, contexts: nextContexts })
+      // 构造自身的文本（`canonical(anchor)`）参与身份；祖先位置只保留结构（`projectContexts`），
+      // 因此用例改名、局部改名、参数化数据表增删行、同形兄弟增删都不会把既有构造重签成新增风险。
+      // 绑定扫描仍用未投影的上下文，避免 `catch ({ local = safeApi })` 这类控制流头部的引用漏掉。
+      const detail = canonical({ node: anchor, contexts: projectContexts(nextContexts) })
       const bindings = [...names].filter(name => imports.has(name)).sort().map(name => imports.get(name))
       risks.push({ reason, fingerprint: JSON.stringify(canonical({ reason, detail, bindings })) })
     }

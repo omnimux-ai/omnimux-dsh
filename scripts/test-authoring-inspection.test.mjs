@@ -195,9 +195,13 @@ test('genuine locally shadowed references remain conservatively associated witho
   ]) assert.equal(inspectTestAuthoringDelta(before, "import { safeApi } from './domain.mjs'; " + before).allowed, false, before)
 })
 
-test('role filtering preserves context slots occurrences risk multiplicity and new execution denials', () => {
+test('role filtering preserves context slots and multiset excess while enclosing renames stay allowed', () => {
+  // 位置身份不含文本：给包裹函数改名是维护动作，构造与位置结构都没变 → 放行（#3754）。
+  assert.equal(inspectTestAuthoringDelta(
+    "function first(safeApi) { consume([...values]) }",
+    "function second(safeApi) { consume([...values]) }",
+  ).allowed, true)
   for (const [before, after] of [
-    ["function first(safeApi) { consume([...values]) }", "function second(safeApi) { consume([...values]) }"],
     ["consume(() => [...values], () => 1)", "consume(() => 1, () => [...values])"],
     ["function read() { consume([...values]) }", "function read() { consume([...values]) } function readAgain() { consume([...values]) }"],
     ["consume([...values])", "consume([...values]); consume([...values])"],
@@ -237,8 +241,12 @@ test('parent domains retain repeated risks and multiset excess denials', () => {
   for (const [before, after] of [
     ["test('first', async () => { data[key] })", "test('first', async () => { data[key] }); test('first', async () => { data[key] })"],
     ["test('first', async () => { data[key] })", "test('first', async () => { data[key]; data[key] })"],
-    ["test('first', async () => { data[key] })", "test('first', async () => {}); test('first', async () => { data[key] })"],
   ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
+  // 前面插入的同形空用例不含风险构造，既有构造的数量与形状都没变 → 放行（#3754）。
+  assert.equal(inspectTestAuthoringDelta(
+    "test('first', async () => { data[key] })",
+    "test('first', async () => {}); test('first', async () => { data[key] })",
+  ).allowed, true)
 })
 
 test('parent domains preserve callback slots literal titles scope and risk bodies', () => {
@@ -252,27 +260,37 @@ test('parent domains preserve callback slots literal titles scope and risk bodie
   ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
 })
 
-test('same parent block insertion and ancestor occurrences retain old identities', () => {
+test('same parent block insertion keeps existing risk identities while new constructs deny', () => {
   for (const [before, after] of [
     ["test('first', async () => { { data[key] } })", "test('first', async () => { {} { data[key] } })"],
     ["{ test('first', async () => { data[key] }) }", "{} { test('first', async () => { data[key] }) }"],
     ['class Example { static { data[key] } }', 'class Example { static {} static { data[key] } }'],
-  ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
+  ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, true, after)
+  // 空块不含构造；但**在新块里新增**一处风险构造仍然拒绝。
+  assert.equal(inspectTestAuthoringDelta(
+    "test('first', async () => { { data[key] } })",
+    "test('first', async () => { {} { data[key]; data[key] } })",
+  ).allowed, false)
 })
 
-test('nonadjacent identical parents keep active callback occurrence beyond zero', () => {
+test('nonadjacent identical parents keep stable identities when a sibling is removed', () => {
   const before = "test('shared', async () => {}); test('middle', async () => {}); test('shared', async () => { data[key] })"
   const after = "test('middle', async () => {}); test('shared', async () => { data[key] })"
   assert.equal(inspectTestAuthoringDelta(before, before).allowed, true)
   assert.equal(inspectTestAuthoringDelta(before, "test('unrelated', async () => {}); " + before).allowed, true)
-  assert.equal(inspectTestAuthoringDelta(before, after).allowed, false)
+  // 被删掉的是不含风险的同形兄弟，既有构造本身没动 → 放行（#3754）。
+  assert.equal(inspectTestAuthoringDelta(before, after).allowed, true)
+  // 既有构造被换成另一处新构造时仍然拒绝。
+  assert.equal(inspectTestAuthoringDelta(before, "test('middle', async () => {}); test('shared', async () => { other[index] })").allowed, false)
 })
 
-test('for of data stays in the full parent context instead of being evaluated', () => {
+test('for of data changes stay allowed while dynamic case names remain denied', () => {
   const before = "for (const scenario of [{ name: 'first' }]) { test('fixed', async () => { data[key] }) }"
   const after = "for (const scenario of [{ name: 'unrelated' }, { name: 'first' }]) { test('fixed', async () => { data[key] }) }"
   assert.equal(inspectTestAuthoringDelta(before, before).allowed, true)
-  assert.equal(inspectTestAuthoringDelta(before, after).allowed, false)
+  // 参数化数据表增删行是维护动作，循环体里的构造没变 → 放行（#3754）。
+  assert.equal(inspectTestAuthoringDelta(before, after).allowed, true)
+  // 动态用例名仍然拒绝。
   assert.equal(inspectTestAuthoring("for (const scenario of cases) { test(scenario.name, async () => {}) }").allowed, false)
 })
 
@@ -428,4 +446,36 @@ test('mocha BDD aliases and skipIf-with-object condition are rejected too', () =
   }
   // mocha 的 `context` 是 describe 别名而非跳过/聚焦，不应被拒。
   assert.equal(inspectTestAuthoring("context('case', () => {})").allowed, true)
+})
+
+// #3754：既有且**未改动**的执行构造不再阻断编辑；新增构造与解析失败仍然硬拒。
+test('pre-existing execution constructs stop blocking while new constructs and parse failures stay denied', () => {
+  const keepsContract = table => `for (const [label, mutate] of ${table}) { test('keeps contract', () => { assert.equal(Object.prototype.hasOwnProperty.call(value, 'id'), false) }) }`
+
+  // ① 两侧都含同一处 `.call(` 执行构造，本编辑只改了参数化数据表（祖先位置的数据）→ 放行。
+  // 旧口径下这条会因为 ForOfStatement 的数据表进入位置身份而报不可声明的选择器原因。
+  const tableBefore = keepsContract("[['a', () => {}]]")
+  const tableAfter = keepsContract("[['a', () => {}], ['b', () => {}]]")
+  assert.equal(inspectTestStandardChange(tableBefore, tableAfter).allowed, true)
+
+  // 用例改名同样不再触发不可声明的选择器原因，而是打开 `## 旧标准变更` 声明通道并点名用例。
+  const renamed = inspectTestStandardChange(
+    "test('keeps contract', () => { assert.equal(Object.prototype.hasOwnProperty.call(value, 'id'), false) })",
+    "test('keeps contract renamed', () => { assert.equal(Object.prototype.hasOwnProperty.call(value, 'id'), false) })",
+  )
+  assert.equal(renamed.allowed, false)
+  assert.equal(renamed.reason, 'test-case-removed-or-renamed')
+  assert.deepEqual(renamed.changedCases, ['keeps contract'])
+
+  // ② 新增一处 `.skip`：硬拒，原因不可经声明放行。
+  const skipped = inspectTestStandardChange(tableBefore, tableBefore + "test.skip('adds', () => {})")
+  assert.equal(skipped.allowed, false)
+  assert.equal(skipped.reason, 'test-execution-selector-needs-review')
+  assert.deepEqual(skipped.changedCases, [])
+
+  // ③ candidate 解析失败：读不出结构化结构就无法比较，绝对拒绝。
+  const broken = inspectTestStandardChange("test('keeps contract', () => {})", "test('keeps contract', () => { const v: number = 1 })")
+  assert.equal(broken.allowed, false)
+  assert.equal(broken.reason, 'unsupported-or-incomplete-test-syntax')
+  assert.deepEqual(broken.changedCases, [])
 })
