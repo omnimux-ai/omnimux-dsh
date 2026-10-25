@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Verify the OmniMux model declarations in plugins/omnimux/cordis.patch.yml
-// against the live OmniMux catalogs:
+// against the offline model contracts:
 //
-//   1. Modality consistency (always runs, keyless): the patch `input` matrix
-//      and the expert whitelist must agree with the measured gateway matrix in
+//   1. Modality consistency (always runs): the patch `input` matrix and the
+//      expert whitelist must agree with the measured gateway matrix in
 //      plugins/omnimux/src/text/catalog.js (CHAT_MODELS). A patch row
 //      declaring image input the measured matrix does not (over-declare)
 //      admits an image the provider rejects mid-turn; a measured image-capable
@@ -14,28 +14,29 @@
 //   2. Expert whitelist (always runs): every id in CHAT_MODELS must appear on
 //      the patch model list. The one-shot tool cannot name a model the chat
 //      adapter does not advertise.
-//   3. Reasoning declaration (always runs, keyless): every patch model must
-//      declare `reasoningEfforts` that includes `max`, and the omnimux route
-//      must set `reasoning: max`. The composer hides the effort pane when
-//      that field is absent; a missing `max` would leave the route default
-//      unset on that row. Levels themselves follow the measured gateway
-//      matrix in docs/evidence/omnimux-reasoning-2026-08-20.md.
-//   4. Gateway existence (needs OMNIMUX_API_KEY, else self-skips): every
-//      declared model id must exist on api.omnimux.ai/v1/models.
+//   3. Reasoning declaration (always runs): every patch model must declare
+//      `reasoningEfforts` that includes `max`, and the omnimux route must set
+//      `reasoning: max`. The composer hides the effort pane when that field is
+//      absent; a missing `max` would leave the route default unset on that row.
+//      Levels themselves follow the measured gateway matrix in
+//      docs/evidence/omnimux-reasoning-2026-08-20.md.
+//   4. Shipped-snapshot existence (always runs, offline): every declared model
+//      id must be sold by the bundled gateway snapshot
+//      (plugins/omnimux/src/catalog/cloud/bundled/pricing.json), the same floor
+//      the runtime catalog serves from.
 //
-// Key resolution: OMNIMUX_API_KEY env, else parsed from
-// ~/.config/omnimux/dsh.env. Inject a key via:
-//   omnimux tokens exec 40 --yes --timeout=600 -- \
-//     env OMNIMUX_API_KEY=__OMNIMUX_TOKEN_40__ node scripts/verify-models.mjs
-//
-// The patch file is the single source of truth for the app's OmniMux model
-// list; this gate makes drift against the live catalogs fail loud instead of
-// shipping a stale list.
+// #3763 retired this gate's two online branches: the unconditional public
+// pricing fetch and the keyed model-list probe. Model truth comes from the
+// selected channel's official docs plus the bundled snapshot ([model API
+// authority]); this gate must never contact the real service, so it needs no
+// gateway credential and reads no key file. See
+// docs/contracts/model-list-ownership.md and docs/contracts/plugin-qa.md.
 import { readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { CHAT_MODELS } from '../plugins/omnimux/src/text/catalog.js'
+import { readBundledSnapshot } from '../plugins/omnimux/src/catalog/cloud/bundled.js'
+import { usableSnapshotModels } from '../plugins/omnimux/src/catalog/cloud/view.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const patchPath = join(root, 'plugins/omnimux/cordis.patch.yml')
@@ -128,41 +129,6 @@ function extract(text) {
   return { baseURL, reasoning, models }
 }
 
-function resolveKey() {
-  if (process.env.OMNIMUX_API_KEY) return process.env.OMNIMUX_API_KEY
-  try {
-    const envPath = join(homedir(), '.config', 'omnimux', 'dsh.env')
-    for (const line of readFileSync(envPath, 'utf8').split(/\r?\n/)) {
-      const match = line.match(/^\s*(?:export\s+)?OMNIMUX_API_KEY\s*=\s*["']?([^"'\s]+)["']?\s*$/)
-      if (match) return match[1]
-    }
-  } catch {
-    // fall through: no key file; gateway check self-skips below
-  }
-  return null
-}
-
-async function fetchPricing() {
-  try {
-    const response = await fetch('https://api.omnimux.ai/api/pricing', {
-      headers: { 'User-Agent': 'OmniMux-DSH/1.0' },
-    })
-    if (!response.ok) {
-      return new Map()
-    }
-    const payload = await response.json()
-    const byName = new Map()
-    for (const row of payload.data ?? []) {
-      if (typeof row?.model_name === 'string' && typeof row?.description === 'string') {
-        byName.set(row.model_name, row.description)
-      }
-    }
-    return byName
-  } catch {
-    return new Map()
-  }
-}
-
 /**
  * The measured gateway matrix in CHAT_MODELS is the single source of truth for
  * image input. The patch must neither over-declare (image on a model the
@@ -196,15 +162,16 @@ if (models.length === 0) {
   throw new Error('no models parsed from the llm-pi-ai row — patch structure changed?')
 }
 
-// Pricing stays informative only: the measured matrix supersedes it. A model
-// whose pricing description mentions image but the matrix did not confirm is
-// reported as a note, never a failure, because the pricing text lags reality
-// (e.g. kimi-k3 accepts images live but its description is silent).
-const pricing = await fetchPricing()
-const pricingNotes = models
-  .filter((model) => /image/i.test(pricing.get(model.id) ?? ''))
-  .filter((model) => !model.input.includes('image'))
-  .map((model) => ({ id: model.id, note: 'pricing mentions image; measured matrix says text-only — confirm live' }))
+// Existence truth is the shipped snapshot, not a live probe: the same floor the
+// runtime catalog intersects with. A model the snapshot does not sell is either
+// a stale patch row or a snapshot that was never regenerated after the gateway
+// delisted it — both must fail loud rather than ship.
+const read = readBundledSnapshot()
+if (!read.snapshot) {
+  process.stderr.write(`verify-models: bundled gateway snapshot is unusable (${read.code ?? 'unknown'})\n`)
+  process.exit(1)
+}
+const onShippedSnapshot = new Set(usableSnapshotModels(read.snapshot).keys())
 
 const mismatches = modalityMismatches(models, CHAT_MODELS)
 const patchIds = new Set(models.map((model) => model.id))
@@ -213,58 +180,22 @@ const reasoningMissing = models
   .filter((model) => model.reasoningEfforts == null || !Object.prototype.hasOwnProperty.call(model.reasoningEfforts, 'max'))
   .map((model) => model.id)
 const reasoningDefaultWrong = reasoning === 'max' ? [] : [reasoning]
-const key = resolveKey()
-
-if (!key) {
-  process.stdout.write(`${JSON.stringify({
-    event: 'models',
-    patch: 'plugins/omnimux/cordis.patch.yml',
-    baseURL,
-    reasoning,
-    modalityMismatches: mismatches,
-    whitelistMissing,
-    reasoningMissing,
-    reasoningDefaultWrong,
-    pricingNotes,
-    skip: 'no OMNIMUX_API_KEY — gateway existence check skipped; modality and reasoning checks ran keyless',
-    hint: 'omnimux tokens exec 40 --yes --timeout=600 -- env OMNIMUX_API_KEY=__OMNIMUX_TOKEN_40__ node scripts/verify-models.mjs',
-    checkedAt: new Date().toISOString(),
-  })}\n`)
-  if (mismatches.length > 0 || whitelistMissing.length > 0 || reasoningMissing.length > 0 || reasoningDefaultWrong.length > 0) {
-    process.stderr.write(`verify-models: modality mismatch (${mismatches.map((row) => row.id).join(', ')}); whitelist not on patch (${whitelistMissing.join(', ')}); missing reasoning max (${reasoningMissing.join(', ')}); route reasoning (${reasoning})\n`)
-    process.exit(1)
-  }
-  process.stderr.write('verify-models: ok (modality + whitelist + reasoning)\n')
-  process.exit(0)
-}
-
-const response = await fetch('https://api.omnimux.ai/v1/models', {
-  headers: { authorization: `Bearer ${key}` },
-})
-if (!response.ok) {
-  process.stderr.write(`verify-models: models endpoint returned ${response.status}\n`)
-  process.exit(1)
-}
-const payload = await response.json()
-const gatewayIds = new Set(
-  (Array.isArray(payload) ? payload : payload.data ?? []).map((model) => model.id),
-)
 
 const table = models.map((model) => ({
   id: model.id,
   contextWindow: model.contextWindow,
   input: model.input.length > 0 ? model.input : null,
   reasoningEfforts: model.reasoningEfforts,
-  onGateway: gatewayIds.has(model.id),
+  onShippedSnapshot: onShippedSnapshot.has(model.id),
 }))
-const missing = table.filter((row) => !row.onGateway).map((row) => row.id)
+const missing = table.filter((row) => !row.onShippedSnapshot).map((row) => row.id)
 
 process.stdout.write(`${JSON.stringify({
   event: 'models',
   patch: 'plugins/omnimux/cordis.patch.yml',
   baseURL,
   reasoning,
-  gatewayTotal: gatewayIds.size,
+  snapshotModels: onShippedSnapshot.size,
   configured: models.length,
   table,
   missing,
@@ -272,12 +203,12 @@ process.stdout.write(`${JSON.stringify({
   whitelistMissing,
   reasoningMissing,
   reasoningDefaultWrong,
-  pricingNotes,
+  network: 'not-used',
   checkedAt: new Date().toISOString(),
 })}\n`)
 
 if (missing.length > 0 || mismatches.length > 0 || whitelistMissing.length > 0 || reasoningMissing.length > 0 || reasoningDefaultWrong.length > 0) {
-  process.stderr.write(`verify-models: not on gateway (${missing.join(', ')}); modality mismatch (${mismatches.map((row) => row.id).join(', ')}); whitelist not on patch (${whitelistMissing.join(', ')}); missing reasoning max (${reasoningMissing.join(', ')}); route reasoning (${reasoning})\n`)
+  process.stderr.write(`verify-models: not in the shipped snapshot (${missing.join(', ')}); modality mismatch (${mismatches.map((row) => row.id).join(', ')}); whitelist not on patch (${whitelistMissing.join(', ')}); missing reasoning max (${reasoningMissing.join(', ')}); route reasoning (${reasoning})\n`)
   process.exit(1)
 }
-process.stderr.write('verify-models: ok\n')
+process.stderr.write('verify-models: ok (offline: modality + whitelist + reasoning + shipped snapshot)\n')

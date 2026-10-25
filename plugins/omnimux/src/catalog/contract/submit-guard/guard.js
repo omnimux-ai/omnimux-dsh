@@ -126,7 +126,10 @@ function reject(partial) {
  * listing check is skipped there — the runtime submit paths all keep the
  * default. `gatewayMembership: false` is the narrower opt-out for a capability
  * whose models the anonymous gateway view does not publish (transcription); it
- * relaxes only this gate, never the operation's own listed requirement.
+ * relaxes only this gate, never the operation's own listed requirement. Since
+ * #3763 that opt-out is itself declared per model in
+ * `auto-serving-manifest.json` (`gatewayMembershipExempt`, reason + review
+ * date) and read at the call site — never hardcoded in a caller.
  *
  * @param {string} modelId canonical contract id
  * @param {{ snapshot?: object }} [opts]
