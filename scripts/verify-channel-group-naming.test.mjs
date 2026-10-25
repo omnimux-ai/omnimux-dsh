@@ -1,35 +1,50 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 
 import {
   checkCatalog,
+  checkCanvasNames,
   checkFamily,
-  checkMirror,
+  checkProjectedCatalog,
   ALLOWED_LABELS,
   FORBIDDEN_WORDS,
-  MIRROR_PATH,
   REQUIRED_LABEL,
 } from './verify-channel-group-naming.mjs'
 import { MODEL_CHANNEL_GROUPS } from '../plugins/omnimux/src/catalog/serving/channel-groups.js'
+import { buildModelCatalog } from '../plugins/omnimux/src/catalog/list.js'
+import { resolveReadOnlySnapshot } from '../plugins/omnimux/src/catalog/cloud/current.js'
+import { readCanvasCatalog } from '../plugins/omnimux-workflow/src/workflow/seam/canvasCatalog.ts'
 
 const rules = (violations) => violations.map((v) => v.rule)
 
+/** 目录投影：模型 id → 线路行（四个桶去重）。 */
+function projection(catalog) {
+  const projected = {}
+  for (const kind of ['text', 'image', 'video', 'audio']) {
+    for (const row of catalog[kind] ?? []) projected[row.id] = row.channelGroups ?? []
+  }
+  return projected
+}
+
+const readCatalog = () => buildModelCatalog({ env: {}, snapshot: resolveReadOnlySnapshot().snapshot })
+
 describe('channel group naming gate', () => {
   it('passes on the live catalog and canvas mirror', () => {
-    const mirrorText = readFileSync(MIRROR_PATH, 'utf8')
-    assert.deepEqual(checkCatalog(MODEL_CHANNEL_GROUPS), [])
-    assert.deepEqual(checkMirror(MODEL_CHANNEL_GROUPS, mirrorText), [])
+    const catalog = readCatalog()
+    const canvasRows = readCanvasCatalog((name) => (name === 'modelCatalog' ? { list: () => catalog } : undefined))
+    assert.deepEqual(checkProjectedCatalog(projection(catalog), MODEL_CHANNEL_GROUPS).violations, [])
+    assert.deepEqual(checkCanvasNames(canvasRows, catalog), [])
   })
 
   it('covers every enabled group of the catalog', () => {
-    const enabled = Object.values(MODEL_CHANNEL_GROUPS)
-      .flat()
-      .filter((g) => g.enabled !== false)
-    // 2026-10-21 #3516：8 个模型族 / 10 个分组（全部启用）。
-    assert.ok(enabled.length >= 10)
-    for (const g of enabled) {
-      assert.ok(ALLOWED_LABELS.includes(g.label), `${g.id} label「${g.label}」需在白名单内`)
+    const catalog = readCatalog()
+    const report = checkProjectedCatalog(projection(catalog), MODEL_CHANNEL_GROUPS)
+    // 2026-10-25 #3762：产品命名 7 条 + 网关命名 3 条 = 目录在售 10 条线路。
+    assert.ok(report.authoredCount >= 7, `authored lines must be checked, got ${report.authoredCount}`)
+    assert.ok(report.gatewayCount >= 3, `gateway-published lines must be counted, got ${report.gatewayCount}`)
+    for (const line of report.gatewayLines) {
+      assert.ok(ALLOWED_LABELS.length > 0)
+      assert.ok(line.modelId && line.id, 'gateway census entries must name their line')
     }
   })
 
@@ -79,6 +94,14 @@ describe('channel group naming gate', () => {
     ])
   })
 
+  it('rejects a product-authored label that describes its own price', () => {
+    const violations = checkFamily('demo', [
+      { id: 'std', label: '标准版' },
+      { id: 'cheap', label: '¥2.85/秒' },
+    ])
+    assert.ok(rules(violations).includes('LABEL_PRICE_SELF_DESCRIPTION'))
+  })
+
   it('ignores disabled groups', () => {
     const violations = checkFamily('demo', [
       { id: 'std', label: '标准版' },
@@ -93,11 +116,37 @@ describe('channel group naming gate', () => {
   })
 
   it('detects a mirror drift against the hub', () => {
-    const violations = checkMirror(MODEL_CHANNEL_GROUPS, '"label": "标准版",')
-    assert.deepEqual(rules(violations), ['MIRROR_MISMATCH', 'MIRROR_MISMATCH'])
+    const canvasRows = { video: [{ id: 'seedance-2-0', channelGroups: [{ id: 'standard', label: '标准版', badge: '改过的文案' }] }] }
+    const directoryRows = { video: [{ id: 'seedance-2-0', channelGroups: [{ id: 'standard', label: '标准版', badge: '官方原生专线 · 按秒计费' }] }] }
+    assert.deepEqual(rules(checkCanvasNames(canvasRows, directoryRows)), ['CANVAS_NAME_DRIFT'])
+    assert.deepEqual(checkCanvasNames(directoryRows, directoryRows), [])
+  })
+
+  it('only exempts gateway-published lines from the tier whitelist', () => {
+    const projected = {
+      'demo-model': [
+        { id: 'standard', wireGroup: 'default', label: '标准版', enabled: true },
+        { id: 'gateway-line', wireGroup: 'gw-x', label: 'Nano Banana 2 Lite 低价版（经济跑量）', enabled: true },
+      ],
+    }
+    const overrides = { 'demo-model': [{ id: 'standard', wireGroup: 'default', label: '标准版' }] }
+    const report = checkProjectedCatalog(projected, overrides)
+    assert.deepEqual(report.violations, [], 'the gateway-published name is not product-authored, so the whitelist does not apply')
+    assert.equal(report.authoredCount, 1)
+    assert.equal(report.gatewayCount, 1)
+    // 但产品自己起的名必须受白名单约束。
+    const strict = checkProjectedCatalog(
+      { 'demo-model': [{ id: 'standard', wireGroup: 'default', label: '尊享版', enabled: true }] },
+      overrides,
+    )
+    assert.ok(rules(strict.violations).includes('LABEL_NOT_ALLOWED'))
   })
 
   it('requires the baseline tier name to stay canonical', () => {
     assert.equal(REQUIRED_LABEL, '标准版')
+  })
+
+  it('keeps the rule engine reachable for direct family checks', () => {
+    assert.deepEqual(checkCatalog({ demo: [{ id: 'std', label: '标准版' }] }), [])
   })
 })

@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildVideoParameterSelection } from './videoParameterSelection.ts';
-import { MODEL_CHANNEL_GROUPS } from '../channelGroups.ts';
 
 // 2026-10-21 网关对账 #3516：H3/ComfyUI 专线下架后，线路收窄契约用合成线路固定，
-// 避免依赖已删除的真实模型行。
+// 避免依赖已删除的真实模型行。线路只挂在目录行（`catalog.models[].channelGroups`）上——
+// 与运行期中枢目录到达画布的路径完全一致。
 const LINE_MODEL = 'line-fixture-video';
 
 const resolution = (defaultValue) => ({ options: [{value:'480p'},{value:'720p'},{value:'1080p'}], defaultValue });
@@ -94,43 +94,33 @@ test('schema controls do not capture prompt/media/routing and non-scalar runtime
 });
 
 test('operation adapts to line constraints when preferred operation is not supported by target channel group', () => {
-  MODEL_CHANNEL_GROUPS['line-fixture-video'] = [{
-    id: 'lipsync', label: '合成口型线路', enabled: true,
-    constraints: { operations: ['digital_human'] },
-  }];
-  try {
-    const currentModel = { id: LINE_MODEL, label: 'Line fixture', parameters: { resolution: resolution('720p') } };
-    const restrictedModel = {
-      id: LINE_MODEL, label: 'Line fixture', parameters: { resolution: resolution('720p') },
-      operations: [
-        { id: 'first_frame', listed: true, output: { type: 'video' }, inputs: [{ slot: 'first_frame', type: 'image', source: 'upstream_edge', min: 1, max: 1 }] },
-        { id: 'digital_human', listed: true, output: { type: 'video' }, inputs: [{ slot: 'character', type: 'image', source: 'upstream_edge', min: 1, max: 1 }, { slot: 'driving_audio', type: 'audio', source: 'upstream_edge', min: 1, max: 1 }] },
-      ],
-    };
-    const currentParams = { model: LINE_MODEL, operation: 'first_frame', resolution: '720p' };
-    const result = buildVideoParameterSelection({
-      params: currentParams,
-      currentModelItem: currentModel,
-      targetModelItem: restrictedModel,
-      catalog: { video: [restrictedModel], models: [restrictedModel] },
-      routing: { allowedGroups: ['lipsync'] },
-    });
-    assert.equal(result.params.operation, 'digital_human');
-    assert.deepEqual(result.errors, []);
-  } finally {
-    delete MODEL_CHANNEL_GROUPS['line-fixture-video'];
-  }
+  const currentModel = { id: LINE_MODEL, label: 'Line fixture', parameters: { resolution: resolution('720p') } };
+  const restrictedModel = {
+    id: LINE_MODEL, label: 'Line fixture', parameters: { resolution: resolution('720p') },
+    // 目录行：该模型只被这条线路服务，且这条线路只支持口型操作。
+    channelGroups: [{
+      id: 'lipsync', label: '合成口型线路', enabled: true,
+      constraints: { operations: ['digital_human'] },
+    }],
+    operations: [
+      { id: 'first_frame', listed: true, output: { type: 'video' }, inputs: [{ slot: 'first_frame', type: 'image', source: 'upstream_edge', min: 1, max: 1 }] },
+      { id: 'digital_human', listed: true, output: { type: 'video' }, inputs: [{ slot: 'character', type: 'image', source: 'upstream_edge', min: 1, max: 1 }, { slot: 'driving_audio', type: 'audio', source: 'upstream_edge', min: 1, max: 1 }] },
+    ],
+  };
+  const currentParams = { model: LINE_MODEL, operation: 'first_frame', resolution: '720p' };
+  const result = buildVideoParameterSelection({
+    params: currentParams,
+    currentModelItem: currentModel,
+    targetModelItem: restrictedModel,
+    catalog: { video: [restrictedModel], models: [restrictedModel] },
+    routing: { allowedGroups: ['lipsync'] },
+  });
+  assert.equal(result.params.operation, 'digital_human');
+  assert.deepEqual(result.errors, []);
 });
 
 test('a line narrows the operation list and keeps hidden parameters from resurfacing', () => {
-  MODEL_CHANNEL_GROUPS['line-fixture-video'] = [{
-    id: 'comfyui', label: '合成收窄线路', enabled: true,
-    constraints: {
-      operations: ['video_multi_ref'],
-      parameters: { resolution: { supported: false } },
-    },
-  }];
-  try {
+  {
     const operation = (id) => ({
       id, listed: true, output: { type: 'video' },
       inputs: [{ slot: 'prompt', type: 'text', source: 'node_field', min: 0, max: 1 }],
@@ -139,6 +129,14 @@ test('a line narrows the operation list and keeps hidden parameters from resurfa
     });
     const lineModel = {
       id: LINE_MODEL, label: 'Line fixture',
+      // 目录行：该线路只支持多参考视频，且不暴露清晰度控件。
+      channelGroups: [{
+        id: 'comfyui', label: '合成收窄线路', enabled: true,
+        constraints: {
+          operations: ['video_multi_ref'],
+          parameters: { resolution: { supported: false } },
+        },
+      }],
       parameters: {
         resolution: { options: [{ value: '768P' }, { value: '2K' }], defaultValue: '2K' },
         duration: { options: [{ value: 5 }, { value: 10 }], defaultValue: 10 },
@@ -164,8 +162,6 @@ test('a line narrows the operation list and keeps hidden parameters from resurfa
     });
     assert.equal(open.params.operation, 'text_to_video');
     assert.equal(open.params.resolution, '2K');
-  } finally {
-    delete MODEL_CHANNEL_GROUPS['line-fixture-video'];
   }
 });
 

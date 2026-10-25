@@ -2,13 +2,19 @@
 /**
  * scripts/verify-channel-group-pricing.mjs
  *
- * 渠道分组定价真实性与推导一致性硬门禁。
- * 目的：彻底消灭 Agent 本地手工硬编码与随机臆造积分的 AI 诟病。
+ * 渠道分组定价真实性硬门禁（P1b 之后）。
+ *
+ * 真源只有一个：中枢目录的 `channelGroups` 投影，它的线路来自网关快照的
+ * `enable_groups`、价格来自 `group_ratio` + 每模型计费。画布消费同一份投影，
+ * 本地不得再抄一份价格表。
  *
  * 校验项：
- *   1. TEXT_MODEL_RATIO_ALIGNMENT —— 文本模型标准版积分与畅享版积分必须严格对齐网关官方 model_ratio 与 pool_ratio
- *   2. MIRROR_POINTS_MISMATCH      —— 画布镜像 (channelGroups.ts) 与中枢 (channel-groups.js) 的 pointsEstimate 必须逐字一致
- *   3. DISCOUNT_RATE_INVALID       —— discountRate 必须为有效正浮点数
+ *   1. PROJECTION_PRICE_DRIFT —— 目录每条线路的积分必须能由快照口径逐项重算
+ *      （`estimatePointsFromGateway`：快照单价/按次价 × 分组倍率）。
+ *   2. PROJECTION_PRICE_UNEXPLAINED —— 没有可比数字的线路必须带 `pointsNote` 说明，
+ *      且不得编造数字（网关按表达式/token 计费时）。
+ *   3. PROJECTION_PRICE_OUT_OF_RANGE —— 非 token 计费的线路积分必须落在 0–100 安全区间。
+ *   4. CANVAS_LOCAL_PRICE_TABLE —— 画布渠道模块不得再持有线路集合或价格数字。
  *
  * 退出码：0 全部通过；1 存在违规。
  */
@@ -17,154 +23,138 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
-import { MODEL_CHANNEL_GROUPS } from '../plugins/omnimux/src/catalog/serving/channel-groups.js'
+import { buildModelCatalog } from '../plugins/omnimux/src/catalog/list.js'
+import { resolveReadOnlySnapshot } from '../plugins/omnimux/src/catalog/cloud/current.js'
+import { findSnapshotModel } from '../plugins/omnimux/src/catalog/cloud/view.js'
+import { estimatePointsFromGateway, gatewayBillingMode } from '../plugins/omnimux/src/catalog/pricing-calculator.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(HERE, '..')
 
-export const HUB_PATH = 'plugins/omnimux/src/catalog/serving/channel-groups.js'
-export const MIRROR_PATH =
+/** 画布渠道模块：只允许格式化与运行期自备渠道。 */
+export const CANVAS_CHANNEL_MODULE =
   'plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.ts'
 
-/**
- * 网关权威基准（GET /api/pricing）：
- * model_ratio:
- *   gemini-3.8-flash: 0.375  -> 基准 100 积分
- *   claude-sonnet-4-6: 1.500 -> 严格 4 倍 = 400 积分
- * group_ratio:
- *   pool: 0.285714 (2.9折)
- *   default: 1.0
- */
-const GATEWAY_TEXT_MODEL_RATIOS = Object.freeze({
-  'gemini-3.8-flash': { ratio: 0.375, standardExpected: 100, poolExpected: 28 },
-  'claude-sonnet-4-6': { ratio: 1.5, standardExpected: 400, poolExpected: 114 },
-})
+/** 非 token 计费线路的积分安全上限（防止把内部排序权重当成对外积分）。 */
+export const MAX_NON_TOKEN_POINTS = 100
 
 /**
- * 校验文本模型定价是否与网关官方倍率及号池折扣严格一致。
+ * 校验目录投影的每条线路价格都能由网关快照口径重算出来。
+ * @param {object} snapshot 网关快照
+ * @param {object} catalog 目录 DTO（`buildModelCatalog` 结果）
+ * @returns {{ violations: Array<object>, comparable: number, explained: number }}
  */
-export function checkTextModelPricing(catalog) {
+export function checkProjectionPricing(snapshot, catalog) {
   const violations = []
+  const rows = ['text', 'image', 'video', 'audio'].flatMap((kind) => catalog?.[kind] ?? [])
+  if (rows.length === 0) {
+    violations.push({ rule: 'CATALOG_EMPTY', modelId: '-', groupId: '-', detail: '目录没有任何行，定价门禁无从校验' })
+    return { violations, comparable: 0, explained: 0 }
+  }
 
-  for (const [modelId, expected] of Object.entries(GATEWAY_TEXT_MODEL_RATIOS)) {
-    const groups = catalog[modelId]
-    if (!groups) continue
-
-    const standard = groups.find((g) => g.id === 'standard' || g.wireGroup === 'default')
-    if (standard) {
-      const declared = standard.pricing?.pointsEstimate
-      if (declared !== expected.standardExpected) {
-        violations.push({
-          rule: 'TEXT_STANDARD_PRICING_DRIFT',
-          modelId,
-          groupId: standard.id,
-          detail: `标准版 pointsEstimate=${declared}，但网关 ratio=${expected.ratio} 对应基准为 ${expected.standardExpected} 积分！严禁 AI 随机臆造！`,
-        })
-      }
+  let comparable = 0
+  let explained = 0
+  for (const row of rows) {
+    const snapshotModel = findSnapshotModel(snapshot, row.id)
+    if (!snapshotModel) {
+      violations.push({ rule: 'SNAPSHOT_MODEL_MISSING', modelId: row.id, groupId: '-', detail: '目录行在网关快照里不存在，线路与价格无依据' })
+      continue
     }
-
-    const pool = groups.find((g) => g.id === 'pool' || g.wireGroup === 'pool')
-    if (pool) {
-      const declared = pool.pricing?.pointsEstimate
-      if (declared !== expected.poolExpected) {
+    const lines = Array.isArray(row.channelGroups) ? row.channelGroups : []
+    if (lines.length === 0) {
+      violations.push({ rule: 'CATALOG_LINE_MISSING', modelId: row.id, groupId: '-', detail: '目录行没有任何线路，画布将显示空渠道池' })
+      continue
+    }
+    const billingMode = gatewayBillingMode(snapshotModel)
+    for (const group of lines) {
+      const expected = estimatePointsFromGateway({
+        billing: snapshotModel.billing,
+        billingMode,
+        groupRatio: group.pricing?.groupRatio,
+      })
+      const declared = group.pricing?.pointsEstimate ?? null
+      if (declared !== (expected ?? null)) {
         violations.push({
-          rule: 'TEXT_POOL_PRICING_DRIFT',
-          modelId,
-          groupId: pool.id,
-          detail: `畅享版 pointsEstimate=${declared}，但根据标准版与网关 2.9折 (0.2857) 折算应为 ${expected.poolExpected} 积分！`,
+          rule: 'PROJECTION_PRICE_DRIFT',
+          modelId: row.id,
+          groupId: group.id,
+          detail: `目录 pointsEstimate=${declared}，但按快照单价 × 分组倍率应为 ${expected}；画布与中枢必须消费同一份快照口径`,
+        })
+        continue
+      }
+      if (expected == null) {
+        const note = group.pricing?.pointsNote
+        if (typeof note !== 'string' || !note.trim()) {
+          violations.push({
+            rule: 'PROJECTION_PRICE_UNEXPLAINED',
+            modelId: row.id,
+            groupId: group.id,
+            detail: '该线路没有可比价格，却没有 pointsNote 说明为什么无法比对',
+          })
+          continue
+        }
+        explained++
+        continue
+      }
+      comparable++
+      if (billingMode !== 'per_token' && (expected < 0 || expected > MAX_NON_TOKEN_POINTS)) {
+        violations.push({
+          rule: 'PROJECTION_PRICE_OUT_OF_RANGE',
+          modelId: row.id,
+          groupId: group.id,
+          detail: `非 token 计费线路积分 ${expected} 超出 0–${MAX_NON_TOKEN_POINTS} 安全区间`,
         })
       }
     }
   }
-
-  return violations
+  return { violations, comparable, explained }
 }
 
 /**
- * 校验画布镜像与中枢在 pointsEstimate 上的全量对齐。
+ * 校验画布渠道模块不再持有任何线路集合或价格数字。
+ * @param {string} source 画布 channelGroups 模块源码
+ * @returns {Array<object>}
  */
-export function checkMirrorPricing(catalog, mirrorText) {
+export function checkCanvasPricingSource(source) {
   const violations = []
-
-  let parsed = null
-  try {
-    const start = mirrorText.indexOf('export const MODEL_CHANNEL_GROUPS')
-    if (start >= 0) {
-      const objStart = mirrorText.indexOf('{', start)
-      let depth = 0
-      let objEnd = -1
-      for (let i = objStart; i < mirrorText.length; i++) {
-        if (mirrorText[i] === '{') depth++
-        else if (mirrorText[i] === '}') {
-          depth--
-          if (depth === 0) {
-            objEnd = i + 1
-            break
-          }
-        }
-      }
-      if (objStart >= 0 && objEnd > objStart) {
-        parsed = new Function('return (' + mirrorText.slice(objStart, objEnd) + ')')()
-      }
-    }
-  } catch (_e) {
-    parsed = null
-  }
-
-  if (!parsed) {
+  if (/MODEL_CHANNEL_GROUPS/.test(source)) {
     violations.push({
-      rule: 'MIRROR_PARSE_FAILED',
+      rule: 'CANVAS_LOCAL_PRICE_TABLE',
       modelId: '-',
       groupId: '-',
-      detail: '无法解析画布 channelGroups.ts 镜像对象',
+      detail: '画布 channelGroups 模块仍声明本地线路/价格表；线路与价格必须只来自目录投影',
     })
-    return violations
   }
-
-  for (const [modelId, hubGroups] of Object.entries(catalog)) {
-    const mirrorGroups = parsed[modelId]
-    if (!mirrorGroups) {
-      violations.push({
-        rule: 'MIRROR_MODEL_MISSING',
-        modelId,
-        groupId: '-',
-        detail: `画布镜像缺少模型族 ${modelId}`,
-      })
-      continue
-    }
-
-    for (const hg of hubGroups) {
-      const mg = mirrorGroups.find((g) => g.id === hg.id)
-      if (!mg) continue
-      const hp = hg.pricing?.pointsEstimate ?? null
-      const mp = mg.pricing?.pointsEstimate ?? null
-      if (hp !== mp) {
-        violations.push({
-          rule: 'MIRROR_POINTS_MISMATCH',
-          modelId,
-          groupId: hg.id,
-          detail: `中枢 pointsEstimate=${hp} 与画布镜像 pointsEstimate=${mp} 不一致`,
-        })
-      }
-    }
+  if (/pointsEstimate\s*:\s*-?\d/.test(source)) {
+    violations.push({
+      rule: 'CANVAS_LOCAL_PRICE_LITERAL',
+      modelId: '-',
+      groupId: '-',
+      detail: '画布 channelGroups 模块仍硬编码 pointsEstimate 数字',
+    })
   }
-
+  if (/groupRatio\s*:\s*-?\d/.test(source)) {
+    violations.push({
+      rule: 'CANVAS_LOCAL_RATIO_LITERAL',
+      modelId: '-',
+      groupId: '-',
+      detail: '画布 channelGroups 模块仍硬编码分组倍率',
+    })
+  }
   return violations
 }
 
 function main() {
-  const catalog = MODEL_CHANNEL_GROUPS
-  const mirrorText = readFileSync(resolve(REPO_ROOT, MIRROR_PATH), 'utf8')
-  const violations = [
-    ...checkTextModelPricing(catalog),
-    ...checkMirrorPricing(catalog, mirrorText),
-  ]
-
-  const checkedCount = Object.values(catalog).flat().filter((g) => g.pricing?.pointsEstimate != null).length
+  const snapshot = resolveReadOnlySnapshot().snapshot
+  const catalog = buildModelCatalog({ env: {}, snapshot })
+  const canvasSource = readFileSync(resolve(REPO_ROOT, CANVAS_CHANNEL_MODULE), 'utf8')
+  const pricing = checkProjectionPricing(snapshot, catalog)
+  const violations = [...pricing.violations, ...checkCanvasPricingSource(canvasSource)]
 
   if (violations.length === 0) {
     console.log(
-      `✅ 渠道定价真实性与镜像对齐门禁通过：${checkedCount} 个分组报价通过对账，网关官方倍率校验一致，零手工偏差。`,
+      `✅ 渠道定价真实性门禁通过：${pricing.comparable} 条线路积分与网关快照口径逐项一致，` +
+      `${pricing.explained} 条无可比价格的线路带明确说明，画布零本地价格表。`,
     )
     process.exit(0)
   }

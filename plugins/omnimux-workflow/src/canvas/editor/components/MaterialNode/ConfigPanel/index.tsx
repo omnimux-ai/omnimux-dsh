@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { ModelCascadeMenu } from './ModelCascadeMenu';
 import {
+  directoryChannelGroups,
   resolveModelChannelGroups,
   resolveShortModelName,
   resolveLineConstraints,
@@ -272,8 +273,13 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   // 渠道组 operations 约束（如 comfyui 仅 video_multi_ref）：收窄目录后
   // 页签、选中态与提交路径天然一致，不再出现不可用的生成模式。
   const lineConstraints = useMemo(
-    () => resolveLineConstraints(modelValue, params.routing, effectiveRuntimeSettings),
-    [modelValue, params.routing, effectiveRuntimeSettings],
+    () => resolveLineConstraints(
+      modelValue,
+      params.routing,
+      directoryChannelGroups(activeCatalog, modelValue),
+      effectiveRuntimeSettings,
+    ),
+    [modelValue, activeCatalog, params.routing, effectiveRuntimeSettings],
   );
   const opsCatalog = useMemo(() => {
     if (!activeCatalog || !Array.isArray(lineConstraints?.operations) || lineConstraints.operations.length === 0) {
@@ -304,13 +310,14 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       modelValue,
       displayName,
       params.routing as Record<string, unknown> | undefined,
+      directoryChannelGroups(activeCatalog, modelValue),
       effectiveRuntimeSettings,
     );
   }, [modelValue, activeCatalog, materialType, params.routing, effectiveRuntimeSettings]);
 
   const allChannelGroups = useMemo(
-    () => resolveModelChannelGroups(modelValue, effectiveRuntimeSettings),
-    [modelValue, effectiveRuntimeSettings],
+    () => resolveModelChannelGroups(modelValue, directoryChannelGroups(activeCatalog, modelValue), effectiveRuntimeSettings),
+    [modelValue, activeCatalog, effectiveRuntimeSettings],
   );
 
   const isSingleImageChannel = useMemo(() => {
@@ -755,6 +762,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           : (resolvedChannelSelGroup !== undefined ? resolvedChannelSelGroup : resolvedRoutingGroup);
         const availableGroups = resolveModelChannelGroups(
           newModelId,
+          directoryChannelGroups(activeCatalog, newModelId),
           effectiveRuntimeSettings,
         );
         const isUsableGroup = (group: { enabled?: boolean; isAvailable?: boolean } | undefined) => Boolean(group && group.enabled !== false && group.isAvailable !== false);

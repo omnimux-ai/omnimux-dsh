@@ -27,9 +27,8 @@ const ANALYSIS_PROMPT = 'Analyze the supplied image as simplified staging, not 3
 import type { ProjectAssetsStore } from '../workspace/ProjectAssetsStore.ts';
 import type { CapabilityCatalog, CatalogModelDto } from '../../shared/api.ts';
 
-import { narrowModelByLineConstraints, type LineConstraints } from '../../shared/validation/lineConstraints.ts';
-interface Group { id: string; enabled?: boolean; operations?: string[]; constraints?: LineConstraints }
-type Model = CatalogModelDto & { channelGroups?: Group[] };
+import { narrowModelByLineConstraints } from '../../shared/validation/lineConstraints.ts';
+type Model = CatalogModelDto;
 export interface DirectorModelChoice { model: string; operation: string; profile: string; group: string }
 interface CatalogSeam { list(): CapabilityCatalog | Promise<CapabilityCatalog> }
 interface ExecuteSeam { execute(input: Record<string, unknown>): Promise<unknown> }
@@ -94,7 +93,9 @@ export function createDirectorAssistant({ host, getSeam, assetsStore, gateway, t
         || operation.implementation.seam !== seam || !operation.implementation.profileId
         || (kind === 'text' && !operation.inputs.some(input => input.type === 'image' && (input.max === null || input.max >= 1)))) return [];
       return (model.channelGroups ?? []).filter(group => {
-        if (group.enabled !== true || !group.id || (group.operations && !group.operations.includes(operation.id))) return false;
+        // A line's operation list lives in `constraints.operations` (the directory
+        // projection never publishes a bare `operations` field).
+        if (group.enabled !== true || !group.id) return false;
         const narrowed = narrowModelByLineConstraints(model, model.id, group.constraints).operations?.find(op => op.id === operation.id);
         return narrowed && (kind !== 'text' || narrowed.inputs.some(input => input.type === 'image' && (input.max === null || input.max >= 1)));
       })

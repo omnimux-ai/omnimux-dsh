@@ -185,7 +185,11 @@ test('picker consumes only final filtered options and renders their labels', () 
 });
 test('emission and channel lists validate model membership', () => {
   assert.match(cascadeSrc, /if \(!isPickerCandidate\(options, modelId\)\) return;/);
-  assert.match(cascadeSrc, /isPickerCandidate\(options, channelModelId\) \? getModelChannelGroups/);
+  // 线路只来自上游候选行自带的目录字段：菜单不再有任何本地线路表可读。
+  assert.match(cascadeSrc, /resolveModelChannelGroups\(channelModelId, rowChannelGroups\(options, channelModelId\), runtimeSettings\)/);
+  assert.match(cascadeSrc, /resolveModelChannelGroups\(activeModelId, rowChannelGroups\(options, activeModelId\), runtimeSettings\)/);
+  assert.match(cascadeSrc, /resolveModelChannelGroups\(item\.id, rowChannelGroups\(options, item\.id\), runtimeSettings\)/);
+  assert.doesNotMatch(cascadeSrc, /getModelChannelGroups|MODEL_CHANNEL_GROUPS/);
   assert.match(cascadeSrc, /buildChannelSelectionPayload\(modelId, groupIds, groups\)/);
   assert.match(cascadeSrc, /待重新选择/);
   assert.doesNotMatch(cascadeSrc, /setActiveModelId/);

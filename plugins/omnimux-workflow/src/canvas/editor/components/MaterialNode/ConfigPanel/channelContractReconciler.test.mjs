@@ -33,11 +33,26 @@ const {
   ALLOWED_CONSTRAINT_KEYS,
 } = await import(pathToFileURL(bundlePath).href);
 
+/**
+ * 目录线路夹具（P1b 之后官方线路只来自中枢目录行的形状）。
+ * 本用例集不再有画布本地线路表可读，官方线路一律由调用方传入。
+ */
+const SEEDANCE_2_0_LINES = [{
+  id: 'standard',
+  label: '标准版',
+  badge: '官方原生专线 · 按秒计费',
+  wireGroup: 'default',
+  pricing: { billingMode: 'per_second', pointsEstimate: 4.86, groupRatio: 1 },
+  sla: { stability24h: 98, avgWaitTimeSec: 90 },
+  enabled: true,
+  default: true,
+}];
+
 describe('Channel Contract and Adaptive Reconciler', () => {
   describe('resolveModelChannelGroups', () => {
     it('returns official groups with category official when no runtimeSettings provided', () => {
-      // 2026-10-21 网关对账 #3516：seedance-2-0 只剩一条官方标准线路。
-      const groups = resolveModelChannelGroups('seedance-2-0');
+      // 2026-10-21 网关对账 #3516：seedance-2-0 只剩一条官方标准线路（来自目录行）。
+      const groups = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES);
       assert.deepEqual(groups.map((group) => group.id), ['standard']);
       for (const group of groups) {
         assert.equal(group.category, 'official');
@@ -51,7 +66,7 @@ describe('Channel Contract and Adaptive Reconciler', () => {
         runtimeMediaProvider: 'fal',
         runtimeMediaVideo: true,
       };
-      const groups = resolveModelChannelGroups('seedance-2-0', settings);
+      const groups = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES, settings);
       const byok = groups.find((g) => g.id === 'byok-fal');
       assert.ok(byok);
       assert.equal(byok.label, '我的 fal.ai');
@@ -70,7 +85,7 @@ describe('Channel Contract and Adaptive Reconciler', () => {
         runtimeKeyEndpoint: 'https://custom.endpoint.com/v1',
         runtimeMediaVideo: true,
       };
-      const groups = resolveModelChannelGroups('seedance-2-0', settings);
+      const groups = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES, settings);
       const byok = groups.find((g) => g.id === 'byok-custom');
       assert.ok(byok);
       assert.equal(byok.label, '我的 自建端点');
@@ -88,7 +103,7 @@ describe('Channel Contract and Adaptive Reconciler', () => {
           { provider: 'openrouter', verified: false, capabilities: ['video'] },
         ],
       };
-      const groups = resolveModelChannelGroups('seedance-2-0', settings);
+      const groups = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES, settings);
       const byokIds = groups.filter((g) => g.id.startsWith('byok-')).map((g) => g.id);
       assert.deepEqual(byokIds, ['byok-fal', 'byok-openai']);
     });
@@ -101,12 +116,12 @@ describe('Channel Contract and Adaptive Reconciler', () => {
         runtimeMediaProvider: 'fal',
         runtimeMediaVideo: true,
       };
-      const constraints = resolveLineConstraints('seedance-2-0', { allowedGroups: ['byok-fal'] }, settings);
+      const constraints = resolveLineConstraints('seedance-2-0', { allowedGroups: ['byok-fal'] }, SEEDANCE_2_0_LINES, settings);
       assert.equal(constraints.inputs?.image?.max, 1);
     });
 
     it('does not apply constraints when byok channel is not declared in runtimeSettings', () => {
-      const constraints = resolveLineConstraints('seedance-2-0', { allowedGroups: ['byok-openai'] });
+      const constraints = resolveLineConstraints('seedance-2-0', { allowedGroups: ['byok-openai'] }, SEEDANCE_2_0_LINES);
       assert.deepEqual(constraints, {});
     });
   });
@@ -331,7 +346,8 @@ describe('Channel Contract and Adaptive Reconciler', () => {
       const state = resolveFallbackRouting(
         'seedance-2-0',
         'Seedance 2.0',
-        { channelGroupId: 'standard', allowedGroups: ['standard'], strategy: 'auto' },
+{ channelGroupId: 'standard', allowedGroups: ['standard'], strategy: 'auto' },
+        SEEDANCE_2_0_LINES,
       );
       assert.equal(state.isFallback, false);
       assert.equal(state.bannerMessage, null);
@@ -348,7 +364,8 @@ describe('Channel Contract and Adaptive Reconciler', () => {
       const state = resolveFallbackRouting(
         'seedance-2-0',
         'Seedance 2.0',
-        { channelGroupId: 'byok-fal', allowedGroups: ['byok-fal'], strategy: 'auto', sourceType: 'byok' },
+{ channelGroupId: 'byok-fal', allowedGroups: ['byok-fal'], strategy: 'auto', sourceType: 'byok' },
+        SEEDANCE_2_0_LINES,
         settings,
       );
       assert.equal(state.isFallback, false);
@@ -359,7 +376,8 @@ describe('Channel Contract and Adaptive Reconciler', () => {
       const state = resolveFallbackRouting(
         'seedance-2-0',
         'Seedance 2.0',
-        { sourceType: 'byok' },
+{ sourceType: 'byok' },
+        SEEDANCE_2_0_LINES,
       );
       assert.equal(state.isFallback, true);
       assert.equal(state.invalidGroupId, null);
@@ -377,7 +395,8 @@ describe('Channel Contract and Adaptive Reconciler', () => {
       const state = resolveFallbackRouting(
         'seedance-2-0',
         'Seedance 2.0',
-        { channelGroupId: 'byok-fal', allowedGroups: ['byok-fal'], strategy: 'auto', sourceType: 'byok' },
+{ channelGroupId: 'byok-fal', allowedGroups: ['byok-fal'], strategy: 'auto', sourceType: 'byok' },
+        SEEDANCE_2_0_LINES,
         settings,
       );
       assert.equal(state.isFallback, true);
@@ -404,7 +423,8 @@ describe('Channel Contract and Adaptive Reconciler', () => {
       const state = resolveFallbackRouting(
         'seedance-2-0',
         'Seedance 2.0',
-        { channelGroupId: 'byok-unknown', label: '<script>alert("xss")</script>`hello', sourceType: 'byok' },
+{ channelGroupId: 'byok-unknown', label: '<script>alert("xss")</script>`hello', sourceType: 'byok' },
+        SEEDANCE_2_0_LINES,
         null,
       );
       assert.equal(state.isFallback, true);
@@ -415,7 +435,8 @@ describe('Channel Contract and Adaptive Reconciler', () => {
       const state = resolveFallbackRouting(
         'seedance-2-0',
         'Seedance 2.0',
-        { channelGroupId: 'byok-custom', label: "Ben & Jerry's 专线 (A区)", sourceType: 'byok' },
+{ channelGroupId: 'byok-custom', label: "Ben & Jerry's 专线 (A区)", sourceType: 'byok' },
+        SEEDANCE_2_0_LINES,
         null,
       );
       assert.equal(state.isFallback, true);
@@ -428,7 +449,8 @@ describe('Channel Contract and Adaptive Reconciler', () => {
       const state = resolveFallbackRouting(
         'seedance-2-0',
         'Seedance 2.0',
-        { channelGroupId: 'official', allowedGroups: ['pro'], sourceType: 'byok' },
+{ channelGroupId: 'official', allowedGroups: ['pro'], sourceType: 'byok' },
+        SEEDANCE_2_0_LINES,
         null,
       );
       assert.equal(state.isFallback, true);
@@ -439,7 +461,7 @@ describe('Channel Contract and Adaptive Reconciler', () => {
 
   describe('buildChannelContract', () => {
     it('constructs ChannelContract from ChannelGroupItem', () => {
-      const [officialGroup] = resolveModelChannelGroups('seedance-2-0');
+      const [officialGroup] = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES);
       const contract = buildChannelContract('seedance-2-0', officialGroup);
       assert.equal(contract.modelId, 'seedance-2-0');
       assert.equal(contract.groupId, officialGroup.id);
@@ -449,7 +471,7 @@ describe('Channel Contract and Adaptive Reconciler', () => {
     });
 
     it('respects baseConstraints override priority over group.constraints', () => {
-      const [officialGroup] = resolveModelChannelGroups('seedance-2-0');
+      const [officialGroup] = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES);
       const groupWithConstraints = {
         ...officialGroup,
         constraints: {
@@ -469,7 +491,7 @@ describe('Channel Contract and Adaptive Reconciler', () => {
     });
 
     it('defends against null/undefined in baseConstraints and enforces non-negative maxReferenceImages', () => {
-      const [officialGroup] = resolveModelChannelGroups('seedance-2-0');
+      const [officialGroup] = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES);
       const contract = buildChannelContract('seedance-2-0', officialGroup, {
         maxReferenceImages: -1,
         defaultDuration: null,
@@ -481,7 +503,7 @@ describe('Channel Contract and Adaptive Reconciler', () => {
     });
 
     it('defends against non-finite or negative defaultDuration and maxPromptLength in baseConstraints', () => {
-      const [officialGroup] = resolveModelChannelGroups('seedance-2-0');
+      const [officialGroup] = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES);
       const contract = buildChannelContract('seedance-2-0', officialGroup, {
         defaultDuration: -10,
         maxPromptLength: NaN,
@@ -499,7 +521,7 @@ describe('Channel Contract and Adaptive Reconciler', () => {
     });
 
     it('reconciles params consistently with baseConstraints override in contract', () => {
-      const [officialGroup] = resolveModelChannelGroups('seedance-2-0');
+      const [officialGroup] = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES);
       const contract = buildChannelContract('seedance-2-0', officialGroup, {
         maxReferenceImages: 2,
         supportedDurations: [5],
@@ -538,7 +560,7 @@ describe('Channel Contract and Adaptive Reconciler', () => {
     });
 
     it('filters out non-array supportedAspectRatios/supportedDurations/supportedResolutions in baseConstraints', () => {
-      const [officialGroup] = resolveModelChannelGroups('seedance-2-0');
+      const [officialGroup] = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES);
       const contract = buildChannelContract('seedance-2-0', officialGroup, {
         supportedAspectRatios: 'not-an-array',
         supportedDurations: { not: 'array' },
@@ -587,7 +609,7 @@ describe('Channel Contract and Adaptive Reconciler', () => {
     });
 
     it('safely guards against NaN or negative maxReferenceImages in constraints', () => {
-      const [officialGroup] = resolveModelChannelGroups('seedance-2-0');
+      const [officialGroup] = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES);
       const contractWithNaN = buildChannelContract('seedance-2-0', officialGroup, {
         maxReferenceImages: NaN,
       });
@@ -682,7 +704,7 @@ describe('Channel Contract and Adaptive Reconciler', () => {
     });
 
     it('does not populate video durations when model modality is unknown or null', () => {
-      const [officialGroup] = resolveModelChannelGroups('seedance-2-0');
+      const [officialGroup] = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES);
       const contract = buildChannelContract('unknown-custom-model-xyz', officialGroup);
       assert.equal(contract.constraints.supportedDurations, undefined);
       assert.equal(contract.constraints.defaultDuration, undefined);
@@ -721,7 +743,7 @@ describe('Channel Contract and Adaptive Reconciler', () => {
 
     it('ALLOWED_CONSTRAINT_KEYS strictly guards against external unknown fields injection', () => {
       assert.ok(ALLOWED_CONSTRAINT_KEYS instanceof Set);
-      const [officialGroup] = resolveModelChannelGroups('seedance-2-0');
+      const [officialGroup] = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES);
       const maliciousPayload = {
         supportedAspectRatios: ['16:9'],
         __proto_pollute__: 'danger',
@@ -739,7 +761,7 @@ describe('Channel Contract and Adaptive Reconciler', () => {
     });
 
     it('normalizes default values to first supported item when baseConstraints overrides supported sets without explicit default', () => {
-      const [officialGroup] = resolveModelChannelGroups('seedance-2-0');
+      const [officialGroup] = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES);
       const baseConstraints = {
         supportedAspectRatios: ['9:16', '1:1'],
         supportedDurations: [10],
@@ -752,7 +774,7 @@ describe('Channel Contract and Adaptive Reconciler', () => {
     });
 
     it('normalizes default values when baseConstraints specifies default values outside new supported sets', () => {
-      const [officialGroup] = resolveModelChannelGroups('seedance-2-0');
+      const [officialGroup] = resolveModelChannelGroups('seedance-2-0', SEEDANCE_2_0_LINES);
       const baseConstraints = {
         supportedAspectRatios: ['9:16'],
         defaultAspectRatio: '16:9',
@@ -785,7 +807,8 @@ describe('Channel Contract and Adaptive Reconciler', () => {
       const fallbackResult = resolveFallbackRouting(
         'seedance-2-0',
         'Seedance 2.0',
-        { allowedGroups: ['byok-toString'], channelGroupId: 'byok-toString', sourceType: 'byok' },
+{ allowedGroups: ['byok-toString'], channelGroupId: 'byok-toString', sourceType: 'byok' },
+        SEEDANCE_2_0_LINES,
       );
       assert.equal(fallbackResult.isFallback, true);
       assert.equal(fallbackResult.invalidGroupLabel, '我的 tostring');

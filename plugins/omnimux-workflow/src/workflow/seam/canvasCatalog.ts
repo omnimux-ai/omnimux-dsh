@@ -1,21 +1,66 @@
-import type { CapabilityCatalog, CatalogModelDto, CapabilityModelItem } from '../../shared/api.ts';
+import type {
+  CapabilityCatalog,
+  CatalogChannelGroupDto,
+  CatalogModelDto,
+  CapabilityModelItem,
+} from '../../shared/api.ts';
 import { projectCanvasCatalog } from '../../shared/generationPolicy.ts';
 
 type Getter = (name: string) => unknown;
 interface CatalogSeam { list(): Partial<CapabilityCatalog> }
 
+/**
+ * Keep the hub's own line rows (id / label / badge / wire group / snapshot price /
+ * constraints / SLA / enabled / default pin) as they arrive. The canvas must not
+ * invent, rename or re-price a line, so anything without a usable id+label is
+ * dropped instead of repaired — a malformed row would otherwise render as a
+ * channel the hub cannot route to.
+ */
+function channelGroups(value: unknown): CatalogChannelGroupDto[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const rows = value.flatMap((row): CatalogChannelGroupDto[] => {
+    if (!row || typeof row !== 'object') return [];
+    const group = row as Record<string, unknown>;
+    const id = typeof group.id === 'string' ? group.id.trim() : '';
+    if (!id) return [];
+    return [{
+      id,
+      label: typeof group.label === 'string' && group.label.trim() ? group.label : id,
+      ...(typeof group.badge === 'string' ? { badge: group.badge } : {}),
+      ...(typeof group.wireGroup === 'string' ? { wireGroup: group.wireGroup } : {}),
+      ...(typeof group.wireModel === 'string' ? { wireModel: group.wireModel } : {}),
+      ...(group.pricing && typeof group.pricing === 'object'
+        ? { pricing: group.pricing as CatalogChannelGroupDto['pricing'] }
+        : {}),
+      ...(group.constraints && typeof group.constraints === 'object'
+        ? { constraints: group.constraints as CatalogChannelGroupDto['constraints'] }
+        : {}),
+      ...(group.sla && typeof group.sla === 'object'
+        ? { sla: group.sla as CatalogChannelGroupDto['sla'] }
+        : {}),
+      enabled: group.enabled !== false,
+      ...(group.default === true ? { default: true } : {}),
+    }];
+  });
+  return rows;
+}
+
 function rows(value: unknown): CapabilityModelItem[] {
   if (!Array.isArray(value)) return [];
-  return value.filter((row) => row && typeof row === 'object').map((row) => ({
-    id: String(row.id ?? ''),
-    label: typeof row.label === 'string' && row.label.trim() ? row.label : String(row.id ?? ''),
-    ...(typeof row.badge === 'string' ? { badge: row.badge } : {}),
-    ...(typeof row.subtitle === 'string' ? { subtitle: row.subtitle } : {}),
-    ...(typeof row.family === 'string' ? { family: row.family } : {}),
-    ...(Array.isArray(row.aliases) ? { aliases: row.aliases.map(String) } : {}),
-    ...(row.inputCapability && typeof row.inputCapability === 'object' ? { inputCapability: row.inputCapability } : {}),
-    ...(row.parameters && typeof row.parameters === 'object' ? { parameters: row.parameters } : {}),
-  })).filter((row) => row.id.length > 0);
+  return value.filter((row) => row && typeof row === 'object').map((row) => {
+    const lines = channelGroups(row.channelGroups);
+    return {
+      id: String(row.id ?? ''),
+      label: typeof row.label === 'string' && row.label.trim() ? row.label : String(row.id ?? ''),
+      ...(typeof row.badge === 'string' ? { badge: row.badge } : {}),
+      ...(typeof row.subtitle === 'string' ? { subtitle: row.subtitle } : {}),
+      ...(typeof row.family === 'string' ? { family: row.family } : {}),
+      ...(Array.isArray(row.aliases) ? { aliases: row.aliases.map(String) } : {}),
+      ...(row.inputCapability && typeof row.inputCapability === 'object' ? { inputCapability: row.inputCapability } : {}),
+      ...(row.parameters && typeof row.parameters === 'object' ? { parameters: row.parameters } : {}),
+      ...(lines && lines.length > 0 ? { channelGroups: lines } : {}),
+    };
+  }).filter((row) => row.id.length > 0);
 }
 
 /** Catalog DTO passthrough; curation never fabricates an executable operation. */

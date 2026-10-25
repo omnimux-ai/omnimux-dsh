@@ -38,7 +38,7 @@
   "peerDependencies": {
     "@deepseek-ai/dsh-client-ui-primitives": "0.1.2-rc.1 || >=0.2.1-rc.3 <0.3.0-0",
     "@deepseek-ai/dsh-client-locale": "0.1.2-rc.1 || >=0.2.1-rc.3 <0.3.0-0",
-    "dsh-better-sidebar": "0.19.1",
+    "dsh-better-sidebar": "0.28.0",
     "react": "^18.2.0 || ^19.0.0",
     "react-dom": "^18.2.0 || ^19.0.0"
   },

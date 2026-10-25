@@ -12,6 +12,7 @@ related:
   - "docs/contracts/model-display-label.md"
   - "docs/contracts/ui-copywriting-and-naming-standards.md"
   - "docs/contracts/model-list-ownership.md"
+  - "docs/contracts/omnimux-contracts-architecture.md"
 ---
 
 # OmniMux 渠道分组显示名与副标题命名规范
@@ -27,9 +28,12 @@ related:
 | --- | --- | --- |
 | `model-display-label.md` | 模型行显示名（`modelCatalog.list()` 的 `label`） | 渠道分组显示名 |
 | `ui-copywriting-and-naming-standards.md` | 筛选器、按钮、状态徽章、术语字典 | 渠道分组显示名 |
-| **本规范** | **渠道分组 `label` 与 `badge`**（`channel-groups.js` 及其画布镜像） | 路由 `id`、`wireModel`、`wireGroup`、定价、约束 |
+| **本规范** | **产品命名的渠道分组 `label` 与 `badge`**（中枢展示覆盖表里登记了该 `wireGroup` 的线路） | 路由 `id`、`wireModel`、`wireGroup`、定价、约束；网关自己发布的分组名 |
+| 消费方（画布、应用页、媒体查看器） | 只按目录投影逐字显示 | 重新命名、翻译或改写任何分组名 |
 
 分组 `id`、`wireGroup` 是路由与计费键，属于机器标识，不受本规范约束、也不得因改名而变更。
+
+**单一真源**：分组名的权威表述在中枢展示覆盖表 `plugins/omnimux/src/catalog/serving/channel-groups.js`；消费方只显示目录投影，禁止手抄第二份（[契约单一真源](omnimux-contracts-architecture.md)）。网关直接发布、产品未在覆盖表命名的线路由网关起名，本规范的白名单不适用于它们，但禁用词（供应商名、采购层黑话、促销话术）照查——要改名必须先在中枢展示覆盖表补条目。
 
 ## 二、三层语义（既有命名分类）
 
@@ -70,13 +74,14 @@ related:
 
 ## 五、门禁与验证
 
-- `pnpm verify:group-naming`：校验 label 白名单、每族唯一性、构词法、禁用词零命中、中枢与画布镜像逐字一致。
+- `pnpm verify:group-naming`：对**目录投影**校验产品命名线路的 label 白名单、每族唯一性、构词法、价格自述、禁用词零命中，并逐字比对画布展示名与目录投影；网关直接发布的线路单独计数，只受禁用词约束。
 - 单元测试：`plugins/omnimux/src/catalog/serving/channel-groups.test.js`、`plugins/omnimux-workflow/.../channelGroups.test.mjs`。
 - 门禁脚本自测：`scripts/verify-channel-group-naming.test.mjs`（含违规样本必须失败的反向用例）。
+- 跨插件一致性：`pnpm verify:cross-plugin-models`（目录投影 vs 画布消费）。
 
 ## 六、变更流程
 
 1. 新档位词先进本文件白名单；
-2. 同步改中枢 `plugins/omnimux/src/catalog/serving/channel-groups.js` 与画布镜像 `plugins/omnimux-workflow/.../ConfigPanel/channelGroups.ts`（跨插件原子闭环）；
-3. 跑 `pnpm verify:group-naming` 与两侧单元测试；
+2. 只在中枢展示覆盖表 `plugins/omnimux/src/catalog/serving/channel-groups.js` 里给该 `wireGroup` 起名（消费方自动跟随目录，禁止在画布或其它插件再抄一份）；
+3. 跑 `pnpm verify:group-naming`、`pnpm verify:cross-plugin-models` 与相关单元测试；
 4. 界面文案属前端改动，交付前须在任务工作树完成真实浏览器验证。

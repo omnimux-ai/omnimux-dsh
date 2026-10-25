@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "kind": "omnimux-blocker",
+  "taskId": "canvas-catalog-truth-issue-3762",
+  "phase": "verify",
+  "summary": "变基到 4dbb44479（含 19e4a74a5 / #3769，身份已对齐 dsh-better-sidebar 0.19.1）后重跑同一条应用级验收命令，fresh task runtime 安装仍被正式插件管理器以 peer 不兼容整体拒绝：support 包 dsh-better-sidebar@0.19.1 声明 14 个非可选 @deepseek-ai/dsh-* peer 为 ^0.1.5-rc.1，宿主 /Applications/OmniMux Dev.app 的 dsh 为 0.2.1-rc.3（build-info.json 的 dsh.packageSpec），不在该区间，exact-version exemption 未启用，安装器输出「dsh: nothing was installed」。因此 app-environment / app-browser / task-journey 全部 not-executed，无任何断言、截图或页面证据。该缺口是本仓已知残留（specs/cross-sidebar-support-identity.spec.md:76「0.19.1 peer 代际缺口」）：#3725 只为本仓自有插件 peer 追加了 >=0.2.1-rc.3 <0.3.0-0 分支，第三方 support 包未扩。上次阻断记录把原因归为「分支落后 origin/main 3 个提交」不成立——身份对齐后仍被同一门禁拒绝。",
+  "createdAt": "2026-10-25T04:24:06.217Z",
+  "repo": {
+    "baseSha": "4dbb4447977b1a64e4bbb8f1d2ec2c4174e4658f",
+    "headSha": "4dbb4447977b1a64e4bbb8f1d2ec2c4174e4658f"
+  },
+  "attempts": [
+    {
+      "command": "corepack pnpm verify:app --request test-support/canvas-catalog-truth-3762/request.json --journey plugins/omnimux-workflow/tests/e2e/canvas-catalog-truth-3762.journey.mjs",
+      "exitCode": 1
+    }
+  ],
+  "missing": [],
+  "evidence": [
+    ".workbuddy/evidence/contract/canvas-catalog-truth-issue-3762/948ee1ab-dab4-4c00-8d5a-d038339e43c6/raw-run.json",
+    ".workbuddy/evidence/contract/canvas-catalog-truth-issue-3762/948ee1ab-dab4-4c00-8d5a-d038339e43c6/install-diagnostic.txt"
+  ],
+  "nextAction": "宿主代际缺口闭合前无法产出应用级真浏览器证据。需要二选一：把 support 包换成 peer 区间覆盖 dsh 0.2.1-rc.3 的构建（扩 peer 或换版本），或在受控路径显式授予 dsh-better-sidebar@0.19.1 on 0.2.1-rc.3 的 exact-version 豁免；两者都改产品/门禁，属独立决策，需授权后由 Lead 处置。之后在本工作树原样重跑同一条命令即可（请求与旅程已就位，base/head 已重钉为 4dbb4447977b1a64e4bbb8f1d2ec2c4174e4658f）。",
+  "authorization": "not-granted"
+}

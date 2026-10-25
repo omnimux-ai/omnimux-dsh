@@ -75,8 +75,10 @@ export async function dismissFirstLaunchNotice({ send, sleep, now = Date.now, ti
         return box.width > 0 && box.height > 0 && style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
       };
       const dialogs = [...document.querySelectorAll('[role="dialog"], [data-slot="dialog-content"]')]
-        .filter(dialog => visible(dialog) && [...dialog.querySelectorAll('h1,h2,h3,h4,[role="heading"]')]
-          .some(heading => heading.textContent.trim() === '内测声明'));
+        .filter(dialog => visible(dialog) && [...dialog.querySelectorAll('button')]
+          .filter(button => button.textContent.trim() === '继续' && !button.disabled && visible(button)).length === 1
+          && [...dialog.querySelectorAll('h1,h2,h3,h4,[role="heading"]')]
+            .some(heading => ['内测声明', '预览版说明'].includes(heading.textContent.trim())));
       if (!dialogs.length) return { present: false };
       if (dialogs.length !== 1) return { present: true, actionable: false };
       const buttons = [...dialogs[0].querySelectorAll('button')]
@@ -624,7 +626,26 @@ export async function runJourney(journeyPath, { send, sleep, evidenceDir, origin
 }
 
 /** 真实无头 Chrome 驱动：动态 CDP 端口、同源 cookie 注入、正几何断言、PNG 取证。 */
-async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, mode = 'ui', journey = null, installation = null, io = fs, chromePath = findChromePath() }) {
+/** Chrome 155 full headless hangs every loopback navigation on this host (DevTools
+ * commands never answer); the Playwright-distributed chrome-headless-shell (a real
+ * Chromium build) executes the same command set normally. Prefer it when present. */
+export function findAppQaChromePath(io = fs) {
+  if (process.env.CHROME_PATH && io.existsSync(process.env.CHROME_PATH)) return process.env.CHROME_PATH;
+  const home = process.env.HOME ?? '';
+  const playwrightRoot = join(home, 'Library/Caches/ms-playwright');
+  try {
+    const candidates = io.readdirSync(playwrightRoot)
+      .filter(name => /^chromium_headless_shell-\d+$/.test(name))
+      .sort((a, b) => Number(b.split('-').pop()) - Number(a.split('-').pop()));
+    for (const name of candidates) {
+      const bin = join(playwrightRoot, name, 'chrome-headless-shell-mac-arm64', 'chrome-headless-shell');
+      if (io.existsSync(bin)) return bin;
+    }
+  } catch {}
+  return findChromePath();
+}
+
+async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, mode = 'ui', journey = null, installation = null, io = fs, chromePath = findAppQaChromePath() }) {
   let chrome; let socket; let privateDir; let exited = false; let closed = false; let cleaning = false;
   let chromeStderrTail = '';
   const assertions = [];
@@ -636,6 +657,7 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
     chrome = spawn(chromePath, [
       '--headless=new', '--remote-debugging-port=0', '--no-first-run',
       `--user-data-dir=${privateDir}`, '--no-default-browser-check', '--disable-gpu', '--window-size=1280,800',
+      '--enable-logging=stderr', '--v=0',
       'about:blank',
     ], { env: { PATH: '/usr/bin:/bin:/usr/sbin:/sbin', HOME: privateDir, TMPDIR: privateDir }, stdio: ['ignore', 'ignore', 'pipe'] });
     state.observations.events.push({ event: 'spawn', pid: chrome.pid ?? null, parentPid: process.pid });
@@ -650,7 +672,7 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
       chrome.stderr.on('data', chunk => {
         const text = chunk.toString();
         // Bounded tail kept for failure diagnostics; the port probe below owns the `buffer` reset.
-        chromeStderrTail = (chromeStderrTail + text).slice(-4000);
+        chromeStderrTail = (chromeStderrTail + text).slice(-8000);
         buffer += text;
         if (buffer.length > 65536) { buffer = ''; clearTimeout(timer); reject(new Error('chrome-output-limit')); return; }
         const match = /DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\//.exec(buffer);
@@ -659,66 +681,120 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
     });
     assertions.push({ name: 'chrome-cdp-listen', pass: true, port: cdpPort.value });
 
-    const targets = await (await fetch(`http://127.0.0.1:${cdpPort.value}/json/list`, { signal: AbortSignal.timeout(15000) })).json();
-    const page = targets.find(target => target.type === 'page');
-    socket = new WebSocket(page.webSocketDebuggerUrl);
+    // Chrome 155 page-level DevTools WebSockets accept the handshake but never execute
+    // page commands (evaluate/navigate hang forever). The browser-level socket with a
+    // flat `Target.attachToTarget` session executes the same commands normally.
+    const versionInfo = await (await fetch(`http://127.0.0.1:${cdpPort.value}/json/version`, { signal: AbortSignal.timeout(15000) })).json();
+    const pageTargetId = async () => {
+      const targets = await (await fetch(`http://127.0.0.1:${cdpPort.value}/json/list`, { signal: AbortSignal.timeout(15000) })).json();
+      const target = targets.find(item => item.type === 'page');
+      if (!target?.id) throw new Error('cdp-page-target-missing');
+      return target.id;
+    };
+    socket = new WebSocket(versionInfo.webSocketDebuggerUrl);
     await new Promise((yes, no) => {
       const timer = setTimeout(() => no(new Error('cdp-open-timeout')), 15000);
       socket.onopen = () => { clearTimeout(timer); yes(); };
       socket.onerror = () => { clearTimeout(timer); no(new Error('cdp-open-failed')); };
     });
-
+    let socketClosed = false;
+    let sessionId = null;
+    const pending = new Map();
+    const failPending = reason => {
+      for (const { reject: no } of pending.values()) no(reason);
+      pending.clear();
+    };
+    socket.addEventListener('close', event => {
+      socketClosed = true;
+      state.observations.cdpSocketClosed = { code: event.code, reason: String(event.reason ?? '').slice(0, 200) };
+      failPending(new Error('cdp-socket-closed'));
+    });
+    socket.addEventListener('error', () => { state.observations.cdpSocketError = true; });
     let sequence = 0;
     let eventSequence = 0;
     let eventsTruncated = false;
     const scriptEvents = [];
-    const readEvents = async ({ afterSequence = eventSequence, methods = ['Debugger.scriptParsed'], limit = 2000 } = {}) => {
-      const events = scriptEvents.filter(event => event.sequence > afterSequence && methods.includes(event.method));
-      return { cursor: eventSequence, events: events.slice(0, limit), hasMore: events.length > limit, truncated: eventsTruncated };
-    };
-    const pending = new Map();
-    const send = (method, params) => new Promise((resolve, reject) => {
-      const id = ++sequence;
-      const timer = setTimeout(() => { pending.delete(id); reject(new Error('cdp-command-timeout')); }, 15000);
-      pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } });
-      socket.send(JSON.stringify({ id, method, params: params ?? {} }));
-    });
     socket.onmessage = event => {
       const message = JSON.parse(event.data);
       if (message.method === 'Debugger.scriptParsed') {
         if (scriptEvents.length >= 2000) { scriptEvents.shift(); eventsTruncated = true; }
         scriptEvents.push({ sequence: ++eventSequence, method: message.method, params: message.params });
       }
+      if (message.method?.startsWith('Target.')) {
+        state.observations.targetEvents ??= [];
+        if (state.observations.targetEvents.length < 12) {
+          state.observations.targetEvents.push({
+            method: message.method,
+            sessionId: String(message.sessionId ?? message.params?.sessionId ?? '').slice(0, 16),
+            targetId: String(message.params?.targetInfo?.targetId ?? message.params?.targetId ?? '').slice(0, 16),
+            type: message.params?.targetInfo?.type ?? null,
+            url: String(message.params?.targetInfo?.url ?? '').slice(0, 80),
+          });
+        }
+      }
       if (!message.id || !pending.has(message.id)) return;
       const { resolve: yes, reject: no } = pending.get(message.id);
       pending.delete(message.id);
       if (message.error) no(new Error(`cdp ${message.error.message}`)); else yes(message.result);
     };
+    const sendOnce = (method, params) => new Promise((resolve, reject) => {
+      if (socketClosed) { reject(new Error(`cdp-socket-closed:${method}`)); return; }
+      const id = ++sequence;
+      const timer = setTimeout(() => { pending.delete(id); reject(new Error(`cdp-command-timeout:${method}`)); }, 30000);
+      pending.set(id, { resolve: value => { clearTimeout(timer); state.observations.cdpLastCompleted = method; resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } });
+      try { socket.send(JSON.stringify({ id, method, ...(sessionId ? { sessionId } : {}), params: params ?? {} })); }
+      catch (error) { clearTimeout(timer); pending.delete(id); reject(error); }
+    });
+    // A dropped or stale session is re-attached once per command; postconditions are unchanged.
+    const send = async (method, params) => {
+      try {
+        return await sendOnce(method, params);
+      } catch (error) {
+        const message = String(error?.message ?? error);
+        if (!/^cdp-socket-closed/.test(message) && !/^cdp-command-timeout/.test(message) && !/session/i.test(message)) throw error;
+        const reconnects = Number(state.observations.cdpSocketReconnectCount ?? 0) + 1;
+        state.observations.cdpSocketReconnectCount = reconnects;
+        if (reconnects > 8) throw error;
+        if (!socketClosed) {
+          const attached = await sendOnce('Target.attachToTarget', { targetId: await pageTargetId(), flatten: true });
+          sessionId = attached.sessionId;
+        } else {
+          throw error;
+        }
+        return sendOnce(method, params);
+      }
+    };
+    const attached = await sendOnce('Target.attachToTarget', { targetId: await pageTargetId(), flatten: true });
+    sessionId = attached.sessionId;
+
+    const readEvents = async ({ afterSequence = eventSequence, methods = ['Debugger.scriptParsed'], limit = 2000 } = {}) => {
+      const events = scriptEvents.filter(event => event.sequence > afterSequence && methods.includes(event.method));
+      return { cursor: eventSequence, events: events.slice(0, limit), hasMore: events.length > limit, truncated: eventsTruncated };
+    };
 
     await send('Network.enable');
     await send('Page.enable');
-    const applyCookie = () => send('Network.setCookie', {
+    const targetUrl = seededWorkspace ? `${origin}/#/workspace/${seededWorkspace}` : `${origin}/`;
+    const setCookie = await send('Network.setCookie', {
       name: cookie.name, value: cookie.value, domain: new URL(origin).hostname, path: '/',
       url: `${origin}/`, secure: false, sameSite: 'Lax',
     });
-    let sameSiteCookie = await applyCookie();
-    let cookieRetried = false;
-    if (sameSiteCookie?.success === false) {
-      // A rejected injection poisons every later assertion, so retry once before failing the run.
-      // The postcondition is unchanged: the cookie still has to be applied for the assertion to pass.
-      cookieRetried = true;
+    let cookieApplied = setCookie?.success !== false;
+    if (!cookieApplied) {
+      // Rejected injection poisons every later assertion; retry once before failing.
       await sleep(300);
-      try { await send('Network.enable'); }
-      catch (error) { state.observations.cookieRetryNetworkEnableError = sanitizeFailureText(String(error?.message ?? error)); }
-      sameSiteCookie = await applyCookie();
+      const retry = await send('Network.setCookie', {
+        name: cookie.name, value: cookie.value, domain: new URL(origin).hostname, path: '/',
+        url: `${origin}/`, secure: false, sameSite: 'Lax',
+      });
+      cookieApplied = retry?.success !== false;
     }
     // Only the cookie name travels into evidence; the value stays in memory.
     assertions.push({
-      name: 'auth-cookie-applied', pass: sameSiteCookie?.success !== false,
-      cookieName: cookie.name, retried: cookieRetried, success: sameSiteCookie?.success ?? null,
+      name: 'auth-cookie-applied', pass: cookieApplied,
+      cookieName: cookie.name, via: 'Network.setCookie',
     });
-
-    const targetUrl = seededWorkspace ? `${origin}/#/workspace/${seededWorkspace}` : `${origin}/`;
+    if (!cookieApplied) throw new Error('auth-cookie-injection-failed');
     await send('Page.navigate', { url: targetUrl });
     const deadline = Date.now() + 30000;
     let geometry = null;
@@ -739,7 +815,7 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
       state.observations.browserDiagnostics = {
         targetUrl,
         navigation: navState?.result?.value ?? null,
-        cookie: { name: cookie.name, success: sameSiteCookie?.success ?? null, retried: cookieRetried },
+        cookie: { name: cookie.name, applied: cookieApplied },
         chromeStderrTail: sanitizeFailureText(chromeStderrTail, { tail: true, limit: 400 }),
       };
     }
@@ -788,6 +864,12 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
     // 任务自定义功能旅程：保底断言通过后执行，断言并入总判定。
     if (journey) {
       const journeyAssertions = await runJourney(journey, { send, sleep, evidenceDir, origin, io });
+      for (const item of journeyAssertions) {
+        if (item.pass === false && typeof item.detail === 'string') {
+          state.observations.journeyFailure ??= sanitizeFailureText(item.detail, { limit: 400 });
+          break;
+        }
+      }
       assertions.push(...journeyAssertions);
     }
 
@@ -825,6 +907,8 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
     });
   } catch (error) {
     if (state.loadingPhase) state.loadingFailure = 'TEST_APP_QA_CLIENT_LOADING';
+    state.observations.browserError = sanitizeFailureText(String(error?.message ?? error), { limit: 400 });
+    state.observations.chromeStderrTail = sanitizeFailureText(chromeStderrTail, { tail: true, limit: 4000 });
     throw Object.assign(new Error('TEST_APP_QA_BROWSER'), { code: 'TEST_APP_QA_BROWSER', browser: state });
   } finally {
     cleaning = true;
@@ -1218,6 +1302,15 @@ export function createAppQaRunner(deps = {}) {
     const observed = env?.observations ?? prepareObservations;
     const skippedInputCount = observed?.preparation?.skippedInputCount ?? observed?.skippedInputCount;
     if (Number.isInteger(skippedInputCount)) report.observations.skippedInputCount = skippedInputCount;
+    if (typeof browser?.observations?.browserError === 'string') report.observations.browserError = browser.observations.browserError;
+    if (typeof browser?.observations?.chromeStderrTail === 'string') report.observations.chromeStderrTail = browser.observations.chromeStderrTail;
+    if (browser?.observations?.cdpSocketClosed) report.observations.cdpSocketClosed = browser.observations.cdpSocketClosed;
+    if (typeof browser?.observations?.cdpLastCompleted === 'string') report.observations.cdpLastCompleted = browser.observations.cdpLastCompleted;
+    if (typeof browser?.observations?.cdpSocketReconnect === 'string') report.observations.cdpSocketReconnect = browser.observations.cdpSocketReconnect;
+    if (Number.isInteger(browser?.observations?.cdpSocketReconnectCount)) report.observations.cdpSocketReconnectCount = browser.observations.cdpSocketReconnectCount;
+    if (Array.isArray(browser?.observations?.targetEvents)) report.observations.targetEvents = browser.observations.targetEvents;
+    if (typeof browser?.observations?.journeyFailure === 'string') report.observations.journeyFailure = browser.observations.journeyFailure;
+    if (browser?.observations?.cdpSocketError) report.observations.cdpSocketError = true;
     if (request) {
       const allExpected = request.requiredChecks.flatMap(name => request.expectedAssertions[name]);
       if (new Set(report.assertions.map(item => item.name)).size !== report.assertions.length

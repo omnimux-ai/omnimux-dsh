@@ -677,6 +677,7 @@ async function startFreshTaskRuntime({ options, io, deps }) {
     io.writeFileSync(join(env.DSH_HOME, 'settings.yaml'), JSON.stringify({
       'llm-deepseek': { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: mock.origin },
       'agent-default-model': { provider: 'deepseek-official', model: 'deepseek-flash' },
+      'ui-onboarding': { welcomeNoticeVersion: '2026-09-28.1' },
     }) + '\n', { flag: 'wx', mode: 0o600 });
     const installed = await installTaskRuntime({ root: options.root, repository: deps.repositoryRoot ?? repositoryRoot, privateRoot, ownerIdentity: runtimeOwnerIdentity, preparation, evidenceContext: options.evidenceContext, candidate: options.candidate, executable: EXECUTABLE, wrapper: WRAPPER, env });
     const { createTaskPeerProbeSource } = await import('./task-runtime-proof.mjs');
@@ -906,7 +907,7 @@ export function createTestEnvironmentStarter(deps = {}) {
         'llm-deepseek': { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: endpoint },
       };
       if (mode !== 'onboarding') {
-        initialSettings['ui-onboarding'] = { welcomeNoticeVersion: '2026-08-13.1' };
+        initialSettings['ui-onboarding'] = { welcomeNoticeVersion: '2026-09-28.1' };
         initialSettings.omnimux = {
           defaultTextModel: 'gemini-3.8-flash',
           defaultVideoModel: 'minimax-h3',

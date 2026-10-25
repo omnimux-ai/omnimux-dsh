@@ -1,25 +1,32 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import {
   formatBillingLabel,
   formatPriceChip,
   formatPriceLabel,
-  getModelChannelGroups,
+  directoryChannelGroups,
+  rowChannelGroups,
+  normalizeDirectoryGroups,
   resolveModelChannelGroups,
   parseModelAndGroup,
   resolveLineConstraints,
   resolveShortModelName,
-  MODEL_CHANNEL_GROUPS,
   DEFAULT_BYOK_CONSTRAINTS,
   isRuntimeByokChannelSettings,
   isLineConstraintsShape,
   buildChannelSelectionPayload,
   detectModelModality,
 } from './channelGroups.ts';
-// The picker mirror must equal the hub routing table; the hub is readable from a
-// test (product code may not import it). The same comparison runs as a CI gate in
-// scripts/verify-cross-plugin-model-alignment.mjs.
-import { MODEL_CHANNEL_GROUPS as HUB_CHANNEL_GROUPS } from '../../../../../../../omnimux/src/catalog/serving/channel-groups.js';
+// 官方线路只来自中枢目录：测试用真实中枢投影当夹具（产品代码不得 import 中枢内部）。
+// 同一份「目录 → 画布」投影一致性由 scripts/verify-cross-plugin-model-alignment.mjs 门禁覆盖。
+import { getModelChannelGroups as hubChannelGroups } from '../../../../../../../omnimux/src/catalog/serving/channel-groups.js';
+
+/** 目录夹具：真实中枢投影（随包快照，离线）。 */
+const directory = (modelId) => hubChannelGroups(modelId);
+/** 目录形态的 catalog（`models[]` 携带 `channelGroups`），用于验证 resolver 的取数路径。 */
+const directoryCatalog = (modelId) => ({ models: [{ id: modelId, channelGroups: directory(modelId) }] });
 
 describe('Canvas ConfigPanel ChannelGroups', () => {
   it('parses model and group safely', () => {
@@ -37,59 +44,91 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     });
   });
 
-  it('retrieves channel groups for supported models', () => {
+  it('resolves exactly the lines the hub directory publishes for a model', () => {
     // 2026-10-21 网关对账 #3516：seedance-2-0 只剩标准版一条官方线路。
-    const seedanceGroups = getModelChannelGroups('seedance-2-0');
-    assert.ok(Array.isArray(seedanceGroups));
-    assert.deepEqual(seedanceGroups.map((g) => g.id), ['standard']);
-    assert.equal(seedanceGroups[0].default, true);
+    const seedanceLines = directory('seedance-2-0');
+    assert.deepEqual(seedanceLines.map((g) => g.id), ['standard']);
+    assert.equal(seedanceLines[0].default, true);
+    const seedanceGroups = resolveModelChannelGroups('seedance-2-0', seedanceLines);
+    assert.deepEqual(seedanceGroups.map((g) => g.id), seedanceLines.map((g) => g.id));
+    assert.deepEqual(seedanceGroups.map((g) => g.label), seedanceLines.map((g) => g.label));
+    assert.deepEqual(seedanceGroups.map((g) => g.pricing), seedanceLines.map((g) => g.pricing));
+    assert.ok(seedanceGroups.every((g) => g.category === 'official' && g.sourceType === 'official' && g.isAvailable === true));
 
-    // seedance-2-5 提供 480p（经济版）/720p（标准版，默认）两档；gpt-image-2.5 提供标准/经济两条线路。
-    const seedance25Groups = getModelChannelGroups('seedance-2-5');
-    assert.deepEqual(seedance25Groups.map((g) => g.id), ['480p', '720p']);
-    assert.deepEqual(seedance25Groups.map((g) => g.label), ['经济版', '标准版']);
+    // 2026-10-25 网关快照（P1b）：seedance-2-5 发布 4 条线路，默认仍是 720p 标准版。
+    const seedance25Groups = resolveModelChannelGroups('seedance-2-5', directory('seedance-2-5'));
+    assert.deepEqual(seedance25Groups.map((g) => g.id), ['480p', '720p', 'seedance-2-5-480p', 'seedance-2-5-720p']);
+    assert.deepEqual(seedance25Groups.slice(0, 2).map((g) => g.label), ['经济版', '标准版']);
     assert.deepEqual(seedance25Groups.filter((g) => g.default).map((g) => g.id), ['720p']);
-    const imageGroups = getModelChannelGroups('gpt-image-2.5');
-    assert.deepEqual(imageGroups.map((g) => g.id), ['standard', 'economy']);
+
+    // gpt-image-2.5 发布标准/经济/Nano Banana 经济三条线路（表达式计费，无逐项可比数字）。
+    const imageGroups = resolveModelChannelGroups('gpt-image-2.5', directory('gpt-image-2.5'));
+    assert.deepEqual(imageGroups.map((g) => g.id), ['standard', 'economy', 'nanobanana-economy']);
+    assert.equal(imageGroups[0].pricing?.pointsEstimate, null);
+    assert.match(String(imageGroups[0].pricing?.pointsNote), /无法逐项比对/);
 
     // Claude 已随网关对账整体停用，不得再有任何渠道池。
-    assert.deepEqual(getModelChannelGroups('claude-opus-4-6'), []);
+    assert.deepEqual(directory('claude-opus-4-6'), []);
+    assert.deepEqual(resolveModelChannelGroups('claude-opus-4-6', directory('claude-opus-4-6')), []);
   });
 
-  it('offers no channels for a model the hub has no pool for', () => {
+  it('offers no channels for a model the gateway does not sell', () => {
     // Inventing channels and prices here would promise routing the hub cannot do.
-    assert.deepEqual(getModelChannelGroups('unknown-custom-model'), []);
-    // 网关定价表未收录该模型 → 没有可依据的分组，画布不得凭空给渠道。
-    assert.deepEqual(getModelChannelGroups('grok-imagine-image-2-0'), []);
+    for (const modelId of [
+      'unknown-custom-model',
+      // 网关定价表未收录该模型 → 没有可依据的分组，画布不得凭空给渠道。
+      'grok-imagine-image-2-0',
+      // 网关已下架的型号：目录给空，画布也必须给空（不得回落到任何本地表）。
+      'seedance-2-0-fast',
+      'seedance-2-0-mini',
+      'seedream-5-0-pro',
+      'minimax-h3',
+    ]) {
+      assert.deepEqual(directory(modelId), [], `${modelId} must have no gateway line`);
+      assert.deepEqual(resolveModelChannelGroups(modelId, directory(modelId)), [], `${modelId} must offer no channel`);
+    }
   });
 
-  it('mirrors the hub routing table exactly (model keys, ids and every routing field)', () => {
-    assert.deepEqual(
-      Object.keys(MODEL_CHANNEL_GROUPS).sort(),
-      Object.keys(HUB_CHANNEL_GROUPS).sort(),
-      'picker and hub must expose the same model pools',
-    );
-    for (const [modelId, hubGroups] of Object.entries(HUB_CHANNEL_GROUPS)) {
-      const pickerGroups = MODEL_CHANNEL_GROUPS[modelId];
-      assert.deepEqual(
-        pickerGroups.map((g) => g.id).sort(),
-        hubGroups.map((g) => g.id).sort(),
-        `${modelId} channel ids must match the hub`,
-      );
-      for (const hubGroup of hubGroups) {
-        const pickerGroup = pickerGroups.find((g) => g.id === hubGroup.id);
-        assert.ok(pickerGroup, `${modelId}@${hubGroup.id} missing from the picker`);
-        assert.equal(pickerGroup.wireGroup, hubGroup.wireGroup, `${modelId}@${hubGroup.id} wireGroup`);
-        assert.equal(pickerGroup.pricing?.pointsEstimate, hubGroup.pricing?.pointsEstimate, `${modelId}@${hubGroup.id} points`);
-        assert.equal(pickerGroup.pricing?.discountRate, hubGroup.pricing?.discountRate, `${modelId}@${hubGroup.id} discount`);
-        assert.equal(pickerGroup.pricing?.priceRatio ?? null, hubGroup.pricing?.priceRatio ?? null, `${modelId}@${hubGroup.id} ratio`);
-        assert.equal(pickerGroup.pricing?.billingMode, hubGroup.pricing?.billingMode, `${modelId}@${hubGroup.id} billing`);
-        assert.equal(pickerGroup.sla?.stability24h, hubGroup.sla?.stability24h, `${modelId}@${hubGroup.id} stability`);
-        assert.equal(pickerGroup.sla?.avgWaitTimeSec, hubGroup.sla?.avgWaitTimeSec, `${modelId}@${hubGroup.id} wait`);
-        assert.deepEqual(pickerGroup.parameterConstraints ?? null, hubGroup.parameterConstraints ?? null, `${modelId}@${hubGroup.id} parameterConstraints`);
-        assert.equal(pickerGroup.enabled, hubGroup.enabled, `${modelId}@${hubGroup.id} enabled`);
-      }
+  it('reads every line field from the directory row without re-declaring it', () => {
+    for (const modelId of ['seedance-2-0', 'seedance-2-5', 'gpt-image-2.5', 'gemini-3.8-flash', 'suno']) {
+      const lines = directory(modelId);
+      assert.ok(lines.length > 0, `${modelId} must have gateway lines`);
+      const resolved = resolveModelChannelGroups(modelId, lines);
+      assert.deepEqual(resolved.map((g) => g.id), lines.map((g) => g.id), `${modelId} ids`);
+      assert.deepEqual(resolved.map((g) => g.label), lines.map((g) => g.label), `${modelId} labels`);
+      assert.deepEqual(resolved.map((g) => g.badge ?? null), lines.map((g) => g.badge ?? null), `${modelId} badges`);
+      assert.deepEqual(resolved.map((g) => g.wireGroup ?? null), lines.map((g) => g.wireGroup ?? null), `${modelId} wireGroups`);
+      assert.deepEqual(resolved.map((g) => g.pricing ?? null), lines.map((g) => g.pricing ?? null), `${modelId} pricing`);
+      assert.deepEqual(resolved.map((g) => g.sla ?? null), lines.map((g) => g.sla ?? null), `${modelId} sla`);
+      assert.deepEqual(resolved.map((g) => g.constraints ?? null), lines.map((g) => g.constraints ?? null), `${modelId} constraints`);
+      assert.deepEqual(resolved.map((g) => g.enabled), lines.map((g) => g.enabled !== false), `${modelId} enabled`);
+      assert.deepEqual(resolved.map((g) => g.default === true), lines.map((g) => g.default === true), `${modelId} default pin`);
     }
+  });
+
+  it('carries no local line set or price list of its own', () => {
+    // 本模块只允许格式化与运行期自备渠道；线路集合与价格数字必须整段不存在。
+    const source = readFileSync(fileURLToPath(new URL('./channelGroups.ts', import.meta.url)), 'utf8');
+    assert.doesNotMatch(source, /MODEL_CHANNEL_GROUPS/);
+    assert.doesNotMatch(source, /pointsEstimate\s*:\s*-?\d/);
+    assert.doesNotMatch(source, /groupRatio\s*:\s*-?\d/);
+  });
+
+  it('reads the model lines out of the catalog rows the shared surfaces already hold', () => {
+    const catalog = directoryCatalog('seedance-2-5');
+    assert.deepEqual(
+      directoryChannelGroups(catalog, 'seedance-2-5').map((g) => g.id),
+      directory('seedance-2-5').map((g) => g.id),
+    );
+    assert.deepEqual(directoryChannelGroups(catalog, 'seedance-2-5@720p').map((g) => g.id), directory('seedance-2-5').map((g) => g.id));
+    assert.deepEqual(directoryChannelGroups(catalog, 'other-model'), []);
+    assert.deepEqual(directoryChannelGroups(null, 'seedance-2-5'), []);
+    // 菜单读的是上游候选行本身，而不是任何第二份表。
+    const rows = [{ id: 'seedance-2-5', channelGroups: directory('seedance-2-5') }];
+    assert.deepEqual(rowChannelGroups(rows, 'seedance-2-5@480p').map((g) => g.id), ['480p', '720p', 'seedance-2-5-480p', 'seedance-2-5-720p']);
+    assert.deepEqual(rowChannelGroups(rows, 'missing'), []);
+    assert.deepEqual(normalizeDirectoryGroups([{ id: 'x', label: '标准版', enabled: true }]).map((g) => g.category), ['official']);
+    assert.deepEqual(normalizeDirectoryGroups(undefined), []);
   });
 
   it('derives the price chip and label from the real pricing fields', () => {
@@ -111,25 +150,25 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
   });
 
   it('never invents an SLA for groups the gateway does not publish one for', () => {
-    for (const [modelId, groups] of Object.entries(MODEL_CHANNEL_GROUPS)) {
-      for (const group of groups) {
+    for (const modelId of ['seedance-2-0', 'seedance-2-5', 'gpt-image-2.5', 'gemini-3.8-flash', 'suno']) {
+      for (const group of directory(modelId)) {
         if (!group.sla) continue;
         assert.equal(typeof group.sla.stability24h, 'number', `${modelId}@${group.id} SLA 必须是真实数值`);
       }
     }
     // 网关公开定价接口不提供 SLA，这批条目必须整体缺省。
     for (const modelId of ['gpt-image-2.5', 'seedream-5-0-pro', 'suno']) {
-      for (const group of getModelChannelGroups(modelId)) {
+      for (const group of resolveModelChannelGroups(modelId, directory(modelId))) {
         assert.equal(group.sla, undefined, `${modelId}@${group.id} 不应凭空带 SLA`);
       }
     }
     // 网关确实公布了 SLA 的线路则必须保留真实数值（不能反向丢掉）。
-    assert.deepEqual(getModelChannelGroups('gemini-3.8-flash')[0].sla, { stability24h: 99, avgWaitTimeSec: 8 });
+    assert.deepEqual(resolveModelChannelGroups('gemini-3.8-flash', directory('gemini-3.8-flash'))[0].sla, { stability24h: 99, avgWaitTimeSec: 8 });
   });
 
   it('never repeats the discount inside a feature badge', () => {
-    for (const [modelId, groups] of Object.entries(MODEL_CHANNEL_GROUPS)) {
-      for (const group of groups) {
+    for (const modelId of ['seedance-2-0', 'seedance-2-5', 'gpt-image-2.5', 'gemini-3.8-flash', 'suno']) {
+      for (const group of directory(modelId)) {
         const chip = formatPriceChip(group.pricing?.priceRatio ?? group.pricing?.discountRate);
         if (!chip) continue;
         assert.ok(
@@ -182,44 +221,45 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         n: { fixed: 1 },
       },
     };
-    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', { group: 'standard' }), imageConstraints);
+    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', { group: 'standard' }, directory('gpt-image-2.5')), imageConstraints);
     // 自动路由命中默认线路（standard）时同样落实约束。
-    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', undefined), imageConstraints);
-    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', {}), imageConstraints);
-    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', { allowedGroups: ['economy'] }), {});
-    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', { allowedGroups: ['nope'] }), {});
+    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', undefined, directory('gpt-image-2.5')), imageConstraints);
+    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', {}, directory('gpt-image-2.5')), imageConstraints);
+    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', { allowedGroups: ['economy'] }, directory('gpt-image-2.5')), {});
+    assert.deepEqual(resolveLineConstraints('gpt-image-2.5', { allowedGroups: ['nope'] }, directory('gpt-image-2.5')), {});
     // 视频现售线路按档位固定清晰度：480p 经济版 / 720p 标准版（默认）。
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: '480p' }),
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: '480p' }, directory('seedance-2-5')),
       { parameters: { resolution: { fixed: '480p' } } });
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: '720p' }),
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: '720p' }, directory('seedance-2-5')),
       { parameters: { resolution: { fixed: '720p' } } });
-    assert.deepEqual(resolveLineConstraints('seedance-2-5@desktop-480p', { group: 'desktop-480p' }),
+    assert.deepEqual(resolveLineConstraints('seedance-2-5@desktop-480p', { group: 'desktop-480p' }, directory('seedance-2-5@desktop-480p')),
       { parameters: { resolution: { fixed: '480p' } } });
     // 自动路由只对 gpt-image-2.5 落实默认线路约束；未点名分组的视频路由不额外收紧。
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', undefined), {});
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['nope'] }), {});
-    assert.deepEqual(resolveLineConstraints('seedance-2-0', { allowedGroups: ['standard'] }), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', undefined, directory('seedance-2-5')), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['nope'] }, directory('seedance-2-5')), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-0', { allowedGroups: ['standard'] }, directory('seedance-2-0')), {});
   });
 
   // 30 秒 / 9 图特惠线路（wireGroup seedance-cheap）上游断货已下架：
   // 它不再贡献任何约束，选中它的历史工程也不得把 30 秒 / 9 图能力继续挂在节点上。
   it('drops every constraint of the delisted cheap line', () => {
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap'] }), {});
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: 'seedance-cheap' }), {});
-    assert.deepEqual(resolveLineConstraints('seedance-2-5@cheap', { allowedGroups: ['cheap'] }), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap'] }, directory('seedance-2-5')), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: 'seedance-cheap' }, directory('seedance-2-5')), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-5@cheap', { allowedGroups: ['cheap'] }, directory('seedance-2-5@cheap')), {});
     // 下架线路与仍在售的标准版混选时，只剩标准版（无约束）
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap', 'standard'] }), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap', 'standard'] }, directory('seedance-2-5')), {});
   });
 
   // 2026-10-21 网关对账 #3516：MiniMax H3 渠道全部停用，模型只登记不上架；
   // 它此前的 task/lipsync/video_fast/video_pro/turbo 线路不得再贡献任何约束。
   it('drops every former H3 line contract now that the model is registered-only', () => {
     for (const group of ['task', 'lipsync', 'video_fast', 'video_pro', 'turbo', 'standard']) {
-      assert.deepEqual(resolveLineConstraints('minimax-h3', { allowedGroups: [group] }), {}, group);
+      assert.deepEqual(resolveLineConstraints('minimax-h3', { allowedGroups: [group] }, directory('minimax-h3')), {}, group);
     }
-    assert.deepEqual(resolveLineConstraints('minimax-h3', undefined), {});
-    // 选型器同样不再给 H3 任何渠道池。
-    assert.deepEqual(getModelChannelGroups('minimax-h3'), []);
+    assert.deepEqual(resolveLineConstraints('minimax-h3', undefined, directory('minimax-h3')), {});
+    // 选型器同样不再给 H3 任何渠道池（网关不售 → 目录为空 → 画布为空）。
+    assert.deepEqual(directory('minimax-h3'), []);
+    assert.deepEqual(resolveModelChannelGroups('minimax-h3', directory('minimax-h3')), []);
   });
 
   describe('resolveModelChannelGroups implementation robustness', () => {
@@ -229,7 +269,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         runtimeMediaProvider: 'fal',
         runtimeMediaVideo: true,
       };
-      const groups = resolveModelChannelGroups('seedance-2-0', settings);
+      const groups = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), settings);
       const byok = groups.find((g) => g.id === 'byok-fal');
       assert.ok(byok);
       assert.equal(byok.constraints, DEFAULT_BYOK_CONSTRAINTS);
@@ -237,14 +277,14 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
 
     it('correctly calculates isCapEnabled: enables when caps are undefined for unknown model, or strictly by explicit toggle for video model', () => {
       // 1. 未知模态模型在全部 undefined 时应该启用保底（对齐后端非全关健壮保底）
-      const groupsDefault = resolveModelChannelGroups('unknown-custom-model-xyz', {
+      const groupsDefault = resolveModelChannelGroups('unknown-custom-model-xyz', directory('unknown-custom-model-xyz'), {
         runtimeKeyVerified: true,
         runtimeMediaProvider: 'fal',
       });
       assert.ok(groupsDefault.some((g) => g.id === 'byok-fal'));
 
       // 1b. 模态已知时，严格以开关状态为准：未显式开启时绝对不挂载（对齐前后端对称收敛逻辑）
-      const groupsDedicatedModelWithoutToggle = resolveModelChannelGroups('seedance-2-0', {
+      const groupsDedicatedModelWithoutToggle = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), {
         runtimeKeyVerified: true,
         runtimeMediaProvider: 'fal',
         runtimeMediaVideoModel: 'seedance-2-0',
@@ -252,7 +292,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
       assert.ok(!groupsDedicatedModelWithoutToggle.some((g) => g.id === 'byok-fal'));
 
       // 1c. 显式开启开关时正常挂载
-      const groupsWithExplicitToggle = resolveModelChannelGroups('seedance-2-0', {
+      const groupsWithExplicitToggle = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), {
         runtimeKeyVerified: true,
         runtimeMediaProvider: 'fal',
         runtimeMediaVideo: true,
@@ -261,7 +301,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
       assert.ok(groupsWithExplicitToggle.some((g) => g.id === 'byok-fal'));
 
       // 2. 至少一个为 true 时启用
-      const groupsVideoOnly = resolveModelChannelGroups('seedance-2-0', {
+      const groupsVideoOnly = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), {
         runtimeKeyVerified: true,
         runtimeMediaProvider: 'fal',
         runtimeMediaImage: false,
@@ -271,7 +311,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
       assert.ok(groupsVideoOnly.some((g) => g.id === 'byok-fal'));
 
       // 3. 全部为 false 时禁用
-      const groupsAllFalse = resolveModelChannelGroups('seedance-2-0', {
+      const groupsAllFalse = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), {
         runtimeKeyVerified: true,
         runtimeMediaProvider: 'fal',
         runtimeMediaImage: false,
@@ -299,7 +339,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
           },
         ],
       };
-      const groupsWithoutEndpoint = resolveModelChannelGroups('seedance-2-0', settingsWithoutEndpoint);
+      const groupsWithoutEndpoint = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), settingsWithoutEndpoint);
       assert.ok(!groupsWithoutEndpoint.some((g) => g.id === 'byok-custom'));
 
       // 2. custom 提供商配置了有效 endpoint 时，正常挂载渠道
@@ -314,7 +354,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
           },
         ],
       };
-      const groupsWithEndpoint = resolveModelChannelGroups('seedance-2-0', settingsWithEndpoint);
+      const groupsWithEndpoint = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), settingsWithEndpoint);
       assert.ok(groupsWithEndpoint.some((g) => g.id === 'byok-custom'));
 
       // 3. 主配置 custom 提供商未配置 endpoint 时，绝对不挂载渠道
@@ -323,7 +363,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         runtimeMediaProvider: 'custom',
         runtimeMediaVideo: true,
       };
-      const mainGroupsWithoutEndpoint = resolveModelChannelGroups('seedance-2-0', mainSettingsWithoutEndpoint);
+      const mainGroupsWithoutEndpoint = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), mainSettingsWithoutEndpoint);
       assert.ok(!mainGroupsWithoutEndpoint.some((g) => g.id === 'byok-custom'));
 
       // 4. 主配置 custom 提供商配置了有效 endpoint 时，正常挂载渠道
@@ -333,13 +373,13 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         runtimeKeyEndpoint: 'https://custom-main.example.com/v1',
         runtimeMediaVideo: true,
       };
-      const mainGroupsWithEndpoint = resolveModelChannelGroups('seedance-2-0', mainSettingsWithEndpoint);
+      const mainGroupsWithEndpoint = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), mainSettingsWithEndpoint);
       assert.ok(mainGroupsWithEndpoint.some((g) => g.id === 'byok-custom'));
     });
 
     it('enforces modality-specific capability gate: image-only settings do not enable byok for video model', () => {
       // 视频模型在仅开启图片能力时不挂载 BYOK 渠道
-      const videoGroups = resolveModelChannelGroups('seedance-2-0', {
+      const videoGroups = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), {
         runtimeKeyVerified: true,
         runtimeMediaProvider: 'fal',
         runtimeMediaImage: true,
@@ -349,7 +389,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
       assert.ok(!videoGroups.some((g) => g.id === 'byok-fal'));
 
       // 图片模型在开启图片能力时正常挂载 BYOK 渠道
-      const imageGroups = resolveModelChannelGroups('gpt-image-2.5', {
+      const imageGroups = resolveModelChannelGroups('gpt-image-2.5', directory('gpt-image-2.5'), {
         runtimeKeyVerified: true,
         runtimeMediaProvider: 'fal',
         runtimeMediaImage: true,
@@ -376,7 +416,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         ],
       };
       // 视频模型仅挂载具有 video 能力的 openai，不挂载仅 image 的 fal
-      const videoGroups = resolveModelChannelGroups('seedance-2-0', settings);
+      const videoGroups = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), settings);
       assert.ok(videoGroups.some((g) => g.id === 'byok-openai'));
       assert.ok(!videoGroups.some((g) => g.id === 'byok-fal'));
     });
@@ -423,14 +463,14 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
           runtimeKeyVerified: true,
           runtimeMediaProvider: '',
         };
-        const emptyGroups = resolveModelChannelGroups('seedance-2-0', emptySettings);
+        const emptyGroups = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), emptySettings);
         assert.ok(!emptyGroups.some((g) => g.id === 'byok-fal'), 'explicit empty string must not append byok-fal');
 
         const whitespaceSettings = {
           runtimeKeyVerified: true,
           runtimeMediaProvider: '   ',
         };
-        const whitespaceGroups = resolveModelChannelGroups('seedance-2-0', whitespaceSettings);
+        const whitespaceGroups = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), whitespaceSettings);
         assert.ok(!whitespaceGroups.some((g) => g.id === 'byok-fal'), 'whitespace string must not append byok-fal');
       });
 
@@ -440,7 +480,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
           runtimeMediaProvider: 'fal',
           runtimeMediaVideo: true,
         };
-        const constraints = resolveLineConstraints('seedance-2-0', { allowedGroups: ['byok-fal'] }, settings);
+        const constraints = resolveLineConstraints('seedance-2-0', { allowedGroups: ['byok-fal'] }, directory('seedance-2-0'), settings);
         assert.equal(constraints.inputs?.image?.max, 1);
         assert.deepEqual(constraints.parameters?.aspectRatio, { only: ['16:9', '9:16', '1:1'] });
         assert.deepEqual(constraints.parameters?.duration, { only: [5, 10] });
@@ -551,11 +591,11 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
             },
           };
           // 纯函数调用：未传入有效 settings 时不受 window 污染，返回纯函数标准兜底
-          const constraints = resolveLineConstraints('seedance-2-0', { allowedGroups: ['byok-fal'] });
+          const constraints = resolveLineConstraints('seedance-2-0', { allowedGroups: ['byok-fal'] }, directory('seedance-2-0'));
           assert.deepEqual(constraints, {}, '未传入 runtimeSettings 时必须保持纯函数标准兜底，不得读取全局 window');
 
           // 显式传入有效 settings 时正常解析约束
-          const validConstraints = resolveLineConstraints('seedance-2-0', { allowedGroups: ['byok-fal'] }, {
+          const validConstraints = resolveLineConstraints('seedance-2-0', { allowedGroups: ['byok-fal'] }, directory('seedance-2-0'), {
             runtimeKeyVerified: true,
             runtimeMediaProvider: 'fal',
             runtimeMediaVideo: true,
@@ -575,7 +615,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         }), false);
 
         // 对齐服务端语义：当 runtimeMediaProvider 为 undefined 且 runtimeKeyVerified === true 时，安全映射为默认 fal
-        const groupsWithoutProvider = resolveModelChannelGroups('seedance-2-0', {
+        const groupsWithoutProvider = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), {
           runtimeKeyVerified: true,
           runtimeMediaVideo: true,
           constraints: {
@@ -588,7 +628,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         assert.deepEqual(byokFalDefault.constraints?.parameters?.duration, { only: [5] }, '主渠道必须成功注入 runtimeSettings.constraints');
 
         // 显式配置 fal 时正常解析并注入 constraints
-        const groupsWithFal = resolveModelChannelGroups('seedance-2-0', {
+        const groupsWithFal = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), {
           runtimeKeyVerified: true,
           runtimeMediaProvider: 'fal',
           runtimeMediaVideo: true,
@@ -602,7 +642,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         assert.deepEqual(byokFal.constraints?.parameters?.duration, { only: [5] }, '主渠道必须成功注入 runtimeSettings.constraints');
 
         // 空约束对象 {} 有效性保护：空对象回退到 DEFAULT_BYOK_CONSTRAINTS
-        const groupsEmptyConstraints = resolveModelChannelGroups('seedance-2-0', {
+        const groupsEmptyConstraints = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), {
           runtimeKeyVerified: true,
           runtimeMediaProvider: 'fal',
           runtimeMediaVideo: true,
@@ -612,14 +652,14 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         assert.deepEqual(byokFalEmptyCons?.constraints, DEFAULT_BYOK_CONSTRAINTS, '空约束对象 {} 自动回退到 DEFAULT_BYOK_CONSTRAINTS');
 
         // 空白串或显式空串坚决拒绝
-        const groupsBlank = resolveModelChannelGroups('seedance-2-0', {
+        const groupsBlank = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), {
           runtimeKeyVerified: true,
           runtimeMediaProvider: '   ',
           runtimeMediaVideo: true,
         });
         assert.ok(!groupsBlank.some((g) => g.id === 'byok-fal'), '空白串 runtimeMediaProvider 坚决拒绝');
 
-        const groupsEmptyStr = resolveModelChannelGroups('seedance-2-0', {
+        const groupsEmptyStr = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), {
           runtimeKeyVerified: true,
           runtimeMediaProvider: '',
           runtimeMediaVideo: true,
@@ -627,7 +667,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         assert.ok(!groupsEmptyStr.some((g) => g.id === 'byok-fal'), '显式空串 runtimeMediaProvider 坚决拒绝');
 
         // 移除通用 model 模态宽松判定：仅有通用 model 而无对应模态模型时严格排除
-        const groupsGeneralModel = resolveModelChannelGroups('seedance-2-0', {
+        const groupsGeneralModel = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), {
           runtimeKeyVerified: false,
           byokProviders: [
             {
@@ -646,7 +686,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
           runtimeMediaProvider: 'fal',
           runtimeMediaVideo: true,
         };
-        const constraints = resolveLineConstraints('seedance-2-0', { channelGroupId: 'byok-fal' }, settings);
+        const constraints = resolveLineConstraints('seedance-2-0', { channelGroupId: 'byok-fal' }, directory('seedance-2-0'), settings);
         assert.equal(constraints.inputs?.image?.max, 1);
         assert.deepEqual(constraints.parameters?.aspectRatio, { only: ['16:9', '9:16', '1:1'] });
       });
@@ -719,7 +759,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         const mixedRouting = {
           allowedGroups: ['standard', 'byok-fal'],
         };
-        const constraints = resolveLineConstraints('seedance-2-0', mixedRouting, settings);
+        const constraints = resolveLineConstraints('seedance-2-0', mixedRouting, directory('seedance-2-0'), settings);
         assert.deepEqual(constraints, {}, '混合渠道必须 Fail-Closed 拦截并返回空约束对象');
 
         // 双路由残留但显式声明 sourceType 时，优先依据 sourceType 保留对应一方约束
@@ -727,7 +767,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
           allowedGroups: ['standard', 'byok-fal'],
           sourceType: 'byok',
         };
-        const byokConstraints = resolveLineConstraints('seedance-2-0', mixedByok, settings);
+        const byokConstraints = resolveLineConstraints('seedance-2-0', mixedByok, directory('seedance-2-0'), settings);
         assert.deepEqual(byokConstraints.inputs, { image: { max: 1 } }, '显式 sourceType: byok 时优先采纳 BYOK 约束');
 
         // 官方线路留在混合路由里时，只能采纳官方线路自己的约束（gpt-image-2.5 标准版）。
@@ -735,7 +775,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
           allowedGroups: ['standard', 'byok-fal'],
           sourceType: 'official',
         };
-        const officialConstraints = resolveLineConstraints('gpt-image-2.5', mixedOfficial, settings);
+        const officialConstraints = resolveLineConstraints('gpt-image-2.5', mixedOfficial, directory('gpt-image-2.5'), settings);
         assert.deepEqual(officialConstraints, {
           parameters: { resolution: { fixed: '1K' }, quality: { supported: false }, n: { fixed: 1 } },
         }, '显式 sourceType: official 时优先采纳 official 约束');
@@ -764,7 +804,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
           channelGroupId: 'byok-volcengine',
           allowedGroups: ['byok-fal'],
         };
-        const constraints = resolveLineConstraints('seedance-2-0', conflictingRouting, settings);
+        const constraints = resolveLineConstraints('seedance-2-0', conflictingRouting, directory('seedance-2-0'), settings);
         assert.equal(constraints.inputs?.image?.max, 2, '以 channelGroupId 为权威来源解析 volcengine 约束，而不是 fal 约束');
         assert.deepEqual(constraints.parameters?.duration, { only: [10] });
       });
@@ -778,11 +818,11 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
             { provider: 'openai', verified: true, image: true, video: false },
           ],
         };
-        const videoGroups = resolveModelChannelGroups('seedance-2-0', settingsWithBooleans);
+        const videoGroups = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), settingsWithBooleans);
         assert.ok(videoGroups.some((g) => g.id === 'byok-fal'), '具备 video: true 的 provider 应被判定为视频可用');
         assert.ok(!videoGroups.some((g) => g.id === 'byok-openai'), '显式 video: false 的 provider 应被排除在视频之外');
 
-        const imageGroups = resolveModelChannelGroups('flux-1-dev', settingsWithBooleans);
+        const imageGroups = resolveModelChannelGroups('flux-1-dev', directory('flux-1-dev'), settingsWithBooleans);
         assert.ok(imageGroups.some((g) => g.id === 'byok-openai'), '具备 image: true 的 provider 应被判定为图片可用');
 
         // 2. item 带有 models[capability] 或 imageModel / videoModel 等模型字段
@@ -793,7 +833,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
             { provider: 'custom', verified: true, endpoint: 'https://api.example.com', videoModel: 'my-custom-video-model' },
           ],
         };
-        const modelVideoGroups = resolveModelChannelGroups('seedance-2-0', settingsWithModels);
+        const modelVideoGroups = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), settingsWithModels);
         assert.ok(modelVideoGroups.some((g) => g.id === 'byok-openrouter'), '配置 models.video 模型的 provider 应放行');
         assert.ok(modelVideoGroups.some((g) => g.id === 'byok-custom'), '配置 videoModel 的 custom provider 应放行');
       });

@@ -11,17 +11,23 @@ import { createOmnimuxSeamClient } from '../../workflow/seam/omnimuxGateway.ts';
 
 const model = 'gpt-image-2.5';
 const schema = { resolution: { options: ['1K', '2K', '4K'].map(value => ({ value })), defaultValue: '1K' }, quality: { options: ['standard', 'hd'].map(value => ({ value })), defaultValue: 'standard' } };
+// 线路约束只来自目录行（`catalog.models[].channelGroups`）：标准版固定 1K 并关闭 quality，
+// 经济版不施加约束。这与运行期中枢目录到达画布的路径一致。
+const catalog = { models: [{ id: model, channelGroups: [
+  { id: 'standard', label: '标准版', enabled: true, default: true, constraints: { parameters: { resolution: { fixed: '1K' }, quality: { supported: false }, n: { fixed: 1 } } } },
+  { id: 'economy', label: '经济版', enabled: true },
+] }] };
 test('canvas default/selected standard hide unsupported quality without mutating saved parameters', () => {
   for (const routing of [undefined, { allowedGroups: ['standard'] }]) {
     const params = { model, resolution: '4K', quality: 'hd', routing };
     const before = structuredClone(params);
-    const effective = resolveEffectiveImageParams({ params, schema });
+    const effective = resolveEffectiveImageParams({ params, schema, catalog });
     assert.equal(effective.resolution, '1K');
     assert.equal(effective.quality, undefined);
     assert.deepEqual(effective.schema.quality.options, []);
     assert.deepEqual(params, before);
   }
-  const economy = resolveEffectiveImageParams({ params: { model, resolution: '4K', quality: 'hd', routing: { allowedGroups: ['economy'] } }, schema });
+  const economy = resolveEffectiveImageParams({ params: { model, resolution: '4K', quality: 'hd', routing: { allowedGroups: ['economy'] } }, schema, catalog });
   assert.equal(economy.resolution, '4K');
   assert.equal(economy.quality, 'hd');
 });
