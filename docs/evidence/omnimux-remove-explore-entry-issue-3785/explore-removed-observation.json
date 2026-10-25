@@ -1,0 +1,339 @@
+{
+  "issue": "3785",
+  "origin": "http://127.0.0.1:58221",
+  "startedAt": "2026-10-25T15:01:55.613Z",
+  "builtinLabels": [
+    "应用",
+    "视频剪辑",
+    "产品库",
+    "发布",
+    "账号",
+    "手机管理",
+    "数据分析",
+    "自动化",
+    "任务表单",
+    "社交采收"
+  ],
+  "expectedSeparatorBefore": [
+    "产品库",
+    "数据分析"
+  ],
+  "runtimeItem": {
+    "id": "qa-runtime-probe",
+    "label": "QA运行时项",
+    "iconSvg": "<svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"8\" r=\"5\"/></svg>",
+    "tabId": "qa:runtime"
+  },
+  "probeErrors": [],
+  "steps": [
+    {
+      "step": "explore-probe",
+      "exploreEntryPresent": false,
+      "exploreMenuPresent": false,
+      "exploreStyleNodePresent": false,
+      "exploreClassNodeCount": 21,
+      "exploreStyleTextHits": 31,
+      "registerExploreItemType": "function",
+      "probeError": null
+    },
+    {
+      "step": "more-menu-before",
+      "rowCount": 12,
+      "blockStart": 2,
+      "tenInOrder": true,
+      "separatorsMatch": true
+    },
+    {
+      "step": "runtime-registered",
+      "registered": true,
+      "rowCount": 13,
+      "runtimeAppendedLast": true
+    },
+    {
+      "step": "invalid-inputs",
+      "malformedCalls": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "builtinConflict": "no-throw",
+      "rowCount": 13,
+      "invalidNoop": true
+    },
+    {
+      "step": "runtime-unregistered",
+      "rowCount": 12,
+      "runtimeRemoved": true
+    }
+  ],
+  "screenshots": {
+    "more-menu-baseline.png": {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-remove-explore-entry-issue-3785/.workbuddy/evidence/contract/omnimux-remove-explore-entry-issue-3785/0df86a43-1512-4c6d-8a4c-c2380e9bb593/more-menu-baseline.png",
+      "bytes": 213554
+    },
+    "more-menu-runtime-item.png": {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-remove-explore-entry-issue-3785/.workbuddy/evidence/contract/omnimux-remove-explore-entry-issue-3785/0df86a43-1512-4c6d-8a4c-c2380e9bb593/more-menu-runtime-item.png",
+      "bytes": 214697
+    },
+    "more-menu-after-unregister.png": {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-remove-explore-entry-issue-3785/.workbuddy/evidence/contract/omnimux-remove-explore-entry-issue-3785/0df86a43-1512-4c6d-8a4c-c2380e9bb593/more-menu-after-unregister.png",
+      "bytes": 213554
+    }
+  },
+  "explore": {
+    "exploreEntryPresent": false,
+    "exploreMenuPresent": false,
+    "exploreStyleNodePresent": false,
+    "exploreClassNodeCount": 21,
+    "exploreClassNodes": [
+      "omnimux-explore-templates-root",
+      "omnimux-explore-header-row",
+      "omnimux-explore-title",
+      "omnimux-explore-filter-bar",
+      "omnimux-explore-primary-tabs",
+      "omnimux-explore-primary-tab active",
+      "omnimux-explore-primary-tab ",
+      "omnimux-explore-primary-tab ",
+      "omnimux-explore-primary-tab ",
+      "omnimux-explore-primary-tab "
+    ],
+    "retiredEntryClassNodes": [],
+    "exploreStyleTextHits": 31,
+    "retiredStyleTextHits": 0,
+    "starterGuideExploreClassNodeCount": 21,
+    "sidebarGlobal": true,
+    "registerExploreItemType": "function",
+    "navEntryIds": []
+  },
+  "menuBefore": {
+    "menuFound": true,
+    "allMenuCount": 1,
+    "anchorExpanded": "true",
+    "separatorCount": 2,
+    "rows": [
+      {
+        "text": "浏览更多插件",
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 272,
+          "width": 280,
+          "height": 34
+        }
+      },
+      {
+        "text": "创建你的插件",
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 306,
+          "width": 280,
+          "height": 34
+        }
+      },
+      {
+        "text": "应用",
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 340,
+          "width": 280,
+          "height": 34
+        }
+      },
+      {
+        "text": "视频剪辑",
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 374,
+          "width": 280,
+          "height": 34
+        }
+      },
+      {
+        "text": "产品库",
+        "visible": true,
+        "separatorBefore": true,
+        "rect": {
+          "x": 16,
+          "y": 415,
+          "width": 280,
+          "height": 34
+        }
+      },
+      {
+        "text": "发布",
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 449,
+          "width": 280,
+          "height": 34
+        }
+      },
+      {
+        "text": "账号",
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 483,
+          "width": 280,
+          "height": 34
+        }
+      },
+      {
+        "text": "手机管理",
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 517,
+          "width": 280,
+          "height": 34
+        }
+      },
+      {
+        "text": "数据分析",
+        "visible": true,
+        "separatorBefore": true,
+        "rect": {
+          "x": 16,
+          "y": 557,
+          "width": 280,
+          "height": 34
+        }
+      },
+      {
+        "text": "自动化",
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 591,
+          "width": 280,
+          "height": 34
+        }
+      },
+      {
+        "text": "任务表单",
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 625,
+          "width": 280,
+          "height": 34
+        }
+      },
+      {
+        "text": "社交采收",
+        "visible": true,
+        "separatorBefore": false,
+        "rect": {
+          "x": 16,
+          "y": 659,
+          "width": 280,
+          "height": 34
+        }
+      }
+    ]
+  },
+  "rowsBefore": [
+    "浏览更多插件",
+    "创建你的插件",
+    "应用",
+    "视频剪辑",
+    "产品库",
+    "发布",
+    "账号",
+    "手机管理",
+    "数据分析",
+    "自动化",
+    "任务表单",
+    "社交采收"
+  ],
+  "blockStart": 2,
+  "blockSeparators": [
+    "产品库",
+    "数据分析"
+  ],
+  "tenInOrder": true,
+  "separatorsMatch": true,
+  "register": {
+    "registered": true,
+    "disposer": true
+  },
+  "rowsRegistered": [
+    "浏览更多插件",
+    "创建你的插件",
+    "应用",
+    "视频剪辑",
+    "产品库",
+    "发布",
+    "账号",
+    "手机管理",
+    "数据分析",
+    "自动化",
+    "任务表单",
+    "社交采收",
+    "QA运行时项"
+  ],
+  "runtimeAppendedLast": true,
+  "invalid": {
+    "malformedCalls": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "builtinConflict": "no-throw"
+  },
+  "rowsAfterInvalid": [
+    "浏览更多插件",
+    "创建你的插件",
+    "应用",
+    "视频剪辑",
+    "产品库",
+    "发布",
+    "账号",
+    "手机管理",
+    "数据分析",
+    "自动化",
+    "任务表单",
+    "社交采收",
+    "QA运行时项"
+  ],
+  "invalidNoop": true,
+  "unregister": {
+    "disposed": true
+  },
+  "rowsAfterUnregister": [
+    "浏览更多插件",
+    "创建你的插件",
+    "应用",
+    "视频剪辑",
+    "产品库",
+    "发布",
+    "账号",
+    "手机管理",
+    "数据分析",
+    "自动化",
+    "任务表单",
+    "社交采收"
+  ],
+  "runtimeRemoved": true,
+  "fatal": null,
+  "completedAt": "2026-10-25T15:01:58.048Z"
+}

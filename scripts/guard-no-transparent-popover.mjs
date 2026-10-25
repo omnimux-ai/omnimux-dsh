@@ -204,83 +204,13 @@ function isOpaqueColorValue(value) {
  */
 export function checkContentForTransparencyViolations(content, filePath = 'snippet.css') {
   const violations = []
-  const isSidebarCoordinator = filePath.includes('sidebar-coordinator.js')
-
-  // 1. 检查侧边栏协调器中的探索菜单与新建菜单（用户现场核心防御区）
-  if (isSidebarCoordinator) {
-    const ruleBlocks = extractCssRuleBlocks(content)
-    const exploreMenuBlock = ruleBlocks.find((b) =>
-      /^\.omnimux-explore-menu(?:\s*\[[^\]]+\])?$/.test(b.selector.trim())
-    )
-
-    if (!exploreMenuBlock) {
-      violations.push({
-        rule: 'EXPLORE_MENU_MUST_EXIST',
-        file: filePath,
-        line: 1,
-        message: 'sidebar-coordinator.js 必须定义 .omnimux-explore-menu 浮层菜单样式规则。',
-        fatal: true,
-      })
-    } else {
-      const lineNum = content.slice(0, exploreMenuBlock.index).split('\n').length
-
-      // 1.1 严禁 backdrop-filter 伪毛玻璃
-      if (/backdrop-filter/i.test(exploreMenuBlock.body)) {
-        violations.push({
-          rule: 'POPOVER_NO_BACKDROP_BLUR',
-          file: filePath,
-          line: lineNum,
-          message: '.omnimux-explore-menu 严禁使用 backdrop-filter 伪毛玻璃滤镜，避免透出中栏及底层内容！',
-          fatal: true,
-        })
-      }
-
-      // 1.2 严禁裸写 var(--dsw-alias-bg-elevated)
-      if (/var\(\s*--dsw-alias-bg-elevated\s*\)/.test(exploreMenuBlock.body)) {
-        violations.push({
-          rule: 'NO_BARE_BG_ELEVATED',
-          file: filePath,
-          line: lineNum,
-          message: '.omnimux-explore-menu 严禁裸写未定义变量 var(--dsw-alias-bg-elevated)，防止计算值退化为 transparent 造成全透明穿透！',
-          fatal: true,
-        })
-      }
-
-      // 1.3 严禁滥用 --dsw-alias-bg-overlay（中浅灰 #61666b）导致严重偏色
-      if (/--dsw-alias-bg-overlay\b/.test(exploreMenuBlock.body)) {
-        violations.push({
-          rule: 'POPOVER_NO_BG_OVERLAY_DISCOLORATION',
-          file: filePath,
-          line: lineNum,
-          message: '.omnimux-explore-menu 严禁使用 --dsw-alias-bg-overlay！该变量在宿主深色主题中被解析为中浅灰 (#61666b) 导致严重白灰偏色，必须使用标准深色层级变量 var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base))。',
-          fatal: true,
-        })
-      }
-
-      // 1.4 必须声明官方标准深色层级背景
-      if (
-        !/background:\s*var\(--dsw-alias-bg-layer-2,\s*var\(--dsw-alias-bg-base\)\)/.test(
-          exploreMenuBlock.body
-        )
-      ) {
-        violations.push({
-          rule: 'EXPLORE_MENU_MUST_BE_DARK_SOLID_LAYER',
-          file: filePath,
-          line: lineNum,
-          message: '.omnimux-explore-menu 必须使用官方深色规范层级底色：var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base))。',
-          fatal: true,
-        })
-      }
-    }
-  }
-
   // 2. 通用浮层容器判定（按“类别”而不是按某一个选择器）
   // 旧实现只认 `.omnimux-*-menu` 前缀，导致任何别的命名空间（例如 .omx-avatar-popover）
   // 与任何别的浮层词（dropdown / dialog / sheet …）都落在规则之外：新增浮层时门禁恒绿。
   // 这里改为：选择器里出现浮层关键词即视为浮层，再统一施加四条硬规则。
   const ruleBlocks = extractCssRuleBlocks(content)
 
-  // 先按「基础容器类」聚合：.omnimux-explore-menu[hidden] / .x-menu--wide 等变体
+  // 先按「基础容器类」聚合：.omnimux-new-menu[hidden] / .x-menu--wide 等变体
   // 与基础类同组 —— 底色只要在组内声明过一次即可，避免变体规则被逐条误判。
   const groups = new Map()
   for (const block of ruleBlocks) {

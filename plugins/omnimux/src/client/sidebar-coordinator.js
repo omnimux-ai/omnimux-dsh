@@ -22,10 +22,9 @@
  * 架构收敛（Architecture Convergence）：
  * 1. 排除核心常驻项：`omnimux-workflow`（项目）、`omnimux-assets`（资产库）、`omnimux-inspiration`（灵感社区）以及 inline 的新建项目，继续挂载在侧栏；
  * 2. 排除技能专家（`omnimux-market`，在底部 footer）；
- * 3. 其余所有插件（包括所有 Alpha 插件 accounts, publish, analytics, forms, automation 以及垂直插件 video, products, device, clip, social-harvest, apps 等）全部收敛至探索菜单，不再作为独立行渲染在侧边栏；
- * 4. 常驻探索行（rank 3.9，在项目上方），展开态显示图标与“探索”，折叠态显示居中图标；
- * 5. 浮动探索菜单（挂在 document.body，深色半透明圆角面板、细分割线、hover 态、点击激活对应 Workbench Tab 并关闭菜单、点击外部或按 Esc 关闭、防溢出几何定位）；
- * 6. 探索菜单项严格按照产品经理 Spec 白名单（10项：应用、视频剪辑、产品库、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收），带纯矢量 SVG 图标。
+ * 3. 其余所有插件（包括所有 Alpha 插件 accounts, publish, analytics, forms, automation 以及垂直插件 video, products, device, clip, social-harvest, apps 等）全部收敛，不再作为独立行渲染在侧边栏；
+ * 4. 收敛项的渲染面是官方「更多」菜单（seat `sidebar.panellist.actions`，注册点在 `explore-more-menu.jsx`）：本模块只提供清单真源与激活委托，不再自绘侧栏行或浮动菜单；
+ * 5. 清单严格按照产品 Spec 白名单（10项：应用、视频剪辑、产品库、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收），带纯矢量 SVG 图标。
  */
 
 import pluginLifecycle from '../plugin-lifecycle.json' with { type: 'json' }
@@ -77,25 +76,23 @@ const INLINE_ROWS = []
 const CONVERGED_ROWS = new Map()
 const seen = new Set()
 
-/** 核心常驻侧栏项白名单（除 inline 新建项目与探索行自身外） */
+/** 核心常驻侧栏项白名单（除 inline 新建项目外） */
 const PINNED_ENTRY_PREFIXES = ['omnimux-workflow', 'omnimux-market', 'omnimux-assets', 'omnimux-inspiration', 'omnimux-avatar']
 
 export function isPinnedSidebarEntry(id) {
-  if (id === 'omnimux-explore-entry') return true
   const pluginId = id.endsWith('-entry') ? id.slice(0, -6) : id
   return PINNED_ENTRY_PREFIXES.includes(pluginId) || PINNED_ENTRY_PREFIXES.includes(id)
 }
 
 /**
- * 判断是否应收敛到「探索」菜单，不再作为独立行渲染在侧边栏。
- * 排除核心常驻项（workflow, market, assets, inspiration, explore）和非 omnimux 夹具；
+ * 判断是否应收敛到官方「更多」菜单，不再作为独立行渲染在侧边栏。
+ * 排除核心常驻项（workflow, market, assets, inspiration）和非 omnimux 夹具；
  * 其余所有 omnimux 功能插件均收敛。
  */
 export function isConvergedEntry(id) {
   if (isPinnedSidebarEntry(id)) return false
   const pluginId = id.endsWith('-entry') ? id.slice(0, -6) : id
-  // 核心常驻项与探索行自身都不收敛；白名单是单一真源，避免两处清单漂移。
-  if (pluginId === 'omnimux-explore') return false
+  // 白名单是单一真源，避免两处清单漂移。
   if (PINNED_ENTRY_PREFIXES.includes(pluginId)) return false
   if (id.startsWith('omnimux-') || pluginId.startsWith('omnimux-')) {
     return true
@@ -152,97 +149,6 @@ const INLINE_STYLES = `
 }
 .omnimux-sidebar-new-menu button:hover {
   background: var(--dsw-alias-interactive-bg-hover);
-}
-`
-
-/** 探索行（Rank 3.9）与探索浮动菜单样式，100% 消费官方原生 --dsw-alias-* Token */
-const EXPLORE_STYLES = `
-.omnimux-explore-entry {
-  box-sizing: border-box; display: flex; align-items: center; gap: 6px; position: relative;
-  width: calc(100% - 8px); height: 32px; margin: 0 4px 2px; padding: 0 8px;
-  border: none; border-radius: 8px; background: transparent;
-  color: var(--dsw-alias-label-primary, inherit);
-  font: var(--dsw-font-s-14, inherit); font-size: 14px; line-height: 20px;
-  cursor: pointer; text-align: left;
-}
-.omnimux-explore-entry:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-.omnimux-explore-entry[data-active="true"],
-.omnimux-explore-entry[aria-expanded="true"] {
-  background: var(--dsw-alias-interactive-bg-active);
-}
-.omnimux-explore-entry-icon {
-  flex: none; display: inline-flex; width: 14px; height: 14px; align-items: center; justify-content: center;
-}
-.omnimux-explore-entry svg {
-  display: block; width: 14px; height: 14px;
-}
-.omnimux-explore-entry-label {
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 20px;
-}
-[data-sidebar-collapsed] .omnimux-explore-entry {
-  width: 36px; min-width: 36px; height: 36px;
-  padding: 0; margin: 0 auto 6px;
-  justify-content: center; align-self: center;
-}
-[data-sidebar-collapsed] .omnimux-explore-entry .omnimux-explore-entry-label {
-  display: none !important;
-}
-
-/* 外壳分隔线手柄（.dshDesktopResizeHandle，宿主 z-index 50）必须压在探索菜单（z-index 500）之上：
-   菜单贴边弹出时盖住手柄命中区，导致分割线被覆盖段不可拖。
-   手柄仅 8px 宽，不会遮挡菜单项。 */
-.dshDesktopResizeHandle { z-index: 510 !important; }
-
-.omnimux-explore-menu {
-  position: fixed; z-index: 500; min-width: 180px; width: max-content; max-width: 240px;
-  max-height: calc(100vh - 16px); overflow-y: auto;
-  box-sizing: border-box; padding: 5px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 12px;
-  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base));
-  box-shadow: 0 10px 28px var(--dsw-alias-bg-mask-1), 0 2px 8px var(--dsw-alias-bg-mask-1);
-  color: var(--dsw-alias-label-primary, inherit);
-  animation: omnimux-explore-pop 0.12s cubic-bezier(0.16, 1, 0.3, 1);
-}
-@keyframes omnimux-explore-pop {
-  from { opacity: 0; transform: scale(0.96) translateX(-4px); }
-  to { opacity: 1; transform: scale(1) translateX(0); }
-}
-.omnimux-explore-menu[hidden] { display: none !important; }
-.omnimux-explore-menu-item {
-  display: flex; align-items: center; gap: 8px; width: 100%; height: 32px;
-  box-sizing: border-box; margin: 0 0 1px; padding: 0 10px;
-  border: 0; border-radius: 8px; background: transparent;
-  color: var(--dsw-alias-label-primary, inherit); cursor: pointer;
-  font: var(--dsw-font-s-14, 14px/20px system-ui); font-size: 14px; line-height: 20px;
-  text-align: left; transition: background 100ms ease;
-}
-.omnimux-explore-menu-item:last-child { margin-bottom: 0; }
-.omnimux-explore-menu-item:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-.omnimux-explore-menu-item:active {
-  background: var(--dsw-alias-interactive-bg-active);
-  transform: scale(0.98);
-}
-.omnimux-explore-menu-item-icon {
-  flex: none; display: inline-flex; width: 14px; height: 14px; align-items: center; justify-content: center;
-  color: var(--dsw-alias-label-secondary, inherit);
-}
-.omnimux-explore-menu-item:hover .omnimux-explore-menu-item-icon {
-  color: var(--dsw-alias-label-primary, inherit);
-}
-.omnimux-explore-menu-item-icon svg {
-  display: block; width: 14px; height: 14px;
-}
-.omnimux-explore-menu-item-label {
-  flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.omnimux-explore-menu-divider {
-  height: 1px; margin: 4px 6px;
-  background: var(--dsw-alias-border-l1);
 }
 `
 
@@ -348,7 +254,8 @@ export const EXPLORE_MENU_ITEMS = [
 ]
 
 /**
- * 运行时注册的探索菜单项（第三方 / 个人插件经 `registerExploreItem` 注册）。
+ * 运行时注册的菜单项（第三方 / 个人插件经 `registerExploreItem` 注册），
+ * 渲染面是官方「更多」菜单（`sidebar.panellist.actions`）。
  * 内置白名单保持只读；未注册即不渲染 —— 产品基线不会出现指向未安装插件的死条目。
  */
 const EXTRA_EXPLORE_ITEMS = []
@@ -373,181 +280,14 @@ export function resolveExploreMenuItems() {
   return [...EXPLORE_MENU_ITEMS, ...EXTRA_EXPLORE_ITEMS.filter((item) => !builtin.has(item.id))]
 }
 
-let exploreEntryElement = null
-let exploreDocCleanup = null
-let currentExploreAnchor = null
-
-/** 悬停展开意图延时：扫过不误触，同时保持「移上去就出来」的手感。 */
-export const EXPLORE_HOVER_OPEN_DELAY = 100
-/** 移出后的收起宽限：允许指针从按钮斜向移入菜单而不闪断。 */
-export const EXPLORE_HOVER_CLOSE_DELAY = 220
-
-let exploreHoverTimer = null
-/** 点击收起后指针仍停在按钮上：抑制悬停重开，直到指针离开。 */
-let exploreHoverSuppressed = false
-/** 指针当前位置：按钮 / 菜单。收起判定必须与事件到达顺序无关。 */
-let explorePointerInEntry = false
-let explorePointerInMenu = false
-let exploreMenuClosing = false
-
-function clearExploreHoverTimer() {
-  if (exploreHoverTimer === null) return
-  clearTimeout(exploreHoverTimer)
-  exploreHoverTimer = null
-}
-
-function scheduleExploreHover(action, delay) {
-  clearExploreHoverTimer()
-  exploreHoverTimer = setTimeout(() => {
-    exploreHoverTimer = null
-    action()
-  }, delay)
-}
-
-/** 指针已不在按钮与菜单内时才真正收起；与 mouseenter/mouseleave 到达顺序无关。 */
-function scheduleExploreHoverClose() {
-  if (!exploreMenuElement()) {
-    clearExploreHoverTimer()
-    return
-  }
-  scheduleExploreHover(() => {
-    if (explorePointerInEntry || explorePointerInMenu) return
-    closeExploreMenu()
-  }, EXPLORE_HOVER_CLOSE_DELAY)
-}
-
-function exploreMenuElement() {
-  return typeof document === 'undefined' ? null : document.getElementById('omnimux-explore-menu')
-}
-
-/** 焦点移出按钮与菜单之外时收起；移入菜单内部则保持展开。 */
-function handleExploreFocusOut(event) {
-  const next = event?.relatedTarget
-  const isNode = typeof Node !== 'undefined' && next instanceof Node
-  if (isNode && (exploreEntryElement?.contains(next) || exploreMenuElement()?.contains(next))) return
-  closeExploreMenu()
-}
-
-function createExploreIcon() {
-  return '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><polygon points="10.8 5.2 8.8 8.8 5.2 10.8 7.2 7.2" fill="currentColor" stroke="none"/></svg>'
-}
-
 /**
- * 确保常驻「探索」行就位（Rank 7.2，位于最下方，排在「灵感社区」之后）。
- */
-function ensureExploreRow() {
-  if (ROWS.some((r) => r.id === 'omnimux-explore-entry')) return
-  injectStyles(EXPLORE_STYLES, 'omnimux-sidebar-explore-styles')
-  if (!exploreEntryElement) {
-    const btn = document.createElement('button')
-    btn.type = 'button'
-    btn.id = 'omnimux-explore-entry'
-    btn.className = 'omnimux-sidebar-nav-entry omnimux-explore-entry'
-    btn.dataset.omnimuxExploreEntry = ''
-    btn.setAttribute('aria-label', '探索')
-    btn.setAttribute('aria-haspopup', 'menu')
-    btn.setAttribute('aria-expanded', 'false')
-    btn.innerHTML = `<span class="omnimux-explore-entry-icon">${createExploreIcon()}</span><span class="omnimux-explore-entry-label">探索</span>`
-    btn.addEventListener('click', (event) => {
-      event.preventDefault()
-      event.stopPropagation()
-      clearExploreHoverTimer()
-      const wasOpen = Boolean(exploreMenuElement())
-      toggleExploreMenu(btn)
-      // 点击收起后指针通常还停在按钮上：抑制悬停重开，直到指针真正离开。
-      exploreHoverSuppressed = wasOpen
-    })
-    // 悬停即展开（不点击）；移出按钮给一段宽限，让指针能斜向移进菜单。
-    btn.addEventListener('mouseenter', () => {
-      explorePointerInEntry = true
-      if (exploreMenuElement()) clearExploreHoverTimer()
-      if (exploreHoverSuppressed) return
-      if (exploreMenuElement()) return
-      scheduleExploreHover(() => {
-        if (!exploreMenuElement()) openExploreMenu(btn)
-      }, EXPLORE_HOVER_OPEN_DELAY)
-    })
-    btn.addEventListener('mouseleave', () => {
-      explorePointerInEntry = false
-      exploreHoverSuppressed = false
-      scheduleExploreHoverClose()
-    })
-    btn.addEventListener('focusout', handleExploreFocusOut)
-    exploreEntryElement = btn
-  }
-  ROWS.push({ id: 'omnimux-explore-entry', rank: 7.2, element: exploreEntryElement })
-}
-
-/**
- * 计算探索浮动菜单位置，带视口边界防溢出定位。
- * @param {HTMLElement} anchor
- * @param {{ innerWidth: number, innerHeight: number }} [viewport]
- * @param {{ width: number, height: number }} [menuSize] 实测菜单尺寸；缺省回落到保守常量
- * @returns {{ left: number, top: number }}
- */
-export function computeExploreMenuPosition(anchor, viewport = typeof window !== 'undefined' ? window : undefined, menuSize) {
-  const rect = anchor?.getBoundingClientRect?.() ?? { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 }
-  const vw = viewport?.innerWidth ?? 1280
-  const vh = viewport?.innerHeight ?? 800
-  // 运行时注册项让菜单高度不再固定：优先用实测尺寸，避免「按常量判定放得下」把末项裁到视口外。
-  const menuW = menuSize?.width > 0 ? menuSize.width : 180
-  const menuH = menuSize?.height > 0 ? menuSize.height : 380
-  const gap = 6
-
-  let left = Math.round(rect.right + gap)
-  let top = Math.round(rect.top)
-
-  if (left + menuW > vw - 8) {
-    left = Math.max(8, Math.round(rect.left - menuW - gap))
-  }
-  if (left < 8) left = 8
-
-  if (top + menuH > vh - 8) {
-    top = Math.max(8, vh - menuH - 8)
-  }
-  if (top < 8) top = 8
-
-  return { left, top }
-}
-
-export function closeExploreMenu() {
-  // 移除菜单会让其中获得焦点的项触发 blur/focusout，进而重入本函数；
-  // 这里用重入闸门 + isConnected 双重保护，保证收起是幂等的（重复收起不得抛错）。
-  if (exploreMenuClosing) return
-  exploreMenuClosing = true
-  try {
-    clearExploreHoverTimer()
-    explorePointerInMenu = false
-    exploreDocCleanup?.()
-    exploreDocCleanup = undefined
-    if (currentExploreAnchor) {
-      currentExploreAnchor.setAttribute('aria-expanded', 'false')
-      delete currentExploreAnchor.dataset.active
-      currentExploreAnchor = null
-    }
-    const menu = document.getElementById('omnimux-explore-menu')
-    if (menu?.isConnected) menu.remove()
-  } finally {
-    exploreMenuClosing = false
-  }
-}
-
-/** 注册集合发生变化时收起已展开的菜单，避免展示陈旧项。 */
-function closeExploreMenuIfOpen() {
-  if (typeof document === 'undefined') return
-  if (!document.getElementById('omnimux-explore-menu')) return
-  closeExploreMenu()
-}
-
-/**
- * 激活探索菜单项：
+ * 激活一个菜单项（渲染面为官方「更多」菜单）：
  * 1. 执行 item 特化 action（如有）；
  * 2. 委托调用收敛插件已注册的按钮 click 处理器（保持原有鉴权与逻辑）；
- * 3. 兜底通过 window.__omnimuxWorkbench.open 打开对应的 Workbench Tab；
- * 4. 关闭菜单。
+ * 3. 兜底通过 window.__omnimuxWorkbench.open 打开对应的 Workbench Tab。
+ * 关菜单由菜单 owner 负责（官方 `onDismiss()`），本函数不碰 DOM。
  */
 export function activateExploreItem(item) {
-  closeExploreMenu()
   if (typeof item.action === 'function') {
     const handled = item.action(CONVERGED_ROWS)
     if (handled !== false) {
@@ -563,91 +303,6 @@ export function activateExploreItem(item) {
   if (item.tabId && typeof window !== 'undefined' && window.__omnimuxWorkbench?.open) {
     window.__omnimuxWorkbench.open({ tabId: item.tabId, title: item.label })
   }
-}
-
-export function openExploreMenu(anchor) {
-  if (!(anchor instanceof HTMLElement)) return false
-  closeExploreMenu()
-  explorePointerInMenu = false
-  currentExploreAnchor = anchor
-  anchor.setAttribute('aria-expanded', 'true')
-  anchor.dataset.active = 'true'
-
-  const menu = document.createElement('div')
-  menu.id = 'omnimux-explore-menu'
-  menu.className = 'omnimux-explore-menu'
-  menu.setAttribute('role', 'menu')
-  menu.setAttribute('aria-label', '探索')
-
-  for (const item of resolveExploreMenuItems()) {
-    const btn = document.createElement('button')
-    btn.type = 'button'
-    btn.className = 'omnimux-explore-menu-item'
-    btn.setAttribute('role', 'menuitem')
-    btn.dataset.exploreId = item.id
-    btn.setAttribute('aria-label', item.label)
-    // iconSvg 是受信 HTML（契约要求纯矢量）；label 一律按纯文本渲染，绝不拼进 innerHTML。
-    const icon = document.createElement('span')
-    icon.className = 'omnimux-explore-menu-item-icon'
-    icon.innerHTML = item.iconSvg
-    const label = document.createElement('span')
-    label.className = 'omnimux-explore-menu-item-label'
-    label.textContent = item.label
-    btn.append(icon, label)
-    btn.addEventListener('click', (event) => {
-      event.preventDefault()
-      event.stopPropagation()
-      activateExploreItem(item)
-    })
-    menu.append(btn)
-    if (item.dividerAfter) {
-      const divider = document.createElement('div')
-      divider.className = 'omnimux-explore-menu-divider'
-      divider.setAttribute('role', 'separator')
-      menu.append(divider)
-    }
-  }
-
-  document.body.append(menu)
-  const measured = menu.getBoundingClientRect()
-  const { left, top } = computeExploreMenuPosition(anchor, undefined, { width: measured.width, height: measured.height })
-  menu.style.left = `${left}px`
-  menu.style.top = `${top}px`
-
-  const onDoc = (event) => {
-    if (menu.contains(event.target) || event.target === anchor || anchor.contains(event.target)) return
-    closeExploreMenu()
-  }
-  const onKey = (event) => {
-    if (event.key === 'Escape') closeExploreMenu()
-  }
-
-  // 指针进入菜单即取消待收起；离开菜单再给一次宽限，回到按钮同样能续上。
-  menu.addEventListener('mouseenter', () => {
-    explorePointerInMenu = true
-    clearExploreHoverTimer()
-  })
-  menu.addEventListener('mouseleave', () => {
-    explorePointerInMenu = false
-    scheduleExploreHoverClose()
-  })
-  menu.addEventListener('focusout', handleExploreFocusOut)
-
-  document.addEventListener('mousedown', onDoc, true)
-  document.addEventListener('keydown', onKey, true)
-  exploreDocCleanup = () => {
-    document.removeEventListener('mousedown', onDoc, true)
-    document.removeEventListener('keydown', onKey, true)
-  }
-  return true
-}
-
-export function toggleExploreMenu(anchor) {
-  if (document.getElementById('omnimux-explore-menu')) {
-    closeExploreMenu()
-    return false
-  }
-  return openExploreMenu(anchor)
 }
 
 /** Inner pane/col first; desktop shell wrappers are fallback only. */
@@ -984,7 +639,6 @@ function runPlaceAll() {
   bindCollapsedAttrObserver()
   const root = sidebarRoot()
   if (root === undefined) return
-  ensureExploreRow()
   placeBelow(root)
   placeInline(root)
   if (!railCollapsed()) closeNewMenu()
@@ -1111,10 +765,11 @@ function createApi() {
     },
     place: runPlaceAll,
     /**
-     * 把一项注册进「探索」菜单（第三方 / 个人插件唯一合法入口，替代自挂一级行）。
+     * 把一项注册进官方「更多」菜单（第三方 / 个人插件唯一合法入口，替代自挂一级行）。
      * 非法形状或与内置 id 冲突时不注册且不抛错；返回注销函数。
      * 只接受白名单字段（id / label / iconSvg / tabId / action）：注册项不得借
      * `entryId` / `pluginId` 委托到已挂载行，避免冒充其它插件的入口。
+     * 注册 / 注销只改集合，不碰 DOM：官方菜单每次展开重新挂载即读取最新集合。
      */
     registerExploreItem(item) {
       if (!isValidExploreItem(item)) return () => {}
@@ -1126,11 +781,9 @@ function createApi() {
       if (typeof item.tabId === 'string' && item.tabId.trim()) record.tabId = item.tabId
       if (typeof item.action === 'function') record.action = item.action
       EXTRA_EXPLORE_ITEMS.push(record)
-      closeExploreMenuIfOpen()
       return () => {
         const index = EXTRA_EXPLORE_ITEMS.indexOf(record)
         if (index >= 0) EXTRA_EXPLORE_ITEMS.splice(index, 1)
-        closeExploreMenuIfOpen()
       }
     },
   }
@@ -1174,10 +827,6 @@ export function getPlaceCountForTests() {
   return placeCount
 }
 
-export function getExploreEntryForTests() {
-  return exploreEntryElement
-}
-
 export function getConvergedRowsForTests() {
   return CONVERGED_ROWS
 }
@@ -1206,10 +855,6 @@ export function resetSidebarCoordinatorForTests() {
   EXTRA_EXPLORE_ITEMS.length = 0
   seen.clear()
   closeNewMenu()
-  closeExploreMenu()
-  exploreHoverSuppressed = false
-  explorePointerInEntry = false
-  exploreEntryElement = null
   if (typeof window !== 'undefined') {
     try {
       delete window[SIDEBAR_GLOBAL_KEY]

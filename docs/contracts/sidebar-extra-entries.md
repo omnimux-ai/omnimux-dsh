@@ -54,7 +54,7 @@ Derivation order is fixed and exclusive:
 
 | Marker | Owner | Label |
 |---|---|---|
-| `[data-omnimux-apps-entry]` | `omnimux` | 应用 / Apps（收敛至「探索」菜单） |
+| `[data-omnimux-apps-entry]` | `omnimux` | 应用 / Apps（收敛至官方「更多」菜单） |
 | `[data-omnimux-app-tabs]` | `omnimux` | Dynamic app tab rows (see below) |
 | `[data-dsh-taskboard-entry]` | `dsh-taskboard-plugin` (fork) | 任务看板 / Taskboard |
 | `[data-omnimux-esc-entry]` | `omnimux-gallery`（历史 marker，现网无独立 gallery 包） | 专家·技能·连接器（**已迁** `omnimux-market`，rank 4.1，**核心常驻**） |
@@ -62,21 +62,20 @@ Derivation order is fixed and exclusive:
 | `[data-dsh-omnimux-new-project-entry]` | `omnimux-workflow` | 新建项目 / New Project（展开：`kind:'inline'` 并排「新建会话」。收起：CSS 藏项目按钮，点官方加号弹出「新建会话 / 新建项目」，选中再 click 原按钮。折叠态属性在 AppFrame，不在 html。收起 wrapper 可用 `display:contents`，但官方加号上的 `flex:1` **必须**收回 `flex:none` + 36×36，否则会吃掉会话列表高度变成竖条） |
 | `[data-omnimux-assets-entry]` | `omnimux-assets` | 资产库（rank 6 现网，**核心常驻**）。**Workbench**：`omnimux-assets:library`，不得 claim |
 | `[data-omnimux-inspiration-entry]` | `omnimux-inspiration` | 灵感社区（rank 7，**核心常驻**）。**Workbench**：`omnimux-inspiration:library`，不得 claim |
-| `[data-omnimux-explore-entry]` | `omnimux` | **探索 / Explore（rank 7.2，位于最下方，排在灵感社区之后）**。点击呼出浮动菜单，收敛全部内测版与非排除项 OmniMux 插件（11 项白名单，见 specs）。 |
-| `[data-omnimux-products-entry]` | `omnimux-products` | 产品库（收敛至「探索」菜单） |
-| `[data-omnimux-automation-entry]` | `omnimux-automation` | 自动化（收敛至「探索」菜单） |
-| `[data-omnimux-google-vids-entry]` | `omnimux-video` | Google Vids（rank 7.5，收敛至「探索」菜单）。**中栏 Stage**：Vids 经 `shell.overlay` 注册，**不再**注册 Workbench Tab。点击先 `await workbench.open({ tabId: 'omnimux-clip:studio', focus: 'split' })` 把视频剪辑开到右侧栏，仅当返回值严格为 `true` 且条目仍挂载时才 `claim('omnimux-vids')`；失败时保持原 Stage 与焦点不变，禁止另写 `setFocus`。 |
-| `[data-omnimux-publish-entry]` | `omnimux-publish` | 发布（收敛至「探索」菜单） |
-| `[data-omnimux-analytics-entry]` | `omnimux-analytics` | 数据分析（收敛至「探索」菜单） |
-| `[data-omnimux-accounts-entry]` | `omnimux-accounts` | 账号（收敛至「探索」菜单） |
-| `[data-omnimux-device-entry]` | `omnimux-device` | 手机管理（收敛至「探索」菜单） |
-| `[data-omnimux-clip-entry]` | `omnimux-clip` | 视频剪辑（收敛至「探索」菜单） |
-| `[data-omnimux-forms-entry]` | `omnimux-forms` | 任务表单（收敛至「探索」菜单） |
+| `[data-omnimux-products-entry]` | `omnimux-products` | 产品库（收敛至官方「更多」菜单） |
+| `[data-omnimux-automation-entry]` | `omnimux-automation` | 自动化（收敛至官方「更多」菜单） |
+| `[data-omnimux-google-vids-entry]` | `omnimux-video` | Google Vids（rank 7.5，收敛至官方「更多」菜单）。**中栏 Stage**：Vids 经 `shell.overlay` 注册，**不再**注册 Workbench Tab。点击先 `await workbench.open({ tabId: 'omnimux-clip:studio', focus: 'split' })` 把视频剪辑开到右侧栏，仅当返回值严格为 `true` 且条目仍挂载时才 `claim('omnimux-vids')`；失败时保持原 Stage 与焦点不变，禁止另写 `setFocus`。 |
+| `[data-omnimux-publish-entry]` | `omnimux-publish` | 发布（收敛至官方「更多」菜单） |
+| `[data-omnimux-analytics-entry]` | `omnimux-analytics` | 数据分析（收敛至官方「更多」菜单） |
+| `[data-omnimux-accounts-entry]` | `omnimux-accounts` | 账号（收敛至官方「更多」菜单） |
+| `[data-omnimux-device-entry]` | `omnimux-device` | 手机管理（收敛至官方「更多」菜单） |
+| `[data-omnimux-clip-entry]` | `omnimux-clip` | 视频剪辑（收敛至官方「更多」菜单） |
+| `[data-omnimux-forms-entry]` | `omnimux-forms` | 任务表单（收敛至官方「更多」菜单） |
 | `[data-omnimux-avatar-entry]` | `omnimux-avatar` | 数字人（rank 4.05，位于「项目」rank 4 之下，**核心常驻**）。**Workbench**：`omnimux-avatar:studio`，不得 claim |
 
-### 探索菜单运行时注册（第三方 / 个人插件唯一合法入口）
+### 「更多」菜单运行时注册（第三方 / 个人插件唯一合法入口）
 
-内置白名单是只读的产品清单。**不在本仓插件树内的插件**（个人沙箱、外部包）要进「探索」，只能经单一协调器的运行时接缝注册，**禁止**克隆侧栏按钮自插一级行，也**禁止**自挂 `MutationObserver` / `setInterval` 去改写菜单 DOM。
+内置白名单是只读的产品清单。**不在本仓插件树内的插件**（个人沙箱、外部包）要进官方「更多」菜单，只能经单一协调器的运行时接缝注册，**禁止**克隆侧栏按钮自插一级行，也**禁止**自挂 `MutationObserver` / `setInterval` 去改写菜单 DOM。
 
 ```js
 const unregister = window.__omnimuxSidebar.registerExploreItem({
@@ -90,43 +89,31 @@ const unregister = window.__omnimuxSidebar.registerExploreItem({
 
 | Rule | Detail |
 |---|---|
-| 渲染集合 | `openExploreMenu` 渲染 `内置 11 项 + 运行时注册项`；注册项一律追加在末尾，度量与样式复用 `.omnimux-explore-menu-item`，不得引入第二套字阶或图标尺寸 |
+| 渲染集合 | 官方「更多」菜单渲染 `内置 10 项 + 运行时注册项`；注册项一律追加在末尾，行度量与样式复用官方 `MenuItemButton`，不得引入第二套字阶或图标尺寸 |
 | 未注册即不渲染 | 产品基线不得出现指向未安装插件的死条目：接缝是运行时注册，**不是**把某个具体插件 id 写进内置白名单 |
 | 形状校验 | 缺 `id` / `label` / `iconSvg` 或类型非法 → 不注册、不抛错，仍返回可调用注销函数 |
 | 字段白名单 | 只接受 `id` / `label` / `iconSvg` / `tabId` / `action`；`entryId`、`pluginId` 等一律被剥离，注册项**不得**借委托通道冒充已挂载插件的入口 |
 | 文本与 HTML 边界 | `iconSvg` 按受信 HTML 注入（契约要求 14×14 纯矢量）；`label` 一律按**纯文本**渲染，不得拼进 `innerHTML` |
-| 幂等 | 同 id 二次注册覆盖前一项，覆盖后该项位于**末尾**；旧注销函数随即失效。注销后菜单立即不再包含该项 |
-| 长菜单防溢出 | 菜单高度随注册项增长：定位必须用**实测**菜单尺寸（`getBoundingClientRect`）而非固定常量，且 `.omnimux-explore-menu` 带 `max-height: calc(100vh - 16px)` + `overflow-y: auto`，末项必须可达 |
+| 幂等 | 同 id 二次注册覆盖前一项，覆盖后该项位于**末尾**；旧注销函数随即失效。注销后菜单下次展开不再包含该项 |
+| 长菜单防溢出 | 菜单高度由官方 seat 拥有者管理；OmniMux 侧不得自绘容器、固定高度或第二套滚动条 |
 | 点击语义 | 复用 `activateExploreItem` 既有三段委托（`action` → 已挂载行 click → `__omnimuxWorkbench.open({ tabId })`），不得另写导航 |
-| 展开中变更 | 注册 / 注销时若菜单已展开，收起菜单，下次展开即最新集合 |
-
-### 探索入口的展开方式（悬停为主，点击与键盘保留）
-
-| Rule | Detail |
-|---|---|
-| 悬停即展开 | 指针进入「探索」按钮后经**意图延时**（`EXPLORE_HOVER_OPEN_DELAY`）展开，不需要点击；延时是模块常量，不得读环境变量或本机配置 |
-| 扫过不误触 | 意图延时未到就移出，不得展开 |
-| 不闪断 | 指针从按钮移向菜单（含斜向）时不得中途收起：移出后有一段**宽限延时**（`EXPLORE_HOVER_CLOSE_DELAY`），且收起判定只看**指针当前位置**（在按钮内 / 在菜单内），与 `mouseenter` / `mouseleave` 的到达顺序无关 |
-| 点击仍可用 | 点击开关行为不变；点击收起后指针若仍停在按钮上，**不得**被悬停逻辑立刻重开，直到指针真正离开 |
-| 键盘仍可用 | 保留原生 button 语义：Enter / Space 展开，`Escape` 收起，焦点移出按钮与菜单后收起 |
-| 幂等收起 | 移除菜单会让其中获得焦点的项触发 blur / focusout 并重入收起：收起必须防重入，且只移除仍挂载（`isConnected`）的节点，重复收起不得抛错 |
-| 不新增全局监听 | 除既有文档级按下 / 按键监听外，只允许按钮与菜单自身的悬停与焦点事件；禁止为悬停再挂文档级 `mousemove` 轮询 |
+| 展开中变更 | 官方菜单每次展开重新挂载即读取最新集合：注册 / 注销在**下次展开**生效，不需要第二套订阅；注册 / 注销不得直接改写菜单 DOM |
 
 ### 官方「更多」菜单（`sidebar.panellist.actions`，宿主 ≥ `0.2.1-rc.3`）
 
-宿主 `0.2.1-rc.3` 起，官方左侧栏自带 root 作用域列表 seat `sidebar.panellist.actions`：该列表有注册时渲染「更多」行，注册项**直接渲染为菜单行**（官方参考实现 `packages/client/ui-entry-customization/src/client/EntryMenuContent.tsx`）。OmniMux 的 10 项入口同时注册进这个官方菜单，与「探索」浮动菜单共用同一份真源。
+宿主 `0.2.1-rc.3` 起，官方左侧栏自带 root 作用域列表 seat `sidebar.panellist.actions`：该列表有注册时渲染「更多」行，注册项**直接渲染为菜单行**（官方参考实现 `packages/client/ui-entry-customization/src/client/EntryMenuContent.tsx`）。OmniMux 的 10 项入口注册进这个官方菜单；自绘的「探索」常驻行与浮动菜单已退役（#3785），本菜单是这 10 项在侧栏的**唯一入口**。
 
 | Rule | Detail |
 |---|---|
 | 唯一注册点 | `plugins/omnimux/src/client/explore-more-menu.jsx`（`id: 'omnimux-explore'`，`order: 100`），由 hub `apply()` 安装；其它插件**不得**再注册该 seat 的 OmniMux 入口 |
 | 单一真源 | 清单 / 图标 / 分组 / 激活语义一律取 `sidebar-coordinator.js` 的 `EXPLORE_MENU_ITEMS`、`resolveExploreMenuItems()`、`activateExploreItem()`；MUST NOT 复制第二份清单、图标或三段委托 |
 | 行原语 | 用官方 `MenuItemButton`（`icon` + `separatorBefore`），不得自绘第二套行样式或字阶 |
-| 分组 | 与浮动菜单同构：`dividerAfter` 的项之后，下一行带 `separatorBefore` |
-| 点击 | 先 `onDismiss()` 关闭官方菜单，再 `activateExploreItem(item)` —— 与浮动菜单同一段委托，不得另写导航 |
+| 分组 | `dividerAfter` 的项之后，下一行带 `separatorBefore`（视频剪辑后、手机管理后各一条） |
+| 点击 | 先 `onDismiss()` 关闭官方菜单，再 `activateExploreItem(item)`，不得另写导航 |
 | 文本与 HTML 边界 | 行内 `iconSvg` 仍按受信 HTML 注入（14×14 纯矢量）；`label` 一律纯文本 |
 | 老宿主兼容 | 无 `slots` 服务或该 seat 不存在时静默 no-op（`ctx.slots.inject` 惰性语义）；MUST NOT 用空 `catch` 兜底 |
-| 与浮动菜单关系 | 常驻「探索」行与浮动菜单本次保留；两处入口共用同一清单，禁止任何一处单独漂移 |
-| 刷新语义 | 官方菜单每次展开重新挂载即读取最新集合，与浮动菜单「下次展开即最新集合」一致，不需要第二套订阅 |
+| 不得回退自绘入口 | 禁止以任何形式重新注入「探索」常驻行、浮动菜单或第二套侧栏菜单；宿主没有该 seat 时宁可不显示，也不自绘 |
+| 刷新语义 | 官方菜单每次展开重新挂载即读取最新集合，不需要第二套订阅 |
 
 ## Alpha 内测标记
 

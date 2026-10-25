@@ -1,17 +1,22 @@
 #!/usr/bin/env node
 /**
- * Real-browser acceptance for the explore-menu runtime registration seam (Issue #3108).
+ * Real-browser acceptance for the 「更多」menu runtime registration seam (Issue #3785).
  *
  * What it proves, against the REAL client source (no logic is copied or rewritten):
- * `plugins/omnimux/src/client/sidebar-coordinator.js` is bundled with esbuild into a
- * single ESM file, served from a throw-away static server on 127.0.0.1:0, loaded into a
- * headless Chrome page that carries a minimal official sidebar skeleton, and driven step
+ * `plugins/omnimux/src/client/explore-more-menu.jsx` + `sidebar-coordinator.js` are
+ * bundled with esbuild into a single ESM file, served from a throw-away static server on
+ * 127.0.0.1:0, loaded into a headless Chrome page that renders the official
+ * `sidebar.panellist.actions` menu content with a stand-in row primitive, and driven step
  * by step over CDP (`Runtime.evaluate` / `Input.dispatchMouseEvent` / `Page.captureScreenshot`).
- * 悬停展开也走真实鼠标事件（`mouseMoved`），不靠脚本 `.click()`。
+ * 点击走真实鼠标事件（`mousePressed` / `mouseReleased`），不靠脚本 `.click()`。
  *
- * Journey: boot → menu has the 11 builtin items → register a runtime item → 12 items with
- * the new one last → a REAL mouse click opens the workbench tab → unregister → back to 11
- * → malformed input is rejected without throwing or changing the menu.
+ * 自绘「探索」常驻行与浮动菜单已在 #3785 退役；本脚本的渲染面随之改为官方「更多」菜单，
+ * 不再驱动 `#omnimux-explore-entry` / `#omnimux-explore-menu`。
+ *
+ * Journey: boot → menu has the 10 builtin items → register a runtime item → 11 items with
+ * the new one last → a REAL mouse click on it opens the workbench tab and dismisses the
+ * menu → unregister → back to 10 → malformed input and builtin-id conflicts are rejected
+ * without throwing or changing the menu.
  *
  * Artifacts land in `docs/evidence/explore-registration-3124/`:
  *   - explore-registration-browser.png   (the registered item visible in the open menu)
@@ -32,6 +37,7 @@ import { randomUUID } from 'node:crypto'
 
 /** Worktree root, derived from this file — never a hardcoded checkout path. */
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
+const MENU_SOURCE = path.join(ROOT, 'plugins/omnimux/src/client/explore-more-menu.jsx')
 const COORDINATOR_SOURCE = path.join(ROOT, 'plugins/omnimux/src/client/sidebar-coordinator.js')
 const EVIDENCE_DIR = path.join(ROOT, 'docs/evidence/explore-registration-3124')
 const PNG_PATH = path.join(EVIDENCE_DIR, 'explore-registration-browser.png')
@@ -127,53 +133,39 @@ function buildIndexHtml() {
     color: var(--dsw-alias-label-primary);
     font: var(--dsw-font-s-14);
   }
-  [data-omnimux-frame] { display: flex; flex-direction: column; height: 100%; }
-  [data-slot="root"] { display: flex; flex: 1 1 auto; min-height: 0; }
-  [data-pane="sidebar"] {
-    flex: none; width: 240px; box-sizing: border-box;
-    padding: 10px 8px; display: flex; flex-direction: column; gap: 2px;
-    border-right: 1px solid var(--dsw-alias-border-l1);
-    background: #fafafa;
+  .pane { padding: 24px 28px; }
+  .pane-hint { margin: 0 0 16px; color: var(--dsw-alias-label-secondary); }
+  /* 官方 MenuItemButton 的替身行：同一份 icon / children / separatorBefore / onSelect 契约。 */
+  .menu {
+    width: 260px; box-sizing: border-box; padding: 5px;
+    border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px;
+    background: var(--dsw-alias-bg-layer-2);
+    box-shadow: 0 10px 28px var(--dsw-alias-bg-mask-1);
   }
-  [data-pane="sidebar"] .logoRow { padding: 0 4px 10px; }
-  [data-pane="sidebar"] .logoRow .brand {
-    border: 0; background: transparent; padding: 0; cursor: pointer;
-    font: var(--dsw-font-s-14); font-weight: 600; color: inherit;
+  .menu-row {
+    display: flex; align-items: center; gap: 8px; width: 100%; height: 32px;
+    box-sizing: border-box; padding: 0 10px; border: 0; border-radius: 8px;
+    background: transparent; color: inherit; cursor: pointer;
+    font: var(--dsw-font-s-14); text-align: left;
   }
-  [data-pane="sidebar"] .newSession {
-    display: block; width: 100%; height: 32px; box-sizing: border-box;
-    padding: 0 8px; border: 0; border-radius: 8px; cursor: pointer;
-    background: var(--dsw-alias-interactive-bg-hover);
-    color: inherit; font: var(--dsw-font-s-14); text-align: left;
+  .menu-row:hover { background: var(--dsw-alias-interactive-bg-hover); }
+  .menu-row-icon {
+    flex: none; display: inline-flex; width: 14px; height: 14px;
+    align-items: center; justify-content: center;
   }
-  .pane { flex: 1 1 auto; padding: 24px 28px; }
-  .pane-hint { margin: 0; color: var(--dsw-alias-label-secondary); }
+  .menu-row-icon svg { display: block; width: 14px; height: 14px; }
+  .menu-separator { height: 1px; margin: 4px 6px; background: var(--dsw-alias-border-l1); }
 </style>
 </head>
 <body>
-<div data-omnimux-frame>
-  <div data-slot="root">
-    <aside data-pane="sidebar" class="sidebarCol">
-      <div class="logoRow"><button type="button" class="brand">OmniMux</button></div>
-      <button type="button" class="newSession" aria-label="新建会话">新建会话</button>
-    </aside>
-    <main class="pane">
-      <p class="pane-hint">官方侧栏骨架 · 探索菜单运行时注册接缝（Issue #3108）真实浏览器验收</p>
-    </main>
-  </div>
-</div>
+<main class="pane">
+  <p class="pane-hint">官方「更多」菜单（sidebar.panellist.actions）· 运行时注册接缝真实浏览器验收</p>
+  <div class="menu" id="root"></div>
+</main>
 <script type="module">
 import * as mod from '/bundle.js'
 
-window.__QA_ERRORS = []
-window.addEventListener('error', (event) => window.__QA_ERRORS.push(String(event.message || event.error)))
-window.addEventListener('unhandledrejection', (event) => window.__QA_ERRORS.push('unhandledrejection: ' + String(event.reason)))
-
-const q = (selector) => document.querySelector(selector)
-let lastUnregister = null
-
-// 未捕获错误计数：收起菜单会让获得焦点的项触发 blur/focusout，
-// 若收起逻辑不是幂等的，这里就会记到异常 —— 用于回归该竞态。
+// 未捕获错误计数：注册 / 注销 / 点击都不应让页面抛错。
 window.__qaErrors = []
 window.addEventListener('error', (event) => {
   window.__qaErrors.push(String((event && event.message) || event))
@@ -182,44 +174,90 @@ window.addEventListener('unhandledrejection', (event) => {
   window.__qaErrors.push(String((event && event.reason) || event))
 })
 
-window.__QA = {
-  errors() {
-    return window.__qaErrors.slice()
+const rowNodes = () => Array.from(document.querySelectorAll('[data-row-label]'))
+let reactRoot = null
+let lastUnregister = null
+let dismissCount = 0
+
+/**
+ * 官方 MenuItemButton 的替身：只复用它的输入契约
+ * （icon / children / separatorBefore / onSelect），不复制菜单逻辑 ——
+ * 行内容、顺序与分组全部由被测模块产出。
+ */
+function StubMenuItemButton(props) {
+  const children = []
+  if (props.separatorBefore) {
+    children.push(mod.React.createElement('div', {
+      key: 'separator', className: 'menu-separator', role: 'separator',
+    }))
+  }
+  children.push(mod.React.createElement('button', {
+    key: 'row',
+    type: 'button',
+    className: 'menu-row',
+    'data-row-label': String(props.children),
+    onClick: props.onSelect,
   },
+  mod.React.createElement('span', { key: 'icon', className: 'menu-row-icon' }, props.icon),
+  mod.React.createElement('span', { key: 'label' }, props.children)))
+  return mod.React.createElement('div', { className: 'menu-row-wrap' }, children)
+}
+
+/** 重新挂载菜单内容：官方菜单每次展开重新挂载即读最新集合。 */
+async function remount() {
+  if (reactRoot) reactRoot.unmount()
+  reactRoot = mod.ReactDOMClient.createRoot(document.getElementById('root'))
+  const Content = mod.createExploreMoreMenuContent({ MenuItemButton: StubMenuItemButton })
+  reactRoot.render(mod.React.createElement(Content, {
+    onDismiss: () => { dismissCount += 1 },
+  }))
+  await new Promise((resolve) => setTimeout(resolve, 60))
+  return rowNodes().length
+}
+
+/** coordinator 的运行时注册接缝（幂等安装）。 */
+function registry() {
+  mod.coordinator.installSidebarGlobal()
+  return window.__omnimuxSidebar
+}
+
+function readMenu() {
+  const list = rowNodes()
+  const labels = list.map((el) => el.getAttribute('data-row-label'))
+  return {
+    count: list.length,
+    labels,
+    firstLabel: labels.length ? labels[0] : null,
+    lastLabel: labels.length ? labels[labels.length - 1] : null,
+    separatorCount: document.querySelectorAll('.menu-separator').length,
+  }
+}
+
+window.__QA = {
+  errors: () => window.__qaErrors.slice(),
 
   module: mod,
-  installSidebarGlobal: mod.installSidebarGlobal,
-  builtinIds: () => mod.EXPLORE_MENU_ITEMS.map((item) => item.id),
-  builtinCount: () => mod.EXPLORE_MENU_ITEMS.length,
+  builtinIds: () => mod.coordinator.EXPLORE_MENU_ITEMS.map((item) => item.id),
+  builtinCount: () => mod.coordinator.EXPLORE_MENU_ITEMS.length,
 
+  /** 首次挂载官方「更多」菜单内容，返回行数。 */
   boot() {
-    mod.installSidebarGlobal()
-    window.__omnimuxSidebar.place()
-    return Boolean(q('[data-omnimux-explore-entry]'))
+    return remount()
   },
-  place() {
-    window.__omnimuxSidebar.place()
-    return Boolean(q('[data-omnimux-explore-entry]'))
+  /** 重新挂载（模拟再次展开菜单），返回行数。 */
+  rerender() {
+    return remount()
   },
-  exploreEntryExists() {
-    return Boolean(q('[data-omnimux-explore-entry]'))
-  },
-
-  openMenu() {
-    const anchor = q('[data-omnimux-explore-entry]')
-    if (!anchor) throw new Error('探索行未挂载')
-    if (q('#omnimux-explore-menu')) mod.closeExploreMenu()
-    anchor.click()
-    return Boolean(q('#omnimux-explore-menu'))
-  },
+  readMenu,
+  dismissed: () => dismissCount,
 
   register(item) {
-    lastUnregister = window.__omnimuxSidebar.registerExploreItem(item)
+    lastUnregister = registry().registerExploreItem(item)
     return typeof lastUnregister === 'function'
   },
   registerRaw(item) {
     try {
-      const off = window.__omnimuxSidebar.registerExploreItem(item)
+      const off = registry().registerExploreItem(item)
       return { threw: false, returnedFunction: typeof off === 'function' }
     } catch (error) {
       return { threw: true, returnedFunction: false, error: String((error && error.message) || error) }
@@ -246,41 +284,9 @@ window.__QA = {
     return window.__opened === undefined ? null : window.__opened
   },
 
-  readMenu() {
-    const menu = q('#omnimux-explore-menu')
-    if (!menu) return { open: false, count: 0, ids: [], labels: [] }
-    const items = Array.from(menu.querySelectorAll('[data-explore-id]'))
-    const ids = items.map((el) => el.dataset.exploreId)
-    const labels = items.map((el) => (el.querySelector('.omnimux-explore-menu-item-label')?.textContent ?? '').trim())
-    const last = items[items.length - 1]
-    return {
-      open: true,
-      count: items.length,
-      ids,
-      labels,
-      lastId: last ? last.dataset.exploreId : null,
-      lastLabel: last ? labels[labels.length - 1] : null,
-      dividerCount: menu.querySelectorAll('.omnimux-explore-menu-divider').length,
-      anchorExpanded: q('[data-omnimux-explore-entry]')?.getAttribute('aria-expanded') ?? null,
-    }
-  },
-
-  entryRect() {
-    const el = q('[data-omnimux-explore-entry]')
-    if (!el) return null
-    const rect = el.getBoundingClientRect()
-    return {
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2,
-      width: rect.width,
-      height: rect.height,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-    }
-  },
-
-  menuItemRect(id) {
-    const el = q('#omnimux-explore-menu [data-explore-id="' + id + '"]')
+  /** 行在视口中的位置：真实鼠标点击与截图就绪判定都用它。 */
+  rowRect(label) {
+    const el = rowNodes().find((node) => node.getAttribute('data-row-label') === label)
     if (!el) return null
     const rect = el.getBoundingClientRect()
     return {
@@ -296,28 +302,6 @@ window.__QA = {
       viewportHeight: window.innerHeight,
     }
   },
-
-  /**
-   * Skip the 120ms entrance animation so a screenshot is not captured mid-pop.
-   * Standard Web Animations API on the test side; product CSS is untouched.
-   */
-  settleMenu() {
-    const menu = q('#omnimux-explore-menu')
-    if (!menu) return null
-    if (typeof menu.getAnimations === 'function') {
-      for (const animation of menu.getAnimations()) {
-        try {
-          animation.finish()
-        } catch {
-          /* already finished or not finishable */
-        }
-      }
-    }
-    const style = getComputedStyle(menu)
-    return { opacity: style.opacity, transform: style.transform }
-  },
-
-  errors: () => window.__QA_ERRORS.slice(),
 }
 </script>
 </body>
@@ -442,11 +426,12 @@ async function main() {
   const startedAt = new Date().toISOString()
   const report = {
     runId,
-    issue: '3108',
-    title: '探索菜单运行时注册接缝 · 真实浏览器验收',
+    issue: '3785',
+    title: '官方「更多」菜单运行时注册接缝 · 真实浏览器验收',
     startedAt,
     root: ROOT,
-    source: path.relative(ROOT, COORDINATOR_SOURCE),
+    source: path.relative(ROOT, MENU_SOURCE),
+    sources: [path.relative(ROOT, MENU_SOURCE), path.relative(ROOT, COORDINATOR_SOURCE)],
     chrome: { path: CHROME_PATH, product: null, protocolVersion: null },
     page: { url: null, viewport: VIEWPORT },
     bundle: { bytes: null },
@@ -535,12 +520,22 @@ async function main() {
 
   try {
     // ---- bundle the real source -------------------------------------------------
+    // 入口同时导出被测菜单模块、coordinator 注册接缝与 React：
+    // 页面用同一份实例渲染，注册 / 注销与菜单读到的集合必然一致。
+    const entry = [
+      "export * from './explore-more-menu.jsx'",
+      "export * as coordinator from './sidebar-coordinator.js'",
+      "export * as React from 'react'",
+      "export * as ReactDOMClient from 'react-dom/client'",
+      '',
+    ].join('\n')
     await esbuild.build({
-      entryPoints: [COORDINATOR_SOURCE],
+      stdin: { contents: entry, resolveDir: path.dirname(MENU_SOURCE), loader: 'js' },
       bundle: true,
       format: 'esm',
       platform: 'browser',
       target: 'chrome120',
+      jsx: 'automatic',
       outfile: bundlePath,
       legalComments: 'none',
       logLevel: 'silent',
@@ -588,166 +583,100 @@ async function main() {
     )
 
     // ---- step 1: boot -----------------------------------------------------------
-    await assert('boot：探索行已挂载（[data-omnimux-explore-entry] 存在）', async () => {
-      const booted = await evalIn(`window.__QA.boot()`)
-      await waitFor(async () => await evalIn(`window.__QA.exploreEntryExists()`), 8_000, '探索行出现')
-      const exists = await evalIn(`window.__QA.exploreEntryExists()`)
-      const actual = { bootReturned: booted, exploreEntryExists: exists }
-      if (!exists) throw fail('boot 后 [data-omnimux-explore-entry] 不存在', actual)
+    await assert('boot：官方「更多」菜单渲染内置 10 项，文案与真源清单一致', async () => {
+      const rendered = await evalIn(`window.__QA.boot()`)
+      const menu = await evalIn(`window.__QA.readMenu()`)
+      const builtinCount = await evalIn(`window.__QA.builtinCount()`)
+      const builtinLabels = await evalIn(`window.__QA.module.coordinator.EXPLORE_MENU_ITEMS.map((item) => item.label)`)
+      const builtinIds = await evalIn(`window.__QA.builtinIds()`)
+      const actual = {
+        rendered, count: menu.count, labels: menu.labels,
+        builtinCount, builtinLabels, builtinIds, separatorCount: menu.separatorCount,
+      }
+      if (builtinCount !== 10) throw fail(`内置白名单应为 10 项，实际 ${builtinCount}`, actual)
+      if (menu.count !== 10) throw fail(`菜单行数应为 10，实际 ${menu.count}`, actual)
+      if (!deepEqual(menu.labels, builtinLabels)) throw fail('行文案与真源清单不一致', actual)
+      if (builtinIds.length !== 10) throw fail(`真源清单 id 应为 10 个，实际 ${builtinIds.length}`, actual)
+      if (menu.separatorCount !== 2) throw fail(`分组分隔线应为 2 条，实际 ${menu.separatorCount}`, actual)
       return actual
     })
     await capture('step-1-boot')
 
-    // ---- step 1b: hover-only open (no click at all) -----------------------------
-    await assert('悬停即展开：只派发真实鼠标移动（不点击）即出现菜单', async () => {
-      const entryRect = await evalIn(`window.__QA.entryRect()`)
-      if (!entryRect) throw fail('探索行 rect 不可读', null)
-      const base = { x: entryRect.x, y: entryRect.y, modifiers: 0 }
-      await cdp.send('Input.dispatchMouseEvent', { ...base, type: 'mouseMoved', button: 'none' }, sessionId)
-      let opened = false
-      try {
-        await waitFor(async () => await evalIn(`window.__QA.readMenu().open === true`), 4_000, '悬停展开菜单')
-        opened = true
-      } catch {
-        opened = false
-      }
-      const menu = await evalIn(`window.__QA.readMenu()`)
-      const actual = { opened, count: menu.count, anchorExpanded: menu.anchorExpanded, clicked: false }
-      if (!opened || !menu.open) throw fail('仅悬停未展开菜单', actual)
-      if (menu.anchorExpanded !== 'true') throw fail('悬停展开后 aria-expanded 应为 true', actual)
-      return actual
-    })
-    await capture('step-1b-hover-open')
-
-    await assert('移出即收起：指针移到按钮与菜单之外后菜单关闭', async () => {
-      await cdp.send(
-        'Input.dispatchMouseEvent',
-        { x: VIEWPORT.width - 4, y: VIEWPORT.height - 4, modifiers: 0, type: 'mouseMoved', button: 'none' },
-        sessionId,
-      )
-      let closed = false
-      try {
-        await waitFor(async () => await evalIn(`window.__QA.readMenu().open === false`), 4_000, '移出收起')
-        closed = true
-      } catch {
-        closed = false
-      }
-      const menu = await evalIn(`window.__QA.readMenu()`)
-      const actual = { closed, open: menu.open, anchorExpanded: menu.anchorExpanded }
-      if (!closed || menu.open) throw fail('指针移出后菜单仍展开', actual)
-      return actual
-    })
-
-    // ---- step 2: builtin menu ---------------------------------------------------
-    await assert('打开菜单：11 项，id 序列与内置白名单完全一致', async () => {
-      const opened = await evalIn(`window.__QA.openMenu()`)
-      const menu = await evalIn(`window.__QA.readMenu()`)
-      const builtinIds = await evalIn(`window.__QA.builtinIds()`)
-      const builtinCount = await evalIn(`window.__QA.builtinCount()`)
-      const actual = { opened, count: menu.count, ids: menu.ids, builtinIds, builtinCount }
-      if (!opened || !menu.open) throw fail('菜单未展开', actual)
-      if (builtinCount !== 11) throw fail(`内置白名单应为 11 项，实际 ${builtinCount}`, actual)
-      if (menu.count !== 11) throw fail(`菜单项数应为 11，实际 ${menu.count}`, actual)
-      if (!deepEqual(menu.ids, builtinIds)) throw fail('菜单 id 序列与内置白名单不一致', actual)
-      return actual
-    })
-    await capture('step-2-builtin-menu')
-
-    // ---- step 3: register -------------------------------------------------------
-    await assert('注册运行时项：返回注销函数，且菜单展开时自动收起', async () => {
+    // ---- step 2: register -------------------------------------------------------
+    await assert('注册运行时项：返回注销函数', async () => {
       const registered = await evalIn(`window.__QA.register(${JSON.stringify(REGISTERED_ITEM)})`)
-      const afterRegister = await evalIn(`window.__QA.readMenu()`)
-      const actual = { returnedFunction: registered, menuAfterRegister: afterRegister }
+      const actual = { returnedFunction: registered }
       if (!registered) throw fail('registerExploreItem 未返回函数', actual)
-      if (afterRegister.open !== false) throw fail('注册时菜单已展开，应自动收起', actual)
       return actual
     })
 
-    // ---- step 4: 12 items, new one last -----------------------------------------
-    await assert("重新打开菜单：12 项，末项 data-explore-id='fast-news-workbench' 且文案为「快讯中枢」", async () => {
-      const opened = await evalIn(`window.__QA.openMenu()`)
+    // ---- step 3: 11 rows, new one last ------------------------------------------
+    await assert("重新挂载菜单：11 行，末项文案为「快讯中枢」", async () => {
+      const rendered = await evalIn(`window.__QA.rerender()`)
       const menu = await evalIn(`window.__QA.readMenu()`)
-      const actual = { opened, count: menu.count, lastId: menu.lastId, lastLabel: menu.lastLabel, ids: menu.ids }
-      if (!opened || !menu.open) throw fail('注册后菜单未能展开', actual)
-      if (menu.count !== 12) throw fail(`菜单项数应为 12，实际 ${menu.count}`, actual)
-      if (menu.lastId !== 'fast-news-workbench') {
-        throw fail(`末项 id 应为 fast-news-workbench，实际 ${menu.lastId}`, actual)
-      }
+      const actual = { rendered, count: menu.count, lastLabel: menu.lastLabel, labels: menu.labels }
+      if (menu.count !== 11) throw fail(`菜单行数应为 11，实际 ${menu.count}`, actual)
       if (menu.lastLabel !== '快讯中枢') throw fail(`末项文案应为「快讯中枢」，实际「${menu.lastLabel}」`, actual)
       return actual
     })
 
-    // ---- screenshot: the registered item visible in the open menu ---------------
+    // ---- screenshot: the registered item visible in the menu --------------------
     await assert('截图就绪：注册项完整落在视口内（功能专属证据，非首页冒烟）', async () => {
-      // The menu pops in over 120ms; settle it so the capture is not a mid-animation frame.
-      const settled = await evalIn(`window.__QA.settleMenu()`)
-      await waitFor(async () => (await evalIn(`window.__QA.menuItemRect('fast-news-workbench')`)) !== null, 2_000, '菜单稳定')
-      const rect = await evalIn(`window.__QA.menuItemRect('fast-news-workbench')`)
-      const actual = { settled, rect }
-      if (!rect) throw fail('注册项按钮不在菜单中', actual)
-      if (settled && settled.opacity !== '1') throw fail(`菜单未稳定（opacity=${settled.opacity}）`, actual)
+      await waitFor(async () => (await evalIn(`window.__QA.rowRect('快讯中枢')`)) !== null, 2_000, '菜单稳定')
+      const rect = await evalIn(`window.__QA.rowRect('快讯中枢')`)
+      const actual = { rect }
+      if (!rect) throw fail('注册项不在菜单中', actual)
       if (rect.top < 0 || rect.bottom > rect.viewportHeight) {
         throw fail('注册项超出视口，截图无法作为证据', actual)
       }
-      requiredShot = await capture('step-4-registered-menu')
+      requiredShot = await capture('step-3-registered-menu')
       report.screenshot = {
         path: path.relative(ROOT, PNG_PATH),
         ...pngSize(requiredShot),
         bytes: requiredShot.length,
-        capturedAtStep: 'step-4-registered-menu',
+        capturedAtStep: 'step-3-registered-menu',
       }
-      return { settled, rect, screenshot: report.screenshot }
+      return { rect, screenshot: report.screenshot }
     })
 
-    // ---- step 5: real mouse click on the registered item ------------------------
-    await assert('点击注册项（真实鼠标）：__opened 深等于 {tabId,title}，且菜单已关闭', async () => {
+    // ---- step 4: real mouse click on the registered item ------------------------
+    await assert('点击注册项（真实鼠标）：先 onDismiss 关菜单，再打开 workbench tab', async () => {
       await evalIn(`window.__QA.setWorkbenchStub()`)
-      const rect = await evalIn(`window.__QA.menuItemRect('fast-news-workbench')`)
-      if (!rect) throw fail('注册项按钮不在菜单中', { rect })
+      const dismissedBefore = await evalIn(`window.__QA.dismissed()`)
+      const rect = await evalIn(`window.__QA.rowRect('快讯中枢')`)
+      if (!rect) throw fail('注册项不在菜单中', { rect })
       await realClick(rect)
       await waitFor(async () => (await evalIn(`window.__QA.opened()`)) !== null, 4_000, '__opened 被写入')
       const opened = await evalIn(`window.__QA.opened()`)
+      const dismissedAfter = await evalIn(`window.__QA.dismissed()`)
       const pageErrors = await evalIn(`window.__QA.errors()`)
-      const menu = await evalIn(`window.__QA.readMenu()`)
-      const actual = { opened, expected: EXPECTED_OPENED, menuOpen: menu.open, menuCount: menu.count, pageErrors, clickRect: rect }
+      const actual = {
+        opened, expected: EXPECTED_OPENED, dismissedBefore, dismissedAfter, pageErrors, clickRect: rect,
+      }
       if (!deepEqual(opened, EXPECTED_OPENED)) {
         throw fail(`__opened 应为 ${normalize(EXPECTED_OPENED)}，实际 ${normalize(opened)}`, actual)
       }
-      if (menu.open !== false) throw fail('点击后菜单应已关闭', actual)
-      if (pageErrors.length > 0) throw fail('点击菜单项时页面抛出未捕获错误（收起竞态）', actual)
+      if (dismissedAfter !== dismissedBefore + 1) throw fail('点击行必须先调用 onDismiss 关菜单', actual)
+      if (pageErrors.length > 0) throw fail('点击行时页面抛出未捕获错误', actual)
       return actual
     })
-    await capture('step-5-after-click')
+    await capture('step-4-after-click')
 
-    // ---- step 6: unregister -----------------------------------------------------
-    await assert('注销：菜单展开时自动收起，重新打开后回到 11 项且不含该项', async () => {
-      const reopened = await evalIn(`window.__QA.openMenu()`)
-      const beforeUnregister = await evalIn(`window.__QA.readMenu()`)
+    // ---- step 5: unregister -----------------------------------------------------
+    await assert('注销：重新挂载后回到 10 行且不含该项', async () => {
       const removed = await evalIn(`window.__QA.unregister()`)
-      const afterUnregister = await evalIn(`window.__QA.readMenu()`)
-      const reopenedAgain = await evalIn(`window.__QA.openMenu()`)
+      const rendered = await evalIn(`window.__QA.rerender()`)
       const menu = await evalIn(`window.__QA.readMenu()`)
-      const actual = {
-        reopened,
-        beforeUnregisterCount: beforeUnregister.count,
-        removed,
-        menuOpenAfterUnregister: afterUnregister.open,
-        reopenedAgain,
-        count: menu.count,
-        ids: menu.ids,
-      }
-      if (beforeUnregister.count !== 12) throw fail(`注销前应为 12 项，实际 ${beforeUnregister.count}`, actual)
+      const actual = { removed, rendered, count: menu.count, labels: menu.labels }
       if (!removed) throw fail('注销函数调用失败', actual)
-      if (afterUnregister.open !== false) throw fail('注销时菜单已展开，应自动收起', actual)
-      if (!reopenedAgain || !menu.open) throw fail('注销后菜单未能重新展开', actual)
-      if (menu.count !== 11) throw fail(`注销后应为 11 项，实际 ${menu.count}`, actual)
-      if (menu.ids.includes('fast-news-workbench')) throw fail('注销后菜单仍含 fast-news-workbench', actual)
+      if (menu.count !== 10) throw fail(`注销后应为 10 行，实际 ${menu.count}`, actual)
+      if (menu.labels.includes('快讯中枢')) throw fail('注销后菜单仍含「快讯中枢」', actual)
       return actual
     })
-    await capture('step-6-unregistered')
+    await capture('step-5-unregistered')
 
-    // ---- step 7: malformed input ------------------------------------------------
-    await assert('非法形状输入（null / {} / 缺 label / 缺 iconSvg / id 为空白）不抛错且不改变菜单项数', async () => {
+    // ---- step 6: malformed input ------------------------------------------------
+    await assert('非法形状输入（null / {} / 缺 label / 缺 iconSvg / id 为空白）不抛错且不改变菜单行数', async () => {
       const invalidInputs = [
         { label: 'null', value: null },
         { label: '{}', value: {} },
@@ -765,43 +694,42 @@ async function main() {
         const outcome = await evalIn(`window.__QA.registerRaw(${JSON.stringify(input.value)})`)
         results.push({ input: input.label, ...outcome })
       }
+      await evalIn(`window.__QA.rerender()`)
       const menu = await evalIn(`window.__QA.readMenu()`)
-      const actual = { results, menuOpen: menu.open, count: menu.count, ids: menu.ids }
+      const actual = { results, count: menu.count, labels: menu.labels }
       const threw = results.filter((r) => r.threw)
       if (threw.length > 0) throw fail(`非法输入抛错：${normalize(threw)}`, actual)
-      if (menu.open !== true) throw fail('非法输入不应收起菜单', actual)
-      if (menu.count !== 11) throw fail(`非法输入后菜单项数应为 11，实际 ${menu.count}`, actual)
+      if (menu.count !== 10) throw fail(`非法输入后菜单行数应为 10，实际 ${menu.count}`, actual)
       return actual
     })
 
-    // ---- step 8: builtin id conflict --------------------------------------------
-    await assert('与内置 11 项 id 冲突时不注册（菜单仍 11 项）', async () => {
+    // ---- step 7: builtin id conflict --------------------------------------------
+    await assert('与内置 10 项 id 冲突时不注册（菜单仍 10 行，首项仍为「应用」）', async () => {
       const outcome = await evalIn(
         `window.__QA.registerRaw(${JSON.stringify({ id: 'apps', label: '冲突项', iconSvg: '<svg viewBox="0 0 16 16"></svg>' })})`,
       )
+      await evalIn(`window.__QA.rerender()`)
       const menu = await evalIn(`window.__QA.readMenu()`)
-      const actual = { outcome, count: menu.count, ids: menu.ids, firstLabel: menu.labels[0] }
+      const actual = { outcome, count: menu.count, firstLabel: menu.firstLabel, labels: menu.labels }
       if (outcome.threw) throw fail('冲突注册抛错', actual)
-      if (menu.count !== 11) throw fail(`冲突注册后应仍为 11 项，实际 ${menu.count}`, actual)
+      if (menu.count !== 10) throw fail(`冲突注册后应仍为 10 行，实际 ${menu.count}`, actual)
       if (actual.firstLabel !== '应用') throw fail(`内置首项文案应仍为「应用」，实际「${actual.firstLabel}」`, actual)
       return actual
     })
 
-    // ---- step 9: same-id re-registration overwrites -----------------------------
-    await assert('同 id 二次注册覆盖（仍 12 项，末项为后一次注册的文案）', async () => {
+    // ---- step 8: same-id re-registration overwrites -----------------------------
+    await assert('同 id 二次注册覆盖（11 行，末项为后一次注册的文案）', async () => {
       await evalIn(
         `window.__QA.registerRaw(${JSON.stringify({ id: 'dup-probe', label: '首次', iconSvg: '<svg viewBox="0 0 16 16"></svg>', tabId: 'dup' })})`,
       )
       await evalIn(
         `window.__QA.registerRaw(${JSON.stringify({ id: 'dup-probe', label: '二次', iconSvg: '<svg viewBox="0 0 16 16"></svg>', tabId: 'dup' })})`,
       )
-      const opened = await evalIn(`window.__QA.openMenu()`)
+      const rendered = await evalIn(`window.__QA.rerender()`)
       const menu = await evalIn(`window.__QA.readMenu()`)
-      const actual = { opened, count: menu.count, lastId: menu.lastId, lastLabel: menu.lastLabel, ids: menu.ids }
-      if (menu.count !== 12) throw fail(`二次注册后应为 12 项，实际 ${menu.count}`, actual)
-      if (menu.lastId !== 'dup-probe' || menu.lastLabel !== '二次') {
-        throw fail('二次注册未覆盖同 id 条目', actual)
-      }
+      const actual = { rendered, count: menu.count, lastLabel: menu.lastLabel, labels: menu.labels }
+      if (menu.count !== 11) throw fail(`二次注册后应为 11 行，实际 ${menu.count}`, actual)
+      if (menu.lastLabel !== '二次') throw fail('二次注册未覆盖同 id 条目', actual)
       return actual
     })
 
@@ -841,15 +769,15 @@ async function main() {
 
     if (report.assertions.length > 0) {
       await fs.mkdir(EVIDENCE_DIR, { recursive: true })
-      // 头图取「仅悬停即展开」那一帧：本任务的证据必须是悬停态，而不是点击态。
-      const hoverShot = captured.get('step-1b-hover-open')
-      if (hoverShot) {
-        requiredShot = hoverShot
+      // 头图取「注册项已出现在官方『更多』菜单里」那一帧：功能专属证据，非首页冒烟。
+      const registeredShot = captured.get('step-3-registered-menu')
+      if (registeredShot) {
+        requiredShot = registeredShot
         report.screenshot = {
           path: path.relative(ROOT, PNG_PATH),
-          ...pngSize(hoverShot),
-          bytes: hoverShot.length,
-          capturedAtStep: 'step-1b-hover-open',
+          ...pngSize(registeredShot),
+          bytes: registeredShot.length,
+          capturedAtStep: 'step-3-registered-menu',
         }
       }
       if (requiredShot) await fs.writeFile(PNG_PATH, requiredShot)
