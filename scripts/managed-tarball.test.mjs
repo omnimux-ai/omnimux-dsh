@@ -10,7 +10,11 @@ import { parseRequest } from './managed-tarball.mjs';
 import { fakeGitPath } from './sync-fixtures.test.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const scratch = fs.mkdtempSync(path.join(tmpdir(), 'managed-archive-'));
+// 临时目录要先解析成真实路径：macOS 上 tmpdir() 是 /var/folders/…，而 /var 是指向
+// /private/var 的符号链接，materialize-graph 的 assertPath 会（正确地）以
+// "symlink ancestor" 拒绝任何带符号链接祖先的路径——那是防越权的检查，不该放宽，
+// 该改的是测试自己别把符号链接路径喂进去。Linux 上 realpath 是空操作。
+const scratch = fs.mkdtempSync(path.join(fs.realpathSync(tmpdir()), 'managed-archive-'));
 after(() => fs.rmSync(scratch, { recursive: true, force: true }));
 
 export function makeArchive(file, entries = [], metadata = {}) {
