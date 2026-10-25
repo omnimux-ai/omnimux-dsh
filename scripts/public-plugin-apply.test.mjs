@@ -1,10 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { dirname, resolve } from 'node:path'
+import { basename, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { inspectTestAuthoring } from './test-authoring-inspection.mjs'
 import { handle, sourceInspectionIO } from './guard-anti-cheat.mjs'
-import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync, readFileSync, constants } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync, readFileSync, readdirSync, existsSync, constants } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
 
@@ -292,9 +292,77 @@ test('guard ignores claimed source facts and rejects unrelated relative sources'
   assert.equal(result.hookSpecificOutput.permissionDecision, 'deny')
 })
 
+/**
+ * 仓内临时夹具登记表。
+ *
+ * 这些夹具必须建在**仓内**（用例要验证"仓内未跟踪的插件目录不得获得仓库权威"），
+ * 但只靠 `finally` 清理不够：测试运行被中断或提前失败时 `finally` 不会执行，
+ * 残留的未跟踪文件会被 `scripts/sync-to-app.sh` 判定为"会进入物化产物"并
+ * 直接拒绝开发版物化。这里再加一层进程退出兜底。
+ */
+const fixtures = new Set()
+
+/**
+ * 仓内夹具前缀。SIGKILL / runner 强制退出这类路径无法在进程内拦截，所以每次
+ * 载入本文件时先把上一轮遗留的同前缀目录清掉——残留最多存在一轮，不会累积，
+ * 也不会一直挡着开发版物化。
+ */
+const FIXTURE_PREFIXES = [
+  resolve(root, 'plugins/public-apply-untracked-'),
+  resolve(root, 'scripts/public-apply-edit-'),
+  resolve(root, 'scripts/public-apply-target-'),
+]
+
+function sweepStaleFixtures() {
+  for (const prefix of FIXTURE_PREFIXES) {
+    const parent = dirname(prefix)
+    const base = basename(prefix)
+    if (!existsSync(parent)) continue
+    for (const entry of readdirSync(parent)) {
+      if (!entry.startsWith(base)) continue
+      try {
+        rmSync(resolve(parent, entry), { recursive: true, force: true })
+      } catch {
+        // 尽力而为：扫不掉不影响本次测试结论。
+      }
+    }
+  }
+}
+
+sweepStaleFixtures()
+
+function makeFixture(prefix) {
+  const dir = mkdtempSync(prefix)
+  fixtures.add(dir)
+  return dir
+}
+
+/** 尽力而为地清掉所有已登记夹具；退出阶段失败不影响测试结论。 */
+function cleanupFixtures() {
+  for (const dir of fixtures) {
+    try {
+      rmSync(dir, { recursive: true, force: true })
+    } catch {
+      // 见上：清理失败不能反过来影响测试结论。
+    }
+  }
+  fixtures.clear()
+}
+
+// `process.on('exit')` 只覆盖正常结束与未捕获异常；SIGINT/SIGTERM 下**不会**触发，
+// 而"测试被 Ctrl-C / 被 runner 终止"正是残留的主要来源（残留会挡住开发版物化）。
+process.on('exit', cleanupFixtures)
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => {
+    cleanupFixtures()
+    // 清完按惯例的 128+signum 退出，保持"被中断"的语义。
+    process.exit(signal === 'SIGINT' ? 130 : 143)
+  })
+}
+
 test('external mirror, other checkout, and untracked repo plugin cannot establish identity', () => {
-  const temporary = mkdtempSync(resolve(tmpdir(), 'public-apply-'))
-  const untracked = mkdtempSync(resolve(root, 'plugins/public-apply-untracked-'))
+  const temporary = makeFixture(resolve(tmpdir(), 'public-apply-'))
+  const untracked = makeFixture(resolve(root, 'plugins/public-apply-untracked-'))
   try {
     const fakeSrc = resolve(temporary, 'plugins/omnimux/src')
     mkdirSync(resolve(fakeSrc, 'host'), { recursive: true })
@@ -321,8 +389,10 @@ test('external mirror, other checkout, and untracked repo plugin cannot establis
   } finally {
     assert.equal(temporary.startsWith(resolve(tmpdir(), 'public-apply-')), true)
     assert.equal(untracked.startsWith(resolve(root, 'plugins/public-apply-untracked-')), true)
-    rmSync(temporary, { recursive: true })
-    rmSync(untracked, { recursive: true })
+    rmSync(temporary, { recursive: true, force: true })
+    rmSync(untracked, { recursive: true, force: true })
+    fixtures.delete(temporary)
+    fixtures.delete(untracked)
   }
 })
 
@@ -418,8 +488,8 @@ test('one HEAD generation is fixed and rechecked after all source AST reads', (t
 })
 
 test('canonical target symlink is rejected for write and complete edit candidates', () => {
-  const temporary = mkdtempSync(resolve(root, 'scripts/public-apply-target-'))
-  const outside = mkdtempSync(resolve(tmpdir(), 'public-apply-target-'))
+  const temporary = makeFixture(resolve(root, 'scripts/public-apply-target-'))
+  const outside = makeFixture(resolve(tmpdir(), 'public-apply-target-'))
   try {
     const target = resolve(temporary, 'candidate.test.mjs')
     const referent = resolve(outside, 'candidate.test.mjs')
@@ -434,8 +504,10 @@ test('canonical target symlink is rejected for write and complete edit candidate
   } finally {
     assert.equal(temporary.startsWith(resolve(root, 'scripts/public-apply-target-')), true)
     assert.equal(outside.startsWith(resolve(tmpdir(), 'public-apply-target-')), true)
-    rmSync(temporary, { recursive: true })
-    rmSync(outside, { recursive: true })
+    rmSync(temporary, { recursive: true, force: true })
+    rmSync(outside, { recursive: true, force: true })
+    fixtures.delete(temporary)
+    fixtures.delete(outside)
   }
 })
 
@@ -460,7 +532,7 @@ test('source replacement during final HEAD child return is still rejected', (t) 
 })
 
 test('full edit candidate is reconstructed before binding and selector inspection', () => {
-  const temporary = mkdtempSync(resolve(root, 'scripts/public-apply-edit-'))
+  const temporary = makeFixture(resolve(root, 'scripts/public-apply-edit-'))
   try {
     const path = resolve(temporary, 'candidate.test.mjs')
     const original = "import { apply } from '../../plugins/omnimux/src/index.js'; test('install', () => apply(ctx))"
@@ -472,6 +544,7 @@ test('full edit candidate is reconstructed before binding and selector inspectio
     assert.equal(readFileSync(path, 'utf8'), original)
   } finally {
     assert.equal(temporary.startsWith(resolve(root, 'scripts/public-apply-edit-')), true)
-    rmSync(temporary, { recursive: true })
+    rmSync(temporary, { recursive: true, force: true })
+    fixtures.delete(temporary)
   }
 })
