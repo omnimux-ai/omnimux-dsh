@@ -77,6 +77,13 @@ function sourceFiles(root) {
   return files
 }
 
+/** 去掉行注释与块注释；只用于「名字是否被引用」的判定，不改写文件。 */
+function stripComments(text) {
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ')
+}
+
 function readManifestPackages(manifestPath) {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
   const names = new Set()
@@ -139,7 +146,8 @@ export function collectFailures(root, options = {}) {
     // #3737：依赖声明面（dependencies / devDependencies / peerDependencies）同样不得引用已删包。
     for (const field of DEPENDENCY_FIELDS) {
       for (const name of Object.keys(pkg[field] ?? {})) {
-        if (name.startsWith('@deepseek-ai/')) referencedNames.add(name)
+        // 依赖声明面只对「已删包登记表」负责；底座清单差集看的是客户端装配面
+        // （inject / external / 源码导入），peer 里的宿主包不属清单范围。
         if (removedNames.includes(name)) {
           const entry = REMOVED_PACKAGES.find((candidate) => candidate.name === name)
           failures.push(`${rel} ${field} 仍指向 ${entry.since} 已删除的 ${name}`)
@@ -158,28 +166,47 @@ export function collectFailures(root, options = {}) {
         failures.push(`${rel} esbuild external 仍包含 ${entry.since} 已删除的 ${entry.name}`)
       }
     }
+    // 外部名同样进底座清单差集（客户端装配面之一）。
+    for (const entry of REMOVED_PACKAGES) {
+      if (text.includes(`'${entry.name}'`) || text.includes(`"${entry.name}"`)) {
+        referencedNames.add(entry.name)
+      }
+    }
   }
 
   // #3737：源码与类型导入面（viewer 的 `import type { ToolCallBlock } from '…/client'` 属此类）。
   for (const file of sourceFiles(root)) {
-    const text = readFileSync(file, 'utf8')
+    // build-client.mjs 的外部名由上面那条专用检查负责，别把同一处引用报两遍。
+    if (file.endsWith(join('scripts', 'build-client.mjs'))) continue
+    // 注释里提到旧包名（例如「官方 X 发现服务」这类说明）不算引用，
+    // 否则真问题会被说明性文字淹掉。
+    const text = stripComments(readFileSync(file, 'utf8'))
     const rel = file.replace(`${root}/`, '')
     for (const entry of REMOVED_PACKAGES) {
       if (text.includes(entry.name)) {
         failures.push(`${rel} 源码仍引用 ${entry.since} 已删除的 ${entry.name}`)
+        referencedNames.add(entry.name)
       }
+    }
+    for (const match of text.matchAll(/['"](@deepseek-ai\/dsh-[a-z0-9-]+)(?:\/[a-z0-9-]+)*['"]/g)) {
+      referencedNames.add(match[1])
     }
   }
 
   let manifestStatus = 'skipped'
   let manifestMissing = []
+  let manifestChecked = 0
   const manifestPath = options.manifestPath ?? process.env.OMNIMUX_VENDOR_MANIFEST ?? null
   if (manifestPath && existsSync(manifestPath)) {
     const provided = readManifestPackages(manifestPath)
-    manifestMissing = [...referencedNames].filter((name) => !provided.has(name)).sort()
+    // 底座清单（vendor/dsh-runtime）只覆盖 dsh-* 客户端包；@deepseek-ai/cordis、
+    // @deepseek-ai/schemastery 这类随底座一起安装的依赖不在清单里，属正常。
+    const inScope = [...referencedNames].filter((name) => name.startsWith('@deepseek-ai/dsh-'))
+    manifestMissing = inScope.filter((name) => !provided.has(name)).sort()
     for (const name of manifestMissing) {
       failures.push(`引用名 ${name} 不在底座清单 ${manifestPath} 中（该底座未提供此包）`)
     }
+    manifestChecked = inScope.length
     manifestStatus = 'checked'
   } else if (manifestPath) {
     manifestStatus = 'missing'
@@ -189,7 +216,7 @@ export function collectFailures(root, options = {}) {
     failures.push(`校验范围可疑：peer=${peersChecked}、inject=${injectChecked}`)
   }
 
-  return { failures, peersChecked, injectChecked, referencedNames, manifestStatus, manifestMissing }
+  return { failures, peersChecked, injectChecked, referencedNames, manifestStatus, manifestMissing, manifestChecked }
 }
 
 function main() {
@@ -200,8 +227,10 @@ function main() {
     console.log('⏭ 底座清单差集未运行：未设置 OMNIMUX_VENDOR_MANIFEST（只跑已删包登记表与静态扫描面）')
   } else if (result.manifestStatus === 'missing') {
     console.log(`⏭ 底座清单差集未运行：OMNIMUX_VENDOR_MANIFEST 指向的文件不存在（${process.env.OMNIMUX_VENDOR_MANIFEST}）`)
+  } else if (result.manifestMissing.length > 0) {
+    console.log(`⚠️ 底座清单差集已运行：${result.manifestChecked} 个 dsh-* 引用名中 ${result.manifestMissing.length} 个不在清单内（见下方失败项）`)
   } else {
-    console.log(`✅ 底座清单差集已运行：${result.referencedNames.size} 个引用名全部在清单内`)
+    console.log(`✅ 底座清单差集已运行：${result.manifestChecked} 个 dsh-* 引用名全部在清单内`)
   }
 
   if (result.failures.length > 0) {
@@ -210,7 +239,7 @@ function main() {
     process.exit(1)
   }
 
-  console.log(`✅ DSH 宿主兼容声明校验通过（peer ${result.peersChecked} 条容纳新宿主且未收窄旧世代；已删包登记 ${REMOVED_PACKAGES.length} 项在 inject / external / 依赖声明 / 源码四处均无残留）`)
+  console.log(`✅ DSH 宿主兼容声明校验通过（peer ${result.peersChecked} 条容纳新宿主且未收窄旧世代；已删包登记 ${REMOVED_PACKAGES.length} 项在 inject / external / 依赖声明 / 源码四处均无残留；底座清单差集 ${result.manifestStatus}）`)
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main()

@@ -40,3 +40,17 @@
 
 - 不修 viewer 本身（属 #3733）；不改 peer 范围检查；不联网。
 - 本任务的合入依赖 #3733：门禁会红，直到 viewer 的 devDependency 与类型导入清理干净。
+
+## 8. 实施记录（2026-10-25）
+
+原实现留下的三处问题已修，并把清单差集从"摆设"变成能报真问题：
+
+| 问题 | 现象 | 修法 |
+| --- | --- | --- |
+| 同一处引用报两遍 | `scripts/build-client.mjs` 同时被"external 专用面"与"通用源码面"扫到，单处违规产出 2 条 | 通用源码面跳过 `scripts/build-client.mjs`（专用面更精确）；external 命中的名字仍进清单差集 |
+| 清单差集误报第三方依赖 | 对真实清单跑一次，报 `@deepseek-ai/cordis`、`@deepseek-ai/schemastery` 不在清单内 | 差集只看 `@deepseek-ai/dsh-*`（清单是 `vendor/dsh-runtime` 的 tarball 集合，不含随底座安装的 cordis/schemastery） |
+| 注释算引用 | market 三处说明性注释里提到旧包名即判失败，真问题会被淹 | 判定前先剥掉行注释与块注释 |
+
+**清单差集抓到的第一个真问题**：`plugins/omnimux-automation/scripts/register-dsh-stubs.mjs` 仍登记 `@deepseek-ai/dsh-agent-presets`（复数）。实测 npm：复数包 0.2.1 系列**不存在**（latest 仅 `0.0.1-rc.1`），rc.3 提供的是单数 `@deepseek-ai/dsh-agent-preset` 与 `@deepseek-ai/dsh-agent-preset-registry`；仓内没有任何代码 import 复数包，属死条目。已从 stub 集合移除，`omnimux-automation` 测试 132/132 通过。
+
+**验证（本机，2026-10-25）**：`node --test scripts/verify-dsh-declaration-range.test.mjs` 7/7；不带清单 → 显式 skip 且 exit 0；带真实清单（`vendor/dsh-runtime/0.2.1-rc.3/manifest.json`）→ 48 个 dsh-* 引用名全部在清单内、exit 0；`pnpm --filter omnimux-automation test` 132/132；`pnpm test:gates` 见提交时的实测输出。
