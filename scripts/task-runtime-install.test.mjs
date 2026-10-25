@@ -253,7 +253,7 @@ test('the declared exemption covers the shipped support package on the running h
 test('an undeclared support package is reported loudly and gets no exemption file', t => {
   const profile = tempProfile(t);
   const identity = readSidebarSupportIdentity();
-  const result = applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: identity.peerExemptions[0].hostSpec, identity: { ...identity, peerExemptions: [] } });
+  const result = applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: identity.peerExemptions[0].hostSpec, identity: Object.assign({}, identity, { peerExemptions: [] }) });
   assert.deepEqual(result.grants, {});
   assert.equal(result.filename, null);
   assert.deepEqual(result.warnings.map(warning => warning.code), ['support_exemption_undeclared']);
@@ -266,9 +266,9 @@ test('a declared exemption is written exactly as the host reads it, keyed by pac
   const hostSpec = identity.peerExemptions[0].hostSpec;
   const result = applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: hostSpec, identity });
   const key = `${identity.name}@${identity.version}`;
-  assert.deepEqual(result.grants, { [key]: [hostSpec] });
+  assert.deepEqual(result.grants, Object.fromEntries([[key, [hostSpec]]]));
   assert.equal(result.filename, join(profile, 'compatibility.json'));
-  assert.equal(fs.readFileSync(result.filename, 'utf8'), JSON.stringify({ [key]: [hostSpec] }, undefined, 2) + '\n');
+  assert.equal(fs.readFileSync(result.filename, 'utf8'), JSON.stringify(Object.fromEntries([[key, [hostSpec]]]), undefined, 2) + '\n');
   assert.equal(fs.statSync(result.filename).mode & 0o777, 0o600);
   assert.equal(hashFile(result.filename), result.sha256);
   assert.deepEqual(result.applied.map(item => item.key), [key]);
@@ -289,7 +289,7 @@ test('a declaration for another host generation or an expired review refuses ins
   assert.throws(() => applySupportPeerExemptions({ profile, manifests: [manifest], hostVersion: '0.2.2-rc.1', identity }),
     { code: 'TEST_ENV_INSTALL_SUPPORT_EXEMPTION_STALE' });
   // Nor does a review older than the agreed window.
-  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [manifest], hostVersion: declared.hostSpec, identity: { ...identity, peerExemptions: [{ ...declared, reviewedAt: '2020-01-01' }] } }),
+  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [manifest], hostVersion: declared.hostSpec, identity: Object.assign({}, identity, { peerExemptions: [Object.assign({}, declared, { reviewedAt: '2020-01-01' })] }) }),
     { code: 'TEST_ENV_INSTALL_SUPPORT_EXEMPTION_STALE' });
   assert.ok(!fs.existsSync(join(profile, 'compatibility.json')), 'a stale declaration must not leave a half-effective grant behind');
   assert.equal(isReviewFresh(declared.reviewedAt), true);
@@ -301,7 +301,7 @@ test('a malformed declaration is a coded failure, never a silently dropped recor
   const identity = readSidebarSupportIdentity();
   const [base] = identity.peerExemptions;
   const malformed = [
-    { ...identity, peerExemptions: 'not-a-list' },
+    Object.assign({}, identity, { peerExemptions: 'not-a-list' }),
     { ...identity, peerExemptions: [null] },
     { ...identity, peerExemptions: [{ ...base, version: '^0.19.1' }] },
     { ...identity, peerExemptions: [{ ...base, hostSpec: '>=0.2.0' }] },
