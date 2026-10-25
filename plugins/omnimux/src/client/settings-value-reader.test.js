@@ -15,19 +15,19 @@ function fakeCtx({ settingsScope, configForms } = {}) {
   }
 }
 
-test('settingsScope: reads the live namespace value', () => {
+test('configForms: reads the live namespace value', () => {
   let current = { value: undefined }
-  const scope = { getSnapshot: () => current }
-  let boundNamespace
-  const binder = {
-    bind(spec) {
-      boundNamespace = spec.namespace
-      return scope
+  const controller = { getSnapshot: () => current }
+  let queriedId
+  const forms = {
+    get(entryId) {
+      queriedId = entryId
+      return controller
     },
   }
-  const read = installSettingsValueReader({ ctx: fakeCtx({ settingsScope: binder }), namespace: 'omnimux' })
+  const read = installSettingsValueReader({ ctx: fakeCtx({ configForms: forms }), namespace: 'omnimux' })
   assert.equal(typeof read, 'function')
-  assert.equal(boundNamespace, 'omnimux')
+  assert.equal(queriedId, 'omnimux')
   current = { value: { runtimeMode: 'official' } }
   assert.deepEqual(read(), { runtimeMode: 'official' })
 })
