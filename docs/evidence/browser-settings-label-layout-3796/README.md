@@ -82,9 +82,11 @@ node scripts/verify-browser-settings-label-layout.mjs --width 1280
 
 窄面板单列规则只作用于 `label:not(.setting-toggle)`，为确认没有误伤，脚本实测了全部 22 行：
 
-- **开关行（8 行）**：420px 下文案列宽 312px、`rowOverflow = 0`，开关 `switchLeft = 354` 仍在
-  文案右缘（`copyRight = 342`）之外，即保持两列、未被挤到下一行
-- **中继配置行（5 行）**：标签宽 310px、单行、`rowOverflow = 0`
+- **开关行（8 行）**：420px 下文案列宽 312px、开关 `switchLeft = 354` 仍在文案右缘
+  （`copyRight = 342`）之外；280px 下为 172 / 214 / 202，同样在右侧。两档 `rowOverflow` 均为 0，
+  即保持两列、未被挤到下一行
+- **中继配置行（5 行）**：4 个字段 label 宽 310px、「设为默认模型」开关行文案宽 162px，
+  全部单行、`rowOverflow = 0`
 - **其它设置行（10 行）**：标签全部单行、未裁切
 - **逐行溢出**：22 行 `rowOverflow` 全为 0
 
