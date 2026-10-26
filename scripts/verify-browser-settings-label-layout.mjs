@@ -111,6 +111,7 @@ const MEASURE = `(() => {
   if (probeSpan) {
     const original = probeSpan.textContent
     // Exactly 90 CJK characters: far wider than 45% of any panel, so the cap must bite.
+    // Real labels are 3-13 characters, which is why the cap needs a probe to be exercised.
     const probeText = '文本生成模型与推理等级'.repeat(8) + '文本生成模型与推理等级'.slice(0, 2)
     probeSpan.textContent = probeText
     const rowBox = probeRow.getBoundingClientRect()
@@ -235,7 +236,10 @@ async function main() {
   // its own artifact and screenshot suffix instead.
   const tagValue = tagArg === -1 ? '' : String(process.argv[tagArg + 1] ?? '')
   if (tagArg !== -1 && tagValue.trim() === '') throw new Error('--tag 需要一个非空名称')
-  const tag = tagValue.trim() === '' ? '' : `-${tagValue.replace(/[^a-z0-9-]/gi, '')}`
+  const sanitized = tagValue.replace(/[^a-z0-9-]/gi, '')
+  // A tag that sanitizes to nothing would silently produce `...-420-.json`; fail loudly instead.
+  if (tagValue.trim() !== '' && sanitized === '') throw new Error(`--tag 「${tagValue}」不含可用的 ASCII 字母数字`)
+  const tag = sanitized === '' ? '' : `-${sanitized}`
   const themeArg = process.argv.indexOf('--theme')
   const themes = (themeArg === -1 ? 'dark,light' : String(process.argv[themeArg + 1] ?? ''))
     .split(',').map((value) => value.trim()).filter((value) => ['auto', 'dark', 'light'].includes(value))

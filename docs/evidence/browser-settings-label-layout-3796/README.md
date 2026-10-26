@@ -99,7 +99,8 @@ node scripts/verify-browser-settings-label-layout.mjs --width 420 --tag falsify
 
 ## 5. 45% 上限的实测（`measured.longLabel`）
 
-真实中文标签只有 4–7 字，`fit-content(45%)` 平时不参与计算，所以脚本会**临时**把一个标签
+真实标签只有 3–13 个字符（最长「中转地址 Base URL」13 字符，见本目录 JSON 的 `rows[].text`），
+`fit-content(45%)` 平时不参与计算，所以脚本会**临时**把一个标签
 改成 90 个汉字再测量、随后还原（实际字数记在 `longLabel.probeChars`，可直接核对）。
 宽面板实测（`settings-label-layout-1280.json` 的 `longLabel`）：
 
@@ -136,5 +137,6 @@ node scripts/verify-browser-settings-label-layout.mjs --width 420 --tag falsify
 - `node --test scripts/verify-governance-registry.test.mjs` → pass 4 / fail 0（新脚本已在 `scripts/governance-manifest.json` 登记为 manual）
 - `pnpm test:gates` → exit 0
 - `cd plugins/omnimux-browser/extension && npx tsc -p tsconfig.json --noEmit`：70 个既有错误，
-  与 `origin/main` 检出同一基线，本次新增 0 个（根 `pnpm typecheck` 只跑 `omnimux-workflow`，
-  exit 0，与本包无关）
+  与 `origin/main` 检出同一基线，本次改动文件新增 0 个（根 `pnpm typecheck` 只跑
+  `omnimux-workflow`，exit 0 / 0 error，与本包无关；那 70 个分布在既有 `tests/*.spec.ts`
+  与部分 `src`）
