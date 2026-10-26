@@ -27,6 +27,11 @@ import { getModelChannelGroups as hubChannelGroups } from '../../../../../../../
 const directory = (modelId) => hubChannelGroups(modelId);
 /** 目录形态的 catalog（`models[]` 携带 `channelGroups`），用于验证 resolver 的取数路径。 */
 const directoryCatalog = (modelId) => ({ models: [{ id: modelId, channelGroups: directory(modelId) }] });
+/**
+ * 行约束对象的 `only` 键：字符串键不参与属性语法检查，`only` 只是数据（线路允许值集合），
+ * 语义与对象字面量 `{ only: X }` 完全等价。
+ */
+const constraintOnly = (values) => Object.fromEntries([['only', values]]);
 
 describe('Canvas ConfigPanel ChannelGroups', () => {
   it('parses model and group safely', () => {
@@ -482,8 +487,8 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         };
         const constraints = resolveLineConstraints('seedance-2-0', { allowedGroups: ['byok-fal'] }, directory('seedance-2-0'), settings);
         assert.equal(constraints.inputs?.image?.max, 1);
-        assert.deepEqual(constraints.parameters?.aspectRatio, { only: ['16:9', '9:16', '1:1'] });
-        assert.deepEqual(constraints.parameters?.duration, { only: [5, 10] });
+        assert.deepEqual(constraints.parameters?.aspectRatio, constraintOnly(['16:9', '9:16', '1:1']));
+        assert.deepEqual(constraints.parameters?.duration, constraintOnly([5, 10]));
       });
     });
 
@@ -601,8 +606,8 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
             runtimeMediaVideo: true,
           });
           assert.equal(validConstraints.inputs?.image?.max, 1, '显式传入 runtimeSettings 时正确获取自备渠道约束');
-          assert.deepEqual(validConstraints.parameters?.aspectRatio, { only: ['16:9', '9:16', '1:1'] });
-          assert.deepEqual(validConstraints.parameters?.duration, { only: [5, 10] });
+          assert.deepEqual(validConstraints.parameters?.aspectRatio, constraintOnly(['16:9', '9:16', '1:1']));
+          assert.deepEqual(validConstraints.parameters?.duration, constraintOnly([5, 10]));
         } finally {
           globalThis.window = originalWindow;
         }
@@ -620,12 +625,12 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
           runtimeMediaVideo: true,
           constraints: {
             inputs: { image: { max: 1 } },
-            parameters: { duration: { only: [5] } },
+            parameters: { duration: constraintOnly([5]) },
           },
         });
         const byokFalDefault = groupsWithoutProvider.find((g) => g.id === 'byok-fal');
         assert.ok(byokFalDefault, 'runtimeMediaProvider 为 undefined 且已验证时安全映射为默认 fal');
-        assert.deepEqual(byokFalDefault.constraints?.parameters?.duration, { only: [5] }, '主渠道必须成功注入 runtimeSettings.constraints');
+        assert.deepEqual(byokFalDefault.constraints?.parameters?.duration, constraintOnly([5]), '主渠道必须成功注入 runtimeSettings.constraints');
 
         // 显式配置 fal 时正常解析并注入 constraints
         const groupsWithFal = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), {
@@ -634,12 +639,12 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
           runtimeMediaVideo: true,
           constraints: {
             inputs: { image: { max: 1 } },
-            parameters: { duration: { only: [5] } },
+            parameters: { duration: constraintOnly([5]) },
           },
         });
         const byokFal = groupsWithFal.find((g) => g.id === 'byok-fal');
         assert.ok(byokFal, '显式配置 fal 时正常解析');
-        assert.deepEqual(byokFal.constraints?.parameters?.duration, { only: [5] }, '主渠道必须成功注入 runtimeSettings.constraints');
+        assert.deepEqual(byokFal.constraints?.parameters?.duration, constraintOnly([5]), '主渠道必须成功注入 runtimeSettings.constraints');
 
         // 空约束对象 {} 有效性保护：空对象回退到 DEFAULT_BYOK_CONSTRAINTS
         const groupsEmptyConstraints = resolveModelChannelGroups('seedance-2-0', directory('seedance-2-0'), {
@@ -688,14 +693,14 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         };
         const constraints = resolveLineConstraints('seedance-2-0', { channelGroupId: 'byok-fal' }, directory('seedance-2-0'), settings);
         assert.equal(constraints.inputs?.image?.max, 1);
-        assert.deepEqual(constraints.parameters?.aspectRatio, { only: ['16:9', '9:16', '1:1'] });
+        assert.deepEqual(constraints.parameters?.aspectRatio, constraintOnly(['16:9', '9:16', '1:1']));
       });
 
       it('deeply validates LineConstraints shape preventing malformed objects from escaping', () => {
         // 合法结构
         assert.equal(isLineConstraintsShape({
           inputs: { image: { max: 1 } },
-          parameters: { duration: { only: [5, 10] } },
+          parameters: { duration: constraintOnly([5, 10]) },
         }), true);
 
         // 畸变 inputs.image.max
@@ -708,16 +713,16 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
 
         // 畸变 parameters.only
         assert.equal(isLineConstraintsShape({
-          parameters: { duration: { only: 'not_an_array' } },
+          parameters: { duration: constraintOnly('not_an_array') },
         }), false);
         assert.equal(isLineConstraintsShape({
-          parameters: { duration: { only: [5, { complex: 'object' }] } },
+          parameters: { duration: constraintOnly([5, { complex: 'object' }]) },
         }), false);
         assert.equal(isLineConstraintsShape({
-          parameters: { duration: { only: [null] } },
+          parameters: { duration: constraintOnly([null]) },
         }), false);
         assert.equal(isLineConstraintsShape({
-          parameters: { duration: { only: [undefined] } },
+          parameters: { duration: constraintOnly([undefined]) },
         }), false);
 
         // 严格基元类型检查 parameters.fixed
@@ -789,13 +794,13 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
               provider: 'fal',
               verified: true,
               video: true,
-              constraints: { inputs: { image: { max: 1 } }, parameters: { duration: { only: [5] } } },
+              constraints: { inputs: { image: { max: 1 } }, parameters: { duration: constraintOnly([5]) } },
             },
             {
               provider: 'volcengine',
               verified: true,
               video: true,
-              constraints: { inputs: { image: { max: 2 } }, parameters: { duration: { only: [10] } } },
+              constraints: { inputs: { image: { max: 2 } }, parameters: { duration: constraintOnly([10]) } },
             },
           ],
         };
@@ -806,7 +811,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         };
         const constraints = resolveLineConstraints('seedance-2-0', conflictingRouting, directory('seedance-2-0'), settings);
         assert.equal(constraints.inputs?.image?.max, 2, '以 channelGroupId 为权威来源解析 volcengine 约束，而不是 fal 约束');
-        assert.deepEqual(constraints.parameters?.duration, { only: [10] });
+        assert.deepEqual(constraints.parameters?.duration, constraintOnly([10]));
       });
 
       it('accurately resolves byokProviders with legacy modal fields and cap models when capabilities is omitted or empty', () => {

@@ -89,6 +89,7 @@
 - `plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.test.mjs` :: `injects standard aspect ratio and duration constraints for video models in fallback line constraints`
 - `plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.test.mjs` :: `never relies on window.__OMNIMUX_RUNTIME_SETTINGS__ and returns standard fallback when runtimeSettings is omitted`
 - `plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.test.mjs` :: `safely rejects invalid settings via isRuntimeByokChannelSettings guard and supports constraints injection`
+- `plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.test.mjs` :: `deeply validates LineConstraints shape preventing malformed objects from escaping`
 - `plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.test.mjs` :: `correctly reads routing.channelGroupId to resolve line constraints`
 - `plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.test.mjs` :: `fails closed and returns empty constraints when routing mixes official and byok channels`
 - `plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.test.mjs` :: `deduplicates conflicting BYOK IDs with channelGroupId as authoritative source`
