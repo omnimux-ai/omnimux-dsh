@@ -12,8 +12,10 @@
 - `bindings` 仍是引用标识符→import 的映射（`catch ({ local = safeApi })` 之类引用照样算进）。
 - `reach` 只分三档，粗到不会因维护动作漂移，又足以拦住真升级：
   - `module` —— 用例之外（含普通函数里，仍是未证明被执行的代码）
-  - `skipped-case` —— 跳过/聚焦用例的回调里（`test.skip` / `test.only` / `xit` / `{skip:true}` …）
+  - `skipped-case` —— 跳过/聚焦用例的回调里（`test.skip` / `test.only` / `xit` / `{skip:true}` /
+    `test.describe.skip` 等链式选择器 …），**外层跳过容器会向内层运行器继承**，内层不得升回活用例
   - `live-case` —— 正常用例的回调里
+- 运行器/选择器识别扫**整条非计算成员链的根标识符**，覆盖 `test.describe.skip(...)` 这类链式写法。
 - 多重集计数兜底净新增：同一档位内复制一份、或新增一处 `.skip`/`.only` 仍硬拒。
 - 构造自身变了（别的对象/键/名字）仍被拒。
 - **选择器类风险**（`test-execution-selector-needs-review` / `test-execution-option-needs-review`）锚定选择器本身，不再把整个用例回调正文吃进指纹——否则用例正文一动就被判成新增风险，而选择器语义根本没变。
@@ -31,6 +33,7 @@
 - 若以下两侧不成立，说明位置仍参与身份或放行过度：①参数位互换 `consume(() => consume(...values), () => 1)` → `consume(() => 1, () => consume(...values))` 必须放行；②净新增 `consume(...values)` → `consume(...values); consume(...values)` 必须拒绝。
 - 若「构造变了」也被放行（`data[key]` → `other[index]`、用例名被改、调用方名被改），说明身份被过度简化。
 - **若可达性没进身份**，则「`eval`/`data[key]` 从死函数或 `test.skip` 搬进活用例」会被放行——这是必须拒绝的真升级（旧门禁能拦）。
+- 若**容器式跳过**没继承（`test.skip('g', () => { test('a', () => { eval(code) }) })` 里的构造挪进顶层活用例）或 `test.describe.skip` 链没被识别为运行器，同样会被放行——也必须拒绝。
 - 若同一档位内挪位置被拒（用例内套 `if`、跳过用例内套 `if`），说明位置又混进了身份。
 - 若 `import { runInThisContext } from 'node:vm'` 加 specifier 被放行，说明绑定侧把关丢了。
 - 若 skip/focus、eval、动态 import、动态成员、解析失败被放行，说明收紧范围被误伤。
@@ -55,13 +58,25 @@
 ## 验收
 
 - `node --test scripts/test-authoring-inspection.test.mjs scripts/guard-anti-cheat.test.mjs` 全绿（100 例）。
-- 可达性四条真升级实测拒绝：`eval`/`data[key]` 从死函数搬进活用例、从 `test.skip` 搬进活用例。
+- 可达性升级实测拒绝：`eval`/`data[key]` 从死函数搬进活用例、从 `test.skip` 搬进活用例、
+  从容器式 `test.skip` 内层用例搬进活用例、从 `test.describe.skip` 内层用例搬进活用例（5/5）。
 - 同档位挪位置实测放行：用例内套 `if`、跳过用例内套 `if`。
 - 净新增与同档位复制实测拒绝。
 - **本 PR 对 #3762 的真实贡献是 2 处**：在 `05d9555a7` 时旧门禁剩 5 处不可声明、新门禁剩 3 处；`004144df7` 时 4 → 2；到 `8b7a27eb1` 双双归零。即本 PR 把 `channelGroups` 的 `test-execution-option-needs-review` 与 `comfyui-ops-filter` 的 `dynamic-test-execution-needs-review` 转为可声明的 `test-case-removed-or-renamed`；其余 3 处由 #3762 改写测试自行消除。当前 HEAD 上新旧门禁跑同一命令都是 0，因此「6 处→0」的归因只对中间提交成立。
 
 ## 不做
 
-- 不放松 `DECLARABLE_TEST_STANDARD_REASONS` 之外的拒绝通道（新增风险、可达性升级、同档位复制仍硬拒）。
+- 不放松 `DECLARABLE_TEST_STANDARD_REASONS` 之外的拒绝通道：新增风险、同档位复制、以及
+  **可达性升级**（死代码/跳过用例 → 活用例，含容器式 `test.skip` 与 `test.describe.skip` 链）
+  仍硬拒。
 - 不动 `assertSidebarSupportIdentity`、`guard-anti-cheat.mjs` 的路径/仓库身份判定。
-- **已知不堵、且有意不堵**：`module` 档内部的细分（模块顶层语句 ↔ 普通函数体）。两者都是「未证明被执行」的同一档，旧门禁靠位置区分它们，正是本 PR 要消除的误拦来源；`eval` 在顶层还是在死函数里，静态风险等价，净新增仍被计数拦住。若要堵这条，需引入真正的可达性分析（调用图），超出本门禁「语法级」定位。
+- **已知不堵、且有意不堵**：`module` 档内部的细分（模块顶层语句 ↔ 普通函数体）。两者都是
+  「未证明被执行」的同一档。堵它需要再加一个 `inFunction` 布尔档（只分 `module` / `module-fn`，
+  不含序号/槽位/层数，实测 56/56 通过且不破坏主目标），但会把「把顶层语句抽进 helper」这类
+  常见重构判成风险，与「被包裹函数套住必须放行」直接冲突。取舍是保住主目标、接受这一档粗粒度。
+- **已知不堵（P1，待评估）**：`bindings` 扫描会吃进祖先上下文的 callee，因此当 `describe`
+  已被 import 时，「把用例包进 describe」仍会被判成新增风险（顶层 bindings=`test`，describe 内
+  是 `describe|test`）。修它要动 bindings 的上下文扫描，牵动 2 个既有断言，留待单独评估。
+- **已知不一致（P2）**：`xit` / `fit` 仍锚定整个 `CallExpression`（正文一动即拒），与已修的
+  `test.skip` / `test.only` 不一致；`test.skip` → `test.only` 与新增跳过用例仍被拒。
+

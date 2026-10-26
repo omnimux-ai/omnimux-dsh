@@ -601,3 +601,39 @@ test('reachability keeps dead-code and skipped-case execution from upgrading int
     ["function dead() { eval(code) }", "function dead() { eval(code); eval(code) }"],
   ]) assert.equal(inspectTestStandardChange(before, after).allowed, false, after)
 })
+
+test('container skip and chained describe selectors inherit skip reach into inner runners', () => {
+  // 外层是跳过容器时，内层运行器不得把档位升回 live-case。
+  for (const [before, after] of [
+    [
+      "test.skip('g', () => { test('a', () => { eval(code) }) }); test('z', () => {})",
+      "test.skip('g', () => { test('a', () => {}) }); test('z', () => { eval(code) })",
+    ],
+    [
+      "test.skip('g', () => { test('a', () => { data[key] }) }); test('z', () => {})",
+      "test.skip('g', () => { test('a', () => {}) }); test('z', () => { data[key] })",
+    ],
+    [
+      "test.skip('g', () => { test('a', () => {}) }); test('z', () => { eval(code) })",
+      "test.skip('g', () => { test('a', () => { eval(code) }) }); test('z', () => {})",
+    ],
+  ]) assert.equal(inspectTestStandardChange(before, after).allowed, false, after)
+
+  // 链式选择器（`test.describe.skip`）同样要识别为运行器，内层用例不能被当成 module 档。
+  for (const [before, after] of [
+    [
+      "test.describe.skip('g', () => { test('a', () => { eval(code) }) }); test('z', () => {})",
+      "test.describe.skip('g', () => { test('a', () => {}) }); test('z', () => { eval(code) })",
+    ],
+    [
+      "test.describe.skip('g', () => { test('a', () => { data[key] }) }); test('z', () => {})",
+      "test.describe.skip('g', () => { test('a', () => {}) }); test('z', () => { data[key] })",
+    ],
+  ]) assert.equal(inspectTestStandardChange(before, after).allowed, false, after)
+
+  // 跳过容器内挪位置仍放行。
+  assert.equal(inspectTestStandardChange(
+    "test.skip('g', () => { test('a', () => { eval(code) }) })",
+    "test.skip('g', () => { test('a', () => { if (x) { eval(code) } }) })",
+  ).allowed, true)
+})
