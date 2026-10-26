@@ -24,28 +24,29 @@
 命令（每个宽度一次运行，一个 Chrome 进程，结束清理）：
 
 ```bash
-node scripts/verify-browser-settings-label-layout.mjs --width 340
-node scripts/verify-browser-settings-label-layout.mjs --width 420
-node scripts/verify-browser-settings-label-layout.mjs --width 1280
+node scripts/verify-browser-settings-label-layout.mjs --width 280   # 13/13 pass
+node scripts/verify-browser-settings-label-layout.mjs --width 340   # 13/13 pass
+node scripts/verify-browser-settings-label-layout.mjs --width 420   # 13/13 pass
+node scripts/verify-browser-settings-label-layout.mjs --width 1280  # 13/13 pass
 ```
 
-| 断言 | 340px | 420px | 1280px |
-| --- | --- | --- | --- |
-| 两行模型配置同时存在 | pass | pass | pass |
-| 对话模型 标签单行显示（不逐字竖排） | pass | pass | pass |
-| 对话模型 标签未被裁切 | pass | pass | pass |
-| 对话模型 控件铺满整行（无剩余空白） | pass | pass | pass |
-| 对话模型 说明句落到标签下方（≤480px）／与标签同排且未压窄标签（>480px） | pass | pass | pass |
-| 对话模型 说明句不压住控件 | pass | pass | pass |
-| 文本生成模型 标签单行显示（不逐字竖排） | pass | pass | pass |
-| 文本生成模型 标签未被裁切 | pass | pass | pass |
-| 文本生成模型 控件铺满整行（无剩余空白） | pass | pass | pass |
-| 文本生成模型 说明句落到标签下方／与标签同排且未压窄标签 | pass | pass | pass |
-| 文本生成模型 说明句不压住控件 | pass | pass | pass |
-| 页面无横向溢出 | pass | pass | pass |
-| 其它设置行标签同样单行未裁切（共 10 行） | pass | pass | pass |
+| 断言 | 280px | 340px | 420px | 1280px |
+| --- | --- | --- | --- | --- |
+| 两行模型配置同时存在 | pass | pass | pass | pass |
+| 对话模型 标签单行显示（不逐字竖排） | pass | pass | pass | pass |
+| 对话模型 标签未被裁切 | pass | pass | pass | pass |
+| 对话模型 控件铺满整行（无剩余空白） | pass | pass | pass | pass |
+| 对话模型 说明句落到标签下方（≤480px）／与标签同排且未压窄标签（>480px） | pass | pass | pass | pass |
+| 对话模型 说明句不压住控件 | pass | pass | pass | pass |
+| 文本生成模型 标签单行显示（不逐字竖排） | pass | pass | pass | pass |
+| 文本生成模型 标签未被裁切 | pass | pass | pass | pass |
+| 文本生成模型 控件铺满整行（无剩余空白） | pass | pass | pass | pass |
+| 文本生成模型 说明句落到标签下方／与标签同排且未压窄标签 | pass | pass | pass | pass |
+| 文本生成模型 说明句不压住控件 | pass | pass | pass | pass |
+| 页面无横向溢出 | pass | pass | pass | pass |
+| 其它设置行标签同样单行未裁切（共 10 行） | pass | pass | pass | pass |
 
-截图：`settings-340px.png`、`settings-420px.png`、`settings-1280px.png`；
+截图：`settings-280px.png`、`settings-340px.png`、`settings-420px.png`、`settings-1280px.png`；
 结构化报告：`settings-label-layout-<width>.json`（含 viewport、每行几何、逐项 pass/actual）。
 
 ## 4. 证伪（修复前必须失败）
@@ -62,7 +63,17 @@ node scripts/verify-browser-settings-label-layout.mjs --width 1280
 
 恢复修复后同一条命令回到 13/13 pass。这证明断言确实锚定本缺陷，而不是恒真。
 
-## 5. 其它证据
+## 5. 共用网格的其它行（回归面实测）
+
+`@media (max-width: 480px)` 的单列规则只作用于 `label:not(.setting-toggle)`。为确认没有误伤，
+在 340px 与 420px、深浅两套主题下实测了全部设置行（含开关行、中继配置 label）：
+
+- 开关行（`.setting-toggle`）保持两列：340px 下文案宽 232px、420px 下 312px，`rowOverflow` 全为 0，
+  未被压成单列、开关未被挤到下一行
+- 中继配置的 label（无说明句）标签宽 310px、单行、无裁切
+- 所有行 `rowOverflow = 0`，`documentElement` 无横向溢出
+
+## 6. 其它证据
 
 - 定向单测：`npx vitest run tests/panel-settings-label-layout.spec.ts tests/panel-styles.spec.ts tests/panel-text-model-isolation.spec.ts` → 9/9 pass
 - 扩展全量单测：`cd plugins/omnimux-browser/extension && pnpm test` → 160 文件 / 1743 pass + 1 expected fail
