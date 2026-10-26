@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-10-25"
+updated: "2026-10-27"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux-assets"
 ---
@@ -29,6 +29,33 @@ Official source of the numbers: `dsh-client-ui-workspace` session row (`.session
 | Hover / active | `--dsw-alias-interactive-bg-hover` / `--dsw-alias-interactive-bg-active` | Hover is the same token as the official session row; the official **selected** row paints with the *hover* token family, so plugin active and session selected are not the same shade — an accepted, documented difference (D-2), not a defect to "fix" by touching official CSS |
 
 MUST NOT use 13px labels or 16px filled icons on these rows. MUST NOT invent a second visual scale next to 工作区. Icon box and label font-size MUST be the same number (14px).
+
+## 官方 panel 行同样消费本表度量（#3802）
+
+官方左侧栏自带的 panel 行（`插件` / `自动化任务` / `更多`）与上面的自定义行上下相邻。宿主默认给它们 `min-height:36px` / `padding:7px 8px` / `margin:0 2px` / `--dsw-radius-md`(12px) / 16px 图标，于是侧栏里同时存在两套行度量，观感一高一低、一圆一方。
+
+产品侧由 hub 客户端 `plugins/omnimux/src/client/sidebar-panel-chrome.js` 把**展开态**的官方 panel 行压到本表度量（高度 32px、`0 8px` 内边距、`0 4px` 外边距、`gap 6px`、8px 圆角、14px 图标、14/20 字阶、选中态用 active 令牌 + 字重 500）。
+
+| Rule | Detail |
+|---|---|
+| 单一真源 | 数字只写在 `PANEL_ROW_METRICS`，样式与测试都读它；MUST NOT 在样式里再手写第二套数字 |
+| 作用域 | 规则挂在侧栏列后代（`[data-pane="sidebar"], [class*="sidebarCol"]`）下，不得全局裸命中同名类 |
+| 收起态不变 | 规则以 `html:not(:has([data-sidebar-collapsed]))` 前置：56px 轨道是图标列，官方 36×36 居中图标保持不变，MUST NOT 被文字行内边距撑回横条 |
+| 不改官方 | MUST NOT 修改官方 `packages/`、类名或 React 树；只注入 CSS + 读几何 |
+| 新行一致性 | 新增任何侧栏行（含第三方插件行）都消费本表度量；出现第二套字号 / 图标尺寸的 PR 直接打回 |
+
+## 官方「更多」菜单的落位与材质（#3802）
+
+官方「更多」菜单默认从锚点**下方**展开（`side:'bottom'`）、压在侧栏内容上，材质是 `--dsw-menu-surface-fill`（暗色 `rgba(67,69,74,.45)`）+ `backdrop-filter: blur(40px)` 的毛玻璃，底下侧栏文字会透出来。产品侧把该菜单摆到侧栏列**右侧**、并换成实体不透明底。
+
+| Rule | Detail |
+|---|---|
+| 落位 | 目标左边界 = 侧栏列右边界 + `8px`；实现只写 `--omnimux-more-menu-shift`（`translate`），MUST NOT 与官方每帧写入的 inline `left/top` 抢同一个属性 |
+| 视口约束 | 右侧放不下时按「视口宽 − 12px 留白」收窄菜单（`--omnimux-more-menu-max-width`），而不是溢出视口，也不是压回侧栏上；连最小可用宽度（`200px`）都放不下时保持官方位置 |
+| 材质 | 在该菜单实例上覆盖 `--dsw-menu-surface-fill`（实体层色）与 `--dsw-menu-backdrop-filter: none`；MUST NOT 让覆盖外溢到其它官方浮层 |
+| 选择器边界 | 只命中同时满足 `[data-menu-material="translucent"]` 与 `[class*="moreMenu"]` 的元素；其它半透明官方菜单保持原材质 |
+| 跟随 | 官方 `Menu` 逐帧重算锚点位置，本模块同样逐帧跟随（菜单移除即停）；MUST NOT 自绘菜单容器或第二套关闭逻辑 |
+| 单一真源 | 菜单内容（条目 / 顺序 / 分组 / 点击委托）仍由 `explore-more-menu.jsx` 与 `sidebar-coordinator.js` 拥有，本模块只改落位与材质 |
 
 ## Left-rail single activation slot (#rail-active-state-convergence)
 
