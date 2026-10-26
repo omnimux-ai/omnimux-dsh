@@ -3,7 +3,8 @@ import { ensureProductStageChrome } from './conversation-box.js'
 import { installStageGlobal } from './stage.js'
 import { installSidebarGlobal } from './sidebar-coordinator.js'
 import { installAuthGlobal } from './auth-gate.js'
-import { installWorkbenchGlobal, installWorkbenchLeftRailObserver, installSidebarActivation, installSplitConversationMin, hydrateConversationCollapsed, reconcileRightbarFromRatio } from './workbench.js'
+import { installWorkbenchGlobal, installWorkbenchLeftRailObserver, installSidebarActivation, installSplitConversationMin, hydrateConversationCollapsed, reconcileRightbarFromRatio, requestRailActivationSync } from './workbench.js'
+import { notifyWorkbenchChange } from './workbench/event-bus.js'
 import { installChatToggle } from './chat-toggle.js'
 import { ensureConversationCollapseChrome } from './conversation-collapse.js'
 import { ensureComposerCompactChrome, installComposerCompactObserver } from './composer-compact.js'
@@ -54,7 +55,16 @@ export function installHubChrome(ctx) {
     ctx.inject(['sidebarRight'], (inner) => {
       inner.effect(() => {
         bindWorkbenchDeps({ sidebarRight: inner.sidebarRight })
-        return () => bindWorkbenchDeps({ sidebarRight: null })
+        // 在屏会话是工作台唯一的会话真源（Issue #3800）：会话切换后必须立刻
+        // 让左栏激活位与工作台状态跟上，否则入口点击会继续拿旧/空会话。
+        const mounted = inner.sidebarRight?.mounted
+        const unsubscribe = typeof mounted?.subscribe === 'function'
+          ? mounted.subscribe(() => { requestRailActivationSync(); notifyWorkbenchChange() })
+          : () => {}
+        return () => {
+          unsubscribe()
+          bindWorkbenchDeps({ sidebarRight: null })
+        }
       }, 'omnimux: native sidebar context')
     })
   }

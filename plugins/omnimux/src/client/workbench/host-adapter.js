@@ -167,10 +167,44 @@ export function tabIsOpen(state, tabId) {
   return listOpenTabs(state).some((tab) => tab.id === tabId || tab.type === tabId)
 }
 
+/**
+ * 当前在屏会话：rc.3 的合法读面是官方 `ctx.sidebarRight.mounted`
+ * （`ObservableSnapshot<SessionId | undefined>`，由 ui-sidebar-right 在
+ * 「中间栏显示对话」时写入）。
+ *
+ * 它比 sessions 列表更准：`mounted` 表示**此刻真正在屏**的会话，而列表的
+ * `current` 只是「选中」。
+ * @returns {string | undefined}
+ */
+export function mountedSessionId(sidebarRight = deps.sidebarRight) {
+  try {
+    const id = sidebarRight?.mounted?.getSnapshot?.()
+    return typeof id === 'string' && id ? id : undefined
+  } catch {
+    // Cordis Proxy may throw on unread services.
+    return undefined
+  }
+}
+
+/**
+ * 解析当前会话 id。
+ *
+ * 顺序：`sidebarRight.mounted`（在屏）→ `sessions.list` 的 `current`（选中）。
+ * 两者都是官方契约字段；读不到就返回 `undefined`，绝不拿列表首项冒充当前会话。
+ *
+ * Issue #3800 背景：侧栏支持包 0.19.1 只读 `current`，而 rc.3 运行时在该字段
+ * 留空时它的会话槽位永远为空，`openTab` 于是直接返回、一级入口点击全废。
+ * 本仓自己解析会话时必须先认 `mounted`，不能沿用单一 `current` 读法。
+ * @param {object | null} [sessions]
+ * @returns {string | undefined}
+ */
 export function currentSessionId(sessions = deps.sessions) {
+  const mounted = mountedSessionId()
+  if (mounted) return mounted
   try {
     const snap = sessions?.list?.getSnapshot?.()
-    if (snap?.current) return String(snap.current)
+    const selected = snap?.current
+    if (typeof selected === 'string' && selected) return selected
   } catch {
     // Cordis Proxy may throw on unread services.
   }

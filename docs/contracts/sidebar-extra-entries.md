@@ -48,6 +48,7 @@ Derivation order is fixed and exclusive:
 | Column visible | Collapse key absent **and** measured conversation-column width > 0 **and** the host right panel is not in fullscreen presentation (all three, not any) |
 | Tab identity | The focused tab's `kind` maps to a left-rail `tabId`; an unmappable key means "no active row", never a guessed one |
 | Truth order | Host truth (official DOM attributes, `ctx.sidebarRight`, `ctx.sessions.list`) outranks plugin in-memory state |
+| Current session | The on-screen Session is `ctx.sidebarRight.mounted` (`ObservableSnapshot<SessionId \| undefined>`); `ctx.sessions.list.current` is the *selected* Session and is the only fallback. Neither may be replaced by a list-first guess (#3800) |
 | Broadcast | Verdict changes ride the existing `notifyWorkbenchChange` bus; no second subscription channel, and no polling to patch state |
 
 ## Current occupants
