@@ -79,4 +79,3 @@
   是 `describe|test`）。修它要动 bindings 的上下文扫描，牵动 2 个既有断言，留待单独评估。
 - **已知不一致（P2）**：`xit` / `fit` 仍锚定整个 `CallExpression`（正文一动即拒），与已修的
   `test.skip` / `test.only` 不一致；`test.skip` → `test.only` 与新增跳过用例仍被拒。
-
