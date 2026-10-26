@@ -31,15 +31,17 @@ residual: 三屏浏览器证据待 Dev 应用启动后补；desktop-no-open 需�
 ## 品牌与 Stage 契约（实测）
 
 `node scripts/verify-stage-contracts.mjs` → `PASS: 14 Stage components; 8 registered sidebar targets and their runtime contracts.`
+
+> 前置：该脚本需要 `node_modules`，在**已 bootstrap 的主检出**里跑（`/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh`）。在未 bootstrap 的任务工作树里直接跑会报 `Cannot find module 'lucide-react'`，属环境前提，不是契约失败。
 （同时打印若干 `dsh-ui-kit` 图标缺失提示——属运行中宿主未提供该图标的既有告警，不影响契约结论。）
 
 ## 四屏证据（未取到，原因如实记录）
 
 | 屏 | 状态 | 原因 / 复现方式 |
 | --- | --- | --- |
-| 空会话品牌 | missing | 取证时 Dev 应用未运行：`127.0.0.1:45120` 无监听、`OmniMux Dev` 进程不存在（ego-browser `page.goto` 报 `ERR_CONNECTION_REFUSED`）。启动 Dev 后可用 ego-browser 重取 |
-| 侧栏品牌（展开/收起） | missing | 同上 |
-| 工具调用（一次无害读取） | missing | 同上；需要会话内实际触发一次工具调用 |
+| 空会话品牌 | missing | 取证时（17:53）Dev 应用未运行：`127.0.0.1:45120` 无监听、进程不存在（ego-browser 报 `ERR_CONNECTION_REFUSED`）。**17:53:40 后 Dev 已启动**（45120 有监听），但新起的独立浏览器会话没有登录态（页面返回 `dsh web authentication required`），而共享 Dev 的已登录窗口只能通过它的 CDP 9229 访问——**仓内 hook 明令禁止 agent 直连共享 Dev 的 9229**。因此本屏须由人工在已登录的 Dev 窗口里截 |
+| 侧栏品牌（展开/收起） | missing | 同上（同一登录态限制） |
+| 工具调用（一次无害读取） | missing | 同上；且需在会话内实际触发一次工具调用 |
 | 桌面冷启动（单窗口、不起外部浏览器） | missing | 按仓库契约**归人工**：共享 Dev 应用验收不由 agent 代签 |
 
 ## 证据与出处
@@ -55,6 +57,7 @@ residual: 三屏浏览器证据待 Dev 应用启动后补；desktop-no-open 需�
 1. 启动 OmniMux Dev（共享实例，端口 45120）。
 2. 用 ego-browser 新建独立 TaskSpace，打开 `http://127.0.0.1:45120/`。
 3. 依次截：空会话（品牌贴合、输入区无 OmniMux 标记）、侧栏展开/收起（标记与名称正确、入口可用）、会话内触发一次无害读取（无 `prepare` / `turn/end` 报错）。
+   - **必须在已登录的 Dev 窗口里做**：新开的独立浏览器没有登录态（`dsh web authentication required`），而共享 Dev 的 CDP（9229）按仓库 hook 不允许 agent 直连。
 4. 桌面冷启动单窗口、不拉起外部系统浏览器 —— 人工确认。
 
 ## 结论
