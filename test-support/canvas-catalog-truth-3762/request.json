@@ -1,7 +1,7 @@
 {
   "taskId": "canvas-catalog-truth-issue-3762",
-  "base": "f76b89e7b9460cc8ab8a9c46b361324f9606dc10",
-  "head": "f76b89e7b9460cc8ab8a9c46b361324f9606dc10",
+  "base": "8df4b3a170686dee71e59bb190557f040f25478c",
+  "head": "caffbc1dd996615146657cc84e657d0286c88bb2",
   "scope": "task",
   "taskPlugins": [
     "omnimux-assets",

@@ -222,6 +222,23 @@ function installedSupportManifest() {
   return JSON.parse(fs.readFileSync(path, 'utf8'));
 }
 
+/**
+ * 合成豁免声明：`peerExemptions` 已从真身份里移除（0.28.0 不再需要豁免），
+ * 但豁免**机制**本身仍要能被验证，所以用一份刻意构造的声明当夹具。
+ * 宿主世代取一个旧世代，让声明的 peer 需求在该世代下确实不满足。
+ */
+function declaredExemptionFixture(identity) {
+  return Object.assign({}, identity, {
+    peerExemptions: [{
+      package: identity.name,
+      version: identity.version,
+      hostSpec: '0.1.5-rc.3',
+      reason: 'synthetic declaration used only to exercise the exemption mechanism in tests',
+      reviewedAt: new Date().toISOString().slice(0, 10),
+    }],
+  });
+}
+
 function tempProfile(t) {
   const profile = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), 'omnimux-exemption-')));
   t.after(() => fs.rmSync(profile, { recursive: true, force: true }));
@@ -232,28 +249,23 @@ function isExactVersion(value) {
   return exemptionKey('probe', value) === `probe@${value}`;
 }
 
-test('the declared exemption covers the shipped support package on the running host', () => {
+test('the shipped support package needs no peer exemption on the running host', () => {
   const identity = readSidebarSupportIdentity();
   const manifest = assertSidebarSupportIdentity(installedSupportManifest(), identity);
   const rows = readSupportPeerExemptions(identity);
-  assert.equal(rows.length, 1, 'exactly one reviewed exemption is declared');
-  const [row] = rows;
-  assert.equal(row.package, identity.name);
-  assert.equal(row.version, identity.version);
-  assert.ok(row.reason.length > 20, 'the declaration records why the risk was accepted');
-  assert.ok(isReviewFresh(row.reviewedAt), `reviewed ${row.reviewedAt} must stay inside the ${SUPPORT_EXEMPTION_REVIEW_WINDOW_DAYS}-day window`);
-  // The declaration exists because the requirements are structurally unmet, not because someone
-  // forgot to upgrade: the same peer set was satisfied by the previous generation.
-  assert.deepEqual(unmetHostRequirements(manifest, '0.1.5-rc.3'), {});
-  const unmet = unmetHostRequirements(manifest, row.hostSpec);
-  assert.ok(Object.keys(unmet).length >= 1, 'the running generation must leave the declared peers unmet');
-  assert.equal(supportPeerExemptionDecision({ manifest, hostVersion: row.hostSpec, exemptions: rows }).status, 'granted');
+  // 0.28.0 的 peer 已放宽到 ^0.2.1-rc.1，宿主 0.2.1-rc.3 直接满足；豁免机制保留给将来真不兼容时用。
+  assert.deepEqual(rows, [], 'the current support package must not need an exemption');
+  // 仓库钉住的宿主世代（package.json 的 @deepseek-ai/* 版本），不需要起真实宿主。
+  const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const hostVersion = JSON.parse(fs.readFileSync(join(repositoryRoot, 'package.json'), 'utf8')).devDependencies['@deepseek-ai/dsh-util-code-language'];
+  assert.deepEqual(unmetHostRequirements(manifest, hostVersion), {}, '0.28.0 satisfies the pinned host without an exemption');
+  assert.equal(supportPeerExemptionDecision({ manifest, hostVersion, exemptions: rows }).status, 'not-needed');
 });
 
 test('an undeclared support package is reported loudly and gets no exemption file', t => {
   const profile = tempProfile(t);
   const identity = readSidebarSupportIdentity();
-  const result = applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: identity.peerExemptions[0].hostSpec, identity: Object.assign({}, identity, { peerExemptions: [] }) });
+  const result = applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: declaredExemptionFixture(identity).peerExemptions[0].hostSpec, identity: Object.assign({}, identity, { peerExemptions: [] }) });
   assert.deepEqual(result.grants, {});
   assert.equal(result.filename, null);
   assert.deepEqual(result.warnings.map(warning => warning.code), ['support_exemption_undeclared']);
@@ -263,8 +275,9 @@ test('an undeclared support package is reported loudly and gets no exemption fil
 test('a declared exemption is written exactly as the host reads it, keyed by package and host', t => {
   const profile = tempProfile(t);
   const identity = readSidebarSupportIdentity();
-  const hostSpec = identity.peerExemptions[0].hostSpec;
-  const result = applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: hostSpec, identity });
+  const declared = declaredExemptionFixture(identity);
+  const hostSpec = declared.peerExemptions[0].hostSpec;
+  const result = applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: hostSpec, identity: declared });
   const key = `${identity.name}@${identity.version}`;
   assert.deepEqual(result.grants, Object.fromEntries([[key, [hostSpec]]]));
   assert.equal(result.filename, join(profile, 'compatibility.json'));
@@ -284,12 +297,14 @@ test('a declaration for another host generation or an expired review refuses ins
   const profile = tempProfile(t);
   const identity = readSidebarSupportIdentity();
   const manifest = installedSupportManifest();
-  const [declared] = readSupportPeerExemptions(identity);
+  const fixture = declaredExemptionFixture(identity);
+  const [declared] = readSupportPeerExemptions(fixture);
   // The plugin upgrade does not inherit permission: another generation is stale, not granted.
-  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [manifest], hostVersion: '0.2.2-rc.1', identity }),
+  // 声明写的是 0.1.5-rc.3；在 0.2.0（peer 同样不满足、但世代不同）上跑，必须判 stale 而不是沿用。
+  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [manifest], hostVersion: '0.2.0', identity: fixture }),
     { code: 'TEST_ENV_INSTALL_SUPPORT_EXEMPTION_STALE' });
   // Nor does a review older than the agreed window.
-  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [manifest], hostVersion: declared.hostSpec, identity: Object.assign({}, identity, { peerExemptions: [Object.assign({}, declared, { reviewedAt: '2020-01-01' })] }) }),
+  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [manifest], hostVersion: declared.hostSpec, identity: Object.assign({}, fixture, { peerExemptions: [Object.assign({}, declared, { reviewedAt: '2020-01-01' })] }) }),
     { code: 'TEST_ENV_INSTALL_SUPPORT_EXEMPTION_STALE' });
   assert.ok(!fs.existsSync(join(profile, 'compatibility.json')), 'a stale declaration must not leave a half-effective grant behind');
   assert.equal(isReviewFresh(declared.reviewedAt), true);
@@ -299,7 +314,7 @@ test('a declaration for another host generation or an expired review refuses ins
 
 test('a malformed declaration is a coded failure, never a silently dropped record', () => {
   const identity = readSidebarSupportIdentity();
-  const [base] = identity.peerExemptions;
+  const [base] = declaredExemptionFixture(identity).peerExemptions;
   const malformed = [
     Object.assign({}, identity, { peerExemptions: 'not-a-list' }),
     Object.assign({}, identity, { peerExemptions: [null] }),
@@ -320,14 +335,14 @@ test('peer exemptions never relax the support identity, and cannot be minted for
   const profile = tempProfile(t);
   const identity = readSidebarSupportIdentity();
   const manifest = installedSupportManifest();
-  const hostSpec = identity.peerExemptions[0].hostSpec;
+  const hostSpec = declaredExemptionFixture(identity).peerExemptions[0].hostSpec;
   // The exemption path re-asserts identity first, so a drifted manifest never reaches it.
   assert.throws(() => applySupportPeerExemptions({ profile, manifests: [Object.assign({}, manifest, { version: '0.0.0' })], hostVersion: hostSpec, identity }),
     { code: 'TEST_ENV_INSTALL_SUPPORT_REQUIRED' });
   assert.throws(() => applySupportPeerExemptions({ profile, manifests: [Object.assign({}, manifest, { name: 'dsh-other-sidebar' })], hostVersion: hostSpec, identity }),
     { code: 'TEST_ENV_INSTALL_SUPPORT_REQUIRED' });
   // A declaration naming another package grants nothing for this one.
-  const foreign = Object.assign({}, identity, { peerExemptions: [Object.assign({}, identity.peerExemptions[0], { package: 'dsh-other-sidebar' })] });
+  const foreign = Object.assign({}, identity, { peerExemptions: [Object.assign({}, declaredExemptionFixture(identity).peerExemptions[0], { package: 'dsh-other-sidebar' })] });
   const result = applySupportPeerExemptions({ profile, manifests: [manifest], hostVersion: hostSpec, identity: foreign });
   assert.deepEqual(result.grants, {});
   assert.deepEqual(result.warnings.map(warning => warning.code), ['support_exemption_undeclared']);
@@ -340,7 +355,7 @@ test('an existing compatibility file is never overwritten by the installer', t =
   fs.mkdirSync(profile, { recursive: true });
   const filename = join(profile, 'compatibility.json');
   fs.writeFileSync(filename, '{ "hand-written": ["0.1.0"] }\n');
-  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: identity.peerExemptions[0].hostSpec, identity }),
+  assert.throws(() => applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: declaredExemptionFixture(identity).peerExemptions[0].hostSpec, identity: declaredExemptionFixture(identity) }),
     { code: 'TEST_ENV_INSTALL_SUPPORT_EXEMPTION_CONFLICT' });
   assert.equal(fs.readFileSync(filename, 'utf8'), '{ "hand-written": ["0.1.0"] }\n');
 });
@@ -400,7 +415,7 @@ test('a peer exemption never touches the admitted package payload or archive che
   const support = join(dirname(fileURLToPath(import.meta.url)), '..', 'plugins/omnimux-studio/node_modules/dsh-better-sidebar');
   const before = taskPackagePayload(support);
   assert.ok(before.length > 0, 'the admitted support payload is what the installer hashes');
-  applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: identity.peerExemptions[0].hostSpec, identity });
+  applySupportPeerExemptions({ profile, manifests: [installedSupportManifest()], hostVersion: declaredExemptionFixture(identity).peerExemptions[0].hostSpec, identity: declaredExemptionFixture(identity) });
   assert.deepEqual(taskPackagePayload(support), before, 'the exemption is profile metadata, never a package mutation');
   // Identity and bytes stay the gates: the exemption only ever relaxes the peer judgement.
   assert.throws(() => assertSidebarSupportIdentity({ name: identity.name, version: '0.0.0' }), /INSTALL_SUPPORT_REQUIRED/);

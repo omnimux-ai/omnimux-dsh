@@ -79,7 +79,36 @@ describe('channel group pricing gate', () => {
   it('rejects a canvas module that re-declares a line table or a price literal', () => {
     const withTable = 'export const MODEL_CHANNEL_GROUPS = { "seedance-2-0": [{ "id": "standard" }] };'
     assert.equal(checkCanvasPricingSource(withTable)[0].rule, 'CANVAS_LOCAL_PRICE_TABLE')
-    assert.equal(checkCanvasPricingSource('pricing: { pointsEstimate: 4.9 }')[0].rule, 'CANVAS_LOCAL_PRICE_LITERAL')
-    assert.equal(checkCanvasPricingSource('pricing: { groupRatio: 0.17 }')[0].rule, 'CANVAS_LOCAL_RATIO_LITERAL')
+    const violations = src => checkCanvasPricingSource(src, 'probe.ts').map(v => v.rule)
+    assert.ok(violations('const pricing = { pointsEstimate: 4.9 }').includes('CANVAS_LOCAL_PRICE_MIRROR'))
+    assert.ok(violations('const pricing = { groupRatio: 0.17 }').includes('CANVAS_LOCAL_PRICE_MIRROR'))
+  })
+
+  it('catches every indirect mirror shape a single-file regex would miss', () => {
+    // 每种写法都是「同一份本地价格表的另一种写法」，正则只能抓其中三种。
+    const mirrored = [
+      'const groupRatio = 4.9',
+      'const priceTable = { standard: 4.9 }',
+      'const cfg = { pointsEstimate: P[id] }',
+      "const priceEntries = [['standard', 4.9]]",
+      'const cfg = { priceRatio: 0.5 }',
+      'const cfg = { discountRate: 0.5 }',
+      'const cfg = { unitPriceUsd: 0.12 }',
+      "import prices from './prices.json'",
+      'const pointsTable = SOME_IMPORTED_TABLE',
+    ]
+    for (const source of mirrored) {
+      assert.ok(checkCanvasPricingSource(source, 'probe.ts').length > 0, source)
+    }
+    // 合法形态不得误报：目录投影读取、纯格式化、宽高比、运行期自备渠道展示表。
+    const clean = [
+      'const groups = row.channelGroups ?? []',
+      "const label = group.label + ' (' + group.pointsEstimate.toFixed(2) + ')'",
+      "const U06_ASPECT_RATIO_MAP = { '16:9': '16:9' }",
+      "const BYOK_CHANNELS = [{ id: 'byok', label: '自备渠道' }]",
+    ]
+    for (const source of clean) {
+      assert.deepEqual(checkCanvasPricingSource(source, 'probe.ts'), [], source)
+    }
   })
 })

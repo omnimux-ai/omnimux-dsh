@@ -1,10 +1,10 @@
 # Issue #3762 离线验证证据（画布渠道菜单改读中枢目录）
 
-- 日期：2026-10-25
+- 日期：2026-10-25（离线部分）／2026-10-26（浏览器验收补跑）
 - 任务：P0「画布渠道菜单改读中枢目录，删除本地模型/线路/价格镜像」
-- 工作树：`.worktrees/canvas-catalog-truth`，分支 `agent/canvas-catalog-truth-issue-3762`，基线提交 `a2a3c5286`（P1b 之后）
-- 说明：本文件是**离线**证据（单测 + 门禁 + 等价性对照）。**真实浏览器证据被阻断**，见
-  `docs/evidence/blockers/canvas-catalog-truth-issue-3762.json`；本文件不替代浏览器验收。
+- 工作树：`.worktrees/canvas-catalog-truth`，分支 `agent/canvas-catalog-truth-issue-3762`；离线部分基线 `a2a3c5286`，最终提交 `caffbc1dd`（rebase 到 main `8df4b3a1`）
+- 说明：第一至四节是**离线**证据（单测 + 门禁 + 等价性对照）；第五节是**真实浏览器验收**（已通过）。
+  原阻断记录见 `docs/evidence/blockers/canvas-catalog-truth-issue-3762.json`，该文件已标为 `resolved`。
 
 ## 一、目录真源对照（画布解析 vs 中枢目录投影）
 
@@ -56,10 +56,19 @@
 | `node scripts/impact-matrix.mjs --git-diff --base origin/main` | `browser.required = true` |
 | `rg 'pointsEstimate\s*:\s*-?\d|MODEL_CHANNEL_GROUPS' .../channelGroups.ts` | 无命中 |
 
-## 五、浏览器证据（阻断）
+## 五、真实浏览器验收（已通过）
 
 - 命令：`corepack pnpm verify:app --request test-support/canvas-catalog-truth-3762/request.json --journey plugins/omnimux-workflow/tests/e2e/canvas-catalog-truth-3762.journey.mjs`
-- 结果：`TEST_ENV_INSTALL_FAILED`（`raw-run.json` 在 `.workbuddy/evidence/contract/canvas-catalog-truth-issue-3762/52464118-ab9e-4aee-ae62-fc6f8be3b0f9/`）
-- 根因：本分支钉 `dsh-better-sidebar@0.18.0`，本机已装 dsh 为 `0.2.1-rc.3`，官方 plugin 命令以 peer 不兼容拒绝安装；
-  origin/main 的 `19e4a74a5`（#3769）已把该依赖提到 `0.19.1` 并新增 `scripts/sidebar-support-identity.json`，但不在本分支。
-- 旅程与请求已就位，变基到 origin/main 后原样重跑即可产出证据（旅程断言：菜单渠道列 == 目录 DTO、已下架型号不在候选）。
+- 结果：**exit 0，19 项断言全绿**（mode=ui，端口 54858，CDP 55053）
+- 证据目录：`.workbuddy/evidence/contract/canvas-catalog-truth-issue-3762/0386daf9-75ac-4b1e-acc1-fb156e407f73/`
+  - `evidence.json`：`result.pass = true`，`candidate.base = 8df4b3a1`，`candidate.head = caffbc1dd`
+  - `app-home.png`（1280×800）
+- 旅程断言覆盖：菜单渠道列 == 目录 DTO 的 `channelGroups`、已下架型号不在候选、线路 label 与目录逐字一致。
+
+### 原阻断及解除方式
+
+原阻断是支撑包 `dsh-better-sidebar@0.19.1` 的 14 条 peer 声明为 `^0.1.5-rc.1`，与宿主 `0.2.1-rc.3` 不兼容，
+安装期精确版本豁免未启用，fresh task runtime 被正式插件管理器整体拒绝。
+
+解除方式：支撑包升级到 **0.28.0**（peer 全为 `^0.2.1-rc.1`、无 `dsh-invariants`），宿主直接满足，
+`peerExemptions` 随之从 `scripts/sidebar-support-identity.json` 移除——豁免机制不再需要，而非绕过。
