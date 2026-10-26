@@ -170,6 +170,28 @@
 - `plugins/omnimux-workflow/tests/e2e/comfyui-u06-ops-filter.e2e.test.mjs` :: `渠道约束只放行全能参考，目录收窄后仅剩 1 个生成方式`、
   `清晰度控件数据消失且不再产生自适应自愈提示`（H3/ComfyUI 专线在 #3516 已下架，夹具前提失效；同样不在包测试 glob 内）。
 
+### 支撑包 0.28.0 升级带来的安装器测试口径变更
+
+`scripts/task-runtime-install.test.mjs` 有三条用例锁定「恰好一条 peerExemptions 声明生效」的旧口径。
+0.28.0 的 peer 已放宽到 `^0.2.1-rc.1`，宿主 0.2.1-rc.3 直接满足，豁免不再需要；机制本身仍保留，
+所以机制类用例改用一份合成声明做夹具（覆盖强度不降：stale / expired / 畸形 / 越权 / 不覆盖
+`compatibility.json` / 不碰包载荷，逐条仍在验）。
+
+- `scripts/task-runtime-install.test.mjs` :: `the declared exemption covers the shipped support package on the running host`
+  - 原断言：身份文件里恰好一条豁免声明，且该声明在运行宿主上被授予。
+  - 理由：0.28.0 的 peer 已由宿主满足，身份文件不再携带 `peerExemptions`；「有声明」不再是事实。
+  - 新期望：改名为 `the shipped support package needs no peer exemption on the running host`，
+    断言声明列表为空、`unmetHostRequirements` 为空、决策为 `not-needed`。
+- `scripts/task-runtime-install.test.mjs` :: `a declaration for another host generation or an expired review refuses instead of granting`
+  - 原断言：拿身份文件里真实那条声明的 `hostSpec` 驱动 stale / expired 两条拒绝路径。
+  - 理由：真实声明已不存在，测试无法再从身份文件取夹具；但拒绝路径本身必须继续被验证。
+  - 新期望：改用合成声明夹具，断言 `TEST_ENV_INSTALL_SUPPORT_EXEMPTION_STALE` 仍在
+    「声明世代与运行世代不符」和「审核过期」两种情况下抛出，且不留下半生效的 `compatibility.json`。
+- `scripts/task-runtime-install.test.mjs` :: `an existing compatibility file is never overwritten by the installer`
+  - 原断言：用真实声明的 `hostSpec` 触发写入路径，验证已有文件不被覆盖。
+  - 理由：同上，夹具来源从身份文件换成合成声明；「不覆盖已有文件」这一保证不变。
+  - 新期望：改用合成声明夹具，仍断言安装器不覆盖已有 `compatibility.json`。
+
 ## 不做什么
 
 - 不改 `plugins/omnimux/src/catalog/cloud/` 下 P1a/P1b 的语义（快照拉取、成员资格、价格推导）。
