@@ -27,7 +27,7 @@ const readCatalog = () => buildModelCatalog({ env: {}, snapshot: resolveReadOnly
 const projection = (catalog) => {
   const projected = {}
   for (const kind of ['text', 'image', 'video', 'audio']) {
-    for (const row of [catalog.text, catalog.image, catalog.video, catalog.audio].flat()) projected[row.id] = row.channelGroups ?? []
+    for (const row of [catalog.text, catalog.image, catalog.video, catalog.audio].flat()) Object.assign(projected, Object.fromEntries([[row.id, row.channelGroups ?? []]]))
   }
   return projected
 }
