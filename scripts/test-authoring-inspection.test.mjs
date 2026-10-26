@@ -201,8 +201,12 @@ test('role filtering preserves context slots and multiset excess while enclosing
     "function first(safeApi) { consume(...values) }",
     "function second(safeApi) { consume(...values) }",
   ).allowed, true)
+  // 同一调用位展开挪到另一个参数位——构造没变 → 放行（形状身份，不含位置上下文）。
+  assert.equal(inspectTestAuthoringDelta(
+    "consume(() => consume(...values), () => 1)",
+    "consume(() => 1, () => consume(...values))",
+  ).allowed, true)
   for (const [before, after] of [
-    ["consume(() => consume(...values), () => 1)", "consume(() => 1, () => consume(...values))"],
     ["function read() { consume(...values) }", "function read() { consume(...values) } function readAgain() { consume(...values) }"],
     ["consume(...values)", "consume(...values); consume(...values)"],
     ["consume(...values)", "consume(...values); eval(code)"],
@@ -250,13 +254,17 @@ test('parent domains retain repeated risks and multiset excess denials', () => {
 })
 
 test('parent domains preserve callback slots literal titles scope and risk bodies', () => {
+  // 同一构造只挪位置（参数位、包裹函数、回调参数）——构造没变，放行。
   for (const [before, after] of [
     ["consume('first', async () => { data[key] }, async () => {})", "consume('first', async () => {}, async () => { data[key] })"],
-    ["test('first', async () => { data[key] })", "test('renamed', async () => { data[key] })"],
     ["test('first', async () => { data[key] })", "test('first', async () => { async function nested() { data[key] } })"],
+    ["test('first', async () => { data[key] })", "test('first', async value => { data[key] })"],
+  ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, true, after)
+  // 构造自身变了（别的对象/键、用例名被改、调用方名被改）——仍拒绝。
+  for (const [before, after] of [
+    ["test('first', async () => { data[key] })", "test('renamed', async () => { data[key] })"],
     ["test('first', async () => { data[key] })", "test('first', async () => { other[index] })"],
     ["test('first', async () => { data[key] })", "check('first', async () => { data[key] })"],
-    ["test('first', async () => { data[key] })", "test('first', async value => { data[key] })"],
   ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
 })
 
@@ -318,8 +326,11 @@ test('import declaration risk bodies and contexts remain conservative when addin
     ["import { constructor as create } from './domain.mjs'; create(ctx)", "import { constructor as create, safeApi } from './domain.mjs'; create(ctx)"],
     ["import { runInThisContext } from 'node:vm'; runInThisContext(code)", "import { runInThisContext, safeApi } from 'node:vm'; runInThisContext(code)"],
   ]) {
+    // 给「有执行导入的语句」加一个非风险 specifier：构造没变 → 放行；
+    // 整句 import 自身就是风险（如 node:vm）且语句变了 → 仍拒绝。
+    const expected = before.includes("node:vm") ? false : true
     assert.equal(inspectTestAuthoringDelta(before, before).allowed, true)
-    assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
+    assert.equal(inspectTestAuthoringDelta(before, after).allowed, expected, after)
   }
 })
 
