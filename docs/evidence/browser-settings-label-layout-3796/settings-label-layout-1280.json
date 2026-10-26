@@ -1,0 +1,212 @@
+{
+  "issue": 3796,
+  "width": 1280,
+  "extensionDir": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-settings-label-layout-3796/plugins/omnimux-browser/extension/dist",
+  "chromePath": "/Users/x/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "chromePid": 27084,
+  "extensionId": "kehmdepjinefcbfabfcplakcdfblmkck",
+  "runs": [
+    {
+      "width": 1280,
+      "measured": {
+        "viewport": {
+          "width": 1280,
+          "height": 820
+        },
+        "docOverflow": 0,
+        "chat": {
+          "text": "对话模型",
+          "labelLines": 1,
+          "labelClipped": false,
+          "labelTop": 285,
+          "labelHeight": 16,
+          "smallTop": 285,
+          "smallBottom": 302,
+          "controlWidth": 1104,
+          "effortWidth": 108,
+          "controlRowWidth": 1220,
+          "controlTop": 319,
+          "rowWidth": 1246
+        },
+        "text": {
+          "text": "文本生成模型",
+          "labelLines": 1,
+          "labelClipped": false,
+          "labelTop": 384,
+          "labelHeight": 16,
+          "smallTop": 384,
+          "smallBottom": 400,
+          "controlWidth": 1220,
+          "effortWidth": 0,
+          "controlRowWidth": 1220,
+          "controlTop": 417,
+          "rowWidth": 1246
+        },
+        "otherRows": [
+          {
+            "text": "连接实例",
+            "labelLines": 1,
+            "labelClipped": false
+          },
+          {
+            "text": "默认工作区",
+            "labelLines": 1,
+            "labelClipped": false
+          },
+          {
+            "text": "对话模型",
+            "labelLines": 1,
+            "labelClipped": false
+          },
+          {
+            "text": "文本生成模型",
+            "labelLines": 1,
+            "labelClipped": false
+          },
+          {
+            "text": "桥地址",
+            "labelLines": 1,
+            "labelClipped": false
+          },
+          {
+            "text": "鉴权 Token",
+            "labelLines": 1,
+            "labelClipped": false
+          },
+          {
+            "text": "页面内容共享",
+            "labelLines": 1,
+            "labelClipped": false
+          },
+          {
+            "text": "界面主题",
+            "labelLines": 1,
+            "labelClipped": false
+          },
+          {
+            "text": "界面语言",
+            "labelLines": 1,
+            "labelClipped": false
+          },
+          {
+            "text": "界面字号大小",
+            "labelLines": 1,
+            "labelClipped": false
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "两行模型配置同时存在",
+          "pass": true,
+          "actual": {
+            "chat": "对话模型",
+            "text": "文本生成模型"
+          }
+        },
+        {
+          "name": "对话模型 标签单行显示（不逐字竖排）",
+          "pass": true,
+          "actual": {
+            "labelLines": 1
+          }
+        },
+        {
+          "name": "对话模型 标签未被裁切",
+          "pass": true,
+          "actual": {
+            "labelClipped": false
+          }
+        },
+        {
+          "name": "对话模型 控件铺满整行（无剩余空白）",
+          "pass": true,
+          "actual": {
+            "controlWidth": 1104,
+            "effortWidth": 108,
+            "controlRowWidth": 1220
+          }
+        },
+        {
+          "name": "对话模型 说明句与标签同排且未压窄标签",
+          "pass": true,
+          "actual": {
+            "narrow": false,
+            "labelTop": 285,
+            "labelHeight": 16,
+            "smallTop": 285
+          }
+        },
+        {
+          "name": "对话模型 说明句不压住控件",
+          "pass": true,
+          "actual": {
+            "smallBottom": 302,
+            "controlTop": 319
+          }
+        },
+        {
+          "name": "文本生成模型 标签单行显示（不逐字竖排）",
+          "pass": true,
+          "actual": {
+            "labelLines": 1
+          }
+        },
+        {
+          "name": "文本生成模型 标签未被裁切",
+          "pass": true,
+          "actual": {
+            "labelClipped": false
+          }
+        },
+        {
+          "name": "文本生成模型 控件铺满整行（无剩余空白）",
+          "pass": true,
+          "actual": {
+            "controlWidth": 1220,
+            "effortWidth": 0,
+            "controlRowWidth": 1220
+          }
+        },
+        {
+          "name": "文本生成模型 说明句与标签同排且未压窄标签",
+          "pass": true,
+          "actual": {
+            "narrow": false,
+            "labelTop": 384,
+            "labelHeight": 16,
+            "smallTop": 384
+          }
+        },
+        {
+          "name": "文本生成模型 说明句不压住控件",
+          "pass": true,
+          "actual": {
+            "smallBottom": 400,
+            "controlTop": 417
+          }
+        },
+        {
+          "name": "页面无横向溢出",
+          "pass": true,
+          "actual": {
+            "docOverflow": 0
+          }
+        },
+        {
+          "name": "其它设置行标签同样单行未裁切",
+          "pass": true,
+          "actual": {
+            "broken": []
+          }
+        }
+      ],
+      "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-settings-label-layout-3796/docs/evidence/browser-settings-label-layout-3796/settings-1280px.png"
+    }
+  ],
+  "pass": true,
+  "cleanup": {
+    "profileDir": "/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ext-e2e-gzQSv3",
+    "closed": true
+  }
+}
