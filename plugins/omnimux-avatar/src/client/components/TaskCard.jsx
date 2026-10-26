@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
 
 import { taskAspectRatio, taskImageUrl, taskKind } from '../lib/history.js'
 import { multiViewProgress, multiViewState } from '../lib/multiview.js'
+import { FailReasonDetail, describeFailReason } from './FailReasonDetail.jsx'
 import { MultiViewBadge } from './MultiViewBadge.jsx'
 import { RecoverableMedia } from './RecoverableMedia.jsx'
 
@@ -61,14 +62,14 @@ function SyncAlertIcon() {
  *   child: import('../lib/types.js').TaskRecord | null,
  *   syncing?: boolean,
  *   onView: (task: import('../lib/types.js').TaskRecord) => void,
- *   onRetry: (task: import('../lib/types.js').TaskRecord) => void,
+ *   onRetry: (task: import('../lib/types.js').TaskRecord) => void, 保留给调用方；失败卡自身不再消费它
  *   onSync?: (task: import('../lib/types.js').TaskRecord) => void,
  *   onOpenMultiView?: (parent: import('../lib/types.js').TaskRecord, child: import('../lib/types.js').TaskRecord) => void,
  *   t: (key: string) => string,
  * }} props
  */
 export function TaskCard(props) {
-  const { viewMode, child, syncing, onView, onRetry, onSync, onOpenMultiView, onGenerateMultiView, t } = props
+  const { viewMode, child, syncing, onView, onSync, onOpenMultiView, onGenerateMultiView, t } = props
   const task = props.task?.error && !props.task.fail_reason ? { ...props.task, fail_reason: props.task.error } : props.task
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
@@ -92,6 +93,8 @@ export function TaskCard(props) {
   const boardState = child ? multiViewState(child) : 'absent'
   // 归档（资产库同步）失败的原因：图已产出，任务仍是 ready，但这一行还没入库。
   const syncError = typeof task?.syncError === 'string' && task.syncError !== '' ? task.syncError : ''
+  // 失败原因统一走同一份解析：中文主文案 + 可展开的原文，未知错误不吞。
+  const failView = state === 'failed' ? describeFailReason(t, task?.fail_reason) : null
 
   const onActivate = (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return
@@ -152,17 +155,10 @@ export function TaskCard(props) {
 
         {state === 'failed' ? (
           <div className='omx-avatar-card-fail'>
-            <p className='omx-avatar-fail'>{task?.fail_reason || t('生成失败')}</p>
-            <button /* exempt-ui01: 失败卡片内的次级动作，外观由 omx-avatar-abtn 类独占 */
-              type='button'
-              className='omx-avatar-abtn'
-              onClick={(event) => {
-                event.stopPropagation()
-                onRetry(task)
-              }}
-            >
-              {t('重试')}
-            </button>
+            {/* 失败卡不再给重试：重试的语义是「重新生成」，入口在预览窗里，
+                卡片上重复一个重试键只会让人分不清它重试的是提交还是生成。 */}
+            <p className='omx-avatar-fail'>{failView.message}</p>
+            <FailReasonDetail view={failView} t={t} />
           </div>
         ) : null}
 

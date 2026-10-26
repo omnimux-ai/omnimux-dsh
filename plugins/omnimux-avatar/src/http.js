@@ -10,6 +10,8 @@ import { resolveAvatarArtifact } from './artifact.js'
 
 const PREFIX = '/api/omnimux/avatar'
 const BODY_LIMIT = 64 * 1024
+// 复刻拆解结果（分镜 + 原始拆解 JSON + 编译提示词）会超过普通写请求的量级。
+const RECREATE_BODY_LIMIT = 256 * 1024
 // 超限后仍读一段以给出可读的 413，再大就直接断开连接。
 const DRAIN_LIMIT = 1024 * 1024
 const PRESET_ASSET_PREFIX = '/influencer-presets/'
@@ -36,7 +38,7 @@ const messageOf = (error) => (error instanceof Error ? error.message : String(er
  */
 export function registerAvatarRoutes(webServer, deps = {}) {
   // librarySync 供 POST /sync 手动补偿使用；自动归档在任务转 ready 时已经跑过一次。
-  const { store, generation, paths, librarySync, materials, motion } = deps
+  const { store, generation, paths, librarySync, materials, motion, recreate } = deps
 
   /** 宿主连接座位：给了 ctx 就按请求实时取，便于座位后注册与测试替换。 */
   function connectionOf() {
@@ -148,7 +150,8 @@ export function registerAvatarRoutes(webServer, deps = {}) {
 
       let body
       try {
-        body = await readJsonBody(req)
+        // 复刻拆解结果（shots + analysisJson + 编译提示词）比普通写请求大，单给这两条放宽。
+        body = await readJsonBody(req, route === '/recreate/analyze' || route === '/motion' ? RECREATE_BODY_LIMIT : BODY_LIMIT)
       } catch (error) {
         if (error instanceof AvatarError) return fail(error.status, error.code, error.message)
         throw error
@@ -183,6 +186,11 @@ export function registerAvatarRoutes(webServer, deps = {}) {
         case '/motion': {
           const result = await motion.submit(body)
           return send(200, { success: true, ...result })
+        }
+        case '/recreate/analyze': {
+          // 拆解只是内部步骤：这里只回拆解结果，提交由 /motion 带 mode:'recreate' 完成。
+          const result = await recreate.analyze(body)
+          return send(200, { success: true, data: result })
         }
         case '/sheet': {
           if (body.materialId) {
@@ -264,14 +272,14 @@ function assertWritable(req) {
   return null
 }
 
-/** 读 JSON 请求体，超过 64KB 直接拒绝。 */
-async function readJsonBody(req) {
+/** 读 JSON 请求体，超过 limit 直接拒绝。 */
+async function readJsonBody(req, limit = BODY_LIMIT) {
   const chunks = []
   let size = 0
   let tooLarge = false
   for await (const chunk of req) {
     size += chunk.length
-    if (size > BODY_LIMIT) {
+    if (size > limit) {
       // 超限后不再缓存；继续把请求读完，客户端才读得到 413 而不是连接被掐断。
       tooLarge = true
       if (size > DRAIN_LIMIT) {
@@ -282,7 +290,7 @@ async function readJsonBody(req) {
     }
     chunks.push(chunk)
   }
-  if (tooLarge) throw new AvatarError('body-too-large', '请求体超过 64KB', 413)
+  if (tooLarge) throw new AvatarError('body-too-large', `请求体超过 ${Math.round(limit / 1024)}KB`, 413)
   if (chunks.length === 0) return {}
   const text = Buffer.concat(chunks).toString('utf8')
   if (text.trim() === '') return {}

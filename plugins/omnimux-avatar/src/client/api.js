@@ -19,6 +19,7 @@ const PATHS = {
   avatarsDelete: '/api/omnimux/avatar/avatars/delete',
   sheet: '/api/omnimux/avatar/sheet',
   motion: '/api/omnimux/avatar/motion',
+  recreate: '/api/omnimux/avatar/recreate',
   materials: '/api/omnimux/avatar/materials',
   multiview: '/api/omnimux/avatar/multiview',
   sync: '/api/omnimux/avatar/sync',
@@ -211,6 +212,32 @@ export async function fetchMotionOptions(body) {
   return await request(PATHS.motion + '/options', { method: 'POST', body })
 }
 
+/**
+ * 爆款复刻：拆解参考视频与参考图，拿回编译好的提示词与分镜。
+ *
+ * 这一步是独立的一次调用（服务端可能抽帧 + 两轮文本模型），失败时只报错，
+ * 不影响任何已提交的任务。返回 `{ prompt, durationSec, shots, hook, analysisJson }`。
+ *
+ * 参考视频只在这里出现；它不进 `submitMotion` 的视频请求。
+ *
+ * @param {{ avatarId: string, images: unknown[], video: unknown, intent?: string }} body
+ * @returns {Promise<{ prompt: string, durationSec?: number, shots?: unknown[], hook?: string, analysisJson?: unknown }>}
+ */
+export async function analyzeRecreate(body) {
+  const result = await request(PATHS.recreate + '/analyze', { method: 'POST', body })
+  const data = result.data ?? result
+  if (!data || typeof data.prompt !== 'string' || data.prompt.trim() === '') {
+    throw new Error('拆解没有返回可用的提示词，请重试')
+  }
+  return data
+}
+
+/**
+ * 提交视频生成。
+ *
+ * `mode: 'recreate'` 时请求体由 `lib/recreate.js` 的 `recreateBody` 组装：
+ * 只有参考图与编译后的提示词，没有参考视频字段。
+ */
 export async function submitMotion(body) {
   const result = await request(PATHS.motion, { method: 'POST', body })
   return result.task

@@ -15,7 +15,7 @@
       {"name":"avatar_library_sync","summary":"把形象的主图与多视角同步到资产库「角色」分类","category":"avatar","isWriteOperation":true,"requiresAuth":false}
     ],
     "seamsProvided":[],
-    "seamsConsumed":["imageGenerate","videoGenerate","mediaInspect","assetLibrary","modelCatalog","hubEvents"],
+    "seamsConsumed":["imageGenerate","videoGenerate","mediaInspect","assetLibrary","modelCatalog","hubEvents","videoProcess","textComplete"],
     "slots":[],
     "storageDomains":["$DSH_HOME/omnimux/avatar/"]
   },

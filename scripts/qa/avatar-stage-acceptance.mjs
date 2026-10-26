@@ -1018,6 +1018,124 @@ export default async function avatarStageAcceptance({ send, evidenceDir, io }) {
     })()`)
     await sleep(800)
 
+    // ── 8. J5 · 视频创作三模式与爆款复刻表单（Issue #3799） ──────────────────
+    // 只验界面与状态，不点「生成视频」：那会发起真实模型调用，需要任务级授权。
+    // 判定只认真实 DOM 与计算样式，不读内存状态。
+    const openVideo = await evaluate(`(() => {
+      const page = document.querySelector('.omx-avatar-page')
+      if (!page) return { ok: false, why: 'stage-missing' }
+      const hit = [...page.querySelectorAll('button')]
+        .find((b) => (b.textContent || '').trim() === '视频创作')
+      if (!hit) return { ok: false, why: 'video-tab-missing' }
+      hit.click()
+      return { ok: true }
+    })()`)
+    add('j5-video-workbench-clickable', openVideo.ok === true, openVideo.why ?? '已切到「视频创作」')
+    await sleep(600)
+
+    const modeBar = await evaluate(`(() => {
+      const group = document.querySelector('[aria-label="视频模式"]')
+      if (!group) return { ok: false, why: 'mode-group-missing' }
+      const items = [...group.querySelectorAll('[role="radio"]')]
+      const labels = items.map((b) => (b.textContent || '').trim())
+      const cs = getComputedStyle(group)
+      // 三模式必须同处一行：分段控件换行会把「爆款复刻」挤到第二行。
+      const tops = new Set(items.map((b) => Math.round(b.getBoundingClientRect().top)))
+      return {
+        ok: true, labels, count: items.length, tops: tops.size,
+        flexWrap: cs.flexWrap, width: Math.round(group.getBoundingClientRect().width),
+      }
+    })()`)
+    add(
+      'j5-three-video-modes-on-one-row',
+      modeBar.ok === true && modeBar.count === 3 && modeBar.tops === 1,
+      modeBar.ok
+        ? `模式=${JSON.stringify(modeBar.labels)}，行数=${modeBar.tops}，flex-wrap=${modeBar.flexWrap}，宽度 ${modeBar.width}px`
+        : modeBar.why,
+    )
+
+    const pickRecreate = await evaluate(`(() => {
+      const group = document.querySelector('[aria-label="视频模式"]')
+      const hit = [...group.querySelectorAll('[role="radio"]')]
+        .find((b) => (b.textContent || '').trim() === '爆款复刻')
+      if (!hit) return { ok: false, why: 'recreate-mode-missing' }
+      hit.click()
+      return { ok: true }
+    })()`)
+    add('j5-recreate-mode-selectable', pickRecreate.ok === true, pickRecreate.why ?? '已选中「爆款复刻」')
+    await sleep(700)
+
+    const recreateForm = await evaluate(`(() => {
+      const page = document.querySelector('.omx-avatar-page')
+      const text = page?.textContent || ''
+      const cta = [...page.querySelectorAll('button')]
+        .find((b) => (b.textContent || '').trim() === '生成视频')
+      const radios = [...(document.querySelector('[aria-label="视频模式"]')?.querySelectorAll('[role="radio"]') || [])]
+      const selected = radios.find((b) => b.getAttribute('aria-checked') === 'true')
+      // 复刻模式不该出现画幅选择（时长跟参考片、画幅固定竖屏）。
+      const ratioSelect = [...page.querySelectorAll('[aria-label="画幅"]')].length
+      const resSelect = [...page.querySelectorAll('[aria-label="清晰度"]')].length
+      return {
+        ok: true,
+        selected: (selected?.textContent || '').trim(),
+        hasAnalyzeCopy: text.includes('参考视频仅用于拆解'),
+        hasCta: Boolean(cta),
+        ctaDisabled: cta ? cta.disabled === true : null,
+        ratioSelect, resSelect,
+        // 拆解说明必须真的落在页面上，而不是只在源码里。
+        introText: (page.querySelector('.omx-avatar-recreate-intro')?.textContent || '').trim(),
+      }
+    })()`)
+    add(
+      'j5-recreate-mode-selected',
+      recreateForm.ok === true && recreateForm.selected === '爆款复刻',
+      `当前选中「${recreateForm.selected}」`,
+    )
+    add(
+      'j5-recreate-hides-aspect-ratio-choice',
+      recreateForm.ratioSelect === 0,
+      `画幅选择器 ${recreateForm.ratioSelect} 个（复刻固定竖屏，应为 0），清晰度 ${recreateForm.resSelect} 个`,
+    )
+    add(
+      'j5-recreate-states-reference-video-is-analysis-only',
+      recreateForm.hasAnalyzeCopy === true,
+      `页面含「参考视频仅用于拆解」=${recreateForm.hasAnalyzeCopy}`,
+    )
+    add(
+      'j5-recreate-cta-blocked-without-assets',
+      recreateForm.hasCta === true && recreateForm.ctaDisabled === true,
+      `「生成视频」存在=${recreateForm.hasCta}，未选素材时禁用=${recreateForm.ctaDisabled}`,
+    )
+    add(
+      'j5-recreate-intro-copy-rendered',
+      typeof recreateForm.introText === 'string' && recreateForm.introText.includes('拆解'),
+      `模式说明「${recreateForm.introText}」`,
+    )
+
+    shots.push(await screenshot('07-avatar-video-recreate'))
+
+    // 切回动作复刻：验证模式切换不炸，且画幅选择回到界面（两模式差异）。
+    const backToMotion = await evaluate(`(() => {
+      const group = document.querySelector('[aria-label="视频模式"]')
+      const hit = [...group.querySelectorAll('[role="radio"]')]
+        .find((b) => (b.textContent || '').trim() === '动作复刻')
+      if (!hit) return { ok: false, why: 'motion-mode-missing' }
+      hit.click()
+      return { ok: true }
+    })()`)
+    await sleep(600)
+    const motionForm = await evaluate(`(() => {
+      const page = document.querySelector('.omx-avatar-page')
+      const radios = [...(document.querySelector('[aria-label="视频模式"]')?.querySelectorAll('[role="radio"]') || [])]
+      const selected = radios.find((b) => b.getAttribute('aria-checked') === 'true')
+      return { ok: true, selected: (selected?.textContent || '').trim() }
+    })()`)
+    add(
+      'j5-mode-switch-back-to-motion',
+      backToMotion.ok === true && motionForm.selected === '动作复刻',
+      `切回后选中「${motionForm.selected}」`,
+    )
+
   } catch (error) {
     add('j3-j4-section-error', false, error?.message ?? String(error))
   }

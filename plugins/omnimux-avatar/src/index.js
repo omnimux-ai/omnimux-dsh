@@ -7,6 +7,7 @@ import { createAvatarStore } from './store.js'
 import { registerAvatarTools } from './tools.js'
 import { createMaterials } from './materials.js'
 import { createMotion } from './motion.js'
+import { createRecreate } from './recreate.js'
 import { AvatarError } from './store.js'
 import { resolveAvatarArtifact } from './artifact.js'
 
@@ -40,7 +41,9 @@ export function apply(ctx) {
   }
   const generation = createGeneration({ ctx, store, paths, onReady })
   const materials = createMaterials({ ctx, paths, store })
-  const motion = createMotion({ ctx, paths, store, resolveAssets: async input => {
+  // withVideo 只决定参考视频是否进入候选素材。时长与画幅始终按真实素材解析：
+  // 爆款复刻要拿参考片的真实时长做候选探测，但视频本身绝不进提交体。
+  const resolveAssets = async (input, { withVideo = true } = {}) => {
     const resolve = async (reference, type) => {
       if (!reference || typeof reference !== 'object') throw new AvatarError('invalid_request', '请选择受管素材', 400)
       if (reference.materialId) {
@@ -55,23 +58,27 @@ export function apply(ctx) {
       return { path, ...metadata, species: task.input?.tier }
     }
     const images = await Promise.all(input.images.map(reference => resolve(reference, 'image')))
-    const video = await resolve(input.video, 'video')
+    // 有参考视频就解析它（要时长与画幅）；是否把它放进候选素材由 withVideo 决定。
+    const video = input.video ? await resolve(input.video, 'video') : null
     const inspector = ctx.get('mediaInspect')
     if (!inspector?.inspect) throw new AvatarError('needs-media-inspect', '素材检查能力不可用，请更新创作中枢', 503)
-    const data = await inspector.inspect({ path: video.path, type: 'video' })
-    const ratio = ['16:9','9:16','3:4'].find(value => { const [w,h] = value.split(':').map(Number); return Math.abs(data.width * h - data.height * w) <= (w+h)/2 })
+    const data = video ? await inspector.inspect({ path: video.path, type: 'video' }) : null
+    const ratio = data ? ['16:9','9:16','3:4'].find(value => { const [w,h] = value.split(':').map(Number); return Math.abs(data.width * h - data.height * w) <= (w+h)/2 }) : null
     const assets = [...images.map(row => ({ type: 'image', role: 'reference', targetSlot: 'reference_images', pathOrUrl: row.path, mime: row.mime, ...(row.sizeBytes ? { sizeBytes: row.sizeBytes } : {}) })),
-      { type: 'video', role: 'reference', targetSlot: 'reference_videos', pathOrUrl: video.path, mime: video.mime, durationSec: data.duration, ...(video.sizeBytes ? { sizeBytes: video.sizeBytes } : {}) }]
-    return { assets, duration: data.duration, aspectRatio: ratio, species: images[0].species }
-  }, onReady: async (avatarId, task) => {
+      ...(data && withVideo ? [{ type: 'video', role: 'reference', targetSlot: 'reference_videos', pathOrUrl: video.path, mime: video.mime, durationSec: data.duration, ...(video.sizeBytes ? { sizeBytes: video.sizeBytes } : {}) }] : [])]
+    return { assets, duration: data?.duration ?? null, aspectRatio: ratio ?? null, species: images[0].species }
+  }
+  const motionOnReady = async (avatarId, task) => {
     const avatar = store.get(avatarId)
     const library = ctx.get('assetLibrary')
     if (!library) throw new AvatarError('needs-assets', '资产库不可用', 503)
     const source=`omnimux-avatar:${task.taskId}`
     if(library.findBySource?.(source))return
     await library.saveTypedAsset({ name: `${avatar.name.slice(0,25)} 视频 ${task.taskId.slice(-8)}`, type: 'custom', files: [resolveAvatarArtifact(paths,avatarId,task.destPath)], source, tags: ['角色视频'] })
-  } })
-  const deps = { store, generation, librarySync, paths, ctx, materials, motion }
+  }
+  const recreate = createRecreate({ ctx, store, paths, materials, resolveAssets, onReady: motionOnReady })
+  const motion = createMotion({ ctx, paths, store, resolveAssets, onReady: motionOnReady, recreate })
+  const deps = { store, generation, librarySync, paths, ctx, materials, motion, recreate }
 
   const mountHttp = (httpCtx) => {
     const webServer = httpCtx.webServer ?? httpCtx.get?.('webServer')
