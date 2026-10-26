@@ -365,3 +365,5 @@ export function matchOldStandardDeclarations({ declarations, filePath, changedCa
   const missing = (Array.isArray(changedCases) ? changedCases : []).filter(name => !declared.has(name))
   return { ok: missing.length === 0, missing }
 }
+
+export function __collectRisks(code) { return collectRisks(code, {}) }
