@@ -211,3 +211,16 @@ test('专家市场精选卡：文字标签由源码渲染，图标与无障碍�
   assert.match(cardSource, /'aria-label': tryTooltip/, '营销卡片试用按钮必须绑定 aria-label')
   assert.match(cardSource, /'去对话试试'/, '中文环境悬停气泡文字必须为 去对话试试')
 })
+
+test('tool view reads arguments by rc.3 phase instead of "has kind" (#3753)', () => {
+  const source = readFileSync(join(here, 'tool-views.js'), 'utf8')
+  // rc.3：结算结果才读 call.argsRaw；运行中只有 phase === 'start' 才读 argsRaw。
+  assert.match(source, /block\.kind === "tool-result"/, '必须按结算结果判定')
+  assert.match(source, /block\?\.phase === "start"/, '运行中必须按 start 阶段判定')
+  // 旧写法（只按「有没有 kind」）必须已消失，否则运行中的块会被当成结算块。
+  assert.doesNotMatch(
+    source,
+    /"kind" in block \? block\.call\?\.argsRaw : block\?\.argsRaw/,
+    '旧的「有 kind 即结算」两臂读法必须已移除',
+  )
+})

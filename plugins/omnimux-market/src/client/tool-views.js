@@ -1,6 +1,10 @@
     function parseToolArgs(props) {
       const block = props?.block;
-      const raw = (block && "kind" in block ? block.call?.argsRaw : block?.argsRaw) || "";
+      // rc.3 把运行中的调用按阶段拆开：只有已派发（phase === 'start'）才带原始参数，
+      // preparing 阶段还没有；已结算的结果则把参数留在配对的调用头上。
+      // 旧写法按"有没有 kind"判断，会把运行中的块当成结算块，导致参数永远为空。
+      const settled = !!block && "kind" in block && block.kind === "tool-result";
+      const raw = (settled ? block.call?.argsRaw : block?.phase === "start" ? block.argsRaw : "") || "";
       if (!raw || typeof raw !== "string") return {};
       try { return JSON.parse(raw); } catch { return {}; }
     }

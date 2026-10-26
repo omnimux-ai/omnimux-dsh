@@ -1,0 +1,40 @@
+{
+  "issue": 3753,
+  "scenario": "market-toolview-phase",
+  "source": "plugins/omnimux-market/src/client/tool-views.js",
+  "generatedAt": "2026-10-26T09:05:48.620Z",
+  "engine": "headless Chrome（真实浏览器引擎，加载真实 tool-views.js fragment）",
+  "assertions": [
+    {
+      "name": "parseToolArgs:preparing",
+      "pass": true,
+      "actual": "{}",
+      "expected": "{}"
+    },
+    {
+      "name": "parseToolArgs:start",
+      "pass": true,
+      "actual": "{\"query\":\"视频\"}",
+      "expected": "{\"query\":\"视频\"}"
+    },
+    {
+      "name": "parseToolArgs:settled",
+      "pass": true,
+      "actual": "{\"query\":\"图像\"}",
+      "expected": "{\"query\":\"图像\"}"
+    },
+    {
+      "name": "parseToolArgs:settled-no-call",
+      "pass": true,
+      "actual": "{}",
+      "expected": "{}"
+    }
+  ],
+  "screenshot": {
+    "path": "docs/evidence/3753-market-toolview-phase.png",
+    "width": 1280,
+    "height": 633,
+    "bytes": 34040
+  },
+  "pass": true
+}

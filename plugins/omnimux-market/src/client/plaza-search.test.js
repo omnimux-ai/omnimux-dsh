@@ -84,3 +84,20 @@ test('skill picker forwards value changes using the SearchField contract', () =>
   props.onClear()
   assert.equal(query, '')
 })
+
+test('tool view reads arguments by rc.3 phase instead of "has kind" (#3753)', () => {
+  const parseToolArgs = runInNewContext(`${readClient('tool-views.js')}\n;parseToolArgs`, {})
+  const asJson = (props) => JSON.stringify(parseToolArgs(props))
+  assert.equal(asJson({ block: { kind: 'tool-call', phase: 'preparing' } }), '{}')
+  assert.equal(
+    asJson({ block: { kind: 'tool-call', phase: 'start', argsRaw: '{"query":"视频"}' } }),
+    '{"query":"视频"}',
+  )
+  assert.equal(
+    asJson({ block: { kind: 'tool-result', call: { name: 'search', argsRaw: '{"query":"图像"}' } } }),
+    '{"query":"图像"}',
+  )
+  assert.equal(asJson({ block: { kind: 'tool-result' } }), '{}')
+  assert.equal(asJson({ block: { kind: 'tool-call', phase: 'start', argsRaw: 'not-json' } }), '{}')
+  assert.equal(asJson({}), '{}')
+})

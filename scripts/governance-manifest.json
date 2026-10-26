@@ -261,6 +261,7 @@
     "lib/extension-e2e.mjs",
     "list-tables.mjs",
     "managed-tarball-archive.py",
+    "market-toolview-phase-evidence.mjs",
     "market-try-skill-chip-qa.mjs",
     "media-param-qa.mjs",
     "media-paste-qa.mjs",
