@@ -2,7 +2,7 @@ import type { CapabilityCatalog, CapabilityModelItem, ModelParameterSchema } fro
 import { buildEffectiveOpsUiState, buildUiUpstreamFingerprint, readPreferredOperationId, setParamsOperation, type UpstreamMediaSnapshot } from '../../../../../../shared/validation/operationUi.ts';
 import { findDeclaredParameterFailure } from '../../../../../../shared/validation/declaredParameterValidation.ts';
 import { narrowModelByLineConstraints } from '../../../../../../shared/validation/lineConstraints.ts';
-import { resolveLineConstraints, type RuntimeByokChannelSettings } from '../channelGroups.ts';
+import { directoryChannelGroups, resolveLineConstraints, type RuntimeByokChannelSettings } from '../channelGroups.ts';
 import { mergeVideoParameterSchema } from './videoParamAdapter.ts';
 import { DEFAULT_PARAM_CONTROL_POLICY } from './paramControlTable.ts';
 
@@ -94,7 +94,12 @@ export function buildVideoParameterSelection(args: VideoParameterSelectionArgs):
   // A narrow line accepts far less than the contract publishes; narrowing before any
   // control is derived keeps the panel, the operation list and the slot layout honest.
   const routingIntent = args.routing === undefined ? args.params.routing : args.routing;
-  const lineConstraints = resolveLineConstraints(args.targetModelItem.id, routingIntent, args.runtimeSettings);
+  const lineConstraints = resolveLineConstraints(
+    args.targetModelItem.id,
+    routingIntent,
+    directoryChannelGroups(args.catalog, args.targetModelItem.id),
+    args.runtimeSettings,
+  );
   const target = narrowModelByLineConstraints(
     args.targetModelItem,
     args.targetModelItem.id,

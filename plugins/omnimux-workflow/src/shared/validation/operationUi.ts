@@ -9,6 +9,7 @@ import {
 import type {
   CapabilityCatalog,
   CapabilityModelItem,
+  CatalogChannelGroupDto,
   CatalogModelDto,
   OperationContractDto,
 } from '../api.ts';
@@ -86,6 +87,13 @@ export interface FilteredModelOption {
   subtitle?: string;
   family?: string;
   aliases?: string[];
+  /**
+   * Gateway lines of this model, taken verbatim from the hub catalog row.
+   *
+   * The channel menu renders straight from these; it must never re-declare a
+   * line, a price or a constraint of its own.
+   */
+  channelGroups?: CatalogChannelGroupDto[];
   /** Catalog row (bucket or models[] projection) when available. */
   item?: CapabilityModelItem | CatalogModelDto;
   /** Kernel verdict for this model under the current fingerprint. */
@@ -621,6 +629,9 @@ export function buildFilteredModelOptions(args: {
         : {}),
       ...(verdict.family ? { family: verdict.family } : {}),
       ...(auth?.aliases ? { aliases: auth.aliases } : {}),
+      ...(auth?.channelGroups ?? bucket?.channelGroups
+        ? { channelGroups: (auth?.channelGroups ?? bucket?.channelGroups) as CatalogChannelGroupDto[] }
+        : {}),
       ...(auth || bucket ? { item: (auth ?? bucket) as CapabilityModelItem | CatalogModelDto } : {}),
       verdict,
     });

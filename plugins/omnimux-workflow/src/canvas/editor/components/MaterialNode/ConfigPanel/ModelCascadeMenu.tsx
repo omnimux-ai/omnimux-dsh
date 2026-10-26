@@ -1,7 +1,9 @@
 /**
  * ModelCascadeMenu — 画布节点三级级联浮层选择菜单（品牌 → 型号 → 渠道策略）。
  *
- * 数据真源：`./channelGroups`（与中枢渠道路由表镜像，由 verify:model-contracts 门禁锁定）。
+ * 数据真源：上游目录行自带的 `channelGroups`（中枢目录由网关快照推导，经
+ * `/omnimux-workflow/api/capabilities` 透传）。菜单不再持有任何本地线路集合或价格表：
+ * 显示什么线路、什么价格、什么约束，全部等于目录给的那一份。
  * 选择结果经 `onSelect` 写回 `node.data.params.model` 与 `params.routing`，由
  * `materialGatewayExecutor` 透传给中枢。
  *
@@ -28,8 +30,8 @@ import {
   formatBillingLabel,
   formatPriceChip,
   formatPriceLabel,
-  getModelChannelGroups,
   resolveModelChannelGroups,
+  rowChannelGroups,
   parseModelAndGroup,
   resolveShortModelName,
   isByokGroup,
@@ -151,7 +153,10 @@ const ChannelRow: React.FC<{
   const isAvailable = group.isAvailable !== false && group.enabled !== false;
   const isRowDisabled = disabled || !isAvailable;
   const isByok = isByokGroup(group);
-  const priceChip = !isByok ? formatPriceChip(group.pricing?.priceRatio ?? group.pricing?.discountRate) : '';
+  // 价格芯片只在目录真的给了可比数字时出现：表达式/token 计费的线路照实显示目录的说明文字。
+  const priceChip = !isByok && typeof group.pricing?.pointsEstimate === 'number'
+    ? formatPriceChip(group.pricing?.priceRatio ?? group.pricing?.discountRate)
+    : '';
   const chipIsMarkup = typeof group.pricing?.priceRatio === 'number'
     ? group.pricing.priceRatio > 1
     : typeof group.pricing?.discountRate === 'number' && group.pricing.discountRate > 1;
@@ -397,12 +402,17 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   // 若分组为空（0个）或只有唯一默认渠道（<=1），则直接不显示三级菜单。
   const hoveringOtherBrand = hoverBrandId !== null && hoverBrandId !== activeBrandId;
   const channelModelId = hoverModelId ?? activeModelId;
+  // 线路只来自上游目录行：不再有本地线路表可读，也不再需要额外的目录查询。
   const channelGroups = useMemo(
-    () => isPickerCandidate(options, channelModelId) ? getModelChannelGroups(channelModelId, runtimeSettings) : [],
+    () => isPickerCandidate(options, channelModelId)
+      ? resolveModelChannelGroups(channelModelId, rowChannelGroups(options, channelModelId), runtimeSettings)
+      : [],
     [options, channelModelId, runtimeSettings],
   );
   const activeChannelGroups = useMemo(
-    () => isPickerCandidate(options, activeModelId) ? getModelChannelGroups(activeModelId, runtimeSettings) : [],
+    () => isPickerCandidate(options, activeModelId)
+      ? resolveModelChannelGroups(activeModelId, rowChannelGroups(options, activeModelId), runtimeSettings)
+      : [],
     [options, activeModelId, runtimeSettings],
   );
   const hasMultipleChannels = channelGroups.length > 1;
@@ -467,7 +477,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
 
   const emit = useCallback((modelId: string, groupIds: string[]) => {
     if (!isPickerCandidate(options, modelId)) return;
-    const groups = resolveModelChannelGroups(modelId, runtimeSettings);
+    const groups = resolveModelChannelGroups(modelId, rowChannelGroups(options, modelId), runtimeSettings);
     const payload = buildChannelSelectionPayload(modelId, groupIds, groups);
     if (!payload) return;
     onSelect(payload);
@@ -490,7 +500,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
 
   const handleSelectModel = useCallback((modelId: string) => {
     if (!isPickerCandidate(options, modelId)) return;
-    const groups = resolveModelChannelGroups(modelId, runtimeSettings);
+    const groups = resolveModelChannelGroups(modelId, rowChannelGroups(options, modelId), runtimeSettings);
     const defaultGroup = groups.find((group) => group.enabled !== false && group.isAvailable !== false)?.id;
     const nextGroupIds = defaultGroup ? [defaultGroup] : [];
     setSelectedGroupIds(nextGroupIds);
@@ -550,7 +560,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
         </div>
       ))}
       {brandList.flatMap((brand) => brand.rows).map((item) => {
-        const groups = resolveModelChannelGroups(item.id, runtimeSettings);
+        const groups = resolveModelChannelGroups(item.id, rowChannelGroups(options, item.id), runtimeSettings);
         if (groups.length <= 1) return null;
         return (
           <div key={item.id} className="wf-loomi-col wf-loomi-col--channel" data-cascade-probe-col="">
@@ -564,7 +574,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
         );
       })}
     </>
-  ), [brandList, runtimeSettings, fallbackState]);
+  ), [brandList, options, runtimeSettings, fallbackState]);
 
   useEffect(() => {
     if (!isOpen) return;

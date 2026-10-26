@@ -1,8 +1,15 @@
+import type { CatalogChannelGroupDto } from '../../../../../shared/api.ts';
+
 export interface PickerCandidate {
   id: string;
   label: string;
   subtitle?: string;
   family?: string;
+  /**
+   * Gateway lines of this model, straight from the hub catalog row. The channel
+   * column renders these and nothing else.
+   */
+  channelGroups?: CatalogChannelGroupDto[];
 }
 
 export interface PickerCandidateGroup {

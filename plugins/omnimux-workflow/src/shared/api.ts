@@ -281,6 +281,56 @@ export interface OperationContractDto {
   parameters?: Record<string, unknown>;
 }
 
+/**
+ * Price block of one gateway line.
+ *
+ * Every number is the gateway's own (snapshot unit price × group ratio); the
+ * canvas never derives or mirrors it. When the gateway bills by an expression
+ * or by reported tokens there is no comparable number: `pointsEstimate` is
+ * `null` and `pointsNote` explains why.
+ */
+export interface CatalogChannelGroupPricingDto {
+  billingMode?: string;
+  /** Snapshot unit price for the model (USD per second / per task). */
+  unitPriceUsd?: number | null;
+  /** Snapshot group ratio of this line. */
+  groupRatio?: number | null;
+  /** Comparable points estimate; `null` when the gateway publishes no number. */
+  pointsEstimate?: number | null;
+  /** Why no comparable number exists (expression / per-token billing). */
+  pointsNote?: string;
+  /** Alias of `groupRatio` kept for existing consumers. */
+  discountRate?: number | null;
+  /** Alias of `groupRatio` kept for existing consumers. */
+  priceRatio?: number | null;
+  sortWeight?: number;
+}
+
+/**
+ * One gateway line (channel group) of a model, as projected by the hub catalog
+ * (`projectChannelGroups`): membership comes from the snapshot's `enable_groups`,
+ * the price from its `group_ratio` + per-model billing, and the label / badge /
+ * SLA / constraints / default pin from the hub's display-override table.
+ *
+ * This is the canvas's only authority for "which lines exist and what they cost".
+ */
+export interface CatalogChannelGroupDto {
+  id: string;
+  label: string;
+  badge?: string;
+  /** Gateway group appended as `model@wireGroup`; falls back to `id`. */
+  wireGroup?: string;
+  /** Upstream model this line is served by, when it differs from the product id. */
+  wireModel?: string;
+  pricing?: CatalogChannelGroupPricingDto;
+  /** What this line actually accepts; narrows the model contract for this node. */
+  constraints?: import('./validation/lineConstraints.ts').LineConstraints;
+  sla?: { stability24h: number; avgWaitTimeSec?: number };
+  enabled: boolean;
+  /** Marks the line pre-selected when the model offers several tiers. */
+  default?: boolean;
+}
+
 /** Authoritative model row of the Catalog v1.1 DTO (`models[]`). */
 export interface CatalogModelDto {
   id: string;
@@ -297,6 +347,8 @@ export interface CatalogModelDto {
   listed?: boolean;
   listedOperations?: string[];
   disposition?: string;
+  /** Gateway lines this model is served on, with their snapshot-derived prices. */
+  channelGroups?: CatalogChannelGroupDto[];
 }
 
 export interface CapabilityModelItem {
@@ -308,6 +360,8 @@ export interface CapabilityModelItem {
   aliases?: string[];
   inputCapability?: ModelInputCapability;
   parameters?: ModelParameterSchema;
+  /** Gateway lines this model is served on, with their snapshot-derived prices. */
+  channelGroups?: CatalogChannelGroupDto[];
 }
 
 /** GET /api/capabilities response (hub modelCatalog.list shape). */

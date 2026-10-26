@@ -88,7 +88,7 @@ test('default ui isolates environment, fixed config, login capability and cleanu
     assert.ok(options.cwd.startsWith(root + '/.test-env-'));
     const settings = JSON.parse(f.files.get(options.env.DSH_HOME + '/settings.yaml'));
     assert.deepEqual(settings['llm-deepseek'], { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: options.env.DEEPSEEK_BASE_URL });
-    assert.equal(settings['ui-onboarding']?.welcomeNoticeVersion, '2026-08-13.1');
+    assert.equal(settings['ui-onboarding']?.welcomeNoticeVersion, '2026-09-28.1');
     assert.equal(settings.omnimux?.runtimeMode, 'agent');
     assert.equal(settings.omnimux?.runtimeAgentVerified, true);
     assert.equal(run.origin, 'http://127.0.0.1:32123');

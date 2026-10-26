@@ -39,8 +39,13 @@ import { FILE_UPLOAD_MODEL as STT_FILE_UPLOAD_MODEL } from '../plugins/omnimux/s
 import { CANVAS_GENERATION_POLICY, CANVAS_CAPABILITY_TOOLS, CANVAS_INPUT_CAPABILITY_SEAMS } from '../plugins/omnimux-workflow/src/shared/generationPolicy.ts';
 import { DEFAULT_SPEECH_TO_TEXT_MODEL } from '../plugins/omnimux-workflow/src/shared/speechToText.ts';
 import { ASPECT_RATIO_GEOMETRIES } from '../plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/cfg/aspectRatioGeometry.ts';
-import { MODEL_CHANNEL_GROUPS as HUB_CHANNEL_GROUPS } from '../plugins/omnimux/src/catalog/serving/channel-groups.js';
-import { MODEL_CHANNEL_GROUPS as PICKER_CHANNEL_GROUPS } from '../plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.ts';
+import { readCanvasCatalog } from '../plugins/omnimux-workflow/src/workflow/seam/canvasCatalog.ts';
+import { resolveModelChannelGroups } from '../plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.ts';
+import { buildModelCatalog } from '../plugins/omnimux/src/catalog/list.js';
+import { resolveReadOnlySnapshot } from '../plugins/omnimux/src/catalog/cloud/current.js';
+
+/** The canvas channel module: it may format and classify, never re-declare a line or a price. */
+export const CANVAS_CHANNEL_MODULE = 'plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const MANIFEST_URL = new URL('../plugins/omnimux/src/catalog/contract/auto-serving-manifest.json', import.meta.url);
@@ -312,51 +317,88 @@ export function verifyCrossPluginModelAlignment(options = {}) {
     }
   }
 
-  // 4. Channel Group Parity (picker mirror vs hub routing table)
-  // The canvas model picker cannot import hub internals, so it mirrors the hub's
-  // channel table. A drift here shows the user one channel and charges for
-  // another (or lets an excluded group back into the failover plan), so the two
-  // tables must agree on every routing-relevant field.
-  const hubGroups = options.hubChannelGroups ?? HUB_CHANNEL_GROUPS;
-  const pickerGroups = options.pickerChannelGroups ?? PICKER_CHANNEL_GROUPS;
+  // 4. Channel-line parity: the canvas consumes the hub's projected channelGroups.
+  //
+  // The canvas may not import hub internals, so the lines travel with the catalog DTO
+  // through the capabilities seam. What must hold is that the canvas's own resolution
+  // of those rows is exactly the hub projection — same ids, labels, prices, constraints
+  // and enabled flags — and that the canvas module declares no line set or price of its
+  // own. A drift here shows the user one channel and charges for another.
   let channelGroupsChecked = 0;
-  if (hubGroups && pickerGroups) {
-    const hubKeys = Object.keys(hubGroups).sort();
-    const pickerKeys = Object.keys(pickerGroups).sort();
-    for (const missing of hubKeys.filter((key) => !pickerKeys.includes(key))) {
-      issue('channel_pool_missing_in_picker', `Hub channel pool for "${missing}" is absent from the canvas picker mirror.`);
-    }
-    for (const extra of pickerKeys.filter((key) => !hubKeys.includes(key))) {
-      issue('channel_pool_unknown_in_hub', `Canvas picker offers channel choices for "${extra}", but the hub has no such pool; the request would silently ignore the choice.`);
-    }
-    for (const key of hubKeys.filter((k) => pickerKeys.includes(k))) {
-      const hubById = new Map(hubGroups[key].map((g) => [g.id, g]));
-      const pickerById = new Map(pickerGroups[key].map((g) => [g.id, g]));
-      for (const id of hubById.keys()) {
-        if (!pickerById.has(id)) issue('channel_missing_in_picker', `Channel "${key}@${id}" exists in the hub but not in the picker mirror.`, key);
-      }
-      for (const id of pickerById.keys()) {
-        if (!hubById.has(id)) issue('channel_unknown_in_hub', `Picker offers "${key}@${id}", but the hub pool has no such channel; selecting it cannot be honoured.`, key);
-      }
-      for (const [id, hubGroup] of hubById) {
-        const pickerGroup = pickerById.get(id);
-        if (!pickerGroup) continue;
+  try {
+    const snapshot = options.snapshot ?? resolveReadOnlySnapshot().snapshot;
+    const hub = options.hubCatalog ?? buildModelCatalog({ env: {}, snapshot });
+    const canvas = readCanvasCatalog((name) => (name === 'modelCatalog' ? { list: () => hub } : undefined));
+    const hubById = new Map((hub.models ?? []).map((row) => [row.id, row]));
+    for (const kind of ['text', 'image', 'video', 'audio']) {
+      for (const row of canvas[kind] ?? []) {
+        const hubRow = hubById.get(row.id);
+        if (!hubRow) {
+          issue('channel_row_unknown_in_hub', `Canvas ${kind} row "${row.id}" is not in the hub catalog DTO.`, row.id);
+          continue;
+        }
+        const directory = hubRow.channelGroups ?? [];
+        const delivered = row.channelGroups ?? [];
         channelGroupsChecked++;
-        const compare = (field, hubValue, pickerValue) => {
-          if (hubValue !== pickerValue) {
-            issue('channel_field_drift', `Channel "${key}@${id}" ${field}: picker=${JSON.stringify(pickerValue)} hub=${JSON.stringify(hubValue)}.`, key);
-          }
-        };
-        compare('wireGroup', hubGroup.wireGroup, pickerGroup.wireGroup);
-        compare('pointsEstimate', hubGroup.pricing?.pointsEstimate ?? null, pickerGroup.pricing?.pointsEstimate ?? null);
-        compare('discountRate', hubGroup.pricing?.discountRate ?? null, pickerGroup.pricing?.discountRate ?? null);
-        compare('priceRatio', hubGroup.pricing?.priceRatio ?? null, pickerGroup.pricing?.priceRatio ?? null);
-        compare('billingMode', hubGroup.pricing?.billingMode ?? null, pickerGroup.pricing?.billingMode ?? null);
-        compare('stability24h', hubGroup.sla?.stability24h ?? null, pickerGroup.sla?.stability24h ?? null);
-        compare('avgWaitTimeSec', hubGroup.sla?.avgWaitTimeSec ?? null, pickerGroup.sla?.avgWaitTimeSec ?? null);
-        compare('enabled', hubGroup.enabled, pickerGroup.enabled);
+        if (JSON.stringify(delivered) !== JSON.stringify(directory)) {
+          issue(
+            'channel_groups_not_directory',
+            `Canvas ${kind} row "${row.id}" channelGroups differ from the hub projection. ` +
+            `delivered=${JSON.stringify(delivered)} directory=${JSON.stringify(directory)}`,
+            row.id,
+          );
+          continue;
+        }
+        // The canvas's own resolution must add nothing but the picker's classification flags.
+        const resolved = resolveModelChannelGroups(row.id, delivered, null);
+        const strip = (group) => ({
+          id: group.id,
+          label: group.label,
+          badge: group.badge ?? null,
+          wireGroup: group.wireGroup ?? null,
+          pricing: group.pricing ?? null,
+          constraints: group.constraints ?? null,
+          sla: group.sla ?? null,
+          enabled: group.enabled !== false,
+          default: group.default === true,
+        });
+        if (JSON.stringify(resolved.map(strip)) !== JSON.stringify(directory.map(strip))) {
+          issue(
+            'channel_resolution_drift',
+            `Canvas resolution for "${row.id}" is not the directory rows: ` +
+            `${JSON.stringify(resolved.map(strip))} vs ${JSON.stringify(directory.map(strip))}`,
+            row.id,
+          );
+        }
       }
     }
+    const moduleSource = readFileSync(join(root, CANVAS_CHANNEL_MODULE), 'utf8');
+    if (/MODEL_CHANNEL_GROUPS/.test(moduleSource)) {
+      issue('channel_local_table_remains', `Canvas ${CANVAS_CHANNEL_MODULE} still declares a local line table.`);
+    }
+    if (/pointsEstimate\s*:\s*-?\d/.test(moduleSource)) {
+      issue('channel_local_price_remains', `Canvas ${CANVAS_CHANNEL_MODULE} still hardcodes a points estimate.`);
+    }
+    // Curation must stay aligned with the directory: a curated model the canvas can offer
+    // has to arrive with at least one routable line, otherwise the picker shows an empty pool.
+    for (const [kind, entry] of Object.entries(policy ?? {})) {
+      for (const modelId of entry.allowedModelIds ?? []) {
+        const row = (canvas[kind] ?? []).find((candidate) => candidate.id === modelId);
+        if (!row) continue;
+        if (!Array.isArray(row.channelGroups) || row.channelGroups.length === 0) {
+          issue(
+            'channel_curation_without_line',
+            `Canvas ${kind} policy curates "${modelId}", but the catalog projection delivers no gateway line for it.`,
+            modelId,
+          );
+        }
+      }
+    }
+    if (channelGroupsChecked === 0) {
+      issue('channel_groups_unchecked', 'The canvas catalog exposed no channel-bearing row; the parity check proved nothing.');
+    }
+  } catch (err) {
+    issue('channel_groups_check_failed', err.message);
   }
 
   // 5. Capability-seam admission (models the canvas serves outside the generative whitelists)

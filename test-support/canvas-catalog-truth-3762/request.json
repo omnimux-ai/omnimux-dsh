@@ -1,0 +1,54 @@
+{
+  "taskId": "canvas-catalog-truth-issue-3762",
+  "base": "8df4b3a170686dee71e59bb190557f040f25478c",
+  "head": "caffbc1dd996615146657cc84e657d0286c88bb2",
+  "scope": "task",
+  "taskPlugins": [
+    "omnimux-assets",
+    "omnimux-inspiration",
+    "omnimux-workflow"
+  ],
+  "requiredChecks": [
+    "app-environment",
+    "app-browser",
+    "task-journey"
+  ],
+  "expectedAssertions": {
+    "app-environment": [
+      "app-runtime-ready",
+      "same-origin-login",
+      "task-source-installed-loaded"
+    ],
+    "app-browser": [
+      "chrome-cdp-listen",
+      "auth-cookie-applied",
+      "app-dom-mounted",
+      "visible-geometry-positive",
+      "runtime-modal-bypassed",
+      "blank-session-guide-visible",
+      "explore-section-visible",
+      "explore-cards-present",
+      "asset-hub-reachable-via-library",
+      "screenshot-png-verified"
+    ],
+    "task-journey": [
+      "journey:canvas-renders-both-directory-nodes",
+      "journey:video-menu-shows-every-directory-line",
+      "journey:video-menu-price-equals-directory",
+      "journey:image-menu-shows-directory-lines-and-notes",
+      "journey:menu-offers-only-directory-models",
+      "journey:menu-lines-equal-hub-catalog"
+    ]
+  },
+  "extraInputs": [],
+  "artifactNames": [
+    "canvas-with-nodes.png",
+    "video-channel-menu.png",
+    "image-channel-menu.png",
+    "final-canvas.png",
+    "video-menu.json",
+    "image-menu.json",
+    "canvas-catalog-truth-3762.json"
+  ],
+  "journey": "plugins/omnimux-workflow/tests/e2e/canvas-catalog-truth-3762.journey.mjs"
+}

@@ -22,7 +22,7 @@ import {
   type UpstreamMediaSnapshot,
 } from '../../../../../../shared/validation/operationUi.ts';
 import { narrowModelByLineConstraints } from '../../../../../../shared/validation/lineConstraints.ts';
-import { resolveLineConstraints } from '../channelGroups.ts';
+import { directoryChannelGroups, resolveLineConstraints } from '../channelGroups.ts';
 import type {
   EffectiveImageParams,
   ImageNodeParams,
@@ -106,7 +106,7 @@ export function resolveEffectiveImageParams(
   const operation = preferredOperation ?? operationOption?.id ?? '';
   const schema: ModelParameterSchema = model === 'gpt-image-2.5'
     ? narrowModelByLineConstraints({ id: model, parameters: args.schema ?? {} }, model,
-      resolveLineConstraints(model, params?.routing)).parameters
+      resolveLineConstraints(model, params?.routing, directoryChannelGroups(args.catalog, model))).parameters
     : args.schema ?? {};
 
   const ratioOptions = schema.aspectRatio?.options ?? [];

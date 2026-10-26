@@ -17,6 +17,7 @@ import {
   type ChannelGroupItem,
   type RuntimeByokChannelSettings,
 } from './channelGroups';
+import type { CatalogChannelGroupDto } from '../../../../../shared/api.ts';
 
 /**
  * 渠道输入与输出能力硬约束
@@ -217,11 +218,15 @@ export interface ChannelFallbackState {
 /**
  * 解析渠道失效回退状态。
  * 当持久化的自备渠道在当前配置中已失效或被删除时，平滑降级，提供一键切换与安全拦截。
+ *
+ * `directoryGroups` 是该模型的目录线路行（`row.channelGroups`）；官方线路集合只来自目录，
+ * 本函数只在其上追加运行期自备渠道。
  */
 export function resolveFallbackRouting(
   modelId: string,
   modelDisplayName: string,
   persistedRouting: Record<string, unknown> | undefined,
+  directoryGroups?: readonly CatalogChannelGroupDto[] | null,
   runtimeSettings?: RuntimeByokChannelSettings | null,
 ): ChannelFallbackState {
   if (!persistedRouting || typeof persistedRouting !== 'object') {
@@ -284,7 +289,7 @@ export function resolveFallbackRouting(
   }
 
   // 检查在当前可用渠道列表中是否存在且有效
-  const availableGroups = resolveModelChannelGroups(modelId, runtimeSettings);
+  const availableGroups = resolveModelChannelGroups(modelId, directoryGroups, runtimeSettings);
   if (targetGroupId) {
     const matched = availableGroups.find((g) => g.id === targetGroupId);
     if (matched && matched.isAvailable !== false) {

@@ -78,6 +78,7 @@ node /tmp/omnimux-exemption-proof.mjs no-declaration  # 反例：exit=1 + "Exact
 
 - [x] 宿主机制与 schema 有可复现的抽取证据（app.asar 字节偏移 + 官方文档串）。
 - [x] `peerExemptions` 是唯一豁免真源；安装器无豁免名单、无宿主版本字面量。
+- [x] **当前无声明**：支撑包 0.28.0 的 peer 已由宿主 0.2.1-rc.3 直接满足，`peerExemptions` 已从身份文件移除；机制保留但未启用（`supportPeerExemptionDecision` 返回 `not-needed`）。
 - [x] 反例：声明缺失 → `dsh plugin add` 仍被拒（原始 peer 拒绝原文可见）。
 - [x] 正向：声明齐全 → 同一命令 `dsh plugin add` 成功（exit 0）。
 - [x] 门禁：未声明不签发、过期/代际不符硬失败、身份与字节校验不被放宽（32 条用例）。

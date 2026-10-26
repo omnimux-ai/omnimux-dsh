@@ -161,17 +161,27 @@ export function narrowModelByLineConstraints<M>(model: M, modelId: string, const
   return { ...record, operations: nextOperations, parameters: nextModelParameters } as unknown as M;
 }
 
-/** Resolves the constraints of the lines a node routes to; the canvas owns the group table. */
-export type LineConstraintResolver = (modelId: string, routing: unknown) => LineConstraints;
+/**
+ * Resolves the constraints of the lines a node routes to.
+ *
+ * The lines live on the catalog rows the resolver is handed (`channelGroups`,
+ * projected from the gateway snapshot by the hub), so the lookup is injected
+ * instead of imported: shared code owns slot layout and operation lists, while
+ * the canvas owns the resolution rules.
+ */
+export type LineConstraintResolver = (
+  modelId: string,
+  routing: unknown,
+  catalog?: unknown,
+) => LineConstraints;
 
 let resolver: LineConstraintResolver | null = null;
 
 /**
- * Register the group-table lookup.
+ * Register the line-constraint lookup.
  *
- * The table lives in the canvas while slot layout and operation lists live in shared
- * code, so the lookup is injected instead of imported. Without a resolver every surface
- * keeps the full model declaration, which is the safe default.
+ * Without a resolver every surface keeps the full model declaration, which is
+ * the safe default.
  */
 export function setLineConstraintResolver(next: LineConstraintResolver | null): void {
   resolver = next;
@@ -180,9 +190,11 @@ export function setLineConstraintResolver(next: LineConstraintResolver | null): 
 /**
  * Narrow the routed model inside a catalog copy.
  *
- * Slot layout, operation lists and parameter controls all read the model out of the
- * catalog, so narrowing once here keeps every downstream surface honest — the slot count,
+ * Slot layout, operation lists and parameter controls all read the model out of
+ * the catalog, so narrowing once here keeps every downstream surface honest — the slot count,
  * the input types and the operation list follow from the same declaration.
+ *
+ * The catalog travels with the call because the routed lines are part of it.
  */
 export function narrowCatalogByRouting<C>(
   catalog: C | null | undefined,
@@ -194,7 +206,7 @@ export function narrowCatalogByRouting<C>(
   const catalogRecord = catalog as unknown as Record<string, unknown>;
   const models = Array.isArray(catalogRecord.models) ? catalogRecord.models : null;
   if (!models || !models.some((model) => asRecord(model)?.id === modelId)) return catalog;
-  const constraints = resolver(modelId, routing);
+  const constraints = resolver(modelId, routing, catalogRecord);
   if (!constraints || Object.keys(constraints).length === 0) return catalog;
   return {
     ...catalogRecord,

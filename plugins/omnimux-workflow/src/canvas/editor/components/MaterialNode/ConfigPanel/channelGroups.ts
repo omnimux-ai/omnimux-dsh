@@ -1,19 +1,30 @@
 /**
- * Channel group catalogue for the canvas model picker.
+ * Channel lines of the canvas model picker — display override only.
  *
- * The picker shows what the hub will actually route to, so this table is a
- * mirror of `plugins/omnimux/src/catalog/serving/channel-groups.js`
- * (`MODEL_CHANNEL_GROUPS`): same model keys, same channel ids, same wire group,
- * points estimate, discount, billing mode and SLA. Cross-plugin source imports
- * are forbidden, so the mirror is enforced by
- * `scripts/verify-model-contracts.mjs` — drift fails CI instead of silently
- * routing to a group the user never picked.
+ * The picker shows what the hub will actually route to. That truth is the hub
+ * catalog's `channelGroups` projection (`plugins/omnimux/src/catalog/project.js`
+ * → `/omnimux/model-catalog` → the canvas capabilities seam), which derives
+ * membership from the gateway snapshot's `enable_groups` and the price from its
+ * `group_ratio` + per-model billing. This module therefore holds **no line set,
+ * no price and no multiplier**: it normalizes the directory rows for display and
+ * resolves which of them a node routes to.
  *
- * Badges carry feature words only: the discount and billing chips are derived
- * from `pricing`, so the same fact is never rendered twice.
+ * What legitimately stays here:
+ * - pure formatting (price / billing / points copy) driven by the directory numbers;
+ * - compact model short names and the BYOK display table (presentation only);
+ * - BYOK channel merging, which is a *runtime* concept (the user's own key), not
+ *   a gateway line, so it cannot come from the catalog.
  */
 
-import { setLineConstraintResolver, type LineConstraints } from '../../../../../shared/validation/lineConstraints.ts';
+import {
+  setLineConstraintResolver,
+  type LineConstraints,
+} from '../../../../../shared/validation/lineConstraints.ts';
+import type {
+  CapabilityCatalog,
+  CatalogChannelGroupDto,
+  CatalogChannelGroupPricingDto,
+} from '../../../../../shared/api.ts';
 
 export interface ChannelGroupItem {
   id: string;
@@ -26,16 +37,8 @@ export interface ChannelGroupItem {
   isAvailable?: boolean;
   /** 适合场景与能力文字简介。 */
   description?: string;
-  pricing?: {
-    /** Numeric estimate; `null` when the parameter set has no published price. */
-    pointsEstimate: number | null;
-    /** 支柱三：内部排序打分权重，彻底解耦面向用户的 pointsEstimate。 */
-    sortWeight?: number;
-    discountRate?: number;
-    /** 网关真实分组倍率（相对官方组的相对价），SLA 缺失时的价格口径。 */
-    priceRatio?: number | null;
-    billingMode?: string;
-  };
+  /** Directory price block, passed through verbatim. */
+  pricing?: CatalogChannelGroupPricingDto;
   sla?: {
     stability24h: number;
     avgWaitTimeSec?: number;
@@ -60,195 +63,60 @@ export interface ChannelGroupItem {
   enabled: boolean;
 }
 
-export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
-  "seedance-2-0": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "官方原生专线 · 按秒计费",
-      "pricing": {
-        "pointsEstimate": 4.9,
-        "discountRate": 1,
-        "billingMode": "per_second"
-      },
-      "sla": {
-        "stability24h": 98,
-        "avgWaitTimeSec": 90
-      },
-      "wireGroup": "default",
-      "default": true,
-      "enabled": true
-    }
-  ],
-  "seedance-2-0-fast": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "极速出片 · 官方专线",
-      "pricing": {
-        "pointsEstimate": 3,
-        "discountRate": 1,
-        "billingMode": "per_second"
-      },
-      "sla": {
-        "stability24h": 100,
-        "avgWaitTimeSec": 30
-      },
-      "wireGroup": "default",
-      "default": true,
-      "enabled": true
-    }
-  ],
-  "seedance-2-0-mini": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "轻量视频官方专线",
-      "pricing": {
-        "pointsEstimate": 0.8,
-        "discountRate": 1,
-        "billingMode": "per_second"
-      },
-      "sla": {
-        "stability24h": 100,
-        "avgWaitTimeSec": 45
-      },
-      "wireGroup": "default",
-      "default": true,
-      "enabled": true
-    }
-  ],
-  "seedance-2-5": [
-    {
-      "id": "480p",
-      "label": "经济版",
-      "badge": "480p 档 · 经济走量",
-      "pricing": {
-        "pointsEstimate": 6.8,
-        "discountRate": 0.17,
-        "billingMode": "per_second"
-      },
-      "sla": {
-        "stability24h": 100,
-        "avgWaitTimeSec": 60
-      },
-      "constraints": {
-        "parameters": {
-          "resolution": { "fixed": "480p" }
-        }
-      },
-      "wireGroup": "desktop-480p",
-      "enabled": true
-    },
-    {
-      "id": "720p",
-      "label": "标准版",
-      "badge": "720p 档 · 稳定满血",
-      "pricing": {
-        "pointsEstimate": 9.6,
-        "discountRate": 0.24,
-        "billingMode": "per_second"
-      },
-      "constraints": {
-        "parameters": {
-          "resolution": { "fixed": "720p" }
-        }
-      },
-      "wireGroup": "desktop-720p",
-      "default": true,
-      "enabled": true
-    }
-  ],
-  "gpt-image-2.5": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "基础清晰度 · 异步出图",
-      "pricing": {
-        "pointsEstimate": 0.13,
-        "discountRate": 1,
-        "billingMode": "per_task"
-      },
-      "wireGroup": "default",
-      "constraints": {
-        "parameters": {
-          "resolution": {
-            "fixed": "1K"
-          },
-          "quality": {
-            "supported": false
-          },
-          "n": {
-            "fixed": 1
-          }
-        }
-      },
-      "default": true,
-      "enabled": true
-    },
-    {
-      "id": "economy",
-      "label": "经济版",
-      "badge": "经济走量 · 独立线路",
-      "pricing": {
-        "pointsEstimate": 0.01,
-        "discountRate": 0.112455,
-        "billingMode": "per_task"
-      },
-      "wireGroup": "gpt-image-2.5-economy",
-      "enabled": true
-    }
-  ],
-  "gemini-3.8-flash": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "Google 官方专线",
-      "pricing": {
-        "pointsEstimate": 100,
-        "discountRate": 1,
-        "billingMode": "per_token"
-      },
-      "sla": {
-        "stability24h": 99,
-        "avgWaitTimeSec": 8
-      },
-      "wireGroup": "default",
-      "default": true,
-      "enabled": true
-    }
-  ],
-  "seedream-5-0-pro": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "Seedream 官方专线",
-      "pricing": {
-        "pointsEstimate": 0.64,
-        "discountRate": 1,
-        "billingMode": "per_task"
-      },
-      "wireGroup": "default",
-      "default": true,
-      "enabled": true
-    }
-  ],
-  "suno": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "Suno 音乐生成官方专线",
-      "pricing": {
-        "pointsEstimate": 0.76,
-        "discountRate": 1,
-        "billingMode": "per_task"
-      },
-      "wireGroup": "default",
-      "default": true,
-      "enabled": true
-    }
-  ]
-};
+/**
+ * Normalize directory rows into picker items.
+ *
+ * The directory already carries the line's identity, name, price, constraints
+ * and SLA; only the picker's own classification flags are added, and they are
+ * derived from `enabled` / the `byok-` id prefix rather than re-declared.
+ */
+export function normalizeDirectoryGroups(
+  directoryGroups?: readonly CatalogChannelGroupDto[] | null,
+): ChannelGroupItem[] {
+  if (!Array.isArray(directoryGroups)) return [];
+  return directoryGroups.flatMap((group): ChannelGroupItem[] => {
+    if (!group || typeof group !== 'object' || typeof group.id !== 'string' || !group.id) return [];
+    const enabled = group.enabled !== false;
+    return [{
+      ...group,
+      label: typeof group.label === 'string' && group.label ? group.label : group.id,
+      enabled,
+      category: 'official',
+      sourceType: 'official',
+      isAvailable: enabled,
+    }];
+  });
+}
+
+/** Directory lines of one model, read from the catalog rows (`models[]`). */
+export function directoryChannelGroups(
+  catalog: CapabilityCatalog | null | undefined,
+  modelId: string,
+): CatalogChannelGroupDto[] {
+  const { modelId: canonical } = parseModelAndGroup(modelId);
+  if (!canonical) return [];
+  const rows = catalog?.models;
+  if (!Array.isArray(rows)) return [];
+  const row = rows.find((candidate) => candidate?.id === canonical
+    || (Array.isArray(candidate?.aliases) && candidate.aliases.includes(canonical)));
+  return Array.isArray(row?.channelGroups) ? row.channelGroups : [];
+}
+
+/**
+ * Directory lines of one picker row.
+ *
+ * The menu is handed the already-filtered candidate rows, so the row itself is
+ * the line source — no second lookup, no local table.
+ */
+export function rowChannelGroups(
+  rows: ReadonlyArray<{ id: string; channelGroups?: CatalogChannelGroupDto[] }>,
+  modelId: string,
+): CatalogChannelGroupDto[] {
+  const { modelId: canonical } = parseModelAndGroup(modelId);
+  if (!canonical) return [];
+  const row = rows.find((candidate) => candidate?.id === canonical);
+  return Array.isArray(row?.channelGroups) ? row.channelGroups : [];
+}
 
 export function parseModelAndGroup(input?: string): { modelId: string; group: string | null } {
   if (!input || typeof input !== 'string') return { modelId: '', group: null };
@@ -261,22 +129,6 @@ export function parseModelAndGroup(input?: string): { modelId: string; group: st
     modelId: rawModel,
     group: rawGroup || null,
   };
-}
-
-/**
- * Configured channel groups for a model. Models without a pool return `[]`: the
- * picker must show "no channel choice" rather than invent channels and prices
- * the hub cannot route to.
- */
-export function getModelChannelGroups(
-  modelId: string,
-  runtimeSettings?: RuntimeByokChannelSettings | null,
-): ChannelGroupItem[] {
-  if (runtimeSettings) {
-    return resolveModelChannelGroups(modelId, runtimeSettings);
-  }
-  const { modelId: canonical } = parseModelAndGroup(modelId);
-  return MODEL_CHANNEL_GROUPS[canonical] ? [...MODEL_CHANNEL_GROUPS[canonical]] : [];
 }
 
 export interface RuntimeByokChannelSettings {
@@ -638,24 +490,23 @@ export function detectModelModality(modelId: string): 'image' | 'video' | 'audio
 }
 
 /**
- * 聚合指定逻辑模型的完整可用渠道池（官方内置专线 + 已验证的用户自备 BYOK 渠道）。
+ * 聚合指定逻辑模型的完整可用渠道池（目录官方线路 + 已验证的用户自备 BYOK 渠道）。
+ *
+ * 官方线路整体来自中枢目录行，本函数只做展示归一化并追加运行期自备渠道；
+ * 任何线路集合或价格都不在这里声明。
  *
  * @param modelId 逻辑模型 ID（支持带 @group 后缀，内部自动归一化）
+ * @param directoryGroups 该模型的目录线路行（`row.channelGroups`）
  * @param runtimeSettings 当前运行时设置快照
  * @returns 包含 category ('official' | 'byok')、chipLabel 等属性的渠道分组列表
  */
 export function resolveModelChannelGroups(
   modelId: string,
+  directoryGroups?: readonly CatalogChannelGroupDto[] | null,
   runtimeSettings?: RuntimeByokChannelSettings | null,
 ): ChannelGroupItem[] {
   const { modelId: parsedModelId } = parseModelAndGroup(modelId);
-  const rawOfficialGroups = MODEL_CHANNEL_GROUPS[parsedModelId] || [];
-  const officialGroups = rawOfficialGroups.map((group) => ({
-    ...group,
-    category: 'official' as const,
-    sourceType: 'official' as const,
-    isAvailable: group.enabled !== false,
-  }));
+  const officialGroups = normalizeDirectoryGroups(directoryGroups);
 
   if (!isRuntimeByokChannelSettings(runtimeSettings)) {
     return officialGroups;
@@ -802,10 +653,21 @@ export function formatPriceChip(rate?: number | null): string {
   return `×${Math.round(rate * 100) / 100}`;
 }
 
-/** 价格展示：有积分给积分，只有倍率给倍率，两者都无则明确说明不报价。 */
-export function formatPriceLabel(pricing?: { pointsEstimate?: number | null, priceRatio?: number | null }): string {
+/**
+ * 价格展示：有积分给积分；无数字但目录给了原因就给原因；只有倍率给倍率；两者都无则明确说明不报价。
+ *
+ * `pointsNote` 来自目录（网关按表达式/按 token 计费时无法给出可比数字），照实显示比
+ * 拿一个没有可比意义的倍率折算更诚实。
+ */
+export function formatPriceLabel(pricing?: {
+  pointsEstimate?: number | null;
+  priceRatio?: number | null;
+  pointsNote?: string;
+}): string {
   const points = pricing?.pointsEstimate;
   if (typeof points === 'number' && Number.isFinite(points)) return `≈${points} 积分`;
+  const note = pricing?.pointsNote;
+  if (typeof note === 'string' && note.trim()) return note.trim();
   const ratio = pricing?.priceRatio;
   if (typeof ratio === 'number' && Number.isFinite(ratio)) return `×${Math.round(ratio * 100) / 100} 倍率`;
   return '当前参数不支持报价';
@@ -972,18 +834,6 @@ export function intersectLineConstraints(declarations: LineConstraints[]): LineC
 }
 
 /**
- * Line constraints the node currently routes to.
- *
- * A line may accept far less than the model contract publishes, so the canvas reads
- * the declaration here before the contract reaches slot layout, operation lists or
- * parameter controls. Automatic routing applies nothing; several lines apply what
- * they agree on, with the stricter ceiling winning.
- *
- * @param modelId Model id (may carry a `@channelGroup` suffix).
- * @param routing Persisted routing intent (`group` and/or `allowedGroups`).
- * @param runtimeSettings Optional runtime settings to resolve dynamic BYOK channels.
- */
-/**
  * 纯函数：针对视频自备渠道的兜底参数约束注入（标准比例与时长），避免契约逃逸。
  */
 export function injectVideoByokDefaults(raw: LineConstraints = {}): LineConstraints {
@@ -1001,14 +851,28 @@ export function injectVideoByokDefaults(raw: LineConstraints = {}): LineConstrai
   };
 }
 
+/**
+ * Line constraints the node currently routes to.
+ *
+ * A line may accept far less than the model contract publishes, so the canvas reads
+ * the declaration of the directory rows before the contract reaches slot layout,
+ * operation lists or parameter controls. Automatic routing applies nothing; several
+ * lines apply what they agree on, with the stricter ceiling winning.
+ *
+ * @param modelId Model id (may carry a `@channelGroup` suffix).
+ * @param routing Persisted routing intent (`group` and/or `allowedGroups`).
+ * @param directoryGroups The model's directory lines (`row.channelGroups`).
+ * @param runtimeSettings Optional runtime settings to resolve dynamic BYOK channels.
+ */
 export function resolveLineConstraints(
   modelId: string,
   routing: unknown,
+  directoryGroups?: readonly CatalogChannelGroupDto[] | null,
   runtimeSettings?: RuntimeByokChannelSettings | null,
 ): LineConstraints {
   const effectiveSettings = runtimeSettings ?? null;
   const { modelId: id } = parseModelAndGroup(modelId);
-  const groups = resolveModelChannelGroups(id, effectiveSettings);
+  const groups = resolveModelChannelGroups(id, directoryGroups, effectiveSettings);
   const availableGroupIds = new Set(groups.map((g) => g.id));
   const selected = selectedGroupIds(routing, availableGroupIds);
   if (selected.size === 0) {
@@ -1045,9 +909,16 @@ export function resolveLineConstraints(
   return rawResult;
 }
 
-// This module owns the group table, so it installs the lookup that the shared contract
-// surfaces read through. Without it they keep the full model declaration.
-setLineConstraintResolver(resolveLineConstraints);
+// Shared contract surfaces (slot layout, operation lists, parameter controls) reach the
+// lines through the catalog they already hold, so the lookup is installed with the same
+// directory rows the picker reads. Without a catalog the resolver returns nothing and every
+// surface keeps the full model declaration — the safe default.
+setLineConstraintResolver((modelId, routing, catalog) => resolveLineConstraints(
+  modelId,
+  routing,
+  directoryChannelGroups(catalog as CapabilityCatalog | null | undefined, modelId),
+  null,
+));
 
 /**
  * 渠道单选互斥路由派发载荷
