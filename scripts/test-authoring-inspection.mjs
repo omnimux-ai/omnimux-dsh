@@ -12,46 +12,6 @@ function canonical(value) {
   return Object.fromEntries(Object.entries(value).filter(([key]) => !['start', 'end', 'loc'].includes(key)).map(([key, child]) => [key, canonical(child)]))
 }
 
-/**
- * 位置身份只保留**结构**：祖先节点类型、回调/参数槽位、分支边。
- *
- * 剔除的是位置上的**文本、数据与序号**——Literal 的值与 `raw`、Identifier 的名字、控制流语句的
- * 数据字段（见 `projectContexts`）、以及同形兄弟的序号（见 `inspect`）。理由是这些内容在正常维护里最容易
- * 变：用例改名、局部绑定改名、参数化数据表增删行、在既有用例前后插入同形用例，都会改动它们。
- * 把它们算进身份，会让**同一处未改动的构造**在 candidate 里看起来像新增风险，于是既有构造本身
- * 成为编辑阻断（#3754、#3718）。
- *
- * 构造自身的文本仍由 `canonical(anchor)` 保留：`data[key]` 与 `other[index]`、`eval(a)` 与 `eval(b)`
- * 依旧是不同的构造；同形状构造的数量增长由多重集计数捕获——同一处复制两份、或新增一处 `.skip`
- * 仍然因计数超出而被拒。
- */
-function structural(value) {
-  if (Array.isArray(value)) return value.map(structural)
-  if (!value || typeof value !== 'object') return value
-  const out = {}
-  for (const [key, child] of Object.entries(value)) {
-    if (['start', 'end', 'loc', 'raw'].includes(key)) continue
-    if (key === 'value' && value.type === 'Literal') continue
-    if (key === 'name' && value.type === 'Identifier') continue
-    out[key] = structural(child)
-  }
-  return out
-}
-
-// 控制流语句的**数据**（`test`/`init`/`update`/`left`/`right`/`discriminant`/`param`）不参与位置身份：
-// 参数化数据表增删行（PR #3752 的 generation-fingerprint.test.js 就是如此）不该把循环体里的既有构造
-// 变成新增风险。这些字段仍保留在 `contextOf` 里，因为它们同时供**绑定扫描**使用（例如
-// `catch ({ local = safeApi })` 里的 `safeApi` 必须仍然被算作引用）。
-const controlFlowContexts = new Set(['IfStatement', 'ConditionalExpression', 'WhileStatement', 'DoWhileStatement', 'ForStatement', 'ForInStatement', 'ForOfStatement', 'SwitchStatement', 'SwitchCase', 'CatchClause'])
-
-/** 把祖先上下文投影成**位置身份**：结构 + 槽位/分支边，不含易变文本、数据与序号。 */
-function projectContexts(contexts) {
-  return contexts.map(entry => {
-    if (!entry || entry.node === undefined) return entry
-    const positional = controlFlowContexts.has(entry.node.type) ? { type: entry.node.type, await: entry.node.await } : structural(entry.node)
-    return { ...entry, node: positional }
-  })
-}
 
 function contextOf(node) {
   if (functions.has(node.type)) return { type: node.type, id: node.id, params: node.params, async: node.async, generator: node.generator }
@@ -137,12 +97,23 @@ function collectRisks(code, { resolveImport } = {}) {
       }
     }
   }
-  function inspect(node, parent = null, contexts = []) {
+  function inspect(node, parent = null, contexts = [], reach = 'module') {
     if (!node || typeof node !== 'object' || !node.type) return
     const context = contextOf(node)
     const nextContexts = context ? [...contexts, { node: context }] : contexts
+    // 可达性：风险所在的构造到底跑不跑。只分三档，粗到不会因维护动作漂移，
+    // 又足以拦住「把死代码 / 跳过用例里的执行塞进活用例」这种真升级。
+    //   module        —— 用例之外（含普通函数里，那仍属于未证明被执行的代码）
+    //   skipped-case  —— 跳过/聚焦用例的回调里（test.skip / test.only / xit / {skip:true} …）
+    //   live-case     —— 正常用例的回调里
+    // 不进身份的仍然是：参数序号、包裹层数、回调/分支槽位、文本、数据与同形兄弟序号。
+    let callbackReach = null
     function risk(reason) {
-      const anchor = (parent?.type === 'CallExpression' || parent?.type === 'NewExpression') && parent.callee === node ? parent : node
+      // 锚点上提到外层调用只在「该节点就是被调用者」时成立（`f(...)` 里的 `f`、`new C(...)` 里的 `C`）。
+      // 但**选择器类风险**（`test.skip` / `xit` / `{only:true}`）锚定的是选择器本身，不该把整个用例
+      // 回调正文吃进指纹——否则用例正文一动就被判成「新增风险」，而选择器语义根本没变。
+      const selectorRisk = reason === 'test-execution-selector-needs-review' || reason === 'test-execution-option-needs-review'
+      const anchor = !selectorRisk && (parent?.type === 'CallExpression' || parent?.type === 'NewExpression') && parent.callee === node ? parent : node
       const names = new Set()
       function identifiers(value) {
         if (!value || typeof value !== 'object') return
@@ -150,12 +121,14 @@ function collectRisks(code, { resolveImport } = {}) {
         for (const child of Object.values(value)) if (Array.isArray(child)) child.forEach(identifiers); else identifiers(child)
       }
       identifiers({ node: anchor, contexts: nextContexts })
-      // 构造自身的文本（`canonical(anchor)`）参与身份；祖先位置只保留结构（`projectContexts`），
-      // 因此用例改名、局部改名、参数化数据表增删行、同形兄弟增删都不会把既有构造重签成新增风险。
-      // 绑定扫描仍用未投影的上下文，避免 `catch ({ local = safeApi })` 这类控制流头部的引用漏掉。
-      const detail = canonical({ node: anchor, contexts: projectContexts(nextContexts) })
+      // 构造身份 = 自身规范化节点 + 引用的 import 绑定 + 可达性档位，**不含位置上下文**：
+      // 把同一处既有构造在文件里挪个位置（大改写的常见情况）不该让它看起来像「新增风险」——
+      // 多重集计数仍能拦住真正的净新增（数量超出的同形构造），可达性档位仍能拦住
+      // 「死代码/跳过用例里的执行被搬进活用例」。绑定扫描仍用未投影的上下文，避免
+      // `catch ({ local = safeApi })` 这类控制流头部的引用漏掉。
+      const detail = canonical(anchor)
       const bindings = [...names].filter(name => imports.has(name)).sort().map(name => imports.get(name))
-      risks.push({ reason, fingerprint: JSON.stringify(canonical({ reason, detail, bindings })) })
+      risks.push({ reason, fingerprint: JSON.stringify(canonical({ reason, detail, bindings, reach })) })
     }
     if (node.type === 'MemberExpression') {
       const property = node.computed ? node.property.type === 'Literal' ? node.property.value : null : node.property.name
@@ -176,12 +149,39 @@ function collectRisks(code, { resolveImport } = {}) {
       if (node.callee.type === 'Identifier' && legacySelectors.has(node.callee.name)) risk('test-execution-selector-needs-review')
       const directRunner = node.callee.type === 'Identifier' && runners.has(node.callee.name)
       const namespaceRunner = node.callee.type === 'MemberExpression' && node.callee.object.type === 'Identifier' && runners.has(node.callee.object.name)
-      if (directRunner || namespaceRunner) {
+      // 运行器调用链的可达性：`test(...)` 是活用例，`test.skip(...)` / `xit(...)` / `{skip:true}` 是跳过用例。
+      // 运行器/选择器识别扫**整条非计算成员链的根标识符**，覆盖 `test.describe.skip(...)` /
+      // `test.describe(...)` 这类链式写法：只看根是谁，中间节点与末节点一并判 skip/only。
+      const chain = []
+      for (let current = node.callee; current && current.type === 'MemberExpression' && !current.computed; current = current.object) chain.push(current.property.name)
+      const chainRoot = node.callee.type === 'Identifier' ? node.callee.name
+        : node.callee.type === 'MemberExpression' ? (() => { let c = node.callee; while (c.type === 'MemberExpression' && !c.computed) c = c.object; return c.type === 'Identifier' ? c.name : null })()
+        : null
+      const chainIsRunner = chainRoot !== null && runners.has(chainRoot)
+      const chainIsSkip = chain.some(name => blocked.has(name) && name !== 'only')
+      const chainIsOnly = chain.includes('only') || chainRoot !== null && /^f/.test(chainRoot) && legacySelectors.has(chainRoot)
+      const selectorName = node.callee.type === 'MemberExpression' && !node.callee.computed ? node.callee.property.name : null
+      const legacySelector = node.callee.type === 'Identifier' && legacySelectors.has(node.callee.name)
+      const selectorIsSkip = legacySelector || chainIsSkip || selectorName !== null && blocked.has(selectorName) && selectorName !== 'only'
+      const selectorIsOnly = chainIsOnly || selectorName === 'only' || node.callee.type === 'Identifier' && /^f/.test(node.callee.name) && legacySelectors.has(node.callee.name)
+      if (directRunner || namespaceRunner || legacySelector || chainIsRunner) {
         const first = node.arguments[0]
         const named = first?.type === 'Literal' && typeof first.value === 'string'
         const options = named ? node.arguments[1] : first
         const callback = options && functions.has(options.type)
         if (options && !callback && (options.type !== 'ObjectExpression' || options.properties.some(property => property.type !== 'Property'))) risk('dynamic-test-options-needs-review')
+        // 用例级 skip/only 选项对象（`test('x', { skip: true }, fn)`）。
+        const optionSkip = options?.type === 'ObjectExpression' && options.properties.some(property => {
+          if (property.type !== 'Property' || property.computed) return false
+          const key = property.key.name ?? property.key.value
+          return blocked.has(key) && key !== 'only' && !(property.value?.type === 'Literal' && property.value.value === false)
+        })
+        const optionOnly = options?.type === 'ObjectExpression' && options.properties.some(property => property.type === 'Property' && !property.computed && (property.key.name ?? property.key.value) === 'only')
+        // 外层已经是 skipped-case 时，内层运行器**不得**把档位升回 live-case：
+        // `test.skip('g', () => { test('a', () => { eval(code) }) })` 里那个 eval 永远不跑。
+        const inheritedSkip = reach === 'skipped-case'
+        if (selectorIsSkip || selectorIsOnly || optionSkip || optionOnly || inheritedSkip) callbackReach = 'skipped-case'
+        else if (callback || named) callbackReach = 'live-case'
       }
     }
     if (node.type === 'ImportDeclaration' && /^(?:node:)?(?:vm|child_process|worker_threads|module)$/.test(node.source.value)) risk('runtime-code-execution-import-needs-review')
@@ -201,11 +201,14 @@ function collectRisks(code, { resolveImport } = {}) {
     if (node.type === 'Identifier' && publicBindings.has(node.name) && !publicImports.has(parent) && !(parent?.type === 'CallExpression' && parent.callee === node && !parent.optional)) risk('public-plugin-binding-escape-needs-review')
     for (const [key, value] of Object.entries(node)) {
       const branch = ['IfStatement', 'ConditionalExpression', 'LogicalExpression', 'TryStatement', 'TaggedTemplateExpression', 'MemberExpression', 'ChainExpression', 'SequenceExpression', 'ArrayExpression', 'ArrayPattern', 'ExportNamedDeclaration', 'ExportDefaultDeclaration'].includes(node.type) ? [...nextContexts, { edge: key }] : nextContexts
+      // 可达性**继承**当前档位；只有运行器回调（`test(...)` 的函数实参）才改写成该用例的档位。
+      // 这样用例体内的构造保留 `live-case`，用例外的普通函数保持 `module`，嵌套函数不重置。
       if (Array.isArray(value)) for (const [index, child] of value.entries()) {
         const argumentsContext = ['arguments', 'elements', 'expressions', 'cases'].includes(key) ? [...branch, { slot: key, index }] : branch
-        inspect(child, node, argumentsContext)
+        const childIsCallback = callbackReach && key === 'arguments' && functions.has(child?.type)
+        inspect(child, node, argumentsContext, childIsCallback ? callbackReach : reach)
       }
-      else if (value && typeof value === 'object') inspect(value, node, branch)
+      else if (value && typeof value === 'object') inspect(value, node, branch, reach)
     }
   }
   inspect(ast)

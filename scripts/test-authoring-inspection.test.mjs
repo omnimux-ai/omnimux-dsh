@@ -201,8 +201,12 @@ test('role filtering preserves context slots and multiset excess while enclosing
     "function first(safeApi) { consume(...values) }",
     "function second(safeApi) { consume(...values) }",
   ).allowed, true)
+  // 同一调用位展开挪到另一个参数位——构造没变 → 放行（形状身份，不含位置上下文）。
+  assert.equal(inspectTestAuthoringDelta(
+    "consume(() => consume(...values), () => 1)",
+    "consume(() => 1, () => consume(...values))",
+  ).allowed, true)
   for (const [before, after] of [
-    ["consume(() => consume(...values), () => 1)", "consume(() => 1, () => consume(...values))"],
     ["function read() { consume(...values) }", "function read() { consume(...values) } function readAgain() { consume(...values) }"],
     ["consume(...values)", "consume(...values); consume(...values)"],
     ["consume(...values)", "consume(...values); eval(code)"],
@@ -250,13 +254,17 @@ test('parent domains retain repeated risks and multiset excess denials', () => {
 })
 
 test('parent domains preserve callback slots literal titles scope and risk bodies', () => {
+  // 同一构造只挪位置（参数位、包裹函数、回调参数）——构造没变，放行。
   for (const [before, after] of [
     ["consume('first', async () => { data[key] }, async () => {})", "consume('first', async () => {}, async () => { data[key] })"],
-    ["test('first', async () => { data[key] })", "test('renamed', async () => { data[key] })"],
     ["test('first', async () => { data[key] })", "test('first', async () => { async function nested() { data[key] } })"],
+    ["test('first', async () => { data[key] })", "test('first', async value => { data[key] })"],
+  ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, true, after)
+  // 构造自身变了（别的对象/键、用例名被改、调用方名被改）——仍拒绝。
+  for (const [before, after] of [
+    ["test('first', async () => { data[key] })", "test('renamed', async () => { data[key] })"],
     ["test('first', async () => { data[key] })", "test('first', async () => { other[index] })"],
     ["test('first', async () => { data[key] })", "check('first', async () => { data[key] })"],
-    ["test('first', async () => { data[key] })", "test('first', async value => { data[key] })"],
   ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
 })
 
@@ -318,8 +326,11 @@ test('import declaration risk bodies and contexts remain conservative when addin
     ["import { constructor as create } from './domain.mjs'; create(ctx)", "import { constructor as create, safeApi } from './domain.mjs'; create(ctx)"],
     ["import { runInThisContext } from 'node:vm'; runInThisContext(code)", "import { runInThisContext, safeApi } from 'node:vm'; runInThisContext(code)"],
   ]) {
+    // 给「有执行导入的语句」加一个非风险 specifier：构造没变 → 放行；
+    // 整句 import 自身就是风险（如 node:vm）且语句变了 → 仍拒绝。
+    const expected = before.includes("node:vm") ? false : true
     assert.equal(inspectTestAuthoringDelta(before, before).allowed, true)
-    assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
+    assert.equal(inspectTestAuthoringDelta(before, after).allowed, expected, after)
   }
 })
 
@@ -565,4 +576,64 @@ test('pre-existing execution constructs stop blocking while new constructs and p
   assert.equal(broken.allowed, false)
   assert.equal(broken.reason, 'unsupported-or-incomplete-test-syntax')
   assert.deepEqual(broken.changedCases, [])
+})
+
+test('reachability keeps dead-code and skipped-case execution from upgrading into a live case', () => {
+  // 构造本身没变，只是**从死代码/跳过用例搬进活用例**——可达性变了，必须拒绝。
+  for (const [before, after] of [
+    ["function dead() { eval(code) } test('a', () => {})", "function dead() {} test('a', () => { eval(code) })"],
+    ["function dead() { data[key] } test('a', () => {})", "function dead() {} test('a', () => { data[key] })"],
+    ["test.skip('s', () => { eval(code) }); test('a', () => {})", "test.skip('s', () => {}); test('a', () => { eval(code) })"],
+    ["test.skip('s', () => { data[key] }); test('a', () => {})", "test.skip('s', () => {}); test('a', () => { data[key] })"],
+  ]) assert.equal(inspectTestStandardChange(before, after).allowed, false, after)
+
+  // 同一档位内挪位置（用例内套 if、跳过用例内套 if）仍放行——位置不在身份里。
+  for (const [before, after] of [
+    ["test('a', () => { eval(code) })", "test('a', () => { if (x) { eval(code) } })"],
+    ["test('a', () => { data[key] })", "test('a', () => { if (x) { data[key] } })"],
+    ["test.skip('s', () => { eval(code) })", "test.skip('s', () => { if (x) { eval(code) } })"],
+  ]) assert.equal(inspectTestStandardChange(before, after).allowed, true, after)
+
+  // 净新增与同档位复制仍然拒绝。
+  for (const [before, after] of [
+    ["test('a', () => {})", "test('a', () => { eval(code) })"],
+    ["test('a', () => {})", "test('a', () => { data[key] })"],
+    ["function dead() { eval(code) }", "function dead() { eval(code); eval(code) }"],
+  ]) assert.equal(inspectTestStandardChange(before, after).allowed, false, after)
+})
+
+test('container skip and chained describe selectors inherit skip reach into inner runners', () => {
+  // 外层是跳过容器时，内层运行器不得把档位升回 live-case。
+  for (const [before, after] of [
+    [
+      "test.skip('g', () => { test('a', () => { eval(code) }) }); test('z', () => {})",
+      "test.skip('g', () => { test('a', () => {}) }); test('z', () => { eval(code) })",
+    ],
+    [
+      "test.skip('g', () => { test('a', () => { data[key] }) }); test('z', () => {})",
+      "test.skip('g', () => { test('a', () => {}) }); test('z', () => { data[key] })",
+    ],
+    [
+      "test.skip('g', () => { test('a', () => {}) }); test('z', () => { eval(code) })",
+      "test.skip('g', () => { test('a', () => { eval(code) }) }); test('z', () => {})",
+    ],
+  ]) assert.equal(inspectTestStandardChange(before, after).allowed, false, after)
+
+  // 链式选择器（`test.describe.skip`）同样要识别为运行器，内层用例不能被当成 module 档。
+  for (const [before, after] of [
+    [
+      "test.describe.skip('g', () => { test('a', () => { eval(code) }) }); test('z', () => {})",
+      "test.describe.skip('g', () => { test('a', () => {}) }); test('z', () => { eval(code) })",
+    ],
+    [
+      "test.describe.skip('g', () => { test('a', () => { data[key] }) }); test('z', () => {})",
+      "test.describe.skip('g', () => { test('a', () => {}) }); test('z', () => { data[key] })",
+    ],
+  ]) assert.equal(inspectTestStandardChange(before, after).allowed, false, after)
+
+  // 跳过容器内挪位置仍放行。
+  assert.equal(inspectTestStandardChange(
+    "test.skip('g', () => { test('a', () => { eval(code) }) })",
+    "test.skip('g', () => { test('a', () => { if (x) { eval(code) } }) })",
+  ).allowed, true)
 })
