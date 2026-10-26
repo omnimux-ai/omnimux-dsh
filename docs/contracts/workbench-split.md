@@ -49,6 +49,15 @@ Official AppFrame is already `sidebar | conversation | details`. Workbench does 
 
 ## Occupants
 
+**Current session (the one the Workbench opens into).** Two official faces exist and they are not interchangeable:
+
+| Face | Meaning | Where |
+|---|---|---|
+| `ctx.sidebarRight.mounted` | The Session **on screen** (written only while the Conversation fills the main column) | `packages/client/ui-sidebar-right/src/client/service.ts` |
+| `ctx.sessions.list.current` | The Session **selected** in the workspace tree | `packages/client/runtime/.../sessions/manager.d.ts` |
+
+Resolution order is `mounted` → `current`; a missing value is `undefined`, never a guessed first row. The Workbench-side adapter owns this (`plugins/omnimux/src/client/workbench/host-adapter.js`), and the sidebar support package must agree: `dsh-better-sidebar` **0.19.1 reads only `current`** and therefore keeps an empty session slot whenever the host leaves it undefined — every left-rail entry then silently no-ops (#3800). Identity and installed version MUST match `scripts/sidebar-support-identity.json` (currently 0.28.0, which reads `mounted`).
+
 | Tab id | Owner | Default focus | Left row |
 |---|---|---|---|
 | `omnimux-assets:library` | `omnimux-assets` | `gui` | `[data-omnimux-assets-entry]` |

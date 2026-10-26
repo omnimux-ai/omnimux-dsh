@@ -1,12 +1,12 @@
 {
-  "runId": "b20408a3-19aa-4ba8-b2c9-5084c2ded784",
+  "runId": "63363eca-6568-4fd4-85ac-1f1ccb58f787",
   "stage": "analytics",
   "plugin": "omnimux-analytics",
-  "startedAt": "2026-10-24T15:44:46.683Z",
-  "completedAt": "2026-10-24T15:44:50.320Z",
+  "startedAt": "2026-10-26T16:27:10.308Z",
+  "completedAt": "2026-10-26T16:27:11.904Z",
   "pass": true,
-  "serverPort": 51420,
-  "cdpPort": 51424,
+  "serverPort": 63718,
+  "cdpPort": 63719,
   "assertions": [
     {
       "name": "bundle-client-code",
@@ -16,12 +16,12 @@
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 51420
+      "port": 63718
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 51424
+      "port": 63719
     },
     {
       "name": "runner-page-ready",
@@ -52,7 +52,7 @@
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/rc3-code-migration-issue-3715/.workbuddy/evidence/worktree-qa/b20408a3-19aa-4ba8-b2c9-5084c2ded784/analytics.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-workbench-session-source/.workbuddy/evidence/worktree-qa/63363eca-6568-4fd4-85ac-1f1ccb58f787/analytics.png",
     "width": 1280,
     "height": 713,
     "bytes": 37555
