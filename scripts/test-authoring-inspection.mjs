@@ -150,11 +150,21 @@ function collectRisks(code, { resolveImport } = {}) {
       const directRunner = node.callee.type === 'Identifier' && runners.has(node.callee.name)
       const namespaceRunner = node.callee.type === 'MemberExpression' && node.callee.object.type === 'Identifier' && runners.has(node.callee.object.name)
       // 运行器调用链的可达性：`test(...)` 是活用例，`test.skip(...)` / `xit(...)` / `{skip:true}` 是跳过用例。
+      // 运行器/选择器识别扫**整条非计算成员链的根标识符**，覆盖 `test.describe.skip(...)` /
+      // `test.describe(...)` 这类链式写法：只看根是谁，中间节点与末节点一并判 skip/only。
+      const chain = []
+      for (let current = node.callee; current && current.type === 'MemberExpression' && !current.computed; current = current.object) chain.push(current.property.name)
+      const chainRoot = node.callee.type === 'Identifier' ? node.callee.name
+        : node.callee.type === 'MemberExpression' ? (() => { let c = node.callee; while (c.type === 'MemberExpression' && !c.computed) c = c.object; return c.type === 'Identifier' ? c.name : null })()
+        : null
+      const chainIsRunner = chainRoot !== null && runners.has(chainRoot)
+      const chainIsSkip = chain.some(name => blocked.has(name) && name !== 'only')
+      const chainIsOnly = chain.includes('only') || chainRoot !== null && /^f/.test(chainRoot) && legacySelectors.has(chainRoot)
       const selectorName = node.callee.type === 'MemberExpression' && !node.callee.computed ? node.callee.property.name : null
       const legacySelector = node.callee.type === 'Identifier' && legacySelectors.has(node.callee.name)
-      const selectorIsSkip = legacySelector || selectorName !== null && blocked.has(selectorName) && selectorName !== 'only'
-      const selectorIsOnly = selectorName === 'only' || node.callee.type === 'Identifier' && /^f/.test(node.callee.name) && legacySelectors.has(node.callee.name)
-      if (directRunner || namespaceRunner || legacySelector) {
+      const selectorIsSkip = legacySelector || chainIsSkip || selectorName !== null && blocked.has(selectorName) && selectorName !== 'only'
+      const selectorIsOnly = chainIsOnly || selectorName === 'only' || node.callee.type === 'Identifier' && /^f/.test(node.callee.name) && legacySelectors.has(node.callee.name)
+      if (directRunner || namespaceRunner || legacySelector || chainIsRunner) {
         const first = node.arguments[0]
         const named = first?.type === 'Literal' && typeof first.value === 'string'
         const options = named ? node.arguments[1] : first
@@ -167,7 +177,10 @@ function collectRisks(code, { resolveImport } = {}) {
           return blocked.has(key) && key !== 'only' && !(property.value?.type === 'Literal' && property.value.value === false)
         })
         const optionOnly = options?.type === 'ObjectExpression' && options.properties.some(property => property.type === 'Property' && !property.computed && (property.key.name ?? property.key.value) === 'only')
-        if (selectorIsSkip || selectorIsOnly || optionSkip || optionOnly) callbackReach = 'skipped-case'
+        // 外层已经是 skipped-case 时，内层运行器**不得**把档位升回 live-case：
+        // `test.skip('g', () => { test('a', () => { eval(code) }) })` 里那个 eval 永远不跑。
+        const inheritedSkip = reach === 'skipped-case'
+        if (selectorIsSkip || selectorIsOnly || optionSkip || optionOnly || inheritedSkip) callbackReach = 'skipped-case'
         else if (callback || named) callbackReach = 'live-case'
       }
     }
@@ -355,4 +368,3 @@ export function matchOldStandardDeclarations({ declarations, filePath, changedCa
   const missing = (Array.isArray(changedCases) ? changedCases : []).filter(name => !declared.has(name))
   return { ok: missing.length === 0, missing }
 }
-
