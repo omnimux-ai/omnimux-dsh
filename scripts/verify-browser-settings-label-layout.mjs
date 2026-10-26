@@ -95,12 +95,10 @@ const MEASURE = `(() => {
       effortWidth: Math.round(effortBox?.width ?? 0),
       controlRowWidth: Math.round(controlRowBox?.width ?? 0),
       controlTop: Math.round(controlBox?.top ?? 0),
-      rowWidth: Math.round(row.getBoundingClientRect().width),
       // The real horizontal-overflow signal: a row wider than its own box, or a label
       // wider than the column it sits in. .settings-panel is overflow:hidden, so a
       // documentElement-level check can never see this.
       rowOverflow: overflows(row),
-      switchTop: Math.round(switchBox?.top ?? 0),
       switchLeft: Math.round(switchBox?.left ?? 0),
     }
   }
@@ -112,8 +110,9 @@ const MEASURE = `(() => {
   let longLabel = null
   if (probeSpan) {
     const original = probeSpan.textContent
-    // ~90 CJK characters: far wider than 45% of any panel, so the cap must bite.
-    probeSpan.textContent = '文本生成模型与推理等级'.repeat(10)
+    // Exactly 90 CJK characters: far wider than 45% of any panel, so the cap must bite.
+    const probeText = '文本生成模型与推理等级'.repeat(8) + '文本生成模型与推理等级'.slice(0, 2)
+    probeSpan.textContent = probeText
     const rowBox = probeRow.getBoundingClientRect()
     const spanBox = probeSpan.getBoundingClientRect()
     const style = getComputedStyle(probeRow)
@@ -127,6 +126,8 @@ const MEASURE = `(() => {
         const lineHeight = parseFloat(getComputedStyle(probeSpan).lineHeight)
         return lineHeight > 0 ? Math.round(spanBox.height / lineHeight) : 0
       })(),
+      // Recorded so the README's character count is checkable, not prose.
+      probeChars: probeText.length,
       rowOverflow: Math.round(probeRow.scrollWidth - probeRow.clientWidth),
     }
     probeSpan.textContent = original
@@ -232,14 +233,16 @@ async function main() {
   const tagArg = process.argv.indexOf('--tag')
   // A falsification run (pre-fix CSS) must not overwrite the pass evidence, so it writes
   // its own artifact and screenshot suffix instead.
-  const tag = tagArg === -1 ? '' : `-${String(process.argv[tagArg + 1] ?? '').replace(/[^a-z0-9-]/gi, '')}`
+  const tagValue = tagArg === -1 ? '' : String(process.argv[tagArg + 1] ?? '')
+  if (tagArg !== -1 && tagValue.trim() === '') throw new Error('--tag 需要一个非空名称')
+  const tag = tagValue.trim() === '' ? '' : `-${tagValue.replace(/[^a-z0-9-]/gi, '')}`
   const themeArg = process.argv.indexOf('--theme')
   const themes = (themeArg === -1 ? 'dark,light' : String(process.argv[themeArg + 1] ?? ''))
     .split(',').map((value) => value.trim()).filter((value) => ['auto', 'dark', 'light'].includes(value))
   if (themes.length === 0) throw new Error('--theme 需要 auto / dark / light 之一')
 
   mkdirSync(OUT, { recursive: true })
-  const report = { issue: 3796, width, themes, extensionDir: EXTENSION_DIR, chromePath: null, chromePid: null, extensionId: null, runs: [], pass: false, cleanup: null }
+  const report = { issue: 3796, width, themes, tag: tagValue.trim() || null, extensionDir: EXTENSION_DIR, chromePath: null, chromePid: null, extensionId: null, runs: [], pass: false, cleanup: null }
 
   const browser = await launchExtensionBrowser({
     extensionDir: EXTENSION_DIR,

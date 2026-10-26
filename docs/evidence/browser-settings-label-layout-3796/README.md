@@ -100,17 +100,19 @@ node scripts/verify-browser-settings-label-layout.mjs --width 420 --tag falsify
 ## 5. 45% 上限的实测（`measured.longLabel`）
 
 真实中文标签只有 4–7 字，`fit-content(45%)` 平时不参与计算，所以脚本会**临时**把一个标签
-改成 90 字再测量、随后还原。宽面板实测（`settings-label-layout-1280.json` 的 `longLabel`）：
+改成 90 个汉字再测量、随后还原（实际字数记在 `longLabel.probeChars`，可直接核对）。
+宽面板实测（`settings-label-layout-1280.json` 的 `longLabel`）：
 
 | 字段 | 值 | 含义 |
 | --- | --- | --- |
 | `rowContentWidth` | 1220px | 行的内容宽度 |
 | 45% 上限 | 549px | 1220 × 0.45 |
 | `firstTrackWidth` | 549px | 实际标签轨道宽，**正好被 45% 卡住** |
-| `labelLines` | 3 | 长标签换行而非撑满一行 |
+| `probeChars` | 90 | 探针标签的实际字数 |
+| `labelLines` | 2 | 长标签换行而非撑满一行 |
 | `rowOverflow` | 0 | 未撑破行 |
 
-若去掉上限（裸 `max-content`），轨道会随 90 字撑到远超 549px 并溢出——这正是单测里
+若去掉上限（裸 `max-content`），轨道会随这 90 字撑到远超 549px 并溢出——这正是单测里
 `doesNotMatch(/grid-template-columns:\s*max-content\s/)` 要防的回退。
 窄面板下该上限不参与（媒体查询把标签列改为整行宽），所以这条断言只在 >480px 生效。
 
@@ -133,4 +135,6 @@ node scripts/verify-browser-settings-label-layout.mjs --width 420 --tag falsify
 - `node --test scripts/verify-anti-slop.test.mjs` → pass 3 / fail 0
 - `node --test scripts/verify-governance-registry.test.mjs` → pass 4 / fail 0（新脚本已在 `scripts/governance-manifest.json` 登记为 manual）
 - `pnpm test:gates` → exit 0
-- `pnpm typecheck`：70 个既有错误，与 `origin/main` 检出同一基线，本次新增 0 个
+- `cd plugins/omnimux-browser/extension && npx tsc -p tsconfig.json --noEmit`：70 个既有错误，
+  与 `origin/main` 检出同一基线，本次新增 0 个（根 `pnpm typecheck` 只跑 `omnimux-workflow`，
+  exit 0，与本包无关）

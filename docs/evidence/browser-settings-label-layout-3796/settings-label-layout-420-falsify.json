@@ -5,9 +5,10 @@
     "dark",
     "light"
   ],
+  "tag": "falsify",
   "extensionDir": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-settings-label-layout-3796/plugins/omnimux-browser/extension/dist",
   "chromePath": "/Users/x/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
-  "chromePid": 36005,
+  "chromePid": 29877,
   "extensionId": "kehmdepjinefcbfabfcplakcdfblmkck",
   "runs": [
     {
@@ -36,9 +37,7 @@
           "effortWidth": 108,
           "controlRowWidth": 360,
           "controlTop": 319,
-          "rowWidth": 386,
           "rowOverflow": 0,
-          "switchTop": 0,
           "switchLeft": 0
         },
         "text": {
@@ -58,16 +57,15 @@
           "effortWidth": 0,
           "controlRowWidth": 360,
           "controlTop": 498,
-          "rowWidth": 386,
           "rowOverflow": 0,
-          "switchTop": 0,
           "switchLeft": 0
         },
         "longLabel": {
           "rowContentWidth": 360,
           "firstTrackWidth": 12,
           "labelWidth": 12,
-          "labelLines": 110,
+          "labelLines": 90,
+          "probeChars": 90,
           "rowOverflow": 0
         },
         "rowCounts": {
@@ -495,9 +493,7 @@
                 "effortWidth": 0,
                 "controlRowWidth": 360,
                 "controlTop": 498,
-                "rowWidth": 386,
                 "rowOverflow": 0,
-                "switchTop": 0,
                 "switchLeft": 0
               },
               {
@@ -517,9 +513,7 @@
                 "effortWidth": 0,
                 "controlRowWidth": 0,
                 "controlTop": 0,
-                "rowWidth": 386,
                 "rowOverflow": 0,
-                "switchTop": 0,
                 "switchLeft": 0
               }
             ]
@@ -577,9 +571,7 @@
           "effortWidth": 108,
           "controlRowWidth": 360,
           "controlTop": 319,
-          "rowWidth": 386,
           "rowOverflow": 0,
-          "switchTop": 0,
           "switchLeft": 0
         },
         "text": {
@@ -599,16 +591,15 @@
           "effortWidth": 0,
           "controlRowWidth": 360,
           "controlTop": 498,
-          "rowWidth": 386,
           "rowOverflow": 0,
-          "switchTop": 0,
           "switchLeft": 0
         },
         "longLabel": {
           "rowContentWidth": 360,
           "firstTrackWidth": 12,
           "labelWidth": 12,
-          "labelLines": 110,
+          "labelLines": 90,
+          "probeChars": 90,
           "rowOverflow": 0
         },
         "rowCounts": {
@@ -1036,9 +1027,7 @@
                 "effortWidth": 0,
                 "controlRowWidth": 360,
                 "controlTop": 498,
-                "rowWidth": 386,
                 "rowOverflow": 0,
-                "switchTop": 0,
                 "switchLeft": 0
               },
               {
@@ -1058,9 +1047,7 @@
                 "effortWidth": 0,
                 "controlRowWidth": 0,
                 "controlTop": 0,
-                "rowWidth": 386,
                 "rowOverflow": 0,
-                "switchTop": 0,
                 "switchLeft": 0
               }
             ]
@@ -1095,7 +1082,7 @@
   ],
   "pass": false,
   "cleanup": {
-    "profileDir": "/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ext-e2e-z0C3Mk",
+    "profileDir": "/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ext-e2e-5grA1Q",
     "closed": true
   }
 }
