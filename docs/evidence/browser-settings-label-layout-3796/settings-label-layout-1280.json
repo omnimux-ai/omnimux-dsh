@@ -7,7 +7,7 @@
   ],
   "extensionDir": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-settings-label-layout-3796/plugins/omnimux-browser/extension/dist",
   "chromePath": "/Users/x/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
-  "chromePid": 16284,
+  "chromePid": 34896,
   "extensionId": "kehmdepjinefcbfabfcplakcdfblmkck",
   "runs": [
     {
@@ -19,7 +19,6 @@
           "height": 820
         },
         "theme": "dark",
-        "docOverflow": 0,
         "chat": {
           "kind": "settings",
           "toggle": false,
@@ -40,8 +39,7 @@
           "rowWidth": 1246,
           "rowOverflow": 0,
           "switchTop": 0,
-          "switchLeft": 0,
-          "switchWidth": 0
+          "switchLeft": 0
         },
         "text": {
           "kind": "settings",
@@ -63,8 +61,14 @@
           "rowWidth": 1246,
           "rowOverflow": 0,
           "switchTop": 0,
-          "switchLeft": 0,
-          "switchWidth": 0
+          "switchLeft": 0
+        },
+        "longLabel": {
+          "rowContentWidth": 1220,
+          "firstTrackWidth": 549,
+          "labelWidth": 549,
+          "labelLines": 3,
+          "rowOverflow": 0
         },
         "rowCounts": {
           "total": 22,
@@ -474,6 +478,18 @@
           "pass": true,
           "actual": {
             "broken": []
+          }
+        },
+        {
+          "name": "超长标签受 45% 上限约束且不撑破行",
+          "pass": true,
+          "actual": {
+            "cap": 549,
+            "rowContentWidth": 1220,
+            "firstTrackWidth": 549,
+            "labelWidth": 549,
+            "labelLines": 3,
+            "rowOverflow": 0
           }
         },
         {
@@ -496,7 +512,6 @@
           "height": 820
         },
         "theme": "light",
-        "docOverflow": 0,
         "chat": {
           "kind": "settings",
           "toggle": false,
@@ -517,8 +532,7 @@
           "rowWidth": 1246,
           "rowOverflow": 0,
           "switchTop": 0,
-          "switchLeft": 0,
-          "switchWidth": 0
+          "switchLeft": 0
         },
         "text": {
           "kind": "settings",
@@ -540,8 +554,14 @@
           "rowWidth": 1246,
           "rowOverflow": 0,
           "switchTop": 0,
-          "switchLeft": 0,
-          "switchWidth": 0
+          "switchLeft": 0
+        },
+        "longLabel": {
+          "rowContentWidth": 1220,
+          "firstTrackWidth": 549,
+          "labelWidth": 549,
+          "labelLines": 3,
+          "rowOverflow": 0
         },
         "rowCounts": {
           "total": 22,
@@ -954,6 +974,18 @@
           }
         },
         {
+          "name": "超长标签受 45% 上限约束且不撑破行",
+          "pass": true,
+          "actual": {
+            "cap": 549,
+            "rowContentWidth": 1220,
+            "firstTrackWidth": 549,
+            "labelWidth": 549,
+            "labelLines": 3,
+            "rowOverflow": 0
+          }
+        },
+        {
           "name": "中继配置行标签未裁切、行未溢出",
           "pass": true,
           "actual": {
@@ -967,7 +999,7 @@
   ],
   "pass": true,
   "cleanup": {
-    "profileDir": "/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ext-e2e-Z5DSNs",
+    "profileDir": "/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ext-e2e-jCll0u",
     "closed": true
   }
 }

@@ -23,7 +23,10 @@
  * One width per invocation (the runner contract is one browser process per run; the
  * viewport width IS the emulated window size the browser launches with).
  *
- * Usage: node scripts/verify-browser-settings-label-layout.mjs [--width 420] [--theme dark,light]
+ * Usage: node scripts/verify-browser-settings-label-layout.mjs [--width 420] [--theme dark,light] [--tag falsify]
+ *
+ * `--tag falsify` writes `*-falsify` artifacts: use it when running against the pre-fix CSS
+ * so the failing report is retained as proof the assertions bite, without clobbering the pass run.
  * Exit code is non-zero when any assertion fails; a browser that cannot start writes
  * nothing rather than a fabricated artifact.
  */
@@ -99,14 +102,40 @@ const MEASURE = `(() => {
       rowOverflow: overflows(row),
       switchTop: Math.round(switchBox?.top ?? 0),
       switchLeft: Math.round(switchBox?.left ?? 0),
-      switchWidth: Math.round(switchBox?.width ?? 0),
     }
+  }
+  // Probe the label column's 45% cap with a deliberately long label. Real Chinese labels are
+  // 4-7 characters, so without this the cap is never exercised and its spec claim is unproven.
+  // The probe mutates one row's text, measures, then restores it.
+  const probeRow = pick('文本生成模型')
+  const probeSpan = probeRow?.querySelector(':scope > span')
+  let longLabel = null
+  if (probeSpan) {
+    const original = probeSpan.textContent
+    // ~90 CJK characters: far wider than 45% of any panel, so the cap must bite.
+    probeSpan.textContent = '文本生成模型与推理等级'.repeat(10)
+    const rowBox = probeRow.getBoundingClientRect()
+    const spanBox = probeSpan.getBoundingClientRect()
+    const style = getComputedStyle(probeRow)
+    const columns = style.gridTemplateColumns.split(' ').map((value) => parseFloat(value)).filter(Number.isFinite)
+    longLabel = {
+      // Content width available to the grid, minus the row's own horizontal padding.
+      rowContentWidth: Math.round(rowBox.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)),
+      firstTrackWidth: Math.round(columns[0] ?? 0),
+      labelWidth: Math.round(spanBox.width),
+      labelLines: (() => {
+        const lineHeight = parseFloat(getComputedStyle(probeSpan).lineHeight)
+        return lineHeight > 0 ? Math.round(spanBox.height / lineHeight) : 0
+      })(),
+      rowOverflow: Math.round(probeRow.scrollWidth - probeRow.clientWidth),
+    }
+    probeSpan.textContent = original
   }
   const all = groups.flatMap((group) => group.rows.map((row) => describe(row, group.kind))).filter(Boolean)
   return {
+    longLabel,
     viewport: { width: window.innerWidth, height: window.innerHeight },
     theme: document.documentElement.getAttribute('data-theme') || 'auto',
-    docOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     chat: describe(pick('对话模型'), 'settings'),
     text: describe(pick('文本生成模型'), 'settings'),
     rows: all,
@@ -138,10 +167,11 @@ function judge(measured, width) {
     const row = measured[key]
     add(`${rowLabel} 标签单行显示（不逐字竖排）`, row !== null && row.labelLines === 1, { labelLines: row?.labelLines })
     add(`${rowLabel} 标签未被裁切`, row !== null && row.labelClipped === false, { labelClipped: row?.labelClipped })
-    // The chat row holds the model selector and the effort selector side by side; together
-    // with their gap they must fill the control row instead of leaving dead space.
+    // The chat row holds the model selector and the effort selector side by side; with their
+    // 8px gap they must fill the control row exactly. `>= width - 12` would pass even with
+    // dead space, so compare against the actual gap instead.
     add(`${rowLabel} 控件铺满整行（无剩余空白）`,
-      row !== null && row.controlWidth + row.effortWidth >= row.controlRowWidth - 12,
+      row !== null && Math.abs(row.controlRowWidth - (row.controlWidth + row.effortWidth)) <= 10,
       { controlWidth: row?.controlWidth, effortWidth: row?.effortWidth, controlRowWidth: row?.controlRowWidth })
     add(narrow ? `${rowLabel} 说明句落到标签下方` : `${rowLabel} 说明句与标签同排且未压窄标签`,
       row !== null && (narrow
@@ -178,6 +208,16 @@ function judge(measured, width) {
         droppedSwitches: droppedSwitches.map((row) => ({ text: row.text.slice(0, 12), switchLeft: row.switchLeft, copyRight: row.copyRight })) })
   }
 
+  // The 45% cap only applies where the two-column grid is in use (wide panels); on narrow
+  // panels the media query makes the label span the full row, so the cap is intentionally idle.
+  if (!narrow && measured.longLabel) {
+    const probe = measured.longLabel
+    const cap = probe.rowContentWidth * 0.45
+    add('超长标签受 45% 上限约束且不撑破行',
+      probe.firstTrackWidth <= cap + 2 && probe.rowOverflow <= 1 && probe.labelLines > 1,
+      { cap: Math.round(cap), ...probe })
+  }
+
   const brokenRelay = measured.relayRows.filter((row) => row.labelClipped || row.rowOverflow > 1)
   add('中继配置行标签未裁切、行未溢出', brokenRelay.length === 0,
     { relayRows: measured.relayRows.length, brokenRelay: brokenRelay.map((row) => row.text) })
@@ -189,6 +229,10 @@ async function main() {
   const widthArg = process.argv.indexOf('--width')
   const width = Number(widthArg === -1 ? 420 : process.argv[widthArg + 1])
   if (!Number.isFinite(width) || width < 280) throw new Error('--width 需要一个 >=280 的像素宽度')
+  const tagArg = process.argv.indexOf('--tag')
+  // A falsification run (pre-fix CSS) must not overwrite the pass evidence, so it writes
+  // its own artifact and screenshot suffix instead.
+  const tag = tagArg === -1 ? '' : `-${String(process.argv[tagArg + 1] ?? '').replace(/[^a-z0-9-]/gi, '')}`
   const themeArg = process.argv.indexOf('--theme')
   const themes = (themeArg === -1 ? 'dark,light' : String(process.argv[themeArg + 1] ?? ''))
     .split(',').map((value) => value.trim()).filter((value) => ['auto', 'dark', 'light'].includes(value))
@@ -234,7 +278,7 @@ async function main() {
         })()`)
         await sleep(400)
         const measured = await page.evaluate(MEASURE)
-        const shot = join(OUT, `settings-${width}px-${theme}.png`)
+        const shot = join(OUT, `settings-${width}px-${theme}${tag}.png`)
         await page.screenshot(shot)
         // Keep the report readable: the two model rows keep full geometry (they are the
         // subject), every other row is stored as the fields the assertions actually read.
@@ -249,9 +293,9 @@ async function main() {
           measured: {
             viewport: measured.viewport,
             theme: measured.theme,
-            docOverflow: measured.docOverflow,
             chat: measured.chat,
             text: measured.text,
+            longLabel: measured.longLabel,
             rowCounts: {
               total: measured.rows.length,
               toggles: measured.toggleRows.length,
@@ -274,7 +318,7 @@ async function main() {
     report.cleanup = { profileDir: browser.profileDir, closed: true }
   }
 
-  writeFileSync(join(OUT, `settings-label-layout-${width}.json`), JSON.stringify(report, null, 2))
+  writeFileSync(join(OUT, `settings-label-layout-${width}${tag}.json`), JSON.stringify(report, null, 2))
   for (const run of report.runs) {
     const failed = run.assertions.filter((item) => !item.pass)
     console.log(`${run.width}px ${run.theme}: ${run.assertions.length - failed.length}/${run.assertions.length} pass`)
