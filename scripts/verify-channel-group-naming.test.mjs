@@ -21,7 +21,7 @@ const rules = (violations) => violations.map((v) => v.rule)
 function projection(catalog) {
   const projected = {}
   for (const kind of ['text', 'image', 'video', 'audio']) {
-    for (const row of catalog[kind] ?? []) projected[row.id] = row.channelGroups ?? []
+    for (const row of [catalog.text, catalog.image, catalog.video, catalog.audio].flat()) projected[row.id] = row.channelGroups ?? []
   }
   return projected
 }

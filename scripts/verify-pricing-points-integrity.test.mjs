@@ -23,7 +23,7 @@ function catalogRows() {
   const catalog = buildModelCatalog({ env: {}, snapshot: resolveReadOnlySnapshot().snapshot });
   const byId = new Map();
   for (const kind of ['text', 'image', 'video', 'audio']) {
-    for (const row of catalog[kind] ?? []) byId.set(row.id, row);
+    for (const row of [catalog.text, catalog.image, catalog.video, catalog.audio].flat()) byId.set(row.id, row);
   }
   return [...byId.values()];
 }
