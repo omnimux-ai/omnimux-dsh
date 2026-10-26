@@ -577,3 +577,27 @@ test('pre-existing execution constructs stop blocking while new constructs and p
   assert.equal(broken.reason, 'unsupported-or-incomplete-test-syntax')
   assert.deepEqual(broken.changedCases, [])
 })
+
+test('reachability keeps dead-code and skipped-case execution from upgrading into a live case', () => {
+  // 构造本身没变，只是**从死代码/跳过用例搬进活用例**——可达性变了，必须拒绝。
+  for (const [before, after] of [
+    ["function dead() { eval(code) } test('a', () => {})", "function dead() {} test('a', () => { eval(code) })"],
+    ["function dead() { data[key] } test('a', () => {})", "function dead() {} test('a', () => { data[key] })"],
+    ["test.skip('s', () => { eval(code) }); test('a', () => {})", "test.skip('s', () => {}); test('a', () => { eval(code) })"],
+    ["test.skip('s', () => { data[key] }); test('a', () => {})", "test.skip('s', () => {}); test('a', () => { data[key] })"],
+  ]) assert.equal(inspectTestStandardChange(before, after).allowed, false, after)
+
+  // 同一档位内挪位置（用例内套 if、跳过用例内套 if）仍放行——位置不在身份里。
+  for (const [before, after] of [
+    ["test('a', () => { eval(code) })", "test('a', () => { if (x) { eval(code) } })"],
+    ["test('a', () => { data[key] })", "test('a', () => { if (x) { data[key] } })"],
+    ["test.skip('s', () => { eval(code) })", "test.skip('s', () => { if (x) { eval(code) } })"],
+  ]) assert.equal(inspectTestStandardChange(before, after).allowed, true, after)
+
+  // 净新增与同档位复制仍然拒绝。
+  for (const [before, after] of [
+    ["test('a', () => {})", "test('a', () => { eval(code) })"],
+    ["test('a', () => {})", "test('a', () => { data[key] })"],
+    ["function dead() { eval(code) }", "function dead() { eval(code); eval(code) }"],
+  ]) assert.equal(inspectTestStandardChange(before, after).allowed, false, after)
+})

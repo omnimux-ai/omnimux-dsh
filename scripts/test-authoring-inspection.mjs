@@ -97,12 +97,23 @@ function collectRisks(code, { resolveImport } = {}) {
       }
     }
   }
-  function inspect(node, parent = null, contexts = []) {
+  function inspect(node, parent = null, contexts = [], reach = 'module') {
     if (!node || typeof node !== 'object' || !node.type) return
     const context = contextOf(node)
     const nextContexts = context ? [...contexts, { node: context }] : contexts
+    // 可达性：风险所在的构造到底跑不跑。只分三档，粗到不会因维护动作漂移，
+    // 又足以拦住「把死代码 / 跳过用例里的执行塞进活用例」这种真升级。
+    //   module        —— 用例之外（含普通函数里，那仍属于未证明被执行的代码）
+    //   skipped-case  —— 跳过/聚焦用例的回调里（test.skip / test.only / xit / {skip:true} …）
+    //   live-case     —— 正常用例的回调里
+    // 不进身份的仍然是：参数序号、包裹层数、回调/分支槽位、文本、数据与同形兄弟序号。
+    let callbackReach = null
     function risk(reason) {
-      const anchor = (parent?.type === 'CallExpression' || parent?.type === 'NewExpression') && parent.callee === node ? parent : node
+      // 锚点上提到外层调用只在「该节点就是被调用者」时成立（`f(...)` 里的 `f`、`new C(...)` 里的 `C`）。
+      // 但**选择器类风险**（`test.skip` / `xit` / `{only:true}`）锚定的是选择器本身，不该把整个用例
+      // 回调正文吃进指纹——否则用例正文一动就被判成「新增风险」，而选择器语义根本没变。
+      const selectorRisk = reason === 'test-execution-selector-needs-review' || reason === 'test-execution-option-needs-review'
+      const anchor = !selectorRisk && (parent?.type === 'CallExpression' || parent?.type === 'NewExpression') && parent.callee === node ? parent : node
       const names = new Set()
       function identifiers(value) {
         if (!value || typeof value !== 'object') return
@@ -110,14 +121,14 @@ function collectRisks(code, { resolveImport } = {}) {
         for (const child of Object.values(value)) if (Array.isArray(child)) child.forEach(identifiers); else identifiers(child)
       }
       identifiers({ node: anchor, contexts: nextContexts })
-      // 构造身份 = 自身规范化节点 + 引用的 import 绑定，**不含位置上下文**：把同一处既有构造
-      // 在文件里挪个位置（大改写的常见情况）不该让它看起来像「新增风险」——多重集计数仍能
-      // 拦住真正的净新增（数量超出的同形构造）。绑定扫描仍用未投影的上下文，避免
+      // 构造身份 = 自身规范化节点 + 引用的 import 绑定 + 可达性档位，**不含位置上下文**：
+      // 把同一处既有构造在文件里挪个位置（大改写的常见情况）不该让它看起来像「新增风险」——
+      // 多重集计数仍能拦住真正的净新增（数量超出的同形构造），可达性档位仍能拦住
+      // 「死代码/跳过用例里的执行被搬进活用例」。绑定扫描仍用未投影的上下文，避免
       // `catch ({ local = safeApi })` 这类控制流头部的引用漏掉。
       const detail = canonical(anchor)
       const bindings = [...names].filter(name => imports.has(name)).sort().map(name => imports.get(name))
-      risks.push({ reason, fingerprint: JSON.stringify(canonical({ reason, detail, bindings })) })
-      if (process.env.DBG_RISK) risks[risks.length-1].detail = detail
+      risks.push({ reason, fingerprint: JSON.stringify(canonical({ reason, detail, bindings, reach })) })
     }
     if (node.type === 'MemberExpression') {
       const property = node.computed ? node.property.type === 'Literal' ? node.property.value : null : node.property.name
@@ -138,12 +149,26 @@ function collectRisks(code, { resolveImport } = {}) {
       if (node.callee.type === 'Identifier' && legacySelectors.has(node.callee.name)) risk('test-execution-selector-needs-review')
       const directRunner = node.callee.type === 'Identifier' && runners.has(node.callee.name)
       const namespaceRunner = node.callee.type === 'MemberExpression' && node.callee.object.type === 'Identifier' && runners.has(node.callee.object.name)
-      if (directRunner || namespaceRunner) {
+      // 运行器调用链的可达性：`test(...)` 是活用例，`test.skip(...)` / `xit(...)` / `{skip:true}` 是跳过用例。
+      const selectorName = node.callee.type === 'MemberExpression' && !node.callee.computed ? node.callee.property.name : null
+      const legacySelector = node.callee.type === 'Identifier' && legacySelectors.has(node.callee.name)
+      const selectorIsSkip = legacySelector || selectorName !== null && blocked.has(selectorName) && selectorName !== 'only'
+      const selectorIsOnly = selectorName === 'only' || node.callee.type === 'Identifier' && /^f/.test(node.callee.name) && legacySelectors.has(node.callee.name)
+      if (directRunner || namespaceRunner || legacySelector) {
         const first = node.arguments[0]
         const named = first?.type === 'Literal' && typeof first.value === 'string'
         const options = named ? node.arguments[1] : first
         const callback = options && functions.has(options.type)
         if (options && !callback && (options.type !== 'ObjectExpression' || options.properties.some(property => property.type !== 'Property'))) risk('dynamic-test-options-needs-review')
+        // 用例级 skip/only 选项对象（`test('x', { skip: true }, fn)`）。
+        const optionSkip = options?.type === 'ObjectExpression' && options.properties.some(property => {
+          if (property.type !== 'Property' || property.computed) return false
+          const key = property.key.name ?? property.key.value
+          return blocked.has(key) && key !== 'only' && !(property.value?.type === 'Literal' && property.value.value === false)
+        })
+        const optionOnly = options?.type === 'ObjectExpression' && options.properties.some(property => property.type === 'Property' && !property.computed && (property.key.name ?? property.key.value) === 'only')
+        if (selectorIsSkip || selectorIsOnly || optionSkip || optionOnly) callbackReach = 'skipped-case'
+        else if (callback || named) callbackReach = 'live-case'
       }
     }
     if (node.type === 'ImportDeclaration' && /^(?:node:)?(?:vm|child_process|worker_threads|module)$/.test(node.source.value)) risk('runtime-code-execution-import-needs-review')
@@ -163,11 +188,14 @@ function collectRisks(code, { resolveImport } = {}) {
     if (node.type === 'Identifier' && publicBindings.has(node.name) && !publicImports.has(parent) && !(parent?.type === 'CallExpression' && parent.callee === node && !parent.optional)) risk('public-plugin-binding-escape-needs-review')
     for (const [key, value] of Object.entries(node)) {
       const branch = ['IfStatement', 'ConditionalExpression', 'LogicalExpression', 'TryStatement', 'TaggedTemplateExpression', 'MemberExpression', 'ChainExpression', 'SequenceExpression', 'ArrayExpression', 'ArrayPattern', 'ExportNamedDeclaration', 'ExportDefaultDeclaration'].includes(node.type) ? [...nextContexts, { edge: key }] : nextContexts
+      // 可达性**继承**当前档位；只有运行器回调（`test(...)` 的函数实参）才改写成该用例的档位。
+      // 这样用例体内的构造保留 `live-case`，用例外的普通函数保持 `module`，嵌套函数不重置。
       if (Array.isArray(value)) for (const [index, child] of value.entries()) {
         const argumentsContext = ['arguments', 'elements', 'expressions', 'cases'].includes(key) ? [...branch, { slot: key, index }] : branch
-        inspect(child, node, argumentsContext)
+        const childIsCallback = callbackReach && key === 'arguments' && functions.has(child?.type)
+        inspect(child, node, argumentsContext, childIsCallback ? callbackReach : reach)
       }
-      else if (value && typeof value === 'object') inspect(value, node, branch)
+      else if (value && typeof value === 'object') inspect(value, node, branch, reach)
     }
   }
   inspect(ast)
@@ -328,4 +356,3 @@ export function matchOldStandardDeclarations({ declarations, filePath, changedCa
   return { ok: missing.length === 0, missing }
 }
 
-export function __collectRisks(code) { return collectRisks(code, {}) }
