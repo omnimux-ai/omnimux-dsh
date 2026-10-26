@@ -23,9 +23,12 @@ describe('设置面板行标签布局（#3796）', () => {
   it('标签列按文字取宽，说明句列可收缩', () => {
     const rowRule = rule(/\.settings label\s*\{([^}]*)\}/)
 
-    assert.match(rowRule, /(?:^|\n)\s*grid-template-columns:\s*max-content\s+minmax\(0,\s*1fr\);/)
+    // 标签列按内容取宽并带 45% 上限：无限 `max-content` 会被超长标签撑出容器。
+    assert.match(rowRule, /(?:^|\n)\s*grid-template-columns:\s*fit-content\(45%\)\s+minmax\(0,\s*1fr\);/)
     // 旧的 `1fr auto` 正是竖排成因：说明句撑满、标签列被压扁，不得回退。
     assert.doesNotMatch(rowRule, /(?:^|\n)\s*grid-template-columns:\s*1fr\s+auto;/)
+    // 裸 `max-content` 无上限，同样会让长标签溢出后被父容器静默裁掉。
+    assert.doesNotMatch(rowRule, /grid-template-columns:\s*max-content\s/)
   })
 
   it('说明句可收缩并可断词，不独占整行宽度', () => {

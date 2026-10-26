@@ -17,13 +17,13 @@
  * the control → no horizontal overflow → no other settings row is clipped.
  *
  * Artifacts land in `docs/evidence/browser-settings-label-layout-3796/`:
- *   - settings-<width>px.png       (the settings view at that width)
+ *   - settings-<width>px-<theme>.png       (the settings view at that width and theme)
  *   - settings-label-layout-<width>.json   (per-assertion pass/actual)
  *
  * One width per invocation (the runner contract is one browser process per run; the
  * viewport width IS the emulated window size the browser launches with).
  *
- * Usage: node scripts/verify-browser-settings-label-layout.mjs [--width 420]
+ * Usage: node scripts/verify-browser-settings-label-layout.mjs [--width 420] [--theme dark,light]
  * Exit code is non-zero when any assertion fails; a browser that cannot start writes
  * nothing rather than a fabricated artifact.
  */
@@ -39,49 +39,80 @@ const EXTENSION_DIR = join(ROOT, 'plugins/omnimux-browser/extension/dist')
 const NARROW_MAX = 480
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms))
 
-/** Measure every settings row from inside the real panel page. */
+/**
+ * Measure every settings row from inside the real panel page.
+ *
+ * Covers `.settings-panel label` (the model rows and the plain input/select rows) AND
+ * `.setting-toggle` rows AND the relay-profile rows, because the narrow-panel media query
+ * deliberately excludes toggles — an assertion that filtered them out could not prove the
+ * exclusion is harmless. Clipping is measured two ways: the label's own scrollWidth and the
+ * row's, so a label overflowing into `.settings-panel { overflow: hidden }` is still caught.
+ */
 const MEASURE = `(() => {
-  const rows = Array.from(document.querySelectorAll('.settings-panel label'))
-  const pick = (label) => rows.find((row) => (row.querySelector(':scope > span')?.textContent || '').trim() === label)
+  const groups = [
+    { kind: 'settings', rows: Array.from(document.querySelectorAll('.settings-panel label')) },
+    { kind: 'relay', rows: Array.from(document.querySelectorAll('.relay-config label')) },
+  ]
+  const pick = (label) => groups[0].rows.find((row) => (row.querySelector(':scope > span')?.textContent || '').trim() === label)
   const box = (node) => node?.getBoundingClientRect()
-  const describe = (row) => {
+  const overflows = (node) => node ? Math.round(node.scrollWidth - node.clientWidth) : 0
+  const describe = (row, kind) => {
     if (!row) return null
-    const span = row.querySelector(':scope > span')
-    const small = row.querySelector(':scope > small')
+    const toggle = row.classList.contains('setting-toggle')
+    // Toggle rows carry their text inside .setting-toggle-copy; plain rows use direct children.
+    const span = toggle ? row.querySelector('.setting-toggle-copy > strong') : row.querySelector(':scope > span')
+    const small = toggle ? row.querySelector('.setting-toggle-copy > small') : row.querySelector(':scope > small')
     const controlRow = row.querySelector('.model-selector-row')
     const control = row.querySelector('.model-select-control')
     const effort = row.querySelector('.effort-select-control')
+    const switchControl = row.querySelector('.setting-toggle-control')
     const spanBox = box(span)
     const smallBox = box(small)
     const controlRowBox = box(controlRow)
     const controlBox = box(control)
     const effortBox = box(effort)
+    const switchBox = box(switchControl)
     const lineHeight = span ? parseFloat(getComputedStyle(span).lineHeight) : 0
     return {
+      kind,
+      toggle,
+      // Relay profiles lay their own labels out as a flex column, so their switches sit
+      // under the copy by design — that is pre-existing, not this media query's doing.
+      nestedInRelay: Boolean(row.closest('.relay-profile')),
       text: span?.textContent?.trim() ?? '',
       labelLines: lineHeight > 0 ? Math.round((spanBox?.height ?? 0) / lineHeight) : 0,
-      labelClipped: span ? span.scrollWidth > Math.ceil(spanBox.width) + 1 : false,
+      labelWidth: Math.round(spanBox?.width ?? 0),
+      labelClipped: span ? overflows(span) > 1 : false,
       labelTop: Math.round(spanBox?.top ?? 0),
       labelHeight: Math.round(spanBox?.height ?? 0),
       smallTop: Math.round(smallBox?.top ?? 0),
       smallBottom: Math.round((smallBox?.top ?? 0) + (smallBox?.height ?? 0)),
+      copyRight: Math.round(Math.max(spanBox?.right ?? 0, smallBox?.right ?? 0)),
       controlWidth: Math.round(controlBox?.width ?? 0),
       effortWidth: Math.round(effortBox?.width ?? 0),
       controlRowWidth: Math.round(controlRowBox?.width ?? 0),
       controlTop: Math.round(controlBox?.top ?? 0),
       rowWidth: Math.round(row.getBoundingClientRect().width),
+      // The real horizontal-overflow signal: a row wider than its own box, or a label
+      // wider than the column it sits in. .settings-panel is overflow:hidden, so a
+      // documentElement-level check can never see this.
+      rowOverflow: overflows(row),
+      switchTop: Math.round(switchBox?.top ?? 0),
+      switchLeft: Math.round(switchBox?.left ?? 0),
+      switchWidth: Math.round(switchBox?.width ?? 0),
     }
   }
+  const all = groups.flatMap((group) => group.rows.map((row) => describe(row, group.kind))).filter(Boolean)
   return {
     viewport: { width: window.innerWidth, height: window.innerHeight },
+    theme: document.documentElement.getAttribute('data-theme') || 'auto',
     docOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    chat: describe(pick('对话模型')),
-    text: describe(pick('文本生成模型')),
-    otherRows: rows
-      .filter((row) => !row.classList.contains('setting-toggle'))
-      .map((row) => describe(row))
-      .filter(Boolean)
-      .map((item) => ({ text: item.text, labelLines: item.labelLines, labelClipped: item.labelClipped })),
+    chat: describe(pick('对话模型'), 'settings'),
+    text: describe(pick('文本生成模型'), 'settings'),
+    rows: all,
+    otherRows: all.filter((row) => row.kind === 'settings' && !row.toggle),
+    toggleRows: all.filter((row) => row.toggle),
+    relayRows: all.filter((row) => row.kind === 'relay'),
   }
 })()`
 
@@ -121,9 +152,35 @@ function judge(measured, width) {
       { smallBottom: row?.smallBottom, controlTop: row?.controlTop })
   }
 
-  add('页面无横向溢出', measured.docOverflow <= 0, { docOverflow: measured.docOverflow })
+  // `.settings` scrolls vertically and `.settings-panel` is overflow:hidden, so a
+  // documentElement-level check can never see a row that overflows its own box. Measure
+  // each row's own scrollWidth instead — that is what the clipping would actually hide.
+  const overflowing = measured.rows.filter((row) => row.rowOverflow > 1)
+  add('所有设置行都没有超出自身宽度（未被 overflow:hidden 裁掉）', overflowing.length === 0, { overflowing })
+
   const broken = measured.otherRows.filter((row) => row.labelLines > 1 || row.labelClipped)
   add('其它设置行标签同样单行未裁切', broken.length === 0, { broken })
+
+  // The narrow-panel rule excludes toggles on purpose; prove the exclusion is harmless
+  // rather than merely asserting the rule's own text.
+  if (narrow) {
+    const brokenToggles = measured.toggleRows.filter((row) => row.labelClipped || row.rowOverflow > 1)
+    add('开关行在窄面板下未被压坏（标签未裁切、行未溢出）', brokenToggles.length === 0,
+      { brokenToggles: brokenToggles.map((row) => ({ text: row.text.slice(0, 12), labelClipped: row.labelClipped, rowOverflow: row.rowOverflow })) })
+    // A toggle must stay BESIDE its text. If the single-column rule had swallowed the row,
+    // the switch would wrap under the copy block and start at the row's left edge, so
+    // comparing horizontal positions proves the exclusion — vertical centering does not.
+    const droppedSwitches = measured.toggleRows
+      .filter((row) => !row.nestedInRelay)
+      .filter((row) => row.switchLeft < row.copyRight - 1)
+    add('开关行的开关仍在文案右侧（未被单列规则挤到下一行）', droppedSwitches.length === 0,
+      { checked: measured.toggleRows.filter((row) => !row.nestedInRelay).length,
+        droppedSwitches: droppedSwitches.map((row) => ({ text: row.text.slice(0, 12), switchLeft: row.switchLeft, copyRight: row.copyRight })) })
+  }
+
+  const brokenRelay = measured.relayRows.filter((row) => row.labelClipped || row.rowOverflow > 1)
+  add('中继配置行标签未裁切、行未溢出', brokenRelay.length === 0,
+    { relayRows: measured.relayRows.length, brokenRelay: brokenRelay.map((row) => row.text) })
 
   return assertions
 }
@@ -132,9 +189,13 @@ async function main() {
   const widthArg = process.argv.indexOf('--width')
   const width = Number(widthArg === -1 ? 420 : process.argv[widthArg + 1])
   if (!Number.isFinite(width) || width < 280) throw new Error('--width 需要一个 >=280 的像素宽度')
+  const themeArg = process.argv.indexOf('--theme')
+  const themes = (themeArg === -1 ? 'dark,light' : String(process.argv[themeArg + 1] ?? ''))
+    .split(',').map((value) => value.trim()).filter((value) => ['auto', 'dark', 'light'].includes(value))
+  if (themes.length === 0) throw new Error('--theme 需要 auto / dark / light 之一')
 
   mkdirSync(OUT, { recursive: true })
-  const report = { issue: 3796, width, extensionDir: EXTENSION_DIR, chromePath: null, chromePid: null, extensionId: null, runs: [], pass: false, cleanup: null }
+  const report = { issue: 3796, width, themes, extensionDir: EXTENSION_DIR, chromePath: null, chromePid: null, extensionId: null, runs: [], pass: false, cleanup: null }
 
   const browser = await launchExtensionBrowser({
     extensionDir: EXTENSION_DIR,
@@ -154,15 +215,58 @@ async function main() {
     }
     report.extensionId = worker.extensionId
 
-    const page = await browser.newPage(`chrome-extension://${worker.extensionId}/panel/index.html`)
-    try {
-      await openSettings(page)
-      const measured = await page.evaluate(MEASURE)
-      const shot = join(OUT, `settings-${width}px.png`)
-      await page.screenshot(shot)
-      report.runs.push({ width, measured, assertions: judge(measured, width), screenshot: shot })
-    } finally {
-      await page.close()
+    for (const theme of themes) {
+      const page = await browser.newPage(`chrome-extension://${worker.extensionId}/panel/index.html`)
+      try {
+        await openSettings(page)
+        // The panel persists the theme under `omnimux_theme_mode`; set it and reload so the
+        // run measures the palette the user actually gets, not just the default one.
+        if (theme !== 'auto') {
+          await page.evaluate(`localStorage.setItem('omnimux_theme_mode', ${JSON.stringify(theme)})`)
+          await page.goto(`chrome-extension://${worker.extensionId}/panel/index.html`)
+          await openSettings(page)
+        }
+        // Add one relay profile so the relay rows (which have no description column) are
+        // part of the measured set instead of being silently absent.
+        await page.evaluate(`(() => {
+          const add = document.querySelector('.relay-heading button')
+          if (add) add.click()
+        })()`)
+        await sleep(400)
+        const measured = await page.evaluate(MEASURE)
+        const shot = join(OUT, `settings-${width}px-${theme}.png`)
+        await page.screenshot(shot)
+        // Keep the report readable: the two model rows keep full geometry (they are the
+        // subject), every other row is stored as the fields the assertions actually read.
+        const compact = (row) => ({
+          text: row.text, kind: row.kind, toggle: row.toggle,
+          labelLines: row.labelLines, labelWidth: row.labelWidth, labelClipped: row.labelClipped,
+          rowOverflow: row.rowOverflow,
+        })
+        report.runs.push({
+          width,
+          theme,
+          measured: {
+            viewport: measured.viewport,
+            theme: measured.theme,
+            docOverflow: measured.docOverflow,
+            chat: measured.chat,
+            text: measured.text,
+            rowCounts: {
+              total: measured.rows.length,
+              toggles: measured.toggleRows.length,
+              relay: measured.relayRows.length,
+              other: measured.otherRows.length,
+            },
+            rows: measured.rows.map(compact),
+            toggleRows: measured.toggleRows.map((row) => ({ ...compact(row), switchLeft: row.switchLeft, copyRight: row.copyRight, nestedInRelay: row.nestedInRelay })),
+          },
+          assertions: judge(measured, width),
+          screenshot: shot,
+        })
+      } finally {
+        await page.close()
+      }
     }
     report.pass = report.runs.every((run) => run.assertions.every((item) => item.pass))
   } finally {
@@ -173,7 +277,7 @@ async function main() {
   writeFileSync(join(OUT, `settings-label-layout-${width}.json`), JSON.stringify(report, null, 2))
   for (const run of report.runs) {
     const failed = run.assertions.filter((item) => !item.pass)
-    console.log(`${run.width}px: ${run.assertions.length - failed.length}/${run.assertions.length} pass`)
+    console.log(`${run.width}px ${run.theme}: ${run.assertions.length - failed.length}/${run.assertions.length} pass`)
     for (const item of failed) console.log(`  FAIL ${item.name} ${JSON.stringify(item.actual)}`)
   }
   if (!report.pass) process.exitCode = 1

@@ -1,97 +1,373 @@
 {
   "issue": 3796,
   "width": 280,
+  "themes": [
+    "dark",
+    "light"
+  ],
   "extensionDir": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-settings-label-layout-3796/plugins/omnimux-browser/extension/dist",
   "chromePath": "/Users/x/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
-  "chromePid": 25348,
+  "chromePid": 14717,
   "extensionId": "kehmdepjinefcbfabfcplakcdfblmkck",
   "runs": [
     {
       "width": 280,
+      "theme": "dark",
       "measured": {
         "viewport": {
           "width": 280,
           "height": 820
         },
+        "theme": "dark",
         "docOverflow": 0,
         "chat": {
+          "kind": "settings",
+          "toggle": false,
+          "nestedInRelay": false,
           "text": "对话模型",
           "labelLines": 1,
+          "labelWidth": 220,
           "labelClipped": false,
           "labelTop": 318,
           "labelHeight": 16,
           "smallTop": 337,
           "smallBottom": 350,
+          "copyRight": 250,
           "controlWidth": 104,
           "effortWidth": 108,
           "controlRowWidth": 220,
           "controlTop": 367,
-          "rowWidth": 246
+          "rowWidth": 246,
+          "rowOverflow": 0,
+          "switchTop": 0,
+          "switchLeft": 0,
+          "switchWidth": 0
         },
         "text": {
+          "kind": "settings",
+          "toggle": false,
+          "nestedInRelay": false,
           "text": "文本生成模型",
           "labelLines": 1,
+          "labelWidth": 220,
           "labelClipped": false,
           "labelTop": 432,
           "labelHeight": 16,
           "smallTop": 452,
           "smallBottom": 478,
+          "copyRight": 250,
           "controlWidth": 220,
           "effortWidth": 0,
           "controlRowWidth": 220,
           "controlTop": 495,
-          "rowWidth": 246
+          "rowWidth": 246,
+          "rowOverflow": 0,
+          "switchTop": 0,
+          "switchLeft": 0,
+          "switchWidth": 0
         },
-        "otherRows": [
+        "rowCounts": {
+          "total": 22,
+          "toggles": 8,
+          "relay": 5,
+          "other": 10
+        },
+        "rows": [
           {
             "text": "连接实例",
+            "kind": "settings",
+            "toggle": false,
             "labelLines": 1,
-            "labelClipped": false
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
           },
           {
             "text": "默认工作区",
+            "kind": "settings",
+            "toggle": false,
             "labelLines": 1,
-            "labelClipped": false
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
           },
           {
             "text": "对话模型",
+            "kind": "settings",
+            "toggle": false,
             "labelLines": 1,
-            "labelClipped": false
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
           },
           {
             "text": "文本生成模型",
+            "kind": "settings",
+            "toggle": false,
             "labelLines": 1,
-            "labelClipped": false
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
           },
           {
             "text": "桥地址",
+            "kind": "settings",
+            "toggle": false,
             "labelLines": 1,
-            "labelClipped": false
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
           },
           {
             "text": "鉴权 Token",
+            "kind": "settings",
+            "toggle": false,
             "labelLines": 1,
-            "labelClipped": false
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
           },
           {
             "text": "页面内容共享",
+            "kind": "settings",
+            "toggle": false,
             "labelLines": 1,
-            "labelClipped": false
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
           },
           {
             "text": "界面主题",
+            "kind": "settings",
+            "toggle": false,
             "labelLines": 1,
-            "labelClipped": false
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
           },
           {
             "text": "界面语言",
+            "kind": "settings",
+            "toggle": false,
             "labelLines": 1,
-            "labelClipped": false
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
           },
           {
             "text": "界面字号大小",
+            "kind": "settings",
+            "toggle": false,
             "labelLines": 1,
-            "labelClipped": false
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "启用悬浮球",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "悬停在图片上时显示",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "显示 X 爆速角标",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "显示「生成海报」入口",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "允许模型完全控制浏览器",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "浏览器审批通知",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "续接当前页面会话",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "档案名称",
+            "kind": "relay",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 170,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "接口格式",
+            "kind": "relay",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 170,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "中转地址 Base URL",
+            "kind": "relay",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 170,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "令牌 Token",
+            "kind": "relay",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 170,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "设为默认模型",
+            "kind": "relay",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 162,
+            "labelClipped": false,
+            "rowOverflow": 0
+          }
+        ],
+        "toggleRows": [
+          {
+            "text": "启用悬浮球",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 214,
+            "copyRight": 202,
+            "nestedInRelay": false
+          },
+          {
+            "text": "悬停在图片上时显示",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 214,
+            "copyRight": 202,
+            "nestedInRelay": false
+          },
+          {
+            "text": "显示 X 爆速角标",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 214,
+            "copyRight": 202,
+            "nestedInRelay": false
+          },
+          {
+            "text": "显示「生成海报」入口",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 214,
+            "copyRight": 202,
+            "nestedInRelay": false
+          },
+          {
+            "text": "允许模型完全控制浏览器",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 214,
+            "copyRight": 202,
+            "nestedInRelay": false
+          },
+          {
+            "text": "浏览器审批通知",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 214,
+            "copyRight": 202,
+            "nestedInRelay": false
+          },
+          {
+            "text": "续接当前页面会话",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 214,
+            "copyRight": 202,
+            "nestedInRelay": false
+          },
+          {
+            "text": "设为默认模型",
+            "kind": "relay",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 162,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 122,
+            "copyRight": 221,
+            "nestedInRelay": true
           }
         ]
       },
@@ -187,10 +463,10 @@
           }
         },
         {
-          "name": "页面无横向溢出",
+          "name": "所有设置行都没有超出自身宽度（未被 overflow:hidden 裁掉）",
           "pass": true,
           "actual": {
-            "docOverflow": 0
+            "overflowing": []
           }
         },
         {
@@ -199,14 +475,529 @@
           "actual": {
             "broken": []
           }
+        },
+        {
+          "name": "开关行在窄面板下未被压坏（标签未裁切、行未溢出）",
+          "pass": true,
+          "actual": {
+            "brokenToggles": []
+          }
+        },
+        {
+          "name": "开关行的开关仍在文案右侧（未被单列规则挤到下一行）",
+          "pass": true,
+          "actual": {
+            "checked": 7,
+            "droppedSwitches": []
+          }
+        },
+        {
+          "name": "中继配置行标签未裁切、行未溢出",
+          "pass": true,
+          "actual": {
+            "relayRows": 5,
+            "brokenRelay": []
+          }
         }
       ],
-      "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-settings-label-layout-3796/docs/evidence/browser-settings-label-layout-3796/settings-280px.png"
+      "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-settings-label-layout-3796/docs/evidence/browser-settings-label-layout-3796/settings-280px-dark.png"
+    },
+    {
+      "width": 280,
+      "theme": "light",
+      "measured": {
+        "viewport": {
+          "width": 280,
+          "height": 820
+        },
+        "theme": "light",
+        "docOverflow": 0,
+        "chat": {
+          "kind": "settings",
+          "toggle": false,
+          "nestedInRelay": false,
+          "text": "对话模型",
+          "labelLines": 1,
+          "labelWidth": 220,
+          "labelClipped": false,
+          "labelTop": 318,
+          "labelHeight": 16,
+          "smallTop": 337,
+          "smallBottom": 350,
+          "copyRight": 250,
+          "controlWidth": 104,
+          "effortWidth": 108,
+          "controlRowWidth": 220,
+          "controlTop": 367,
+          "rowWidth": 246,
+          "rowOverflow": 0,
+          "switchTop": 0,
+          "switchLeft": 0,
+          "switchWidth": 0
+        },
+        "text": {
+          "kind": "settings",
+          "toggle": false,
+          "nestedInRelay": false,
+          "text": "文本生成模型",
+          "labelLines": 1,
+          "labelWidth": 220,
+          "labelClipped": false,
+          "labelTop": 432,
+          "labelHeight": 16,
+          "smallTop": 452,
+          "smallBottom": 478,
+          "copyRight": 250,
+          "controlWidth": 220,
+          "effortWidth": 0,
+          "controlRowWidth": 220,
+          "controlTop": 495,
+          "rowWidth": 246,
+          "rowOverflow": 0,
+          "switchTop": 0,
+          "switchLeft": 0,
+          "switchWidth": 0
+        },
+        "rowCounts": {
+          "total": 22,
+          "toggles": 8,
+          "relay": 5,
+          "other": 10
+        },
+        "rows": [
+          {
+            "text": "连接实例",
+            "kind": "settings",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "默认工作区",
+            "kind": "settings",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "对话模型",
+            "kind": "settings",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "文本生成模型",
+            "kind": "settings",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "桥地址",
+            "kind": "settings",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "鉴权 Token",
+            "kind": "settings",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "页面内容共享",
+            "kind": "settings",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "界面主题",
+            "kind": "settings",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "界面语言",
+            "kind": "settings",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "界面字号大小",
+            "kind": "settings",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 220,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "启用悬浮球",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "悬停在图片上时显示",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "显示 X 爆速角标",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "显示「生成海报」入口",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "允许模型完全控制浏览器",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "浏览器审批通知",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "续接当前页面会话",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "档案名称",
+            "kind": "relay",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 170,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "接口格式",
+            "kind": "relay",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 170,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "中转地址 Base URL",
+            "kind": "relay",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 170,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "令牌 Token",
+            "kind": "relay",
+            "toggle": false,
+            "labelLines": 1,
+            "labelWidth": 170,
+            "labelClipped": false,
+            "rowOverflow": 0
+          },
+          {
+            "text": "设为默认模型",
+            "kind": "relay",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 162,
+            "labelClipped": false,
+            "rowOverflow": 0
+          }
+        ],
+        "toggleRows": [
+          {
+            "text": "启用悬浮球",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 214,
+            "copyRight": 202,
+            "nestedInRelay": false
+          },
+          {
+            "text": "悬停在图片上时显示",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 214,
+            "copyRight": 202,
+            "nestedInRelay": false
+          },
+          {
+            "text": "显示 X 爆速角标",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 214,
+            "copyRight": 202,
+            "nestedInRelay": false
+          },
+          {
+            "text": "显示「生成海报」入口",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 214,
+            "copyRight": 202,
+            "nestedInRelay": false
+          },
+          {
+            "text": "允许模型完全控制浏览器",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 214,
+            "copyRight": 202,
+            "nestedInRelay": false
+          },
+          {
+            "text": "浏览器审批通知",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 214,
+            "copyRight": 202,
+            "nestedInRelay": false
+          },
+          {
+            "text": "续接当前页面会话",
+            "kind": "settings",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 172,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 214,
+            "copyRight": 202,
+            "nestedInRelay": false
+          },
+          {
+            "text": "设为默认模型",
+            "kind": "relay",
+            "toggle": true,
+            "labelLines": 1,
+            "labelWidth": 162,
+            "labelClipped": false,
+            "rowOverflow": 0,
+            "switchLeft": 122,
+            "copyRight": 221,
+            "nestedInRelay": true
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "两行模型配置同时存在",
+          "pass": true,
+          "actual": {
+            "chat": "对话模型",
+            "text": "文本生成模型"
+          }
+        },
+        {
+          "name": "对话模型 标签单行显示（不逐字竖排）",
+          "pass": true,
+          "actual": {
+            "labelLines": 1
+          }
+        },
+        {
+          "name": "对话模型 标签未被裁切",
+          "pass": true,
+          "actual": {
+            "labelClipped": false
+          }
+        },
+        {
+          "name": "对话模型 控件铺满整行（无剩余空白）",
+          "pass": true,
+          "actual": {
+            "controlWidth": 104,
+            "effortWidth": 108,
+            "controlRowWidth": 220
+          }
+        },
+        {
+          "name": "对话模型 说明句落到标签下方",
+          "pass": true,
+          "actual": {
+            "narrow": true,
+            "labelTop": 318,
+            "labelHeight": 16,
+            "smallTop": 337
+          }
+        },
+        {
+          "name": "对话模型 说明句不压住控件",
+          "pass": true,
+          "actual": {
+            "smallBottom": 350,
+            "controlTop": 367
+          }
+        },
+        {
+          "name": "文本生成模型 标签单行显示（不逐字竖排）",
+          "pass": true,
+          "actual": {
+            "labelLines": 1
+          }
+        },
+        {
+          "name": "文本生成模型 标签未被裁切",
+          "pass": true,
+          "actual": {
+            "labelClipped": false
+          }
+        },
+        {
+          "name": "文本生成模型 控件铺满整行（无剩余空白）",
+          "pass": true,
+          "actual": {
+            "controlWidth": 220,
+            "effortWidth": 0,
+            "controlRowWidth": 220
+          }
+        },
+        {
+          "name": "文本生成模型 说明句落到标签下方",
+          "pass": true,
+          "actual": {
+            "narrow": true,
+            "labelTop": 432,
+            "labelHeight": 16,
+            "smallTop": 452
+          }
+        },
+        {
+          "name": "文本生成模型 说明句不压住控件",
+          "pass": true,
+          "actual": {
+            "smallBottom": 478,
+            "controlTop": 495
+          }
+        },
+        {
+          "name": "所有设置行都没有超出自身宽度（未被 overflow:hidden 裁掉）",
+          "pass": true,
+          "actual": {
+            "overflowing": []
+          }
+        },
+        {
+          "name": "其它设置行标签同样单行未裁切",
+          "pass": true,
+          "actual": {
+            "broken": []
+          }
+        },
+        {
+          "name": "开关行在窄面板下未被压坏（标签未裁切、行未溢出）",
+          "pass": true,
+          "actual": {
+            "brokenToggles": []
+          }
+        },
+        {
+          "name": "开关行的开关仍在文案右侧（未被单列规则挤到下一行）",
+          "pass": true,
+          "actual": {
+            "checked": 7,
+            "droppedSwitches": []
+          }
+        },
+        {
+          "name": "中继配置行标签未裁切、行未溢出",
+          "pass": true,
+          "actual": {
+            "relayRows": 5,
+            "brokenRelay": []
+          }
+        }
+      ],
+      "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-settings-label-layout-3796/docs/evidence/browser-settings-label-layout-3796/settings-280px-light.png"
     }
   ],
   "pass": true,
   "cleanup": {
-    "profileDir": "/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ext-e2e-LrK3xM",
+    "profileDir": "/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ext-e2e-LcAArZ",
     "closed": true
   }
 }
