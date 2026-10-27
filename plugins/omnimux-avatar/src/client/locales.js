@@ -17,17 +17,17 @@ export const NS = 'omnimux-avatar'
 
 /** 语义点号键（本插件自有文案）。 */
 const ZH_DOTTED = {
-  nav: '数字人',
-  'avatar.label': '数字人',
+  nav: 'AI网红工作室',
+  'avatar.label': 'AI网红工作室',
   'avatar.unnamed': '未命名',
-  'avatar.create': '新建数字人',
-  'avatar.name': '数字人名称',
+  'avatar.create': '新建工作室',
+  'avatar.name': '工作室名称',
   'avatar.createConfirm': '创建',
   'avatar.cancel': '取消',
-  'avatar.switch': '切换数字人',
+  'avatar.switch': '切换工作室',
   'avatar.rename': '重命名',
   'avatar.renameHint': '双击改名',
-  'avatar.empty': '还没有数字人，先新建一个。',
+  'avatar.empty': '还没有工作室，先新建一个。',
 
   'tier.title': '角色类型',
   'tier.normal': '普通',
@@ -66,7 +66,7 @@ const ZH_DOTTED = {
   'preset.updating': '预设设置正在更新，请稍后再试。',
 
   'history.empty.title': '这里还没有内容',
-  'history.empty.desc': '在左侧选好设定后点生成，或点随机来一个数字人',
+  'history.empty.desc': '在左侧选好设定后点生成，或点随机来一个角色',
   'history.loading': '正在加载历史…',
   'history.loadingMore': '正在加载更多…',
   'history.loadFailed': '加载历史失败',
@@ -102,23 +102,23 @@ const ZH_DOTTED = {
 
   'error.noImageChannel': '尚未配置图像生成渠道',
   'error.allImageChannelsDisabled': '当前图像生成渠道均不可用',
-  'error.avatarNameExists': '数字人名称已存在',
+  'error.avatarNameExists': '工作室名称已存在',
   'common.close': '关闭',
 }
 
 /** 语义点号键的英文对照（源工作台原文）。 */
 const EN_DOTTED = {
-  nav: 'Characters',
-  'avatar.label': 'Character',
+  nav: 'AI Creator Studio',
+  'avatar.label': 'AI Creator Studio',
   'avatar.unnamed': 'Untitled',
-  'avatar.create': 'New character',
-  'avatar.name': 'Character name',
+  'avatar.create': 'New studio',
+  'avatar.name': 'Studio name',
   'avatar.createConfirm': 'Create',
   'avatar.cancel': 'Cancel',
-  'avatar.switch': 'Switch character',
+  'avatar.switch': 'Switch studio',
   'avatar.rename': 'Rename',
   'avatar.renameHint': 'Double-click to rename',
-  'avatar.empty': 'No characters yet. Create one to start.',
+  'avatar.empty': 'No studio yet. Create one to start.',
 
   'tier.title': 'Exaggeration',
   'tier.normal': 'Average',
@@ -204,7 +204,7 @@ const EN_DOTTED = {
  * @type {[string, string][]}
  */
 const TEXT_KEYS = [
-  ['数字人', 'Characters'],
+  ['AI网红工作室', 'AI Creator Studio'],
   ['夸张程度', 'Exaggeration'],
   ['普通', 'Average'],
   ['夸张', 'Bold'],

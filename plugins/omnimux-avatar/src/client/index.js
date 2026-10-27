@@ -8,11 +8,12 @@
 //     本插件不自行推断开关状态，也不抢占任何全局 overlay。
 
 import { createElement } from 'react'
-import { createSidebarEntry } from 'dsh-ui-kit'
+import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 
 import { AvatarStage } from './AvatarStage.jsx'
 import { NS, en, zh } from './locales.js'
 import { injectAvatarStyles } from './styles.js'
+import { installAvatarMoreMenu } from './avatar-more-menu.jsx'
 
 injectAvatarStyles()
 
@@ -42,7 +43,7 @@ function resolveTitle(t) {
   } catch {
     /* 语言包可能尚未就绪；用中文原文兜底 */
   }
-  return '数字人'
+  return 'AI网红工作室'
 }
 
 /**
@@ -145,26 +146,6 @@ function createWorkbenchStageStore(t, tabId) {
 }
 
 /**
- * 挂载「新会话」下方的左栏行。
- * @param {(key: string) => string} t
- * @param {unknown} locale
- * @returns {() => void}
- */
-function mountSidebarEntry(t, locale) {
-  return createSidebarEntry({
-    id: 'omnimux-avatar',
-    rank: 4.05,
-    label: () => resolveTitle(t),
-    iconSvg: ENTRY_ICON,
-    stageStore: createWorkbenchStageStore(t, AVATAR_TAB_ID),
-    locale,
-    access: 'offline',
-    customClassName: 'omnimux-avatar-entry',
-    datasetKey: 'data-omnimux-avatar-entry',
-  })
-}
-
-/**
  * @param {{
  *   locale: { register: Function, bind: Function },
  *   slots: { inject: Function, register: Function },
@@ -177,7 +158,16 @@ export function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'omnimux-avatar: dictionaries')
   const t = ctx.locale.bind(NS)
 
-  ctx.effect(() => mountSidebarEntry(t, ctx.locale), 'omnimux-avatar: sidebar entry')
+  // #3811：入口收敛进官方「更多」菜单，左栏常驻行退役。
+  // 老宿主没有该 seat 时 installAvatarMoreMenu 返回 false，工作台 Tab 仍是入口，
+  // 不静默丢失可达性。
+  const stageStore = createWorkbenchStageStore(t, AVATAR_TAB_ID)
+  const moreMenuInstalled = installAvatarMoreMenu(ctx, {
+    MenuItemButton: primitives?.MenuItemButton,
+    title: () => resolveTitle(t),
+    iconSvg: ENTRY_ICON,
+    open: () => stageStore.open(),
+  })
 
   const registerAvatarTab = (sidebar) => {
     if (!sidebar || typeof sidebar.registerTab !== 'function') return () => {}

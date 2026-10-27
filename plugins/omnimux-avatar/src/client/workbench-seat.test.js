@@ -87,10 +87,18 @@ describe('client entry (index.js)', () => {
     assert.ok(source.includes("AVATAR_TAB_ID = 'omnimux-avatar:studio'"))
   })
 
-  it('registers the left-rail row with its own dataset marker', () => {
-    assert.ok(source.includes('data-omnimux-avatar-entry'))
-    assert.ok(source.includes('datasetKey'))
-    assert.ok(source.includes("customClassName: 'omnimux-avatar-entry'"))
+  // #3811：左栏常驻行退役，入口收敛进官方「更多」菜单。原用例锁的正是被删掉的
+  // 常驻行实现（data-omnimux-avatar-entry / datasetKey / customClassName），
+  // 已在 specs/avatar-rename-more-menu.spec.md 的「旧标准变更」逐条声明后改写。
+  it('converges the entry into the official More menu instead of a left-rail row', () => {
+    // 常驻行必须真的不在：不靠 CSS 隐藏，源码里就不该再挂载它。
+    assert.ok(!source.includes('createSidebarEntry'), '不得再挂载左栏常驻行')
+    assert.ok(!source.includes('mountSidebarEntry'), '常驻行实现应已删除')
+    // 入口改为注册进官方「更多」菜单，并且点击复用同一个工作台打开语义。
+    assert.ok(source.includes('installAvatarMoreMenu'), '必须注册进官方「更多」菜单')
+    assert.ok(source.includes("open: () => stageStore.open()"), '点击必须复用 stageStore.open()')
+    // 工作台 Tab 仍是回退入口：老宿主没有该 seat 时不能丢可达性。
+    assert.ok(source.includes('registerAvatarTab'), '工作台 Tab 注册必须保留')
   })
 
   it('injects its stylesheet at module top level', () => {
