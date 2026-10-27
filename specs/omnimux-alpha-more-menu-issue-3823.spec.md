@@ -91,10 +91,10 @@ Alpha 名单（`plugins/omnimux/src/plugin-lifecycle.json`）与生产排除早�
   - 必须改的理由：该正则同时命中新写的注释文本（注释里说明「真源仍是 `plugin-lifecycle.json`」），把「不得 import 注册表」误判成「不得提到它」。断言点应指向 import 语句而不是任意出现。
   - 新期望证据：改为 `/^\s*import\b[^\n]*plugin-lifecycle\.json/m` 的 `doesNotMatch`，即菜单模块不得 import 生命周期注册表；同时保留「必须复用 `isAlphaEntry`」「不得内联 `stage === 'alpha'`」「不得有第二份 Alpha 名单常量」三条。
 
-- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `10 行文案与顺序逐字等于真源清单`
-  - 原断言：`assert.equal(TRUTH.length, 10)` / `assert.equal(menu.rows.length, 10)` / `assert.deepEqual(menu.rows.map((row) => row.children), EXPECTED_LABELS)` / `[data-stub-row]` 计数 10。
-  - 必须改的理由：两条独立的既有事实同时前移。其一，`origin/main` 的 #3816 把产品库并入资产库，菜单真源从 10 项变 9 项，计数与文案集合随之变化；其二，本任务把 Alpha 项行内容改成「文案 + 标识」片段，`children` 不再是字符串。冲突解决必须同时保留「9 项」与「文案文本提取」两个口径，否则不是丢标识就是丢产品库并入的结论。用例名同步改为 `9 行文案与顺序逐字等于真源清单`。
-  - 新期望证据：`TRUTH.length` / `menu.rows.length` / `[data-stub-row]` 计数为 9；文案比较改走 `labelTextOf(row.children)`，仍与真源清单逐字相等。
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `9 行文案与顺序逐字等于真源清单`
+  - 原断言（`origin/main` 当前版本）：`assert.deepEqual(menu.rows.map((row) => row.children), EXPECTED_LABELS)`，要求每行 `children` 与真源文案数组逐字相等。
+  - 必须改的理由：本任务把 Alpha 项行内容改成「文案 + 标识」片段，`children` 不再是字符串；不放宽等于要求内测标识无法渲染。9 项计数与文案集合本身不变（产品库并入资产库已由 `origin/main` 完成）。
+  - 新期望证据：文案比较改走 `labelTextOf(row.children)`，仍与真源清单逐字相等；`TRUTH.length` / `menu.rows.length` / `[data-stub-row]` 计数保持 9。
 
 - `plugins/omnimux/src/client/explore-more-menu.test.js` :: `运行时注册项出现在菜单末尾`
   - 原断言：`menu.rows.length === 10`（未注册）与 `=== 11`（注册后）。
