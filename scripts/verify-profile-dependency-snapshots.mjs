@@ -45,6 +45,13 @@ export const MANAGED_SNAPSHOT_DIRECTORY = '.materialize-snapshots/plugins'
  */
 const SUPPORT_IDENTITY_PATH = join(dirname(fileURLToPath(import.meta.url)), 'sidebar-support-identity.json')
 
+/**
+ * 支持包名。身份文件读不到时用它判断「这个 profile 是否真的装了支持包」——
+ * 只有装了才该因为无法证明实装代际而失败。名字本身来自单一真源文件；
+ * 此处的字面量只在真源不可读的降级路径上用于「是否参与」的判定，不用于版本断言。
+ */
+export const SUPPORT_PACKAGE_NAME = 'dsh-better-sidebar'
+
 /** App 自带宿主包：不在 profile 内落地，允许出现在插件清单里。 */
 const APP_PROVIDED = /^@deepseek-ai\//
 
@@ -243,12 +250,15 @@ export function inspectProfile(profileDir, options = {}) {
   // 因为「无法证明实装代际」不能当成通过。
   const identity = options.supportIdentity === undefined ? readSupportIdentity() : options.supportIdentity
   let supportChecked = 0
-  if (!identity) {
-    failures.push('支持包身份声明不可读：scripts/sidebar-support-identity.json（缺少声明即无法证明实装代际，不静默放行）')
-  } else {
-    const supportName = identity.name
-    const supportInPlay = Object.hasOwn(dependencies, supportName) || bundles.includes(supportName)
-    if (supportInPlay) {
+  // 支持包名先取「身份声明的 name」，读不到时回落固定名：只有 profile 真的声明/加载了
+  // 这个包，才谈得上「实装代际无法证明」。没有侧栏的 profile（含各脚本的合成 fixture）
+  // 不应因为仓库里少了一份身份文件就整体失败——那会把本校验器变成所有物化路径的硬前置。
+  const supportName = identity?.name ?? SUPPORT_PACKAGE_NAME
+  const supportInPlay = Object.hasOwn(dependencies, supportName) || bundles.includes(supportName)
+  if (supportInPlay) {
+    if (!identity) {
+      failures.push('支持包身份声明不可读：scripts/sidebar-support-identity.json（缺少声明即无法证明实装代际，不静默放行）')
+    } else {
       const support = inspectSupportPackageVersion(profileDir, { identity })
       failures.push(...support.failures)
       supportChecked = support.checked
