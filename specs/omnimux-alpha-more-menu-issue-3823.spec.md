@@ -85,3 +85,8 @@ Alpha 名单（`plugins/omnimux/src/plugin-lifecycle.json`）与生产排除早�
   - 原断言：`assert.equal(typeof row.children, 'string', 'label 只按纯文本交给 React')`，对全部 10 行要求 `children` 是字符串。
   - 必须改的理由：同上，Alpha 行内容为片段；该断言的原意是「文案不得拼进 HTML」，这条约束用「文案文本逐字相等 + 标识是独立元素」表达更准确，不靠「整体必须是字符串」。
   - 新期望证据：断言非 Alpha 行的 `children` 仍是纯字符串（零变化），Alpha 行的文案文本与真源逐字相等且标识为独立元素、不带 HTML 注入。
+
+- `tests/e2e/alpha-more-menu-badge.e2e.test.mjs` :: `E2E: Alpha 判定真源仍是生命周期注册表，菜单面不复制第二份名单`
+  - 原断言：`assert.doesNotMatch(menu, /plugin-lifecycle\.json/)`，要求菜单模块源码里不出现 `plugin-lifecycle.json` 这个字符串。
+  - 必须改的理由：该正则同时命中新写的注释文本（注释里说明「真源仍是 `plugin-lifecycle.json`」），把「不得 import 注册表」误判成「不得提到它」。断言点应指向 import 语句而不是任意出现。
+  - 新期望证据：改为 `/^\s*import\b[^\n]*plugin-lifecycle\.json/m` 的 `doesNotMatch`，即菜单模块不得 import 生命周期注册表；同时保留「必须复用 `isAlphaEntry`」「不得内联 `stage === 'alpha'`」「不得有第二份 Alpha 名单常量」三条。

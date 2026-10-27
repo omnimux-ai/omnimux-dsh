@@ -1,8 +1,8 @@
 {
-  "runId": "459e75a8-128c-471f-81bb-4b4ef51b1c54",
+  "runId": "b7d6c0d2-7eb8-4634-99f0-45b1d369dae8",
   "issue": "3785",
   "title": "官方「更多」菜单运行时注册接缝 · 真实浏览器验收",
-  "startedAt": "2026-10-27T10:35:26.341Z",
+  "startedAt": "2026-10-27T10:50:07.868Z",
   "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-alpha-more-menu/",
   "source": "plugins/omnimux/src/client/explore-more-menu.jsx",
   "sources": [
@@ -16,7 +16,7 @@
     "jsVersion": "15.6.75.19"
   },
   "page": {
-    "url": "http://127.0.0.1:56384/index.html",
+    "url": "http://127.0.0.1:52430/index.html",
     "viewport": {
       "width": 1280,
       "height": 900
@@ -406,9 +406,9 @@
       "tabId": "fast-news-workbench",
       "title": "快讯中枢"
     },
-    "chromeStderrTail": "/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[67281:131771857:1027/183526.828569:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[67281:131771768:1027/183526.832209:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[67281:131771857:1027/183526.832259:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[67281:131771768:1027/183526.832374:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[67281:131771857:1027/183526.832398:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n"
+    "chromeStderrTail": "splay/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[1335:132062588:1027/185008.875612:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[1335:132062467:1027/185008.875691:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[1335:132062588:1027/185008.875718:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[1335:132062467:1027/185008.890697:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[1335:132062588:1027/185008.890763:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n"
   },
-  "finishedAt": "2026-10-27T10:35:27.895Z",
+  "finishedAt": "2026-10-27T10:50:10.107Z",
   "passed": true,
   "failed": []
 }
