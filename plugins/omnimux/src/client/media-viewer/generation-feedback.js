@@ -1,4 +1,5 @@
 import { isExplicitGenerationRequest } from './generation-intent.js';
+import { currentSessionId } from '../workbench/host-adapter.js';
 
 const generationTools = new Set(['image_generate', 'video_generate', 'omnimux_image_submit', 'omnimux_video_submit']);
 
@@ -192,7 +193,9 @@ export function createGenerationFeedback({ sessions, store, getUiContext, events
   });
   const follow = () => {
     for (const sessionId of [...watches.keys()]) watch(sessionId);
-    watch(sessions.list.getSnapshot().current);
+    // 统一读数口（#3806）：直读 list.current 在 rc.3 恒 undefined，watch() 的
+    // `if (!sessionId) return` 会让生成反馈静默不监听当前会话。
+    watch(currentSessionId(sessions));
   };
   const stopList = sessions.list.subscribe(follow);
   follow();

@@ -19,7 +19,10 @@ export function mountSessionGuide(ctx) {
     store: guideStore,
     // 渲染时按官方全局缝读 workbench（hub 已装 window.__omnimuxWorkbench）
     get workbench() { return typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined },
-    getCurrentSessionId: () => guideSessions?.list.getSnapshot().current,
+    // 统一读数口（#3806）：直读 list.current 在 rc.3 恒 undefined。
+    // 跨插件不得 import hub 的 host-adapter（模块级 deps 各建一份、绑定为空），
+    // 只经 hub 已装的全局缝取裁决后的 sessionId。
+    getCurrentSessionId: () => guideFace.workbench?.getCurrentSessionId?.(),
   }
   ctx.effect?.(() => ctx.locale?.register?.('omnimux-session-guide', { zh: guideZh, en: guideEn }), 'omnimux-inspiration: starter locale')
   ctx.effect?.(() => () => guideStore.dispose(), 'omnimux-inspiration: starter state')

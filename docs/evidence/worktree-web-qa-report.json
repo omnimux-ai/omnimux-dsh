@@ -1,12 +1,12 @@
 {
-  "runId": "63363eca-6568-4fd4-85ac-1f1ccb58f787",
+  "runId": "801eceaa-7401-42dd-bb2c-8cd25939611b",
   "stage": "analytics",
   "plugin": "omnimux-analytics",
-  "startedAt": "2026-10-26T16:27:10.308Z",
-  "completedAt": "2026-10-26T16:27:11.904Z",
+  "startedAt": "2026-10-27T02:44:42.877Z",
+  "completedAt": "2026-10-27T02:44:44.528Z",
   "pass": true,
-  "serverPort": 63718,
-  "cdpPort": 63719,
+  "serverPort": 57776,
+  "cdpPort": 57778,
   "assertions": [
     {
       "name": "bundle-client-code",
@@ -16,12 +16,12 @@
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 63718
+      "port": 57776
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 63719
+      "port": 57778
     },
     {
       "name": "runner-page-ready",
@@ -52,7 +52,7 @@
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-workbench-session-source/.workbuddy/evidence/worktree-qa/63363eca-6568-4fd4-85ac-1f1ccb58f787/analytics.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-session-source-sweep/.workbuddy/evidence/worktree-qa/801eceaa-7401-42dd-bb2c-8cd25939611b/analytics.png",
     "width": 1280,
     "height": 713,
     "bytes": 37555

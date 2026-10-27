@@ -1,5 +1,6 @@
 import { createComposerAddController } from './controller.js'
 import { LIBRARY_STAGE_PROMPT_EVENT } from './library-stage-model.js'
+import { currentSessionId } from '../workbench/host-adapter.js'
 
 function createToast(doc) {
   let toast = null
@@ -45,7 +46,9 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
   const controller = createComposerAddController({
     t,
     store,
-    getCurrentSessionId: () => sessions.list.getSnapshot().current,
+    // 当前会话唯一读数口是 host-adapter 的 currentSessionId()（mounted 优先、
+    // current 兜底）。直读 sessions.list.current 在 rc.3 恒为 undefined（#3806）。
+    getCurrentSessionId: () => currentSessionId(sessions),
     subscribeCurrentSession: listener => sessions.list.subscribe(listener),
     notify: message => toast.show(message),
     onBegin: () => { focusTarget = doc.activeElement },
@@ -58,7 +61,7 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
       currentModel = model
     },
     onPrompt(prompt) {
-      const sessionId = sessions.list.getSnapshot().current
+      const sessionId = currentSessionId(sessions)
       doc.defaultView?.dispatchEvent(new doc.defaultView.CustomEvent(LIBRARY_STAGE_PROMPT_EVENT, {
         detail: { prompt, sessionId },
       }))
