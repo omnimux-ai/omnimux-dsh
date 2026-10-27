@@ -1,9 +1,9 @@
 {
-  "runId": "450c3ed6-2197-4004-a3fe-9e8f23349b67",
+  "runId": "459e75a8-128c-471f-81bb-4b4ef51b1c54",
   "issue": "3785",
   "title": "官方「更多」菜单运行时注册接缝 · 真实浏览器验收",
-  "startedAt": "2026-10-25T14:26:02.559Z",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-remove-explore-entry-issue-3785/",
+  "startedAt": "2026-10-27T10:35:26.341Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-alpha-more-menu/",
   "source": "plugins/omnimux/src/client/explore-more-menu.jsx",
   "sources": [
     "plugins/omnimux/src/client/explore-more-menu.jsx",
@@ -11,19 +11,19 @@
   ],
   "chrome": {
     "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    "product": "Chrome/155.0.8059.85",
+    "product": "Chrome/156.0.8078.48",
     "protocolVersion": "1.3",
-    "jsVersion": "15.5.35.25"
+    "jsVersion": "15.6.75.19"
   },
   "page": {
-    "url": "http://127.0.0.1:51361/index.html",
+    "url": "http://127.0.0.1:56384/index.html",
     "viewport": {
       "width": 1280,
       "height": 900
     }
   },
   "bundle": {
-    "bytes": 1082743,
+    "bytes": 1156944,
     "outfile": "bundle.js"
   },
   "assertions": [
@@ -71,6 +71,63 @@
           "social-harvest"
         ],
         "separatorCount": 2
+      }
+    },
+    {
+      "name": "Alpha 内测标识：只出现在 5 个 Alpha 项，文案与顺序不变",
+      "pass": true,
+      "actual": {
+        "alphaLabels": [
+          "发布",
+          "账号",
+          "数据分析",
+          "自动化",
+          "任务表单"
+        ],
+        "expectedAlphaLabels": [
+          "发布",
+          "账号",
+          "数据分析",
+          "自动化",
+          "任务表单"
+        ],
+        "alphaBadgeCount": 5,
+        "labels": [
+          "应用",
+          "视频剪辑",
+          "产品库",
+          "发布",
+          "账号",
+          "手机管理",
+          "数据分析",
+          "自动化",
+          "任务表单",
+          "社交采收"
+        ]
+      }
+    },
+    {
+      "name": "Alpha 标识在行内可见：落在行矩形内、宽高非零、文案未被挤没",
+      "pass": true,
+      "actual": {
+        "badge": {
+          "width": 44.140625,
+          "height": 18,
+          "top": 315,
+          "right": 158.140625
+        },
+        "text": {
+          "width": 42,
+          "height": 20
+        },
+        "row": {
+          "width": 248,
+          "height": 32,
+          "top": 308,
+          "right": 282
+        },
+        "insideRow": true,
+        "title": "Alpha · 内测：开发阶段优先完善非 Alpha 功能；正式版不包含此功能。"
       }
     },
     {
@@ -122,7 +179,7 @@
           "path": "docs/evidence/explore-registration-3124/explore-registration-browser.png",
           "width": 1280,
           "height": 900,
-          "bytes": 35789,
+          "bytes": 39341,
           "capturedAtStep": "step-3-registered-menu"
         }
       }
@@ -286,7 +343,23 @@
       "screenshot": {
         "width": 1280,
         "height": 900,
-        "bytes": 34331
+        "bytes": 37883
+      }
+    },
+    {
+      "label": "step-1b-alpha-badges",
+      "screenshot": {
+        "width": 1280,
+        "height": 900,
+        "bytes": 37883
+      }
+    },
+    {
+      "label": "step-1c-alpha-badge-visible",
+      "screenshot": {
+        "width": 1280,
+        "height": 900,
+        "bytes": 37883
       }
     },
     {
@@ -294,7 +367,7 @@
       "screenshot": {
         "width": 1280,
         "height": 900,
-        "bytes": 35789
+        "bytes": 39341
       }
     },
     {
@@ -302,7 +375,7 @@
       "screenshot": {
         "width": 1280,
         "height": 900,
-        "bytes": 36003
+        "bytes": 39555
       }
     },
     {
@@ -310,7 +383,7 @@
       "screenshot": {
         "width": 1280,
         "height": 900,
-        "bytes": 34331
+        "bytes": 37883
       }
     }
   ],
@@ -318,7 +391,7 @@
     "path": "docs/evidence/explore-registration-3124/explore-registration-browser.png",
     "width": 1280,
     "height": 900,
-    "bytes": 35789,
+    "bytes": 39341,
     "capturedAtStep": "step-3-registered-menu"
   },
   "diagnostics": {
@@ -333,9 +406,9 @@
       "tabId": "fast-news-workbench",
       "title": "快讯中枢"
     },
-    "chromeStderrTail": "/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[12390:110518876:1025/222603.020916:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[12390:110518806:1025/222603.021012:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[12390:110518876:1025/222603.021049:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[12390:110518806:1025/222603.026204:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[12390:110518876:1025/222603.026252:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n"
+    "chromeStderrTail": "/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[67281:131771857:1027/183526.828569:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[67281:131771768:1027/183526.832209:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[67281:131771857:1027/183526.832259:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[67281:131771768:1027/183526.832374:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[67281:131771857:1027/183526.832398:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n"
   },
-  "finishedAt": "2026-10-25T14:26:04.007Z",
+  "finishedAt": "2026-10-27T10:35:27.895Z",
   "passed": true,
   "failed": []
 }

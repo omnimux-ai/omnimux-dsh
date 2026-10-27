@@ -21,6 +21,7 @@ import { describe, it } from 'node:test'
 import { build } from 'esbuild'
 import { JSDOM } from 'jsdom'
 import { resolveExploreMenuItems } from './sidebar-coordinator.js'
+import { ALPHA_DESCRIPTION, isAlphaEntry } from './sidebar-coordinator.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const sourceFile = join(here, 'explore-more-menu.jsx')
@@ -49,6 +50,31 @@ const EXPECTED_LABELS = TRUTH.map((item) => item.label)
 const EXPECTED_SEPARATORS = TRUTH.map((item, index) => index > 0 && TRUTH.at(index - 1).dividerAfter === true)
 const SEPARATOR_OWNERS = TRUTH.filter((item, index) => index > 0 && TRUTH.at(index - 1).dividerAfter === true)
   .map((item) => item.label)
+
+/**
+ * Alpha 行内容的文本部分：非 Alpha 行的 `children` 仍是纯字符串（零变化），
+ * Alpha 行是「文案 + 标识」片段，文案取片段里的第一个文本节点。
+ * @param {unknown} children
+ * @returns {string | null}
+ */
+function labelTextOf(children) {
+  if (typeof children === 'string') return children
+  const inner = children?.props?.children
+  const nodes = Array.isArray(inner) ? inner : [inner]
+  for (const node of nodes) {
+    if (typeof node === 'string') return node
+    if (typeof node?.props?.children === 'string') return node.props.children
+  }
+  return null
+}
+
+/** 行内容里的 Alpha 标识元素（没有则返回 undefined）。 */
+function alphaBadgeOf(children) {
+  if (children === null || typeof children !== 'object') return undefined
+  const inner = children.props?.children
+  return (Array.isArray(inner) ? inner : [inner])
+    .find((node) => node?.props?.className === 'omnimux-explore-more-alpha')
+}
 
 /** 注入 bundle 的 jsdom：取回模块导出，并补上 react-dom 调度器需要的 MessageChannel。 */
 function loadMenuBundle() {
@@ -231,7 +257,7 @@ describe('官方「更多」菜单内容', () => {
     try {
       assert.equal(TRUTH.length, 10, '真源清单为 10 项')
       assert.equal(menu.rows.length, 10, '每项渲染一行')
-      assert.deepEqual(menu.rows.map((row) => row.children), EXPECTED_LABELS)
+      assert.deepEqual(menu.rows.map((row) => labelTextOf(row.children)), EXPECTED_LABELS)
       assert.equal(menu.container.querySelectorAll('[data-stub-row]').length, 10)
     } finally {
       menu.cleanup()
@@ -257,8 +283,36 @@ describe('官方「更多」菜单内容', () => {
         assert.equal(row.icon.props.className, 'omnimux-explore-more-icon')
         assert.equal(row.icon.props['aria-hidden'], 'true')
         assert.equal(row.icon.props.dangerouslySetInnerHTML.__html, TRUTH.at(index).iconSvg)
-        assert.equal(typeof row.children, 'string', 'label 只按纯文本交给 React')
+        assert.equal(labelTextOf(row.children), TRUTH.at(index).label, 'label 只按纯文本交给 React')
       })
+    } finally {
+      menu.cleanup()
+    }
+  })
+
+  it('Alpha 内测项带行内标识，非 Alpha 项保持纯字符串文案（Issue #3823）', async () => {
+    const menu = await renderMoreMenu({ onDismiss: () => {} })
+    try {
+      const alphaLabels = []
+      const plainLabels = []
+      menu.rows.forEach((row, index) => {
+        const item = TRUTH.at(index)
+        const badge = alphaBadgeOf(row.children)
+        if (isAlphaEntry(item.entryId)) {
+          alphaLabels.push(item.label)
+          assert.ok(badge, `${item.label} 是 Alpha 项，行内必须有标识`)
+          assert.equal(badge.props.children, 'Alpha', '标识文案为 Alpha')
+          assert.equal(badge.props.title, ALPHA_DESCRIPTION, '标识承载完整内测说明')
+          assert.equal(labelTextOf(row.children), item.label, '加标识不得改动行文案')
+        } else {
+          plainLabels.push(item.label)
+          assert.equal(badge, undefined, `${item.label} 不是 Alpha 项，不得带标识`)
+          assert.equal(typeof row.children, 'string', '非 Alpha 行内容仍是纯字符串（零变化）')
+        }
+      })
+      assert.deepEqual(alphaLabels, ['发布', '账号', '数据分析', '自动化', '任务表单'], 'Alpha 项按菜单顺序命中 5 项')
+      assert.deepEqual(plainLabels, ['应用', '视频剪辑', '产品库', '手机管理', '社交采收'], '其余 5 项不带标识')
+      assert.equal(menu.container.querySelectorAll('.omnimux-explore-more-alpha').length, 5)
     } finally {
       menu.cleanup()
     }
