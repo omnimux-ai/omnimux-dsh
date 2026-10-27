@@ -111,6 +111,15 @@ export function readSupportIdentity(identityPath = SUPPORT_IDENTITY_PATH) {
   }
 }
 
+/**
+ * 该 profile 是否真的落地了支持包（受管快照或 node_modules 任一存在即算）。
+ * 用于身份文件不可读时的降级判定：没有这个包，就无从谈「实装代际」。
+ */
+function profileHasSupportPackage(profileDir) {
+  return existsSync(join(profileDir, MANAGED_SNAPSHOT_DIRECTORY, SUPPORT_PACKAGE_NAME, 'package.json'))
+    || existsSync(join(profileDir, 'node_modules', SUPPORT_PACKAGE_NAME, 'package.json'))
+}
+
 /** 读取某个目录下已安装包的 `{ name, version }`；不存在或不可解析返回 null。 */
 function readInstalledPackageVersion(directory) {
   try {
@@ -139,6 +148,10 @@ export function inspectSupportPackageVersion(profileDir, options = {}) {
   const failures = []
   const identity = options.identity === undefined ? readSupportIdentity() : options.identity
   if (!identity) {
+    // 身份文件不可读时不能无条件失败：各脚本的合成 fixture 既没有这份文件、也没有装
+    // 支持包，把「无法证明代际」记成硬失败会让本校验器变成所有物化路径的前置闸，
+    // 并抢掉下游更具体的错误（如「源码缺失」）。只有 profile 真的存在该包时才要求可证明。
+    if (!profileHasSupportPackage(profileDir)) return { failures, checked: 0 }
     failures.push('支持包身份声明不可读：scripts/sidebar-support-identity.json（缺少声明即无法证明实装代际，不静默放行）')
     return { failures, checked: 0 }
   }
