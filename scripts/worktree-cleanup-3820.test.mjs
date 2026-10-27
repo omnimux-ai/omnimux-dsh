@@ -72,3 +72,25 @@ describe('worktree.sh audit 判定 (#3820)', () => {
     assert.match(source, /for wt in "\$\{PRIMARY_WT_DIR\}"/, '巡检必须遍历主检出 .worktrees')
   })
 })
+
+describe('audit 不误判未提交改动 (#3829)', () => {
+  it('有已跟踪改动时判保留，不出清理命令', () => {
+    assert.match(source, /保留：有未提交改动/, '必须存在「有未提交改动」这一判据')
+    assert.match(source, /git -C "\$\{wt\}" diff --name-only/, '必须检查已跟踪文件的未提交改动')
+  })
+
+  it('未跟踪的非 spec 文件同样保守保留', () => {
+    assert.match(source, /grep -vE '\^specs\/\.\*\\\.md\$'/, '未跟踪项要排除 specs/*.md 后才计数')
+    assert.match(source, /untracked=/, '必须区分未跟踪项')
+  })
+
+  it('仅有未跟踪 spec 时仍可清理', () => {
+    // specs/*.md 被排除在 untracked 计数外，因此只剩 spec 的 worktree 会走到可清理分支。
+    assert.match(source, /verdict="可清理"/, '仍必须存在可清理分支')
+  })
+
+  it('grep 无匹配不得中断脚本（pipefail 兜底）', () => {
+    assert.match(source, /\|\| true\)/, 'grep -vE 无匹配退出码为 1，pipefail 下需 || true 兜底')
+  })
+})
+

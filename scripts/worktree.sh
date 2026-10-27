@@ -87,20 +87,32 @@ archive_worktree_evidence() {
 audit_worktrees() {
   local remote_branch="${REMOTE}/${DEFAULT_BRANCH}"
   say "巡检 worktree（基线 ${remote_branch}）"
-  local name wt branch ahead merged verdict
+  local name wt branch ahead tracked untracked verdict
   for wt in "${PRIMARY_WT_DIR}"/*; do
     [ -d "${wt}" ] || continue
     name=$(basename "${wt}")
     branch=$(git -C "${wt}" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
     [ -n "${branch}" ] || continue
+    # ahead 只覆盖已提交差异；本仓允许改动以未提交形式留在 worktree，
+    # 所以还要看工作区本身，否则会把「做了一半、没提交」的任务判成可清理（#3829）。
+    # 注意 `grep -vE` 无匹配时退出码为 1，pipefail 下会中断整个脚本，故加 `|| true`。
+    tracked=$(git -C "${wt}" diff --name-only 2>/dev/null | wc -l | tr -d ' ' || true)
+    untracked=$(git -C "${wt}" status --porcelain -uall 2>/dev/null \
+      | awk '$1=="??"{print $2}' | grep -vE '^specs/.*\.md$' | wc -l | tr -d ' ' || true)
+    tracked=${tracked:-0}
+    untracked=${untracked:-0}
     if [ "${branch}" = "${DEFAULT_BRANCH}" ]; then
       verdict="保留：分支是 ${DEFAULT_BRANCH}，需人工判断"
+    elif [ "${wt}" = "${ROOT}" ]; then
+      # 当前所在的 worktree 还没提交时 ahead 也是 0，不能据此判可清理。
+      verdict="保留：这是当前所在 worktree"
+    elif [ "${tracked}" -gt 0 ] || [ "${untracked}" -gt 0 ]; then
+      # 已跟踪文件被改 = 真实未交付工作；未跟踪的非 spec 文件同样保守保留。
+      # 只有未跟踪的 specs/*.md 不算「有活」——那是契约要求的常态，ship 会归档。
+      verdict="保留：有未提交改动（tracked=${tracked} untracked=${untracked}）"
     else
       ahead=$(git -C "${PRIMARY_ROOT}" rev-list --count "${remote_branch}..${branch}" 2>/dev/null || echo "?")
-      if [ "${ahead}" = "0" ] && [ "${wt}" = "${ROOT}" ]; then
-        # 当前所在的 worktree 还没提交时 ahead 也是 0，不能据此判可清理。
-        verdict="保留：这是当前所在 worktree"
-      elif [ "${ahead}" = "0" ]; then
+      if [ "${ahead}" = "0" ]; then
         verdict="可清理"
       else
         verdict="保留：ahead=${ahead}"

@@ -75,7 +75,19 @@ fatal: '<path>' contains modified or untracked files, use --force to delete it
 2. 用 `git worktree remove --force` 删除，失败再 `rm -rf` 兜底。
 3. 删除分支后 `git worktree prune`。
 
-**巡检入口**：`bash scripts/worktree.sh audit` 只读列出可清理对象——判据是 `rev-list --count origin/main..<branch> == 0`（无未合并提交）；分支为 `main` 或就是当前所在 worktree 时一律保留待人工判断。它**不自动删除**。
+**巡检入口**：`bash scripts/worktree.sh audit` 只读列出可清理对象，判据按此顺序短路：
+
+| 条件 | 判定 |
+|---|---|
+| 分支是 `main` | 保留，待人工判断 |
+| 就是当前所在 worktree | 保留 |
+| **有未提交的已跟踪改动，或未跟踪的非 `specs/*.md` 文件** | **保留：有未提交改动** |
+| `rev-list --count origin/main..<branch> > 0` | 保留：ahead=N |
+| 其余 | 可清理 |
+
+第三条是必须的：`ahead` 只覆盖**已提交**差异，而本仓允许改动以未提交形式留在 worktree；只看 ahead 会把「做了一半、没提交」的任务判成可清理（#3829）。未跟踪的 `specs/*.md` 是契约要求的常态，不计入「有活」，ship 会先归档。
+
+它**不自动删除**。
 
 `cmd_remove` 的 `--discard` 与 `cmd_clean` 遇到脏工作区主动 skip，是刻意保守的人工确认语义，不属于本节的自动清理路径。
 
