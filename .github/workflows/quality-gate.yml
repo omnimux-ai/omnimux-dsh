@@ -19,7 +19,7 @@ jobs:
     name: Static gates & regression
     runs-on: ubuntu-latest
     env:
-      QA_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || 'origin/main' }}
+      QA_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || 'origin/main' }}
     permissions:
       contents: read
       pull-requests: write
@@ -460,6 +460,16 @@ jobs:
           retention-days: 7
           include-hidden-files: true
 
+      # 聚合 job 只需要 verdict 输入这一份报告；整包证据很大，下载会拖慢 required check。
+      - name: Upload L0 report for verdict
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-report
+          path: .workbuddy/evidence/auto-qa-report.json
+          retention-days: 7
+          if-no-files-found: ignore
+
   # 每个插件的测试在合并前必须全绿：run-workspace-tests 按包 scripts.test 执行并 TAP 汇总。
   # 分片表在 run-workspace-tests.mjs 的 TEST_SHARDS，rest 兜底收所有未列包；
   # run-workspace-tests.test.mjs 断言矩阵与分片表一致、分片不重不漏。
@@ -579,6 +589,16 @@ jobs:
         with:
           node-version: 24.18.1
 
+      # ci-verdict 经 impact-matrix → auto-qa-gate 传递依赖 pngjs，需要工作区依赖。
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+          run_install: false
+
+      - name: Install workspace dependencies
+        run: corepack pnpm install --frozen-lockfile --ignore-scripts
+
       # full-scan 只在 merge_group 运行，其余事件为 skipped；其他 job 必须 success。
       - name: Require upstream jobs
         env:
@@ -593,11 +613,11 @@ jobs:
           test "$FULL_SCAN" = success || { test "$EVENT_NAME" != merge_group && test "$FULL_SCAN" = skipped; }
 
       # 缺失报告时 ci-verdict 读不到输入即判失败，不会放行。
-      - name: Download QA evidence
+      - name: Download L0 report
         if: ${{ always() }}
         uses: actions/download-artifact@v4
         with:
-          name: qa-evidence
+          name: qa-report
           path: .workbuddy/evidence/
 
       - name: Evaluate CI verdict

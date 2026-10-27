@@ -152,6 +152,7 @@ export function judge({ exitCode, tap }) {
 export function packageEnv(pkgDir, base = process.env, dshHome) {
   const env = { ...base }
   for (const key of PROXY_VARIABLES) delete env[key]
+  delete env.OMNIMUX_TEST_SHARD
   env.NODE_OPTIONS = [base.NODE_OPTIONS, '--test-reporter=tap'].filter(Boolean).join(' ')
   env.PATH = [join(pkgDir, 'node_modules', '.bin'), join(repoRoot, 'node_modules', '.bin'), base.PATH].filter(Boolean).join(delimiter)
   env.DSH_HOME = dshHome
@@ -182,7 +183,8 @@ function runPackage(pkg, logsDir) {
 }
 
 function parseArgs(argv, env) {
-  const options = { json: '', logs: '', shard: env.OMNIMUX_TEST_SHARD || '', only: [] }
+  // An explicitly set but empty shard is a misconfiguration, not "run everything".
+  const options = { json: '', logs: '', shard: Object.hasOwn(env, 'OMNIMUX_TEST_SHARD') ? env.OMNIMUX_TEST_SHARD : null, only: [] }
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--json') options.json = argv[++i]
     else if (argv[i] === '--logs') options.logs = argv[++i]
@@ -195,7 +197,7 @@ function parseArgs(argv, env) {
 export function main(argv = process.argv.slice(2), env = process.env) {
   const options = parseArgs(argv, env)
   let packages = discoverPackages()
-  if (options.shard) {
+  if (options.shard !== null) {
     if (options.only.length) {
       console.error('--shard cannot be combined with explicit package names')
       return 2

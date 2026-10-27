@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { parse } from 'yaml'
-import { discoverPackages, selectShard, SHARD_NAMES } from './run-workspace-tests.mjs'
+import { discoverPackages, main, selectShard, SHARD_NAMES } from './run-workspace-tests.mjs'
 
 const RUNNER = fileURLToPath(new URL('./run-workspace-tests.mjs', import.meta.url))
 
@@ -44,6 +44,11 @@ test('packageEnv injects an isolated DSH_HOME per package run', async () => {
   } finally {
     rmSync(home, { recursive: true, force: true })
   }
+})
+
+test('an empty shard value fails instead of running every package', () => {
+  assert.equal(main([], { OMNIMUX_TEST_SHARD: '' }), 2)
+  assert.equal(main(['--shard'], {}), 2)
 })
 
 test('spawned package tests can still override DSH_HOME in-process', () => {
