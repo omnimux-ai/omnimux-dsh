@@ -98,7 +98,17 @@
 - `plugins/omnimux-products/src/client-form-subscreen.test.js` :: `routes every product card by its persisted kind`
 - `plugins/omnimux-products/src/client-form-subscreen.test.js` :: `uses the hover split menu for both create entry points and never a character glyph`
 - `plugins/omnimux-products/src/client/all-plugins-stage-spacing.test.js` :: `omnimux-products extracts ActionRow to Layer 2 and defines 8px 20px 12px padding`
-- `plugins/omnimux-products/src/client/stage-data.test.js` :: `*`
+- `plugins/omnimux-products/src/client/stage-data.test.js` :: `stage loads actual state response, opens complete media details and saves without losing references`
+- `plugins/omnimux-products/src/client/stage-data.test.js` :: `the list view stays mounted behind the sub-screen so filters survive the round trip`
+- `plugins/omnimux-products/src/client/stage-data.test.js` :: `failed detail request is visible and never opens an empty-media editor`
+- `plugins/omnimux-products/src/client/stage-data.test.js` :: `empty response clears cards and exposes the grid create action`
+- `plugins/omnimux-products/src/client/stage-data.test.js` :: `opening a physical product card routes to the physical form`
+- `plugins/omnimux-products/src/client/stage-data.test.js` :: `opening a digital product card routes to the digital form`
+- `plugins/omnimux-products/src/client/stage-data.test.js` :: `editing preserves a missing source reference and refuses a name-only save until the file is restored`
+- `plugins/omnimux-products/src/client/stage-data.test.js` :: `a slow A detail response cannot replace the faster B editor`
+- `plugins/omnimux-products/src/client/stage-data.test.js` :: `closing an editor invalidates an older pending detail request`
+- `plugins/omnimux-products/src/client/stage-data.test.js` :: `creating a product invalidates pending edit responses`
+- `plugins/omnimux-products/src/client/stage-data.test.js` :: `ProductsStage displays searched-empty state and hides empty action button when query has no match`
 - `plugins/omnimux-products/src/client/workbench-seat.test.js` :: `client apply integrates into workbench and registers tab without redundant sidebar entry`
 - `plugins/omnimux-products/src/client/workbench-seat.test.js` :: `products workbench seat (sidebar must not claim overlay)`
 - `plugins/omnimux-products/src/client/workbench-seat.test.js` :: `sidebar entry uses the workbench store, not the product stage`
@@ -124,6 +134,9 @@
 - `tests/e2e/integrate-products-tab.e2e.test.mjs` :: `E2E: 资产库一级 Tab 整合产品库及操作按钮动态联动验证`
 - `tests/e2e/product-selection-delete.e2e.test.mjs` :: `E2E: 验证产品库支持批量选择与删除（对齐本地 Tab 规范）`
 - `tests/e2e/remove-product-copy-cite.e2e.test.mjs` :: `E2E: 验证产品库卡片彻底移除「复制引用」整行操作栏并仅保留标题与描述`
+- `tests/e2e/remove-unnecessary-page-header-actions.e2e.test.mjs` :: `E2E: 全局所有一级插件页面右上角彻底移除非必要的刷新与关闭按钮`
+- `tests/e2e/ui-duplication-convergence.e2e.test.mjs` :: `E2E-3: 新建产品分流菜单单一真源收敛与资产库副本清除`
+- `tests/e2e/ui-duplication-convergence.e2e.test.mjs` :: `E2E-4: 删除二次确认弹窗原生 ConfirmModal 替代与薄包装清除`
 
 产品库并入资产库后，下列既有用例的断言对象（`ProductsStage` / `ProductsView` / 独立产品 Tab / 10 项菜单 / 8 个 Stage 目标）已不存在，因此必须改写。每条给出：原断言 → 必须改的理由 → 新期望证据。
 
