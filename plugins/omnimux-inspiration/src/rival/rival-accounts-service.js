@@ -450,6 +450,17 @@ export function createRivalAccountsService(deps) {
         reason: perAccount?.reason || snapshot.paused.reason || BUDGET_REASONS.ACCOUNT_DAILY_CAP,
       })
     }
+    if (result.status === 'unsupported') {
+      // A 4xx, not a 202: nothing was queued, so answering「已排队」would make
+      // the row look like it is refreshing and then fail on its own. The message
+      // names the channel that *does* work instead of a code.
+      throw new RivalServiceError(
+        RIVAL_ERROR_CODES.PLATFORM_UNSUPPORTED,
+        '该平台不走云端自动刷新，请用「浏览器更新」采集',
+        409,
+        { reason: 'no-cloud-collector' },
+      )
+    }
     return {
       account_id: accountId,
       job: 'running',

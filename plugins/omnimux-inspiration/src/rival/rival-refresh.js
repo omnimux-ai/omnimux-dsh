@@ -38,7 +38,7 @@ import {
 /**
  * @typedef {Object} EnqueueResult
  * @property {boolean} queued
- * @property {'queued' | 'running' | 'cooldown' | 'budget' | 'not-found' | 'skipped'} status
+ * @property {'queued' | 'running' | 'cooldown' | 'budget' | 'not-found' | 'skipped' | 'unsupported'} status
  * @property {string} [reason_key]
  * @property {string} account_id
  */
@@ -207,6 +207,21 @@ export function createRivalRefreshScheduler(deps) {
     const mode = request.mode || 'auto'
     const account = store.getAccount(accountId)
     if (!account) return { queued: false, status: 'not-found', account_id: accountId }
+    // The one gate every path goes through — auto tick, row retry, and
+    // 「refresh all」 — so a platform the cloud cannot collect can never be
+    // queued from any of them. Before this check the manual paths still queued
+    // 小红书, which reserved two cloud calls per click for a cycle that throws
+    // before its first call: the reservation is charged even though nothing was
+    // fetched, so a handful of clicks could spend the shared daily allowance and
+    // park the accounts that *can* be collected.
+    if (!CLOUD_RIVAL_PLATFORMS.includes(account.platform)) {
+      return {
+        queued: false,
+        status: 'unsupported',
+        reason_key: RIVAL_LOCALE_KEYS.SKIP_NO_CLOUD,
+        account_id: accountId,
+      }
+    }
     const budgetRequest = { accountId, scope: allowBudgetOverrun ? 'manual' : 'cycle', allowBudgetOverrun }
     const budgetProbe = store.canReserve(budgetRequest)
     if (!budgetProbe.allowed) {
@@ -258,6 +273,7 @@ export function createRivalRefreshScheduler(deps) {
       if (result.queued) queuedIds.push(account.id)
       else if (result.status === 'cooldown' && result.reason_key) skipped.push({ id: account.id, reason_key: result.reason_key })
       else if (result.status === 'budget' && result.reason_key) skipped.push({ id: account.id, reason_key: result.reason_key })
+      else if (result.status === 'unsupported' && result.reason_key) skipped.push({ id: account.id, reason_key: result.reason_key })
     }
     return { queued: queuedIds, skipped }
   }

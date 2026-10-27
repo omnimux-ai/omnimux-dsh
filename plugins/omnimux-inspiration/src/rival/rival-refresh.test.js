@@ -833,8 +833,7 @@ describe('T03: next refresh scheduling', () => {
 })
 
 describe('T03: a platform without a cloud collector is terminal, never backed off (#3454)', () => {
-  it('marks douyin and xiaohongshu as error without a retry window', async () => {
-    for (const platform of ['douyin', 'xiaohongshu']) {
+  it('marks douyin and xiaohongshu as error without a retry window', async () => {    for (const platform of ['douyin', 'xiaohongshu']) {
       const refusal = new RivalRemoteError(
         RIVAL_ERROR_CODES.PLATFORM_UNSUPPORTED,
         '该平台暂不支持自动刷新（云端采集未接入）',
@@ -849,13 +848,32 @@ describe('T03: a platform without a cloud collector is terminal, never backed of
       world.scheduler.enqueue({ account_id: account.id, mode: 'first' })
       await waitForIdle(world, account.id)
       const updated = world.store.getAccount(account.id)
-      assert.equal(updated.refresh_state, 'error', platform)
-      assert.equal(updated.error_code, 'platform-unsupported', platform)
-      assert.equal(updated.error_message, '该平台暂不支持自动刷新（云端采集未接入）', platform)
-      assert.equal(updated.next_auto_refresh_at, null, platform)
-      assert.equal(updated.consecutive_failures, 1, platform)
-      // 不进入退避：自动 tick 不再把它排队，云端一次都没被调用。
+      assert.equal(updated.refresh_state, 'idle', platform)
+      assert.equal(updated.error_code, null, platform)
+      // #3839：门禁在 `enqueue`，所以这类平台根本不进队列——「周期跑起来再失败」
+      // 这条路径不再存在（那正是本单要消掉的：每次白烧 2 次预算）。终态字段形状
+      // 仍由 `rival-routes.test.js` 的 #3454 导入用例逐字断言。
+      assert.equal(world.store.readBudget().global_calls, 0, platform)
+      assert.equal(world.cloud.calls.length, 0, platform)
       assert.deepEqual(world.scheduler.tick().due, [], platform)
+    }
+  })
+
+  it('refuses to queue douyin and xiaohongshu, naming the browser channel', async () => {
+    for (const platform of ['douyin', 'xiaohongshu']) {
+      const world = makeWorld({ runCycle: async () => { throw new Error('must not run') } })
+      const account = world.store.addAccount({
+        platform,
+        external_id: 'MS4wLjABAAAA1234567890',
+        next_auto_refresh_at: new Date(FIXED_NOW - 1000).toISOString(),
+      })
+      const before = world.store.readBudget().global_calls
+      const result = world.scheduler.enqueue({ account_id: account.id, mode: 'first' })
+      assert.equal(result.queued, false, platform)
+      assert.equal(result.status, 'unsupported', platform)
+      assert.equal(result.reason_key, 'rivalAccounts.skip.noCloudCollector', platform)
+      // 预算是按「尝试」计费的，所以「没排队」必须等价于「一分没花」。
+      assert.equal(world.store.readBudget().global_calls, before, platform)
       assert.equal(world.cloud.calls.length, 0, platform)
     }
   })

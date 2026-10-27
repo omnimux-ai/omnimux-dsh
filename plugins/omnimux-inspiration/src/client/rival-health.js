@@ -13,7 +13,7 @@
  * 规格 N12）。
  */
 
-import { PLUGIN_REFRESH_PLATFORMS } from '../rival/constants.js'
+import { CLOUD_RIVAL_PLATFORMS, PLUGIN_REFRESH_PLATFORMS } from '../rival/constants.js'
 import { zh } from './locales.js'
 
 const MS_PER_MINUTE = 60_000
@@ -24,14 +24,33 @@ export function accountNeedsReimport(account) {
 }
 
 /**
- * Whether this account's only working refresh channel is the browser plugin
+ * Whether the browser plugin is this platform's only refresh channel
  * (Issue #3839).
  *
- * `platform-unsupported` is a *capability* terminal state: the cloud has no
- * collector, so the row's「重试」re-queues a cycle that is guaranteed to fail the
- * same way and never collects a single post. 小红书 is the platform this
- * matters for today — it is importable, its notes are only reachable through the
- * user's own logged-in browser.
+ * This is a *platform* fact, not a failure fact: the cloud has no collector for
+ * 小红书 at all, so no cloud refresh can ever work there — whether the row
+ * currently reads `idle` (a capture just succeeded) or `error`. The account row
+ * uses it to decide which action to offer; the menu uses it to decide which item
+ * to render. Keying off `error_code` would have made the menu flip back to
+ * 「刷新」the moment a capture cleared that code, which is exactly the dead
+ * action this ticket removes.
+ * @param {string} platform
+ * @returns {boolean}
+ */
+export function browserOnlyPlatform(platform) {
+  const slug = String(platform || '')
+  if (slug === '') return false
+  return PLUGIN_REFRESH_PLATFORMS.includes(slug) && !CLOUD_RIVAL_PLATFORMS.includes(slug)
+}
+
+/**
+ * Whether the account row should offer「浏览器更新」instead of「重试」.
+ *
+ * `platform-unsupported` is a *capability* terminal state: the row is stopped
+ * because the cloud cannot collect this platform, so「重试」would re-queue a
+ * cycle that is guaranteed to fail the same way and never collects a single
+ * post. 小红书 is the platform this matters for today — it is importable, and
+ * its notes are only reachable through the user's own logged-in browser.
  *
  * The platform list comes from `constants.js`, the same list the Host refuses a
  * token against, so the row can never offer a button the Host answers with 400.
@@ -40,8 +59,7 @@ export function accountNeedsReimport(account) {
  */
 export function browserRefreshAvailable(account) {
   if (!account || account.error_code !== 'platform-unsupported') return false
-  const platform = String(account.platform || '')
-  return platform !== '' && PLUGIN_REFRESH_PLATFORMS.includes(platform)
+  return browserOnlyPlatform(account.platform)
 }
 
 /** Translate known failure codes only; upstream text can contain credentials. */

@@ -188,6 +188,7 @@ export const RIVAL_LOCALE_KEYS = Object.freeze({
   SKIP_BUDGET: 'rivalAccounts.skip.budget',
   SKIP_COOLDOWN: 'rivalAccounts.skip.cooldown',
   SKIP_ACCOUNT_ERROR: 'rivalAccounts.skip.accountError',
+  SKIP_NO_CLOUD: 'rivalAccounts.skip.noCloudCollector',
   ERROR_CLOUD: 'rivalAccounts.error.cloud',
   ERROR_LOGIN: 'rivalAccounts.error.login',
   ERROR_TOOL_MISSING: 'rivalAccounts.error.toolMissing',

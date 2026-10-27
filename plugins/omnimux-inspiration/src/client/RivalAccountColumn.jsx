@@ -12,6 +12,7 @@ import { Button, ConfirmModal } from 'dsh-ui-kit'
 import { formatCount, rivalLocaleOf } from './rival-format.js'
 import { selectedAccountIds, toAccountFilterRow } from './rival-filter.js'
 import { AccountFilterRow } from './RivalAccountFilter.jsx'
+import { browserOnlyPlatform } from './rival-health.js'
 import { openExternalUrl } from './open-url.js'
 
 const PLATFORM_ORDER = ['x', 'tiktok', 'youtube', 'instagram']
@@ -96,6 +97,16 @@ export function RivalAccountColumn(props) {
       window.removeEventListener('resize', onViewport)
     }
   }, [menu])
+
+  /**
+   * Whether the open menu belongs to a platform the cloud cannot collect. Read
+   * from the same source the Host refuses on, so the menu cannot offer a refresh
+   * the API answers with 409 — and it stays right after a capture clears
+   * `error_code`.
+   */
+  const menuBrowserOnly = browserOnlyPlatform(
+    list.find((entry) => String(entry?.id) === String(menu?.id))?.platform,
+  )
 
   const openMore = (event, id) => {
     const rect = event.currentTarget.getBoundingClientRect()
@@ -200,26 +211,31 @@ export function RivalAccountColumn(props) {
           aria-label={t('rivalAccounts.column.more')}
           style={{ left: `${menu.left}px`, top: `${menu.top}px` }}
         >
+          {/* 云端没有采集能力的平台（如小红书）：「刷新」只会换来一次 409 和一句
+              「请用浏览器更新」，所以菜单里只留那个唯一有效的动作。 */}
+          {menuBrowserOnly ? null : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="omnimux-rival-menu-item"
+              role="menuitem"
+              autoFocus={!(refreshBusy || quotaLeft === 0)}
+              title={refreshBusy || quotaLeft === 0 ? t('rivalAccounts.column.refreshBlocked') : undefined}
+              disabled={refreshBusy || quotaLeft === 0}
+              onClick={() => {
+                onRefresh?.(menu.id)
+                setMenu(null)
+              }}
+            >
+              {t('rivalAccounts.column.refresh')}
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
             className="omnimux-rival-menu-item"
             role="menuitem"
-            autoFocus={!(refreshBusy || quotaLeft === 0)}
-            title={refreshBusy || quotaLeft === 0 ? t('rivalAccounts.column.refreshBlocked') : undefined}
-            disabled={refreshBusy || quotaLeft === 0}
-            onClick={() => {
-              onRefresh?.(menu.id)
-              setMenu(null)
-            }}
-          >
-            {t('rivalAccounts.column.refresh')}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="omnimux-rival-menu-item"
-            role="menuitem"
+            autoFocus={menuBrowserOnly}
             onClick={() => {
               onPluginRefresh?.(menu.id)
               setMenu(null)

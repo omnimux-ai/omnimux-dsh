@@ -371,6 +371,23 @@ describe('小红书失败原因', () => {
     assert.equal(requireReason(capture(PROFILE_URL)), 'page-incomplete')
   })
 
+  // 关键边界：`notes: []` 是「store 已 hydrate、这个账号确实零笔记」，与
+  // 「store 还没 hydrate（字段缺失）」必须分开判。前者是合法空账号，后者是
+  // 半加载页面——把前者判成失败会让新注册、还没发笔记的账号永远更新不了。
+  it('notes 为空数组 → 合法空账号（不是失败）', () => {
+    mountState(JSON.stringify(userState([])))
+    const account = requireAccount(capture(PROFILE_URL))
+    assert.equal(account.posts.length, 0)
+    assert.equal(account.nickname, USER_PAGE_DATA.basicInfo.nickname)
+    assert.equal(account.extractor, 'xiaohongshu-profile')
+  })
+
+  it('notes 为空对象映射（另一种已 hydrate 形态）→ 合法空账号', () => {
+    mountState(JSON.stringify(userState({})))
+    const account = requireAccount(capture(PROFILE_URL))
+    assert.equal(account.posts.length, 0)
+  })
+
   it('笔记页 /explore/<id> 与非主页路径返回 not-profile-page', () => {
     mountState(JSON.stringify(userState(NOTES)))
     assert.equal(requireReason(capture('https://www.xiaohongshu.com/explore/6a1f0c2e0000000011019ab1')), 'not-profile-page')
