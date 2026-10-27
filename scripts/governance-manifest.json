@@ -203,7 +203,6 @@
     "worktree.sh"
   ],
   "manual": [
-    "automation-alpha-verification.test.mjs",
     "backup-shared.qa.test.py",
     "batch-generate-home-covers.mjs",
     "capture-media-preview-evidence.mjs",
@@ -338,7 +337,6 @@
     "verify-asset-card-compact-cta.mjs",
     "verify-asset-picker-add-card-browser.mjs",
     "verify-asset-picker-add-card.mjs",
-    "verify-automation-sidebar.mjs",
     "verify-breakdown-pipeline.mjs",
     "verify-browser-settings-label-layout.mjs",
     "verify-card-hover-aspect.mjs",
