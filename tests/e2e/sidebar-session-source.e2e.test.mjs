@@ -16,7 +16,7 @@ const root = path.resolve(__dirname, '../../')
  * `return`，`openWorkbench` 拿不到会话即返回 `false`。
  *
  * 根因是读法：侧栏支持包 0.19.1 只用 `sessions.list.current` 设槽位，而 rc.3
- * 运行时在该字段留空时槽位永远为空。0.28.0 改读 `ctx.sidebarRight.mounted`。
+ * 运行时在该字段留空时槽位永远为空。0.28.x 改读 `ctx.sidebarRight.mounted`。
  *
  * 本文件锁三件事：
  * 1. 本仓解析会话必须 `mounted` 优先、`current` 兜底，且不拿列表首项冒充；

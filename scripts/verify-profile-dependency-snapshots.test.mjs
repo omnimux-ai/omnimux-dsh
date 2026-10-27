@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 
-import { inspectProfile, MANAGED_SNAPSHOT_DIRECTORY } from './verify-profile-dependency-snapshots.mjs'
+import { inspectProfile, MANAGED_SNAPSHOT_DIRECTORY, readSupportIdentity } from './verify-profile-dependency-snapshots.mjs'
 
 /**
  * 造一个 profile 骨架。
@@ -150,4 +150,95 @@ test('profile 缺失或非法 JSON 时指名报错，不静默通过', () => {
     assert.equal(invalid.failures.length, 1)
     assert.match(invalid.failures[0], /不是合法 JSON/)
   })
+})
+/* ------------------------------------------- 支持包版本漂移（Issue #3835） */
+
+const SUPPORT_NAME = 'dsh-better-sidebar'
+const SUPPORT_IDENTITY = { name: SUPPORT_NAME, version: '0.28.1' }
+
+/** 造一个装了支持包的 profile：受管快照与 node_modules 各自写一份 package.json。 */
+function supportProfile({ snapshotVersion, installedVersion }) {
+  const root = mkdtempSync(join(tmpdir(), 'profile-support-'))
+  const dependencies = Object.fromEntries([[SUPPORT_NAME, `file:${MANAGED_SNAPSHOT_DIRECTORY}/${SUPPORT_NAME}`]])
+  writeFileSync(join(root, 'package.json'), JSON.stringify({
+    name: 'omnimux-profile',
+    dependencies,
+    dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', SUPPORT_NAME] } },
+  }, null, 2))
+  const entries = [
+    [join(root, MANAGED_SNAPSHOT_DIRECTORY, SUPPORT_NAME), snapshotVersion],
+    [join(root, 'node_modules', SUPPORT_NAME), installedVersion],
+  ]
+  for (const [directory, version] of entries) {
+    if (version === undefined) continue
+    mkdirSync(directory, { recursive: true })
+    writeFileSync(join(directory, 'package.json'), JSON.stringify({ name: SUPPORT_NAME, version }))
+  }
+  return root
+}
+
+test('受管快照被打回旧版本时硬失败，并指名包名、期望版本、实际版本与路径（#3835 真机缺陷）', () => {
+  const root = supportProfile({ snapshotVersion: '0.19.1', installedVersion: '0.28.1' })
+  try {
+    const result = inspectProfile(root, { ownedPackages: [], supportIdentity: SUPPORT_IDENTITY })
+    assert.equal(result.failures.length, 1, result.failures.join('\n'))
+    assert.match(result.failures[0], /受管快照 dsh-better-sidebar 版本漂移/)
+    assert.match(result.failures[0], /期望 0\.28\.1/)
+    assert.match(result.failures[0], /实际 0\.19\.1/)
+    assert.match(result.failures[0], /\.materialize-snapshots\/plugins\/dsh-better-sidebar/)
+    assert.equal(result.supportChecked, 2, '快照与 node_modules 两处都要核对')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('node_modules 已被旧版本覆盖时同样硬失败', () => {
+  const root = supportProfile({ snapshotVersion: '0.28.1', installedVersion: '0.28.0' })
+  try {
+    const result = inspectProfile(root, { ownedPackages: [], supportIdentity: SUPPORT_IDENTITY })
+    assert.equal(result.failures.length, 1, result.failures.join('\n'))
+    assert.match(result.failures[0], /已安装 dsh-better-sidebar 版本漂移/)
+    assert.match(result.failures[0], /实际 0\.28\.0/)
+    assert.match(result.failures[0], /node_modules\/dsh-better-sidebar/)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('快照与 node_modules 都与身份声明一致时通过', () => {
+  const root = supportProfile({ snapshotVersion: '0.28.1', installedVersion: '0.28.1' })
+  try {
+    const result = inspectProfile(root, { ownedPackages: [], supportIdentity: SUPPORT_IDENTITY })
+    assert.deepEqual(result.failures, [])
+    assert.equal(result.supportChecked, 2)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('没有安装支持包的 profile 不因身份文件而失败', () => {
+  withProfile({ dependencies: {}, snapshots: [], bundles: ['@deepseek-ai/dsh-base'] }, (root) => {
+    const result = inspectProfile(root, { ownedPackages: [], supportIdentity: SUPPORT_IDENTITY })
+    assert.deepEqual(result.failures, [])
+    assert.equal(result.supportChecked, 0)
+  })
+})
+
+test('身份声明不可读时指名失败，不静默放行', () => {
+  const root = supportProfile({ snapshotVersion: '0.28.1', installedVersion: '0.28.1' })
+  try {
+    const result = inspectProfile(root, { ownedPackages: [], supportIdentity: null })
+    assert.equal(result.failures.length, 1, result.failures.join('\n'))
+    assert.match(result.failures[0], /支持包身份声明不可读/)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('真身份文件可读，且版本是精确 semver（单一真源不得缺声明）', () => {
+  const identity = readSupportIdentity()
+  assert.ok(identity, 'scripts/sidebar-support-identity.json 必须可读')
+  assert.equal(identity.name, SUPPORT_NAME)
+  assert.match(identity.version, /^\d+\.\d+\.\d+$/)
+  assert.equal(readSupportIdentity(join(tmpdir(), 'absent-identity.json')), null)
 })

@@ -1,20 +1,20 @@
 {
   "name": "dsh-better-sidebar",
-  "version": "0.28.0",
+  "version": "0.28.1",
   "repository": "https://github.com/omdsh-dev/DSH-better-sidebar.git",
-  "commit": "83faf70940160e5cd4c5332f5400aa8f4dbbb6d6",
+  "commit": "59131330bb837cf48dc4117b17c091998b595df0",
   "shippedBuild": {
     "source": "npm",
-    "spec": "dsh-better-sidebar@0.28.0",
-    "gitTagCommit": "83faf70940160e5cd4c5332f5400aa8f4dbbb6d6",
-    "verifiedAt": "2026-10-26",
+    "spec": "dsh-better-sidebar@0.28.1",
+    "gitTagCommit": "59131330bb837cf48dc4117b17c091998b595df0",
+    "verifiedAt": "2026-10-28",
     "verifiedAgainst": "plugins/omnimux-studio/node_modules/dsh-better-sidebar/package.json（任务沙箱从此处实装）",
-    "note": "上游 npm 0.28.0 的 peer 声明已为当前代际（@deepseek-ai/dsh-* ^0.2.1-rc.1），且不含已在宿主 0.2.x 移除的 dsh-invariants；此前 0.19.1 的 peer 豁免因此不再需要。"
+    "note": "上游 npm 0.28.1 的 peer 声明与 0.28.0 逐字段一致（@deepseek-ai/dsh-* ^0.2.1-rc.1），且不含已在宿主 0.2.x 移除的 dsh-invariants；0.28.1 与壳仓 dsh-desktop-next 声明的 ^0.28.1 同代，无需 peer 豁免。"
   },
   "ownership": {
     "pinPatchBuildContract": "omnimux-desktop-fork/docs/contracts/better-sidebar-source.md",
     "builder": "omnimux-desktop-fork/dsh-plugin-desktop/scripts/better-sidebar/build-patched-sidebar.ts",
-    "note": "壳仓 patch 文件在本记录核对之后有未提交改动，presetPatchSha256 只描述核对时 profile 实装的那份构建，不是壳仓 patch 的当前哈希。"
+    "note": "壳仓 patches/dsh-better-sidebar/ 目前只到 0.19.1，0.28.1 定制补丁尚未重落；presetPatchSha256 只描述核对时 profile 实装的那份构建，不是壳仓 patch 的当前哈希。"
   },
-  "note": "0.28.0 起支持包直接取 npm 上游构建（与壳仓补丁同一代际兼容），不再需要 0.19.1 的 peer 豁免；若将来回到壳仓 preset 构建，应同步更新 source/presetPatchSha256。"
+  "note": "0.28.0 起支持包直接取 npm 上游构建（与壳仓补丁同一代际兼容），不再需要 0.19.1 的 peer 豁免；0.28.1 相对 0.28.0 只多一条 \"./icon\" 导出，peer 与 mounted 读法不变。若将来回到壳仓 preset 构建，应同步更新 source/presetPatchSha256。"
 }

@@ -223,7 +223,7 @@ function installedSupportManifest() {
 }
 
 /**
- * 合成豁免声明：`peerExemptions` 已从真身份里移除（0.28.0 不再需要豁免），
+ * 合成豁免声明：`peerExemptions` 已从真身份里移除（0.28.x 不再需要豁免），
  * 但豁免**机制**本身仍要能被验证，所以用一份刻意构造的声明当夹具。
  * 宿主世代取一个旧世代，让声明的 peer 需求在该世代下确实不满足。
  */
@@ -253,12 +253,12 @@ test('the shipped support package needs no peer exemption on the running host', 
   const identity = readSidebarSupportIdentity();
   const manifest = assertSidebarSupportIdentity(installedSupportManifest(), identity);
   const rows = readSupportPeerExemptions(identity);
-  // 0.28.0 的 peer 已放宽到 ^0.2.1-rc.1，宿主 0.2.1-rc.3 直接满足；豁免机制保留给将来真不兼容时用。
+  // 0.28.x 的 peer 已放宽到 ^0.2.1-rc.1，宿主 0.2.1-rc.3 直接满足；豁免机制保留给将来真不兼容时用。
   assert.deepEqual(rows, [], 'the current support package must not need an exemption');
   // 仓库钉住的宿主世代（package.json 的 @deepseek-ai/* 版本），不需要起真实宿主。
   const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const hostVersion = JSON.parse(fs.readFileSync(join(repositoryRoot, 'package.json'), 'utf8')).devDependencies['@deepseek-ai/dsh-util-code-language'];
-  assert.deepEqual(unmetHostRequirements(manifest, hostVersion), {}, '0.28.0 satisfies the pinned host without an exemption');
+  assert.deepEqual(unmetHostRequirements(manifest, hostVersion), {}, '0.28.1 satisfies the pinned host without an exemption');
   assert.equal(supportPeerExemptionDecision({ manifest, hostVersion, exemptions: rows }).status, 'not-needed');
 });
 
