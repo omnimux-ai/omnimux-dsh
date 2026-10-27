@@ -105,6 +105,18 @@ html:not(:has([data-sidebar-collapsed])) ${SIDEBAR_SCOPE} ${PANEL_ROW_SELECTOR}$
   font-weight: 500;
 }
 
+/* ── 官方面板行折叠进「更多」菜单 ──
+   官方左侧栏自带「插件」「自动化任务」两行内置入口，与产品自定义行混排会把侧栏第一屏占满。
+   这两行是官方内置入口、不是产品入口，因此不在侧栏显示，改由「更多」菜单提供
+   （explore-more-menu.jsx 用官方 owner props 渲染它们，官方清单即真源）。
+
+   识别方式：官方「更多」行带 aria-haspopup="menu"，其余面板行没有 —— 于是
+   「隐藏所有非更多面板行」等价于「隐藏官方面板行」，不需要按 id / 文案匹配，
+   官方改文案、加面板、换语言都不会让这条规则失效。 */
+${SIDEBAR_SCOPE} ${PANEL_ROW_SELECTOR}:not([aria-haspopup="menu"]) {
+  display: none;
+}
+
 /* ── 官方「更多」菜单：右移到侧栏列右侧 + 实体不透明底 ──
    React 每帧写 inline left/top，所以位移只能走它不写的 translate。
    材质由 MenuSurface 的 .material 子层消费这两个自定义属性，改属性即改该实例的底。 */

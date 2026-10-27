@@ -49,15 +49,42 @@ test('样式把官方 panel 行压到产品行度量', () => {
   }
 })
 
+/** 把 CSS 拆成「选择器 → 声明块」的规则数组（去掉注释；本文件的规则都是单选择器块）。 */
+function cssRules(css) {
+  return css.replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('}')
+    .map((chunk) => chunk.trim())
+    .filter(Boolean)
+    .map((chunk) => {
+      const index = chunk.indexOf('{')
+      return { selector: chunk.slice(0, index).trim(), body: chunk.slice(index + 1).trim() }
+    })
+}
+
 test('收起态排除：度量规则只在没有 data-sidebar-collapsed 时命中', () => {
-  const rowRules = PANEL_CHROME_CSS.split('\n').filter((line) => /panelRow|panelGlyph/.test(line))
-  for (const line of rowRules) {
+  // 只覆盖度量类规则：新增的「隐藏非更多面板行」规则在两种状态下都生效，
+  // 因此它不带收起态前缀，由下一条用例单独断言。
+  const metricRules = cssRules(PANEL_CHROME_CSS)
+    .filter((rule) => /panelRow|panelGlyph/.test(rule.selector))
+    .filter((rule) => /min-height|padding|margin|gap|border-radius|font-size|line-height|width|height/.test(rule.body))
+  assert.ok(metricRules.length > 0, '必须存在度量规则')
+  for (const rule of metricRules) {
     assert.match(
-      line,
+      rule.selector,
       /^html:not\(:has\(\[data-sidebar-collapsed\]\)\)/,
-      `轨道态不得被文字行度量撑开: ${line}`,
+      `轨道态不得被文字行度量撑开: ${rule.selector}`,
     )
   }
+})
+
+test('官方面板行折叠：非「更多」面板行在展开态与收起态都不显示', () => {
+  const hideRules = cssRules(PANEL_CHROME_CSS)
+    .filter((rule) => /panelRow/.test(rule.selector) && /display:\s*none/.test(rule.body))
+  assert.equal(hideRules.length, 1, '只允许一条隐藏规则（不要为展开 / 收起各写一份）')
+  const rule = hideRules[0]
+  assert.match(rule.selector, /:not\(\[aria-haspopup="menu"\]\)/, '只隐藏非「更多」面板行')
+  assert.match(rule.selector, /data-pane="sidebar"|sidebarCol/, '规则必须限定在侧栏作用域内')
+  assert.doesNotMatch(rule.selector, /data-sidebar-collapsed/, '折叠在收起态同样生效，不带收起态排除')
 })
 
 test('「更多」菜单去透明：覆盖该实例的材质变量并禁用毛玻璃', () => {

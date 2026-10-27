@@ -52,6 +52,29 @@ function exploreMoreMenuIcon(item) {
 }
 
 /**
+ * 折叠进来的官方面板行图标：单一通用面板图标。
+ *
+ * 不按面板 id 映射图标 —— 那需要第二份 id 清单，官方新增面板时必然漂移。
+ * 几何与 OmniMux 清单里的 `iconSvg` 同档（14×14、1.3 描边、纯矢量、无 Emoji）。
+ */
+const PANEL_ROW_ICON_SVG =
+  '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="1.75" y="2.25" width="12.5" height="11.5" rx="2"/><path d="M1.75 6.25h12.5"/></svg>'
+
+/**
+ * 官方面板行的图标容器：与清单行同一 class 与同一信任边界（受信 14×14 纯矢量）。
+ * @returns {import('react').ReactElement}
+ */
+function panelRowIcon() {
+  return (
+    <span
+      className="omnimux-explore-more-icon"
+      aria-hidden="true"
+      dangerouslySetInnerHTML={{ __html: PANEL_ROW_ICON_SVG }}
+    />
+  )
+}
+
+/**
  * 生成「更多」菜单内容组件：顺序 / 分组 / 激活委托全部取自 sidebar-coordinator 真源。
  *
  * - 分组：`separatorBefore` 取「上一项的 `dividerAfter`」；
@@ -59,21 +82,51 @@ function exploreMoreMenuIcon(item) {
  *   （`action` → 已挂载行 click → `__omnimuxWorkbench.open`），不另写导航；
  * - 不订阅注册变更：官方菜单每次展开重新挂载即读取最新集合。
  *
+ * 折叠的官方面板行（`插件` / `自动化任务`）排在最前：侧栏上的面板行已被
+ * `sidebar-panel-chrome.js` 收起，官方 owner 通过 `entries` / `onOpen` 把它们交给本菜单，
+ * 这里原样渲染并复用官方 `onOpen`，不复制面板 id、不硬编码文案。
+ *
  * @param {{ MenuItemButton?: import('react').ComponentType<object> }} [primitives]
  *   官方 primitives 命名空间（只需 `MenuItemButton`）。
- * @returns {import('react').FunctionComponent<{ onDismiss?: () => void }>}
+ * @returns {import('react').FunctionComponent<{
+ *   onDismiss?: () => void,
+ *   entries?: readonly { id: string, label: string, active?: boolean }[],
+ *   onOpen?: (id: string) => void,
+ * }>}
  */
 export function createExploreMoreMenuContent({ MenuItemButton } = {}) {
-  /** 官方「更多」菜单内容：owner 提供 `onDismiss`，其余输入全部来自真源清单。 */
-  function ExploreMoreMenuContent({ onDismiss }) {
+  /**
+   * 官方「更多」菜单内容：owner 提供 `onDismiss` 与折叠的官方面板清单，
+   * 其余输入全部来自真源清单。
+   */
+  function ExploreMoreMenuContent({ onDismiss, entries, onOpen }) {
     const items = resolveExploreMenuItems()
+    const panels = Array.isArray(entries) ? entries : []
     return (
       <>
+        {panels.map((entry) => (
+          <MenuItemButton
+            key={`panel:${entry.id}`}
+            icon={panelRowIcon()}
+            current={entry.active === true}
+            separatorBefore={false}
+            onSelect={() => {
+              onDismiss?.()
+              onOpen?.(entry.id)
+            }}
+          >
+            {entry.label}
+          </MenuItemButton>
+        ))}
         {items.map((item, index) => (
           <MenuItemButton
             key={item.id}
             icon={exploreMoreMenuIcon(item)}
-            separatorBefore={index > 0 && items[index - 1].dividerAfter === true}
+            separatorBefore={
+              (index > 0 && items[index - 1].dividerAfter === true)
+              // 折叠块之后断开：官方面板入口与产品入口不是同一组。
+              || (index === 0 && panels.length > 0)
+            }
             onSelect={() => {
               onDismiss?.()
               activateExploreItem(item)

@@ -402,3 +402,79 @@ describe('官方「更多」菜单运行时注册接缝', () => {
     }
   })
 })
+
+describe('折叠的官方面板行', () => {
+  /** 官方 owner props 的最小形状：`entries` 与 `onOpen`。 */
+  const PANELS = [
+    { id: 'plugins', label: '插件', pinned: false, active: false },
+    { id: 'schedules', label: '自动化任务', pinned: false, active: true },
+  ]
+
+  it('官方面板行排在产品入口之前，文案取自官方 entries（不硬编码）', async () => {
+    const opened = []
+    const menu = await renderMoreMenu({ onDismiss: () => {}, entries: PANELS, onOpen: (id) => opened.push(id) })
+    try {
+      const labels = menu.rows.map((row) => row.children)
+      assert.deepEqual(labels.slice(0, 2), ['插件', '自动化任务'], '先渲染官方面板行')
+      assert.deepEqual(labels.slice(2), EXPECTED_LABELS, '其后仍是 10 项产品入口，顺序不变')
+      assert.equal(menu.rows.length, PANELS.length + TRUTH.length)
+      assert.equal(opened.length, 0, '渲染不触发打开')
+    } finally {
+      menu.cleanup()
+    }
+  })
+
+  it('点击官方面板行：先 onDismiss，再走官方 onOpen(id)', async () => {
+    const order = []
+    const menu = await renderMoreMenu({
+      onDismiss: () => order.push('dismiss'),
+      entries: PANELS,
+      onOpen: (id) => order.push(`open:${id}`),
+    })
+    try {
+      await menu.api.React.act(async () => { menu.rows[1].onSelect() })
+      assert.deepEqual(order, ['dismiss', 'open:schedules'], '先关菜单再选中面板')
+    } finally {
+      menu.cleanup()
+    }
+  })
+
+  it('折叠块之后断开一条分隔线，产品入口内部原有分组不变', async () => {
+    const menu = await renderMoreMenu({ onDismiss: () => {}, entries: PANELS, onOpen: () => {} })
+    try {
+      assert.equal(menu.rows.at(0).separatorBefore === true, false, '折叠块首行不画线')
+      assert.equal(menu.rows.at(1).separatorBefore === true, false, '折叠块内部不画线')
+      assert.equal(menu.rows.at(2).separatorBefore === true, true, '折叠块与产品入口之间断开')
+      assert.deepEqual(
+        menu.rows.slice(2).map((row) => row.separatorBefore === true),
+        [true, ...EXPECTED_SEPARATORS.slice(1)],
+        '折叠块边界画线，产品入口自身分组位置逐项不变',
+      )
+    } finally {
+      menu.cleanup()
+    }
+  })
+
+  it('选中态：官方 entries 的 active 透传为 current', async () => {
+    const menu = await renderMoreMenu({ onDismiss: () => {}, entries: PANELS, onOpen: () => {} })
+    try {
+      assert.equal(menu.rows[0].current, false)
+      assert.equal(menu.rows[1].current, true, '当前选中的官方面板行带选中态')
+    } finally {
+      menu.cleanup()
+    }
+  })
+
+  it('无 entries（老宿主 / 直接渲染）时仍渲染 10 项且首行不画线', async () => {
+    for (const props of [{ onDismiss: () => {} }, { onDismiss: () => {}, entries: [] }, { onDismiss: () => {}, entries: undefined }]) {
+      const menu = await renderMoreMenu(props)
+      try {
+        assert.equal(menu.rows.length, TRUTH.length)
+        assert.equal(menu.rows.at(0).separatorBefore, false)
+        assert.deepEqual(menu.rows.map((row) => row.children), EXPECTED_LABELS)
+      } finally {
+        menu.cleanup()
+      }
+    }
+  })
+})
