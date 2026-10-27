@@ -369,10 +369,10 @@ export function preparePrivateTaskPackages({ preparation, root, repository, priv
   const targets = preparation.packages.map(item => visit({ source: item.extractedRoot, resolveRoot: join(preparation.stageRoot, item.sourcePath), archive: item }));
   const support = [];
   // The packaged host does not ship the optional sidebar seam; first-party workbench plugins
-  // (assets, workflow, automation) register their tabs through ctx.inject(['betterSidebar']), so the
+  // (assets, workflow) register their tabs through ctx.inject(['betterSidebar']), so the
   // reviewed support package must be installed whenever any of them is part of the task graph.
   // The accepted identity comes from scripts/sidebar-support-identity.json, never a literal here.
-  if (['omnimux-assets', 'omnimux-workflow', 'omnimux-automation'].some(name => byName.has(name))) {
+  if (['omnimux-assets', 'omnimux-workflow'].some(name => byName.has(name))) {
     const source = join(root, 'plugins/omnimux-studio/node_modules/dsh-better-sidebar');
     if (!fs.existsSync(join(source, 'package.json'))) fail('INSTALL_SUPPORT_REQUIRED');
     const actual = fs.realpathSync(source), manifest = json(join(actual, 'package.json'));

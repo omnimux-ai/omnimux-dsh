@@ -90,7 +90,6 @@ Derivation order is fixed and exclusive:
 | `[data-dsh-omnimux-new-project-entry]` | `omnimux-workflow` | 新建项目 / New Project（展开：`kind:'inline'` 并排「新建会话」。收起：CSS 藏项目按钮，点官方加号弹出「新建会话 / 新建项目」，选中再 click 原按钮。折叠态属性在 AppFrame，不在 html。收起 wrapper 可用 `display:contents`，但官方加号上的 `flex:1` **必须**收回 `flex:none` + 36×36，否则会吃掉会话列表高度变成竖条） |
 | `[data-omnimux-assets-entry]` | `omnimux-assets` | 资产库（rank 6 现网，**核心常驻**）。**Workbench**：`omnimux-assets:library`，不得 claim。**产品库**是资产库内的一个 Tab，不是独立侧栏行 |
 | `[data-omnimux-inspiration-entry]` | `omnimux-inspiration` | 灵感社区（rank 7，**核心常驻**）。**Workbench**：`omnimux-inspiration:library`，不得 claim |
-| `[data-omnimux-automation-entry]` | `omnimux-automation` | 自动化（收敛至官方「更多」菜单） |
 | `[data-omnimux-google-vids-entry]` | `omnimux-video` | Google Vids（rank 7.5，收敛至官方「更多」菜单）。**中栏 Stage**：Vids 经 `shell.overlay` 注册，**不再**注册 Workbench Tab。点击先 `await workbench.open({ tabId: 'omnimux-clip:studio', focus: 'split' })` 把视频剪辑开到右侧栏，仅当返回值严格为 `true` 且条目仍挂载时才 `claim('omnimux-vids')`；失败时保持原 Stage 与焦点不变，禁止另写 `setFocus`。 |
 | `[data-omnimux-publish-entry]` | `omnimux-publish` | 发布（收敛至官方「更多」菜单） |
 | `[data-omnimux-analytics-entry]` | `omnimux-analytics` | 数据分析（收敛至官方「更多」菜单） |

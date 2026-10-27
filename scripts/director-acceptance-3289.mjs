@@ -8,7 +8,7 @@
  *   startTestEnvironment({ root, mode: 'ui',
  *     evidenceContext: { taskId: '3289', runId: 'accept-<unique>' },
  *     candidate: { base: <origin/main sha>, head: <HEAD sha> },
- *     taskPlugins: ['omnimux-workflow', 'omnimux-automation'] })
+ *     taskPlugins: ['omnimux-workflow', 'omnimux-assets'] })
  *
  * The bootstrap builds, packs and installs those plugins from the candidate
  * source into a task-private app, then proves the installed/loaded identity.
@@ -842,7 +842,7 @@ async function main() {
   const base = spawnSync('git', ['-C', root, 'rev-parse', 'origin/main'], { encoding: 'utf8' }).stdout.trim();
   const head = spawnSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim();
   const runId = `accept-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-  const runtime = { startedAt: stamp(), head, base, runId, contract: 'task-source-installed', taskPlugins: ['omnimux-workflow', 'omnimux-automation'], python: python3 };
+  const runtime = { startedAt: stamp(), head, base, runId, contract: 'task-source-installed', taskPlugins: ['omnimux-workflow', 'omnimux-assets'], python: python3 };
   let app, failure, assertions, independent;
   try {
     const { startTestEnvironment } = await import('./test-env-bootstrap.mjs');
@@ -851,7 +851,7 @@ async function main() {
       mode: 'ui',
       evidenceContext: { taskId: '3289', runId },
       candidate: { base, head },
-      taskPlugins: ['omnimux-workflow', 'omnimux-automation'],
+      taskPlugins: ['omnimux-workflow', 'omnimux-assets'],
     });
     runtime.summary = app.summary;
     runtime.installation = {

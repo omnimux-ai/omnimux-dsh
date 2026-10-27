@@ -37,3 +37,15 @@ deliverables/
 /.tmp/*
 !/.tmp/AGENTS.md
 .test-env-*
+
+# 市场封面图托管在 https://dl.omnimux.ai/market/covers/（见 omnimux-market 的
+# MARKET_ASSET_CDN）：130MB 图片曾把 npm 包撑到 142MB 并让 publish 因 EPIPE 中断。
+# 只忽略图片，catalog/covers/**/*.generation.json 这类溯源元数据仍需入库。
+plugins/omnimux-market/catalog/covers/**/*.png
+plugins/omnimux-market/catalog/covers/**/*.jpg
+plugins/omnimux-market/catalog/covers/**/*.jpeg
+plugins/omnimux-market/catalog/covers/**/*.webp
+plugins/omnimux-market/catalog/covers/*.png
+plugins/omnimux-market/catalog/covers/*.jpg
+plugins/omnimux-market/catalog/covers/*.jpeg
+plugins/omnimux-market/catalog/covers/*.webp

@@ -178,16 +178,6 @@
 
       // 4. 智能体与系统
       {
-        id: "omnimux-automation",
-        categoryId: "agents-automation",
-        iconKey: "automation",
-        titleZh: "任务自动化",
-        titleEn: "Automation",
-        descZh: "定时任务与独立巡检：到点自动新开会话跑一轮。",
-        descEn: "Scheduled task automation: runs isolated background sessions on calendar schedules.",
-        isProtected: false,
-      },
-      {
         id: "omnimux-workflow",
         categoryId: "agents-automation",
         iconKey: "workflow",

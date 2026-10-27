@@ -28,8 +28,7 @@ test('E2E: Alpha 判定真源仍是生命周期注册表，菜单面不复制第
   const alphaPlugins = Object.entries(lifecycle)
     .filter(([, entry]) => entry.stage === 'alpha')
     .map(([name]) => name)
-  assert.ok(alphaPlugins.includes('omnimux-automation'), '自动化必须仍在 Alpha 名单内')
-  assert.ok(alphaPlugins.length >= 5, 'Alpha 名单至少覆盖 5 个内测插件')
+  assert.ok(alphaPlugins.length >= 4, 'Alpha 名单至少覆盖 4 个内测插件')
 
   const menu = read('plugins/omnimux/src/client/explore-more-menu.jsx')
   assert.match(menu, /isAlphaEntry/, '菜单面必须复用 coordinator 的 Alpha 判定')

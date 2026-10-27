@@ -793,6 +793,24 @@ function detectImageContentType(fileName) {
         return 'image/gif';
     return 'image/png';
 }
+/**
+ * Where catalog cover art is served from.
+ *
+ * `catalog/covers` is 130 MB of images, which pushed the package to 142 MB and made
+ * `npm publish` abort with EPIPE. The images live on the distribution CDN instead and
+ * are cached on disk after the first fetch, so a missing local copy is not an error.
+ */
+export const MARKET_ASSET_CDN = 'https://dl.omnimux.ai/market';
+/** Rewrite a bundled catalog asset path to its CDN location. */
+export function catalogAssetUrl(target) {
+    if (!target.startsWith('catalog/'))
+        return undefined;
+    const rel = target.slice('catalog/'.length);
+    // Reject traversal and anything that is not a plain asset path.
+    if (rel.length === 0 || rel.includes('..') || !/^[a-zA-Z0-9._/-]+$/u.test(rel))
+        return undefined;
+    return `${MARKET_ASSET_CDN}/${rel}`;
+}
 function resolveLocalCoverOrAvatar(target) {
     // 1. 本地 catalog 封面图与专家头像 catalog/covers/<filename>
     if (target.startsWith('catalog/covers/')) {
@@ -882,7 +900,10 @@ function saveAvatarDiskCache(targetUrl, body, contentType) {
 export async function handleIcon(req, res, cfg) {
     try {
         const url = new URL(req.url || '/', 'http://127.0.0.1');
-        const target = url.searchParams.get('url') || '';
+        const requested = url.searchParams.get('url') || '';
+        // A catalog asset that is no longer bundled is fetched from the CDN and cached on
+        // disk, exactly like a remote URL. Only the lookup key changes.
+        const target = requested.startsWith('catalog/') ? (catalogAssetUrl(requested) ?? requested) : requested;
         if (target.startsWith('marketplace-icon:')) {
             const id = target.slice('marketplace-icon:'.length);
             const resolved = resolveMarketplaceIconFile(id);
