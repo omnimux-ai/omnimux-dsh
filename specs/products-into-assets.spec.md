@@ -99,7 +99,11 @@
 - `plugins/omnimux-products/src/client-form-subscreen.test.js` :: `uses the hover split menu for both create entry points and never a character glyph`
 - `plugins/omnimux-products/src/client/all-plugins-stage-spacing.test.js` :: `omnimux-products extracts ActionRow to Layer 2 and defines 8px 20px 12px padding`
 - `plugins/omnimux-products/src/client/stage-data.test.js` :: `*`
-- `plugins/omnimux-products/src/client/workbench-seat.test.js` :: `*`
+- `plugins/omnimux-products/src/client/workbench-seat.test.js` :: `client apply integrates into workbench and registers tab without redundant sidebar entry`
+- `plugins/omnimux-products/src/client/workbench-seat.test.js` :: `products workbench seat (sidebar must not claim overlay)`
+- `plugins/omnimux-products/src/client/workbench-seat.test.js` :: `sidebar entry uses the workbench store, not the product stage`
+- `plugins/omnimux-products/src/client/workbench-seat.test.js` :: `stage ActionRow contains secondary "add in chat" button that reveals middle conversation column`
+- `plugins/omnimux-products/src/client/workbench-seat.test.js` :: `stage component has no in-tab FocusBar and does not claim overlay`
 - `plugins/omnimux/src/client/explore-more-menu.test.js` :: `10 行文案与顺序逐字等于真源清单`
 - `plugins/omnimux/src/client/explore-more-menu.test.js` :: `与内置 id 冲突的注册项不出现（内置文案不被冒充）`
 - `plugins/omnimux/src/client/explore-more-menu.test.js` :: `分组分隔线：上一项 dividerAfter 决定下一行 separatorBefore`
@@ -110,7 +114,8 @@
 - `plugins/omnimux/src/client/sidebar-coordinator.test.js` :: `运行时注册接缝：未注册与内置 10 项完全一致，注册后追加末尾、注销即消失`
 - `plugins/omnimux/src/client/sidebar-coordinator.test.js` :: `非核心插件（video, products, device, clip, social-harvest, apps 等）收敛，不渲染独立行`
 - `plugins/omnimux/src/client/ui-convergence-contract.test.js` :: `AC-5: 删除确认弹窗必须明确提示关联资产名称`
-- `plugins/omnimux/src/client/workbench.test.js` :: `*`
+- `plugins/omnimux/src/client/workbench.test.js` :: `default focus matrix: canvas and all libraries default to gui (Issue #2006)`
+- `plugins/omnimux/src/client/workbench.test.js` :: `resolveWorkbenchTabTitle prefers opts, then getTab, then human fallback (#345)`
 - `plugins/omnimux/src/workbench/surface-follow.test.js` :: `把各工作面工具解析到对应页签`
 - `plugins/omnimux/src/workbench/surface-follow.test.js` :: `识别用户接管：当前页签既不是上次自动目标、也不是本次目标`
 - `scripts/live-qa.test.mjs` :: `stage selection and actual runtime discovery reject empty or unknown targets`
