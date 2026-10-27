@@ -9,14 +9,23 @@
  * missing work list stays empty, and a page without a profile answers a
  * failure reason instead of a half-empty account.
  *
- * Two extractor paths, both measured on the live pages (2026-10-21):
+ * Three extractor paths:
  * - TikTok: `#__UNIVERSAL_DATA_FOR_REHYDRATION__` carries
  *   `__DEFAULT_SCOPE__['webapp.user-detail'].userInfo` (user + stats); the
  *   works are the DOM grid cards, whose own text holds views / comments / date.
+ *   Measured on the live page (2026-10-21).
  * - X: the header DOM carries display name, @handle, bio, followers and
  *   following; works are `article[data-testid="tweet"]` nodes. A signed-out
  *   page shows a "Sign in to X" wall with no articles, which is reported as
- *   `page-incomplete` rather than as a legitimately empty account.
+ *   `page-incomplete` rather than as a legitimately empty account. Measured on
+ *   the live page (2026-10-21).
+ * - 小红书: `window.__INITIAL_STATE__.user` holds the Pinia user store —
+ *   `userPageData` (basicInfo + interactions) and `notes` (`[tab[], …]`). The
+ *   field names follow the opencli 小红书 adapter and the browser-act profile
+ *   skill, both exercised against a logged-in page; every reader below tries
+ *   several candidate keys and answers `null`/`''` instead of guessing. The
+ *   profile grid is the DOM fallback. The live page itself still needs a human
+ *   logged-in regression (spec §7) — this module never fetches anything.
  *
  * @module
  */
@@ -24,16 +33,19 @@
 import {
   absoluteHttpUrl,
   arrayOf,
+  findDeepObject,
   firstHttpUrl,
   firstNonEmpty,
   isoFromDate,
   numberField,
   parseJson,
   recordOf,
+  scriptTexts,
   stringField,
   textOf,
   titleFromText,
   uniqueMedia,
+  valueAfterMarker,
 } from './helpers.ts'
 
 /** One work found on the account's profile page. */
@@ -48,14 +60,14 @@ export interface CapturedAccountPost {
   /** ISO timestamp, or `null` when the card showed no date. */
   posted_at: string | null
   /** Only counters the page rendered; an absent key means the page hid it. */
-  stats: { likes?: number, comments?: number, views?: number, shares?: number }
+  stats: { likes?: number, comments?: number, views?: number, shares?: number, collects?: number }
   media: Array<{ type: 'video' | 'image', url: string }>
 }
 
 /** One captured account, ready for `POST /plugin-refresh/complete`. */
 export interface CapturedAccount {
-  platform: 'tiktok' | 'x'
-  /** Handle without `@`. */
+  platform: 'tiktok' | 'x' | 'xiaohongshu'
+  /** Handle without `@`; 小红书 uses the numeric profile uid. */
   handle: string
   nickname: string
   avatar_url: string
@@ -65,7 +77,7 @@ export interface CapturedAccount {
   posts_count: number | null
   posts: CapturedAccountPost[]
   captured_at: string
-  extractor: 'tiktok-profile' | 'x-profile'
+  extractor: 'tiktok-profile' | 'x-profile' | 'xiaohongshu-profile'
 }
 
 /** Outcome of reading a profile page. */
@@ -85,6 +97,7 @@ const MAX_X_POSTS = 30
 /** Host suffixes per platform, matched on a dot boundary. */
 const TIKTOK_HOSTS: readonly string[] = ['tiktok.com']
 const X_HOSTS: readonly string[] = ['x.com', 'twitter.com']
+const XIAOHONGSHU_HOSTS: readonly string[] = ['xiaohongshu.com']
 
 /**
  * X single-segment paths that are site chrome rather than a profile.
@@ -128,6 +141,14 @@ const TIKTOK_PROFILE_PATH_RE = /^\/@([A-Za-z0-9_.]{1,64})\/?$/
 
 /** X profile path: `/<handle>` (X handles are at most 15 characters). */
 const X_PROFILE_PATH_RE = /^\/([A-Za-z0-9_]{1,15})\/?$/
+
+/**
+ * 小红书 profile path: `/user/profile/<uid>`, uid is 24 hex characters.
+ *
+ * `/explore/<id>`, `/login`, `/search` and the rest of the site are not
+ * profiles; the uid is lower-cased so the handle matches the host's comparison.
+ */
+const XIAOHONGSHU_PROFILE_PATH_RE = /^\/user\/profile\/([0-9a-fA-F]{24})\/?$/
 
 /** X permanent post path; media/analytics suffixes are not the post itself. */
 const X_STATUS_PATH_RE = /^\/[A-Za-z0-9_]+\/status\/(\d+)\/?$/
@@ -196,6 +217,7 @@ function hostMatches(hostname: string, hosts: readonly string[]): boolean {
 function platformOf(hostname: string): AccountPlatform | null {
   if (hostMatches(hostname, TIKTOK_HOSTS)) return 'tiktok'
   if (hostMatches(hostname, X_HOSTS)) return 'x'
+  if (hostMatches(hostname, XIAOHONGSHU_HOSTS)) return 'xiaohongshu'
   return null
 }
 
@@ -205,6 +227,10 @@ function profileHandleOf(url: URL, platform: AccountPlatform): string {
   if (platform === 'tiktok') {
     const match = TIKTOK_PROFILE_PATH_RE.exec(pathname)
     return match === null ? '' : match[1]
+  }
+  if (platform === 'xiaohongshu') {
+    const match = XIAOHONGSHU_PROFILE_PATH_RE.exec(pathname)
+    return match === null ? '' : match[1].toLowerCase()
   }
   const match = X_PROFILE_PATH_RE.exec(pathname)
   if (match === null) return ''
@@ -752,6 +778,487 @@ function captureX(
   }
 }
 
+/* ------------------------------------------------------------------ 小红书 */
+
+/** 小红书 host for the note addresses built below. */
+const XIAOHONGSHU_ORIGIN = 'https://www.xiaohongshu.com'
+
+/** Note id inside a profile card's `/explore/<id>` link. */
+const XIAOHONGSHU_EXPLORE_PATH_RE = /\/explore\/([0-9a-fA-F]{24})/
+
+/** Note id inside a profile card's `/user/profile/<uid>/<id>` link. */
+const XIAOHONGSHU_CARD_PATH_RE = /\/user\/profile\/[0-9a-fA-F]{24}\/([0-9a-fA-F]{24})/
+
+/** A counter as the page wrote it (`1234`, `1.2万`, `3.4K`), or `null`. */
+function countOf(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) && value >= 0 ? Math.round(value) : null
+  }
+  if (typeof value !== 'string') return null
+  const text = value.trim().replace(/[,\s]/g, '')
+  if (text === '') return null
+  // A trailing `+` marks a desensitized lower bound (风控下的 `10+`/`1万+`), not a
+  // count: storing it as an exact number would fabricate precision.
+  if (/[+＋]$/.test(text)) return null
+  const match = /^(\d+(?:\.\d+)?)([万wWkKmM亿])?$/.exec(text)
+  if (match === null) return null
+  const base = Number(match[1])
+  if (!Number.isFinite(base)) return null
+  switch ((match[2] ?? '').toLowerCase()) {
+    case '万':
+    case 'w':
+      return Math.round(base * 10_000)
+    case '亿':
+      return Math.round(base * 100_000_000)
+    case 'k':
+      return Math.round(base * 1_000)
+    case 'm':
+      return Math.round(base * 1_000_000)
+    default:
+      return Math.round(base)
+  }
+}
+
+/**
+ * Plain value behind a Pinia ref.
+ *
+ * `window.__INITIAL_STATE__.user` is a Pinia store: `userPageData` and `notes`
+ * arrive either as the raw object or wrapped in `{ _value: … }` (and Vue's
+ * `{ value: … }`) depending on the page build, so every reader unwraps first.
+ */
+function piniaValue(value: unknown): unknown {
+  const record = recordOf(value)
+  if (record === null) return value
+  if ('_value' in record) return record['_value']
+  if ('value' in record) return record['value']
+  return value
+}
+
+/** `window.__INITIAL_STATE__` from the inline scripts, or `null`. */
+function xiaohongshuStateOf(doc: Document): Record<string, unknown> | null {
+  for (const text of scriptTexts(doc)) {
+    if (!text.includes('__INITIAL_STATE__')) continue
+    const raw = valueAfterMarker(text, '__INITIAL_STATE__')
+    if (raw === null) continue
+    // The state carries `undefined` literals, which are not valid JSON; the
+    // substitution only affects this fallback branch (same as xiaohongshu.ts).
+    const record = recordOf(parseJson(raw.replace(/\bundefined\b/g, 'null')))
+    if (record !== null) return record
+  }
+  return null
+}
+
+/** The profile page's Pinia `user` store, or `null` when the page carries none. */
+function xiaohongshuUserStoreOf(doc: Document): Record<string, unknown> | null {
+  return recordOf(piniaValue(xiaohongshuStateOf(doc)?.['user']))
+}
+
+/** Counters of the profile header, keyed by `type` and by `name`. */
+function xiaohongshuInteractionCountsOf(
+  pageData: Record<string, unknown> | null,
+): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const entry of arrayOf(piniaValue(pageData?.['interactions']))) {
+    const record = recordOf(piniaValue(entry))
+    if (record === null) continue
+    const value = countOf(record['count'] ?? record['i18nCount'] ?? record['i18n_count'])
+    if (value === null) continue
+    for (const key of [stringField(record, ['type']), stringField(record, ['name'])]) {
+      const normalized = key.toLowerCase()
+      if (normalized !== '' && !counts.has(normalized)) counts.set(normalized, value)
+    }
+  }
+  return counts
+}
+
+/** First counter stored under one of `keys`, or `null`. */
+function xiaohongshuCounterOf(counts: Map<string, number>, keys: readonly string[]): number | null {
+  for (const key of keys) {
+    const value = counts.get(key)
+    if (value !== undefined) return value
+  }
+  return null
+}
+
+/** First readable image address among `keys` of `record`, or `null`. */
+function xiaohongshuImageOf(
+  record: Record<string, unknown> | null,
+  keys: readonly string[],
+  base: string,
+): string | null {
+  if (record === null) return null
+  for (const key of keys) {
+    const url = firstHttpUrl(record[key], base)
+    if (url !== null) return url
+  }
+  return null
+}
+
+/** Profile fields read from `userPageData`, or `null` when the store has none. */
+interface XiaohongshuProfile {
+  nickname: string
+  avatar_url: string
+  bio: string
+  followers: number | null
+  following: number | null
+  posts_count: number | null
+}
+
+/**
+ * Profile fields of `userPageData`, or `null` when the page carries none.
+ *
+ * Field names come from the opencli adapter and the browser-act profile skill
+ * (both run against a logged-in profile): `basicInfo.nickname` / `imageb` /
+ * `desc`, and `interactions` — `[{ type: 'fans' | 'follows' | 'interaction',
+ * name: '粉丝' | '关注' | '获赞与收藏', count: '1234' }]`. Several candidate keys
+ * are tried per field and a missing one stays `null`/`''` — the header's
+ * desensitized `10+` is a lower bound and is not stored as a count.
+ */
+function xiaohongshuProfileOf(
+  pageData: Record<string, unknown> | null,
+  pageHref: string,
+): XiaohongshuProfile | null {
+  if (pageData === null) return null
+  const basic = recordOf(piniaValue(pageData['basicInfo'] ?? pageData['basic_info']))
+  if (basic === null) return null
+  const counts = xiaohongshuInteractionCountsOf(pageData)
+  return {
+    nickname: stringField(basic, ['nickname', 'nickName', 'nick_name', 'name']),
+    avatar_url: xiaohongshuImageOf(
+      basic,
+      ['imageb', 'imageB', 'images', 'image', 'avatar', 'avatarUrl', 'avatar_url'],
+      pageHref,
+    ) ?? '',
+    bio: stringField(basic, ['desc', 'description', 'sign']),
+    followers: xiaohongshuCounterOf(counts, ['fans', '粉丝', 'followers']),
+    following: xiaohongshuCounterOf(counts, ['follows', '关注', 'following']),
+    // The profile header renders no note total on the measured page build; the
+    // page data sometimes carries one, so it is read but never invented.
+    posts_count: countOf(pageData['noteNum'] ?? pageData['noteCount'] ?? pageData['note_count'])
+      ?? countOf(basic['noteNum'] ?? basic['noteCount'] ?? basic['note_count']),
+  }
+}
+
+/** The profile's `notes` store as `[tab[], …]` groups, or `[]` when absent. */
+function xiaohongshuNoteGroupsOf(userStore: Record<string, unknown>): unknown[] {
+  const notes = piniaValue(userStore['notes'])
+  // Measured shape is `[tab[], tab[], …]`. Some page builds hand back a
+  // numeric-keyed object map instead (the browser-act skill reads `notes[0]`
+  // as that map), so a plain record is spread into one group per value.
+  if (Array.isArray(notes)) return notes
+  const record = recordOf(notes)
+  return record === null ? [] : Object.values(record)
+}
+
+/** Whether the store hydrated its note list yet (either shape counts). */
+function xiaohongshuNotesReady(userStore: Record<string, unknown> | null): boolean {
+  if (userStore === null) return false
+  const notes = piniaValue(userStore['notes'])
+  return Array.isArray(notes) || recordOf(notes) !== null
+}
+
+/** One note card flattened out of its tab group and its `noteCard` wrapper. */
+interface XiaohongshuNoteCard {
+  /** The group entry (`{ noteCard, xsecToken }`) the card came from. */
+  entry: Record<string, unknown>
+  /** The card itself (`{ noteId, displayTitle, interactInfo, cover, … }`). */
+  card: Record<string, unknown>
+}
+
+/** Every `{ noteCard }` entry of every tab, in page order. */
+function xiaohongshuNoteCardsOf(userStore: Record<string, unknown>): XiaohongshuNoteCard[] {
+  const cards: XiaohongshuNoteCard[] = []
+  for (const group of xiaohongshuNoteGroupsOf(userStore)) {
+    const unwrapped = piniaValue(group)
+    // A tab is an array of entries; a page build that hands back a numeric-keyed
+    // object map (the shape the browser-act skill reads as `notes[0]`) is walked
+    // by its values instead.
+    const entries = Array.isArray(unwrapped) ? unwrapped : Object.values(recordOf(unwrapped) ?? {})
+    for (const item of entries) {
+      const entry = recordOf(piniaValue(item))
+      if (entry === null) continue
+      const card = recordOf(piniaValue(entry['noteCard'] ?? entry['note_card'])) ?? entry
+      cards.push({ entry, card })
+    }
+  }
+  return cards
+}
+
+/** Note address: the tokenized `/explore/` page, else the profile-scoped one. */
+function xiaohongshuNoteUrl(uid: string, noteId: string, xsecToken: string): string {
+  if (xsecToken !== '') {
+    return `${XIAOHONGSHU_ORIGIN}/explore/${noteId}?xsec_token=${encodeURIComponent(xsecToken)}&xsec_source=pc_user`
+  }
+  return `${XIAOHONGSHU_ORIGIN}/user/profile/${uid}/${noteId}`
+}
+
+/** Video address inside a video note, or `null` when the card carries none. */
+function xiaohongshuVideoUrlOf(card: Record<string, unknown>, pageHref: string): string | null {
+  const video = recordOf(card['video'])
+  if (video === null) return null
+  const stream = findDeepObject(video, (record) => record['masterUrl'] !== undefined
+    || record['master_url'] !== undefined
+    || record['backupUrls'] !== undefined)
+  return firstHttpUrl(
+    stream?.['masterUrl'] ?? stream?.['master_url'] ?? stream?.['backupUrls'],
+    pageHref,
+  )
+}
+
+/** One note from a `notes` card, or `null` when it carries no note id. */
+function xiaohongshuPostFromCard(
+  note: XiaohongshuNoteCard,
+  pageHref: string,
+  uid: string,
+): CapturedAccountPost | null {
+  const { entry, card } = note
+  const noteId = firstNonEmpty(
+    stringField(card, ['noteId', 'note_id']),
+    stringField(entry, ['id', 'noteId', 'note_id']),
+  )
+  if (noteId === '') return null
+  const xsecToken = firstNonEmpty(
+    stringField(entry, ['xsecToken', 'xsec_token']),
+    stringField(card, ['xsecToken', 'xsec_token']),
+  )
+  const content = stringField(card, ['desc', 'description'])
+  const title = firstNonEmpty(
+    titleFromText(stringField(card, ['displayTitle', 'display_title', 'title'])),
+    titleFromText(content),
+  )
+  const interact = recordOf(piniaValue(card['interactInfo'] ?? card['interact_info']))
+  const stats: CapturedAccountPost['stats'] = {}
+  const likes = countOf(interact?.['likedCount'] ?? interact?.['liked_count'] ?? interact?.['likes'])
+  const comments = countOf(interact?.['commentCount'] ?? interact?.['comment_count'])
+  const collects = countOf(interact?.['collectedCount'] ?? interact?.['collected_count'])
+  if (likes !== null) stats.likes = likes
+  if (comments !== null) stats.comments = comments
+  if (collects !== null) stats.collects = collects
+  const cover = firstHttpUrl(card['cover'], pageHref)
+  const media: CapturedAccountPost['media'] = []
+  if (cover !== null) media.push({ type: 'image', url: cover })
+  if (stringField(card, ['type']).toLowerCase() === 'video') {
+    const videoUrl = xiaohongshuVideoUrlOf(card, pageHref)
+    if (videoUrl !== null) media.push({ type: 'video', url: videoUrl })
+  }
+  return {
+    platform_post_id: noteId,
+    source_url: xiaohongshuNoteUrl(uid, noteId, xsecToken),
+    title,
+    content,
+    posted_at: isoFromDate(
+      card['time'] ?? card['createTime'] ?? card['create_time'] ?? card['publishTime'],
+    ) ?? null,
+    stats,
+    media: uniqueMedia(media),
+  }
+}
+
+/** Notes from the profile's inline state. */
+function xiaohongshuPostsFromState(
+  userStore: Record<string, unknown>,
+  pageHref: string,
+  uid: string,
+): CapturedAccountPost[] {
+  const posts: CapturedAccountPost[] = []
+  for (const note of xiaohongshuNoteCardsOf(userStore)) {
+    const post = xiaohongshuPostFromCard(note, pageHref, uid)
+    if (post !== null) posts.push(post)
+  }
+  return dedupePosts(posts)
+}
+
+/** Permalink of one rendered card, read from its own href (token preserved). */
+function xiaohongshuCardLinkOf(
+  card: Element,
+  pageHref: string,
+): { noteId: string, url: string } | null {
+  const candidates: { noteId: string, url: string, token: string }[] = []
+  for (const anchor of card.querySelectorAll<HTMLAnchorElement>('a[href]')) {
+    // The raw href is used as-is: a hand-built address would drop the note's
+    // `xsec_token`, and 小红书 refuses to open a note without it.
+    const absolute = absoluteHttpUrl(anchor.getAttribute('href'), pageHref)
+    if (absolute === null) continue
+    const parsed = new URL(absolute)
+    const match = XIAOHONGSHU_EXPLORE_PATH_RE.exec(parsed.pathname)
+      ?? XIAOHONGSHU_CARD_PATH_RE.exec(parsed.pathname)
+    if (match === null) continue
+    parsed.hash = ''
+    candidates.push({
+      noteId: match[1],
+      url: parsed.href,
+      token: parsed.searchParams.get('xsec_token') ?? '',
+    })
+  }
+  const first = candidates.at(0)
+  if (first === undefined) return null
+  // The measured card renders a bare `/explore/<id>` link plus a visible link
+  // carrying the token (shaped `/user/profile/<author>/<id>?xsec_token=…`). The
+  // tokenized address is the one that opens the note, so it wins — but only
+  // when it is about this card's note.
+  const tokenized = candidates.find(
+    (candidate) => candidate.token !== '' && candidate.noteId === first.noteId,
+  )
+  return tokenized ?? first
+}
+
+/** Cover image of one rendered card, or `null`.
+ *
+ * The card's own cover comes first (`.cover img`); a bare first-image scan is
+ * the fallback, and it skips the author avatar the card may render above the
+ * cover — an avatar as `cover_url` would show the wrong picture on every row.
+ */
+function xiaohongshuCardCoverOf(card: Element, pageHref: string): { url: string | null, alt: string } {
+  const cover = card.querySelector<HTMLImageElement>('.cover img, a.cover img, .note-cover img')
+  const image = cover ?? Array.from(card.querySelectorAll<HTMLImageElement>('img[src], img[data-src]'))
+    .find((candidate) => {
+      const src = candidate.getAttribute('src') ?? candidate.getAttribute('data-src') ?? ''
+      return !/avatar|profile_images/i.test(src)
+    })
+  const url = absoluteHttpUrl(
+    image?.getAttribute('src') ?? image?.getAttribute('data-src'),
+    pageHref,
+  )
+  return { url, alt: image?.getAttribute('alt') ?? '' }
+}
+
+/**
+ * The profile grid's card selector.
+ *
+ * `section.note-item` is the measured class; `section:has(a[href*="/explore/"])`
+ * catches a build that renames it. `:has()` throws a SyntaxError where it is
+ * unsupported (rather than matching nothing), so it is only used when the
+ * engine advertises it — a capture must never die on a selector.
+ */
+function xiaohongshuCardSelector(doc: Document): string {
+  const supportsHas = doc.defaultView?.CSS?.supports?.('selector(:has(a))') === true
+  return supportsHas
+    ? 'section.note-item, section:has(a[href*="/explore/"])'
+    : 'section.note-item'
+}
+
+/** Notes from the rendered profile grid (`section.note-item`). */
+function xiaohongshuPostsFromDom(
+  doc: Document,
+  pageHref: string,
+): CapturedAccountPost[] {
+  const posts: CapturedAccountPost[] = []
+  const cards = doc.querySelectorAll<HTMLElement>(xiaohongshuCardSelector(doc))
+  for (const card of cards) {
+    const link = xiaohongshuCardLinkOf(card, pageHref)
+    if (link === null) continue
+    const { url: cover, alt } = xiaohongshuCardCoverOf(card, pageHref)
+    const content = firstNonEmpty(
+      textOf(card.querySelector('.footer .title, .title, a.title')),
+      alt,
+    )
+    const stats: CapturedAccountPost['stats'] = {}
+    const likes = counterOf(textOf(card.querySelector('.like-wrapper .count, .like-wrapper')))
+    if (likes !== null) stats.likes = likes
+    const media: CapturedAccountPost['media'] = []
+    if (cover !== null) media.push({ type: 'image', url: cover })
+    const video = absoluteHttpUrl(card.querySelector<HTMLVideoElement>('video')?.getAttribute('src'), pageHref)
+    if (video !== null) media.push({ type: 'video', url: video })
+    posts.push({
+      platform_post_id: link.noteId,
+      source_url: link.url,
+      title: titleFromText(content),
+      content,
+      // The rendered card carries no publish time.
+      posted_at: null,
+      stats,
+      media: uniqueMedia(media),
+    })
+  }
+  return dedupePosts(posts)
+}
+
+/**
+ * Counter rendered as `<number><label>` in the page text (`1.2万 粉丝`).
+ *
+ * 小红书 renders the header counters as `关注` / `粉丝` / `获赞与收藏` on
+ * `xiaohongshu.com` and as `Follow` / `Followers` / `Likes and saves` on the
+ * English build, so both label sets are accepted. {@link countOf} still drops a
+ * desensitized `10+`, which keeps a signed-out header from becoming a count.
+ */
+function xiaohongshuLabeledCounterOf(text: string, label: string): number | null {
+  const match = new RegExp(`([0-9][0-9.,]*\\s*[万wWkKmM亿]?)\\s*(?:${label})`).exec(text)
+  if (match === null) return null
+  return countOf(match[1].replace(/\s+/g, ''))
+}
+
+/** Profile fallback from the rendered header (no inline state). */
+function xiaohongshuDomProfileOf(doc: Document, pageHref: string): XiaohongshuProfile | null {
+  const header = doc.querySelector('.user-info')
+  const nickname = textOf(doc.querySelector('.user-info .user-name, .user-name, .user-info h1'))
+  const bio = textOf(doc.querySelector('.user-desc, .user-info .desc'))
+  const avatar = doc.querySelector<HTMLImageElement>('.user-info img, .avatar-wrapper img')
+  const avatarUrl = absoluteHttpUrl(avatar?.getAttribute('src'), pageHref) ?? ''
+  if (nickname === '' && bio === '' && avatarUrl === '') return null
+  // The counters sit in the header row, not necessarily inside `.user-info`, so
+  // the text of the header and then the whole page is searched.
+  const text = `${textOf(header)} ${textOf(doc.body)}`
+  // The note total is the `笔记` tab's own label (`笔记・12`); no other element
+  // on the page carries it.
+  const noteTab = /笔记\s*[・·]?\s*([0-9][0-9.,]*\s*[万wWkKmM亿]?)/.exec(text)
+  return {
+    nickname,
+    avatar_url: avatarUrl,
+    bio,
+    followers: xiaohongshuLabeledCounterOf(text, '粉丝|Followers'),
+    following: xiaohongshuLabeledCounterOf(text, '关注|Follow(?!ers)'),
+    posts_count: noteTab === null ? null : countOf(noteTab[1].replace(/\s+/g, '')),
+  }
+}
+
+/** Reads a 小红书 profile page. */
+function captureXiaohongshu(
+  doc: Document,
+  url: URL,
+  uid: string,
+  capturedAt: string,
+): AccountCaptureResult {
+  const pageHref = url.href
+  const userStore = xiaohongshuUserStoreOf(doc)
+  const pageData = userStore === null
+    ? null
+    : recordOf(piniaValue(userStore['userPageData'] ?? userStore['user_page_data']))
+  // `notes` appears only once the store hydrated; a store without it is a page
+  // still loading, not an account without notes.
+  const notesReady = xiaohongshuNotesReady(userStore)
+  const statePosts = userStore === null
+    ? []
+    : xiaohongshuPostsFromState(userStore, pageHref, uid)
+  const posts = statePosts.length > 0
+    ? statePosts
+    : xiaohongshuPostsFromDom(doc, pageHref)
+  const profile = xiaohongshuProfileOf(pageData, pageHref)
+    ?? xiaohongshuDomProfileOf(doc, pageHref)
+  // Nothing readable at all — no hydrated store and no grid — is a login wall or
+  // a half-loaded page; it must never be reported as an empty account.
+  if (posts.length === 0 && (profile === null || !notesReady)) return failure('page-incomplete')
+  return {
+    ok: true,
+    account: {
+      platform: 'xiaohongshu',
+      // The uid from the address is the account's identity; the host compares
+      // it with the imported row's handle.
+      handle: uid,
+      nickname: profile?.nickname ?? '',
+      avatar_url: profile?.avatar_url ?? '',
+      bio: profile?.bio ?? '',
+      followers: profile?.followers ?? null,
+      following: profile?.following ?? null,
+      posts_count: profile?.posts_count ?? null,
+      // Same normalization as the other platforms: deduped by note id, newest
+      // first, capped at the merge contract's bound.
+      posts: sortedPosts(dedupePosts(posts)).slice(0, MAX_MERGED_POSTS),
+      captured_at: capturedAt,
+      extractor: 'xiaohongshu-profile',
+    },
+  }
+}
+
 /* ------------------------------------------------------------------ 入口 */
 
 /**
@@ -767,12 +1274,18 @@ export function captureAccount(doc: Document, href: string): AccountCaptureResul
   if (url === null) return failure('not-profile-page')
   const platform = platformOf(hostnameOf(url))
   if (platform === null) return failure('not-profile-page')
+  // A 小红书 profile request without a session is redirected to `/login`; that
+  // path carries no uid, and calling it "not a profile" would hide the real
+  // reason (the user is signed out) from the account row.
+  if (platform === 'xiaohongshu' && url.pathname.startsWith('/login')) {
+    return failure('page-incomplete')
+  }
   const handle = profileHandleOf(url, platform)
   if (handle === '') return failure('not-profile-page')
   const capturedAt = new Date().toISOString()
-  return platform === 'tiktok'
-    ? captureTiktok(doc, url, handle, capturedAt)
-    : captureX(doc, url, handle, capturedAt)
+  if (platform === 'tiktok') return captureTiktok(doc, url, handle, capturedAt)
+  if (platform === 'xiaohongshu') return captureXiaohongshu(doc, url, handle, capturedAt)
+  return captureX(doc, url, handle, capturedAt)
 }
 
 /* ------------------------------------------------------------------ 合并 */

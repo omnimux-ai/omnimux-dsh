@@ -1,27 +1,27 @@
 {
-  "runId": "30177521-00e8-4b93-953b-48160c9e733a",
+  "runId": "76fbb9c2-e68b-4172-8b31-3750b0b0bc63",
   "stage": "inspiration",
   "plugin": "omnimux-inspiration",
-  "startedAt": "2026-10-27T10:58:00.610Z",
-  "completedAt": "2026-10-27T10:58:03.033Z",
+  "startedAt": "2026-10-27T19:46:58.647Z",
+  "completedAt": "2026-10-27T19:47:00.431Z",
   "pass": true,
-  "serverPort": 50592,
-  "cdpPort": 50617,
+  "serverPort": 61180,
+  "cdpPort": 61182,
   "assertions": [
     {
       "name": "bundle-client-code",
       "pass": true,
-      "size": 7683453
+      "size": 7690562
     },
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 50592
+      "port": 61180
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 50617
+      "port": 61182
     },
     {
       "name": "runner-page-ready",
@@ -52,7 +52,7 @@
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-inspiration-timeline-collapse/.workbuddy/evidence/worktree-qa/30177521-00e8-4b93-953b-48160c9e733a/inspiration.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-xhs-browser-refresh/.workbuddy/evidence/worktree-qa/76fbb9c2-e68b-4172-8b31-3750b0b0bc63/inspiration.png",
     "width": 1280,
     "height": 713,
     "bytes": 37909
