@@ -8,7 +8,7 @@
  *
  * 页面骨架镜像官方结构，不复制本模块逻辑：样式、位移、材质全部由被测模块产出。
  *
- * 产物落 `docs/evidence/sidebar-panel-chrome-3802/`：
+ * 产物落 `docs/evidence/sidebar-more-menu-top-align-3804/`：
  *   - sidebar-panel-chrome.png   展开态侧栏 + 已打开的「更多」菜单
  *   - sidebar-panel-chrome.json  runId、Chrome 版本、逐条断言 pass/actual
  *
@@ -26,7 +26,7 @@ import { randomUUID } from 'node:crypto'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const SOURCE = path.join(ROOT, 'plugins/omnimux/src/client/sidebar-panel-chrome.js')
-const EVIDENCE_DIR = path.join(ROOT, 'docs/evidence/sidebar-panel-chrome-3802')
+const EVIDENCE_DIR = path.join(ROOT, 'docs/evidence/sidebar-more-menu-top-align-3804')
 const PNG_PATH = path.join(EVIDENCE_DIR, 'sidebar-panel-chrome.png')
 const JSON_PATH = path.join(EVIDENCE_DIR, 'sidebar-panel-chrome.json')
 
@@ -95,6 +95,8 @@ function buildIndexHtml() {
 
   /* 官方 panelList / panelRow 原值（36px / 7px 8px / 12px 圆角 / 16px 图标）。 */
   .SidebarRoot_panelList__qa { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+  /* 官方 .moreAnchor：包住「更多」按钮的纵向 flex 容器。 */
+  .SidebarRoot_moreAnchor__qa { display: flex; flex-direction: column; }
   .SidebarRoot_panelRow__qa {
     box-sizing: border-box; display: flex; align-items: center; gap: 8px;
     margin: 0 2px; min-height: 36px; padding: 7px 8px;
@@ -153,11 +155,13 @@ function buildIndexHtml() {
         <span class="SidebarRoot_panelGlyph__qa" aria-hidden="true">${ICON}</span>
         <span class="SidebarRoot_panelTitle__qa">自动化任务</span>
       </button>
-      <button type="button" class="SidebarRoot_panelRow__qa" id="qa-more-anchor" data-qa-row="more"
-        aria-label="更多" aria-haspopup="menu" aria-expanded="true">
-        <span class="SidebarRoot_panelGlyph__qa" aria-hidden="true">${ICON}</span>
-        <span class="SidebarRoot_panelTitle__qa">更多</span>
-      </button>
+      <span class="SidebarRoot_moreAnchor__qa">
+        <button type="button" class="SidebarRoot_panelRow__qa" id="qa-more-anchor" data-qa-row="more"
+          aria-label="更多" aria-haspopup="menu" aria-expanded="true">
+          <span class="SidebarRoot_panelGlyph__qa" aria-hidden="true">${ICON}</span>
+          <span class="SidebarRoot_panelTitle__qa">更多</span>
+        </button>
+      </span>
     </nav>
 
     <button type="button" class="omnimux-sidebar-nav-entry" data-qa-row="custom-workflow">
@@ -227,10 +231,20 @@ const rowMetrics = (el) => {
 
 window.__QA = {
   errors: () => window.__qaErrors.slice(),
-  install: () => { chrome.installSidebarPanelChrome(document) },
+  install: () => {
+    // 先按官方 Menu（portal / side:'bottom' / align:'start' / GAP 4）摆放菜单，再由被测模块接管；
+    // 否则骨架里写死的 top 会让纵向对齐断言失去意义。
+    const menu = document.getElementById('qa-more-menu')
+    const anchor = document.querySelector('[class*="moreAnchor"]')
+    const r = anchor.getBoundingClientRect()
+    menu.style.left = '8px'
+    menu.style.top = Math.round(r.bottom + 4) + 'px'
+    chrome.installSidebarPanelChrome(document)
+  },
   rowMetrics,
   menuBox: () => box(document.getElementById('qa-more-menu')),
   sidebarBox: () => box(document.querySelector('[data-pane="sidebar"]')),
+  anchorBox: () => box(document.querySelector('[class*="moreAnchor"]')),
   glyphMetrics: (row) => {
     const glyph = row.querySelector('[class*="panelGlyph"]')
     const svg = glyph.querySelector('svg')
@@ -462,6 +476,21 @@ async function main() {
     const menu = await evaluate(cdp, sessionId, 'window.__QA.menuBox()')
     record('AC-5 菜单在侧栏右侧', menu.left >= sidebar.right, { menuLeft: menu.left, sidebarRight: sidebar.right }, '菜单左边界 ≥ 侧栏右边界')
     record('AC-5b 菜单在视口内', menu.right <= VIEWPORT.width, { menuRight: menu.right, viewport: VIEWPORT.width }, `菜单右边界 ≤ ${VIEWPORT.width}`)
+
+    // AC-9：菜单顶边对齐触发按钮顶边（#3804）。
+    const anchor = await evaluate(cdp, sessionId, 'window.__QA.anchorBox()')
+    record(
+      'AC-9 菜单顶边对齐按钮顶边',
+      Math.abs(menu.top - anchor.top) <= 1,
+      { menuTop: menu.top, anchorTop: anchor.top, delta: Math.round((menu.top - anchor.top) * 100) / 100 },
+      '|menuTop − anchorTop| ≤ 1px',
+    )
+    record(
+      'AC-9b 纵向不越出视口',
+      menu.top >= 12 && menu.bottom <= VIEWPORT.height - 12,
+      { menuTop: menu.top, menuBottom: menu.bottom, viewportHeight: VIEWPORT.height },
+      '12 ≤ menuTop 且 menuBottom ≤ viewportHeight − 12',
+    )
 
     // AC-6：菜单实体底 + 无毛玻璃。
     const material = await evaluate(cdp, sessionId, `window.__QA.materialStyle('qa-more-menu')`)

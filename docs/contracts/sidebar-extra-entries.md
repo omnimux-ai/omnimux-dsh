@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-10-27"
+updated: "2026-10-28"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux-assets"
 ---
@@ -50,8 +50,8 @@ MUST NOT use 13px labels or 16px filled icons on these rows. MUST NOT invent a s
 
 | Rule | Detail |
 |---|---|
-| 落位 | 目标左边界 = 侧栏列右边界 + `8px`；实现只写 `--omnimux-more-menu-shift`（`translate`），MUST NOT 与官方每帧写入的 inline `left/top` 抢同一个属性 |
-| 视口约束 | 右侧放不下时按「视口宽 − 12px 留白」收窄菜单（`--omnimux-more-menu-max-width`），而不是溢出视口，也不是压回侧栏上；连最小可用宽度（`200px`）都放不下时保持官方位置 |
+| 落位 | 目标左边界 = 侧栏列右边界 + `8px`；纵向顶边对齐触发按钮顶边（官方 `side:'bottom'` 会让菜单低一行）。实现只写 `--omnimux-more-menu-shift` / `--omnimux-more-menu-shift-y`（`translate` 两个分量），MUST NOT 与官方每帧写入的 inline `left/top` 抢同一个属性 |
+| 视口约束 | 右侧放不下时按「视口宽 − 12px 留白」收窄菜单（`--omnimux-more-menu-max-width`），而不是溢出视口，也不是压回侧栏上；连最小可用宽度（`200px`）都放不下时保持官方位置。纵向顶边不得越过 12px 上留白、底边不得越过 12px 下留白；菜单比视口还高时贴顶，超高由官方自身的 `max-height` + 滚动承担 |
 | 材质 | 在该菜单实例上覆盖 `--dsw-menu-surface-fill`（实体层色）与 `--dsw-menu-backdrop-filter: none`；MUST NOT 让覆盖外溢到其它官方浮层 |
 | 选择器边界 | 只命中同时满足 `[data-menu-material="translucent"]` 与 `[class*="moreMenu"]` 的元素；其它半透明官方菜单保持原材质 |
 | 跟随 | 官方 `Menu` 逐帧重算锚点位置，本模块同样逐帧跟随（菜单移除即停）；MUST NOT 自绘菜单容器或第二套关闭逻辑 |

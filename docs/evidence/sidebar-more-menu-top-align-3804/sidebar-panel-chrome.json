@@ -1,0 +1,219 @@
+{
+  "runId": "34e46ee4-3fda-4d9b-9079-24c729284f39",
+  "issue": 3802,
+  "capturedAt": "2026-10-27T02:20:16.922Z",
+  "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "source": "plugins/omnimux/src/client/sidebar-panel-chrome.js",
+  "assertions": [
+    {
+      "name": "AC-1 行度量对齐 plugins",
+      "pass": true,
+      "actual": {
+        "height": 32,
+        "paddingTop": "0px",
+        "paddingLeft": "8px",
+        "paddingRight": "8px",
+        "marginLeft": "4px",
+        "marginRight": "4px",
+        "gap": "6px",
+        "borderRadius": "8px",
+        "fontSize": "14px",
+        "lineHeight": "20px",
+        "fontWeight": "400"
+      },
+      "expected": {
+        "height": 32,
+        "paddingTop": "0px",
+        "paddingLeft": "8px",
+        "paddingRight": "8px",
+        "marginLeft": "4px",
+        "marginRight": "4px",
+        "gap": "6px",
+        "borderRadius": "8px",
+        "fontSize": "14px",
+        "lineHeight": "20px",
+        "fontWeight": "400"
+      }
+    },
+    {
+      "name": "AC-1b 官方行约束为 32px plugins",
+      "pass": true,
+      "actual": "32px",
+      "expected": "32px"
+    },
+    {
+      "name": "AC-1 行度量对齐 schedules",
+      "pass": true,
+      "actual": {
+        "height": 32,
+        "paddingTop": "0px",
+        "paddingLeft": "8px",
+        "paddingRight": "8px",
+        "marginLeft": "4px",
+        "marginRight": "4px",
+        "gap": "6px",
+        "borderRadius": "8px",
+        "fontSize": "14px",
+        "lineHeight": "20px",
+        "fontWeight": "400"
+      },
+      "expected": {
+        "height": 32,
+        "paddingTop": "0px",
+        "paddingLeft": "8px",
+        "paddingRight": "8px",
+        "marginLeft": "4px",
+        "marginRight": "4px",
+        "gap": "6px",
+        "borderRadius": "8px",
+        "fontSize": "14px",
+        "lineHeight": "20px",
+        "fontWeight": "400"
+      }
+    },
+    {
+      "name": "AC-1b 官方行约束为 32px schedules",
+      "pass": true,
+      "actual": "32px",
+      "expected": "32px"
+    },
+    {
+      "name": "AC-1 行度量对齐 more",
+      "pass": true,
+      "actual": {
+        "height": 32,
+        "paddingTop": "0px",
+        "paddingLeft": "8px",
+        "paddingRight": "8px",
+        "marginLeft": "4px",
+        "marginRight": "4px",
+        "gap": "6px",
+        "borderRadius": "8px",
+        "fontSize": "14px",
+        "lineHeight": "20px",
+        "fontWeight": "400"
+      },
+      "expected": {
+        "height": 32,
+        "paddingTop": "0px",
+        "paddingLeft": "8px",
+        "paddingRight": "8px",
+        "marginLeft": "4px",
+        "marginRight": "4px",
+        "gap": "6px",
+        "borderRadius": "8px",
+        "fontSize": "14px",
+        "lineHeight": "20px",
+        "fontWeight": "400"
+      }
+    },
+    {
+      "name": "AC-1b 官方行约束为 32px more",
+      "pass": true,
+      "actual": "32px",
+      "expected": "32px"
+    },
+    {
+      "name": "AC-2 图标 14×14",
+      "pass": true,
+      "actual": {
+        "glyph": {
+          "width": 14,
+          "height": 14
+        },
+        "svg": {
+          "width": 14,
+          "height": 14
+        }
+      },
+      "expected": {
+        "glyph": {
+          "width": 14,
+          "height": 14
+        },
+        "svg": {
+          "width": 14,
+          "height": 14
+        }
+      }
+    },
+    {
+      "name": "AC-5 菜单在侧栏右侧",
+      "pass": true,
+      "actual": {
+        "menuLeft": 288,
+        "sidebarRight": 280
+      },
+      "expected": "菜单左边界 ≥ 侧栏右边界"
+    },
+    {
+      "name": "AC-5b 菜单在视口内",
+      "pass": true,
+      "actual": {
+        "menuRight": 576,
+        "viewport": 1440
+      },
+      "expected": "菜单右边界 ≤ 1440"
+    },
+    {
+      "name": "AC-9 菜单顶边对齐按钮顶边",
+      "pass": true,
+      "actual": {
+        "menuTop": 126,
+        "anchorTop": 126,
+        "delta": 0
+      },
+      "expected": "|menuTop − anchorTop| ≤ 1px"
+    },
+    {
+      "name": "AC-9b 纵向不越出视口",
+      "pass": true,
+      "actual": {
+        "menuTop": 126,
+        "menuBottom": 202,
+        "viewportHeight": 900
+      },
+      "expected": "12 ≤ menuTop 且 menuBottom ≤ viewportHeight − 12"
+    },
+    {
+      "name": "AC-6 菜单背景不透明",
+      "pass": true,
+      "actual": "rgb(35, 35, 38)",
+      "expected": "alpha = 1"
+    },
+    {
+      "name": "AC-6b 无 backdrop-filter",
+      "pass": true,
+      "actual": "none",
+      "expected": "none"
+    },
+    {
+      "name": "AC-7 其它浮层材质不变",
+      "pass": true,
+      "actual": {
+        "background": "rgba(67, 69, 74, 0.45)",
+        "backdropFilter": "blur(40px) saturate(1.5)"
+      },
+      "expected": "半透明 + 保留毛玻璃"
+    },
+    {
+      "name": "AC-8 样式节点幂等",
+      "pass": true,
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "name": "页面无未捕获错误",
+      "pass": true,
+      "actual": [],
+      "expected": []
+    }
+  ],
+  "passed": 16,
+  "failed": 0,
+  "screenshot": "docs/evidence/sidebar-more-menu-top-align-3804/sidebar-panel-chrome.png"
+}

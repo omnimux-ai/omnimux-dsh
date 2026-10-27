@@ -11,6 +11,7 @@ import {
   PANEL_ROW_METRICS,
   computePanelMenuOffset,
   computePanelMenuPlacement,
+  computePanelMenuVerticalOffset,
   ensurePanelChromeStyles,
   installSidebarPanelChrome,
   positionPanelMenu,
@@ -62,7 +63,7 @@ test('收起态排除：度量规则只在没有 data-sidebar-collapsed 时命�
 test('「更多」菜单去透明：覆盖该实例的材质变量并禁用毛玻璃', () => {
   assert.match(PANEL_CHROME_CSS, /--dsw-menu-surface-fill: var\(--dsw-alias-bg-layer-2, var\(--dsw-alias-bg-base\)\)/)
   assert.match(PANEL_CHROME_CSS, /--dsw-menu-backdrop-filter: none/)
-  assert.match(PANEL_CHROME_CSS, /translate: var\(--omnimux-more-menu-shift, 0\) 0/)
+  assert.match(PANEL_CHROME_CSS, /translate: var\(--omnimux-more-menu-shift, 0\) var\(--omnimux-more-menu-shift-y, 0\)/)
   assert.ok(PANEL_CHROME_CSS.includes(`${MORE_MENU_SELECTOR} {`))
   assert.match(MORE_MENU_SELECTOR, /data-menu-material="translucent"/)
   assert.match(MORE_MENU_SELECTOR, /class\*="moreMenu"/)
@@ -231,4 +232,77 @@ test('installSidebarPanelChrome：二次安装不重复注入样式节点', () =
   assert.equal(doc.querySelectorAll(`#${PANEL_CHROME_STYLE_ID}`).length, 1)
   offA()
   offB()
+})
+
+test('纵向：菜单顶边对齐触发按钮顶边', () => {
+  assert.equal(
+    computePanelMenuVerticalOffset({ anchorTop: 200, menuTop: 236, menuHeight: 400, viewportHeight: 900 }),
+    -36,
+  )
+})
+
+test('纵向：视口底部放不下时整体上移，两端都不越出留白', () => {
+  const input = { anchorTop: 700, menuTop: 736, menuHeight: 400, viewportHeight: 900 }
+  const offsetY = computePanelMenuVerticalOffset(input)
+  assert.ok(
+    input.menuTop + offsetY + input.menuHeight <= input.viewportHeight - PANEL_MENU_VIEWPORT_MARGIN,
+    '底边不得越过视口下留白',
+  )
+  assert.ok(input.menuTop + offsetY >= PANEL_MENU_VIEWPORT_MARGIN, '顶边不得越过视口上留白')
+})
+
+test('纵向：顶部放不下时按上留白收住', () => {
+  const input = { anchorTop: 4, menuTop: 40, menuHeight: 300, viewportHeight: 900 }
+  const offsetY = computePanelMenuVerticalOffset(input)
+  assert.equal(input.menuTop + offsetY, PANEL_MENU_VIEWPORT_MARGIN)
+})
+
+test('纵向：菜单比视口还高时贴顶，交给官方滚动', () => {
+  const input = { anchorTop: 300, menuTop: 336, menuHeight: 1200, viewportHeight: 900 }
+  const offsetY = computePanelMenuVerticalOffset(input)
+  assert.equal(input.menuTop + offsetY, PANEL_MENU_VIEWPORT_MARGIN)
+})
+
+test('纵向：非法几何一律 0', () => {
+  for (const bad of [
+    { anchorTop: Number.NaN, menuTop: 236, menuHeight: 400, viewportHeight: 900 },
+    { anchorTop: 200, menuTop: Number.POSITIVE_INFINITY, menuHeight: 400, viewportHeight: 900 },
+    { anchorTop: 200, menuTop: 236, menuHeight: 0, viewportHeight: 900 },
+    { anchorTop: 200, menuTop: 236, menuHeight: 400, viewportHeight: 0 },
+  ]) {
+    assert.equal(computePanelMenuVerticalOffset(bad), 0)
+  }
+})
+
+test('样式：translate 同时消费横纵两个自定义属性', () => {
+  assert.match(
+    PANEL_CHROME_CSS,
+    /translate: var\(--omnimux-more-menu-shift, 0\) var\(--omnimux-more-menu-shift-y, 0\)/,
+  )
+})
+
+test('positionPanelMenu：锚点存在时写入纵向位移，且逐帧不叠加', () => {
+  const { doc, menu } = buildGeometryDom()
+  const anchor = doc.createElement('span')
+  anchor.className = 'SidebarRoot_moreAnchor__abc'
+  anchor.getBoundingClientRect = () => ({
+    left: 0, right: 280, width: 280, top: 200, bottom: 232, height: 32, x: 0, y: 200, toJSON() {},
+  })
+  doc.body.append(anchor)
+  menu.getBoundingClientRect = () => {
+    const appliedX = Number.parseFloat(menu.style.getPropertyValue('--omnimux-more-menu-shift')) || 0
+    const appliedY = Number.parseFloat(menu.style.getPropertyValue('--omnimux-more-menu-shift-y')) || 0
+    const left = 8 + appliedX
+    const top = 236 + appliedY
+    return {
+      left, right: left + 288, width: 288,
+      top, bottom: top + 400, height: 400, x: left, y: top, toJSON() {},
+    }
+  }
+
+  positionPanelMenu(menu, doc)
+  assert.equal(menu.style.getPropertyValue('--omnimux-more-menu-shift-y'), '-36px', '顶边对齐按钮顶边')
+
+  positionPanelMenu(menu, doc)
+  assert.equal(menu.style.getPropertyValue('--omnimux-more-menu-shift-y'), '-36px', '逐帧跟随不得累积')
 })
