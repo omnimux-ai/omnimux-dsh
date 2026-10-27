@@ -40,4 +40,4 @@ A separately installed distribution may use `~/.dsh/browser-extension` or `~/.om
 
 ## License and attribution
 
-Forked from [Lum1104/dsh-browser](https://github.com/Lum1104/dsh-browser). MIT; retain the original copyright notice for Yuxiang Lin.
+Forked from [omdsh-dev/dsh-browser](https://github.com/omdsh-dev/dsh-browser) (formerly `Lum1104/dsh-browser`). MIT; retain the original copyright notice for Yuxiang Lin — see [`LICENSE`](./LICENSE).

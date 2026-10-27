@@ -50,7 +50,8 @@
     "screenshots.json",
     "assets",
     "README.md",
-    "README.zh.md"
+    "README.zh.md",
+    "LICENSE"
   ],
   "engines": {
     "node": "^22.19 || >=24"

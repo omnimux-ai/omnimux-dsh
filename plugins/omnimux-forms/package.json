@@ -14,7 +14,8 @@
     "assets/examples",
     "cordis.patch.yml",
     "dsh.manifest.json",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",
@@ -42,7 +43,7 @@
       "platform": "web"
     }
   },
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "peerDependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

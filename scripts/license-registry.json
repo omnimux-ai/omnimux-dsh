@@ -1,0 +1,190 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "包许可声明真源。class: original=全自有代码；fork=上游代码占主体，保持上游许可；vendor=上游代码为子目录，复合许可。",
+  "rootLicense": "LICENSE",
+  "rootLicenseTitle": "OmniMux Sustainable Source License (Version 1.0)",
+  "nonSpdxNotice": "SPDX 无该许可标识；原创与 vendor 包统一用 \"SEE LICENSE IN LICENSE\"，包内 LICENSE 为原文。",
+  "packages": {
+    "omnimux": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-accounts": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-analytics": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-apps": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-assets": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-automation": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-avatar": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-browser": {
+      "class": "fork",
+      "license": "MIT",
+      "upstream": [
+        {
+          "project": "dsh-browser",
+          "repo": "https://github.com/omdsh-dev/dsh-browser",
+          "ref": null,
+          "commit": null,
+          "license": "MIT",
+          "copyright": "Copyright (c) 2026 Yuxiang Lin",
+          "noticeFile": "LICENSE",
+          "textFile": "LICENSE",
+          "note": "上游基线 commit 未记录；fork 首提交为本仓 cf4e27e07（2026-09-12）。补记上游 SHA 后再填 commit。"
+        }
+      ]
+    },
+    "omnimux-clip": {
+      "class": "vendor",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": [
+        {
+          "project": "openreel-video",
+          "repo": "https://github.com/Augani/openreel-video",
+          "ref": "2566c34e",
+          "commit": "2566c34e0f8ea22992a85f3ff16e048307b49365",
+          "license": "MIT",
+          "copyright": "Copyright (c) 2024-2026 Augustus Otu and Contributors",
+          "noticeFile": "LICENSE.openreel.txt",
+          "textFile": "LICENSE.openreel.txt",
+          "paths": [
+            "src/client/openreel/",
+            "src/client/engine/openreel/",
+            "tailwind.openreel.config.js"
+          ]
+        }
+      ]
+    },
+    "omnimux-device": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-forms": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-inspiration": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-intercept": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-market": {
+      "class": "fork",
+      "license": "MIT",
+      "upstream": [
+        {
+          "project": "skillhub",
+          "repo": "https://github.com/cocofhu/skillhub",
+          "ref": "v0.2.13",
+          "commit": "d9ea8c39fadc2737d04f178fce8420c4c6407f47",
+          "license": "MIT",
+          "copyright": "Copyright (c) 2026 cocofhu",
+          "noticeFile": "LICENSE",
+          "textFile": "LICENSE"
+        }
+      ]
+    },
+    "omnimux-products": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-publish": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-social-harvest": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-studio": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-video": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-video-preview": {
+      "class": "original",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": []
+    },
+    "omnimux-viewer": {
+      "class": "fork",
+      "license": "MIT",
+      "upstream": [
+        {
+          "project": "dsh-viewer",
+          "repo": "https://github.com/Crosery/dsh-viewer",
+          "ref": "4a913a4",
+          "commit": "4a913a4",
+          "license": "MIT",
+          "copyright": "Copyright (c) 2026 Crosery",
+          "noticeFile": "LICENSE",
+          "textFile": "LICENSE"
+        }
+      ]
+    },
+    "omnimux-workflow": {
+      "class": "vendor",
+      "license": "SEE LICENSE IN LICENSE",
+      "upstream": [
+        {
+          "project": "BeefTV Director",
+          "repo": "https://github.com/glanderness/BeefTV",
+          "ref": "5e2ad602",
+          "commit": "5e2ad6022addd387001d08a478e3316ee2266524",
+          "license": "MIT",
+          "copyright": "Copyright (c) 2026 @beefnoode and BeefTV contributors",
+          "noticeFile": "THIRD-PARTY-NOTICES-director.md",
+          "textFile": "THIRD-PARTY-NOTICES-director.md",
+          "paths": [
+            "src/canvas/bridge/director",
+            "src/canvas/components/director-panel/",
+            "src/canvas/nodes/definitions/director.tsx",
+            "src/canvas/theme/director.css",
+            "src/canvas/editor/utils/director",
+            "assets/director/",
+            "scripts/build-director.mjs"
+          ],
+          "note": "锁定在 5e2ad602（2026-10-13，最后一个 MIT 版本）。上游已于 6b30abfe（2026-10-19）改为 Source Available 双段许可；越过该 pin 同步须人工复核许可。"
+        }
+      ]
+    }
+  }
+}

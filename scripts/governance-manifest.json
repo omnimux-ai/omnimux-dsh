@@ -183,6 +183,8 @@
     "verify-craft.mjs",
     "verify-dev-cdp.mjs",
     "verify-dev-smoke.mjs",
+    "verify-license-consistency.mjs",
+    "verify-license-consistency.test.mjs",
     "verify-models.mjs",
     "verify-multimodal-contract-completeness.mjs",
     "verify-omnimux-image-live.mjs",

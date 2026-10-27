@@ -1,0 +1,120 @@
+omnimux-workflow — License and Scope
+=====================================================================
+
+This package contains code from two different sources, under two different
+licenses. The scope of each license is defined by file path below.
+
+1. VENDORED UPSTREAM CODE — MIT License
+---------------------------------------------------------------------
+
+The following paths are vendorized from BeefTV Director
+(https://github.com/glanderness/BeefTV) at commit
+5e2ad6022addd387001d08a478e3316ee2266524, and remain under the MIT License:
+
+  - src/canvas/bridge/director
+  - src/canvas/components/director-panel/
+  - src/canvas/nodes/definitions/director.tsx
+  - src/canvas/theme/director.css
+  - src/canvas/editor/utils/director
+  - assets/director/
+  - scripts/build-director.mjs
+
+The complete upstream MIT license text is distributed in this package as
+THIRD-PARTY-NOTICES-director.md. Its copyright notice reads:
+
+  Copyright (c) 2026 @beefnoode and BeefTV contributors
+
+Modifications made by the OmniMux project to those files are also released
+under the MIT License, so that the vendored subtree stays uniformly MIT.
+
+2. OMNI MUX CODE — OmniMux Sustainable Source License (Version 1.0)
+---------------------------------------------------------------------
+
+All other files in this package are original OmniMux code and are licensed
+under the OmniMux Sustainable Source License (Version 1.0).
+
+The full text of that license follows this notice. It is identical, byte for
+byte, to the LICENSE file at the root of the OmniMux repository.
+
+=====================================================================
+
+OmniMux Sustainable Source License (Version 1.0)
+=============================================================================
+Copyright (c) 2026 OmniMux Project and Contributors.
+Website: https://omnimux.ai
+
+By using, copying, modifying, or distributing this Software, you agree to be
+bound by the terms and conditions of this OmniMux Sustainable Source License.
+
+1. DEFINITIONS
+-----------------------------------------------------------------------------
+- "Software" means the source code, object code, documentation, and associated
+  media for the OmniMux platform, execution hub, and official product plugins.
+- "Commercial Use" means using the Software for any revenue-generating activities
+  that involve:
+  (a) Selling, sublicensing, leasing, renting, or charging fees for the Software
+      itself or any derivative works thereof;
+  (b) Providing the functionality of the Software as a hosted service, managed
+      service, Cloud SaaS, or paid workflow execution platform to third parties;
+  (c) Embedding or bundling the Software into a proprietary commercial product
+      distributed to external customers for a fee.
+- "Internal Business Operations" means self-hosting and using the Software within
+  your own organization or enterprise solely for automating your own internal
+  workflows, social media accounts, or content operations, without charging
+  external third parties for access to the Software functionality.
+- "Personal Use" means non-commercial usage by an individual developer, hobbyist,
+  student, or researcher for learning, evaluation, or personal automation.
+
+2. GRANT OF LICENSE (PERMITTED USES)
+-----------------------------------------------------------------------------
+Subject to the terms and limitations of this License, the Copyright Holders hereby
+grant you a perpetual, worldwide, non-exclusive, royalty-free license to:
+- Inspect, copy, compile, run, and modify the Software;
+- Distribute exact or modified copies of the Software in source or binary form,
+  provided that any distributed copies remain subject to this License;
+- Use the Software freely and without charge for Personal Use and Internal Business
+  Operations.
+
+3. LIMITATIONS AND COMMERCIAL RESTRICTIONS
+-----------------------------------------------------------------------------
+You may NOT engage in any Commercial Use (as defined in Section 1) without
+obtaining a separate, written Commercial License from the Copyright Holders.
+
+Specifically, you may not:
+- Offer OmniMux or its core plugins as a commercial Hosted Service / Multi-tenant
+  SaaS platform to third parties for a recurring subscription or pay-per-use fee;
+- White-label (rebrand) and resell the Software or any derivative work as a
+  proprietary software package;
+- Remove, obscure, or alter any copyright notices, trademark statements, or
+  licensing notices embedded within the Software.
+
+4. THIRD-PARTY PLUGINS & EXTENSIONS EXEMPTION
+-----------------------------------------------------------------------------
+Independent plugins, skills, tools, and workflows created by third parties that
+interface with OmniMux via official extension points (APIs, hooks, Cordis services)
+retain their own copyright and may be distributed under the author's chosen license,
+provided they do not bundle or redistribute modified core OmniMux code in violation
+of Section 3.
+
+5. COMMERCIAL LICENSING & ENTERPRISE EDITION
+-----------------------------------------------------------------------------
+Organizations wishing to:
+- Provide OmniMux as a managed SaaS service to external clients;
+- Bundle OmniMux with proprietary commercial hardware/software solutions;
+- Obtain Enterprise features (SSO/SAML, advanced RBAC, SLA support, white-labeling);
+must obtain an official Enterprise / Commercial License. Inquiries may be directed
+to hello@omnimux.ai (or see COMMERCIAL.md).
+
+6. TERMINATION
+-----------------------------------------------------------------------------
+This License and your rights to use the Software will terminate automatically
+if you fail to comply with any of the terms of this License.
+
+7. DISCLAIMER OF WARRANTY & LIMITATION OF LIABILITY
+-----------------------------------------------------------------------------
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

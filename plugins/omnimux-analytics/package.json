@@ -15,7 +15,8 @@
     "scripts/contract-probe.mjs",
     "cordis.patch.yml",
     "README.md",
-    "package.json"
+    "package.json",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",
@@ -54,6 +55,6 @@
   "devDependencies": {
     "esbuild": "^0.25.0"
   },
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "description": "OmniMux plugin usage analytics (Umami) plus the social analytics first-level dashboard stage."
 }
