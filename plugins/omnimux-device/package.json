@@ -17,7 +17,8 @@
     "dsh.manifest.json",
     "README.md",
     "PRD.md",
-    "ARCHITECTURE.md"
+    "ARCHITECTURE.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",
@@ -43,5 +44,6 @@
   },
   "peerDependencies": {
     "cordis": "^3.18.1"
-  }
+  },
+  "license": "SEE LICENSE IN LICENSE"
 }

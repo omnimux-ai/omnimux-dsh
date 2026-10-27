@@ -15,7 +15,8 @@
     "scripts/build-client.mjs",
     "scripts/build-cloud-assets-catalog.mjs",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",
@@ -55,6 +56,6 @@
   "devDependencies": {
     "esbuild": "^0.25.0"
   },
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "description": "OmniMux creative asset library: named reusable objects (character/scene/style/prop/knowledge/custom) with path-only file refs, plus an artifact store."
 }

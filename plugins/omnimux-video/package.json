@@ -12,7 +12,8 @@
     "scripts",
     "prompts",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "test": "node --test 'src/**/*.test.js'"
@@ -22,6 +23,6 @@
       "patch": "./cordis.patch.yml"
     }
   },
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "description": "Local ffmpeg video processing + depth map (Depth Anything V2) + hub-backed video understanding for OmniMux."
 }

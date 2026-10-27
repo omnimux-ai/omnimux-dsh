@@ -29,7 +29,8 @@
     "lib/types/**/*.d.ts",
     "cordis.patch.yml",
     "src",
-    "extension"
+    "extension",
+    "LICENSE"
   ],
   "dsh": {
     "bundle": {

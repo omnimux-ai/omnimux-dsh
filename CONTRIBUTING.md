@@ -60,3 +60,15 @@
 ## 4. 贡献者许可协议 (Contributor License Agreement)
 
 当您向 OmniMux 仓库提交 Pull Request 时，即代表您同意：您所贡献的代码将以与本项目相同的 **OmniMux Sustainable Source License (Version 1.0)** 许可协议分发并包含在项目中。
+
+**例外：上游 fork 与 vendor 目录。** 下列包的主体代码来自上游 MIT 项目，仍按上游许可分发；向这些路径提交的改动沿用上游许可，不适用本节的 Sustainable Source 条款：
+
+| 包 | 上游 | 上游许可 | 适用路径 |
+| --- | --- | --- | --- |
+| `plugins/omnimux-market` | `cocofhu/skillhub` | MIT | 整包 |
+| `plugins/omnimux-viewer` | `Crosery/dsh-viewer` | MIT | 整包 |
+| `plugins/omnimux-browser` | `omdsh-dev/dsh-browser` | MIT | 整包 |
+| `plugins/omnimux-clip` | `Augani/openreel-video` | MIT | `src/client/openreel/`、`src/client/engine/openreel/`、`tailwind.openreel.config.js` |
+| `plugins/omnimux-workflow` | `glanderness/BeefTV` | MIT（锁定 `5e2ad602`） | `src/canvas/**/director*`、`assets/director/`、`scripts/build-director.mjs` |
+
+逐包真源见 [`scripts/license-registry.json`](scripts/license-registry.json)；一致性由 `pnpm verify:licenses` 校验。**不得**把上游 MIT 代码改标为更受限的许可。

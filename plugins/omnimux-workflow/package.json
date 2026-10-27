@@ -19,7 +19,8 @@
     "scripts",
     "cordis.patch.yml",
     "README.md",
-    "docs"
+    "docs",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node scripts/build-host.mjs && node scripts/build-client.mjs && node scripts/build-canvas.mjs && node scripts/build-director.mjs",
@@ -93,6 +94,6 @@
     "typescript": "~5.9.3",
     "zod": "^4.4.3"
   },
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "description": "omnimux-workflow: workflow infinite canvas plugin for DeepSeek Harness. Node DAG editing, local persistence, execution via OmniMux seams, agent tools for canvas control."
 }
