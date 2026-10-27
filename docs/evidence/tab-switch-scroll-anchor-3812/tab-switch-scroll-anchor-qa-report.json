@@ -1,0 +1,311 @@
+{
+  "runId": "72f78a66-2631-4c2f-b28d-1dd6592f701d",
+  "pass": true,
+  "assertions": [
+    {
+      "name": "pick-docks-composer",
+      "pass": true,
+      "actual": true,
+      "scenario": "fixed"
+    },
+    {
+      "name": "pick-scrolled-deep",
+      "pass": true,
+      "actual": 787,
+      "scenario": "fixed"
+    },
+    {
+      "name": "switch-does-not-jump-to-top",
+      "pass": true,
+      "duringSwitch": 787,
+      "afterSwitch": 787,
+      "scenario": "fixed"
+    },
+    {
+      "name": "switch-does-not-collapse-content",
+      "pass": true,
+      "wrapHeight": 989,
+      "cards": 24,
+      "scenario": "fixed"
+    },
+    {
+      "name": "switch-keeps-tab-bar-at-top",
+      "pass": true,
+      "actual": 0,
+      "scenario": "fixed"
+    },
+    {
+      "name": "switch-keeps-composer-docked",
+      "pass": true,
+      "actual": true,
+      "scenario": "fixed"
+    },
+    {
+      "name": "switch-keeps-attachment",
+      "pass": true,
+      "actual": 1,
+      "scenario": "fixed"
+    },
+    {
+      "name": "sub-switch-does-not-jump-to-top",
+      "pass": true,
+      "actual": 787,
+      "scenario": "fixed"
+    },
+    {
+      "name": "sub-switch-keeps-composer-docked",
+      "pass": true,
+      "actual": true,
+      "scenario": "fixed"
+    },
+    {
+      "name": "negative-control-reproduces-jump",
+      "pass": true,
+      "detail": "退回「换库清空卡片 + 不声明静默窗口」后，切 Tab 必须复现跳顶",
+      "controlAssertions": [
+        "switch-does-not-collapse-content",
+        "switch-keeps-tab-bar-at-top"
+      ]
+    },
+    {
+      "name": "fixed-scenario-passes",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "scenarios": [
+    {
+      "label": "fixed",
+      "pass": true,
+      "matchesExpectation": true,
+      "journey": {
+        "beforeScroll": {
+          "scrollTop": 811,
+          "max": 811
+        },
+        "afterPick": {
+          "scrollTop": 787,
+          "scrollHeight": 1687,
+          "clientHeight": 900,
+          "maxScrollTop": 787,
+          "dockOpen": true,
+          "tabBarTop": 0,
+          "dockedComposerVisible": true,
+          "attachments": 1
+        },
+        "duringSwitch": {
+          "scrollTop": 787,
+          "scrollHeight": 1687,
+          "clientHeight": 900,
+          "maxScrollTop": 787,
+          "dockOpen": true,
+          "tabBarTop": 0,
+          "dockedComposerVisible": true,
+          "attachments": 1
+        },
+        "afterSwitch": {
+          "scrollTop": 787,
+          "scrollHeight": 1687,
+          "clientHeight": 900,
+          "maxScrollTop": 787,
+          "dockOpen": true,
+          "tabBarTop": 0,
+          "dockedComposerVisible": true,
+          "attachments": 1
+        },
+        "afterSub": {
+          "scrollTop": 787,
+          "scrollHeight": 1687,
+          "clientHeight": 900,
+          "maxScrollTop": 787,
+          "dockOpen": true,
+          "tabBarTop": 0,
+          "dockedComposerVisible": true,
+          "attachments": 1
+        },
+        "subTabs": "viral-videos",
+        "probe": {
+          "cards": 24,
+          "statusText": null,
+          "wrapHeight": 989,
+          "wrapClass": "omnimux-explore-grid-view-wrap omnimux-explore-grid-view-flow",
+          "refreshing": "true",
+          "shelves": 0,
+          "shelvesHeight": null
+        }
+      },
+      "assertions": [
+        {
+          "name": "pick-docks-composer",
+          "pass": true,
+          "actual": true
+        },
+        {
+          "name": "pick-scrolled-deep",
+          "pass": true,
+          "actual": 787
+        },
+        {
+          "name": "switch-does-not-jump-to-top",
+          "pass": true,
+          "duringSwitch": 787,
+          "afterSwitch": 787
+        },
+        {
+          "name": "switch-does-not-collapse-content",
+          "pass": true,
+          "wrapHeight": 989,
+          "cards": 24
+        },
+        {
+          "name": "switch-keeps-tab-bar-at-top",
+          "pass": true,
+          "actual": 0
+        },
+        {
+          "name": "switch-keeps-composer-docked",
+          "pass": true,
+          "actual": true
+        },
+        {
+          "name": "switch-keeps-attachment",
+          "pass": true,
+          "actual": 1
+        },
+        {
+          "name": "sub-switch-does-not-jump-to-top",
+          "pass": true,
+          "actual": 787
+        },
+        {
+          "name": "sub-switch-keeps-composer-docked",
+          "pass": true,
+          "actual": true
+        }
+      ],
+      "screenshot": {
+        "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-tab-switch-scroll-anchor/.workbuddy/evidence/worktree-qa/tab-switch-scroll-anchor-72f78a66-2631-4c2f-b28d-1dd6592f701d/fixed.png",
+        "width": 1440,
+        "height": 900,
+        "bytes": 28968
+      }
+    },
+    {
+      "label": "control-before-fix",
+      "pass": false,
+      "matchesExpectation": true,
+      "journey": {
+        "beforeScroll": {
+          "scrollTop": 811,
+          "max": 811
+        },
+        "afterPick": {
+          "scrollTop": 787,
+          "scrollHeight": 1687,
+          "clientHeight": 900,
+          "maxScrollTop": 787,
+          "dockOpen": true,
+          "tabBarTop": 0,
+          "dockedComposerVisible": true,
+          "attachments": 1
+        },
+        "duringSwitch": {
+          "scrollTop": 787,
+          "scrollHeight": 1687,
+          "clientHeight": 900,
+          "maxScrollTop": 787,
+          "dockOpen": true,
+          "tabBarTop": -236,
+          "dockedComposerVisible": true,
+          "attachments": 1
+        },
+        "afterSwitch": {
+          "scrollTop": 787,
+          "scrollHeight": 1687,
+          "clientHeight": 900,
+          "maxScrollTop": 787,
+          "dockOpen": true,
+          "tabBarTop": -116,
+          "dockedComposerVisible": true,
+          "attachments": 1
+        },
+        "afterSub": {
+          "scrollTop": 787,
+          "scrollHeight": 1687,
+          "clientHeight": 900,
+          "maxScrollTop": 787,
+          "dockOpen": true,
+          "tabBarTop": -116,
+          "dockedComposerVisible": true,
+          "attachments": 1
+        },
+        "subTabs": "viral-videos",
+        "probe": {
+          "cards": 0,
+          "statusText": "加载中…",
+          "wrapHeight": 160,
+          "wrapClass": "omnimux-explore-grid-view-wrap omnimux-explore-grid-view-flow",
+          "refreshing": null,
+          "shelves": 0,
+          "shelvesHeight": null
+        }
+      },
+      "assertions": [
+        {
+          "name": "pick-docks-composer",
+          "pass": true,
+          "actual": true
+        },
+        {
+          "name": "pick-scrolled-deep",
+          "pass": true,
+          "actual": 787
+        },
+        {
+          "name": "switch-does-not-jump-to-top",
+          "pass": true,
+          "duringSwitch": 787,
+          "afterSwitch": 787
+        },
+        {
+          "name": "switch-does-not-collapse-content",
+          "pass": false,
+          "wrapHeight": 160,
+          "cards": 0
+        },
+        {
+          "name": "switch-keeps-tab-bar-at-top",
+          "pass": false,
+          "actual": -116
+        },
+        {
+          "name": "switch-keeps-composer-docked",
+          "pass": true,
+          "actual": true
+        },
+        {
+          "name": "switch-keeps-attachment",
+          "pass": true,
+          "actual": 1
+        },
+        {
+          "name": "sub-switch-does-not-jump-to-top",
+          "pass": true,
+          "actual": 787
+        },
+        {
+          "name": "sub-switch-keeps-composer-docked",
+          "pass": true,
+          "actual": true
+        }
+      ],
+      "screenshot": {
+        "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-tab-switch-scroll-anchor/.workbuddy/evidence/worktree-qa/tab-switch-scroll-anchor-72f78a66-2631-4c2f-b28d-1dd6592f701d/control-before-fix.png",
+        "width": 1440,
+        "height": 900,
+        "bytes": 12957
+      }
+    }
+  ],
+  "completedAt": "2026-10-27T11:45:32.983Z"
+}

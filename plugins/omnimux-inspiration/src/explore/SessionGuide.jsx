@@ -170,6 +170,7 @@ function BlankSessionGuide({
     dockedItem,
     placement,
     dock,
+    holdScroll,
     undock,
     isDocked,
   } = useComposerDocking({
@@ -486,6 +487,7 @@ function BlankSessionGuide({
             onApplyTemplate={handleExploreTemplateApply}
             onApplyTrending={handleExploreTrendingApply}
             onApplySkill={handleExploreSkillApply}
+            onContentRebuild={holdScroll}
             t={t}
           />
 
