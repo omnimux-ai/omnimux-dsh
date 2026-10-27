@@ -1206,6 +1206,31 @@ export const RIVAL_CSS = `
   color: var(--dsw-alias-label-primary);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  /* #3825: X 官方对超长正文折叠；默认按 --rival-timeline-body-clamp 行数截断，
+     is-expanded 时还原全文。 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--rival-timeline-body-clamp, 8);
+  overflow: hidden;
+}
+.omnimux-rival-timeline-body.is-expanded {
+  display: block;
+  overflow: visible;
+}
+/* 显示更多/收起：与正文同字号的前景色文本链接，X 官方交互形态。 */
+.omnimux-rival-timeline-expand {
+  display: block;
+  margin: 2px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--dsw-alias-brand-primary, #1d9bf0);
+  cursor: pointer;
+}
+.omnimux-rival-timeline-expand:hover {
+  text-decoration: underline;
 }
 .omnimux-rival-timeline-media {
   position: relative;
@@ -1367,9 +1392,9 @@ export const RIVAL_CSS = `
 }
 .omnimux-rival-timeline-embed.is-card iframe {
   min-height: 180px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 12px;
-  background: var(--dsw-alias-bg-module-platform);
+  /* #3825: X 官方 embed 自身不带卡片外框；宿主不再叠边框/圆角/底色。 */
+  border: 0;
+  background: transparent;
 }
 .omnimux-rival-timeline-embed.is-player {
   max-width: 100%;
@@ -1396,6 +1421,7 @@ export const RIVAL_CSS = `
 .omnimux-rival-timeline-item.is-embed-card .omnimux-rival-timeline-avatar,
 .omnimux-rival-timeline-item.is-embed-card .omnimux-rival-timeline-head,
 .omnimux-rival-timeline-item.is-embed-card .omnimux-rival-timeline-body,
+.omnimux-rival-timeline-item.is-embed-card .omnimux-rival-timeline-expand,
 .omnimux-rival-timeline-item.is-embed-card .omnimux-rival-timeline-media {
   display: none;
 }

@@ -23,6 +23,9 @@ import { rivalEmbedTarget } from './rival-embed.js'
 import { RivalTimelineEmbed, embedTheme, embedWidgetLang } from './rival-timeline-embed.jsx'
 import { timelineBody, timelineInitial, timelineStateText } from './rival-timeline.js'
 
+/** Collapsed budget: the X client folds very long posts into a compact preview. */
+const TIMELINE_BODY_CLAMP_LINES = 8
+
 const ICON_PLAY = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M8 5v14l11-7L8 5Z" />
@@ -48,7 +51,10 @@ export function RivalTimelineRow(props) {
   const [videoLoaded, setVideoLoaded] = useState(false)
   const [embedVisible, setEmbedVisible] = useState(false)
   const [embedState, setEmbedState] = useState('idle')
+  const [bodyExpanded, setBodyExpanded] = useState(false)
+  const [bodyOverflows, setBodyOverflows] = useState(false)
   const rowRef = useRef(null)
+  const bodyRef = useRef(null)
   const embedTarget = rivalEmbedTarget(card)
   const locale = rivalLocaleOf(t)
   const account = card?.account || {}
@@ -77,6 +83,29 @@ export function RivalTimelineRow(props) {
   const done = Boolean(card?.done || card?.done_at || card?.in_library || card?.interacted_at || card?.state || card?.state_label)
   const stateLabel = timelineStateText(card, t)
   const showAvatar = Boolean(account.avatar_url || card?.avatar_url) && !avatarFailed
+
+  // A new post always returns to the folded state; only a card that actually
+  // overflows the X-style budget earns the 「显示更多」link, so short posts
+  // never render a dead button.
+  useEffect(() => {
+    setBodyExpanded(false)
+  }, [body])
+
+  useEffect(() => {
+    if (!body || bodyExpanded) {
+      setBodyOverflows(false)
+      return undefined
+    }
+    const node = bodyRef.current
+    if (!node || typeof ResizeObserver !== 'function') return undefined
+    const check = () => {
+      setBodyOverflows(node.scrollHeight > node.clientHeight + 1)
+    }
+    check()
+    const observer = new ResizeObserver(check)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [body, bodyExpanded])
 
   useEffect(() => {
     setVideoFailed(false)
@@ -177,7 +206,27 @@ export function RivalTimelineRow(props) {
           {stateLabel ? <span className="omnimux-rival-timeline-state">{stateLabel}</span> : null}
         </header>
 
-        {body ? <p className="omnimux-rival-timeline-body">{body}</p> : null}
+        {body ? (
+          <p
+            ref={bodyRef}
+            className={`omnimux-rival-timeline-body${bodyExpanded ? ' is-expanded' : ''}`}
+            style={bodyExpanded ? undefined : { '--rival-timeline-body-clamp': TIMELINE_BODY_CLAMP_LINES }}
+          >
+            {body}
+          </p>
+        ) : null}
+        {/* The X client folds a long post and follows it with a「显示更多」text
+            link on its own line; expanding is a local state change, no extra
+            fetch. The link sits outside the clamped <p> so it stays visible. */}
+        {body && (bodyOverflows || bodyExpanded) ? (
+          <button
+            type="button"
+            className="omnimux-rival-timeline-expand"
+            onClick={(event) => { stop(event); setBodyExpanded((v) => !v) }}
+          >
+            {t(bodyExpanded ? 'rivalTimeline.body.collapse' : 'rivalTimeline.body.expand')}
+          </button>
+        ) : null}
 
         {hasMediaBlock ? (
           <div className={`omnimux-rival-timeline-media${isVideo ? ' is-video' : ''}${showPlaceholder ? ' is-placeholder' : ''}`}>
