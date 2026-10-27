@@ -201,6 +201,14 @@ fi
 
 for PROFILE in "${PROFILES[@]}"; do
   echo "== 同步目标 Profile: $PROFILE =="
+  # 支持包身份预检（Issue #3835）：profile 用 file: 依赖指向受管快照，pnpm install 只会按
+  # 快照里的版本安装 node_modules。快照一旦被旧构建覆盖，下面的写入就已经把运行时降级了，
+  # 事后再回滚也只是回到旧快照。因此在任何写入之前先按身份声明核对快照与已装版本，
+  # 漂移即指名失败，绝不静默降级。
+  if ! node "$ROOT/scripts/verify-profile-dependency-snapshots.mjs" --support-only "$PROFILE"; then
+    echo "✗ 支持包身份预检失败：$PROFILE 的 dsh-better-sidebar 受管快照/已装版本与 scripts/sidebar-support-identity.json 不一致；未做任何写入。请先用官方完整 profile rebuild 或壳仓 0.28.1 构建重建受管快照。" >&2
+    exit 1
+  fi
   MANAGED_SOURCE_ROOT="$PROFILE/.materialize-snapshots/plugins"
   MANAGED_KIT_SOURCE="$PROFILE/$MANAGED_DSH_UI_KIT_RELATIVE_PATH"
   MANAGED_PLUGINS=()
