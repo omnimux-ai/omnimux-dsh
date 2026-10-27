@@ -1721,6 +1721,36 @@ button[aria-label*="context used"] {
   border-radius: 999px !important;
 }
 
+/* ── 官方「更多」菜单：Alpha 内测标识（Issue #3823） ──
+   行内容由 MenuItemButton 的 children 渲染进 .itemLabel（单行省略）。
+   Alpha 行用一个撑满的 inline-flex 包裹：文案可省略、标识 flex:none 不被吞掉。 */
+.omnimux-explore-more-label {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.omnimux-explore-more-label-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.omnimux-explore-more-alpha {
+  flex: none;
+  margin-inline-start: 6px;
+  padding: 0 5px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 4px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
 ${AGENT_PRESET_AVATAR_CSS}`
 
 export function injectHubStyles() {

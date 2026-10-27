@@ -1,9 +1,9 @@
 {
-  "runId": "450c3ed6-2197-4004-a3fe-9e8f23349b67",
+  "runId": "0f53545f-52a5-4052-bf51-752b0a7a5973",
   "issue": "3785",
   "title": "官方「更多」菜单运行时注册接缝 · 真实浏览器验收",
-  "startedAt": "2026-10-25T14:26:02.559Z",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-remove-explore-entry-issue-3785/",
+  "startedAt": "2026-10-27T11:28:27.858Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-alpha-more-menu/",
   "source": "plugins/omnimux/src/client/explore-more-menu.jsx",
   "sources": [
     "plugins/omnimux/src/client/explore-more-menu.jsx",
@@ -11,32 +11,31 @@
   ],
   "chrome": {
     "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    "product": "Chrome/155.0.8059.85",
+    "product": "Chrome/156.0.8078.48",
     "protocolVersion": "1.3",
-    "jsVersion": "15.5.35.25"
+    "jsVersion": "15.6.75.19"
   },
   "page": {
-    "url": "http://127.0.0.1:51361/index.html",
+    "url": "http://127.0.0.1:58914/index.html",
     "viewport": {
       "width": 1280,
       "height": 900
     }
   },
   "bundle": {
-    "bytes": 1082743,
+    "bytes": 1156514,
     "outfile": "bundle.js"
   },
   "assertions": [
     {
-      "name": "boot：官方「更多」菜单渲染内置 10 项，文案与真源清单一致",
+      "name": "boot：官方「更多」菜单渲染内置 9 项，文案与真源清单一致",
       "pass": true,
       "actual": {
-        "rendered": 10,
-        "count": 10,
+        "rendered": 9,
+        "count": 9,
         "labels": [
           "应用",
           "视频剪辑",
-          "产品库",
           "发布",
           "账号",
           "手机管理",
@@ -45,11 +44,10 @@
           "任务表单",
           "社交采收"
         ],
-        "builtinCount": 10,
+        "builtinCount": 9,
         "builtinLabels": [
           "应用",
           "视频剪辑",
-          "产品库",
           "发布",
           "账号",
           "手机管理",
@@ -61,7 +59,6 @@
         "builtinIds": [
           "apps",
           "clip",
-          "products",
           "publish",
           "accounts",
           "device",
@@ -74,6 +71,62 @@
       }
     },
     {
+      "name": "Alpha 内测标识：只出现在 5 个 Alpha 项，文案与顺序不变",
+      "pass": true,
+      "actual": {
+        "alphaLabels": [
+          "发布",
+          "账号",
+          "数据分析",
+          "自动化",
+          "任务表单"
+        ],
+        "expectedAlphaLabels": [
+          "发布",
+          "账号",
+          "数据分析",
+          "自动化",
+          "任务表单"
+        ],
+        "alphaBadgeCount": 5,
+        "labels": [
+          "应用",
+          "视频剪辑",
+          "发布",
+          "账号",
+          "手机管理",
+          "数据分析",
+          "自动化",
+          "任务表单",
+          "社交采收"
+        ]
+      }
+    },
+    {
+      "name": "Alpha 标识在行内可见：落在行矩形内、宽高非零、文案未被挤没",
+      "pass": true,
+      "actual": {
+        "badge": {
+          "width": 44.140625,
+          "height": 18,
+          "top": 283,
+          "right": 158.140625
+        },
+        "text": {
+          "width": 42,
+          "height": 20
+        },
+        "row": {
+          "width": 248,
+          "height": 32,
+          "top": 276,
+          "right": 282
+        },
+        "insideRow": true,
+        "title": "Alpha · 内测：开发阶段优先完善非 Alpha 功能；正式版不包含此功能。"
+      }
+    },
+    {
       "name": "注册运行时项：返回注销函数",
       "pass": true,
       "actual": {
@@ -81,16 +134,15 @@
       }
     },
     {
-      "name": "重新挂载菜单：11 行，末项文案为「快讯中枢」",
+      "name": "重新挂载菜单：10 行，末项文案为「快讯中枢」",
       "pass": true,
       "actual": {
-        "rendered": 11,
-        "count": 11,
+        "rendered": 10,
+        "count": 10,
         "lastLabel": "快讯中枢",
         "labels": [
           "应用",
           "视频剪辑",
-          "产品库",
           "发布",
           "账号",
           "手机管理",
@@ -108,11 +160,11 @@
       "actual": {
         "rect": {
           "x": 158,
-          "y": 420,
+          "y": 388,
           "width": 248,
           "height": 32,
-          "top": 404,
-          "bottom": 436,
+          "top": 372,
+          "bottom": 404,
           "left": 34,
           "right": 282,
           "viewportWidth": 1280,
@@ -122,7 +174,7 @@
           "path": "docs/evidence/explore-registration-3124/explore-registration-browser.png",
           "width": 1280,
           "height": 900,
-          "bytes": 35789,
+          "bytes": 38330,
           "capturedAtStep": "step-3-registered-menu"
         }
       }
@@ -144,11 +196,11 @@
         "pageErrors": [],
         "clickRect": {
           "x": 158,
-          "y": 420,
+          "y": 388,
           "width": 248,
           "height": 32,
-          "top": 404,
-          "bottom": 436,
+          "top": 372,
+          "bottom": 404,
           "left": 34,
           "right": 282,
           "viewportWidth": 1280,
@@ -157,16 +209,15 @@
       }
     },
     {
-      "name": "注销：重新挂载后回到 10 行且不含该项",
+      "name": "注销：重新挂载后回到 9 行且不含该项",
       "pass": true,
       "actual": {
         "removed": true,
-        "rendered": 10,
-        "count": 10,
+        "rendered": 9,
+        "count": 9,
         "labels": [
           "应用",
           "视频剪辑",
-          "产品库",
           "发布",
           "账号",
           "手机管理",
@@ -218,11 +269,10 @@
             "returnedFunction": true
           }
         ],
-        "count": 10,
+        "count": 9,
         "labels": [
           "应用",
           "视频剪辑",
-          "产品库",
           "发布",
           "账号",
           "手机管理",
@@ -234,19 +284,18 @@
       }
     },
     {
-      "name": "与内置 10 项 id 冲突时不注册（菜单仍 10 行，首项仍为「应用」）",
+      "name": "与内置 9 项 id 冲突时不注册（菜单仍 9 行，首项仍为「应用」）",
       "pass": true,
       "actual": {
         "outcome": {
           "threw": false,
           "returnedFunction": true
         },
-        "count": 10,
+        "count": 9,
         "firstLabel": "应用",
         "labels": [
           "应用",
           "视频剪辑",
-          "产品库",
           "发布",
           "账号",
           "手机管理",
@@ -258,16 +307,15 @@
       }
     },
     {
-      "name": "同 id 二次注册覆盖（11 行，末项为后一次注册的文案）",
+      "name": "同 id 二次注册覆盖（10 行，末项为后一次注册的文案）",
       "pass": true,
       "actual": {
-        "rendered": 11,
-        "count": 11,
+        "rendered": 10,
+        "count": 10,
         "lastLabel": "二次",
         "labels": [
           "应用",
           "视频剪辑",
-          "产品库",
           "发布",
           "账号",
           "手机管理",
@@ -286,7 +334,23 @@
       "screenshot": {
         "width": 1280,
         "height": 900,
-        "bytes": 34331
+        "bytes": 36858
+      }
+    },
+    {
+      "label": "step-1b-alpha-badges",
+      "screenshot": {
+        "width": 1280,
+        "height": 900,
+        "bytes": 36858
+      }
+    },
+    {
+      "label": "step-1c-alpha-badge-visible",
+      "screenshot": {
+        "width": 1280,
+        "height": 900,
+        "bytes": 36858
       }
     },
     {
@@ -294,7 +358,7 @@
       "screenshot": {
         "width": 1280,
         "height": 900,
-        "bytes": 35789
+        "bytes": 38330
       }
     },
     {
@@ -302,7 +366,7 @@
       "screenshot": {
         "width": 1280,
         "height": 900,
-        "bytes": 36003
+        "bytes": 38542
       }
     },
     {
@@ -310,7 +374,7 @@
       "screenshot": {
         "width": 1280,
         "height": 900,
-        "bytes": 34331
+        "bytes": 36858
       }
     }
   ],
@@ -318,7 +382,7 @@
     "path": "docs/evidence/explore-registration-3124/explore-registration-browser.png",
     "width": 1280,
     "height": 900,
-    "bytes": 35789,
+    "bytes": 38330,
     "capturedAtStep": "step-3-registered-menu"
   },
   "diagnostics": {
@@ -333,9 +397,9 @@
       "tabId": "fast-news-workbench",
       "title": "快讯中枢"
     },
-    "chromeStderrTail": "/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[12390:110518876:1025/222603.020916:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[12390:110518806:1025/222603.021012:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[12390:110518876:1025/222603.021049:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[12390:110518806:1025/222603.026204:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[12390:110518876:1025/222603.026252:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n"
+    "chromeStderrTail": "/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[42803:132629961:1027/192828.663207:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[42803:132629875:1027/192828.663292:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[42803:132629961:1027/192828.663318:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[42803:132629875:1027/192828.679688:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[42803:132629961:1027/192828.679727:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n"
   },
-  "finishedAt": "2026-10-25T14:26:04.007Z",
+  "finishedAt": "2026-10-27T11:28:29.846Z",
   "passed": true,
   "failed": []
 }

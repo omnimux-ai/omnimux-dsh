@@ -30,7 +30,8 @@
 import pluginLifecycle from '../plugin-lifecycle.json' with { type: 'json' }
 import { triggerClick } from './sidebar-toggle-topbar.js'
 
-const ALPHA_DESCRIPTION = 'Alpha · 内测：开发阶段优先完善非 Alpha 功能；正式版不包含此功能。'
+/** Alpha 内测说明：侧栏行与官方「更多」菜单行共用同一份文案真源。 */
+export const ALPHA_DESCRIPTION = 'Alpha · 内测：开发阶段优先完善非 Alpha 功能；正式版不包含此功能。'
 const ALPHA_STYLES = `
 .omnimux-sidebar-alpha-badge {
   flex: none; margin-left: auto; padding: 0 5px;
@@ -43,7 +44,14 @@ const ALPHA_STYLES = `
 [data-release-stage="alpha"] { display: none !important; }
 `
 
+/**
+ * Alpha 判定：入口 id（`omnimux-<plugin>-entry`）或插件 id 都接受。
+ * 运行时注册项可以没有 `entryId`，非字符串一律视为非 Alpha，不抛错。
+ * @param {unknown} id
+ * @returns {boolean}
+ */
 export function isAlphaEntry(id) {
+  if (typeof id !== 'string' || id === '') return false
   const pluginId = id.endsWith('-entry') ? id.slice(0, -6) : id
   return pluginLifecycle[pluginId]?.stage === 'alpha'
 }

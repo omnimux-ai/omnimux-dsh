@@ -146,6 +146,16 @@ const unregister = window.__omnimuxSidebar.registerExploreItem({
 
 中枢协调器按 [Alpha release policy](alpha-release.md) 为已有 Alpha 行添加状态标记，不改变 rank、点击或登录处理。禁止域插件各自维护 Alpha 名单或重复添加标记。
 
+官方「更多」菜单是 Alpha 插件在侧栏的**唯一可见渲染面**，因此内测标识必须出现在那里：
+
+| Rule | Detail |
+|---|---|
+| 判定真源 | 复用 `sidebar-coordinator.isAlphaEntry()`（读 `plugin-lifecycle.json`）；菜单面 MUST NOT 维护第二份 Alpha 名单或第二个判定函数 |
+| 渲染位置 | Alpha 项的行内容为「文案 + `Alpha` 标识」片段，非 Alpha 项保持纯字符串；标识 MUST NOT 出现在非 Alpha 项上 |
+| 文案 | 标识文本 `Alpha`，`title` 为 `sidebar-coordinator.ALPHA_DESCRIPTION`（与侧栏行同一份说明） |
+| 样式 | 追加到 `styles.js` 的 `HUB_CSS`，颜色走 `--dsw-alias-*` Token、字号 12px；MUST NOT 新建第二个 `<style>` 注入点 |
+| 可见性 | 标识必须落在行矩形内、宽高非零，且不把行文案挤到零宽（官方 `.itemLabel` 是单行省略） |
+
 ## Offline vs Cloud Visibility
 
 Extra rows follow [docs/contracts/plugin-offline-cloud-matrix.md](./plugin-offline-cloud-matrix.md):

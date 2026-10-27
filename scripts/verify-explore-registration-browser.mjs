@@ -154,6 +154,11 @@ function buildIndexHtml() {
     align-items: center; justify-content: center;
   }
   .menu-row-icon svg { display: block; width: 14px; height: 14px; }
+  /* 官方 .itemLabel 的度量：flex:1 + 单行省略。Alpha 标识必须在这条约束下仍可见。 */
+  .menu-row-label {
+    flex: 1; min-width: 0; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
   .menu-separator { height: 1px; margin: 4px 6px; background: var(--dsw-alias-border-l1); }
 </style>
 </head>
@@ -164,6 +169,10 @@ function buildIndexHtml() {
 </main>
 <script type="module">
 import * as mod from '/bundle.js'
+
+// 注入生产真源样式：标识的可见性必须由 injectHubStyles() 产出的 CSS 证明，
+// 不能靠本页自绘的等价规则自证。
+mod.hubStyles.injectHubStyles()
 
 // 未捕获错误计数：注册 / 注销 / 点击都不应让页面抛错。
 window.__qaErrors = []
@@ -184,6 +193,21 @@ let dismissCount = 0
  * （icon / children / separatorBefore / onSelect），不复制菜单逻辑 ——
  * 行内容、顺序与分组全部由被测模块产出。
  */
+/**
+ * 行内容的文案文本：非 Alpha 行是纯字符串，Alpha 行是「文案 + 标识」片段。
+ * 与官方 .itemLabel 同一渲染面，因此这里按 DOM 文本读取而不是按 props 类型断言。
+ */
+function labelTextOf(children) {
+  if (typeof children === 'string') return children
+  const inner = children?.props?.children
+  const nodes = Array.isArray(inner) ? inner : [inner]
+  for (const node of nodes) {
+    if (typeof node === 'string') return node
+    if (typeof node?.props?.children === 'string') return node.props.children
+  }
+  return ''
+}
+
 function StubMenuItemButton(props) {
   const children = []
   if (props.separatorBefore) {
@@ -195,12 +219,26 @@ function StubMenuItemButton(props) {
     key: 'row',
     type: 'button',
     className: 'menu-row',
-    'data-row-label': String(props.children),
+    'data-row-label': labelTextOf(props.children),
+    'data-row-alpha': hasAlphaBadge(props.children) ? 'true' : 'false',
     onClick: props.onSelect,
   },
   mod.React.createElement('span', { key: 'icon', className: 'menu-row-icon' }, props.icon),
-  mod.React.createElement('span', { key: 'label' }, props.children)))
+  mod.React.createElement('span', { key: 'label', className: 'menu-row-label' }, props.children)))
   return mod.React.createElement('div', { className: 'menu-row-wrap' }, children)
+}
+
+/** 行内容里是否带 Alpha 标识元素。 */
+function hasAlphaBadge(children) {
+  if (children === null || typeof children !== 'object') return false
+  const inner = children.props?.children
+  return (Array.isArray(inner) ? inner : [inner])
+    .some((node) => {
+      if (node?.props?.className === 'omnimux-explore-more-alpha') return true
+      const nested = node?.props?.children
+      return (Array.isArray(nested) ? nested : [nested])
+        .some((child) => child?.props?.className === 'omnimux-explore-more-alpha')
+    })
 }
 
 /** 重新挂载菜单内容：官方菜单每次展开重新挂载即读最新集合。 */
@@ -230,6 +268,9 @@ function readMenu() {
     firstLabel: labels.length ? labels[0] : null,
     lastLabel: labels.length ? labels[labels.length - 1] : null,
     separatorCount: document.querySelectorAll('.menu-separator').length,
+    alphaLabels: list.filter((el) => el.getAttribute('data-row-alpha') === 'true')
+      .map((el) => el.getAttribute('data-row-label')),
+    alphaBadgeCount: document.querySelectorAll('.omnimux-explore-more-alpha').length,
   }
 }
 
@@ -282,6 +323,28 @@ window.__QA = {
   },
   opened() {
     return window.__opened === undefined ? null : window.__opened
+  },
+
+  /**
+   * Alpha 标识在行内的实际几何：必须落在行矩形内、宽高非零，
+   * 且不把行文案挤到不可见（文案矩形宽度 > 0）。
+   */
+  alphaBadgeGeometry(label) {
+    const row = rowNodes().find((node) => node.getAttribute('data-row-label') === label)
+    if (!row) return null
+    const badge = row.querySelector('.omnimux-explore-more-alpha')
+    const text = row.querySelector('.omnimux-explore-more-label-text')
+    if (!badge) return null
+    const rowRect = row.getBoundingClientRect()
+    const badgeRect = badge.getBoundingClientRect()
+    const textRect = text ? text.getBoundingClientRect() : null
+    return {
+      badge: { width: badgeRect.width, height: badgeRect.height, top: badgeRect.top, right: badgeRect.right },
+      text: textRect ? { width: textRect.width, height: textRect.height } : null,
+      row: { width: rowRect.width, height: rowRect.height, top: rowRect.top, right: rowRect.right },
+      insideRow: badgeRect.top >= rowRect.top - 0.5 && badgeRect.right <= rowRect.right + 0.5,
+      title: badge.getAttribute('title'),
+    }
   },
 
   /** 行在视口中的位置：真实鼠标点击与截图就绪判定都用它。 */
@@ -520,11 +583,13 @@ async function main() {
 
   try {
     // ---- bundle the real source -------------------------------------------------
-    // 入口同时导出被测菜单模块、coordinator 注册接缝与 React：
-    // 页面用同一份实例渲染，注册 / 注销与菜单读到的集合必然一致。
+    // 入口同时导出被测菜单模块、coordinator 注册接缝、真实 hub 样式与 React：
+    // 页面用同一份实例渲染，注册 / 注销与菜单读到的集合必然一致；
+    // 样式走生产真源 injectHubStyles()，标识的可见性断言才不是自绘 CSS 自证。
     const entry = [
       "export * from './explore-more-menu.jsx'",
       "export * as coordinator from './sidebar-coordinator.js'",
+      "export * as hubStyles from './styles.js'",
       "export * as React from 'react'",
       "export * as ReactDOMClient from 'react-dom/client'",
       '',
@@ -583,7 +648,7 @@ async function main() {
     )
 
     // ---- step 1: boot -----------------------------------------------------------
-    await assert('boot：官方「更多」菜单渲染内置 10 项，文案与真源清单一致', async () => {
+    await assert('boot：官方「更多」菜单渲染内置 9 项，文案与真源清单一致', async () => {
       const rendered = await evalIn(`window.__QA.boot()`)
       const menu = await evalIn(`window.__QA.readMenu()`)
       const builtinCount = await evalIn(`window.__QA.builtinCount()`)
@@ -593,14 +658,61 @@ async function main() {
         rendered, count: menu.count, labels: menu.labels,
         builtinCount, builtinLabels, builtinIds, separatorCount: menu.separatorCount,
       }
-      if (builtinCount !== 10) throw fail(`内置白名单应为 10 项，实际 ${builtinCount}`, actual)
-      if (menu.count !== 10) throw fail(`菜单行数应为 10，实际 ${menu.count}`, actual)
+      if (builtinCount !== 9) throw fail(`内置白名单应为 9 项，实际 ${builtinCount}`, actual)
+      if (menu.count !== 9) throw fail(`菜单行数应为 9，实际 ${menu.count}`, actual)
       if (!deepEqual(menu.labels, builtinLabels)) throw fail('行文案与真源清单不一致', actual)
-      if (builtinIds.length !== 10) throw fail(`真源清单 id 应为 10 个，实际 ${builtinIds.length}`, actual)
+      if (builtinIds.length !== 9) throw fail(`真源清单 id 应为 9 个，实际 ${builtinIds.length}`, actual)
       if (menu.separatorCount !== 2) throw fail(`分组分隔线应为 2 条，实际 ${menu.separatorCount}`, actual)
       return actual
     })
     await capture('step-1-boot')
+
+    // ---- step 1b: Alpha 内测标识（Issue #3823） ---------------------------------
+    await assert('Alpha 内测标识：只出现在 5 个 Alpha 项，文案与顺序不变', async () => {
+      const menu = await evalIn(`window.__QA.readMenu()`)
+      const expectedAlphaLabels = await evalIn(
+        `window.__QA.module.coordinator.EXPLORE_MENU_ITEMS
+          .filter((item) => window.__QA.module.coordinator.isAlphaEntry(item.entryId))
+          .map((item) => item.label)`,
+      )
+      const actual = {
+        alphaLabels: menu.alphaLabels,
+        expectedAlphaLabels,
+        alphaBadgeCount: menu.alphaBadgeCount,
+        labels: menu.labels,
+      }
+      if (!deepEqual(menu.alphaLabels, expectedAlphaLabels)) {
+        throw fail('带标识的行与 Alpha 真源名单不一致', actual)
+      }
+      if (menu.alphaBadgeCount !== expectedAlphaLabels.length) {
+        throw fail(`标识元素数应为 ${expectedAlphaLabels.length}，实际 ${menu.alphaBadgeCount}`, actual)
+      }
+      if (expectedAlphaLabels.length !== 5) {
+        throw fail(`Alpha 项应为 5 个，实际 ${expectedAlphaLabels.length}`, actual)
+      }
+      return actual
+    })
+    await capture('step-1b-alpha-badges')
+
+    // ---- step 1c: 标识在真实布局里可见（不是只在 props 里存在） -----------------
+    await assert('Alpha 标识在行内可见：落在行矩形内、宽高非零、文案未被挤没', async () => {
+      const label = '自动化'
+      const geometry = await evalIn(`window.__QA.alphaBadgeGeometry(${JSON.stringify(label)})`)
+      const actual = geometry
+      if (!geometry) throw fail(`未找到「${label}」行的 Alpha 标识`, actual)
+      if (!(geometry.badge.width > 0) || !(geometry.badge.height > 0)) {
+        throw fail('标识宽高必须非零（真实渲染，不是隐藏元素）', actual)
+      }
+      if (!geometry.insideRow) throw fail('标识必须完整落在行矩形内，不被裁掉', actual)
+      if (!geometry.text || !(geometry.text.width > 0)) {
+        throw fail('标识不得把行文案挤到零宽', actual)
+      }
+      if (geometry.title !== 'Alpha · 内测：开发阶段优先完善非 Alpha 功能；正式版不包含此功能。') {
+        throw fail('标识必须承载完整内测说明', actual)
+      }
+      return actual
+    })
+    await capture('step-1c-alpha-badge-visible')
 
     // ---- step 2: register -------------------------------------------------------
     await assert('注册运行时项：返回注销函数', async () => {
@@ -611,11 +723,11 @@ async function main() {
     })
 
     // ---- step 3: 11 rows, new one last ------------------------------------------
-    await assert("重新挂载菜单：11 行，末项文案为「快讯中枢」", async () => {
+    await assert("重新挂载菜单：10 行，末项文案为「快讯中枢」", async () => {
       const rendered = await evalIn(`window.__QA.rerender()`)
       const menu = await evalIn(`window.__QA.readMenu()`)
       const actual = { rendered, count: menu.count, lastLabel: menu.lastLabel, labels: menu.labels }
-      if (menu.count !== 11) throw fail(`菜单行数应为 11，实际 ${menu.count}`, actual)
+      if (menu.count !== 10) throw fail(`菜单行数应为 10，实际 ${menu.count}`, actual)
       if (menu.lastLabel !== '快讯中枢') throw fail(`末项文案应为「快讯中枢」，实际「${menu.lastLabel}」`, actual)
       return actual
     })
@@ -663,13 +775,13 @@ async function main() {
     await capture('step-4-after-click')
 
     // ---- step 5: unregister -----------------------------------------------------
-    await assert('注销：重新挂载后回到 10 行且不含该项', async () => {
+    await assert('注销：重新挂载后回到 9 行且不含该项', async () => {
       const removed = await evalIn(`window.__QA.unregister()`)
       const rendered = await evalIn(`window.__QA.rerender()`)
       const menu = await evalIn(`window.__QA.readMenu()`)
       const actual = { removed, rendered, count: menu.count, labels: menu.labels }
       if (!removed) throw fail('注销函数调用失败', actual)
-      if (menu.count !== 10) throw fail(`注销后应为 10 行，实际 ${menu.count}`, actual)
+      if (menu.count !== 9) throw fail(`注销后应为 9 行，实际 ${menu.count}`, actual)
       if (menu.labels.includes('快讯中枢')) throw fail('注销后菜单仍含「快讯中枢」', actual)
       return actual
     })
@@ -699,12 +811,12 @@ async function main() {
       const actual = { results, count: menu.count, labels: menu.labels }
       const threw = results.filter((r) => r.threw)
       if (threw.length > 0) throw fail(`非法输入抛错：${normalize(threw)}`, actual)
-      if (menu.count !== 10) throw fail(`非法输入后菜单行数应为 10，实际 ${menu.count}`, actual)
+      if (menu.count !== 9) throw fail(`非法输入后菜单行数应为 9，实际 ${menu.count}`, actual)
       return actual
     })
 
     // ---- step 7: builtin id conflict --------------------------------------------
-    await assert('与内置 10 项 id 冲突时不注册（菜单仍 10 行，首项仍为「应用」）', async () => {
+    await assert('与内置 9 项 id 冲突时不注册（菜单仍 9 行，首项仍为「应用」）', async () => {
       const outcome = await evalIn(
         `window.__QA.registerRaw(${JSON.stringify({ id: 'apps', label: '冲突项', iconSvg: '<svg viewBox="0 0 16 16"></svg>' })})`,
       )
@@ -712,13 +824,13 @@ async function main() {
       const menu = await evalIn(`window.__QA.readMenu()`)
       const actual = { outcome, count: menu.count, firstLabel: menu.firstLabel, labels: menu.labels }
       if (outcome.threw) throw fail('冲突注册抛错', actual)
-      if (menu.count !== 10) throw fail(`冲突注册后应仍为 10 行，实际 ${menu.count}`, actual)
+      if (menu.count !== 9) throw fail(`冲突注册后应仍为 9 行，实际 ${menu.count}`, actual)
       if (actual.firstLabel !== '应用') throw fail(`内置首项文案应仍为「应用」，实际「${actual.firstLabel}」`, actual)
       return actual
     })
 
     // ---- step 8: same-id re-registration overwrites -----------------------------
-    await assert('同 id 二次注册覆盖（11 行，末项为后一次注册的文案）', async () => {
+    await assert('同 id 二次注册覆盖（10 行，末项为后一次注册的文案）', async () => {
       await evalIn(
         `window.__QA.registerRaw(${JSON.stringify({ id: 'dup-probe', label: '首次', iconSvg: '<svg viewBox="0 0 16 16"></svg>', tabId: 'dup' })})`,
       )
@@ -728,7 +840,7 @@ async function main() {
       const rendered = await evalIn(`window.__QA.rerender()`)
       const menu = await evalIn(`window.__QA.readMenu()`)
       const actual = { rendered, count: menu.count, lastLabel: menu.lastLabel, labels: menu.labels }
-      if (menu.count !== 11) throw fail(`二次注册后应为 11 行，实际 ${menu.count}`, actual)
+      if (menu.count !== 10) throw fail(`二次注册后应为 10 行，实际 ${menu.count}`, actual)
       if (menu.lastLabel !== '二次') throw fail('二次注册未覆盖同 id 条目', actual)
       return actual
     })
