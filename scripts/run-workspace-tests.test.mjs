@@ -1,11 +1,37 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { parse } from 'yaml'
+import { discoverPackages, selectShard, SHARD_NAMES } from './run-workspace-tests.mjs'
 
 const RUNNER = fileURLToPath(new URL('./run-workspace-tests.mjs', import.meta.url))
+
+test('CI shards cover every workspace package exactly once and match the workflow matrix', () => {
+  const packages = discoverPackages()
+  const seen = new Map()
+  for (const shard of SHARD_NAMES) {
+    const selected = selectShard(packages, shard)
+    assert.ok(selected.length > 0, `shard ${shard} must not be empty`)
+    for (const pkg of selected) {
+      assert.equal(seen.has(pkg.name), false, `${pkg.name} runs in both ${seen.get(pkg.name)} and ${shard}`)
+      seen.set(pkg.name, shard)
+    }
+  }
+  assert.deepEqual([...seen.keys()].sort(), packages.map((pkg) => pkg.name).sort())
+  const workflow = parse(readFileSync(new URL('../.github/workflows/quality-gate.yml', import.meta.url), 'utf8'))
+  assert.deepEqual(workflow.jobs['plugin-tests'].strategy.matrix.shard, [...SHARD_NAMES])
+})
+
+test('shard selection fails loudly on unknown shards and stale shard tables', () => {
+  const pkg = (name) => ({ name, dir: `/tmp/${name}`, command: 'true' })
+  const full = ['omnimux', 'omnimux-inspiration', 'omnimux-workflow', 'omnimux-market', 'omnimux-new'].map(pkg)
+  assert.throws(() => selectShard(full, 'nope'), /unknown shard/)
+  assert.deepEqual(selectShard(full, 'rest').map((item) => item.name), ['omnimux-new'], 'new packages fall into rest')
+  assert.throws(() => selectShard(full.filter((item) => item.name !== 'omnimux-market'), 'rest'), /missing package\(s\): omnimux-market/)
+})
 
 test('packageEnv injects an isolated DSH_HOME per package run', async () => {
   const { packageEnv } = await import(pathToFileURL(RUNNER).href)
