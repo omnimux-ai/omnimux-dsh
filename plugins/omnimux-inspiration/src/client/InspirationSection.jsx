@@ -221,19 +221,19 @@ export function InspirationSection({ t, active }) {
   }, [toastLeaving])
 
   /**
-   * Timer of the pending browser-capture wait.
+   * State of the pending browser-capture wait.
    *
-   * Declared beside the toast timers because both outlive a render: the wait
-   * polls for up to {@link BROWSER_UPDATE_WAIT_MS} after the user's browser was
-   * opened, and unmounting the page must stop it.
+   * `generation` retires an older wait when the user clicks again, and
+   * `cancelled` retires it when the page unmounts. Both are read *after* the
+   * timer fires rather than by clearing it: a cleared timer would leave its
+   * promise pending forever, which is a leak with no upside.
    */
-  const browserUpdateTimer = useRef(null)
+  const browserUpdateWait = useRef({ timer: null, generation: 0, cancelled: false })
 
-  // The browser-capture wait outlives a single render but not the tab: leaving
-  // the page must not keep a timer (and a poll) alive.
+  // The wait outlives a single render but not the tab: leaving the page must
+  // stop it from reading again (the pending timer is allowed to fire once).
   useEffect(() => () => {
-    if (browserUpdateTimer.current !== null) clearTimeout(browserUpdateTimer.current)
-    browserUpdateTimer.current = null
+    browserUpdateWait.current.cancelled = true
   }, [])
 
   /**
@@ -271,16 +271,25 @@ export function InspirationSection({ t, active }) {
    * user returns. `last_checked_at` is the only field this path writes — a cloud
    * refresh writes `last_refresh_at` — so waiting on it cannot be satisfied by
    * an unrelated cloud cycle.
+   *
+   * The baseline is captured *before* the token request, not before the wait:
+   * an account the user updated a minute ago already has a fresh
+   * `last_checked_at`, and comparing against the click time would end this wait
+   * on that older fact.
    * @param {string} id
+   * @param {number} baselineMs
+   * @param {number} generation
    */
-  const waitForBrowserUpdate = useCallback(async (id) => {
-    const startedAt = Date.now()
-    const deadline = startedAt + BROWSER_UPDATE_WAIT_MS
+  const waitForBrowserUpdate = useCallback(async (id, baselineMs, generation) => {
+    const state = browserUpdateWait.current
+    const deadline = Date.now() + BROWSER_UPDATE_WAIT_MS
     while (Date.now() < deadline) {
       await new Promise((resolve) => {
-        browserUpdateTimer.current = setTimeout(resolve, BROWSER_UPDATE_POLL_MS)
+        state.timer = setTimeout(resolve, BROWSER_UPDATE_POLL_MS)
       })
-      browserUpdateTimer.current = null
+      state.timer = null
+      // A newer click or an unmounted page retires this wait before it reads.
+      if (state.cancelled || state.generation !== generation) return
       let accounts = null
       try {
         const res = await fetchRivalAccounts({})
@@ -288,11 +297,12 @@ export function InspirationSection({ t, active }) {
       } catch {
         accounts = null
       }
+      if (state.cancelled || state.generation !== generation) return
       const row = Array.isArray(accounts)
         ? accounts.find((account) => String(account?.id) === String(id))
         : null
       const checked = Date.parse(String(row?.last_checked_at || ''))
-      if (Number.isFinite(checked) && checked >= startedAt - 1_000) {
+      if (Number.isFinite(checked) && checked > baselineMs) {
         void reloadRivalFeed()
         return
       }
@@ -307,6 +317,10 @@ export function InspirationSection({ t, active }) {
    * 一遍，是因为第二份实现迟早会和 Host 的 400/422 契约漂开。
    */
   const requestBrowserUpdate = useCallback(async (id) => {
+    const state = browserUpdateWait.current
+    // The baseline is read before the request: everything the capture writes
+    // lands after it.
+    const baselineMs = Date.now()
     let result
     try {
       result = await requestRivalPluginRefresh(id)
@@ -323,9 +337,9 @@ export function InspirationSection({ t, active }) {
       return false
     }
     showToast(t('rivalAccounts.refresh.pluginOpened'))
-    // 连点两次不该叠出两个等待；旧的那个直接作废。
-    if (browserUpdateTimer.current !== null) clearTimeout(browserUpdateTimer.current)
-    void waitForBrowserUpdate(id)
+    // A second click retires the previous wait instead of stacking another poll.
+    state.generation += 1
+    void waitForBrowserUpdate(id, baselineMs, state.generation)
     return true
   }, [showToast, t, waitForBrowserUpdate])
 
