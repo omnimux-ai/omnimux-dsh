@@ -1283,6 +1283,295 @@ ${CANONICAL_SCROLL_DECL}
 .omx-avatar-selection-summary p { margin:6px 0;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .omx-avatar-selection-summary[data-expanded="true"] p { white-space:normal;max-height:100px;overflow:auto; }
 .omx-avatar-material-thumb { display:block;width:52px;height:52px;object-fit:contain;border-radius:8px;background:var(--dsw-alias-bg-layer-3); }
+
+/* ── 三模式分段控件：任何语言下都不换行 ─────────────────────────
+   三段模式名在窄栏里会各自折成两行，把胶囊从 32px 顶到 46px，还会把
+   右侧内容挤歪。这里锁住单行：分段等分、标签不折行、省略号兜底，
+   极窄视口允许横向滚动，而不是竖着长高。 */
+.omx-avatar-seg-no-wrap {
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.omx-avatar-seg-no-wrap::-webkit-scrollbar { display: none; }
+.omx-avatar-seg-no-wrap > .omx-avatar-seg-item {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+  white-space: nowrap;
+}
+.omx-avatar-seg-no-wrap > .omx-avatar-seg-item > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── 爆款复刻：宽幅说明区与参数行 ─────────────────────────────
+   模式说明用宽幅分区（横向排布），与另两个模式的窄栏说明区分开，
+   不引入新位图。 */
+.omx-avatar-recreate-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+.omx-avatar-recreate-intro > h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--dsw-alias-label-primary); }
+.omx-avatar-recreate-intro > p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--dsw-alias-label-secondary); }
+.omx-avatar-recreate-note { margin: 0; font-size: 11px; line-height: 1.4; color: var(--dsw-alias-label-tertiary); }
+.omx-avatar-recreate-params { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.omx-avatar-recreate-params > .omx-avatar-field { flex: 1 1 140px; min-width: 0; }
+/* 复刻的提示词输入框：插件里第一个 textarea，必须显式对齐暗色控件几何，
+   否则会渲染成原生白底输入框，跟整页割裂。 */
+.omx-avatar-recreate-prompt {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 96px;
+  padding: 8px 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.omx-avatar-recreate-prompt::placeholder { color: var(--dsw-alias-label-tertiary); }
+.omx-avatar-recreate-prompt:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 1px; }
+.omx-avatar-recreate-prompt:disabled { opacity: 0.5; cursor: not-allowed; }
+/* 拆解分步清单：当前步高亮、已完成降一档，未开始最弱。 */
+.omx-avatar-recreate-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+.omx-avatar-recreate-steps > li { display: flex; align-items: center; gap: 6px; color: var(--dsw-alias-label-tertiary); }
+.omx-avatar-recreate-steps > li[data-state="done"] { color: var(--dsw-alias-label-secondary); }
+.omx-avatar-recreate-steps > li[data-state="current"] { color: var(--dsw-alias-label-primary); font-weight: 600; }
+
+/* ── 多选上传的进行中卡片 ─────────────────────────────────────
+   一个文件一张卡；状态只落在这张卡上，面板顶部不再重复一遍。
+   卡片与素材瓦片同尺寸，上传完成后原地换成成品，网格不跳列。 */
+/* 一批上传卡片的容器：列宽与素材选择器的网格一致，卡片不会突然变宽或跳列。 */
+.omx-avatar-pending-batch {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+  padding: 0 0 10px;
+}
+.omx-avatar-pending { display: flex; min-width: 0; }
+.omx-avatar-pending-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 8px 14px;
+  overflow: hidden;
+  border: 1px dashed var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  text-align: center;
+}
+.omx-avatar-pending-frame[data-state="uploading"] { border-style: solid; }
+.omx-avatar-pending-frame[data-state="error"] {
+  border-style: solid;
+  border-color: var(--dsw-alias-state-error-primary);
+}
+.omx-avatar-pending-frame[data-state="done"] { border-style: solid; border-color: var(--dsw-alias-border-l2); }
+.omx-avatar-pending-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+}
+.omx-avatar-pending-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 62%, transparent);
+}
+.omx-avatar-pending-body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
+}
+.omx-avatar-pending-frame[data-state="uploading"] .omx-avatar-pending-body > svg { animation: omx-avatar-spin 0.9s linear infinite; }
+.omx-avatar-pending-frame[data-state="error"] .omx-avatar-pending-body > svg { color: var(--dsw-alias-state-error-primary); }
+.omx-avatar-pending-frame[data-state="done"] .omx-avatar-pending-body > svg { color: var(--dsw-alias-label-success); }
+.omx-avatar-pending-state { font-weight: 600; color: var(--dsw-alias-label-primary); }
+.omx-avatar-pending-name {
+  width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--dsw-alias-label-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.omx-avatar-pending-actions {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.omx-avatar-pending-progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  height: 3px;
+  background: var(--dsw-alias-border-l1);
+}
+.omx-avatar-pending-progress > i {
+  display: block;
+  height: 100%;
+  background: var(--dsw-alias-brand-primary);
+  transition: width 0.12s linear;
+}
+
+/* ── 失败原因详情 ─────────────────────────────────────────────
+   主文案永远是中文；原文一次点击可达，未知错误也不吞。 */
+.omx-avatar-fail-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+.omx-avatar-fail-more {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dsw-alias-label-tertiary);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.omx-avatar-fail-more:hover { color: var(--dsw-alias-label-primary); }
+.omx-avatar-fail-more:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 2px; }
+.omx-avatar-fail-raw {
+  width: 100%;
+  max-height: 96px;
+  padding: 8px 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+}
+
+/* ── 预览里的只读分镜拆解 ─────────────────────────────────────
+   只显示任务记录里真实存在的字段，缺字段就不显示那一段。 */
+.omx-avatar-shots {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+.omx-avatar-shots-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.omx-avatar-shots-title { margin: 0; font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary); }
+.omx-avatar-shots-meta { font-size: 11px; color: var(--dsw-alias-label-tertiary); }
+.omx-avatar-shots-hook { margin: 0; font-size: 12px; line-height: 1.5; color: var(--dsw-alias-label-secondary); }
+.omx-avatar-shot-list { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.omx-avatar-shot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.omx-avatar-shot-id { flex: none; font-weight: 600; color: var(--dsw-alias-label-primary); }
+.omx-avatar-shot-time { flex: none; color: var(--dsw-alias-label-tertiary); font-variant-numeric: tabular-nums; }
+.omx-avatar-shot-tag { flex: none; color: var(--dsw-alias-label-secondary); }
+.omx-avatar-shot-job { min-width: 0; color: var(--dsw-alias-label-secondary); }
+
+/* ── 槽位悬浮控件：预览键与移除键同尺寸同底同描边 ─────────────
+   两个键都是悬浮小控件，尺寸/圆角/底色/描边必须一致，否则一角会
+   出现两种大小；移动端两者同时放大，保持相对关系。
+
+   待接入（不是遗留垃圾，请勿当作死代码清理）：
+   .omx-avatar-slot-preview 目前还没有组件挂载。它是 spec 映射表第 20 项
+   （参考图 / 参考视频预览复用共享预览窗）的落地位置——素材槽仍是双 slot
+   结构，预览按钮下一轮挂上即生效。删掉这段下次还要重写。 */
+.omx-avatar-slot-preview {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 62%, transparent);
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.omx-avatar-slot-preview > svg { width: 14px; height: 14px; }
+.omx-avatar-slot:hover .omx-avatar-slot-preview,
+.omx-avatar-slot:focus-within .omx-avatar-slot-preview { opacity: 1; pointer-events: auto; }
+.omx-avatar-slot-preview:hover { background: color-mix(in srgb, var(--dsw-alias-bg-base) 85%, transparent); }
+@media (hover: none), (pointer: coarse) {
+  .omx-avatar-slot-preview { opacity: 1; pointer-events: auto; width: 32px; height: 32px; }
+  .omx-avatar-slot-preview > svg { width: 16px; height: 16px; }
+}
+
 .omx-avatar-mobile-nav { display: none; }
 @media (max-width: 600px) {
   .omnimux-avatar-body { grid-template-rows:minmax(0,1fr); }

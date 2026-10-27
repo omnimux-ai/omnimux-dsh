@@ -276,6 +276,61 @@ const TEXT_KEYS = [
   ['数字人名称已存在', 'A character with this name already exists'],
   ['关闭', 'Close'],
 
+  // ── 爆款复刻（第三个视频模式）────────────────────────────────
+  // 分步文案与模式名对齐源工作台的英文原文；中文按本插件产品文案定稿。
+  ['爆款复刻', 'Viral recreate'],
+  ['正在拆解参考视频', 'Analyzing reference video'],
+  ['拆解参考视频失败', 'Could not analyze the reference video. Please try again.'],
+  ['提取镜头关键帧', 'Extract shot frames'],
+  ['理解你的参考图', 'Understand your references'],
+  ['拆解叙事与爆款逻辑', 'Decompose narrative and viral logic'],
+  ['编译生成提示词', 'Compile the generation prompt'],
+  [
+    '参考视频仅用于拆解，不会提交给视频模型',
+    'The reference video is only used for analysis and is never sent to the video model',
+  ],
+
+  // ── 多选上传进行中卡片 ──────────────────────────────────────
+  ['上传中', 'Uploading…'],
+  ['上传失败', 'Upload failed'],
+  ['重试上传', 'Retry upload'],
+  ['已完成', 'Uploaded'],
+
+  // ── 失败原因与只读分镜 ──────────────────────────────────────
+  ['查看失败原因', 'Details'],
+  ['原始错误', 'Original error'],
+  ['分镜拆解', 'Shot breakdown'],
+  ['分析未完成', 'Analysis not finished'],
+  ['共 {{n}} 个镜头', '{{n}} shots'],
+  ['生成失败，请重试', 'Generation failed. Please try again.'],
+  ['生成超时，请重新生成', 'Task timed out. Please regenerate.'],
+  ['上游任务不存在', 'Upstream task not found'],
+  ['查询上游任务状态失败', 'Failed to query the upstream task status'],
+  ['获取渠道信息失败', 'Failed to get the channel information'],
+  ['提交任务失败，请重试', 'Could not submit the task. Please try again.'],
+  ['文件上传失败，请重试', 'File upload failed. Please try again.'],
+  ['生成渠道不可用', 'The generation channel is unavailable'],
+
+  // ── 爆款复刻表单（client-modes 独有的界面文案）───────────────
+  // 这里只收本插件自己的产品文案：源工作台的英文原文作为对照，
+  // 中文按本仓「普通用户创作不暴露模型 ID」的定位改写。
+  [
+    '拆解参考片的镜头、节奏与叙事，用你的角色重拍一条。',
+    "Break down the reference's shots, pacing and narrative, then reshoot it with your character.",
+  ],
+  ['添加参考视频，拆解爆款结构', 'Add a reference video to break down its structure'],
+  ['更换参考视频', 'Replace reference video'],
+  ['补充说明', 'Additional notes'],
+  ['补充说明：已开启', 'Additional notes: on'],
+  ['补充说明：关闭', 'Additional notes: off'],
+  ['说明这次复刻要保留什么、换成什么', 'Describe what to keep and what to replace'],
+  ['参数', 'Parameters'],
+  ['拆解进度', 'Analysis progress'],
+  ['拆解没有返回可用的提示词，请重试', 'Analysis returned no usable prompt. Please try again.'],
+  ['缺少拆解结果，请先生成一次', 'No analysis result yet. Generate once first.'],
+  ['请先选择参考图片', 'Select reference images first'],
+  ['提交中', 'Submitting'],
+
   // 18 个分类标签：键与数据集 label_en 一致。
   ['性别', 'Gender'],
   ['族裔', 'Ethnicity'],

@@ -21,6 +21,7 @@ import { FeedGrid, taskIdentity } from './components/FeedGrid.jsx'
 import { GenerateBar } from './components/GenerateBar.jsx'
 import { MultiViewDialog } from './components/MultiViewDialog.jsx'
 import { MotionPanel } from './components/MotionPanel.jsx'
+import { isMode as isVideoMode } from './lib/mode-assets.js'
 import { TaskPreviewDialog } from './components/TaskPreviewDialog.jsx'
 import { ImageReference } from './components/ImageReference.jsx'
 import { Button } from './kit.js'
@@ -657,7 +658,7 @@ export function AvatarStage(props) {
                 const epoch=inspirationEpochRef.current
                 const material=await importInspirationVideo(currentId,item)
                 if(epoch!==inspirationEpochRef.current||!isCurrent())return
-                setVideoInitialTask({kind:'reference-preset',materialId:material.id,mode:['motion','replace'].includes(item.mode)?item.mode:undefined,prompt:item.prompt??item.content??item.description??''})
+                setVideoInitialTask({kind:'reference-preset',materialId:material.id,mode:isVideoMode(item.mode)?item.mode:undefined,prompt:item.prompt??item.content??item.description??''})
                 setWorkbenchMode('video');setSource('create');setMobileSection('create')
               }}/>}</>
             ) : (

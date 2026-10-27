@@ -188,11 +188,16 @@ describe('TaskCard：图片兜底与进度不造假', () => {
   })
 
   it('失败原因与重试按钮齐备，重试先阻断冒泡', () => {
-    assert.match(taskCard, /fail_reason \|\| t\('生成失败'\)/)
-    assert.match(taskCard, /event\.stopPropagation\(\)/)
+    // 重试的语义是「重新生成」，入口在预览窗里；失败卡自身不再给重试键，
+    // 否则用户分不清它重试的是提交还是生成（源提交 45e3cb853 / 28b84c633）。
+    assert.match(taskCard, /const failView = state === 'failed' \? describeFailReason\(t, task\?\.fail_reason\) : null/)
+    assert.match(taskCard, /<FailReasonDetail view=\{failView\} t=\{t\} \/>/)
     assert.match(taskCard, /omx-avatar-fail/)
     assert.match(taskCard, /'排队中'/)
     assert.match(taskCard, /'生成中'/)
+    // 负向断言：失败卡内不得再出现重试按钮，也不得直接消费 onRetry。
+    assert.doesNotMatch(taskCard, /t\('重试'\)/)
+    assert.doesNotMatch(taskCard, /onRetry\(task\)/)
   })
 
   it('状态归一同时认上游与适配层两种拼法', () => {
@@ -304,5 +309,120 @@ describe('客户端源码边界：只依赖 react，无原生 select，无 emoji
       assert.doesNotMatch(stripped, /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/, `${name} 存在裸色`)
       assert.doesNotMatch(stripped, /\brgba?\s*\(/i, `${name} 存在裸色`)
     }
+  })
+})
+
+// ── 本轮新增：失败详情、进行中上传卡、预览只读分镜 ─────────────────────
+//
+// 这几条都挑选「改错了不会被其它测试发现」的契约：
+// 失败卡不许再给重试、未知错误不许被吞、进行中卡片的三态各自可辨、
+// 预览里的分镜只读且绝不触发分析。
+
+const pendingCard = read('PendingUploadCard.jsx')
+const failDetail = read('FailReasonDetail.jsx')
+const previewDialog = read('TaskPreviewDialog.jsx')
+
+describe('TaskCard 失败态：中文原因 + 详情入口，没有重试', () => {
+  it('失败卡渲染解析后的中文原因，并把原文交给详情组件', () => {
+    assert.match(taskCard, /const failView = state === 'failed' \? describeFailReason\(t, task\?\.fail_reason\) : null/)
+    assert.match(taskCard, /<p className='omx-avatar-fail'>\{failView\.message\}<\/p>/)
+    assert.match(taskCard, /<FailReasonDetail view=\{failView\} t=\{t\} \/>/)
+  })
+
+  it('失败卡不再有重试按钮，也不再消费 onRetry', () => {
+    assert.ok(!taskCard.includes("t('重试')"), '失败卡不得再出现「重试」按钮')
+    assert.ok(!taskCard.includes('onRetry(task)'), '失败卡不得直接调用 onRetry')
+    const { onRetry, ...rest } = { onRetry: 1, viewMode: 2, child: 3 }
+    assert.ok(onRetry && rest, '重试入口只留在调用方，卡片不消费')
+  })
+})
+
+describe('FailReasonDetail：中文主文案 + 原文可展开，未知错误不吞', () => {
+  it('已中文化的原因原样作主文案，且不给多余详情', () => {
+    assert.match(failDetail, /const CJK = \/\[\\u3400-\\u9fff\\uf900-\\ufaff\]\//)
+    assert.match(failDetail, /if \(CJK\.test\(text\)\) return \{ message: text, raw: text, showDetail: false, kind: 'known' \}/)
+  })
+
+  it('未知文本落到通用中文主文案，原文完整保留在详情里', () => {
+    assert.match(failDetail, /return \{ message: t\(GENERIC_KEY\), raw: text, showDetail: true, kind: 'unknown' \}/)
+    assert.match(failDetail, /const GENERIC_KEY = '生成失败，请重试'/)
+    // 原文区块必须真的渲染 raw，而不是再翻译一层。
+    assert.match(failDetail, /\{view\.raw\}/)
+  })
+
+  it('详情入口是 disclosure：aria-expanded 随开关变化，且不冒泡到卡片点击', () => {
+    assert.match(failDetail, /aria-expanded=\{open\}/)
+    assert.match(failDetail, /event\.stopPropagation\(\)/)
+    assert.match(failDetail, /if \(!view\?\.showDetail\) return null/)
+  })
+
+  it('已知英文原因都有中文对照，且不把英文当主文案', () => {
+    for (const zh of ['生成超时，请重新生成', '上游任务不存在', '查询上游任务状态失败', '获取渠道信息失败']) {
+      assert.ok(failDetail.includes(zh), `缺少中文原因 ${zh}`)
+    }
+    assert.match(failDetail, /const KNOWN_REASONS = \[/)
+  })
+})
+
+describe('PendingUploadCard：三态各自可辨，状态只落在卡片自身', () => {
+  it('三态各自的状态文案齐备，且只来自 locales', () => {
+    assert.match(pendingCard, /t\('上传中'\)/)
+    assert.match(pendingCard, /t\('上传失败'\)/)
+    assert.match(pendingCard, /t\('已完成'\)/)
+    assert.match(pendingCard, /t\('重试上传'\)/)
+  })
+
+  it('状态经 data-state 落在卡片自身，不在外层重复', () => {
+    assert.match(pendingCard, /data-state=\{state\}/)
+    assert.match(pendingCard, /aria-busy=\{state === 'uploading'\}/)
+    // 只有失败态才给重试与移除：上传中给重试会把「还没结束」说成「失败」。
+    assert.match(pendingCard, /\{state === 'error' \? \(/)
+  })
+
+  it('没有真实进度就不画进度条，也不编百分比', () => {
+    assert.ok(!pendingCard.includes('Math.random'), '不得用随机数编造进度')
+    assert.match(pendingCard, /Number\.isFinite\(progress\) \? Math\.max\(0, Math\.min\(100, Math\.round\(progress\)\)\) : null/)
+    assert.match(pendingCard, /\{state === 'uploading' && pct !== null \? \(/)
+  })
+
+  it('图标是内联矢量 SVG，没有字符或 emoji 充当图标', () => {
+    assert.match(pendingCard, /function UploadingIcon\(\)[\s\S]{0,320}<svg/)
+    assert.match(pendingCard, /function DoneIcon\(\)[\s\S]{0,320}<svg/)
+    assert.match(pendingCard, /function FailIcon\(\)[\s\S]{0,320}<svg/)
+    assert.ok(!pendingCard.includes('>✓<'), '不得用 ✓ 字符充当图标')
+    assert.equal(pendingCard.match(/\p{Extended_Pictographic}/u), null)
+  })
+})
+
+describe('TaskPreviewDialog：分镜只读，绝不触发分析', () => {
+  it('只从任务记录读已落库的拆解，不发任何请求', () => {
+    assert.match(previewDialog, /export function readTaskRecreate\(task\)/)
+    assert.ok(!/\bfetch\b/.test(previewDialog), '预览不得发网络请求')
+    assert.ok(!previewDialog.includes('analyzeRecreate'), '预览不得触发重新分析')
+    assert.ok(!/import .*api\.js/.test(previewDialog), '预览不得引入 api 层')
+  })
+
+  it('落库路径认 input.recreate 并兼容顶层，分镜为空即不渲染', () => {
+    assert.match(previewDialog, /const source = input\.recreate \?\? input/)
+    assert.match(previewDialog, /if \(!shots\.length\) return null/)
+  })
+
+  it('分镜用服务端确认的五个字段渲染，缺字段就不显示那一段', () => {
+    assert.match(previewDialog, /shot\?\.start_s/)
+    assert.match(previewDialog, /shot\?\.end_s/)
+    assert.match(previewDialog, /shot\?\.shot_id/)
+    assert.match(previewDialog, /shot\?\.shot_size/)
+    assert.match(previewDialog, /shot\?\.narrative_job/)
+  })
+
+  it('没有重新分析入口，也没有「不可复用」提示', () => {
+    assert.ok(!previewDialog.includes('重新分析'), '分镜只读，不得给重新分析入口')
+    assert.ok(!previewDialog.includes('不可复用'), '不得保留「不可复用」提示')
+    assert.ok(!previewDialog.includes('cannot be reused'), '不得保留英文版不可复用提示')
+  })
+
+  it('拆解区块有可访问名，列表语义是 ol', () => {
+    assert.match(previewDialog, /aria-label=\{t\('分镜拆解'\)\}/)
+    assert.match(previewDialog, /<ol className='omx-avatar-shot-list'>/)
   })
 })
