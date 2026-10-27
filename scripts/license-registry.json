@@ -182,7 +182,7 @@
             "assets/director/",
             "scripts/build-director.mjs"
           ],
-          "note": "锁定在 5e2ad602（2026-10-13，最后一个 MIT 版本）。上游已于 6b30abfe（2026-10-19）改为 Source Available 双段许可；越过该 pin 同步须人工复核许可。"
+          "note": "锁定在 5e2ad602（2026-10-13，MIT）。上游自 6b30abfe（2026-10-19 UTC）起新增原创内容改为 Source Available 许可；不得同步 6b30abfe 及之后的代码，除非取得书面商业授权。"
         }
       ]
     }

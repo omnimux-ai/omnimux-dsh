@@ -2,6 +2,14 @@
 
 Source: glanderness/BeefTV, fixed revision 5e2ad6022addd387001d08a478e3316ee2266524. Director components and library implementations are adapted from the source, excluding original backend, provider clients and application stores.
 
+## Upstream pin
+
+This component is pinned to BeefTV revision `5e2ad6022addd387001d08a478e3316ee2266524` (2026-10-13), which is distributed under the MIT License reproduced below.
+
+Starting with revision `6b30abfe61a2` (2026-10-19 UTC), BeefTV licenses newly added original material under the BeefTV Source Available License 1.0. That license prohibits commercial distribution and providing the software as an external service without separate written authorization. Material published under MIT before that revision remains under MIT.
+
+Do not sync, copy, or adapt upstream code from revision `6b30abfe61a2` or later into this plugin. Because this plugin ships in a paid commercial product, using material licensed under the BeefTV Source Available License 1.0 requires separate written authorization from the relevant BeefTV rights holders (requests: lucas@bf-labs.cn). Any change to the pinned revision also requires a license review and an update to this file and `scripts/license-registry.json`.
+
 MIT License
 
 Copyright (c) 2026 @beefnoode and BeefTV contributors
