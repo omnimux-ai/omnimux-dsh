@@ -17,7 +17,7 @@ const stubs = {
   './styles.js': 'export function injectProductsStyles() {}',
 }
 const bundle = await build({
-  entryPoints: [fileURLToPath(new URL('./ProductsStage.jsx', import.meta.url))],
+  entryPoints: [fileURLToPath(new URL('./ProductGrid.jsx', import.meta.url))],
   bundle: true, write: false, format: 'cjs', platform: 'browser', jsx: 'automatic',
   external: ['react', 'react/jsx-runtime', 'dsh-ui-kit'],
   plugins: [{ name: 'visual-boundaries', setup(ctx) {
