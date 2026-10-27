@@ -55,12 +55,33 @@ function useElapsed(startedAt, running) {
  * 拆解失败与提交失败分开呈现，都走 onError；提交失败保留拆解，
  * 重试不再二次拆解（见 lib/recreate.js 的 analysisValid）。
  */
+/** 清晰度偏好：读失败回落 480p；写失败要留痕，不能静默吞掉（用户会以为记住了）。 */
+function readResolutionPreference() {
+  try {
+    const value = localStorage.getItem('omnimux-avatar:resolution')
+    return ['480p', '720p'].includes(value) ? value : '480p'
+  } catch (error) {
+    console.warn('[omnimux-avatar] 读取清晰度偏好失败，回落 480p：', error)
+    return '480p'
+  }
+}
+
+/** @param {string} value */
+function writeResolutionPreference(value) {
+  try {
+    localStorage.setItem('omnimux-avatar:resolution', value)
+  } catch (error) {
+    // 存储被禁用或写满时偏好记不住，但不该阻断生成；如实告知一次。
+    console.warn('[omnimux-avatar] 保存清晰度偏好失败，本次选择仍生效：', error)
+  }
+}
+
 export function MotionPanel({ avatarId, tasks, initialTask, active, onAccepted, onError }) {
   const [materials, setMaterials] = useState([])
   const [snapshot, setSnapshot] = useState(() => createSnapshot())
   const [mode, setMode] = useState('motion')
   const assets = assetsOf(snapshot, mode)
-  const [resolution, setResolution] = useState(() => { try { const value = localStorage.getItem('omnimux-avatar:resolution'); return ['480p','720p'].includes(value) ? value : '480p' } catch { return '480p' } })
+  const [resolution, setResolution] = useState(readResolutionPreference)
   const [aspectRatio, setAspectRatio] = useState('16:9')
   const [materialSource, setMaterialSource] = useState('all')
   const [picker,setPicker]=useState(null)
@@ -326,7 +347,7 @@ export function MotionPanel({ avatarId, tasks, initialTask, active, onAccepted, 
             assets={assets}
             resolution={resolution}
             resolutions={resolutions}
-            onResolution={value => { setResolution(value); try { localStorage.setItem('omnimux-avatar:resolution',value) } catch {} }}
+            onResolution={value => { setResolution(value); writeResolutionPreference(value) }}
             options={options}
             checking={checking}
             disabled={working}
@@ -362,7 +383,7 @@ export function MotionPanel({ avatarId, tasks, initialTask, active, onAccepted, 
           <Button aria-pressed={assets.promptOn} onClick={() => setSnapshot(prev => withAssets(prev, mode, { promptOn: !assets.promptOn }))}>自定义说明{assets.promptOn ? '：已开启' : '：关闭'}</Button>
           {assets.promptOn ? <><InputField value={assets.prompt} onChange={event => setPrompt(event.target.value)} placeholder="补充视频说明，可用 @Image 1、@Video" aria-label="视频说明" /><div className="omx-avatar-pane-tools">{assets.images.map((item,index)=><Button key={item.id} onClick={()=>setPrompt(assets.prompt+' @Image '+(index+1))}>提及图片 {index+1}</Button>)}{assets.video?<Button onClick={()=>setPrompt(assets.prompt+' @Video')}>提及视频</Button>:null}</div></> : null}
           <div className="omx-avatar-pane-tools">
-            <DropdownSelect aria-label="清晰度" placeholder="清晰度" value={resolution} disabled={!options||checking} options={resolutions.map(value=>({value,label:value}))} onChange={value => { setResolution(value); const ratio=options.supported.find(item=>item.resolution===value&&item.aspectRatio===aspectRatio)??options.supported.find(item=>item.resolution===value);if(ratio)setAspectRatio(ratio.aspectRatio);try { localStorage.setItem('omnimux-avatar:resolution',value) } catch {} }} />
+            <DropdownSelect aria-label="清晰度" placeholder="清晰度" value={resolution} disabled={!options||checking} options={resolutions.map(value=>({value,label:value}))} onChange={value => { setResolution(value); const ratio=options.supported.find(item=>item.resolution===value&&item.aspectRatio===aspectRatio)??options.supported.find(item=>item.resolution===value);if(ratio)setAspectRatio(ratio.aspectRatio);writeResolutionPreference(value) }} />
             {mode==='motion'?<DropdownSelect aria-label="画幅" placeholder="画幅" value={aspectRatio} disabled={!options||checking} options={ratios.map(value => ({value,label:value}))} onChange={setAspectRatio} />:null}
           </div>
           <p className="omx-avatar-field-lbl">{hint}</p>
