@@ -60,13 +60,17 @@ function findChrome() {
 /* --------------------------------------------------------------- harness 源码 */
 
 /**
- * 浏览器侧夹具：挂真实的产品库 Stage，只把 HTTP 边界换成内存实现。
- * 组件、样式、状态机、守卫全部是生产代码。
+ * 浏览器侧夹具：直接挂真实的二级页 `ProductFormPage`，只把 HTTP 边界换成内存实现。
+ *
+ * 产品库列表已并入资产库（`omnimux-assets:library` 的 `ProductTab`），原
+ * `ProductsStage` 宿主不再存在，因此「列表保活 / 返回后滚动位置」这类**宿主级**断言
+ * 移到资产库侧的测试，本脚本只对二级页自身负责：覆盖层几何、面包屑、脏标记、
+ * 三选一拦截、双栏、双端截图、保存 payload 与离开回调。
  */
 const HARNESS_SOURCE = `
-import React from 'react'
+import React, { useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { ProductsStage } from '${join(PLUGIN, 'src/client/ProductsStage.jsx')}'
+import { ProductFormPage } from '${join(PLUGIN, 'src/client/ProductFormPage.jsx')}'
 import { injectProductsStyles } from '${join(PLUGIN, 'src/client/styles.js')}'
 import { zh } from '${join(PLUGIN, 'src/client/locales.js')}'
 
@@ -112,10 +116,6 @@ window.fetch = async (url, opts) => {
   const method = (opts && opts.method) || 'GET'
   const path = String(url)
   const json = (body, status = 200) => ({ ok: status < 400, status, json: async () => body })
-  if (path.startsWith('/omnimux/products/state')) {
-    const rows = Array.from({ length: 40 }, (_, index) => ({ ...PRODUCT, id: 'prd_' + (index + 1), name: 'Aurora Mug ' + (index + 1) }))
-    return json({ revision: 1, products: rows })
-  }
   if (path.startsWith('/omnimux/products/import-from-link')) return json({ success: true, data: DIGITAL_IMPORT })
   if (path.startsWith('/omnimux/products/draft-media/')) return json({}, 404)
   if (method === 'POST' && path === '/omnimux/products') {
@@ -128,20 +128,55 @@ window.fetch = async (url, opts) => {
     window.__lastUpdate = body
     return json({ product: { ...PRODUCT, ...body } })
   }
-  if (path.includes('?view=edit')) return json({ product: PRODUCT })
   if (path.startsWith('/omnimux/products/pick')) return json({ paths: [] })
-  return json({ revision: 1, products: [PRODUCT] })
+  return json({ product: PRODUCT })
 }
 
 injectProductsStyles()
+
+/** 二级页是 absolute/inset:0 的覆盖层，需要一个定位祖先来代表「列表所在的 Tab 容器」。 */
+function Host() {
+  const [view, setView] = useState({ mode: 'create', kind: 'physical' })
+  const [open, setOpen] = useState(true)
+  // 宿主决定「用哪个形态的二级页打开」：形态在进入那一刻锚定，表单内部不再有切换。
+  window.__reopen = (next) => {
+    setView({ mode: (next && next.mode) || 'create', kind: (next && next.kind) || 'physical' })
+    setOpen(true)
+  }
+  return React.createElement(
+    'div',
+    { className: 'omnimux-products-stage omx-stage-scroll', style: { position: 'relative' } },
+    open
+      ? React.createElement(ProductFormPage, {
+        key: \`\${view.mode}:\${view.kind}\`,
+        t: (key) => (key in zh ? zh[key] : key),
+        kind: view.kind,
+        mode: view.mode,
+        initial: view.mode === 'edit' ? PRODUCT : null,
+        onSubmit: async (payload) => {
+          window.__lastPayload = payload
+          window.__submitCalls = (window.__submitCalls || 0) + 1
+          // 服务端拒绝的分支要真的走一遍：保存失败必须留在二级页、输入不丢。
+          if (payload.name === '提交失败产品') {
+            window.__submitStatus = 409
+            return false
+          }
+          const response = await fetch('/omnimux/products', { method: 'POST', body: JSON.stringify(payload) })
+          window.__submitStatus = response.status
+          return response.ok
+        },
+        onLeave: () => {
+          window.__leaveCalls = (window.__leaveCalls || 0) + 1
+          setOpen(false)
+        },
+        onPick: async () => [],
+      })
+      : null,
+  )
+}
+
 const root = createRoot(document.getElementById('app'))
-root.render(
-  React.createElement(ProductsStage, {
-    t: (key) => (key in zh ? zh[key] : key),
-    visible: true,
-    stage: { set: () => {} },
-  }),
-)
+root.render(React.createElement(Host))
 window.__harnessReady = true
 `
 
@@ -315,96 +350,81 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
     }
 
     await send('Page.navigate', { url: `${origin}/` })
-    const mounted = await waitFor('window.__harnessReady && document.querySelector(".omnimux-products-stage")')
-    check('A1 产品库列表在真实浏览器里挂载成功', mounted)
+    const mounted = await waitFor('window.__harnessReady && document.querySelector(".omnimux-products-subscreen")')
+    check('A1 产品二级页在真实浏览器里挂载成功', mounted)
 
     if (!mounted) throw new Error('harness never mounted')
 
-    /* A2 列表初始态没有子屏、没有模态遮罩 */
-    const initial = await evaluate(`
-      const stage = document.querySelector('.omnimux-products-stage')
-      const rect = stage.getBoundingClientRect()
-      return {
-        width: rect.width,
-        height: rect.height,
-        subscreen: Boolean(document.querySelector('.omnimux-products-subscreen')),
-        modal: Boolean(document.querySelector('.omnimux-products-modal-backdrop')),
-        actionRow: getComputedStyle(document.querySelector('.omnimux-products-action-row')).padding,
-      }
-    `)
-    check('A2 列表视图正几何（宽高 > 0）', initial.width > 0 && initial.height > 0, initial)
-    check('A3 初始态没有二级子屏，也没有任何模态遮罩', !initial.subscreen && !initial.modal)
-
-    /* 先滚动列表，稍后验证保活 */
-    await evaluate(`
-      const body = document.querySelector('.omnimux-products-body')
-      body.scrollTop = 40
-      return body.scrollTop
-    `)
-
-    /* A4 点击「添加产品」进入二级页 */
-    await evaluate(`
-      const button = [...document.querySelectorAll('button')].find((node) => node.textContent.trim() === '添加产品')
-      button.click()
-      return true
-    `)
-    const opened = await waitFor('document.querySelector(".omnimux-products-subscreen")')
-
+    /* A2 二级页整屏覆盖、正几何、无模态遮罩、无字符叉号 */
     const geometry = await evaluate(`
       const view = document.querySelector('.omnimux-products-subscreen')
       const style = getComputedStyle(view)
       const rect = view.getBoundingClientRect()
-      const footer = document.querySelector('.omnimux-products-form-footer')
-      const footerRect = footer.getBoundingClientRect()
+      const host = document.querySelector('.omnimux-products-stage').getBoundingClientRect()
       return {
         position: style.position,
         zIndex: style.zIndex,
         width: rect.width,
         height: rect.height,
+        hostWidth: host.width,
+        hostHeight: host.height,
         inset: [style.top, style.right, style.bottom, style.left].join('|'),
-        footerBottomGap: Math.round(window.innerHeight - footerRect.bottom),
-        footerWidth: Math.round(footerRect.width),
-        footerHeight: Math.round(footerRect.height),
         modal: Boolean(document.querySelector('.omnimux-products-modal-backdrop')),
-        listStillMounted: Boolean(document.querySelector('.omnimux-products-list-view')),
-        listScrollTop: document.querySelector('.omnimux-products-body').scrollTop,
-        listScrollable: document.querySelector('.omnimux-products-body').scrollHeight > document.querySelector('.omnimux-products-body').clientHeight,
+        formView: Boolean(document.querySelector('.omnimux-products-form-view')),
         breadcrumb: document.querySelector('.omnimux-products-back-path').textContent,
-        hasCrossGlyph: /[\\u00d7\\u2715]/.test(document.querySelector('.omnimux-products-subscreen').textContent),
+        hasCrossGlyph: /[\\u00d7\\u2715]/.test(view.textContent),
       }
     `)
-    check('A4 二级页以 absolute / inset:0 / z-index:300 整屏覆盖', opened
-      && geometry.position === 'absolute'
+    check('A2 二级页以 absolute / inset:0 / z-index:300 整屏覆盖', geometry.position === 'absolute'
       && geometry.zIndex === '300'
       && geometry.inset === '0px|0px|0px|0px', geometry)
-    check('A5 二级页正几何（宽高 > 0）且没有任何模态遮罩', geometry.width > 0 && geometry.height > 0 && !geometry.modal, {
-      width: geometry.width,
-      height: geometry.height,
-    })
-    check('A6 底部动作条常驻在视口底部', geometry.footerBottomGap === 0 && geometry.footerHeight > 0, {
-      gap: geometry.footerBottomGap,
-      height: geometry.footerHeight,
-    })
-    check('A7 列表子树保活且滚动位置未被重置',
-      geometry.listStillMounted && geometry.listScrollable && geometry.listScrollTop === 40,
-      { scrollTop: geometry.listScrollTop, scrollable: geometry.listScrollable })
-    check('A8 面包屑呈现「产品库 / 添加产品」', /产品库/.test(geometry.breadcrumb) && /添加产品/.test(geometry.breadcrumb), geometry.breadcrumb)
-    check('A9 二级页内没有任何字符 × 图标', geometry.hasCrossGlyph === false)
+    check('A3 二级页正几何（宽高 > 0）铺满宿主容器且没有任何模态遮罩',
+      geometry.width > 0
+      && geometry.height > 0
+      && geometry.width === geometry.hostWidth
+      && geometry.height === geometry.hostHeight
+      && !geometry.modal, { width: geometry.width, height: geometry.height, hostWidth: geometry.hostWidth, hostHeight: geometry.hostHeight })
+    check('A4 二级页带 form-view 标记与「产品库 / 添加实物产品」面包屑',
+      geometry.formView && /产品库/.test(geometry.breadcrumb) && /添加实物产品/.test(geometry.breadcrumb), geometry.breadcrumb)
+    check('A5 二级页内没有任何字符 × 图标', geometry.hasCrossGlyph === false)
 
-    /* A10 双栏在容器 ≥900px 时并排 */
+    /* A6 双栏在容器 ≥900px 时并排 */
     const columns = await evaluate(`
       const left = document.querySelector('.omnimux-products-form-col-left').getBoundingClientRect()
       const right = document.querySelector('.omnimux-products-form-col-right').getBoundingClientRect()
       return { leftRight: Math.round(left.right), rightLeft: Math.round(right.left), leftWidth: Math.round(left.width), rightWidth: Math.round(right.width) }
     `)
-    check('A10 双栏布局在 1280 宽下真的并排', columns.rightLeft >= columns.leftRight - 1
+    check('A6 双栏布局在 1280 宽下真的并排', columns.rightLeft >= columns.leftRight - 1
       && columns.leftWidth > 0
       && columns.rightWidth > 0, columns)
 
-    /* A11 初始不脏：返回不弹拦截 */
+    /* A7 右上角动作条常驻在页头、底部不再有 footer */
+    const actions = await evaluate(`
+      const header = document.querySelector('.omnimux-products-form-view [class*="PageHeader"]')
+      const bar = header ? header.querySelector('.omnimux-products-form-actions') : null
+      const rect = bar ? bar.getBoundingClientRect() : null
+      const headerRect = header ? header.getBoundingClientRect() : null
+      const scroll = document.querySelector('.omnimux-products-form-scroll')
+      return {
+        inHeader: Boolean(bar),
+        buttons: bar ? [...bar.querySelectorAll('button')].map((node) => node.textContent.trim()) : [],
+        rightMargin: rect ? Math.round(window.innerWidth - rect.right) : null,
+        insideHeader: Boolean(rect && headerRect) && rect.top >= headerRect.top && rect.bottom <= headerRect.bottom,
+        hasFooter: Boolean(document.querySelector('.omnimux-products-form-footer')),
+        scrollBottomGap: scroll ? Math.round(window.innerHeight - scroll.getBoundingClientRect().bottom) : null,
+      }
+    `)
+    check('A7 取消/保存按钮在页头右上角、底部 footer 已移除',
+      actions.inHeader
+      && actions.buttons.includes('取消')
+      && actions.buttons.includes('保存产品')
+      && actions.insideHeader
+      && Math.abs(actions.rightMargin - 20) <= 4
+      && actions.hasFooter === false, actions)
+
+    /* A8 初始不脏：返回不弹拦截，直接交回宿主 */
     await evaluate(`
-      const back = document.querySelector('.omnimux-products-back-button')
-      back.click()
+      document.querySelector('.omnimux-products-back-button').click()
       return true
     `)
     await sleep(300)
@@ -413,16 +433,13 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
         subscreen: Boolean(document.querySelector('.omnimux-products-subscreen')),
         dialog: Boolean(document.querySelector('[role="dialog"]')),
         dot: Boolean(document.querySelector('.omnimux-products-dirty-dot')),
+        leaveCalls: window.__leaveCalls || 0,
       }
     `)
-    check('A11 未修改时点返回直接回列表，不弹拦截', !cleanLeave.subscreen && !cleanLeave.dialog, cleanLeave)
+    check('A8 未修改时点返回直接离开，不弹拦截', !cleanLeave.subscreen && !cleanLeave.dialog && cleanLeave.leaveCalls === 1, cleanLeave)
 
-    /* A12 改一个字段 → 出现未保存圆点 */
-    await evaluate(`
-      const openButton = [...document.querySelectorAll('button')].find((node) => node.textContent.trim() === '添加产品')
-      openButton.click()
-      return true
-    `)
+    /* A9 重新打开（新建态）改一个字段 → 出现未保存圆点 */
+    await evaluate('window.__reopen()')
     await waitFor('document.querySelector(".omnimux-products-subscreen")')
     await evaluate(`
       const wrapper = document.querySelector('.omnimux-products-name-field')
@@ -436,16 +453,16 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
     const dirtyState = await evaluate(`
       return {
         dot: Boolean(document.querySelector('.omnimux-products-dirty-dot')),
-        hint: document.querySelector('.omnimux-products-form-footer-hint').textContent.trim(),
+        badge: document.querySelector('.omnimux-products-dirty-dot').getAttribute('aria-label'),
         name: (() => { const node = document.querySelector('.omnimux-products-name-field'); const input = node.tagName === 'INPUT' ? node : node.querySelector('input'); return input.value })(),
         breadcrumb: document.querySelector('.omnimux-products-back-path').textContent,
       }
     `)
-    check('A12 改一个字段后出现「有未保存修改」圆点与提示', dirty && dirtyState.hint === '有未保存修改', dirtyState)
-    check('A13 添加态面包屑保持「产品库 / 添加产品」', dirtyState.breadcrumb === '产品库/添加产品', dirtyState.breadcrumb)
+    check('A9 改一个字段后出现「有未保存修改」圆点', dirty && dirtyState.badge === '有未保存修改', dirtyState)
+    check('A10 添加态面包屑保持「产品库 / 添加实物产品」', dirtyState.breadcrumb === '产品库/添加实物产品', dirtyState.breadcrumb)
     const dirtyShot = await shoot('form-create-dirty')
 
-    /* A14 脏状态下点返回 → 三选一拦截弹窗 */
+    /* A11 脏状态下点返回 → 三选一拦截弹窗 */
     await evaluate(`
       document.querySelector('.omnimux-products-back-button').click()
       return true
@@ -465,15 +482,15 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
         inside: panel.contains(document.activeElement),
       }
     `)
-    check('A14 脏状态下点返回弹出确认弹窗并正几何', dialogOpen && dialog.width > 0 && dialog.height > 0, {
+    check('A11 脏状态下点返回弹出确认弹窗并正几何', dialogOpen && dialog.width > 0 && dialog.height > 0, {
       width: dialog.width,
       height: dialog.height,
     })
-    check('A15 弹窗提供三选一：继续编辑 / 放弃修改 / 保存并返回', ['继续编辑', '放弃修改', '保存并返回'].every((label) => dialog.labels.includes(label)), dialog.labels)
-    check('A16 默认焦点落在安全项「继续编辑」上', dialog.focused === '继续编辑' && dialog.inside, dialog.focused)
+    check('A12 弹窗提供三选一：继续编辑 / 放弃修改 / 保存并返回', ['继续编辑', '放弃修改', '保存并返回'].every((label) => dialog.labels.includes(label)), dialog.labels)
+    check('A13 默认焦点落在安全项「继续编辑」上', dialog.focused === '继续编辑' && dialog.inside, dialog.focused)
     const dialogShot = await shoot('form-unsaved-dialog')
 
-    /* A17 继续编辑：留在二级页且输入不丢 */
+    /* A14 继续编辑：留在二级页且输入不丢 */
     await evaluate(`
       const keep = [...document.querySelectorAll('[role="dialog"] button')].find((node) => node.textContent.trim() === '继续编辑')
       keep.click()
@@ -487,9 +504,35 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
         subscreen: Boolean(document.querySelector('.omnimux-products-subscreen')),
       }
     `)
-    check('A17 选「继续编辑」后弹窗关闭、输入原样保留', !kept.dialog && kept.subscreen && kept.name === '二次编辑测试产品', kept)
+    check('A14 选「继续编辑」后弹窗关闭、输入原样保留', !kept.dialog && kept.subscreen && kept.name === '二次编辑测试产品', kept)
 
-    /* A18 落地页一键解析 → 双视口截图卡片 */
+    /* A15 实物表单的分区：只有实物会出现的商业化段 + 商品主图段 */
+    const physicalSections = await evaluate(`
+      const titles = [...document.querySelectorAll('.omnimux-products-form-section-title')].map((node) => node.textContent.trim())
+      const categoryInputs = [...document.querySelectorAll('.omnimux-products-categories input')]
+      const drops = [...document.querySelectorAll('.omnimux-products-drop')]
+      return { titles, categoryInputs: categoryInputs.length, drops: drops.length, unique: new Set(titles).size === titles.length }
+    `)
+    check('A15 实物表单每段只出现一次（分类/素材编辑区没有被渲染两遍）',
+      physicalSections.unique
+      && physicalSections.categoryInputs === 1
+      && physicalSections.drops === 1
+      && ['链接投放', '产品基础信息', '商业化设置', '分类标签', '商品主图与素材']
+        .every((title) => physicalSections.titles.includes(title)), physicalSections)
+    // 形态分治：实物页不得渲染数字专属的首屏截图段。
+    check('A16 实物表单不渲染数字专属的「首屏截图」段',
+      !physicalSections.titles.includes('首屏截图'), physicalSections.titles)
+
+    /* A17 数字表单：落地页一键解析 → 双视口首屏截图卡片 */
+    await evaluate('window.__reopen({ mode: "create", kind: "digital" })')
+    await waitFor('document.querySelector(".omnimux-products-subscreen")')
+    const digitalSections = await evaluate(`
+      const titles = [...document.querySelectorAll('.omnimux-products-form-section-title')].map((node) => node.textContent.trim())
+      return { titles, breadcrumb: document.querySelector('.omnimux-products-back-path').textContent }
+    `)
+    check('A17 数字表单渲染「首屏截图」段且面包屑为「产品库 / 添加数字产品」',
+      digitalSections.titles.includes('首屏截图')
+      && digitalSections.breadcrumb === '产品库/添加数字产品', digitalSections)
     await evaluate(`
       const wrapper = document.querySelector('.omnimux-products-url-import-field')
       const field = wrapper.tagName === 'INPUT' ? wrapper : wrapper.querySelector('input')
@@ -518,10 +561,10 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
       }
     `)
     check('A18 解析后右栏出现电脑端与手机端两张首屏卡片', cardsReady && shots.count === 2, shots.count)
-    check('A19 两张截图卡片均为正几何', shots.rects.every(([w, h]) => w > 0 && h > 0), shots.rects)
+    check('A19 两张截图卡片均为正几何', shots.rects.length === 2 && shots.rects.every(([w, h]) => w > 0 && h > 0), shots.rects)
     check('A20 截图卡片标注视口与分辨率', shots.labels.some((text) => /1440/.test(text)) && shots.labels.some((text) => /390/.test(text)), shots.labels)
     check('A21 草稿截图走只读预览通路且图片真的解码成功',
-      imagesDecoded && shots.images.every((row) => row && row.natural[0] > 0 && row.natural[1] > 0), shots.images)
+      imagesDecoded && shots.images.length === 2 && shots.images.every((row) => row && row.natural[0] > 0 && row.natural[1] > 0), shots.images)
     check('A22 桌面截图带「主封面」角标', shots.badge === true)
     const glyphs = await evaluate(`
       const buttons = [...document.querySelectorAll('.omnimux-products-subscreen button, .omnimux-products-subscreen [role="button"]')]
@@ -531,18 +574,6 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
     `)
     check('A22b 二级页里没有任何把字符当图标的按钮（移除控件都是矢量图标）',
       glyphs.textGlyph === 0 && glyphs.svgInButton > 0, glyphs)
-    const sections = await evaluate(`
-      const titles = [...document.querySelectorAll('.omnimux-products-form-section-title')].map((node) => node.textContent.trim())
-      const categoryInputs = [...document.querySelectorAll('.omnimux-products-categories input')]
-      const drops = [...document.querySelectorAll('.omnimux-products-drop')]
-      return { titles, categoryInputs: categoryInputs.length, drops: drops.length, unique: new Set(titles).size === titles.length }
-    `)
-    check('A22c 左栏五段 + 右栏两段，每段只出现一次（分类/素材编辑区没有被渲染两遍）',
-      sections.unique
-      && sections.categoryInputs === 1
-      && sections.drops === 1
-      && ['链接投放', '产品基础信息', '商业化设置', '首屏截图', '分类标签', '素材列表']
-        .every((title) => sections.titles.includes(title)), sections)
     const shotsShot = await shoot('form-screenshot-cards')
 
     /* A23 点手机端卡片切换封面 */
@@ -559,7 +590,7 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
     `)
     check('A23 点另一张卡片即可切换封面（媒体行跟随高亮）', /mobile/.test(switched.coverName), switched)
 
-    /* A24 放弃修改：直接回列表且输入被丢弃 */
+    /* A22 放弃修改：直接离开二级页，且宿主收到一次离开回调 */
     await evaluate(`
       document.querySelector('.omnimux-products-back-button').click()
       return true
@@ -575,19 +606,16 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
       return {
         subscreen: Boolean(document.querySelector('.omnimux-products-subscreen')),
         dialog: Boolean(document.querySelector('[role="dialog"]')),
-        grid: Boolean(document.querySelector('.omnimux-products-grid')),
-        scrollTop: document.querySelector('.omnimux-products-body').scrollTop,
+        leaveCalls: window.__leaveCalls || 0,
+        submitCalls: window.__submitCalls || 0,
       }
     `)
-    check('A24 选「放弃修改」后回到列表且不再有二级页', !discarded.subscreen && !discarded.dialog && discarded.grid, discarded)
-    check('A25 返回列表后滚动位置保持（子树保活）', discarded.scrollTop === 40, discarded.scrollTop)
-    const listShot = await shoot('list-after-discard')
+    check('A24 选「放弃修改」后离开二级页、不写库、不留弹窗',
+      !discarded.subscreen && !discarded.dialog && discarded.leaveCalls === 2 && discarded.submitCalls === 0, discarded)
+    const listShot = await shoot('host-after-discard')
 
-    /* A25b 点产品卡片进入编辑态：面包屑带产品名、表单已填入既有值 */
-    await evaluate(`
-      document.querySelector('.omnimux-products-card').click()
-      return true
-    `)
+    /* A25 编辑态：面包屑带产品名、表单已填入既有值、初始不脏 */
+    await evaluate('window.__reopen({ mode: "edit", kind: "physical" })')
     await waitFor('document.querySelector(".omnimux-products-subscreen")')
     const editMode = await evaluate(`
       const node = document.querySelector('.omnimux-products-name-field')
@@ -598,8 +626,8 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
         dot: Boolean(document.querySelector('.omnimux-products-dirty-dot')),
       }
     `)
-    check('A25b 编辑态面包屑呈现「产品库 / 编辑 · {产品名}」', /编辑 · Aurora Mug/.test(editMode.breadcrumb), editMode.breadcrumb)
-    check('A25c 编辑态表单已填入既有产品名且初始不脏', editMode.name === 'Aurora Mug' && editMode.dot === false, {
+    check('A25 编辑态面包屑呈现「产品库 / 编辑实物产品 · {产品名}」', /编辑实物产品 · Aurora Mug/.test(editMode.breadcrumb), editMode.breadcrumb)
+    check('A26 编辑态表单已填入既有产品名且初始不脏', editMode.name === 'Aurora Mug' && editMode.dot === false, {
       name: editMode.name,
       dot: editMode.dot,
     })
@@ -609,11 +637,8 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
     `)
     await sleep(300)
 
-    /* A26 保存并返回：真的把 payload 交出去 */
-    await evaluate(`
-      [...document.querySelectorAll('button')].find((node) => node.textContent.trim() === '添加产品').click()
-      return true
-    `)
+    /* A27 保存并返回：真的把 payload 交出去 */
+    await evaluate('window.__reopen({ mode: "create", kind: "physical" })')
     await waitFor('document.querySelector(".omnimux-products-subscreen")')
     await evaluate(`
       const wrapper = document.querySelector('.omnimux-products-name-field')
@@ -637,13 +662,49 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
     const saved = await evaluate(`
       return {
         subscreen: Boolean(document.querySelector('.omnimux-products-subscreen')),
-        payload: window.__lastCreate || null,
+        payload: window.__lastPayload || null,
+        submitStatus: window.__submitStatus || null,
       }
     `)
-    check('A26 选「保存并返回」真的提交 payload', saved.payload && saved.payload.name === '保存并返回测试产品', saved.payload && saved.payload.name)
-    check('A27 保存成功后自动回到列表', !saved.subscreen)
+    check('A27 选「保存并返回」真的提交 payload 并离开二级页',
+      saved.payload && saved.payload.name === '保存并返回测试产品' && saved.submitStatus === 200 && !saved.subscreen,
+      { name: saved.payload && saved.payload.name, submitStatus: saved.submitStatus, subscreen: saved.subscreen })
 
-    /* A28 保存失败时留在二级页、错误条可见 */
+    /* A28 保存失败时留在二级页、错误条可见、输入零丢失 */
+    await evaluate('window.__reopen({ mode: "create", kind: "physical" })')
+    await waitFor('document.querySelector(".omnimux-products-subscreen")')
+    await evaluate(`
+      const wrapper = document.querySelector('.omnimux-products-name-field')
+      const field = wrapper.tagName === 'INPUT' ? wrapper : wrapper.querySelector('input')
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+      setter.call(field, '提交失败产品')
+      field.dispatchEvent(new Event('input', { bubbles: true }))
+      return true
+    `)
+    await evaluate(`
+      document.querySelector('.omnimux-products-back-button').click()
+      return true
+    `)
+    await waitFor('document.querySelector(\'[role="dialog"]\')')
+    await evaluate(`
+      const save = [...document.querySelectorAll('[role="dialog"] button')].find((node) => node.textContent.trim() === '保存并返回')
+      save.click()
+      return true
+    `)
+    await sleep(500)
+    const failedSave = await evaluate(`
+      const node = document.querySelector('.omnimux-products-name-field')
+      const input = node && (node.tagName === 'INPUT' ? node : node.querySelector('input'))
+      return {
+        subscreen: Boolean(document.querySelector('.omnimux-products-subscreen')),
+        dialog: Boolean(document.querySelector('[role="dialog"]')),
+        name: input ? input.value : null,
+        submitStatus: window.__submitStatus || null,
+      }
+    `)
+    check('A28 保存失败时留在二级页、输入保留、状态码如实反映',
+      failedSave.subscreen && !failedSave.dialog && failedSave.name === '提交失败产品' && failedSave.submitStatus === 409, failedSave)
+
     const report = {
       generatedAt: new Date().toISOString(),
       url: `${origin}/`,

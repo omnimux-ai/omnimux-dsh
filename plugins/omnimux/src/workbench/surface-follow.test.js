@@ -15,7 +15,7 @@ describe('Surface follow · 映射表', () => {
     assert.equal(resolveSurfaceForTool('workflow_node_add'), 'omnimux-workflow:canvas')
     assert.equal(resolveSurfaceForTool('canvas_write_table_node'), 'omnimux-workflow:canvas')
     assert.equal(resolveSurfaceForTool('clip_edit'), 'omnimux-clip:studio')
-    assert.equal(resolveSurfaceForTool('products_list'), 'omnimux-products:library')
+    assert.equal(resolveSurfaceForTool('products_list'), 'omnimux-assets:library')
     assert.equal(resolveSurfaceForTool('inspiration_get'), 'omnimux-inspiration:library')
     assert.equal(resolveSurfaceForTool('omnimux_inspiration_list'), 'omnimux-inspiration:library')
     assert.equal(resolveSurfaceForTool('omnimux_image_submit'), 'omnimux:media-viewer')
@@ -61,6 +61,15 @@ describe('Surface follow · 决策', () => {
     assert.deepEqual(decideSurfaceFollow(base), { action: 'switch', tabId: 'omnimux-workflow:canvas' })
   })
 
+  it('产品库工具跟随到资产库并携带产品库过滤（产品库已并入资产库）', () => {
+    const out = decideSurfaceFollow({ ...base, toolName: 'products_list' })
+    assert.equal(out.action, 'switch')
+    assert.equal(out.tabId, 'omnimux-assets:library')
+    assert.equal(out.view.filterType, 'product')
+    // resolveSurfaceForTool 的字符串契约不变，避免破坏既有调用方。
+    assert.equal(resolveSurfaceForTool('products_list'), 'omnimux-assets:library')
+  })
+
   it('目标页签已是当前页签时不切（already-active）', () => {
     const out = decideSurfaceFollow({ ...base, activeTabId: 'omnimux-workflow:canvas' })
     assert.deepEqual(out, { action: 'skip', code: 'already-active' })
@@ -97,7 +106,7 @@ describe('Surface follow · 决策', () => {
 
   it('识别用户接管：当前页签既不是上次自动目标、也不是本次目标', () => {
     assert.equal(
-      isUserTakeover({ lastAutoTabId: 'omnimux:media-viewer', activeTabId: 'omnimux-products:library', targetTabId: 'omnimux-workflow:canvas' }),
+      isUserTakeover({ lastAutoTabId: 'omnimux:media-viewer', activeTabId: 'omnimux-assets:library', targetTabId: 'omnimux-workflow:canvas' }),
       true,
     )
     assert.equal(
@@ -132,6 +141,15 @@ describe('Surface follow · 宿主挂载', () => {
     assert.equal(h.rpcCalls[0].method, 'open')
     assert.equal(h.rpcCalls[0].tabId, 'omnimux-workflow:canvas')
     assert.equal(h.rpcCalls[0].auto, true)
+    assert.equal('view' in h.rpcCalls[0], false, '无子视图请求时不带 view 字段')
+  })
+
+  it('产品库工具自动跟随到资产库，RPC payload 带上产品库过滤', async () => {
+    const h = harness()
+    await h.run('products_list')
+    assert.equal(h.rpcCalls.length, 1)
+    assert.equal(h.rpcCalls[0].tabId, 'omnimux-assets:library')
+    assert.equal(h.rpcCalls[0].view?.filterType, 'product')
   })
 
   it('同一轮内连续写多个节点只切一次', async () => {
@@ -145,7 +163,7 @@ describe('Surface follow · 宿主挂载', () => {
   it('用户手动切走后本轮不再抢画面', async () => {
     const h = harness()
     await h.run('workflow_create') // 自动切到画布
-    h.setSurface({ panelOpen: true, tabId: 'omnimux-products:library' }) // 用户自己切走
+    h.setSurface({ panelOpen: true, tabId: 'omnimux-assets:library' }) // 用户自己切走
     await h.run('workflow_node_add', 2) // 同轮
     assert.equal(h.rpcCalls.length, 1, '接管后不应再切换')
   })

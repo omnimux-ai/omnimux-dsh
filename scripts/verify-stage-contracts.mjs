@@ -63,7 +63,7 @@ for (const file of stageFiles) {
   }
 
   // 3. 断言：库页不得再挂 Tab 内 FocusBar（顶角 chat-toggle 已覆盖 gui↔split）
-  const isLibraryStage = /AssetsStage|ProductsStage|AccountsStage|InspirationStage|PublishStage|AnalyticsStage|ProjectLibraryPage/.test(basename)
+  const isLibraryStage = /AssetsStage|AccountsStage|InspirationStage|PublishStage|AnalyticsStage|ProjectLibraryPage/.test(basename)
   if (isLibraryStage && (/WorkbenchFocusBar/.test(content) || /omnimux-workbench-focus/.test(content))) {
     console.error(`❌ [Contract Error] ${relPath}: In-tab WorkbenchFocusBar must be removed; use hub chat-toggle instead!`)
     errors++

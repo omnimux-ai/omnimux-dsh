@@ -19,7 +19,6 @@ export const WORKBENCH_OCCUPANTS = Object.freeze([
   'omnimux-workflow:canvas',
   'omnimux-clip:studio',
   'omnimux-assets:library',
-  'omnimux-products:library',
   'omnimux-forms:tasks',
   'omnimux-accounts:library',
   'omnimux-inspiration:library',

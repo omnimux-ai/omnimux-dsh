@@ -5,33 +5,21 @@
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
-    "./client": "./lib/client.js",
+    "./ui": "./src/client/ui.js",
     "./package.json": "./package.json"
   },
   "files": [
     "src",
-    "lib/client.js",
-    "scripts/build-client.mjs",
     "cordis.patch.yml",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "node scripts/build-client.mjs",
-    "prepare": "npm run build",
     "test": "node --test src/*.test.js src/client-form-subscreen.test.js src/client/*.test.js tests/e2e/*.spec.js"
   },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
-    },
-    "client": {
-      "inject": [
-        "@deepseek-ai/dsh-client-ui-renderer",
-        "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-primitives"
-      ],
-      "platform": "web"
     }
   },
   "dependencies": {

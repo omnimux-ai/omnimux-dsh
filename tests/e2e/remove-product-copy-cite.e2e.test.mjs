@@ -8,44 +8,44 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const root = path.resolve(__dirname, '../../')
 
+const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf-8')
+
 test('E2E: 验证产品库卡片彻底移除「复制引用」整行操作栏并仅保留标题与描述', () => {
-  const productsViewPath = path.join(root, 'plugins/omnimux-assets/src/client/ProductsView.jsx')
-  const stylesPath = path.join(root, 'plugins/omnimux-assets/src/client/styles.js')
+  const productGrid = read('plugins/omnimux-products/src/client/ProductGrid.jsx')
+  const productsStyles = read('plugins/omnimux-products/src/client/styles.js')
+  const assetsStyles = read('plugins/omnimux-assets/src/client/styles.js')
 
-  const productsViewContent = fs.readFileSync(productsViewPath, 'utf-8')
-  const stylesContent = fs.readFileSync(stylesPath, 'utf-8')
-
-  // 1. 验证彻底移除复制引用操作行节点及相关状态
+  // 1. 复制引用操作行节点、触发函数与状态彻底移除
   assert.ok(
-    !productsViewContent.includes('omnimux-products-card-actions'),
-    'ProductsView 中不得包含 omnimux-products-card-actions 操作栏容器'
+    !productGrid.includes('omnimux-products-card-actions'),
+    'ProductGrid 中不得包含 omnimux-products-card-actions 操作栏容器',
   )
   assert.ok(
-    !productsViewContent.includes('handleCopyCite'),
-    'ProductsView 中不得残留 handleCopyCite 复制触发函数'
+    !productGrid.includes('handleCopyCite') && !productGrid.includes('onCopy'),
+    'ProductGrid 中不得残留复制引用触发函数或其 props',
   )
   assert.ok(
-    !productsViewContent.includes('copiedId'),
-    'ProductsView 中不得残留 copiedId 状态'
-  )
-  assert.ok(
-    !productsViewContent.includes('CheckIcon'),
-    'ProductsView 中不得残留 CheckIcon 引用'
+    !productGrid.includes('copiedId'),
+    'ProductGrid 中不得残留 copiedId 状态',
   )
 
-  // 2. 验证卡片完整保留标题与副描述/价格
+  // 2. 卡片完整保留标题与副描述
   assert.ok(
-    productsViewContent.includes('className="omnimux-products-card-name"'),
-    '卡片必须完整保留标题类名 omnimux-products-card-name'
+    productGrid.includes('className="omnimux-products-card-title"'),
+    '卡片必须完整保留标题类名',
   )
   assert.ok(
-    productsViewContent.includes('className="omnimux-products-card-sub"'),
-    '卡片必须完整保留描述类名 omnimux-products-card-sub'
+    productGrid.includes('className="omnimux-products-card-desc"'),
+    '卡片必须完整保留描述类名',
   )
 
-  // 3. 验证 styles.js 中无残留无用的操作行样式
+  // 3. 两份样式表都不得残留操作行规则
   assert.ok(
-    !stylesContent.includes('.omnimux-products-card-actions'),
-    'styles.js 中必须移除已弃用的 .omnimux-products-card-actions 规则'
+    !productsStyles.includes('.omnimux-products-card-actions'),
+    '产品插件样式表必须移除已弃用的操作行规则',
+  )
+  assert.ok(
+    !assetsStyles.includes('.omnimux-products-card-actions'),
+    '资产库样式表不得再出现产品操作行规则',
   )
 })

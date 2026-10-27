@@ -19,12 +19,13 @@ describe('All Plugins Stage Spacing & Hierarchy Contract (Issue #307)', () => {
     assert.match(styles, /\.omnimux-inspiration-action-row\s*\{[^}]*padding-top:\s*8px/)
   })
 
-  it('omnimux-products extracts ActionRow to Layer 2 and defines 8px 20px 12px padding', () => {
-    const stage = readFileSync(join(ROOT, 'omnimux-products/src/client/ProductsStage.jsx'), 'utf8')
+  it('omnimux-products keeps the Action Row Layer 2 metrics for the assets-hosted product tab', () => {
+    // 产品库页面已并入资产库，动作行由资产库渲染；产品侧保留共用度量与分流菜单。
     const styles = readFileSync(join(ROOT, 'omnimux-products/src/client/styles.js'), 'utf8')
+    const assetsStage = readFileSync(join(ROOT, 'omnimux-assets/src/client/AssetsStage.jsx'), 'utf8')
 
-    assert.match(stage, /omnimux-products-action-row/)
     assert.match(styles, /\.omnimux-products-action-row\s*\{[^}]*padding:\s*8px 20px 12px/)
+    assert.match(assetsStage, /<CreateProductMenu\b/, '产品库动作行由资产库承载')
   })
 
   it('omnimux-assets defines standard ActionRow padding', () => {

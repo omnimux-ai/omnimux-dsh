@@ -74,7 +74,7 @@ export function apply(ctx) {
   installAgentPresetsI18n(ctx)
   installSessionCopyI18n(ctx)
   installCommandsI18n(ctx, primitives)
-  // 官方侧栏「更多」菜单（sidebar.panellist.actions）：同一份 10 项入口。
+  // 官方侧栏「更多」菜单（sidebar.panellist.actions）：同一份 9 项入口。
   // 老宿主没有该 seat 时靠 ctx.slots.inject 惰性语义 no-op。
   installExploreMoreMenu(ctx, primitives)
   installQuotaGlobal(typeof window !== 'undefined' ? window : undefined)

@@ -23,12 +23,12 @@ test('E2E: 全局所有一级插件页面右上角彻底移除非必要的刷新
   assert.ok(!assetsHeader.includes('onClose'), 'AssetsStage PageHeader 严禁传递 onClose')
   assert.ok(!assetsHeader.includes('closeTitle'), 'AssetsStage PageHeader 严禁传递 closeTitle')
 
-  // 2. 产品中心主列表 ProductsStage
-  const productsStagePath = path.join(root, 'plugins/omnimux-products/src/client/ProductsStage.jsx')
-  const productsHeader = extractPageHeader(fs.readFileSync(productsStagePath, 'utf-8'))
-  assert.ok(productsHeader, 'ProductsStage 必须存在 PageHeader')
-  assert.ok(!productsHeader.includes('onRefresh'), 'ProductsStage PageHeader 严禁传递 onRefresh')
-  assert.ok(!productsHeader.includes('onClose'), 'ProductsStage PageHeader 严禁传递 onClose')
+  // 2. 产品二级页（宿主已并入资产库；页头仍由产品插件提供）
+  const productsPagePath = path.join(root, 'plugins/omnimux-products/src/client/ProductFormPage.jsx')
+  const productsHeader = extractPageHeader(fs.readFileSync(productsPagePath, 'utf-8'))
+  assert.ok(productsHeader, 'ProductFormPage 必须存在 PageHeader')
+  assert.ok(!productsHeader.includes('onRefresh'), 'ProductFormPage PageHeader 严禁传递 onRefresh')
+  assert.ok(!productsHeader.includes('onClose'), 'ProductFormPage PageHeader 严禁传递 onClose')
 
   // 3. 数据分析看板 AnalyticsStage
   const analyticsStagePath = path.join(root, 'plugins/omnimux-analytics/src/client/AnalyticsStage.jsx')
