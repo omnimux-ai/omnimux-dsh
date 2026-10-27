@@ -370,10 +370,10 @@ export function sweepRetiredWorkbenchTabs(service) {
   }
   const swept = service.__omnimuxRetiredTabsSweptSessions
   if (swept.has(sessionKey)) return 0
-  swept.add(sessionKey)
 
   const scope = sessionKey ? { sessionId: sessionKey } : undefined
   let closed = 0
+  let failed = 0
   for (const tab of listOpenTabs(snapshot.state)) {
     if (!RETIRED_WORKBENCH_TAB_TYPES.includes(tab?.type)) continue
     try {
@@ -385,9 +385,14 @@ export function sweepRetiredWorkbenchTabs(service) {
       }
       closed += 1
     } catch (error) {
+      failed += 1
       console.warn('[omnimux-workbench] 关闭下架 Tab 失败:', error)
     }
   }
+  // 只有「本次确实关掉了残留」才封盘。快照可能先于旧 Tab 恢复完成（首次物化时
+  // 还没有），那一刻若就记下「已扫过」，之后同一会话补回的旧 Tab 就永远不再扫。
+  // 关闭失败同理不封盘，让下一次状态变更继续尝试。
+  if (closed > 0 && failed === 0) swept.add(sessionKey)
   if (closed > 0) notifyWorkbenchChange()
   return closed
 }

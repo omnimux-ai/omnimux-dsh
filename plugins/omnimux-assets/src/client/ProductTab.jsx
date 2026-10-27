@@ -167,7 +167,7 @@ export function ProductTab(props) {
    * @param {Record<string, unknown>} data
    * @returns {Promise<boolean>}
    */
-  const handleSubmitForm = async (data) => {
+  const handleSubmitForm = useCallback(async (data) => {
     const productId = view.mode === 'edit' ? view.product?.id : null
     setFormBusy(true)
     setFormError('')
@@ -186,9 +186,9 @@ export function ProductTab(props) {
     } finally {
       setFormBusy(false)
     }
-  }
+  }, [view, t, refreshState])
 
-  const handlePick = async (kind) => {
+  const handlePick = useCallback(async (kind) => {
     const result = await pickPath(kind)
     if (!result.ok) {
       setFormError(pickErrorText(result, t))
@@ -199,7 +199,7 @@ export function ProductTab(props) {
       : []
     if (paths.length > 0) return paths
     return typeof result.body?.path === 'string' && result.body.path !== '' ? [result.body.path] : []
-  }
+  }, [t])
 
   const handleConfirmDelete = () => {
     if (!pendingRemove) return

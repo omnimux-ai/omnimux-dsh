@@ -311,7 +311,7 @@ function AssetsBody(props) {
             kindTab={productKindTab}
             intent={productIntent}
             onViewChange={onProductViewChange}
-            onOpenConversation={handleOpenProductConversation}
+            onOpenConversation={onOpenProductConversation}
           />
         </div>
       </div>
@@ -408,7 +408,7 @@ function AssetsDialogs(props) {
  * }} props
  */
 export function AssetsStage(props) {
-  const { t, productT = t, stage, store, visible = true } = props
+  const { t, productT = t, stage, store, visible = true, tab } = props
   const [previewTarget, setPreviewTarget] = useState(null)
   const [detailModalOpen, setDetailModalOpen] = useState(false)
   // One save controller for the whole stage: the cloud cards and the preview
@@ -426,7 +426,16 @@ export function AssetsStage(props) {
 
   const feed = useAssetsFeed({ t, open: visible })
   const emptyProps = computeEmptyState(feed.filterType, feed.query, t)
-  const [sourceTab, setSourceTab] = useState('local')
+  /**
+   * 初始一级 Tab。外部深链（`products_*` 自动跟随、产品选择器「前往产品库管理」）
+   * 会通过工作台 `view`/`meta` 带 `filterType: 'product'`，必须在这里落地，
+   * 否则请求只是死载荷——Tab 打开了却停在默认「本地」页。
+   */
+  const requestedSourceTab = (() => {
+    const requested = tab?.meta?.filterType ?? tab?.view?.filterType
+    return requested === 'product' ? 'product' : 'local'
+  })()
+  const [sourceTab, setSourceTab] = useState(requestedSourceTab)
   const [productKindTab, setProductKindTab] = useState('all')
   /** 交给 ProductTab 就地展开二级页的意图；nonce 用于重复点击同一产品时也能重开。 */
   const [productIntent, setProductIntent] = useState(null)
@@ -438,6 +447,12 @@ export function AssetsStage(props) {
   const [productView, setProductView] = useState(null)
   const [generationsSource, setGenerationsSource] = useState('all')
   const [generationsType, setGenerationsType] = useState('all')
+  // 深链可能在该 Tab 已挂载后才到达（例如 Agent 自动跟随复用已有 Tab）。
+  useEffect(() => {
+    const requested = tab?.meta?.filterType ?? tab?.view?.filterType
+    if (requested === 'product') setSourceTab('product')
+  }, [tab?.meta?.filterType, tab?.view?.filterType])
+
   const stageRootRef = useRef(null)
   const railRef = useRef(null)
 

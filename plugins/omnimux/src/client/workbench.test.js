@@ -463,6 +463,38 @@ test('sweepRetiredWorkbenchTabs: 幂等按会话记，切到仍带旧 Tab 的会
   assert.equal(closed.length, 1)
 })
 
+test('sweepRetiredWorkbenchTabs: 同一会话晚到的旧 Tab 仍会被补扫', () => {
+  // better-sidebar 的会话快照可能在首次物化时还没有旧 Tab（例如快照尚未恢复完）。
+  // 若那一刻就记下「已扫过」，之后同一会话补回旧 Tab 就永远不再扫 —— AC-305 失效。
+  let snapshot = {
+    sessionId: 's-late',
+    state: makeState([{ id: 'tab:assets', type: 'omnimux-assets:library', title: '资产库' }]),
+  }
+  const closed = []
+  const service = {
+    getSnapshot() { return snapshot },
+    closeTab(id, scope) { closed.push({ id, scope }) },
+  }
+
+  assert.equal(sweepRetiredWorkbenchTabs(service), 0, '首次无残留')
+  assert.deepEqual(closed, [])
+
+  // 同一会话之后补回了旧 Tab：必须补扫并关闭。
+  snapshot = {
+    sessionId: 's-late',
+    state: makeState([
+      { id: 'tab:assets', type: 'omnimux-assets:library', title: '资产库' },
+      { id: 'tab:retired', type: 'omnimux-products:library', title: '产品库' },
+    ]),
+  }
+  assert.equal(sweepRetiredWorkbenchTabs(service), 1, '晚到旧 Tab 仍被收编')
+  assert.deepEqual(closed, [{ id: 'tab:retired', scope: { sessionId: 's-late' } }])
+
+  // 收编完成后再扫：幂等，不再重复关闭。
+  assert.equal(sweepRetiredWorkbenchTabs(service), 0)
+  assert.equal(closed.length, 1)
+})
+
 test('default seed cleanup is a safe no-op when storage or service capabilities are unavailable', () => {
   const win = setupWindow()
   const api = installWorkbenchGlobal(win)
