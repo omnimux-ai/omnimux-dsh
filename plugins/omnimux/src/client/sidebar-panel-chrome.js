@@ -37,6 +37,12 @@ export const PANEL_ACTIVE_SELECTOR = '[class*="panelActive"]'
  */
 export const MORE_MENU_SELECTOR = '[data-menu-material="translucent"][class*="moreMenu"]'
 
+/**
+ * 官方「更多」按钮的包裹层（官方 `Menu` 的 `className={css.moreAnchor}`）。
+ * 它就在侧栏列内、包着按钮本身，取它的矩形比取按钮稳（按钮还可能被 Tooltip 再包一层）。
+ */
+export const MORE_ANCHOR_SELECTOR = '[class*="moreAnchor"]'
+
 /** 菜单与侧栏列之间的水平间隙（px）。 */
 export const PANEL_MENU_GAP = 8
 /** 菜单与视口右边界的最小留白（px），与官方 `Menu` 的 MARGIN 同档。 */
@@ -105,7 +111,7 @@ html:not(:has([data-sidebar-collapsed])) ${SIDEBAR_SCOPE} ${PANEL_ROW_SELECTOR}$
 ${MORE_MENU_SELECTOR} {
   --dsw-menu-surface-fill: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base));
   --dsw-menu-backdrop-filter: none;
-  translate: var(--omnimux-more-menu-shift, 0) 0;
+  translate: var(--omnimux-more-menu-shift, 0) var(--omnimux-more-menu-shift-y, 0);
   max-width: var(--omnimux-more-menu-max-width, calc(100vw - ${PANEL_MENU_VIEWPORT_MARGIN * 2}px));
 }
 `
@@ -160,6 +166,38 @@ export function computePanelMenuOffset(input) {
 }
 
 /**
+ * 计算「更多」菜单的纵向位移：让菜单顶边与触发按钮顶边对齐。
+ *
+ * 官方 `Menu` 用 `side:'bottom'`，把菜单顶边放在按钮**下方** `GAP` 处，于是菜单第一行
+ * 比按钮低一整行，看着像挂在按钮下半截。本函数回答「还要往上挪多少」：
+ *   1. 目标顶边 = 按钮顶边，所以位移通常是负值（向上）；
+ *   2. 夹进视口：顶边不得越过上留白，底边不得越过下留白 —— 菜单太长时整体上移，
+ *      而不是被推出屏幕（超高由官方自身的 `max-height` + 滚动承担）；
+ *   3. 任何非法几何一律返回 `0`，保持官方位置。
+ *
+ * @param {{ anchorTop: number, menuTop: number, menuHeight: number, viewportHeight: number,
+ *   margin?: number }} input 当前几何（均为 CSS 像素）
+ * @returns {number} 需要施加的 translateY
+ */
+export function computePanelMenuVerticalOffset({
+  anchorTop,
+  menuTop,
+  menuHeight,
+  viewportHeight,
+  margin = PANEL_MENU_VIEWPORT_MARGIN,
+}) {
+  const values = [anchorTop, menuTop, menuHeight, viewportHeight]
+  if (values.some((value) => !Number.isFinite(value))) return 0
+  if (menuHeight <= 0 || viewportHeight <= 0) return 0
+  const aligned = Math.round(anchorTop - menuTop)
+  const lowerBound = margin - menuTop
+  const upperBound = viewportHeight - margin - menuHeight - menuTop
+  // 视口比菜单还矮时上下界会交叉，此时贴顶（下界优先）。
+  const clamped = Math.min(Math.max(aligned, lowerBound), Math.max(lowerBound, upperBound))
+  return Math.round(clamped)
+}
+
+/**
  * 把一个官方「更多」菜单摆到侧栏列右侧。
  *
  * 只写自定义属性，不碰官方写入的 inline `left/top` —— 两侧写同一元素的不同属性，
@@ -173,20 +211,35 @@ export function positionPanelMenu(menu, doc = document) {
   if (!isElement(menu)) return 0
   const column = doc.querySelector(SIDEBAR_COLUMN_SELECTOR)
   if (!isElement(column)) return 0
-  const viewportWidth = doc.defaultView?.innerWidth ?? 0
+  const view = doc.defaultView
+  const viewportWidth = view?.innerWidth ?? 0
+  const viewportHeight = view?.innerHeight ?? 0
   if (!(viewportWidth > 0)) return 0
   const rect = menu.getBoundingClientRect()
   // 位移会改变 rect：先扣掉已施加的位移，拿回官方基准位置再重算，避免逐帧叠加。
-  const applied = Number.parseFloat(menu.style.getPropertyValue('--omnimux-more-menu-shift')) || 0
+  const appliedX = Number.parseFloat(menu.style.getPropertyValue('--omnimux-more-menu-shift')) || 0
+  const appliedY = Number.parseFloat(menu.style.getPropertyValue('--omnimux-more-menu-shift-y')) || 0
   const { offset, maxWidth } = computePanelMenuPlacement({
     sidebarRight: column.getBoundingClientRect().right,
-    menuLeft: rect.left - applied,
+    menuLeft: rect.left - appliedX,
     menuWidth: rect.width,
     viewportWidth,
   })
   menu.style.setProperty('--omnimux-more-menu-shift', `${offset}px`)
   if (maxWidth === null) menu.style.removeProperty('--omnimux-more-menu-max-width')
   else menu.style.setProperty('--omnimux-more-menu-max-width', `${maxWidth}px`)
+
+  // 纵向：菜单顶边对齐触发按钮顶边。锚点缺失时保持官方纵向位置。
+  const anchor = doc.querySelector(MORE_ANCHOR_SELECTOR)
+  if (isElement(anchor) && viewportHeight > 0) {
+    const offsetY = computePanelMenuVerticalOffset({
+      anchorTop: anchor.getBoundingClientRect().top,
+      menuTop: rect.top - appliedY,
+      menuHeight: rect.height,
+      viewportHeight,
+    })
+    menu.style.setProperty('--omnimux-more-menu-shift-y', `${offsetY}px`)
+  }
   return offset
 }
 
