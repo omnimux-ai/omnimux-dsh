@@ -2,6 +2,8 @@
 
 This repo lands OmniMux on official dsh. `omnimux` is the execution hub, not a gateway. Platform and domain plugins send requests into hub seams and manage their respective stores. I/O: `docs/contracts/hub.md`.
 
+License and publication: OmniMux-authored code here is AGPL-3.0 ([NOTICE](NOTICE)). The public source repository for gateway, desktop and plugins is [omnimux-ai/omnimux-ai](https://github.com/omnimux-ai/omnimux-ai); this repo will be published there under `plugins/` (no source there yet). It is a publication target, not a development remote.
+
 ## Product language
 
 **Character generation（角色生成）**: Establishing a character from a description or an authorized photo, then producing reusable character images.

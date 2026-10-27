@@ -16,7 +16,8 @@
     "cordis.patch.yml",
     "README.md",
     "dsh-ui-kit-0.1.0.tgz",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",

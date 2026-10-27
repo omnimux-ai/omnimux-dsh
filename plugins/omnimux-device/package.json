@@ -18,7 +18,8 @@
     "README.md",
     "PRD.md",
     "ARCHITECTURE.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",

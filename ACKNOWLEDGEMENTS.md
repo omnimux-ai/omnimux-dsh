@@ -94,7 +94,7 @@ OmniMux 的诞生与演进离不开全球开源社区与先锋项目的杰出贡
 ## 四、商业模式与产品架构灵感致敬 (Inspirations & Tributes)
 
 * **[n8n (n8n-io/n8n)](https://n8n.io)**：
-  * 启发了我们建立兼顾“开发者自由修改开源”与“商业可持续变现”的 **Sustainable Source / Source-Available** 双轨制许可架构，以及节点级可视化编排的产品思想。
+  * 启发了节点级可视化编排的产品思想。（OmniMux 早期曾参照其 Sustainable Source 许可；自 2026-10-28 起改为 AGPL-3.0 + 商业授权双轨，与 new-api 一致。）
 * **[OpenReel Video (Augani/openreel-video)](https://github.com/Augani/openreel-video)**：
   * 为 OmniMux 提供了强大的开源多轨时间轴剪辑内核，让 AI 视频生成摆脱了不可控的模板拼装，迈入工业级精剪与微调。
 
@@ -104,6 +104,6 @@ OmniMux 的诞生与演进离不开全球开源社区与先锋项目的杰出贡
 
 OmniMux 严格尊重上述所有开源项目的原作者知识产权与开源许可证条款：
 1. 本项目中包含的所有第三方源代码或分发包均保留其原始的版权声明（Copyright Notices）与许可证文本；
-2. 即使 OmniMux 顶层采用 Sustainable Source License 保护商业权益，**本项目中所有独立引入的第三方 MIT / Apache 2.0 组件，其上游原始代码依然保持原有宽松开源许可证权利不变**。
+2. OmniMux 自行编写的代码采用 AGPL-3.0；**本项目中所有独立引入的第三方 MIT / Apache 2.0 / MPL-2.0 等组件，其上游原始代码保持原有许可证权利不变**。
 
 *如有任何版权归属疑问或遗漏，欢迎联系 `hello@omnimux.ai`，我们将第一时间核实并更新致谢清单！*
