@@ -1,0 +1,84 @@
+# 规格文档：产品库并入资产库，下架独立产品页
+
+**文件：** `specs/products-into-assets.spec.md` ｜ **优先级：** P0 ｜ **模块：** `plugins/omnimux-products` + `plugins/omnimux-assets` + `plugins/omnimux`
+**变更面：** Client / 工作台 Tab 装配 / 页面导航 / 门禁脚本 / 契约文档
+**设计依据：** [design.md](../design.md)、[first-level-page-layout.md](../docs/contracts/first-level-page-layout.md)、[stage-guards.md](../docs/contracts/stage-guards.md)、[workbench-split.md](../docs/contracts/workbench-split.md)
+
+---
+
+## 1. 业务目标与缺陷根因
+
+### 1.1 用户看到的现象
+在「资产库 → 产品库」里点任意产品卡片，会切到另一个工作台页面去显示详情；在那个详情里点「返回」，落回的是**旧产品页面的列表**，不是刚才点卡片的资产库列表。用户感知为「有两个产品库，返回还会跳回旧的那个」。
+
+### 1.2 根因（已在源码确认，非缓存残留）
+1. **跨 Tab 跳转**：`plugins/omnimux-assets/src/client/AssetsStage.jsx` 的 `handleOpenCreateProduct` 写全局意图 `window.__omnimuxProductsIntent` 并派发 `omnimux-products:open`，随后 `api.open({ tabId: 'omnimux-products:library' })` —— 详情根本不在资产库里渲染。
+2. **意图只有旧页面能接住**：只有 `plugins/omnimux-products/src/client/ProductsStage.jsx` 监听该事件。
+3. **返回语义错位**：旧页面的 `onLeave` 是 `setView(LIST_VIEW)`，即回旧页列表。
+4. **旧页面仍然完整在线**：`omnimux-products` 仍注册 `omnimux-products:library` Tab、仍在侧栏「更多」菜单里、`localStorage` 仍可能持久化该 Tab id（刷新后会渲染「插件未加载」占位）。
+5. **重复实现**：资产库另抄了一份产品卡片（`ProductsView.jsx`）与 17 条同名产品 CSS，与产品插件同名不同值。
+
+### 1.3 核心方案
+- 详情二级页改为**在资产库产品库 Tab 内就地展开**，不切换工作台 Tab；返回落回资产库产品库列表并保持筛选、搜索、滚动。
+- **下架旧页面**：删除 `omnimux-products` 客户端插件本体（Tab 注册、Stage、侧栏入口），插件降级为「宿主能力 + 浏览器安全 UI 源库」。
+- **单一真源**：资产库直接复用产品插件的 `ProductGrid` / `ProductFormPage` / `CreateProductMenu`，删除 `ProductsView.jsx` 与重复 CSS。
+- **中枢摘链**：`WORKBENCH_OCCUPANTS`、`TAB_LABELS`、标题兜底、`surface-follow`、侧栏「更多」菜单、产品选择器「前往产品库」全部改指资产库。
+- **旧 Tab 迁移**：资产库挂载时收编残留的 `omnimux-products:library` Tab，避免刷新后出现「插件未加载」。
+
+---
+
+## 2. 关键用户旅程与验收标准
+
+### 2.1 就地进入详情（P0）
+- **AC-101**：在资产库「产品库」Tab 点击产品卡片，**不发生工作台 Tab 切换**（当前 Tab 始终是 `omnimux-assets:library`），就地渲染全屏二级页。
+- **AC-102**：点「添加产品」并选择实物/数字，同样就地进入对应形态的创建二级页。
+- **AC-103**：二级页保留面包屑（`产品库 / 编辑 · {产品名}`）、常驻返回按钮、右上角取消/保存。
+- **AC-104**：脏表单在返回/取消/Esc 时仍弹三选一（继续编辑 / 放弃修改 / 保存并返回）；干净时直接返回。
+
+### 2.2 返回落点（P0）
+- **AC-201**：从二级页返回后仍在「资产库 → 产品库」，筛选胶囊、搜索词、列表滚动位置保持。
+- **AC-202**：保存成功或「保存并返回」后回到同一列表，并刷新出新数据。
+
+### 2.3 旧页面下架（P0）
+- **AC-301**：`omnimux-products` 不再注册任何工作台 Tab，也不再声明 `sidebar.extra` / `shell.overlay` slot。
+- **AC-302**：侧栏「更多」菜单不再出现「产品库」，菜单由 10 项变 9 项，分隔线归属随之正确。
+- **AC-303**：`WORKBENCH_OCCUPANTS` 移除 `omnimux-products:library`；`products_*` 工具自动跟随改指向资产库并携带产品库 Tab 过滤。
+- **AC-304**：产品选择器「前往产品库管理」不再指向已失效的 `omnimux-products:stage`。
+- **AC-305**：已持久化旧 Tab 的用户刷新后不会看到「插件未加载」占位页，而是落在资产库产品库。
+
+### 2.4 单一真源与规范（P0）
+- **AC-401**：资产库不再有 `ProductsView.jsx`，也不再有与产品插件重名的产品 CSS。
+- **AC-402**：产品库 Tab 的视觉与二级页外观由产品插件样式表提供，不出现两份同名不同值。
+- **AC-403**：全部文案走 locale（资产库命名空间 + 产品库命名空间），无硬编码中文。
+- **AC-404**：静态门禁零违规（`verify:stages`、`verify:stage-scroll`、`verify:slots`、`test:ui`、`check:boundaries`、`check:package-files`、`registry:verify`）。
+
+### 2.5 宿主能力不变（P0）
+- **AC-501**：`products_*` 工具、`/omnimux/products*` 路由、`$DSH_HOME/omnimux/products/` 存储、品牌战略归一化与链接解析行为完全不变。
+- **AC-502**：产品 CRUD、媒体预览、草稿媒体只读预览、批量移除均照旧可用。
+
+---
+
+## 3. 任务分解与执行路径
+- **T01**：规格落盘（本文件）。
+- **T02**：`omnimux-products` 增加浏览器安全 UI 聚合入口，删除客户端插件本体，调整 `package.json` / `dsh.manifest.json`。
+- **T03**：`omnimux-assets` 新增 `ProductTab`（列表 + 二级页状态机 + 动作行联动），删除 `ProductsView` 与重复 CSS，注册产品库词典。
+- **T04**：`omnimux` 中枢摘掉旧 Tab（occupants / 菜单 / 标题 / 工具跟随 / 产品选择器）。
+- **T05**：门禁脚本与契约文档同步；测试逐条改到新结构并补就地展开回归用例。
+- **T06**：门禁 + 插件测试 + 隔离 worktree 真实浏览器验收，独立评审后提交 PR。
+
+---
+
+## 假设
+
+- 产品库的宿主能力（`products_*` 工具、HTTP 路由、`$DSH_HOME/omnimux/products/` 存储、导入解析、品牌战略）与本次 UI 收敛无关，保持零改动；因此不需要重新审计或调整任何模型/计费路径。
+- 「素材工作台」（`omnimux:asset-hub`）里另有一个商品库 Tab，属于另一个独立面，本次不动它；用户已确认只收敛资产库这一个产品库。
+- 资产库可以像现有的 `CreateProductMenu` 转接层一样，在构建期复用产品插件的浏览器安全源码，因此不需要把 `omnimux-products` 变成资产库的运行时依赖，也不需要改动 `pnpm-lock.yaml`。
+- 资产库在挂载时能读到工作台快照并关闭残留 Tab，因此旧 Tab 迁移不需要在产品插件里保留一个只为迁移而存在的客户端插件。
+
+## 证伪方式
+
+- 若合并后点击卡片仍触发工作台 Tab 切换（`activeTabId` 变为非 `omnimux-assets:library`），则「就地展开」不成立，本方案前提失效，退回「只改返回目标」的降级方案。
+- 若从二级页返回后筛选胶囊、搜索词或滚动位置丢失，说明列表未保活；需检查 `ProductTab` 是否与旧页一样常驻挂载、二级页是否为覆盖层而非替换渲染。
+- 若刷新后出现「插件未加载」占位页，说明残留 Tab 未被收编；需在资产库挂载期补上按 tab type 精确关闭的逻辑。
+- 若 `check:boundaries` 或 `verify:plugin-load` 因新增依赖报错，说明 UI 聚合入口不满足浏览器纯净性或包声明要求，需拆分导出面或调整 `files` / `exports`。
+- 若 `pnpm --filter omnimux-products test` 在删除客户端插件后仍有测试引用被删文件，说明测试未随结构同步，需逐条改到新宿主。

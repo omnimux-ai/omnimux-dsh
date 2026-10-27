@@ -12,7 +12,9 @@ import { useCloudSave } from './use-cloud-save.js'
 import { computeEmptyState } from './feed-helpers.js'
 import { injectAssetsStyles } from './styles.js'
 import { useAssetsFeed } from './use-assets-feed.js'
-import { ProductCategoryNav, ProductsView } from './ProductsView.jsx'
+import { ProductCategoryNav } from './ProductCategoryNav.jsx'
+import { ProductTab } from './ProductTab.jsx'
+import { ProductFormPage } from 'omnimux-products/ui'
 import { CreateProductMenu } from './CreateProductMenu.jsx'
 import { GenerationsCategoryNav, GenerationsView } from './GenerationsView.jsx'
 
@@ -252,7 +254,7 @@ function AssetsMainView(props) {
 }
 
 function AssetsBody(props) {
-  const { t, feed, emptyProps, onPreview, onCloudPreview, cloudSave, sourceTab, visible, productKindTab, onOpenCreateProduct, onEditDetail, generationsSource, generationsType } = props
+  const { t, productT = t, feed, emptyProps, onPreview, onCloudPreview, cloudSave, sourceTab, visible, productKindTab, productIntent, onProductViewChange, onOpenProductConversation, onEditDetail, generationsSource, generationsType } = props
   const onOpenAdd = () => {
     feed.setCreating(feed.filterType || 'character')
     feed.setFormError('')
@@ -302,12 +304,14 @@ function AssetsBody(props) {
     return (
       <div className="omnimux-assets-body">
         <div className="omnimux-assets-main">
-          <ProductsView
-            t={t}
-            open={visible}
+          <ProductTab
+            t={productT}
+            visible={visible}
             query={feed.query}
             kindTab={productKindTab}
-            onOpenCreate={onOpenCreateProduct}
+            intent={productIntent}
+            onViewChange={onProductViewChange}
+            onOpenConversation={handleOpenProductConversation}
           />
         </div>
       </div>
@@ -404,7 +408,7 @@ function AssetsDialogs(props) {
  * }} props
  */
 export function AssetsStage(props) {
-  const { t, stage, store, visible = true } = props
+  const { t, productT = t, stage, store, visible = true } = props
   const [previewTarget, setPreviewTarget] = useState(null)
   const [detailModalOpen, setDetailModalOpen] = useState(false)
   // One save controller for the whole stage: the cloud cards and the preview
@@ -424,6 +428,14 @@ export function AssetsStage(props) {
   const emptyProps = computeEmptyState(feed.filterType, feed.query, t)
   const [sourceTab, setSourceTab] = useState('local')
   const [productKindTab, setProductKindTab] = useState('all')
+  /** 交给 ProductTab 就地展开二级页的意图；nonce 用于重复点击同一产品时也能重开。 */
+  const [productIntent, setProductIntent] = useState(null)
+  /**
+   * 产品二级页的当前视图，由 ProductTab 上报。
+   * 二级页挂在 Stage 根上（而不是资产库 main 里），这样它才能像旧产品页一样铺满
+   * 整个区域；挂在 main 里会被 16/20px 内边距缩进，视觉上变成一张卡片。
+   */
+  const [productView, setProductView] = useState(null)
   const [generationsSource, setGenerationsSource] = useState('all')
   const [generationsType, setGenerationsType] = useState('all')
   const stageRootRef = useRef(null)
@@ -490,22 +502,47 @@ export function AssetsStage(props) {
     }
   }, [feed.filterType, feed.query, feed.sortKey, feed.selectedIds, feed.assets])
 
+  /**
+   * 打开产品二级页：切到产品库 Tab 并把意图交给 ProductTab 就地展开。
+   *
+   * 这里不再跳去 `omnimux-products:library` —— 产品库页面已经并入资产库，跨 Tab
+   * 跳转会让「返回」落到另一个页面里的同名列表，用户看到的就是两个产品库。
+   */
   const handleOpenCreateProduct = useCallback((kind = 'physical', productId) => {
+    setSourceTab('product')
+    setProductIntent({
+      mode: productId ? 'edit' : 'create',
+      kind: kind === 'digital' ? 'digital' : 'physical',
+      productId: productId || null,
+      // nonce 让「同一个产品连续点两次」也能重新展开二级页。
+      nonce: Date.now(),
+    })
+  }, [])
+
+  // 外部深链（Agent 自动跟随、产品选择器「前往产品库管理」）与旧意图事件统一收口。
+  useEffect(() => {
+    const applyIntent = (intent) => {
+      if (!intent) return
+      if (intent.mode === 'create') handleOpenCreateProduct(intent.kind)
+      else if (intent.mode === 'edit' && intent.productId) handleOpenCreateProduct(intent.kind, intent.productId)
+    }
+    const win = typeof window !== 'undefined' ? window : undefined
+    if (!win) return undefined
+    if (win.__omnimuxProductsIntent) {
+      const intent = win.__omnimuxProductsIntent
+      delete win.__omnimuxProductsIntent
+      applyIntent(intent)
+    }
+    const onIntentEvent = (event) => { applyIntent(event?.detail) }
+    win.addEventListener('omnimux-products:open', onIntentEvent)
+    return () => { win.removeEventListener('omnimux-products:open', onIntentEvent) }
+  }, [handleOpenCreateProduct])
+
+  const handleOpenProductConversation = useCallback(() => {
     const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
-    const intent = productId ? { mode: 'edit', productId } : { mode: 'create', kind }
-    if (typeof window !== 'undefined') {
-      window.__omnimuxProductsIntent = intent
-      try {
-        window.dispatchEvent(new CustomEvent('omnimux-products:open', { detail: intent }))
-      } catch {}
-    }
-    if (api) {
-      if (typeof api.open === 'function') {
-        api.open({ tabId: 'omnimux-products:library' })
-      } else if (typeof api.openWorkbench === 'function') {
-        api.openWorkbench({ tabId: 'omnimux-products:library' })
-      }
-    }
+    if (!api) return
+    try { api.setConversationCollapsed?.(false) } catch { /* 宿主未提供该能力时保持原状 */ }
+    try { api.setFocus?.('split') } catch { /* 宿主未提供该能力时保持原状 */ }
   }, [])
 
   const handleOpenImageGeneration = useCallback(() => {
@@ -573,6 +610,7 @@ export function AssetsStage(props) {
       </div>
       <AssetsBody
         t={t}
+        productT={productT}
         feed={feed}
         emptyProps={emptyProps}
         onPreview={setPreviewTarget}
@@ -581,7 +619,9 @@ export function AssetsStage(props) {
         sourceTab={sourceTab}
         visible={visible}
         productKindTab={productKindTab}
-        onOpenCreateProduct={handleOpenCreateProduct}
+        productIntent={productIntent}
+        onProductViewChange={setProductView}
+        onOpenProductConversation={handleOpenProductConversation}
         onEditDetail={() => setDetailModalOpen(true)}
         generationsSource={generationsSource}
         generationsType={generationsType}
@@ -602,6 +642,20 @@ export function AssetsStage(props) {
           onSaveToLocal={previewCloudId !== '' && !previewIsOfficialVoice ? savePreviewItem : undefined}
         />
       )}
+      {/* 产品二级页：挂在 Stage 根上铺满整个区域，与旧产品页同一几何。 */}
+      {sourceTab === 'product' && productView && productView.name === 'form' ? (
+        <ProductFormPage
+          t={productT}
+          kind={productView.kind}
+          mode={productView.mode}
+          initial={productView.product}
+          serverError={productView.error}
+          saving={productView.saving}
+          onSubmit={productView.onSubmit}
+          onLeave={productView.onLeave}
+          onPick={productView.onPick}
+        />
+      ) : null}
     </div>
   )
 }

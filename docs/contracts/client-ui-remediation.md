@@ -58,7 +58,7 @@ subsystem: "omnimux-accounts"
 | 插件 | 页面 | 现状（相对金标） | 归类 |
 |---|---|---|---|
 | `omnimux-assets` | `AssetsStage.jsx` | 金标：L1 标题+副标题+Refresh/Close IconButton；L2 `+添加资产`/`导入资产包`；L3 chips+Search+Sort+View；L4 Grid/List | **A / GOLD** |
-| `omnimux-products` | `ProductsStage.jsx` | L1 刷新是 `Button` 不是 IconButton；**无 L2**；主 CTA 塞进 FilterBar `actions`；无 chips / sort / view | **A / P0** |
+| `omnimux-products` | 资产库内产品库 Tab（`omnimux-assets/src/client/ProductTab.jsx`；卡片与二级表单来自 `omnimux-products/src/client/ui.js`） | 不再是独立一级页：4 层骨架由资产库产品库 Tab 提供，产品侧只出列表卡片与二级表单 | **A（随资产库）** |
 | `omnimux-accounts` | `AccountsStage.jsx` + `AccountsSection.jsx` | Stage 只有标题+Close，无副标题/Refresh；OverviewBar 占 L2；**主 CTA `+ 连接` 与 FilterBar 同行** | **A / P0** |
 | `omnimux-inspiration` | `InspirationStage.jsx` + `InspirationSection.jsx` | Stage 只有标题+Close；过滤/搜索沉在 Section；无独立 Action Row | **A / P0** |
 | `omnimux-workflow` | `projects/ProjectLibraryPage.jsx` | 有副标题，但 **主 CTA 进 Header**；FilterBar classic（search 在左、无 tools） | **A / P0** |
@@ -307,7 +307,6 @@ P0 完成标准：A 类四页源码能被 `client-layout` 同类断言扫过；d
   "$schema": "ui-morphology.schema.json",
   "standardLibrary": [
     { "plugin": "omnimux-assets", "entryFile": "src/client/AssetsStage.jsx", "gold": true },
-    { "plugin": "omnimux-products", "entryFile": "src/client/ProductsStage.jsx" },
     { "plugin": "omnimux-accounts", "entryFile": "src/client/AccountsStage.jsx" },
     { "plugin": "omnimux-inspiration", "entryFile": "src/client/InspirationStage.jsx" },
     { "plugin": "omnimux-workflow", "entryFile": "src/client/projects/ProjectLibraryPage.jsx" },

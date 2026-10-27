@@ -5,8 +5,8 @@ import { captureStageContract, selectStages } from './live-stage-contracts.mjs'
 import { assertStageState } from './live-stage-probe.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
-test('Studio is explicit-only and preserves the eight existing Stage targets', async () => {
-  assert.deepEqual(selectStages('all'), ['accounts', 'workflow', 'assets', 'products', 'inspiration', 'publish', 'analytics', 'market'])
+test('Studio is explicit-only and preserves the seven existing Stage targets', async () => {
+  assert.deepEqual(selectStages('all'), ['accounts', 'workflow', 'assets', 'inspiration', 'publish', 'analytics', 'market'])
   assert.deepEqual(selectStages('studio'), ['studio'])
   assert.throws(() => selectStages('studio-typo'), /Unknown stage/)
   const target = await captureStageContract(root, 'studio')

@@ -423,12 +423,14 @@ export function ProductPicker({
                       size="sm"
                       onClick={() => {
                         try {
+                          // 产品库已并入资产库：打开资产库并请求产品库过滤。
                           window.__omnimuxWorkbench?.open?.({
-                            tabId: 'omnimux-products:stage',
+                            tabId: 'omnimux-assets:library',
+                            view: { filterType: 'product' },
                             title: '产品库',
                           });
-                        } catch {
-                          // ignore
+                        } catch (error) {
+                          console.warn('[ProductPicker] open assets library failed:', error);
                         }
                       }}
                     >

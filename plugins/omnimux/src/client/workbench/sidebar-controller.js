@@ -332,6 +332,66 @@ export function closeWorkbenchPanel() {
   return setWorkbenchFocus(WORKBENCH_FOCUS.chat)
 }
 
+/**
+ * 已下架的工作台 Tab 类型：这些页面不再有任何插件注册，留在快照里只会渲染
+ * 「插件未加载」占位页（specs/products-into-assets.spec.md AC-305）。
+ */
+const RETIRED_WORKBENCH_TAB_TYPES = Object.freeze(['omnimux-products:library'])
+
+/**
+ * 一次性收编残留的下架 Tab（产品库已并入资产库）。
+ *
+ * 约束：幂等（同一会话只扫一遍，且关闭动作本身可重复执行）、不阻塞（不 await 任何
+ * 异步结果）、失败不影响主流程（只 console.warn，绝不吞掉原因）。
+ * 只关闭 type 恰好等于下架类型的 Tab，不按 id 前缀或黑名单猜测。
+ *
+ * 幂等按会话记而不是整个服务记一次：better-sidebar 服务跨会话复用，先物化的会话
+ * 可能没有旧 Tab，若那时就打上全局标记，切到仍带旧 Tab 的会话就会漏扫。
+ *
+ * @param {object | null | undefined} service better-sidebar 服务
+ * @returns {number} 本次关闭的 Tab 数
+ */
+export function sweepRetiredWorkbenchTabs(service) {
+  if (!service || typeof service.getSnapshot !== 'function' || typeof service.closeTab !== 'function') return 0
+
+  let snapshot
+  try {
+    snapshot = service.getSnapshot()
+  } catch (error) {
+    console.warn('[omnimux-workbench] 读取快照以收编下架 Tab 失败:', error)
+    return 0
+  }
+  // 快照尚未物化：等下一次状态变更，不要提前打标记，否则真出现时反而漏扫。
+  if (!snapshot?.state) return 0
+
+  const sessionKey = typeof snapshot.sessionId === 'string' && snapshot.sessionId ? snapshot.sessionId : ''
+  if (!(service.__omnimuxRetiredTabsSweptSessions instanceof Set)) {
+    service.__omnimuxRetiredTabsSweptSessions = new Set()
+  }
+  const swept = service.__omnimuxRetiredTabsSweptSessions
+  if (swept.has(sessionKey)) return 0
+  swept.add(sessionKey)
+
+  const scope = sessionKey ? { sessionId: sessionKey } : undefined
+  let closed = 0
+  for (const tab of listOpenTabs(snapshot.state)) {
+    if (!RETIRED_WORKBENCH_TAB_TYPES.includes(tab?.type)) continue
+    try {
+      const result = service.closeTab(tab.id, scope)
+      if (result && typeof result.catch === 'function') {
+        result.catch((error) => {
+          console.warn('[omnimux-workbench] 关闭下架 Tab 的异步结果失败:', error)
+        })
+      }
+      closed += 1
+    } catch (error) {
+      console.warn('[omnimux-workbench] 关闭下架 Tab 失败:', error)
+    }
+  }
+  if (closed > 0) notifyWorkbenchChange()
+  return closed
+}
+
 export function closeWorkbenchTab(tabId) {
   if (!tabId) return false
   const service = getWorkbenchService()

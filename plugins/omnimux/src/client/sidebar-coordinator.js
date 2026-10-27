@@ -24,7 +24,7 @@
  * 2. 排除技能专家（`omnimux-market`，在底部 footer）；
  * 3. 其余所有插件（包括所有 Alpha 插件 accounts, publish, analytics, forms, automation 以及垂直插件 video, products, device, clip, social-harvest, apps 等）全部收敛，不再作为独立行渲染在侧边栏；
  * 4. 收敛项的渲染面是官方「更多」菜单（seat `sidebar.panellist.actions`，注册点在 `explore-more-menu.jsx`）：本模块只提供清单真源与激活委托，不再自绘侧栏行或浮动菜单；
- * 5. 清单严格按照产品 Spec 白名单（10项：应用、视频剪辑、产品库、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收），带纯矢量 SVG 图标。
+ * 5. 清单严格按照产品 Spec 白名单（9项：应用、视频剪辑、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收），带纯矢量 SVG 图标；产品库已并入资产库，不再单列。
  */
 
 import pluginLifecycle from '../plugin-lifecycle.json' with { type: 'json' }
@@ -153,9 +153,10 @@ const INLINE_STYLES = `
 `
 
 /**
- * 探索菜单项白名单（10项，逐字锁定）：
- * 应用、视频剪辑、产品库、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收
+ * 探索菜单项白名单（9项，逐字锁定）：
+ * 应用、视频剪辑、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收
  * 统一带纯矢量 SVG 图标，严禁 Emoji，零冗余徽章、零副标题、零同义重复。
+ * 产品库已并入资产库（specs/products-into-assets.spec.md），不再单独占一项。
  */
 export const EXPLORE_MENU_ITEMS = [
   {
@@ -185,14 +186,6 @@ export const EXPLORE_MENU_ITEMS = [
     tabId: 'omnimux-clip:studio',
     iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="1.75" y="3.25" width="12.5" height="9.5" rx="1.75"/><path d="M6.4 5.6v4.8L10.6 8 6.4 5.6Z" fill="currentColor" stroke="none"/></svg>',
     dividerAfter: true,
-  },
-  {
-    id: 'products',
-    pluginId: 'omnimux-products',
-    entryId: 'omnimux-products-entry',
-    label: '产品库',
-    tabId: 'omnimux-products:library',
-    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h10l-1 9H4L3 5z"/><path d="M6 5V3.5a2 2 0 0 1 4 0V5"/></svg>',
   },
   {
     id: 'publish',

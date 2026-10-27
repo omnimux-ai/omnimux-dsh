@@ -13,7 +13,7 @@
    - 图像生成 `omnimux:media-viewer`：`omnimux_image_*`、`image_generate`、`image_edit`；
    - 视频剪辑 `omnimux-clip:studio`：`clip_*`；
    - 灵感社区 `omnimux-inspiration:library`：`omnimux_inspiration_*`、`inspiration_*`；
-   - 产品库 `omnimux-products:library`：`products_*`。
+   - 产品库 `omnimux-assets:library`（并携带 `view.filterType = 'product'`）：`products_*`。
 3. **防打扰策略（与主功能同批交付）**：
    - **用户优先**：若用户在本轮内手动切走（当前页签 ≠ 上次自动切到的页签），本轮内立即停用自动跟随；
    - **防抖动**：同一轮内同一工作面只自动切一次；同一轮内已跟随过的页签不重复切；

@@ -271,9 +271,9 @@ export const PRODUCTS_CSS = `
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.omnimux-products-stage .omnimux-products-card-thumb .omnimux-products-check,
-.omnimux-products-stage .omnimux-products-card-thumb .omnimux-products-check:hover,
-.omnimux-products-stage .omnimux-products-card-thumb .omnimux-products-check:active {
+.omnimux-products-card-thumb .omnimux-products-check,
+.omnimux-products-card-thumb .omnimux-products-check:hover,
+.omnimux-products-card-thumb .omnimux-products-check:active {
   position: absolute;
   top: 8px;
   left: 8px;
@@ -295,14 +295,14 @@ export const PRODUCTS_CSS = `
   background: var(--dsw-alias-bg-base, var(--dsw-bg));
   color: inherit;
 }
-.omnimux-products-stage .omnimux-products-card-thumb .omnimux-products-check[data-selected="true"],
-.omnimux-products-stage .omnimux-products-card-thumb .omnimux-products-check[data-selected="true"]:hover {
+.omnimux-products-card-thumb .omnimux-products-check[data-selected="true"],
+.omnimux-products-card-thumb .omnimux-products-check[data-selected="true"]:hover {
   opacity: 1;
   border: none;
   background: var(--dsw-alias-button-primary-fill);
   color: var(--dsw-alias-label-primary-foreground);
 }
-.omnimux-products-stage .omnimux-products-card-thumb .omnimux-products-chat-btn {
+.omnimux-products-card-thumb .omnimux-products-chat-btn {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -324,7 +324,7 @@ export const PRODUCTS_CSS = `
   background: var(--dsw-alias-bg-base, var(--dsw-bg));
   color: var(--dsw-alias-label-secondary);
 }
-.omnimux-products-stage .omnimux-products-card-thumb .omnimux-products-chat-btn:hover {
+.omnimux-products-card-thumb .omnimux-products-chat-btn:hover {
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
   border-color: var(--dsw-alias-border-l4);

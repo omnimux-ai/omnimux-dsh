@@ -18,10 +18,7 @@
     ],
     "seamsProvided": [],
     "seamsConsumed": [],
-    "slots": [
-      { "target": "sidebar.extra", "componentPath": "src/client/sidebar-entry.js" },
-      { "target": "shell.overlay", "componentPath": "src/client/ProductsStage.jsx" }
-    ],
+    "slots": [],
     "storageDomains": ["$DSH_HOME/omnimux/products/"]
   },
   "dependencies": {

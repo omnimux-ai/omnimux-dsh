@@ -10,7 +10,6 @@ export const STAGE_CONTENT = Object.freeze({
   accounts: '.omnimux-accounts-stage-body',
   workflow: '.omnimux-workflow-library-body',
   assets: '.omnimux-assets-body',
-  products: '.omnimux-products-body',
   inspiration: '.omnimux-inspiration-stage-body',
   publish: '.omnimux-publish-viewport',
   analytics: '.omnimux-analytics-stage-body',
@@ -126,9 +125,22 @@ export async function captureStageContract(root, stage) {
   win.require = (name) => name === 'react' && stage === 'market' ? marketReact : name === 'dsh-ui-kit'
     ? { createSidebarEntry(options) { entries.push(options); return () => {} } }
     : name === '@deepseek-ai/dsh-client-ui-primitives' ? {} : require(name)
+  // 资产库的产品库 Tab 在构建期复用产品插件的浏览器安全 UI 源库（`omnimux-products/ui`）。
+  // 那是本仓内的 JSX 源码，不是 npm 运行时依赖：`packages: 'external'` 会把它留给 Node
+  // 的 require，而 Node 不认识 `.jsx`。这里按包自身 exports 声明解析回源码路径，随
+  // 入口一起打包——判的是同一份生产源码，不是替身。
+  const localUiPackages = {}
+  for (const name of ['omnimux-products']) {
+    const manifest = JSON.parse(readFileSync(join(root, 'plugins', name, 'package.json'), 'utf8'))
+    for (const [subpath, target] of Object.entries(manifest.exports ?? {})) {
+      if (subpath === '.' || typeof target !== 'string' || !target.startsWith('./src/')) continue
+      localUiPackages[`${name}/${subpath.slice(2)}`] = join(root, 'plugins', name, target.slice(2))
+    }
+  }
   const compile = async (entry) => (await build({
     absWorkingDir: root, entryPoints: [entry], bundle: true, packages: 'external',
     platform: 'browser', format: 'cjs', jsx: 'automatic', write: false, logLevel: 'silent',
+    alias: localUiPackages,
     ...(stage === 'studio' ? { loader: { '.css': 'text', '.js': 'jsx' } } : {}),
   })).outputFiles[0].text
   const evaluate = (code) => {
@@ -257,26 +269,6 @@ export async function captureStageContract(root, stage) {
       assert.equal(win.document.querySelectorAll('#omnimux-studio-styles').length, 0, 'Studio must release its stylesheet')
       assert.ok(hostStyles.every(style => style.isConnected), 'Studio must preserve Host styles')
       return { stage, plugin, tabId, content: '[data-omnimux-studio].studio-root', adapter: 'community-tab' }
-    }
-    if (stage === 'products') {
-      // #1944/#1960: products folded into the assets library; no left-row entry, Tab stays registered.
-      const tabId = 'omnimux-products:library'
-      assert.equal(entries.length, 0, 'Products must not register a left-row sidebar entry')
-      const tab = tabs.get(tabId)
-      assert.ok(tab && tab.single === true && tab.hidden === false && typeof tab.component === 'function', 'Products must keep its single workbench Tab for in-library navigation')
-      assert.equal(await api.open({ tabId, title: tab.title() }), true, 'Products Tab must open through the public workbench')
-      await settle()
-      assert.ok(api.isActive(tabId), 'Products Tab must become the active right Tab')
-      assert.equal(sidebarRight.active()?.kind, tabId)
-      api.closePanel()
-      await settle()
-      assert.equal(api.isActive(tabId), false)
-      for (const dispose of disposers.splice(0).reverse()) dispose()
-      assert.equal(tabs.has(tabId), false, 'Products Tab disposer must unregister')
-      return {
-        stage, plugin, tabId, content: STAGE_CONTENT[stage], ...STAGE_STATUS[stage],
-        adapter: 'workbench-tab-only', defaultFocus: 'gui', activationModel: 'in-library-navigation',
-      }
     }
     assert.equal(entries.length, 1, `${plugin}: expected one actual kit sidebar entry`)
     const { stageStore: adapter, datasetKey } = entries[0]

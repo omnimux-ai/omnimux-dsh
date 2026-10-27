@@ -45,10 +45,12 @@ test('AC-2: 下拉选择器触发器与选项文案必须遵守黄金契约，�
 });
 
 test('AC-5: 删除确认弹窗必须明确提示关联资产名称', () => {
-  const productsStagePath = path.join(root, 'plugins/omnimux-products/src/client/ProductsStage.jsx');
-  const productsStage = fs.readFileSync(productsStagePath, 'utf-8');
+  // 产品库已并入资产库（specs/products-into-assets.spec.md）：旧 ProductsStage.jsx 已下架，
+  // 产品库的删除确认落在资产库的 ProductTab。
+  const productTabPath = path.join(root, 'plugins/omnimux-assets/src/client/ProductTab.jsx');
+  const productTab = fs.readFileSync(productTabPath, 'utf-8');
   assert.ok(
-    productsStage.includes('关联资产'),
+    productTab.includes('关联资产'),
     '产品库删除确认弹窗必须包含关联资产安全提示'
   );
 

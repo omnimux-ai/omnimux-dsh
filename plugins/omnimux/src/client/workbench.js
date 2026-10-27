@@ -74,6 +74,7 @@ import {
   isWorkbenchActive,
   isWorkbenchOpen,
   openWorkbench,
+  sweepRetiredWorkbenchTabs,
   syncWorkbenchGuiWidth,
   uninstallWorkbenchLeftRailObserver,
 } from './workbench/sidebar-controller.js'
@@ -120,6 +121,7 @@ export {
   openWorkbench,
   closeWorkbenchTab,
   closeWorkbenchPanel,
+  sweepRetiredWorkbenchTabs,
   isWorkbenchOpen,
   isWorkbenchActive,
   createWorkbenchSidebarStore,
@@ -200,6 +202,8 @@ function safeServiceState(service) {
 
 function handleServiceStateChange(service) {
   clearInitialFilesSeed(service)
+  // 快照首次物化时才可能出现残留 Tab：状态变更点补一次收编（函数自身幂等）。
+  sweepRetiredWorkbenchTabs(service)
   const state = safeServiceState(service)
   if (!state || state.panelOpen === false) {
     setConversationCollapsed(false)
@@ -219,6 +223,8 @@ function bind(next = {}) {
   bindWorkbenchDeps(next)
   const service = getWorkbenchService()
   clearInitialFilesSeed(service)
+  // 工作台服务就绪：收编已下架的旧 Tab（产品库并入资产库），幂等、失败不影响主流程。
+  sweepRetiredWorkbenchTabs(service)
   if (service && typeof service.subscribeState === 'function' && !service.__omnimuxWorkbenchHooked) {
     try {
       service.subscribeState(() => handleServiceStateChange(service))
