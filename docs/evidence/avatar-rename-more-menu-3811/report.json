@@ -1,0 +1,209 @@
+{
+  "runId": "c845ce82-9e95-42ac-86f1-46aaed9ed7a2",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-rename-more-menu",
+  "origin": "http://127.0.0.1:55289",
+  "appPort": 55289,
+  "cdpPort": 55294,
+  "startedAt": "2026-10-27T03:32:21.494Z",
+  "completedAt": "2026-10-27T03:33:28.559Z",
+  "pass": true,
+  "scope": "smoke",
+  "producer": "controlled-runner",
+  "contract": "none",
+  "taskBinding": "unknown",
+  "userFresh": "unknown",
+  "inputClosure": "unknown",
+  "summary": {
+    "mode": "ui",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "realModelRequest": false,
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true
+    },
+    {
+      "name": "journey:侧栏不再有数字人常驻行",
+      "pass": true
+    },
+    {
+      "name": "journey:更多菜单含AI网红工作室且无旧名称",
+      "pass": true
+    },
+    {
+      "name": "journey:菜单点击可打开工作台",
+      "pass": true
+    },
+    {
+      "name": "journey:页面标题与Tab标题同步改名",
+      "pass": true
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-rename-more-menu/.workbuddy/evidence/app-qa/c845ce82-9e95-42ac-86f1-46aaed9ed7a2/app-home.png",
+    "width": 1280,
+    "height": 800,
+    "bytes": 388715
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true,
+    "resources": [
+      {
+        "name": "app-child",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "mock-server",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "app-private-directory",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "browser-child",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "cdp-transport",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "browser-private-directory",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      }
+    ]
+  },
+  "observations": {
+    "rawOutputRetained": false,
+    "appEvents": [
+      {
+        "event": "spawn",
+        "code": null,
+        "signal": null,
+        "pid": 32275,
+        "parentPid": 22926
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      },
+      {
+        "event": "close",
+        "code": 0,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      }
+    ],
+    "browserEvents": [
+      {
+        "event": "spawn",
+        "code": null,
+        "signal": null,
+        "pid": 32572,
+        "parentPid": 22926
+      },
+      {
+        "event": "exit",
+        "code": 143,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      },
+      {
+        "event": "close",
+        "code": 143,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      }
+    ],
+    "cdpSocketClosed": {
+      "code": 1000,
+      "reason": ""
+    },
+    "cdpLastCompleted": "Page.captureScreenshot",
+    "targetEvents": [
+      {
+        "method": "Target.attachedToTarget",
+        "sessionId": "B40832AB5AF01844",
+        "targetId": "156B88CC71852510",
+        "type": "page",
+        "url": "about:blank"
+      }
+    ]
+  },
+  "beforeCaptureMs": 0,
+  "hubPath": {
+    "clickedNewSession": false,
+    "exploreVisible": true,
+    "assetHubOpened": true,
+    "librarySelected": true,
+    "workbenchRequestAccepted": true
+  }
+}
