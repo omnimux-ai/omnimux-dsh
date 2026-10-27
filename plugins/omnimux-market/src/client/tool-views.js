@@ -147,7 +147,9 @@
      * Host 零用户消息。mode 只用 queue，禁用 steer。成功仍 insertGesture。
      */
     async function sendPlazaFollowUp({ sessions, skill, excerpt }) {
-      const id = sessions.list.getSnapshot().current;
+      // 统一读数口（#3806）：直读 list.current 在 rc.3 恒 undefined。
+      // 经 hub 已装的全局缝取裁决后的 sessionId，不 import hub 内部模块。
+      const id = typeof window !== "undefined" ? window.__omnimuxWorkbench?.getCurrentSessionId?.() : undefined;
       const face = id && sessions.binding(id)?.session;
       const text = excerpt
         ? `/${skill} 继续当前任务：${excerpt}`

@@ -41,6 +41,7 @@ import { installAssistantMessageMediaEnhancer } from './attachments/assistantMes
 import { installPromptFenceGenerate } from './attachments/promptFenceGenerate.ts'
 import { getSubmittedCanvasText, subscribeSubmittedCanvasText } from './attachments/useCommentAttachment.ts'
 import { getUiContext } from './workbench/context.js'
+import { currentSessionId } from './workbench/host-adapter.js'
 import { readActiveSkill, subscribeSkillChanged } from './composer-add/skill-event.ts'
 import { findReplicateAttachment, shouldReleaseReplicateAttachments } from './session-guide/trending/replicate-linkage.js'
 import { installGlobalReferenceApi } from './reference/index.ts'
@@ -207,7 +208,9 @@ export function apply(ctx) {
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
     name: 'conversation.input.dock', id: 'omnimux:attachment-submit', order: 120, locale: NS,
     inject: (sessionId) => ({
-      attachmentStore, attachmentAdmission, getCurrentSessionId: () => guideSessions?.list.getSnapshot().current,
+      // 附件提交桥的归属判定走统一读数口（#3806）：直读 list.current 在 rc.3 恒 undefined，
+      // 会让 `getCurrentSessionId() === sessionId` 永远为假、提交桥静默失效。
+      attachmentStore, attachmentAdmission, getCurrentSessionId: () => currentSessionId(guideSessions),
       insertText: (text, span) => {
         const scope = sessionId && guideSessions?.scope(sessionId)
         return scope?.bail(scope, 'slash/input-insert-text', { text, span }) === true

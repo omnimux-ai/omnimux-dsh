@@ -264,6 +264,9 @@ function createApi() {
     detachStore,
     bind,
     createSidebarStore: createWorkbenchSidebarStore,
+    // 跨插件唯一的当前会话读数口（#3806）：hub 的 host-adapter 持有模块级 deps，
+    // 域插件 import 会各建一份未绑定副本，只能经这个全局缝取值。
+    getCurrentSessionId: () => currentSessionId(),
     waitForService: waitForBetterSidebar,
     applyDefaultWidth: applyDefaultWidthFromGlobal,
     getSnapshot: resolveWorkbenchSnapshot,
