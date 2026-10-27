@@ -1,0 +1,412 @@
+{
+  "runId": "22ff8181-ef42-4b26-8818-fb863d321363",
+  "pass": true,
+  "assertions": [
+    {
+      "name": "assets-card-prefills-composer",
+      "pass": true,
+      "expected": "夏日海边素材",
+      "actual": "请结合资产「夏日海边素材」继续创作：",
+      "scenario": "fixed"
+    },
+    {
+      "name": "assets-card-attaches-to-slot",
+      "pass": true,
+      "expected": "夏日海边素材",
+      "actual": [
+        "夏日海边素材"
+      ],
+      "scenario": "fixed"
+    },
+    {
+      "name": "assets-no-unavailable-notice",
+      "pass": true,
+      "actual": null,
+      "scenario": "fixed"
+    },
+    {
+      "name": "inspiration-card-prefills-composer",
+      "pass": true,
+      "expected": "US beauty hook",
+      "actual": "请参考本地灵感「US beauty hook」继续创作：",
+      "scenario": "fixed"
+    },
+    {
+      "name": "inspiration-card-attaches-to-slot",
+      "pass": true,
+      "expected": "US beauty hook",
+      "actual": [
+        "US beauty hook"
+      ],
+      "scenario": "fixed"
+    },
+    {
+      "name": "inspiration-no-unavailable-notice",
+      "pass": true,
+      "actual": null,
+      "scenario": "fixed"
+    },
+    {
+      "name": "products-card-prefills-composer",
+      "pass": true,
+      "expected": "香薰蜡烛",
+      "actual": "请围绕产品「香薰蜡烛」撰写内容：",
+      "scenario": "fixed"
+    },
+    {
+      "name": "products-card-attaches-to-slot",
+      "pass": true,
+      "expected": "香薰蜡烛",
+      "actual": [
+        "香薰蜡烛"
+      ],
+      "scenario": "fixed"
+    },
+    {
+      "name": "products-no-unavailable-notice",
+      "pass": true,
+      "actual": null,
+      "scenario": "fixed"
+    },
+    {
+      "name": "featuredTemplate-card-prefills-composer",
+      "pass": true,
+      "expected": "黄金开场模板",
+      "actual": "请用黄金开场模板生成脚本",
+      "scenario": "fixed"
+    },
+    {
+      "name": "featuredTemplate-no-unavailable-notice",
+      "pass": true,
+      "actual": null,
+      "scenario": "fixed"
+    },
+    {
+      "name": "negative-control-reproduces-defect",
+      "pass": true,
+      "detail": "把交给 dock() 的载荷换回命令信封（修复前写法）后，同一套断言必须失败"
+    },
+    {
+      "name": "fixed-scenario-passes",
+      "pass": true
+    },
+    {
+      "name": "fixed-assets-screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1440,
+        "height": 1000
+      },
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/explore-library-card-dock/.workbuddy/evidence/worktree-qa/explore-library-dock-22ff8181-ef42-4b26-8818-fb863d321363/fixed-assets.png"
+    },
+    {
+      "name": "fixed-inspiration-screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1440,
+        "height": 1000
+      },
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/explore-library-card-dock/.workbuddy/evidence/worktree-qa/explore-library-dock-22ff8181-ef42-4b26-8818-fb863d321363/fixed-inspiration.png"
+    },
+    {
+      "name": "fixed-products-screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1440,
+        "height": 1000
+      },
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/explore-library-card-dock/.workbuddy/evidence/worktree-qa/explore-library-dock-22ff8181-ef42-4b26-8818-fb863d321363/fixed-products.png"
+    },
+    {
+      "name": "fixed-featuredTemplate-screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1440,
+        "height": 1000
+      },
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/explore-library-card-dock/.workbuddy/evidence/worktree-qa/explore-library-dock-22ff8181-ef42-4b26-8818-fb863d321363/fixed-featured.png"
+    }
+  ],
+  "errors": [],
+  "scenarios": [
+    {
+      "label": "fixed",
+      "results": {
+        "assets": {
+          "expectedTitle": "夏日海边素材",
+          "screenshot": {
+            "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/explore-library-card-dock/.workbuddy/evidence/worktree-qa/explore-library-dock-22ff8181-ef42-4b26-8818-fb863d321363/fixed-assets.png",
+            "width": 1440,
+            "height": 1000,
+            "bytes": 786826
+          },
+          "draft": "请结合资产「夏日海边素材」继续创作：",
+          "attachments": [
+            "夏日海边素材"
+          ],
+          "notice": null,
+          "dockOpen": true,
+          "prefilled": true,
+          "attached": true
+        },
+        "inspiration": {
+          "expectedTitle": "US beauty hook",
+          "screenshot": {
+            "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/explore-library-card-dock/.workbuddy/evidence/worktree-qa/explore-library-dock-22ff8181-ef42-4b26-8818-fb863d321363/fixed-inspiration.png",
+            "width": 1440,
+            "height": 1000,
+            "bytes": 608026
+          },
+          "draft": "请参考本地灵感「US beauty hook」继续创作：",
+          "attachments": [
+            "US beauty hook"
+          ],
+          "notice": null,
+          "dockOpen": true,
+          "prefilled": true,
+          "attached": true
+        },
+        "products": {
+          "expectedTitle": "香薰蜡烛",
+          "screenshot": {
+            "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/explore-library-card-dock/.workbuddy/evidence/worktree-qa/explore-library-dock-22ff8181-ef42-4b26-8818-fb863d321363/fixed-products.png",
+            "width": 1440,
+            "height": 1000,
+            "bytes": 600768
+          },
+          "draft": "请围绕产品「香薰蜡烛」撰写内容：",
+          "attachments": [
+            "香薰蜡烛"
+          ],
+          "notice": null,
+          "dockOpen": true,
+          "prefilled": true,
+          "attached": true
+        },
+        "featuredTemplate": {
+          "expectedTitle": "黄金开场模板",
+          "screenshot": {
+            "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/explore-library-card-dock/.workbuddy/evidence/worktree-qa/explore-library-dock-22ff8181-ef42-4b26-8818-fb863d321363/fixed-featured.png",
+            "width": 1440,
+            "height": 1000,
+            "bytes": 803048
+          },
+          "draft": "请用黄金开场模板生成脚本",
+          "attachments": [
+            "创意模板"
+          ],
+          "notice": null,
+          "dockOpen": true,
+          "prefilled": true,
+          "attached": false
+        }
+      },
+      "assertions": [
+        {
+          "name": "assets-card-prefills-composer",
+          "pass": true,
+          "expected": "夏日海边素材",
+          "actual": "请结合资产「夏日海边素材」继续创作："
+        },
+        {
+          "name": "assets-card-attaches-to-slot",
+          "pass": true,
+          "expected": "夏日海边素材",
+          "actual": [
+            "夏日海边素材"
+          ]
+        },
+        {
+          "name": "assets-no-unavailable-notice",
+          "pass": true,
+          "actual": null
+        },
+        {
+          "name": "inspiration-card-prefills-composer",
+          "pass": true,
+          "expected": "US beauty hook",
+          "actual": "请参考本地灵感「US beauty hook」继续创作："
+        },
+        {
+          "name": "inspiration-card-attaches-to-slot",
+          "pass": true,
+          "expected": "US beauty hook",
+          "actual": [
+            "US beauty hook"
+          ]
+        },
+        {
+          "name": "inspiration-no-unavailable-notice",
+          "pass": true,
+          "actual": null
+        },
+        {
+          "name": "products-card-prefills-composer",
+          "pass": true,
+          "expected": "香薰蜡烛",
+          "actual": "请围绕产品「香薰蜡烛」撰写内容："
+        },
+        {
+          "name": "products-card-attaches-to-slot",
+          "pass": true,
+          "expected": "香薰蜡烛",
+          "actual": [
+            "香薰蜡烛"
+          ]
+        },
+        {
+          "name": "products-no-unavailable-notice",
+          "pass": true,
+          "actual": null
+        },
+        {
+          "name": "featuredTemplate-card-prefills-composer",
+          "pass": true,
+          "expected": "黄金开场模板",
+          "actual": "请用黄金开场模板生成脚本"
+        },
+        {
+          "name": "featuredTemplate-no-unavailable-notice",
+          "pass": true,
+          "actual": null
+        }
+      ],
+      "pass": true,
+      "matchesExpectation": true
+    },
+    {
+      "label": "control-before-fix",
+      "results": {
+        "assets": {
+          "expectedTitle": "夏日海边素材",
+          "screenshot": {
+            "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/explore-library-card-dock/.workbuddy/evidence/worktree-qa/explore-library-dock-22ff8181-ef42-4b26-8818-fb863d321363/control-before-fix-assets.png",
+            "width": 1440,
+            "height": 1000,
+            "bytes": 766122
+          },
+          "draft": "",
+          "attachments": [],
+          "notice": null,
+          "dockOpen": false,
+          "prefilled": false,
+          "attached": false
+        },
+        "inspiration": {
+          "expectedTitle": "US beauty hook",
+          "screenshot": {
+            "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/explore-library-card-dock/.workbuddy/evidence/worktree-qa/explore-library-dock-22ff8181-ef42-4b26-8818-fb863d321363/control-before-fix-inspiration.png",
+            "width": 1440,
+            "height": 1000,
+            "bytes": 705716
+          },
+          "draft": "",
+          "attachments": [],
+          "notice": null,
+          "dockOpen": false,
+          "prefilled": false,
+          "attached": false
+        },
+        "products": {
+          "expectedTitle": "香薰蜡烛",
+          "screenshot": {
+            "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/explore-library-card-dock/.workbuddy/evidence/worktree-qa/explore-library-dock-22ff8181-ef42-4b26-8818-fb863d321363/control-before-fix-products.png",
+            "width": 1440,
+            "height": 1000,
+            "bytes": 701835
+          },
+          "draft": "",
+          "attachments": [],
+          "notice": null,
+          "dockOpen": false,
+          "prefilled": false,
+          "attached": false
+        },
+        "featuredTemplate": {
+          "expectedTitle": "黄金开场模板",
+          "screenshot": {
+            "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/explore-library-card-dock/.workbuddy/evidence/worktree-qa/explore-library-dock-22ff8181-ef42-4b26-8818-fb863d321363/control-before-fix-featured.png",
+            "width": 1440,
+            "height": 1000,
+            "bytes": 796258
+          },
+          "draft": "",
+          "attachments": [
+            "创意模板"
+          ],
+          "notice": null,
+          "dockOpen": false,
+          "prefilled": false,
+          "attached": false
+        }
+      },
+      "assertions": [
+        {
+          "name": "assets-card-prefills-composer",
+          "pass": false,
+          "expected": "夏日海边素材",
+          "actual": ""
+        },
+        {
+          "name": "assets-card-attaches-to-slot",
+          "pass": false,
+          "expected": "夏日海边素材",
+          "actual": []
+        },
+        {
+          "name": "assets-no-unavailable-notice",
+          "pass": true,
+          "actual": null
+        },
+        {
+          "name": "inspiration-card-prefills-composer",
+          "pass": false,
+          "expected": "US beauty hook",
+          "actual": ""
+        },
+        {
+          "name": "inspiration-card-attaches-to-slot",
+          "pass": false,
+          "expected": "US beauty hook",
+          "actual": []
+        },
+        {
+          "name": "inspiration-no-unavailable-notice",
+          "pass": true,
+          "actual": null
+        },
+        {
+          "name": "products-card-prefills-composer",
+          "pass": false,
+          "expected": "香薰蜡烛",
+          "actual": ""
+        },
+        {
+          "name": "products-card-attaches-to-slot",
+          "pass": false,
+          "expected": "香薰蜡烛",
+          "actual": []
+        },
+        {
+          "name": "products-no-unavailable-notice",
+          "pass": true,
+          "actual": null
+        },
+        {
+          "name": "featuredTemplate-card-prefills-composer",
+          "pass": false,
+          "expected": "黄金开场模板",
+          "actual": ""
+        },
+        {
+          "name": "featuredTemplate-no-unavailable-notice",
+          "pass": true,
+          "actual": null
+        }
+      ],
+      "pass": false,
+      "matchesExpectation": true
+    }
+  ],
+  "completedAt": "2026-10-27T03:40:28.806Z"
+}
