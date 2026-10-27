@@ -10,7 +10,7 @@ import { assertStageState } from '../../../scripts/live-stage-probe.mjs'
 const require = createRequire(import.meta.url)
 const root = new URL('../../../', import.meta.url).pathname
 
-test('QA2 every production Stage contract retains strict sidebar validation', async () => {
+test('QA2 existing eight production Stage contracts retain strict sidebar validation', async () => {
   const targets = await captureStageContracts(root)
   assert.deepEqual(targets.map(target => target.stage), selectStages('all'))
   // 数量由真源推导，不在测试里硬编码：产品库并入资产库后从 8 降为 7。
