@@ -1120,4 +1120,74 @@ test.describe('补丁治理：规格假设/证伪 + 增量静默兜底', () => {
       cleanup(root)
     }
   })
+
+  // #3838：门禁提示说「写进 allowlist 可豁免」，但增量路径此前不读 allowlist。
+  test('allowlist 命中 → 该条不进 hits（增量路径真正豁免）', () => {
+    const root = makeRepo('delta-allow-hit')
+    try {
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch {}\n}\n')
+      gitIn(root, ['add', '.'])
+      gitIn(root, ['commit', '-m', 'base plugin'])
+      const base = String(gitIn(root, ['rev-parse', 'HEAD']).stdout).trim()
+      gitIn(root, ['update-ref', 'refs/remotes/origin/main', base])
+      // 新增一处空 catch（SC1）
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch {}\n  try { run2() } catch {}\n}\n')
+      const before = newSilentCatchHits(root, { changedFiles: ['plugins/demo/src/a.js'] })
+      assert.equal(before.hits.length, 1, '无 allowlist 时必须阻断')
+      const hitLine = before.hits[0].line
+      // 按提示写入 allowlist
+      writeFileAt(root, 'scripts/silent-catch-allowlist.json', JSON.stringify({
+        entries: [{
+          path: 'plugins/demo/src/a.js',
+          rule: before.hits[0].rule,
+          line: hitLine,
+          reason: '测试用：刻意吞错，验证增量路径读取 allowlist',
+        }],
+      }, null, 2))
+      const after = newSilentCatchHits(root, { changedFiles: ['plugins/demo/src/a.js'] })
+      assert.equal(after.error, null)
+      assert.deepEqual(after.hits, [], 'allowlist 命中后不得再阻断')
+    } finally {
+      cleanup(root)
+    }
+  })
+
+  test('allowlist 存在但未命中（行号不同）→ 仍然阻断', () => {
+    const root = makeRepo('delta-allow-miss')
+    try {
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch {}\n}\n')
+      gitIn(root, ['add', '.'])
+      gitIn(root, ['commit', '-m', 'base plugin'])
+      const base = String(gitIn(root, ['rev-parse', 'HEAD']).stdout).trim()
+      gitIn(root, ['update-ref', 'refs/remotes/origin/main', base])
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch {}\n  try { run2() } catch {}\n}\n')
+      writeFileAt(root, 'scripts/silent-catch-allowlist.json', JSON.stringify({
+        entries: [{ path: 'plugins/demo/src/a.js', rule: 'SC1', line: 999, reason: '行号不匹配，不应豁免这一条' }],
+      }, null, 2))
+      const result = newSilentCatchHits(root, { changedFiles: ['plugins/demo/src/a.js'] })
+      assert.equal(result.hits.length, 1, '行号不匹配时仍须阻断')
+    } finally {
+      cleanup(root)
+    }
+  })
+
+  test('allowlist 非法 → 返回 error，不放行全部', () => {
+    const root = makeRepo('delta-allow-bad')
+    try {
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch {}\n}\n')
+      gitIn(root, ['add', '.'])
+      gitIn(root, ['commit', '-m', 'base plugin'])
+      const base = String(gitIn(root, ['rev-parse', 'HEAD']).stdout).trim()
+      gitIn(root, ['update-ref', 'refs/remotes/origin/main', base])
+      writeFileAt(root, 'plugins/demo/src/a.js', 'export function a() {\n  try { run() } catch {}\n  try { run2() } catch {}\n}\n')
+      // 缺 line 字段 → loadAllowlist 会报错
+      writeFileAt(root, 'scripts/silent-catch-allowlist.json', JSON.stringify({
+        entries: [{ path: 'plugins/demo/src/a.js', rule: 'SC1', reason: '缺 line 字段的非法条目' }],
+      }, null, 2))
+      const result = newSilentCatchHits(root, { changedFiles: ['plugins/demo/src/a.js'] })
+      assert.match(String(result.error), /allowlist-invalid/, '非法 allowlist 必须显式报错')
+    } finally {
+      cleanup(root)
+    }
+  })
 })

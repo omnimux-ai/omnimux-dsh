@@ -28,7 +28,7 @@ import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { DEFINITE_RULES, isScannableSource, scanContent } from '../verify-silent-catch.mjs'
+import { DEFINITE_RULES, isScannableSource, loadAllowlist, scanContent } from '../verify-silent-catch.mjs'
 
 const MAX_FILE_BYTES = 1024 * 1024
 /** 交付钩子有 8s 预算；超过上限改为 fail-open，避免拖垮每次提交。 */
@@ -163,7 +163,21 @@ export function newSilentCatchHits(root, { baseRef, changedFiles } = {}) {
         else suspected.push(row)
       }
     }
-    return { hits, suspected, scanned: files.length, baseRef: ref, error: null }
+    // 豁免：与全量扫描共用同一份 allowlist（path + rule + line 绑定）。
+    // 少了这一步，门禁提示里「写进 allowlist 可豁免」在增量路径上就是空话（#3838）。
+    // allowlist 非法时沿用 loadAllowlist 的 errors，不放行全部。
+    const allow = loadAllowlist(root)
+    if (allow.errors.length > 0) {
+      return { hits, suspected, scanned: files.length, baseRef: ref, error: `allowlist-invalid: ${allow.errors.join('; ')}` }
+    }
+    const isAllowed = (row) => allow.entries.some((entry) => (
+      String(entry.path).replace(/\\/g, '/') === String(row.path).replace(/\\/g, '/')
+      && entry.rule === row.rule
+      && entry.line === row.line
+    ))
+    const keptHits = hits.filter((row) => !isAllowed(row))
+    const keptSuspected = suspected.filter((row) => !isAllowed(row))
+    return { hits: keptHits, suspected: keptSuspected, scanned: files.length, baseRef: ref, error: null }
   } catch (error) {
     return { hits: [], suspected: [], scanned: 0, baseRef: ref || null, error: error?.message || 'unknown' }
   }
