@@ -214,7 +214,6 @@
     "composer-inline-e2e.mjs",
     "dev-replay.mjs",
     "dev-replay.test.mjs",
-    "worktree-cleanup-3820.test.mjs",
     "dev-smoke.mjs",
     "dev-smoke.test.mjs",
     "director-acceptance-3289.mjs",
@@ -306,6 +305,7 @@
     "sync-stable.sh",
     "sync-targets.test.mjs",
     "sync-to-app.sh",
+    "tab-switch-scroll-anchor-qa.mjs",
     "test-env-credentials.test.mjs",
     "test-env-root-diagnosis.test.mjs",
     "test-fixtures/plugin-load/plugins/fixture-client-loader-bad/lib/client.js",
@@ -414,6 +414,7 @@
     "workflows/verify-batch-shoot.mjs",
     "worktree-app-qa-task.test.mjs",
     "worktree-app-qa.test.mjs",
+    "worktree-cleanup-3820.test.mjs",
     "worktree-default-mode-qa.mjs",
     "worktree-web-qa-lifecycle.test.mjs"
   ],

@@ -326,9 +326,16 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
   const isCollapsedRef = useRef(false)
   const isJumpingRef = useRef(false)
   const jumpingTimerRef = useRef(null)
+  // 内容重排静默窗口：切 Tab / 换二级分类时列表会重建，页面高度随之变化，浏览器
+  // 会把 scrollTop 夹回合法范围。这段被动位移不是用户滚动意图，期间不得读成
+  // 「用户滑回顶部」，否则吸底输入框会被无端弹回顶部。
+  const suppressRef = useRef(false)
+  const suppressTimerRef = useRef(null)
 
   const undock = useCallback(() => {
     if (jumpingTimerRef.current) clearTimeout(jumpingTimerRef.current)
+    if (suppressTimerRef.current) clearTimeout(suppressTimerRef.current)
+    suppressRef.current = false
     setDockedItem(null)
     setPlacement('inline')
     pendingApplyRef.current = null
@@ -430,6 +437,24 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     setDockedItem(item)
     return true
   }, [dockedItem, undock, hostRef])
+
+  /**
+   * 声明「接下来会发生一次由内容重排引起的被动位移」。
+   *
+   * 切 Tab、换二级分类时列表重建，页面高度骤变，浏览器会把 scrollTop 夹回合法范围。
+   * 这段位移不是用户滚动意图：静默窗口内滚动判定一律不读它，吸底输入框保持原状。
+   * 用户自己滚回顶部仍然正常归位——窗口只覆盖重排之后的短暂一段时间。
+   *
+   * @param {number} [ms] 静默时长，默认覆盖一次首屏加载
+   */
+  const holdScroll = useCallback((ms = 600) => {
+    suppressRef.current = true
+    if (suppressTimerRef.current) clearTimeout(suppressTimerRef.current)
+    suppressTimerRef.current = setTimeout(() => {
+      suppressRef.current = false
+      suppressTimerRef.current = null
+    }, ms)
+  }, [])
 
   const pin = useCallback((item) => {
     const previous = pinnedRef.current
@@ -659,6 +684,9 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     const evaluate = () => {
       frame = 0
       if (pinnedRef.current || isJumpingRef.current) return
+      // 内容重排静默窗口内：这段位移是被浏览器夹出来的，不是用户滚动意图。
+      // 既不读它去切 inline，也不清 leftTop —— 窗口结束后照常按真实滚动判定。
+      if (suppressRef.current) return
 
       const { revealThreshold, leaveThreshold } = getComposerScrollThresholds(root, scroller)
       const scrollTop = readPageScrollTop(scroller)
@@ -718,6 +746,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
 
   // 3. 卸载或会话切换时清理宿主样式与标记
   useEffect(() => () => {
+    if (suppressTimerRef.current) clearTimeout(suppressTimerRef.current)
     const root = dockHostRef.current
     if (!root) return
     root.removeAttribute(DOCK_OPEN_ATTR)
@@ -740,6 +769,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     placement,
     dock,
     pin,
+    holdScroll,
     undock,
     isDocked: Boolean((dockedItem && placement === 'docked') || placement === 'docked' || pinnedRef.current),
   }
