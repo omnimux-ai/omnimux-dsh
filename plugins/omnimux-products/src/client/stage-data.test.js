@@ -1,18 +1,31 @@
 import assert from 'node:assert/strict'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import test from 'node:test'
 import { build } from 'esbuild'
+import { createProductsDispatcher } from '../http-routes.js'
+import { createLibraryStore } from '../library.js'
+import { buildPayload, getInitialMedia } from './useProductFormState.js'
 
-/**
- * `ProductGrid` 的渲染契约。
- *
- * 这个文件原本还驱动整个 `ProductsStage` 宿主（列表 + 二级页 + 真实 dispatcher）。
- * 产品库宿主已并入资产库（`omnimux-assets` 的 `ProductTab`），`ProductsStage` 不再
- * 存在，宿主级用例（数据往返、二级页路由、请求作废、列表保活）已由资产库侧的
- * 真实渲染测试（`product-tab-render.test.js`）与 `scripts/verify-product-secondary-page.mjs`
- * 覆盖；这里只保留产品插件自己拥有的卡片渲染契约。
- */
+// Run the production stage, grid, and API against the real dispatcher. Only
+// React's rendering hooks and unrelated visual components are substituted.
+const stubs = {
+  './ProductFormPage.jsx': 'export function ProductFormPage() {}',
+  './styles.js': 'export function injectProductsStyles() {}',
+}
+const bundle = await build({
+  entryPoints: [fileURLToPath(new URL('./ProductsStage.jsx', import.meta.url))],
+  bundle: true, write: false, format: 'cjs', platform: 'browser', jsx: 'automatic',
+  external: ['react', 'react/jsx-runtime', 'dsh-ui-kit'],
+  plugins: [{ name: 'visual-boundaries', setup(ctx) {
+    ctx.onResolve({ filter: /.*/ }, ({ path }) => Object.hasOwn(stubs, path) ? { path, namespace: 'stub' } : undefined)
+    ctx.onLoad({ filter: /.*/, namespace: 'stub' }, ({ path }) => ({ contents: stubs[path], loader: 'jsx' }))
+  } }], logLevel: 'silent',
+})
+
 const gridBundle = await build({
   entryPoints: [fileURLToPath(new URL('./ProductGrid.jsx', import.meta.url))],
   bundle: true, write: false, format: 'cjs', platform: 'browser', jsx: 'automatic',
@@ -40,6 +53,328 @@ function find(tree, matches) {
   return null
 }
 
+function mount(dispatcher) {
+  const hooks = []
+  const effects = []
+  let index = 0
+  let mounted = false
+  const react = {
+    useState(initial) {
+      const slot = index++
+      if (!mounted) hooks[slot] = typeof initial === 'function' ? initial() : initial
+      return [hooks[slot], next => { hooks[slot] = typeof next === 'function' ? next(hooks[slot]) : next }]
+    },
+    useRef(initial) {
+      const slot = index++
+      if (!mounted) hooks[slot] = { current: initial }
+      return hooks[slot]
+    },
+    useEffect(effect) { if (!mounted) effects.push(effect) },
+    useCallback(callback) { return callback },
+  }
+  const context = {
+    module: { exports: {} },
+    require(name) {
+      if (name === 'react') return react
+      if (name === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) }
+      if (name === 'dsh-ui-kit') return { Button: 'Button', IconButton: 'IconButton', PageHeader: 'PageHeader', FilterBar: 'FilterBar', SearchField: 'SearchField', Tabs: 'Tabs', Divider: 'Divider' }
+      throw new Error(`unexpected dependency ${name}`)
+    },
+    fetch: async (url, opts) => {
+      const result = await dispatcher.dispatch({ method: opts.method, url, body: opts.body ? JSON.parse(opts.body) : undefined })
+      return { ok: result.status >= 200 && result.status < 300, status: result.status, json: async () => result.body }
+    },
+    setInterval: fn => { intervalCallback = fn; return 1 }, clearInterval() {}, setTimeout, URLSearchParams,
+  }
+  let intervalCallback = null
+  runInNewContext(bundle.outputFiles[0].text, context)
+  const render = () => {
+    index = 0
+    const tree = context.module.exports.ProductsStage({ t: key => key })
+    mounted = true
+    return tree
+  }
+  render()
+  const cleanups = effects.map(effect => effect()).filter(cleanup => typeof cleanup === 'function')
+  return {
+    render,
+    flush: () => new Promise(resolve => setImmediate(resolve)),
+    refresh: () => intervalCallback?.(),
+    unmount: () => { for (const cleanup of cleanups) cleanup() },
+  }
+}
+
+async function withStore(run) {
+  const root = mkdtempSync(join(tmpdir(), 'products-stage-'))
+  try {
+    const realPath = join(root, 'hero.png')
+    writeFileSync(realPath, 'png')
+    const library = createLibraryStore({ paths: { libraryFile: join(root, 'library.json') } })
+    const dispatcher = createProductsDispatcher({ library })
+    await run({ library, dispatcher, realPath })
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+}
+
+const component = name => node => node.type?.name === name
+
+/**
+ * 列表页的创建入口是一个悬停分流菜单：它自己不开表单，只把选中的形态交给宿主。
+ * 测试沿同一条路径驱动 —— 找到菜单元素，调用它的 `onSelect`。
+ */
+function openCreate(mounted, kind = 'physical') {
+  const menu = find(mounted.render(), component('CreateProductMenu'))
+  assert.ok(menu, 'the create split menu is rendered')
+  menu.props.onSelect(kind)
+  return mounted.render()
+}
+
+test('stage loads actual state response, opens complete media details and saves without losing references', async () => {
+  await withStore(async ({ library, dispatcher, realPath }) => {
+    const product = library.add({ name: '原商品', media: [{ real_path: realPath }], price: '99' })
+    const mounted = mount(dispatcher)
+    await mounted.flush()
+    const grid = find(mounted.render(), component('ProductGrid'))
+    assert.equal(grid.props.products.length, 1)
+    assert.equal(grid.props.products[0].id, product.id)
+    assert.equal(grid.props.products[0].media, undefined, 'state rows are compact list views')
+
+    const card = find(grid.type(grid.props), node => node.type === 'article')
+    card.props.onClick()
+    await mounted.flush()
+    const page = find(mounted.render(), component('ProductFormPage'))
+    assert.equal(page.props.mode, 'edit')
+    assert.equal(page.props.initial.media[0].real_path, realPath)
+    await page.props.onSubmit({ name: '修改商品', price: '199', media: page.props.initial.media })
+    await mounted.flush()
+    assert.equal(find(mounted.render(), component('ProductFormPage')), null)
+    assert.equal(library.get(product.id).media[0].real_path, realPath)
+    assert.equal(find(mounted.render(), component('ProductGrid')).props.products[0].name, '修改商品')
+  })
+})
+
+test('the list view stays mounted behind the sub-screen so filters survive the round trip', async () => {
+  await withStore(async ({ library, dispatcher }) => {
+    library.add({ name: '实体商品', kind: 'physical' })
+    library.add({ name: '数字产品', kind: 'digital' })
+    const mounted = mount(dispatcher)
+    await mounted.flush()
+
+    // 先筛成只剩数字产品，再进二级页 —— 返回后筛选必须原样还在。
+    const filterBar = find(mounted.render(), node => node.type === 'FilterBar')
+    filterBar.props.filters.props.onChange('digital')
+    const filteredCount = find(mounted.render(), component('ProductGrid')).props.products.length
+    assert.equal(filteredCount, 1)
+
+    openCreate(mounted, 'physical')
+    const opened = mounted.render()
+    const page = find(opened, component('ProductFormPage'))
+    assert.equal(page.props.mode, 'create')
+    assert.equal(page.props.kind, 'physical', 'the physical entry opens the physical form')
+    // 列表子树没有被替换掉：它仍在树里，只是被覆盖层盖住。
+    assert.ok(find(opened, component('ProductGrid')), 'the list view must stay mounted behind the sub-screen')
+    assert.equal(
+      find(opened, node => node.props?.className === 'omnimux-products-list-view').props['aria-hidden'],
+      'true',
+    )
+
+    find(opened, component('ProductFormPage')).props.onLeave()
+    const closed = mounted.render()
+    assert.equal(find(closed, component('ProductFormPage')), null)
+    assert.equal(find(closed, component('ProductGrid')).props.products.length, filteredCount)
+  })
+})
+
+test('failed detail request is visible and never opens an empty-media editor', async () => {
+  await withStore(async ({ library, dispatcher }) => {
+    const product = library.add({ name: '待删除商品' })
+    const mounted = mount(dispatcher)
+    await mounted.flush()
+    const grid = find(mounted.render(), component('ProductGrid'))
+    library.remove(product.id)
+    const card = find(grid.type(grid.props), node => node.type === 'article')
+    card.props.onClick()
+    await mounted.flush()
+    const tree = mounted.render()
+    assert.equal(find(tree, component('ProductFormPage')), null)
+    assert.equal(find(tree, node => node.props?.className === 'omnimux-products-error').props.children, 'product not found')
+  })
+})
+
+test('empty response clears cards and exposes the grid create action', async () => {
+  await withStore(async ({ library, dispatcher }) => {
+    const product = library.add({ name: '待删除商品' })
+    const mounted = mount(dispatcher)
+    await mounted.flush()
+    library.remove(product.id)
+    mounted.refresh()
+    await mounted.flush()
+    const grid = find(mounted.render(), component('ProductGrid'))
+    assert.equal(grid.props.products.length, 0)
+    const empty = grid.type(grid.props)
+    assert.equal(find(empty, node => node.type === 'p').props.children, 'empty.all')
+    // AC-104：空状态的创建入口与动作行同源，都走同一个分流菜单。
+    const menu = find(empty, component('CreateProductMenu'))
+    assert.ok(menu, 'the empty state reuses the split menu')
+    menu.props.onSelect('digital')
+    const page = find(mounted.render(), component('ProductFormPage'))
+    assert.equal(page.props.mode, 'create')
+    assert.equal(page.props.kind, 'digital')
+  })
+})
+
+
+// AC-401 / AC-402：卡片点击按产品自身的持久化形态路由，而不是跟当前筛选页签走。
+for (const kind of ['physical', 'digital']) {
+  test(`opening a ${kind} product card routes to the ${kind} form`, async () => {
+    await withStore(async ({ library, dispatcher }) => {
+      const product = library.add({ name: `${kind} 商品`, kind })
+      const mounted = mount(dispatcher)
+      await mounted.flush()
+      const grid = find(mounted.render(), component('ProductGrid'))
+      const row = grid.props.products.find((item) => item.id === product.id)
+      await grid.props.onOpen(row)
+      await mounted.flush()
+      const page = find(mounted.render(), component('ProductFormPage'))
+      assert.equal(page.props.mode, 'edit')
+      assert.equal(page.props.kind, kind)
+      assert.equal(page.props.initial.id, product.id)
+      assert.equal(page.props.initial.kind, kind)
+    })
+  })
+}
+
+test('editing preserves a missing source reference and refuses a name-only save until the file is restored', async () => {
+  await withStore(async ({ library, dispatcher, realPath }) => {
+    const product = library.add({ name: '原商品', media: [{ real_path: realPath }] })
+    const libraryFile = join(realPath, '..', 'library.json')
+    const persisted = readFileSync(libraryFile, 'utf8')
+    rmSync(realPath)
+    const ordinary = await dispatcher.dispatch({ method: 'GET', url: `/omnimux/products/${product.id}` })
+    assert.equal(ordinary.body.product.media.length, 0)
+    const mounted = mount(dispatcher)
+    await mounted.flush()
+    const grid = find(mounted.render(), component('ProductGrid'))
+    assert.equal(grid.props.products[0].media_count, 0)
+    await grid.props.onOpen(grid.props.products[0])
+    const dialog = find(mounted.render(), component('ProductFormPage'))
+    const initial = dialog.props.initial
+    assert.equal(initial.media[0].real_path, realPath)
+    const payload = buildPayload({
+      name: '修改名称', kind: initial.kind, link: initial.link, categories: initial.categories,
+      media: getInitialMedia(initial), coverId: initial.cover_media_id,
+    })
+    await dialog.props.onSubmit(payload)
+    await mounted.flush()
+    assert.match(find(mounted.render(), component('ProductFormPage')).props.serverError, /missing, not a file, or unreadable/)
+    assert.equal(library.get(product.id).name, '原商品')
+    assert.equal(library.get(product.id).media[0].real_path, realPath)
+    assert.equal(library.revision(), 1)
+    assert.equal(readFileSync(libraryFile, 'utf8'), persisted)
+    writeFileSync(realPath, 'restored')
+    assert.equal(library.getView(product.id).media[0].real_path, realPath)
+    await find(mounted.render(), component('ProductFormPage')).props.onSubmit(payload)
+    await mounted.flush()
+    assert.equal(library.get(product.id).name, '修改名称')
+    assert.equal(library.get(product.id).media[0].real_path, realPath)
+    // 编辑保存走的是更新，不是新建：库里仍然只有一条记录。
+    assert.equal(library.list().length, 1)
+    // 保存成功即回列表：二级页卸载，列表子树还在。
+    assert.equal(find(mounted.render(), component('ProductFormPage')), null)
+    assert.ok(find(mounted.render(), component('ProductGrid')))
+  })
+})
+
+function deferEditResponses(dispatcher) {
+  const pending = []
+  return {
+    pending,
+    async dispatch(req) {
+      const response = await dispatcher.dispatch(req)
+      if (!req.url.endsWith('?view=edit')) return response
+      return new Promise((resolve, reject) => {
+        pending.push({ resolve: () => resolve(response), reject })
+      })
+    },
+  }
+}
+
+async function withDeferredEdits(run) {
+  await withStore(async ({ library, dispatcher }) => {
+    const a = library.add({ name: '商品A' })
+    const b = library.add({ name: '商品B' })
+    const delayed = deferEditResponses(dispatcher)
+    const mounted = mount(delayed)
+    await mounted.flush()
+    const open = async product => {
+      void find(mounted.render(), component('ProductGrid')).props.onOpen(product)
+      await mounted.flush()
+    }
+    await run({ mounted, pending: delayed.pending, open, a, b })
+  })
+}
+
+test('a slow A detail response cannot replace the faster B editor', async () => {
+  await withDeferredEdits(async ({ mounted, pending, open, a, b }) => {
+    await open(a)
+    await open(b)
+    pending[1].resolve()
+    await mounted.flush()
+    assert.equal(find(mounted.render(), component('ProductFormPage')).props.initial.id, b.id)
+    pending[0].resolve()
+    await mounted.flush()
+    assert.equal(find(mounted.render(), component('ProductFormPage')).props.initial.id, b.id)
+  })
+})
+
+test('closing an editor invalidates an older pending detail request', async () => {
+  await withDeferredEdits(async ({ mounted, pending, open, a, b }) => {
+    await open(a)
+    await open(b)
+    pending[1].resolve()
+    await mounted.flush()
+    find(mounted.render(), component('ProductFormPage')).props.onLeave()
+    pending[0].resolve()
+    await mounted.flush()
+    assert.equal(find(mounted.render(), component('ProductFormPage')), null)
+  })
+})
+
+test('creating a product invalidates pending edit responses', async () => {
+  await withDeferredEdits(async ({ mounted, pending, open, a }) => {
+    await open(a)
+    openCreate(mounted, 'digital')
+    pending[0].resolve()
+    await mounted.flush()
+    const dialog = find(mounted.render(), component('ProductFormPage'))
+    assert.equal(dialog.props.mode, 'create')
+    assert.equal(dialog.props.kind, 'digital')
+    assert.equal(dialog.props.saving, false)
+  })
+})
+
+// 关 Tab 与卸载都必须作废在路上的取数请求：迟到的响应不能回来改写已经打开的表单，
+// 但表单本身不再被静默清空（关 Tab 顺带清空是旧形态最不可恢复的一处写法）。
+for (const action of ['close', 'unmount']) {
+  test(`${action} invalidates a pending detail request without wiping the open editor`, async () => {
+    await withDeferredEdits(async ({ mounted, pending, open, a, b }) => {
+      await open(a)
+      await open(b)
+      pending[1].resolve()
+      await mounted.flush()
+      const opened = find(mounted.render(), component('ProductFormPage'))
+      assert.equal(opened.props.initial.id, b.id)
+      mounted.unmount()
+      pending[0].resolve()
+      await mounted.flush()
+      const after = find(mounted.render(), component('ProductFormPage'))
+      assert.equal(after.props.initial.id, b.id, 'a stale response must never replace the open editor')
+    })
+  })
+}
+
+// Tests for Issue #572: reconcile ProductGrid props and empty content
 test('ProductGrid falls back to safe labels when emptyLabel and emptyActionLabel are omitted', () => {
   const tree = ProductGrid({
     t: key => `translated:${key}`,
@@ -85,6 +420,33 @@ test('ProductGrid in searched-empty state renders message only and omits action 
   const btn = find(tree, node => node.type === 'Button')
   assert.equal(btn, null, 'searched-empty state must not render empty action button')
   assert.equal(actionTriggered, false)
+})
+
+test('ProductsStage displays searched-empty state and hides empty action button when query has no match', async () => {
+  await withStore(async ({ library, dispatcher }) => {
+    library.add({ name: '真实商品A' })
+    const mounted = mount(dispatcher)
+    await mounted.flush()
+
+    let grid = find(mounted.render(), component('ProductGrid'))
+    assert.equal(grid.props.products.length, 1)
+
+    const filterBar = find(mounted.render(), node => node.type === 'FilterBar')
+    const searchField = filterBar?.props?.search
+    assert.ok(searchField, 'SearchField should be present')
+    searchField.props.onValueChange('不存在的商品')
+    await mounted.flush()
+
+    const tree = mounted.render()
+    grid = find(tree, component('ProductGrid'))
+    assert.equal(grid.props.products.length, 0)
+    assert.equal(grid.props.emptyLabel, 'empty.noMatch')
+    assert.equal(grid.props.showEmptyAction, false)
+
+    const empty = grid.type(grid.props)
+    assert.equal(find(empty, node => node.type === 'p').props.children, 'empty.noMatch')
+    assert.equal(find(empty, node => node.type === 'Button'), null, 'searched-empty must hide action button')
+  })
 })
 
 test('ProductGrid triggers onOpen on card click and onEmptyAction on empty button click', () => {
