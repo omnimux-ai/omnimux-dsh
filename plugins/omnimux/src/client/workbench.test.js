@@ -363,71 +363,25 @@ test('default seed cleanup safely ignores no-session and non-seed snapshots', ()
   assert.deepEqual(closed, [], 'a session already classified as non-seed must not be watched forever')
 })
 
-test('retired tab sweep closes a persisted products-library tab exactly once', () => {
-  const win = setupWindow()
-  const api = installWorkbenchGlobal(win)
-  let snapshot = {
-    sessionId: 's-retired',
-    state: makeState([
-      { id: 'tab:retired', type: 'omnimux-products:library', title: '产品库' },
-      { id: 'tab:assets', type: 'omnimux-assets:library', title: '资产库' },
-    ]),
-  }
+test('sweepRetiredWorkbenchTabs: 快照未物化时不做任何关闭，也不打标记', () => {
+  // 快照尚未物化（state 缺失）时不能提前认定「扫过了」，否则真出现旧 Tab 反而漏扫。
+  let snapshot = { sessionId: 's-pending', state: undefined }
   const closed = []
   const service = {
     getSnapshot() { return snapshot },
-    subscribeState() { return () => {} },
-    closeTab(id, scope) { closed.push({ id, scope }) },
-  }
-
-  api.bind({ betterSidebar: service })
-  assert.deepEqual(closed, [{ id: 'tab:retired', scope: { sessionId: 's-retired' } }], '只关闭旧产品库 Tab')
-
-  // 幂等：同一服务再绑一次不重复关闭。
-  api.bind({ betterSidebar: service })
-  assert.equal(closed.length, 1)
-})
-
-test('retired tab sweep ignores an unmaterialized snapshot and never blocks bind', () => {
-  const win = setupWindow()
-  const api = installWorkbenchGlobal(win)
-  let snapshot = { sessionId: undefined, state: undefined }
-  const closed = []
-  const service = {
-    getSnapshot() { return snapshot },
-    subscribeState() { return () => {} },
     closeTab(id) { closed.push(id) },
   }
 
-  assert.doesNotThrow(() => api.bind({ betterSidebar: service }))
-  assert.deepEqual(closed, [], '快照未物化时不做任何关闭')
-})
+  assert.equal(sweepRetiredWorkbenchTabs(service), 0, '未物化时返回 0')
+  assert.deepEqual(closed, [], '未物化时不关闭任何 Tab')
 
-test('retired tab sweep reports a failing close without breaking the workbench', () => {
-  const win = setupWindow()
-  const api = installWorkbenchGlobal(win)
-  const warnings = []
-  const originalWarn = console.warn
-  console.warn = (...args) => { warnings.push(args) }
-  const service = {
-    getSnapshot() {
-      return {
-        sessionId: 's-broken',
-        state: makeState([{ id: 'tab:retired', type: 'omnimux-products:library', title: '产品库' }]),
-      }
-    },
-    subscribeState() { return () => {} },
-    closeTab() { throw new Error('close refused') },
+  // 物化之后必须真的扫到。
+  snapshot = {
+    sessionId: 's-pending',
+    state: makeState([{ id: 'tab:retired', type: 'omnimux-products:library', title: '产品库' }]),
   }
-
-  try {
-    assert.doesNotThrow(() => api.bind({ betterSidebar: service }))
-  } finally {
-    console.warn = originalWarn
-  }
-  assert.equal(warnings.length, 1, '失败必须留下可诊断的告警，不静默吞错')
-  assert.match(String(warnings[0][0]), /关闭下架 Tab 失败/)
-  assert.equal(typeof api.open, 'function', '主流程入口仍然可用')
+  assert.equal(sweepRetiredWorkbenchTabs(service), 1, '物化后补扫')
+  assert.deepEqual(closed, ['tab:retired'])
 })
 
 test('sweepRetiredWorkbenchTabs: 返回关闭数、幂等、不误伤其它 type、失败不冒泡', () => {
