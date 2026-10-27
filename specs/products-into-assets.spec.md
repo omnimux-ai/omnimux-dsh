@@ -82,3 +82,43 @@
 - 若刷新后出现「插件未加载」占位页，说明残留 Tab 未被收编；需在资产库挂载期补上按 tab type 精确关闭的逻辑。
 - 若 `check:boundaries` 或 `verify:plugin-load` 因新增依赖报错，说明 UI 聚合入口不满足浏览器纯净性或包声明要求，需拆分导出面或调整 `files` / `exports`。
 - 若 `pnpm --filter omnimux-products test` 在删除客户端插件后仍有测试引用被删文件，说明测试未随结构同步，需逐条改到新宿主。
+
+---
+
+## 旧标准变更
+
+- `plugins/omnimux-assets/src/client/ProductsIntegration.test.js` :: `declares 3 first-level tabs including product in AssetsFilterBar`
+- `plugins/omnimux-assets/src/client/ProductsIntegration.test.js` :: `mounts ProductsView under AssetsBody when sourceTab is product`
+- `plugins/omnimux-assets/src/client/ProductsIntegration.test.js` :: `ProductsView cards omit copyCite actions row and keep only title and sub description`
+- `plugins/omnimux-assets/src/client/ProductsIntegration.test.js` :: `ProductsView conforms to design tokens and provides category pills and empty card`
+- `plugins/omnimux-assets/tests/e2e/product-cover-preview.spec.js` :: `资产中心产品库商品微卡封面图预览路径规范与图片渲染契约 (Issue #2338)`
+- `plugins/omnimux-products/src/client-form-subscreen.test.js` :: `closing the tab never clears what the user typed`
+- `plugins/omnimux-products/src/client-form-subscreen.test.js` :: `mirrors the dirty flag upward and never reads it back`
+- `plugins/omnimux-products/src/client-form-subscreen.test.js` :: `the list view stays mounted underneath so scroll and filters survive`
+- `plugins/omnimux-products/src/client-form-subscreen.test.js` :: `routes every product card by its persisted kind`
+- `plugins/omnimux-products/src/client-form-subscreen.test.js` :: `uses the hover split menu for both create entry points and never a character glyph`
+- `plugins/omnimux-products/src/client/all-plugins-stage-spacing.test.js` :: `omnimux-products extracts ActionRow to Layer 2 and defines 8px 20px 12px padding`
+- `plugins/omnimux-products/src/client/stage-data.test.js` :: `*`
+- `plugins/omnimux-products/src/client/workbench-seat.test.js` :: `*`
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `10 行文案与顺序逐字等于真源清单`
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `与内置 id 冲突的注册项不出现（内置文案不被冒充）`
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `分组分隔线：上一项 dividerAfter 决定下一行 separatorBefore`
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `注销后注册项从菜单消失，回到 10 行`
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `运行时注册项出现在菜单末尾`
+- `plugins/omnimux/src/client/sidebar-coordinator.test.js` :: `移除回归：侧栏不再渲染探索行，源码不再残留浮动菜单实现`
+- `plugins/omnimux/src/client/sidebar-coordinator.test.js` :: `运行时注册接缝：action 优先于 tabId，非法形状与 id 冲突不产生脏项`
+- `plugins/omnimux/src/client/sidebar-coordinator.test.js` :: `运行时注册接缝：未注册与内置 10 项完全一致，注册后追加末尾、注销即消失`
+- `plugins/omnimux/src/client/sidebar-coordinator.test.js` :: `非核心插件（video, products, device, clip, social-harvest, apps 等）收敛，不渲染独立行`
+- `plugins/omnimux/src/client/ui-convergence-contract.test.js` :: `AC-5: 删除确认弹窗必须明确提示关联资产名称`
+- `plugins/omnimux/src/client/workbench.test.js` :: `*`
+- `plugins/omnimux/src/workbench/surface-follow.test.js` :: `把各工作面工具解析到对应页签`
+- `plugins/omnimux/src/workbench/surface-follow.test.js` :: `识别用户接管：当前页签既不是上次自动目标、也不是本次目标`
+- `scripts/live-qa.test.mjs` :: `stage selection and actual runtime discovery reject empty or unknown targets`
+- `scripts/studio-live-qa.test.mjs` :: `Studio is explicit-only and preserves the eight existing Stage targets`
+- `tests/e2e/fix-create-product-action.e2e.test.mjs` :: `E2E: 修复资产库「添加产品」点击无响应与二级表单唤起链路验证`
+- `tests/e2e/integrate-products-tab.e2e.test.mjs` :: `E2E: 资产库一级 Tab 整合产品库及操作按钮动态联动验证`
+- `tests/e2e/product-selection-delete.e2e.test.mjs` :: `E2E: 验证产品库支持批量选择与删除（对齐本地 Tab 规范）`
+- `tests/e2e/remove-product-copy-cite.e2e.test.mjs` :: `E2E: 验证产品库卡片彻底移除「复制引用」整行操作栏并仅保留标题与描述`
+
+产品库并入资产库后，下列既有用例的断言对象（`ProductsStage` / `ProductsView` / 独立产品 Tab / 10 项菜单 / 8 个 Stage 目标）已不存在，因此必须改写。每条给出：原断言 → 必须改的理由 → 新期望证据。
+
