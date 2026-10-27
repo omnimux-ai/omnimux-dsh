@@ -35,6 +35,7 @@ subsystem: "global"
 - 核对 `package.json`、Quality Gate CI、worktree、auto-pipeline、CI verdict、静态 QA、browser/live QA、preset 生成与校验、文档 lint 和包白名单等实际入口；没有修改 CI 权限或自动合并判据。
 - 市场索引含 300 条记录，其中 11 条 bundled。外部 Git 包仅确认来源/边界，不把未下载的外部内容算作已审计。
 - 跟踪的 `.agents/skills/dsh-plugin-dev` 是外部共享源软链接；主工作区另有未跟踪/忽略的 `short-drama-router` 入口。它们及全局 `AGENTS.md` 不在本次写集。发现共享技能漂移时应回其真源确认维护，不在本仓库复制一份。
+  - **后续更正（2026-10-27）**：上文记录的「跟踪外部共享源软链接」已被判定为缺陷。软链内容为仓外绝对路径（`/Users/x/Desktop/Project/OPC/资产库/skills/opc-skills-dsh-plugin-dev`），他人 clone 后必然断链。该条目已 `git rm --cached` 取消跟踪并写入 `.gitignore`，本地软链保留可用。新增 `scripts/verify-agents-skills-symlinks.mjs` 门禁阻止再次入库。原文保留以存证当时状态。
 - 收尾时主工作区出现 `.agents/skills/tiktok-drama-center/` 七个文件的并发未提交删除。为保留其他工作，本 PR 排除该技能的文字优化，保持远端基线；未恢复、暂存或提交主工作区的删除。该技能仍计入已审计入口。
 
 ### 自有技能基线

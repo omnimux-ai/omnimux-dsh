@@ -16,8 +16,12 @@ dist
 .agent-backups/
 
 # 本机符号链接，指向仓外 OPC 资产库，仅开发机可用。
+# 仓外绝对路径在他人机器必然断链，一律不入库；仓库自有技能用真实目录入库。
+# 条目可暂时不存在（本机未建软链），由 scripts/verify-agents-skills-symlinks.mjs 校验，勿手工放宽。
 .agents/skills/short-drama-router
 .agents/skills/dsh-plugin-guide
+.agents/skills/dsh-plugin-dev
+.agents/skills/hallmark
 
 # 会话产出 / 一次性演示，不进 git。权威规格与原型在 docs/。
 deliverables/

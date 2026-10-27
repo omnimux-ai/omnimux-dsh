@@ -175,6 +175,8 @@
     "test-agent-tools.mjs",
     "verify-agent-note-format.mjs",
     "verify-agent-presets.test.mjs",
+    "verify-agents-skills-symlinks.mjs",
+    "verify-agents-skills-symlinks.test.mjs",
     "verify-anti-slop.test.mjs",
     "verify-archived-agent-notes.mjs",
     "verify-channel-group-naming.mjs",
