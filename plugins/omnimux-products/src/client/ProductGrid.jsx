@@ -13,15 +13,12 @@ import { CheckIcon, ChatIcon } from './icons.jsx'
  *   showEmptyAction?: boolean,
  *   onEmptyAction?: () => void,
  *   onOpen?: (product: any) => void,
- *   onCopy: (product: any) => void,
- *   onRemove: (product: any) => void,
  *   onAddToChat?: (product: any) => void,
- *   copiedId?: string,
  *   selectedIds?: Set<string>,
  *   onToggleSelect?: (product: any) => void,
  * }} props
  */
-export function ProductGrid({ t, products, emptyLabel, emptyActionLabel, emptyAction, showEmptyAction = true, onEmptyAction, onOpen, onCopy, onRemove, onAddToChat, copiedId, selectedIds, onToggleSelect }) {
+export function ProductGrid({ t, products, emptyLabel, emptyActionLabel, emptyAction, showEmptyAction = true, onEmptyAction, onOpen, onAddToChat, selectedIds, onToggleSelect }) {
   const safeEmptyLabel = emptyLabel || (typeof t === 'function' ? t('empty.all') : '')
   const safeEmptyActionLabel = emptyActionLabel ?? (typeof t === 'function' ? t('add.button') : '')
   if (products.length === 0) {

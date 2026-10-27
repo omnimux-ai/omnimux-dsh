@@ -6,4 +6,4 @@ export {
   OPEN_DELAY_MS,
   CLOSE_DELAY_MS,
   CREATE_KINDS,
-} from '../../../omnimux-products/src/client/CreateProductMenu.jsx'
+} from 'omnimux-products/ui'

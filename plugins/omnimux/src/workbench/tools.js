@@ -20,7 +20,6 @@ const TAB_LABELS = {
   'omnimux-workflow:canvas': '创作画布',
   'omnimux-workflow:library': '项目',
   'omnimux-assets:library': '资产库',
-  'omnimux-products:library': '产品库',
   'omnimux-inspiration:library': '灵感社区',
   'omnimux-clip:studio': '视频剪辑',
   'omnimux-market:plaza': '技能广场',

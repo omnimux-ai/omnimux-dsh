@@ -125,6 +125,7 @@ export function ExploreTemplatesSection({
   onApplyTemplate,
   onApplyTrending,
   onApplySkill,
+  onContentRebuild,
   t,
 }) {
   const [activePrimaryTab, setActivePrimaryTab] = useState('featured');
@@ -139,9 +140,12 @@ export function ExploreTemplatesSection({
   const appLaunchPending = useRef(false);
 
   // 外部素材库数据加载态（支持无限滚动与状态解耦）
+  // refreshing：换库时旧卡片仍在屏上、新数据未到。与 loading 区分开——loading 只用于
+  // 首屏无卡片的空态，refreshing 只是把旧卡片淡化，绝不塌掉高度。
   const [libraryData, setLibraryData] = useState({
     cards: [],
     loading: false,
+    refreshing: false,
     loadingMore: false,
     hasMore: false,
     page: 1,
@@ -223,16 +227,21 @@ export function ExploreTemplatesSection({
       return undefined;
     }
     const controller = new AbortController();
+    // 切 Tab 不清空已有卡片：清空会让内容区瞬间塌成一行「加载中…」，页面高度骤降，
+    // 浏览器把 scrollTop 夹回顶部，吸底输入框也跟着被弹回去。这里保留旧卡片直到新数据
+    // 到达（渲染层用 refreshing 淡化提示），高度不会塌，滚动位置自然守住。
     setLibraryData((prev) => ({
       ...prev,
-      cards: [],
-      loading: true,
+      loading: prev.cards.length === 0,
+      refreshing: prev.cards.length > 0,
       loadingMore: false,
       hasMore: false,
       page: 1,
       error: null,
       loadMoreError: null,
     }));
+    // 即便卡片已在，换库后列表长度仍可能变化；提前声明一次被动位移静默窗口。
+    onContentRebuild?.();
 
     loadLibraryCards(activePrimaryTab, {
       page: 1,
@@ -246,6 +255,7 @@ export function ExploreTemplatesSection({
         setLibraryData({
           cards: res.cards || [],
           loading: false,
+          refreshing: false,
           loadingMore: false,
           hasMore: Boolean(res.hasMore),
           page: 1,
@@ -258,6 +268,7 @@ export function ExploreTemplatesSection({
         setLibraryData({
           cards: [],
           loading: false,
+          refreshing: false,
           loadingMore: false,
           hasMore: false,
           page: 1,
@@ -470,8 +481,15 @@ export function ExploreTemplatesSection({
   };
 
   const handlePrimaryTabChange = (tabId) => {
+    // 换一级库：列表整块重建，先声明被动位移静默窗口，输入框保持吸底不被弹回顶部。
+    onContentRebuild?.();
     setActivePrimaryTab(tabId);
     setSelectedSubCategory('all');
+  };
+
+  const handleSubCategoryChange = (subId) => {
+    onContentRebuild?.();
+    setSelectedSubCategory(subId);
   };
 
   const currentSubCategories = EXPLORE_SUB_CATEGORIES[activePrimaryTab] || EXPLORE_SUB_CATEGORIES.featured;
@@ -584,7 +602,7 @@ export function ExploreTemplatesSection({
                 role="tab"
                 aria-selected={isActive}
                 className={`omnimux-explore-sub-tab ${isActive ? 'active' : ''}`}
-                onClick={() => setSelectedSubCategory(sub.id)}
+                onClick={() => handleSubCategoryChange(sub.id)}
                 data-sub-category={sub.id}
                 data-category-slug={sub.id}
               >
@@ -654,7 +672,10 @@ export function ExploreTemplatesSection({
       )}
 
       {activePrimaryTab !== 'featured' && activePrimaryTab !== 'skills' && (
-        <div className="omnimux-explore-grid-view-wrap omnimux-explore-grid-view-flow">
+        <div
+          className="omnimux-explore-grid-view-wrap omnimux-explore-grid-view-flow"
+          data-refreshing={libraryData.refreshing ? 'true' : undefined}
+        >
           <UnifiedLibraryGrid
             items={filteredLibraryCards}
             loading={libraryData.loading}

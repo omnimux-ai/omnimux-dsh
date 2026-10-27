@@ -15,7 +15,8 @@
     "scripts/build-client.mjs",
     "scripts/build-cloud-assets-catalog.mjs",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",
@@ -37,7 +38,8 @@
     }
   },
   "dependencies": {
-    "dsh-ui-kit": "file:../../packages/dsh-ui-kit"
+    "dsh-ui-kit": "file:../../packages/dsh-ui-kit",
+    "omnimux-products": "file:../omnimux-products"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-client-ui-primitives": ">=0.1.0-rc.6 || >=0.2.1-rc.3 <0.3.0-0",
@@ -55,6 +57,6 @@
   "devDependencies": {
     "esbuild": "^0.25.0"
   },
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "description": "OmniMux creative asset library: named reusable objects (character/scene/style/prop/knowledge/custom) with path-only file refs, plus an artifact store."
 }

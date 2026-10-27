@@ -101,9 +101,8 @@ Derivation order is fixed and exclusive:
 | `[data-omnimux-esc-entry]` | `omnimux-gallery`（历史 marker，现网无独立 gallery 包） | 专家·技能·连接器（**已迁** `omnimux-market`，rank 4.1，**核心常驻**） |
 | `[data-dsh-omnimux-workflow-entry]` | `omnimux-workflow` | 项目 / Projects（rank 4 现网，**核心常驻**）。**Workbench 入口**：点开 `omnimux-workflow:library` Tab，**不得** `claimProductStage`。打开项目后激活 `omnimux-workflow:canvas`（默认 split），库 Tab 保留。 |
 | `[data-dsh-omnimux-new-project-entry]` | `omnimux-workflow` | 新建项目 / New Project（展开：`kind:'inline'` 并排「新建会话」。收起：CSS 藏项目按钮，点官方加号弹出「新建会话 / 新建项目」，选中再 click 原按钮。折叠态属性在 AppFrame，不在 html。收起 wrapper 可用 `display:contents`，但官方加号上的 `flex:1` **必须**收回 `flex:none` + 36×36，否则会吃掉会话列表高度变成竖条） |
-| `[data-omnimux-assets-entry]` | `omnimux-assets` | 资产库（rank 6 现网，**核心常驻**）。**Workbench**：`omnimux-assets:library`，不得 claim |
+| `[data-omnimux-assets-entry]` | `omnimux-assets` | 资产库（rank 6 现网，**核心常驻**）。**Workbench**：`omnimux-assets:library`，不得 claim。**产品库**是资产库内的一个 Tab，不是独立侧栏行 |
 | `[data-omnimux-inspiration-entry]` | `omnimux-inspiration` | 灵感社区（rank 7，**核心常驻**）。**Workbench**：`omnimux-inspiration:library`，不得 claim |
-| `[data-omnimux-products-entry]` | `omnimux-products` | 产品库（收敛至官方「更多」菜单） |
 | `[data-omnimux-automation-entry]` | `omnimux-automation` | 自动化（收敛至官方「更多」菜单） |
 | `[data-omnimux-google-vids-entry]` | `omnimux-video` | Google Vids（rank 7.5，收敛至官方「更多」菜单）。**中栏 Stage**：Vids 经 `shell.overlay` 注册，**不再**注册 Workbench Tab。点击先 `await workbench.open({ tabId: 'omnimux-clip:studio', focus: 'split' })` 把视频剪辑开到右侧栏，仅当返回值严格为 `true` 且条目仍挂载时才 `claim('omnimux-vids')`；失败时保持原 Stage 与焦点不变，禁止另写 `setFocus`。 |
 | `[data-omnimux-publish-entry]` | `omnimux-publish` | 发布（收敛至官方「更多」菜单） |
@@ -130,7 +129,7 @@ const unregister = window.__omnimuxSidebar.registerExploreItem({
 
 | Rule | Detail |
 |---|---|
-| 渲染集合 | 官方「更多」菜单渲染 `内置 10 项 + 运行时注册项`；注册项一律追加在末尾，行度量与样式复用官方 `MenuItemButton`，不得引入第二套字阶或图标尺寸 |
+| 渲染集合 | 官方「更多」菜单渲染 `内置 9 项 + 运行时注册项`；注册项一律追加在末尾，行度量与样式复用官方 `MenuItemButton`，不得引入第二套字阶或图标尺寸 |
 | 未注册即不渲染 | 产品基线不得出现指向未安装插件的死条目：接缝是运行时注册，**不是**把某个具体插件 id 写进内置白名单 |
 | 形状校验 | 缺 `id` / `label` / `iconSvg` 或类型非法 → 不注册、不抛错，仍返回可调用注销函数 |
 | 字段白名单 | 只接受 `id` / `label` / `iconSvg` / `tabId` / `action`；`entryId`、`pluginId` 等一律被剥离，注册项**不得**借委托通道冒充已挂载插件的入口 |
@@ -142,7 +141,7 @@ const unregister = window.__omnimuxSidebar.registerExploreItem({
 
 ### 官方「更多」菜单（`sidebar.panellist.actions`，宿主 ≥ `0.2.1-rc.3`）
 
-宿主 `0.2.1-rc.3` 起，官方左侧栏自带 root 作用域列表 seat `sidebar.panellist.actions`：该列表有注册时渲染「更多」行，注册项**直接渲染为菜单行**（官方参考实现 `packages/client/ui-entry-customization/src/client/EntryMenuContent.tsx`）。OmniMux 的 10 项入口注册进这个官方菜单；自绘的「探索」常驻行与浮动菜单已退役（#3785），本菜单是这 10 项在侧栏的**唯一入口**。
+宿主 `0.2.1-rc.3` 起，官方左侧栏自带 root 作用域列表 seat `sidebar.panellist.actions`：该列表有注册时渲染「更多」行，注册项**直接渲染为菜单行**（官方参考实现 `packages/client/ui-entry-customization/src/client/EntryMenuContent.tsx`）。OmniMux 的 9 项入口注册进这个官方菜单；自绘的「探索」常驻行与浮动菜单已退役（#3785），本菜单是这 9 项在侧栏的**唯一入口**。产品库已并入资产库（[products-into-assets.spec.md](../../specs/products-into-assets.spec.md)），不再单独占一项。
 
 | Rule | Detail |
 |---|---|
@@ -159,6 +158,16 @@ const unregister = window.__omnimuxSidebar.registerExploreItem({
 ## Alpha 内测标记
 
 中枢协调器按 [Alpha release policy](alpha-release.md) 为已有 Alpha 行添加状态标记，不改变 rank、点击或登录处理。禁止域插件各自维护 Alpha 名单或重复添加标记。
+
+官方「更多」菜单是 Alpha 插件在侧栏的**唯一可见渲染面**，因此内测标识必须出现在那里：
+
+| Rule | Detail |
+|---|---|
+| 判定真源 | 复用 `sidebar-coordinator.isAlphaEntry()`（读 `plugin-lifecycle.json`）；菜单面 MUST NOT 维护第二份 Alpha 名单或第二个判定函数 |
+| 渲染位置 | Alpha 项的行内容为「文案 + `Alpha` 标识」片段，非 Alpha 项保持纯字符串；标识 MUST NOT 出现在非 Alpha 项上 |
+| 文案 | 标识文本 `Alpha`，`title` 为 `sidebar-coordinator.ALPHA_DESCRIPTION`（与侧栏行同一份说明） |
+| 样式 | 追加到 `styles.js` 的 `HUB_CSS`，颜色走 `--dsw-alias-*` Token、字号 12px；MUST NOT 新建第二个 `<style>` 注入点 |
+| 可见性 | 标识必须落在行矩形内、宽高非零，且不把行文案挤到零宽（官方 `.itemLabel` 是单行省略） |
 
 ## Offline vs Cloud Visibility
 

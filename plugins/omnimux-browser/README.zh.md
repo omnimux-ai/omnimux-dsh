@@ -2,7 +2,7 @@
 
 [English](README.md) | [中文](README.zh.md)
 
-OmniMux 浏览器伴侣插件与 Chrome 扩展，Fork 自 [Lum1104/dsh-browser](https://github.com/Lum1104/dsh-browser)，遵循 MIT 许可。
+OmniMux 浏览器伴侣插件与 Chrome 扩展，Fork 自 [omdsh-dev/dsh-browser](https://github.com/omdsh-dev/dsh-browser)（原 `Lum1104/dsh-browser`），遵循 MIT 许可。
 
 ## 架构
 
@@ -40,4 +40,4 @@ pnpm run build
 
 ## 许可与致谢
 
-Fork 自 [Lum1104/dsh-browser](https://github.com/Lum1104/dsh-browser)。MIT；保留原作者 Yuxiang Lin 的版权声明。
+Fork 自 [omdsh-dev/dsh-browser](https://github.com/omdsh-dev/dsh-browser)（原 `Lum1104/dsh-browser`）。MIT；保留原作者 Yuxiang Lin 的版权声明——见 [`LICENSE`](./LICENSE)。

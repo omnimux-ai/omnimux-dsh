@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>产品库并入资产库 · 修改前 / 修改后 高保真演示</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #111113;
+    --surface: #18191c;
+    --elevated: #202124;
+    --border: rgba(255,255,255,0.10);
+    --border-strong: rgba(255,255,255,0.22);
+    --label: #f3f4f6;
+    --secondary: rgba(255,255,255,0.65);
+    --tertiary: rgba(255,255,255,0.40);
+    --layer: rgba(255,255,255,0.06);
+    --layer-2: rgba(255,255,255,0.10);
+    --primary: #ffffff;
+    --primary-fg: #111827;
+    --danger: #f87171;
+    --success: #34d399;
+    --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 32px 24px 64px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+    background: var(--bg); color: var(--label);
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+  p.sub { font-size: 13px; color: var(--secondary); margin: 0 0 20px; line-height: 1.6; }
+
+  .verdict {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 14px 16px; border-radius: 12px; margin-bottom: 24px;
+    background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.28);
+    font-size: 13px; line-height: 1.6;
+  }
+  .verdict b { color: var(--danger); }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+  }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+  }
+  .panel-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .tag {
+    font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px;
+    border: 1px solid transparent;
+  }
+  .tag.before { background: rgba(248,113,113,0.14); color: var(--danger); border-color: rgba(248,113,113,0.3); }
+  .tag.after  { background: rgba(52,211,153,0.14); color: var(--success); border-color: rgba(52,211,153,0.3); }
+
+  .stage { padding: 0; }
+  .toolbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+  }
+  .chip {
+    height: 26px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--layer); color: var(--secondary); font-size: 12px; cursor: pointer;
+    display: inline-flex; align-items: center;
+  }
+  .chip[data-active="true"] { background: var(--layer-2); color: var(--label); border-color: transparent; }
+  .spacer { flex: 1; }
+  .btn {
+    height: 28px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--layer); color: var(--label); font-size: 12px; cursor: pointer;
+  }
+  .btn.primary { background: var(--primary); color: var(--primary-fg); border-color: transparent; font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 16px; }
+  .card {
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    background: var(--elevated); cursor: pointer; transition: border-color .15s ease;
+  }
+  .card:hover { border-color: var(--border-strong); }
+  .card-thumb {
+    position: relative; aspect-ratio: 4/3;
+    background: linear-gradient(135deg, #2a2c31, #1d1f23);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 600; color: var(--tertiary);
+  }
+  .card-body { padding: 10px 12px; }
+  .card-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .card-desc { font-size: 11px; color: var(--tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* 二级页覆盖层：修改后它是资产库内的一层，修改前它是另一个 Tab 的整页 */
+  .subscreen {
+    position: absolute; inset: 0; z-index: 300;
+    background: var(--surface); display: flex; flex-direction: column;
+  }
+  .stage-relative { position: relative; min-height: 420px; }
+  .sub-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+  }
+  .back { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--secondary); cursor: pointer; }
+  .crumb { font-size: 12px; color: var(--tertiary); }
+  .crumb b { color: var(--label); font-weight: 600; }
+  .sub-body { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; flex: 1; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 11px; color: var(--tertiary); }
+  .field .input {
+    height: 32px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--layer); color: var(--label); font-size: 12px;
+    display: flex; align-items: center; padding: 0 10px;
+  }
+  .field.wide { grid-column: span 2; }
+  .field .textarea {
+    height: 64px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--layer); color: var(--secondary); font-size: 12px; padding: 8px 10px;
+  }
+
+  .anno {
+    padding: 12px 16px; border-top: 1px solid var(--border);
+    font-size: 12px; line-height: 1.7; color: var(--secondary);
+    background: rgba(255,255,255,0.02);
+  }
+  .anno .bad { color: var(--danger); font-weight: 600; }
+  .anno .good { color: var(--success); font-weight: 600; }
+  .anno code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; background: var(--layer); padding: 1px 5px; border-radius: 4px;
+  }
+
+  .steps { margin: 24px 0 0; }
+  .steps h2 { font-size: 14px; font-weight: 600; margin: 0 0 12px; }
+  .step-row {
+    display: grid; grid-template-columns: 88px 1fr 1fr; gap: 12px;
+    padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--surface); font-size: 12px; margin-bottom: 8px; align-items: center;
+  }
+  .step-row .k { color: var(--tertiary); }
+  .step-row .old { color: var(--danger); }
+  .step-row .new { color: var(--success); }
+  .step-head { background: transparent; border: none; color: var(--tertiary); font-size: 11px; padding-bottom: 0; }
+  .live-hint {
+    margin-top: 20px; padding: 12px 16px; border-radius: 10px; font-size: 12px;
+    background: var(--layer); border: 1px solid var(--border); color: var(--secondary);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>产品库并入资产库 · 修改前 / 修改后</h1>
+  <p class="sub">
+    演示两个关键差异：①点卡片进详情后按「返回」，落点是哪一个列表；②页面上到底存在几个「产品库」。
+    左右两栏可点击卡片、可点「返回」，交互与真实行为一致。
+  </p>
+
+  <div class="verdict">
+    <span>⚠️</span>
+    <div>
+      <b>修改前的问题：</b>点资产库的产品卡片，页面会跳到<b>另一个工作台页签</b>去显示详情；在那个详情里按「返回」，
+      回到的是<b>那个旧页面自己的列表</b>，而不是你刚才点卡片的资产库列表。所以看起来像「有两个产品库，返回还跳回旧的那个」。
+    </div>
+  </div>
+
+  <div class="cols">
+    <!-- ============ 修改前 ============ -->
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">修改前 · 跨页签跳转</div>
+        <span class="tag before">旧行为</span>
+      </div>
+      <div class="stage stage-relative" id="beforeStage">
+        <!-- 资产库列表 -->
+        <div id="beforeList">
+          <div class="toolbar">
+            <span class="chip">本地</span>
+            <span class="chip">云端</span>
+            <span class="chip" data-active="true">产品库</span>
+            <span class="spacer"></span>
+            <button class="btn primary">添加产品</button>
+          </div>
+          <div class="grid">
+            <article class="card" data-open="before">
+              <div class="card-thumb">保</div>
+              <div class="card-body">
+                <div class="card-name">保温杯 316 不锈钢</div>
+                <div class="card-desc">24 小时长效保温</div>
+              </div>
+            </article>
+            <article class="card" data-open="before">
+              <div class="card-thumb">灯</div>
+              <div class="card-body">
+                <div class="card-name">护眼台灯 Pro</div>
+                <div class="card-desc">无频闪 · 五档调光</div>
+              </div>
+            </article>
+          </div>
+          <div class="anno">当前页签：<code>omnimux-assets:library</code>（资产库）</div>
+        </div>
+
+        <!-- 旧独立产品页（跳过去之后的整页） -->
+        <div class="subscreen" id="beforeForm" style="display:none">
+          <div class="sub-head">
+            <span class="back" data-back="before">← 返回</span>
+            <span class="crumb">产品库 / <b>编辑 · 保温杯 316 不锈钢</b></span>
+            <span class="spacer"></span>
+            <button class="btn">取消</button>
+            <button class="btn primary">保存产品</button>
+          </div>
+          <div class="sub-body">
+            <div class="field"><label>产品名称</label><div class="input">保温杯 316 不锈钢</div></div>
+            <div class="field"><label>形态</label><div class="input">实物产品</div></div>
+            <div class="field wide"><label>卖点</label><div class="textarea">24 小时长效保温</div></div>
+          </div>
+          <div class="anno">
+            页签已变成 <code>omnimux-products:library</code>（另一个页签）<br />
+            <span class="bad">按「返回」→ 回到这个旧页面自己的列表，不是资产库列表</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 修改后 ============ -->
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">修改后 · 资产库内就地展开</div>
+        <span class="tag after">新行为</span>
+      </div>
+      <div class="stage stage-relative" id="afterStage">
+        <div id="afterList">
+          <div class="toolbar">
+            <span class="chip">本地</span>
+            <span class="chip">云端</span>
+            <span class="chip" data-active="true">产品库</span>
+            <span class="spacer"></span>
+            <button class="btn primary">添加产品</button>
+          </div>
+          <div class="grid">
+            <article class="card" data-open="after">
+              <div class="card-thumb">保</div>
+              <div class="card-body">
+                <div class="card-name">保温杯 316 不锈钢</div>
+                <div class="card-desc">24 小时长效保温</div>
+              </div>
+            </article>
+            <article class="card" data-open="after">
+              <div class="card-thumb">灯</div>
+              <div class="card-body">
+                <div class="card-name">护眼台灯 Pro</div>
+                <div class="card-desc">无频闪 · 五档调光</div>
+              </div>
+            </article>
+          </div>
+          <div class="anno">当前页签：<code>omnimux-assets:library</code>（资产库）</div>
+        </div>
+
+        <div class="subscreen" id="afterForm" style="display:none">
+          <div class="sub-head">
+            <span class="back" data-back="after">← 返回</span>
+            <span class="crumb">产品库 / <b>编辑 · 保温杯 316 不锈钢</b></span>
+            <span class="spacer"></span>
+            <button class="btn">取消</button>
+            <button class="btn primary">保存产品</button>
+          </div>
+          <div class="sub-body">
+            <div class="field"><label>产品名称</label><div class="input">保温杯 316 不锈钢</div></div>
+            <div class="field"><label>形态</label><div class="input">实物产品</div></div>
+            <div class="field wide"><label>卖点</label><div class="textarea">24 小时长效保温</div></div>
+          </div>
+          <div class="anno">
+            页签仍是 <code>omnimux-assets:library</code>（没有切走）<br />
+            <span class="good">按「返回」→ 回到你点进来的这个资产库产品库列表，筛选与滚动位置都还在</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="steps">
+    <h2>同一条操作路径，两边的落点差异</h2>
+    <div class="step-row step-head">
+      <span>步骤</span><span>修改前</span><span>修改后</span>
+    </div>
+    <div class="step-row">
+      <span class="k">点产品卡片</span>
+      <span class="old">跳到另一个页签</span>
+      <span class="new">留在资产库，就地展开</span>
+    </div>
+    <div class="step-row">
+      <span class="k">按「返回」</span>
+      <span class="old">回到旧页面自己的列表</span>
+      <span class="new">回到资产库产品库列表</span>
+    </div>
+    <div class="step-row">
+      <span class="k">侧栏「更多」</span>
+      <span class="old">有「产品库」独立入口</span>
+      <span class="new">已移除，只从资产库进</span>
+    </div>
+    <div class="step-row">
+      <span class="k">页面数量</span>
+      <span class="old">两个产品库，样式各写一份</span>
+      <span class="new">只有一个，样式单一真源</span>
+    </div>
+  </div>
+
+  <div class="live-hint">
+    点左右两栏的卡片可以进详情，再点「返回」看落点差异。这一页是纯静态演示，不连接真实数据。
+  </div>
+</div>
+
+<script>
+  function wire(mode) {
+    const stage = document.getElementById(mode + 'Stage')
+    const list = document.getElementById(mode + 'List')
+    const form = document.getElementById(mode + 'Form')
+
+    stage.querySelectorAll('[data-open="' + mode + '"]').forEach(function (card) {
+      card.addEventListener('click', function () {
+        list.style.display = 'none'
+        form.style.display = 'flex'
+      })
+    })
+    const back = stage.querySelector('[data-back="' + mode + '"]')
+    if (back) {
+      back.addEventListener('click', function () {
+        form.style.display = 'none'
+        list.style.display = 'block'
+      })
+    }
+  }
+  wire('before')
+  wire('after')
+</script>
+</body>
+</html>

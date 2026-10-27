@@ -81,13 +81,13 @@ export function buildSidebarChromeHarnessHtml(title = '右侧栏 chrome 几何�
 <body>
   <section class="qa-pane" id="qa-pane">
     <div class="_tabStrip_qa" id="qa-strip" data-dockkit-strip>
-      <div class="_tab_qa _tabActive_qa" id="qa-tab" data-dockkit-tab="omnimux-products:library">
-        <span>产品库</span>
+      <div class="_tab_qa _tabActive_qa" id="qa-tab" data-dockkit-tab="omnimux-assets:library">
+        <span>资产库</span>
       </div>
     </div>
     <div class="_paneBody_qa" id="qa-pane-body" data-dockkit-pane-body>
       <div class="qa-page-header">
-        <h1 class="qa-page-title">商品与产品库</h1>
+        <h1 class="qa-page-title">资产库</h1>
       </div>
     </div>
   </section>

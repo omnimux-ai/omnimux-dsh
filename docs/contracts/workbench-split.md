@@ -28,7 +28,7 @@ Normative seat for plugin GUIs that must sit **beside** the official conversatio
 
 | Kind | Examples | Seat | Left-row click |
 |---|---|---|---|
-| **Workbench** | 资产 / 产品 / 账号 / 灵感 / 发布 / 分析 / 项目库 / 专家馆 / 视频剪辑 / 创作画布 | `ctx.betterSidebar.registerTab` on `[data-dsh-panel-host]` | Ordinary Workbench entry flows use `window.__omnimuxWorkbench.open({ tabId })` and **MUST NOT** set `data-dsh-product-stage`; only the Google Vids launcher may claim its own `omnimux-vids` stage after the Clip open specified in the Overlay row is awaited and returns a value strictly equal to `true` |
+| **Workbench** | 资产（含产品库 Tab）/ 账号 / 灵感 / 发布 / 分析 / 项目库 / 专家馆 / 视频剪辑 / 创作画布 | `ctx.betterSidebar.registerTab` on `[data-dsh-panel-host]` | Ordinary Workbench entry flows use `window.__omnimuxWorkbench.open({ tabId })` and **MUST NOT** set `data-dsh-product-stage`; only the Google Vids launcher may claim its own `omnimux-vids` stage after the Clip open specified in the Overlay row is awaited and returns a value strictly equal to `true` |
 | **Overlay** | Hub 登录门；Apps 货架（未挂载）；Clip **画布节点 portal**；Google Vids 生成舞台 | `shell.overlay` | Google Vids 是唯一的创作 stage 例外：左侧入口 MUST first await `window.__omnimuxWorkbench.open({ tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' })`，并且仅当该调用的返回值严格等于 `true` 时才 claim `omnimux-vids`（`false`、拒绝或其他结果均不 claim）；Vids 不得注册为 `betterSidebar` Tab。Clip portal **MUST NOT** claim |
 
 Official AppFrame is already `sidebar | conversation | details`. Workbench does **not** replace `conversation`. Ordinary Workbench GUIs live in the community `dsh-better-sidebar` panel (width up to the viewport); Google Vids' generation stage instead occupies `shell.overlay`, while Clip studio remains a Workbench Tab in that right panel. Official `details` stays at 300–520px and is closed (`layout.closeDetails`) when a workbench tab opens.
@@ -62,7 +62,6 @@ Resolution order is `mounted` → `current`; a missing value is `undefined`, nev
 |---|---|---|---|
 | `omnimux-assets:library` | `omnimux-assets` | `gui` | `[data-omnimux-assets-entry]` |
 | `omnimux-avatar:studio` | `omnimux-avatar` | `gui` | `[data-omnimux-avatar-entry]` |
-| `omnimux-products:library` | `omnimux-products` | `gui` | `[data-omnimux-products-entry]` |
 | `omnimux-accounts:library` | `omnimux-accounts` | `gui` | `[data-omnimux-accounts-entry]` |
 | `omnimux-inspiration:library` | `omnimux-inspiration` | `gui` | `[data-omnimux-inspiration-entry]` |
 | `omnimux-publish:library` | `omnimux-publish` | `gui` | `[data-omnimux-publish-entry]` |

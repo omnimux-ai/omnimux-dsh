@@ -13,7 +13,8 @@
     "lib",
     "scripts",
     "cordis.patch.yml",
-    "dsh.manifest.json"
+    "dsh.manifest.json",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",
@@ -52,6 +53,6 @@
   "devDependencies": {
     "esbuild": "^0.25.0"
   },
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "description": "Inline video preview for DSH better-sidebar backed by HTTP Range (206) streaming and sandbox security guards."
 }

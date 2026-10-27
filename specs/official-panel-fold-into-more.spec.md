@@ -71,7 +71,53 @@
   - 原断言：按字面量 `panelRow` 定位隐藏规则。
   - 必须改的理由：生产 CSS 的选择器走 `PANEL_ROW_SELECTOR` 常量插值，源文件里没有字面量 `panelRow`，按字面量匹配取不到规则。改按常量名 `PANEL_ROW_SELECTOR` + `display: none` 定位，判据（只有一条折叠规则、不带收起态排除、限定侧栏作用域）不变。
   - 新期望证据：`hideRules.length === 1`、规则不含 `data-sidebar-collapsed`、规则含 `SIDEBAR_SCOPE`。
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `官方面板行排在产品入口之前，文案取自官方 entries（不硬编码）`
+  - 原断言：`labels.slice(0, 2)` 等于 `['插件', '自动化任务']`，且 `menu.rows.length === PANELS.length + TRUTH.length`（两行面板都渲染）。
+  - 必须改的理由：用户最终决策是官方「插件」行**彻底隐藏**（产品已有自研插件管理模块），只有「自动化任务」进「更多」菜单。原断言把「两行都渲染」写死，会把这次白名单过滤判成回归。
+  - 新期望证据：`labels.slice(0, 1)` 等于 `['自动化任务']`；`labels` 不含 `'插件'`；`menu.rows.length === 1 + TRUTH.length`。
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `点击官方面板行：先 onDismiss，再走官方 onOpen(id)`
+  - 原断言：点击两行面板分别得到 `open:plugins` 与 `open:schedules`。
+  - 必须改的理由：`plugins` 行已不渲染，无法点击。
+  - 新期望证据：只断言 `open:schedules`；另加一条断言「`plugins` 不在渲染结果中」。
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `选中态：官方 entries 的 active 透传为 current`
+  - 原断言：两行面板的 `current` 分别等于各自的 `active`。
+  - 必须改的理由：只剩 `schedules` 一行（`active: true`）。
+  - 新期望证据：断言该行 `current === true`，且渲染行数为 1。
 
 ## 证据计划
 
 `node --test plugins/omnimux/src/client/explore-more-menu.test.js`、`node --test plugins/omnimux/src/client/sidebar-panel-chrome.test.js`、真实 Chrome 验收（PNG + JSON）。
+
+## 合并冲突解决（2026-10-28）
+
+`main` 在等待评审期间合入了 Alpha 标识改动（`exploreMoreMenuLabel`），与本任务的 `panelRowIcon` 落在 `explore-more-menu.jsx` 同一位置，产生内容冲突。
+
+- 冲突文件：`plugins/omnimux/src/client/explore-more-menu.jsx`（唯一一处）。
+- 解决原则：**两边都保留**——`panelRowIcon`（本任务：官方面板行图标）与 `exploreMoreMenuLabel`（main：Alpha 标识）是两个独立函数，无逻辑交叠，不存在取舍。
+- 拒绝的做法：取任一侧（会丢功能）、重新排序（会破坏各自的注释与调用点）。
+- 期望证据：合并后两函数同时存在；`explore-more-menu.test.js` 与 `sidebar-panel-chrome.test.js` 全绿；Alpha 标识与面板行折叠在同一次渲染中互不干扰。
+
+## 决策变更（2026-10-28，用户确认）
+
+原实现把官方面板行（`插件` / `自动化任务`）**全部**迁入「更多」菜单。用户最终决策：
+
+- **官方「插件」行彻底隐藏**——产品已有自研插件管理模块，官方入口不需要。
+- **「自动化任务」保留在「更多」菜单**，继续复用官方 `onOpen`。
+
+因此 `explore-more-menu.jsx` 对官方 `entries` 加一层白名单：只放行 `id === 'schedules'`，其余丢弃。
+
+### 为什么用白名单而不是黑名单
+
+- 白名单表达「菜单里只该有自动化任务」这一明确意图；黑名单只挡 `plugins`，官方将来新增面板会自动冒出来，属于未经决策的暴露。
+- 与 `sidebar-panel-chrome.js`「隐藏所有非更多面板行」的收敛语义一致。
+
+### 与 main（Alpha 标识）的冲突处理
+
+`main` 同期合入 `exploreMoreMenuLabel`（Alpha 内测标识），与本任务的 `panelRowIcon` 落在同一文件同一位置。**两边都保留**：两个函数无逻辑交叠，分别负责行图标与行文案后缀。
+
+### 验收标准（本次变更）
+
+- [ ] 官方 `entries` 含 `plugins` + `schedules` 时，菜单只渲染「自动化任务」，不渲染「插件」。
+- [ ] 「插件」行在侧栏仍被 `sidebar-panel-chrome.js` 的 CSS 隐藏（`display: none`）。
+- [ ] 「自动化任务」仍带 Alpha 标识与面板图标。
+- [ ] `entries` 为空或缺失时，菜单仍渲染产品入口且不崩。

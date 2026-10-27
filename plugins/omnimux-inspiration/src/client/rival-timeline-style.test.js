@@ -25,3 +25,37 @@ describe('account timeline style (#3565)', () => {
     assert.equal(block.includes('background: var(--dsw-alias-bg-layer-2);'), true)
   })
 })
+
+describe('account timeline style (#3825)', () => {
+  it('collapses the post body to an X-style line budget', () => {
+    const block = ruleBlock('.omnimux-rival-timeline-body')
+    assert.equal(block.includes('display: -webkit-box;'), true)
+    assert.equal(block.includes('-webkit-line-clamp:'), true)
+    assert.equal(block.includes('overflow: hidden;'), true)
+  })
+
+  it('restores the full body when the row is expanded', () => {
+    const block = ruleBlock('.omnimux-rival-timeline-body.is-expanded')
+    assert.equal(block.includes('display: block;'), true)
+    assert.equal(block.includes('overflow: visible;'), true)
+  })
+
+  it('offers a text-link expand button, not a framed control', () => {
+    const block = ruleBlock('.omnimux-rival-timeline-expand')
+    assert.equal(block.includes('background: transparent;'), true)
+    assert.equal(block.includes('border: 0;'), true)
+  })
+
+  it('does not draw a host frame around the official embed card', () => {
+    const block = ruleBlock('.omnimux-rival-timeline-embed.is-card iframe')
+    assert.equal(block.includes('border: 0;'), true)
+    assert.equal(block.includes('background: transparent;'), true)
+    assert.equal(/border-radius/.test(block), false)
+  })
+
+  it('hides the host expand link once the official embed replaces the row', () => {
+    const block = RIVAL_CSS.match(/is-embed-card[^{]*\{[^}]*\}/g)?.[0] || ''
+    assert.equal(block.includes('.omnimux-rival-timeline-expand'), true)
+    assert.equal(block.includes('display: none;'), true)
+  })
+})

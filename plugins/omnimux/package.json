@@ -22,7 +22,8 @@
     "scripts/catalog-diff.mjs",
     "scripts/catalog-snapshot.mjs",
     "scripts/export-voice-previews.mjs",
-    "cordis.patch.yml"
+    "cordis.patch.yml",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node scripts/build-media-inspect.mjs && node scripts/build-client.mjs",
@@ -85,6 +86,6 @@
       "platform": "web"
     }
   },
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "description": "OmniMux execution hub for DeepSeek Harness: product chrome, identity, model routes, and video jobs."
 }

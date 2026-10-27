@@ -8,55 +8,59 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const root = path.resolve(__dirname, '../../')
 
+const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf-8')
+
 test('E2E: 验证产品库支持批量选择与删除（对齐本地 Tab 规范）', () => {
-  const productsViewPath = path.join(root, 'plugins/omnimux-assets/src/client/ProductsView.jsx')
-  const stylesPath = path.join(root, 'plugins/omnimux-assets/src/client/styles.js')
-  const localesPath = path.join(root, 'plugins/omnimux-assets/src/client/locales.js')
+  const productTab = read('plugins/omnimux-assets/src/client/ProductTab.jsx')
+  const productGrid = read('plugins/omnimux-products/src/client/ProductGrid.jsx')
+  const productsStyles = read('plugins/omnimux-products/src/client/styles.js')
+  const assetsStyles = read('plugins/omnimux-assets/src/client/styles.js')
+  const productsLocales = read('plugins/omnimux-products/src/client/locales.js')
 
-  const productsViewContent = fs.readFileSync(productsViewPath, 'utf-8')
-  const stylesContent = fs.readFileSync(stylesPath, 'utf-8')
-  const localesContent = fs.readFileSync(localesPath, 'utf-8')
-
-  // 1. 验证卡片多选状态与勾选框节点挂载
+  // 1. 卡片多选：勾选框挂在缩略图内，选中态由宿主传入
   assert.ok(
-    productsViewContent.includes('className="omnimux-assets-check"') &&
-    productsViewContent.includes('toggleSelect(product.id, e)'),
-    'ProductsView 中必须在缩略图内挂载带有 toggleSelect 的 omnimux-assets-check 勾选按钮'
+    productGrid.includes('className="omnimux-products-check"') &&
+    productGrid.includes('onToggleSelect(product)') &&
+    productGrid.includes('data-selected={selected ?'),
+    'ProductGrid 必须在缩略图内挂载带选中态的勾选框',
   )
   assert.ok(
-    productsViewContent.includes('omnimux-assets-focusable'),
-    '卡片外层容器必须包含 omnimux-assets-focusable 类名以支持悬停勾选框显现'
+    productGrid.includes('omnimux-products-focusable'),
+    '卡片外层容器必须包含 omnimux-products-focusable 类名以支持悬停勾选框显现',
   )
 
-  // 2. 验证多选操作栏渲染
+  // 2. 多选操作栏由资产库宿主渲染
   assert.ok(
-    productsViewContent.includes('className="omnimux-assets-selection"') &&
-    productsViewContent.includes("t('select.count')") &&
-    productsViewContent.includes("t('select.clear')") &&
-    productsViewContent.includes("t('select.delete')"),
-    'ProductsView 必须在有已选项目时呈现带有计数、取消和删除按钮的 omnimux-assets-selection 操作栏'
+    productTab.includes('className="omnimux-products-selection"') &&
+    productTab.includes("t('select.count')") &&
+    productTab.includes("t('select.clear')") &&
+    productTab.includes("t('select.delete')"),
+    'ProductTab 必须在有已选项目时呈现计数、取消与删除操作栏',
   )
 
-  // 3. 验证删除确认弹窗与批量删除链路
+  // 3. 删除确认弹窗与批量删除链路
   assert.ok(
-    productsViewContent.includes('<ConfirmModal') &&
-    productsViewContent.includes('handleConfirmDelete') &&
-    productsViewContent.includes("fetch(`/omnimux/products/${encodeURIComponent(id)}`, { method: 'DELETE' })"),
-    'ProductsView 必须挂载 ConfirmModal 对话框并通过 DELETE 接口执行删除'
+    productTab.includes('<ConfirmModal') &&
+    productTab.includes('handleConfirmDelete') &&
+    productTab.includes('deleteProduct(id)'),
+    'ProductTab 必须挂载 ConfirmModal 并通过产品接口执行删除',
   )
 
-  // 4. 验证样式中勾选框与右上角徽标规范
+  // 4. 勾选框样式在产品插件里定义一次，资产库不再重复
   assert.ok(
-    stylesContent.includes('.omnimux-products-card-thumb .omnimux-assets-check') &&
-    stylesContent.includes('.omnimux-products-badge {\n  position: absolute;\n  top: 8px;\n  right: 8px;'),
-    'styles.js 必须将卡片角标定位在右上角，并为产品缩略图配置 .omnimux-assets-check 样式'
+    productsStyles.includes('.omnimux-products-card-thumb .omnimux-products-check'),
+    '勾选框定位样式必须在产品插件样式表中定义',
+  )
+  assert.ok(
+    !assetsStyles.includes('.omnimux-products-check'),
+    '资产库不得再重复定义产品勾选框样式',
   )
 
-  // 5. 验证中英文多语言词条
+  // 5. 中英文移除提示词条属于产品库命名空间
   assert.ok(
-    localesContent.includes("'product.removeTitle'") &&
-    localesContent.includes("'product.removeBatchTitle'") &&
-    localesContent.includes("'product.removeHint'"),
-    'locales.js 必须包含产品移除相关的专用提示文案'
+    productsLocales.includes("'select.removeTitle'") &&
+    productsLocales.includes("'remove.title'") &&
+    productsLocales.includes("'remove.hint'"),
+    '产品库词典必须包含单项与批量移除的提示文案',
   )
 })

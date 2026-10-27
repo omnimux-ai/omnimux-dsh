@@ -3611,6 +3611,18 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-explore-grid-view-wrap.omnimux-explore-grid-view-flow {
   max-height: none;
   overflow-y: visible;
+  /* 素材库换 Tab 时至少占满一屏（与 shelves 同一套算法）：卡片少或正在换库时
+     下方自然留白，页面高度不塌，浏览器就不会把 scrollTop 夹回顶部。 */
+  min-height: calc(100vh - 152px);
+}
+[data-omnimux-starter-host][data-omnimux-dock-open] .omnimux-explore-grid-view-wrap.omnimux-explore-grid-view-flow {
+  min-height: calc(100vh - 120px - (var(--omnimux-dock-bottom, 20px) + var(--omnimux-dock-card-height, 168px) + 56px));
+}
+/* 换库刷新中：旧卡片留在原位并淡化，新数据到了再替换。界面本体就是回执，
+   不叠加载骨架、不塌高度。 */
+.omnimux-explore-grid-view-wrap[data-refreshing='true'] {
+  opacity: 0.45;
+  transition: opacity 120ms ease-out;
 }
 
 [data-omnimux-starter-host][data-omnimux-dock-open] .omnimux-explore-shelves-view {

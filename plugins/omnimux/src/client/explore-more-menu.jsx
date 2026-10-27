@@ -14,7 +14,7 @@
  * 本模块**不得**顶层 import `@deepseek-ai/dsh-client-ui-primitives`：该包在宿主里是
  * 外部依赖，测试与老宿主解析不到，顶层 import 会把整个模块变成不可加载。
  */
-import { activateExploreItem, resolveExploreMenuItems } from './sidebar-coordinator.js'
+import { ALPHA_DESCRIPTION, activateExploreItem, isAlphaEntry, resolveExploreMenuItems } from './sidebar-coordinator.js'
 
 /** 官方「更多」菜单的 seat 名（root 作用域 list）。 */
 export const EXPLORE_MORE_MENU_SLOT = 'sidebar.panellist.actions'
@@ -61,6 +61,15 @@ const PANEL_ROW_ICON_SVG =
   '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="1.75" y="2.25" width="12.5" height="11.5" rx="2"/><path d="M1.75 6.25h12.5"/></svg>'
 
 /**
+ * 允许进「更多」菜单的官方面板行 id（白名单）。
+ *
+ * 只放行「自动化任务」：官方「插件」行由产品自研插件管理模块取代，彻底隐藏、
+ * 不提供入口。用白名单而非黑名单，是为了让官方将来新增的面板不会未经决策
+ * 就自动出现在菜单里。
+ */
+const PANEL_ENTRY_WHITELIST = new Set(['schedules'])
+
+/**
  * 官方面板行的图标容器：与清单行同一 class 与同一信任边界（受信 14×14 纯矢量）。
  * @returns {import('react').ReactElement}
  */
@@ -71,6 +80,27 @@ function panelRowIcon() {
       aria-hidden="true"
       dangerouslySetInnerHTML={{ __html: PANEL_ROW_ICON_SVG }}
     />
+  )
+}
+
+/**
+ * 行内容：Alpha 内测项在文案后带一个标识，其余项保持纯字符串（零变化）。
+ *
+ * 判定复用 `sidebar-coordinator.isAlphaEntry()`，真源仍是 `plugin-lifecycle.json`，
+ * 本模块不维护第二份 Alpha 名单。标识放在官方 `children` 里：`MenuItemButton` 没有
+ * 第二个尾部插槽，`children` 渲染进 `.itemLabel` 是唯一可行位置。
+ *
+ * @param {{ label: string, entryId?: string, pluginId?: string }} item
+ * @returns {string | import('react').ReactElement}
+ */
+function exploreMoreMenuLabel(item) {
+  const isAlpha = isAlphaEntry(item.entryId) || isAlphaEntry(item.pluginId)
+  if (!isAlpha) return item.label
+  return (
+    <span className="omnimux-explore-more-label">
+      <span className="omnimux-explore-more-label-text">{item.label}</span>
+      <span className="omnimux-explore-more-alpha" title={ALPHA_DESCRIPTION}>{'Alpha'}</span>
+    </span>
   )
 }
 
@@ -101,7 +131,11 @@ export function createExploreMoreMenuContent({ MenuItemButton } = {}) {
    */
   function ExploreMoreMenuContent({ onDismiss, entries, onOpen }) {
     const items = resolveExploreMenuItems()
-    const panels = Array.isArray(entries) ? entries : []
+    // 白名单：只让「自动化任务」进「更多」菜单。官方「插件」行由产品自研插件管理
+    // 模块取代，因此彻底隐藏、不提供入口；其余官方新增面板也不自动冒出来。
+    const panels = Array.isArray(entries)
+      ? entries.filter((entry) => PANEL_ENTRY_WHITELIST.has(entry?.id))
+      : []
     return (
       <>
         {panels.map((entry) => (
@@ -132,7 +166,7 @@ export function createExploreMoreMenuContent({ MenuItemButton } = {}) {
               activateExploreItem(item)
             }}
           >
-            {item.label}
+            {exploreMoreMenuLabel(item)}
           </MenuItemButton>
         ))}
       </>

@@ -13,6 +13,7 @@ import {
   openWorkbench,
   releaseCurrentProductStage,
   resetWorkbenchForTests,
+  sweepRetiredWorkbenchTabs,
   getConversationCollapsed,
   setConversationCollapsed,
   setWorkbenchFocus,
@@ -168,7 +169,6 @@ test('default focus matrix: canvas and all libraries default to gui (Issue #2006
   const libraries = [
     'omnimux-clip:studio',
     'omnimux-assets:library',
-    'omnimux-products:library',
     'omnimux-forms:tasks',
     'omnimux-accounts:library',
     'omnimux-inspiration:library',
@@ -182,7 +182,7 @@ test('default focus matrix: canvas and all libraries default to gui (Issue #2006
     assert.equal(resolveDefaultFocus(lib), WORKBENCH_FOCUS.gui, `${lib} must default to gui`)
     assert.ok(isWorkbenchTab(lib), `${lib} must be recognized as workbench tab`)
   }
-  assert.equal(WORKBENCH_OCCUPANTS.length, 12)
+  assert.equal(WORKBENCH_OCCUPANTS.length, 11)
 })
 
 test('workbenchDefaultWidthPx gives the panel everything the ratio column does not take', () => {
@@ -361,6 +361,138 @@ test('default seed cleanup safely ignores no-session and non-seed snapshots', ()
   }
   notifyState()
   assert.deepEqual(closed, [], 'a session already classified as non-seed must not be watched forever')
+})
+
+test('sweepRetiredWorkbenchTabs: 快照未物化时不做任何关闭，也不打标记', () => {
+  // 快照尚未物化（state 缺失）时不能提前认定「扫过了」，否则真出现旧 Tab 反而漏扫。
+  let snapshot = { sessionId: 's-pending', state: undefined }
+  const closed = []
+  const service = {
+    getSnapshot() { return snapshot },
+    closeTab(id) { closed.push(id) },
+  }
+
+  assert.equal(sweepRetiredWorkbenchTabs(service), 0, '未物化时返回 0')
+  assert.deepEqual(closed, [], '未物化时不关闭任何 Tab')
+
+  // 物化之后必须真的扫到。
+  snapshot = {
+    sessionId: 's-pending',
+    state: makeState([{ id: 'tab:retired', type: 'omnimux-products:library', title: '产品库' }]),
+  }
+  assert.equal(sweepRetiredWorkbenchTabs(service), 1, '物化后补扫')
+  assert.deepEqual(closed, ['tab:retired'])
+})
+
+test('sweepRetiredWorkbenchTabs: 返回关闭数、幂等、不误伤其它 type、失败不冒泡', () => {
+  const makeService = (state, closeImpl, sessionId = 's-direct') => {
+    const closed = []
+    return {
+      closed,
+      service: {
+        getSnapshot() { return { sessionId, state: makeState(state) } },
+        closeTab(id, scope) {
+          closed.push({ id, scope })
+          if (closeImpl) closeImpl(id)
+        },
+      },
+    }
+  }
+
+  // 1. 命中旧产品库 Tab → 关闭并返回 1。
+  const hit = makeService([{ id: 'tab:retired', type: 'omnimux-products:library', title: '产品库' }])
+  assert.equal(sweepRetiredWorkbenchTabs(hit.service), 1, '命中旧 Tab 返回关闭数 1')
+  assert.deepEqual(hit.closed, [{ id: 'tab:retired', scope: { sessionId: 's-direct' } }])
+
+  // 2. 同一 service 同一会话再扫一次 → 返回 0 且不再关闭（幂等）。
+  assert.equal(sweepRetiredWorkbenchTabs(hit.service), 0, '同一会话第二次返回 0')
+  assert.equal(hit.closed.length, 1, '幂等：不重复 closeTab')
+
+  // 3. 只有其它 type → 一个都不关，返回 0（不误伤）。
+  const others = makeService([
+    { id: 'tab:assets', type: 'omnimux-assets:library', title: '资产库' },
+    { id: 'tab:editor', type: 'editor', title: 'Files', path: '/tmp/a.ts' },
+  ])
+  assert.equal(sweepRetiredWorkbenchTabs(others.service), 0, '非旧 Tab 类型不关闭')
+  assert.deepEqual(others.closed, [])
+
+  // 4. closeTab 抛错 → 不冒泡，继续处理后续 Tab（返回值只计成功关闭数）。
+  const boom = makeService([
+    { id: 'tab:retired-a', type: 'omnimux-products:library', title: '产品库' },
+    { id: 'tab:retired-b', type: 'omnimux-products:library', title: '产品库' },
+  ], () => { throw new Error('close refused') })
+  const originalWarn = console.warn
+  const warnings = []
+  console.warn = (...args) => { warnings.push(args) }
+  let closedCount
+  try {
+    closedCount = sweepRetiredWorkbenchTabs(boom.service)
+  } finally {
+    console.warn = originalWarn
+  }
+  assert.equal(closedCount, 0, '抛错的 Tab 不算成功关闭')
+  assert.equal(boom.closed.length, 2, '抛错不阻断后续 Tab，两个都尝试过')
+  assert.equal(warnings.length, 2, '每个失败都留下告警，不静默吞错')
+})
+
+test('sweepRetiredWorkbenchTabs: 幂等按会话记，切到仍带旧 Tab 的会话不漏扫', () => {
+  const closed = []
+  let snapshot = {
+    sessionId: 's-clean',
+    state: makeState([{ id: 'tab:assets', type: 'omnimux-assets:library', title: '资产库' }]),
+  }
+  const service = {
+    getSnapshot() { return snapshot },
+    closeTab(id, scope) { closed.push({ id, scope }) },
+  }
+
+  // 先物化的会话没有旧 Tab：此时不能把「扫过了」记成全局结论。
+  assert.equal(sweepRetiredWorkbenchTabs(service), 0)
+  assert.deepEqual(closed, [])
+
+  // 切到仍持久化了旧 Tab 的会话：必须补扫并关掉它。
+  snapshot = {
+    sessionId: 's-legacy',
+    state: makeState([{ id: 'tab:legacy', type: 'omnimux-products:library', title: '产品库' }]),
+  }
+  assert.equal(sweepRetiredWorkbenchTabs(service), 1, '新会话里的旧 Tab 仍被收编')
+  assert.deepEqual(closed, [{ id: 'tab:legacy', scope: { sessionId: 's-legacy' } }])
+
+  // 同一会话再次触发：不再重复关闭。
+  assert.equal(sweepRetiredWorkbenchTabs(service), 0)
+  assert.equal(closed.length, 1)
+})
+
+test('sweepRetiredWorkbenchTabs: 同一会话晚到的旧 Tab 仍会被补扫', () => {
+  // better-sidebar 的会话快照可能在首次物化时还没有旧 Tab（例如快照尚未恢复完）。
+  // 若那一刻就记下「已扫过」，之后同一会话补回旧 Tab 就永远不再扫 —— AC-305 失效。
+  let snapshot = {
+    sessionId: 's-late',
+    state: makeState([{ id: 'tab:assets', type: 'omnimux-assets:library', title: '资产库' }]),
+  }
+  const closed = []
+  const service = {
+    getSnapshot() { return snapshot },
+    closeTab(id, scope) { closed.push({ id, scope }) },
+  }
+
+  assert.equal(sweepRetiredWorkbenchTabs(service), 0, '首次无残留')
+  assert.deepEqual(closed, [])
+
+  // 同一会话之后补回了旧 Tab：必须补扫并关闭。
+  snapshot = {
+    sessionId: 's-late',
+    state: makeState([
+      { id: 'tab:assets', type: 'omnimux-assets:library', title: '资产库' },
+      { id: 'tab:retired', type: 'omnimux-products:library', title: '产品库' },
+    ]),
+  }
+  assert.equal(sweepRetiredWorkbenchTabs(service), 1, '晚到旧 Tab 仍被收编')
+  assert.deepEqual(closed, [{ id: 'tab:retired', scope: { sessionId: 's-late' } }])
+
+  // 收编完成后再扫：幂等，不再重复关闭。
+  assert.equal(sweepRetiredWorkbenchTabs(service), 0)
+  assert.equal(closed.length, 1)
 })
 
 test('default seed cleanup is a safe no-op when storage or service capabilities are unavailable', () => {
@@ -1567,9 +1699,12 @@ test('resolveWorkbenchTabTitle prefers opts, then getTab, then human fallback (#
     resolveWorkbenchTabTitle('omnimux-accounts:library', '', () => ({ title: 'omnimux-accounts:library' })),
     WORKBENCH_TAB_TITLE_FALLBACKS['omnimux-accounts:library'],
   )
+  // 产品库已并入资产库：旧 Tab 类型不再是 occupant，也不再有人类可读兜底标题。
+  assert.equal(WORKBENCH_TAB_TITLE_FALLBACKS['omnimux-products:library'], undefined)
+  assert.equal(WORKBENCH_TAB_TITLE_FALLBACKS_EN['omnimux-products:library'], undefined)
   assert.equal(
-    resolveWorkbenchTabTitle('omnimux-products:library', undefined, undefined),
-    '产品库',
+    resolveWorkbenchTabTitle('omnimux-assets:library', undefined, undefined),
+    '资产库',
   )
   assert.equal(
     resolveWorkbenchTabTitle('omnimux-market:plaza', undefined, undefined),

@@ -96,6 +96,6 @@
     "tailwindcss": "^3.4.4",
     "tailwindcss-animate": "^1.0.7"
   },
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "description": "OmniMux Clip: official OpenReel GUI + pipeline as a DSH better-sidebar Tab."
 }

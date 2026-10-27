@@ -14,7 +14,8 @@
     "lib/client.js",
     "scripts/build-client.mjs",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",
@@ -60,6 +61,6 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "description": "omnimux-publish: social publishing orchestration layer over OmniMux hub publish tools. Drafts, per-account subtask ledger, publish/retry/refresh, agent tools + local web UI."
 }

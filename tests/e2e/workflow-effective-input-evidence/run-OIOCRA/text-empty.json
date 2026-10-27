@@ -1,0 +1,265 @@
+{
+  "state": {
+    "nodes": [
+      {
+        "id": "正文甲",
+        "type": "material",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "data": {
+          "materialType": "text",
+          "nodeKind": "import",
+          "kind": "import",
+          "label": "正文甲",
+          "status": "completed",
+          "content": "OLD",
+          "generatedContent": "1dog"
+        }
+      },
+      {
+        "id": "空正文",
+        "type": "material",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "data": {
+          "materialType": "text",
+          "nodeKind": "import",
+          "kind": "import",
+          "label": "空正文",
+          "status": "completed",
+          "generatedContent": "",
+          "content": "不得回退旧正文"
+        }
+      },
+      {
+        "id": "target",
+        "type": "material",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "materialType": "text",
+          "nodeKind": "generate",
+          "kind": "generate",
+          "label": "生成目标",
+          "prompt": "",
+          "params": {
+            "model": "qa-text",
+            "operation": "text_to_text"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-0",
+        "source": "正文甲",
+        "target": "target",
+        "targetHandle": "in",
+        "data": {
+          "feedType": "text"
+        }
+      },
+      {
+        "id": "edge-1",
+        "source": "空正文",
+        "target": "target",
+        "targetHandle": "input",
+        "data": {
+          "feedType": "text"
+        }
+      }
+    ],
+    "targetId": "target"
+  },
+  "capture": {
+    "requests": [
+      {
+        "capability": "text",
+        "prompt": "1dog",
+        "operation": "image_to_text",
+        "model": "qa-text",
+        "dest": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/products-into-assets/tests/e2e/workflow-effective-input-evidence/run-OIOCRA/executions/qa_1760/34a04005bcaf206eec990bd9637d9fdb6725e0a0c0d4aebf003f17f4c956eb5c-7b1907fc-e29f-42db-b31f-c7c1ee0a530a.txt",
+        "signal": {},
+        "mockFail": false
+      }
+    ],
+    "captureOnly": true,
+    "generationCompleted": false,
+    "snapshot": {
+      "nodes": [
+        {
+          "id": "正文甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "正文甲",
+            "status": "completed",
+            "content": "OLD",
+            "generatedContent": "1dog"
+          }
+        },
+        {
+          "id": "空正文",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "空正文",
+            "status": "completed",
+            "generatedContent": "",
+            "content": "不得回退旧正文"
+          }
+        },
+        {
+          "id": "target",
+          "type": "material",
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "generate",
+            "kind": "generate",
+            "label": "生成目标",
+            "prompt": "",
+            "params": {
+              "model": "qa-text",
+              "operation": "text_to_text"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-0",
+          "source": "正文甲",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "text"
+          }
+        },
+        {
+          "id": "edge-1",
+          "source": "空正文",
+          "target": "target",
+          "targetHandle": "input",
+          "data": {
+            "feedType": "text"
+          }
+        }
+      ],
+      "targetId": "target"
+    },
+    "prepared": {
+      "nodes": [
+        {
+          "id": "正文甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "正文甲",
+            "status": "completed",
+            "content": "OLD",
+            "generatedContent": "1dog"
+          }
+        },
+        {
+          "id": "空正文",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "空正文",
+            "status": "completed",
+            "generatedContent": "",
+            "content": "不得回退旧正文"
+          }
+        },
+        {
+          "id": "target",
+          "type": "material",
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "generate",
+            "kind": "generate",
+            "label": "生成目标",
+            "prompt": "",
+            "params": {
+              "model": "qa-text",
+              "operation": "text_to_text"
+            },
+            "slotBindings": {},
+            "slotConflicts": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-0",
+          "source": "正文甲",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "text"
+          }
+        },
+        {
+          "id": "edge-1",
+          "source": "空正文",
+          "target": "target",
+          "targetHandle": "input",
+          "data": {
+            "feedType": "text"
+          }
+        }
+      ]
+    },
+    "identity": {
+      "builtAt": "2026-10-27T03:53:46.530Z",
+      "sha256": "381efd15c36f31dcac6c2d9d7a396b36fb609099b74c439e57d79c226240af1b",
+      "backendSha256": "ba1c82ba2f6fdd7fc124487e3a690553149488b1525eff753bf1a31a95eed664",
+      "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/products-into-assets"
+    }
+  },
+  "dom": "1dog\nT\n|\n0/7000\nQ\nqa-text",
+  "errors": [],
+  "snapshot": "[p1 \"1760 真实面板离线验证\" | space \"1760 formal /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/products-into-assets/tests/e2e/workflow-effective-input-evidence/run-OIOCRA\"(27): 1 managed, 0 untracked — p1* \"1760 真实面板离线验证\"]\nroot\n  container\n    heading\n      text \"上游输入离线验证\"\n    paragraph\n      text \"真实生产面板；仅截获请求，不调用模型。\"\n    container\n      button [ref=1]\n        text \"empty\"\n      button [ref=2]\n        text \"text\"\n      button [ref=3]\n        text \"image\"\n      button [ref=4]\n        text \"video\"\n      button [ref=5]\n        text \"audio\"\n      button [ref=6]\n        text \"music\"\n      button [ref=7]\n        text \"ordered\"\n      button [ref=8]\n        text \"mixed\"\n      button [ref=9]\n        text \"frames\"\n    container \"生产生成配置\"\n      container\n        container\n          button [ref=10]\n            svg_root\n            text \"1dog\"\n            button [ref=11]\n              svg_root\n          button \"选择参考图素材\" [ref=12, loc=css:button[aria-label=\"选择参考图素材\"]]\n            svg_root\n          button [ref=13]\n            svg_root\n        container\n          textfield \"补充要求（可选）\" [ref=14]\n            text \"补充要求（可选）\"\n          container\n            button \"提示词助手\" [ref=15, loc=css:button[aria-label=\"提示词助手\"]]\n              svg_root\n            text \"T\"\n            text \"|\"\n            container\n              text \"0\"\n              text \"/\"\n              text \"7000\"\n      container\n        button [ref=16]\n          text \"Q\"\n          text \"qa-text\"\n          svg_root\n        button [ref=17]\n          button \"生成\" [ref=18, loc=css:button[aria-label=\"生成\"]]\n            svg_root\n    container [ref=19]\n      text \"实际提交捕获\"\n  container\n    svg_root\n    dialog \"OmniMux工作台\"\n      iframe\n        root\n          toolbar \"OmniMux\"\n            button \"OmniMux\" [ref=20]\n              svg_root\n  toolbar \"OmniMux\"\n    button \"OmniMux\" [ref=21]\n      svg_root\n",
+  "geometry": {
+    "width": 800,
+    "height": 260
+  }
+}

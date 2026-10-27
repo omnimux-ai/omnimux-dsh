@@ -170,6 +170,7 @@ function BlankSessionGuide({
     dockedItem,
     placement,
     dock,
+    holdScroll,
     undock,
     isDocked,
   } = useComposerDocking({
@@ -344,6 +345,12 @@ function BlankSessionGuide({
 
     const store = typeof window !== 'undefined' ? window.__omnimuxAttachments : null
 
+    // 吸底守卫只认「带 id 的真实卡片实体」，不认命令信封（{ template, prompt, title }）。
+    // 素材类卡片交上来的正是信封，直接透传会让 dock() 拒收、再被当成「再次点击反悔」
+    // 把草稿与卡槽一起抹掉——用户看到的就是点了没反应（#3812）。
+    const dockEntity = [attachmentItem, payload.card, payload.template, payload.trending, payload]
+      .find((candidate) => candidate && candidate.id)
+
     // 1. 如果是 Skill 技能：必须清空素材卡槽，不残留旧图
     if (type === 'skill') {
       store?.clear?.(sessionId)
@@ -353,7 +360,7 @@ function BlankSessionGuide({
     }
 
     // 3. 调度输入框停靠：显式传递 force: true 确保坚决吸底，不被误判为 inline
-    const docked = dock(payload, {
+    const docked = dock(dockEntity, {
       force: true,
       onDocked: () => {
         if (type === 'skill' && cleanSlug) {
@@ -480,6 +487,7 @@ function BlankSessionGuide({
             onApplyTemplate={handleExploreTemplateApply}
             onApplyTrending={handleExploreTrendingApply}
             onApplySkill={handleExploreSkillApply}
+            onContentRebuild={holdScroll}
             t={t}
           />
 

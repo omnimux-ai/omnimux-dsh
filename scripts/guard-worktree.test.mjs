@@ -829,9 +829,17 @@ describe('guard-worktree bash command write safety guard (防命令行绕过篡�
       decideBashCommand({ command: 'pnpm install --frozen-lockfile > /tmp/install.log 2>&1', cwd: mainRepoRoot }).decision,
       'allow',
     )
+    // #3821：主检出 install 必须冻结 lockfile。原断言用 `--filter omnimux` 无冻结
+    // flag 却期望 allow——那正是「install 静默改写 pnpm-lock.yaml」的口子。改为：
+    // 带 --filter 且冻结仍放行（重定向与带值 flag 的解析保护不变），
+    // 但不冻结时一律拒绝。
+    assert.equal(
+      decideBashCommand({ command: 'pnpm install --filter omnimux --frozen-lockfile > /tmp/install.log', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
     assert.equal(
       decideBashCommand({ command: 'pnpm install --filter omnimux > /tmp/install.log', cwd: mainRepoRoot }).decision,
-      'allow',
+      'deny',
     )
     assert.equal(
       decideBashCommand({ command: 'npm install left-pad > /tmp/x.log', cwd: mainRepoRoot }).decision,
@@ -1283,5 +1291,62 @@ describe('guard-worktree unbounded scan guard (全盘扫盘硬拦截)', () => {
     assert.equal(result.status, 0, result.stderr)
     const parsed = JSON.parse(result.stdout)
     assert.equal(parsed.hookSpecificOutput.permissionDecision, 'deny')
+  })
+})
+
+// #3821：主检出 install 必须冻结 lockfile。
+//
+// 背景：不带冻结 flag 的 install 会按 manifest 重写 pnpm-lock.yaml，这一步不经过
+// edit/write，因而绕开 tracked-file 保护。实测（pnpm 11）：manifest 加一个依赖后
+// 无 flag 的 install 使 lockfile sha256 从 88818e6e 变为 c10e5b05；带
+// --frozen-lockfile 时命令失败退出且哈希不变。
+describe('main checkout install must freeze the lockfile (#3821)', () => {
+  const mainCwd = mainRepoRoot
+
+  it('denies unfrozen install for every package manager', () => {
+    for (const command of ['pnpm install', 'npm install', 'yarn install', 'pnpm i']) {
+      const result = decideBashCommand({ command, cwd: mainCwd })
+      assert.equal(result.decision, 'deny', `${command} 必须被拒`)
+      assert.equal(result.reason, 'forbidden-main-checkout-unfrozen-install', `${command} 的拒绝原因要能指名`)
+    }
+  })
+
+  it('allows frozen install and npm ci', () => {
+    for (const command of [
+      'pnpm install --frozen-lockfile',
+      'pnpm install --offline --frozen-lockfile',
+      'yarn install --frozen-lockfile',
+      'npm ci',
+    ]) {
+      assert.equal(decideBashCommand({ command, cwd: mainCwd }).decision, 'allow', `${command} 必须放行`)
+    }
+  })
+
+  it('treats an explicit frozen=false as unfrozen', () => {
+    // 写成 =false 等于关掉冻结，不能因为出现该字符串就当成安全。
+    assert.equal(
+      decideBashCommand({ command: 'pnpm install --frozen-lockfile=false', cwd: mainCwd }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'pnpm install --frozen-lockfile=0', cwd: mainCwd }).decision,
+      'deny',
+    )
+  })
+
+  it('still denies package-name installs on the main checkout', () => {
+    // 冻结判定不应盖掉原有的「带包名按 add 语义拒绝」保护。
+    const result = decideBashCommand({ command: 'pnpm install left-pad --frozen-lockfile', cwd: mainCwd })
+    assert.equal(result.decision, 'deny')
+    assert.equal(result.reason, 'forbidden-main-checkout-build')
+  })
+
+  it('does not restrict installs inside a real worktree', () => {
+    // 工作树里怎么装都不该管——这是任务隔离区的正常开发行为。
+    // 必须是 git 真实登记的工作树（见文件顶部 `git worktree add` 建的 worktreeRoot）：
+    // 随手 mkdir 一个目录不算，isWorktreePath 会判否。
+    for (const command of ['pnpm install', 'yarn install', 'pnpm install --filter x']) {
+      assert.equal(decideBashCommand({ command, cwd: worktreeRoot }).decision, 'allow', `${command} 在工作树内必须放行`)
+    }
   })
 })

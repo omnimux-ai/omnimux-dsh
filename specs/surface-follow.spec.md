@@ -13,7 +13,7 @@
    - 图像生成 `omnimux:media-viewer`：`omnimux_image_*`、`image_generate`、`image_edit`；
    - 视频剪辑 `omnimux-clip:studio`：`clip_*`；
    - 灵感社区 `omnimux-inspiration:library`：`omnimux_inspiration_*`、`inspiration_*`；
-   - 产品库 `omnimux-products:library`：`products_*`。
+   - 产品库 `omnimux-assets:library`（并携带 `view.filterType = 'product'`）：`products_*`。
 3. **防打扰策略（与主功能同批交付）**：
    - **用户优先**：若用户在本轮内手动切走（当前页签 ≠ 上次自动切到的页签），本轮内立即停用自动跟随；
    - **防抖动**：同一轮内同一工作面只自动切一次；同一轮内已跟随过的页签不重复切；
@@ -29,3 +29,15 @@
    - 通道调用使用既有 `mailbox.sendRpc` 且不递增 Agent 配额计数。
 2. 回归：`node --test plugins/omnimux/src/workbench/*.test.js` 全绿；`contract.js` 相关断言同步更新。
 3. 交付交互演示页（单文件），并在侧边栏打开供用户核验。
+
+## 假设
+
+- 假设 A：宿主 `tools/execute` 中间件能在工具执行前拿到工具名与当前会话 id，据此查「工具 → 工作面」映射并触发切换；若中间件拿不到工具名，本设计整体不成立。
+- 假设 B：`mailbox.sendRpc({ method: 'open' })` 是既有的可用通道，能完成右侧工作台切页且不递增 Agent 切换配额；若该通道实际受限或需新机制，需改回显式 `workbench_open_tab`。
+- 假设 C：用户手动切走可用「当前页签 ≠ 上次自动切到的页签」可靠识别；若用户切到同一页签或存在其他切页来源，该判据会误判。
+
+## 证伪方式
+
+- 证伪 A：中间件里取不到工具名或会话 id → 改为在工具自身入口声明目标工作面，不再依赖中间件解析。
+- 证伪 B：实测该通道触发配额计数或切页失败 → 放弃自动跟随，保留 Agent 显式调用。
+- 证伪 C：出现「用户手动切走但被判为未切走」或反之的实际案例 → 改用显式的用户操作事件标记，不再靠页签比对推断。

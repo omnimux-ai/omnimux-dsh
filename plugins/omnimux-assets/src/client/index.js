@@ -2,6 +2,7 @@
  *  assets workbench tab on dsh-better-sidebar. */
 import { createElement } from 'react'
 import { NS, en, zh } from './locales.js'
+import { NS as PRODUCTS_NS, en as productsEn, zh as productsZh } from 'omnimux-products/ui'
 import { mountSidebarEntry } from './sidebar-entry.js'
 import { AssetsStage } from './AssetsStage.jsx'
 import { AssetHubPanel } from '../asset-hub/AssetHubPanel.jsx'
@@ -41,7 +42,14 @@ function renderAssetsIcon(size = 16) {
  */
 export function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'omnimux-assets: dictionaries')
+  // 产品库页面已并入本插件的「产品库」Tab；二级页与卡片的文案仍属产品库命名空间。
+  // 在这里注册它的词典，避免为了几条文案再挂一个客户端插件。
+  ctx.effect(
+    () => ctx.locale.register(PRODUCTS_NS, { zh: productsZh, en: productsEn }),
+    'omnimux-assets: products dictionaries',
+  )
   const t = ctx.locale.bind(NS)
+  const productT = ctx.locale.bind(PRODUCTS_NS)
 
   ctx.effect(() => mountSidebarEntry(null, t, ctx.locale), 'omnimux-assets: sidebar entry')
 
@@ -60,7 +68,7 @@ export function apply(ctx) {
       order: 15,
       hidden: false,
       single: true,
-      component: (props) => createElement(AssetsStage, { ...props, t }),
+      component: (props) => createElement(AssetsStage, { ...props, t, productT }),
     })
     const unregisterAssetHub = sidebar.registerTab({
       id: ASSET_HUB_TAB_ID,
