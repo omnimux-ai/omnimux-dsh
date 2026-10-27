@@ -3,8 +3,8 @@ name: Quality Gate & Auto QA
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
+  # 不再监听 push main：Merge Queue 合入的正是 merge_group 已校验的同一棵树，
+  # 重跑只会抢 runner、被后续合并 cancel（Issue #3845）。
   merge_group:
     types: [checks_requested]
 
@@ -12,12 +12,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# 结构（Issue #3845）：gates / plugin-tests 矩阵 / full-scan 并行，
+# static-and-tests 聚合为唯一 required check「Static L0 QA & Tests」。
 jobs:
-  static-and-tests:
-    name: Static L0 QA & Tests
+  gates:
+    name: Static gates & regression
     runs-on: ubuntu-latest
     env:
-      QA_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || 'origin/main' }}
+      QA_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || 'origin/main' }}
     permissions:
       contents: read
       pull-requests: write
@@ -133,12 +135,6 @@ jobs:
         run: |
           mkdir -p .workbuddy/evidence
           node scripts/auto-qa-gate.mjs . --diff --base "$QA_BASE" --json --output .workbuddy/evidence/auto-qa-report.json
-
-      # 主干全仓巡检：不受 git diff 限制，覆盖插件源码的变形凭据与扩展清单的联网出口。
-      # 不写 --output，避免覆盖上面那份 verdict 输入的 diff 报告。
-      - name: Full-repo secret & extension outbound scan (push to main)
-        if: ${{ github.event_name == 'push' }}
-        run: node scripts/auto-qa-gate.mjs . --all
 
       - name: Setup Python for managed archives
         uses: actions/setup-python@v5
@@ -442,18 +438,8 @@ jobs:
           test -s plugins/omnimux-workflow/dist/index.js
           test -s plugins/omnimux-workflow/lib/canvas.js
 
-      # 每个插件的测试在合并前必须全绿：run-workspace-tests 按包 scripts.test
-      # 逐一执行并 TAP 汇总；verify-plugin-load 在真实 Cordis 内加载每个插件
-      # （声明的 inject 由兄弟桩纤维提供），替代原静态 verify-dsh-contracts。
-      - name: Plugin unit suites (all packages)
-        run: node scripts/run-workspace-tests.mjs --logs .tmp/ci-workspace-logs --json .tmp/ci-workspace-summary.json
-
-      # The browser-extension vitest suite lives in a nested workspace package
-      # and does not emit TAP, so run-workspace-tests cannot judge it; it runs
-      # as its own step. Fails the gate on any red test or unhandled error.
-      - name: Browser extension vitest suite
-        run: corepack pnpm --filter dsh-browser-extension test
-
+      # verify-plugin-load 在真实 Cordis 内加载每个插件（声明的 inject 由兄弟桩纤维提供），
+      # 替代原静态 verify-dsh-contracts。插件单测见 plugin-tests 矩阵。
       - name: Plugin load check (Cordis runtime)
         run: node scripts/verify-plugin-load.mjs
 
@@ -471,10 +457,168 @@ jobs:
           name: qa-evidence
           path: |
             .workbuddy/evidence/
+          retention-days: 7
+          include-hidden-files: true
+
+      # 聚合 job 只需要 verdict 输入这一份报告；整包证据很大，下载会拖慢 required check。
+      - name: Upload L0 report for verdict
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-report
+          path: .workbuddy/evidence/auto-qa-report.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # 每个插件的测试在合并前必须全绿：run-workspace-tests 按包 scripts.test 执行并 TAP 汇总。
+  # 分片表在 run-workspace-tests.mjs 的 TEST_SHARDS，rest 兜底收所有未列包；
+  # run-workspace-tests.test.mjs 断言矩阵与分片表一致、分片不重不漏。
+  plugin-tests:
+    name: Plugin tests (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [hub, inspiration, workflow-market, rest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+          run_install: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install workspace dependencies
+        run: corepack pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build all plugin bundles
+        run: node scripts/build-all.mjs
+
+      - name: Rebuild omnimux-workflow host + canvas bundles from src
+        run: |
+          node plugins/omnimux-workflow/scripts/build-host.mjs
+          node plugins/omnimux-workflow/scripts/build-canvas.mjs
+
+      - name: Plugin unit suites
+        env:
+          OMNIMUX_TEST_SHARD: ${{ matrix.shard }}
+        run: node scripts/run-workspace-tests.mjs --logs .tmp/ci-workspace-logs --json .tmp/ci-workspace-summary.json
+
+      # The browser-extension vitest suite lives in a nested workspace package
+      # and does not emit TAP, so run-workspace-tests cannot judge it; it runs
+      # as its own step in the rest shard. Fails on any red test or unhandled error.
+      - name: Browser extension vitest suite
+        if: ${{ matrix.shard == 'rest' }}
+        run: corepack pnpm --filter dsh-browser-extension test
+
+      - name: Upload plugin test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-tests-${{ matrix.shard }}
+          path: |
             .tmp/ci-workspace-logs/
             .tmp/ci-workspace-summary.json
           retention-days: 7
           include-hidden-files: true
+
+  # 全仓巡检：不受 git diff 限制，覆盖插件源码的变形凭据与扩展清单的联网出口。
+  # 原在 push main 上跑；push 触发移除后改在合入前的 merge_group 跑。
+  full-scan:
+    name: Full-repo secret & extension outbound scan
+    if: ${{ github.event_name == 'merge_group' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+          run_install: false
+
+      - name: Install workspace dependencies
+        run: corepack pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Full-repo secret & extension outbound scan
+        run: node scripts/auto-qa-gate.mjs . --all
+
+  static-and-tests:
+    name: Static L0 QA & Tests
+    needs: [gates, plugin-tests, full-scan]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    env:
+      QA_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || 'origin/main' }}
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.1
+
+      # ci-verdict 经 impact-matrix → auto-qa-gate 传递依赖 pngjs，需要工作区依赖。
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+          run_install: false
+
+      - name: Install workspace dependencies
+        run: corepack pnpm install --frozen-lockfile --ignore-scripts
+
+      # full-scan 只在 merge_group 运行，其余事件为 skipped；其他 job 必须 success。
+      - name: Require upstream jobs
+        env:
+          GATES: ${{ needs.gates.result }}
+          PLUGIN_TESTS: ${{ needs.plugin-tests.result }}
+          FULL_SCAN: ${{ needs.full-scan.result }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          echo "gates=$GATES plugin-tests=$PLUGIN_TESTS full-scan=$FULL_SCAN event=$EVENT_NAME"
+          test "$GATES" = success
+          test "$PLUGIN_TESTS" = success
+          test "$FULL_SCAN" = success || { test "$EVENT_NAME" != merge_group && test "$FULL_SCAN" = skipped; }
+
+      # 缺失报告时 ci-verdict 读不到输入即判失败，不会放行。
+      - name: Download L0 report
+        if: ${{ always() }}
+        uses: actions/download-artifact@v4
+        with:
+          name: qa-report
+          path: .workbuddy/evidence/
 
       - name: Evaluate CI verdict
         if: ${{ always() }}
