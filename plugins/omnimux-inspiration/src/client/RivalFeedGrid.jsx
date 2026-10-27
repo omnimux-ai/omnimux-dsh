@@ -9,7 +9,7 @@
 
 import { Button, EmptyState } from 'dsh-ui-kit'
 import { EMPTY_ICON_SEARCH, EMPTY_ICON_USER, EMPTY_ICON_WORKS } from './icons.jsx'
-import { rivalErrorKey } from './rival-health.js'
+import { browserRefreshAvailable, rivalErrorKey } from './rival-health.js'
 
 /** Blocks a first paint or a page append shows while it has nothing to show. */
 const SKELETON_COUNT = 10
@@ -26,12 +26,13 @@ const SKELETON_COUNT = 10
  *   onImport: () => void,
  *   onRetryFetch?: () => void,
  *   onBrowseTrend?: () => void,
+ *   onBrowserUpdate?: (id: string) => Promise<boolean> | boolean,
  * }} props
  */
 export function RivalFeedGrid(props) {
   const {
     t, cards, loading, emptyKind, fetchPhase, onResetFilters, onImport,
-    onRetryFetch, onBrowseTrend, refreshBusy = false,
+    onRetryFetch, onBrowseTrend, refreshBusy = false, onBrowserUpdate,
   } = props
 
   if (loading && (cards.length === 0) && emptyKind !== 'no-accounts') {
@@ -111,6 +112,9 @@ export function RivalFeedGrid(props) {
         ? t('rivalFeed.empty.failedTimeoutReason')
         : t(rivalErrorKey(phase.account?.error_code))
       const description = `${accountName}：${[failures, reason].filter(Boolean).join('。')}`
+      // 「重试」对能力缺口是空动作：云端没有该平台的采集器，再排一次必然同样
+      // 失败。这时空态只给真正能采到内容的那条通道（Issue #3839）。
+      const browserOnly = browserRefreshAvailable(phase.account)
       return (
         <EmptyState
           icon={EMPTY_ICON_WORKS}
@@ -121,6 +125,14 @@ export function RivalFeedGrid(props) {
               {phase.kind === 'reimport' ? (
                 <Button variant="primary" size="sm" onClick={onImport}>
                   {t('rivalAccounts.health.reimportAction')}
+                </Button>
+              ) : browserOnly ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => { void onBrowserUpdate?.(String(phase.account?.id ?? '')) }}
+                >
+                  {t('rivalAccounts.health.browserUpdate')}
                 </Button>
               ) : onRetryFetch ? (
                 <Button variant="primary" size="sm" disabled={refreshBusy} onClick={onRetryFetch}>

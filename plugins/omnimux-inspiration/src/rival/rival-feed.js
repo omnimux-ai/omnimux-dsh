@@ -350,6 +350,9 @@ export function toFeedRow(post, account) {
       likes: typeof post?.stats?.likes === 'number' ? post.stats.likes : 0,
       comments: typeof post?.stats?.comments === 'number' ? post.stats.comments : 0,
       shares: typeof post?.stats?.shares === 'number' ? post.stats.shares : 0,
+      // 小红书的「收藏」是它最主要的一个指标（`collects` 在回写时已映射成
+      // `saves`）。不透传就等于把这条笔记的互动数据砍掉一半。
+      saves: typeof post?.stats?.saves === 'number' ? post.stats.saves : 0,
     },
     cover_src: coverSrc,
     cover_key: coverSrc,

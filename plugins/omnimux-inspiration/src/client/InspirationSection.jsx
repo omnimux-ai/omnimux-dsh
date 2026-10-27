@@ -24,7 +24,7 @@ import { revealLandedCard, withLandedItem } from './import-landing.js'
 import { injectInspirationStyles } from './styles.js'
 import { useInspirationFeed } from './use-inspiration-feed.js'
 import { useRivalFeed } from './use-rival-feed.js'
-import { removeRivalAccount, requestRivalPluginRefresh } from './rival-api.js'
+import { fetchRivalAccounts, removeRivalAccount, requestRivalPluginRefresh } from './rival-api.js'
 import { openExternalUrl } from './open-url.js'
 import {
   accountHealth,
@@ -38,6 +38,16 @@ const TOAST_VISIBLE_MS = 2500
 
 /** 退场动画时长，必须与样式表里 `.omnimux-inspiration-toast` 的 transition 一致。 */
 const TOAST_FADE_MS = 180
+
+/**
+ * 浏览器采集回写的等待窗口与轮询间隔。
+ *
+ * 采集发生在用户自己的浏览器里，host 不推送结果，所以点完必须自己问一次
+ * 「回来了没有」。窗口比一次性 token 的 2 分钟略宽（用户可能还没登录、要扫码），
+ * 但不会无限等：超时后不再重读，用户手动刷新页面也能看到。
+ */
+const BROWSER_UPDATE_WAIT_MS = 150_000
+const BROWSER_UPDATE_POLL_MS = 3_000
 
 /**
  * 账号导入成功的提示文案：账号带 handle 就点名，没带就退回一句通用话术 ——
@@ -211,6 +221,22 @@ export function InspirationSection({ t, active }) {
   }, [toastLeaving])
 
   /**
+   * Timer of the pending browser-capture wait.
+   *
+   * Declared beside the toast timers because both outlive a render: the wait
+   * polls for up to {@link BROWSER_UPDATE_WAIT_MS} after the user's browser was
+   * opened, and unmounting the page must stop it.
+   */
+  const browserUpdateTimer = useRef(null)
+
+  // The browser-capture wait outlives a single render but not the tab: leaving
+  // the page must not keep a timer (and a poll) alive.
+  useEffect(() => () => {
+    if (browserUpdateTimer.current !== null) clearTimeout(browserUpdateTimer.current)
+    browserUpdateTimer.current = null
+  }, [])
+
+  /**
    * 账号导入成功后的统一收口（顶部「导入灵感」弹窗与账号监控页内的弹窗共用）。
    *
    * 只切 tab 是不够的：用户本来就在账号监控页时 tab 不变、`useRivalFeed` 的
@@ -236,6 +262,72 @@ export function InspirationSection({ t, active }) {
   }, [handleImportSuccess, showToast, t])
 
   const libraryCollections = useInspirationCollections({ feed, collectionId, setCollectionId, t, showToast })
+
+  /**
+   * Wait for the capture to land, then re-read the feed.
+   *
+   * The capture happens in the user's own browser and the Host pushes nothing
+   * back, so a click that only opens a tab looks like「点了没反应」the moment the
+   * user returns. `last_checked_at` is the only field this path writes — a cloud
+   * refresh writes `last_refresh_at` — so waiting on it cannot be satisfied by
+   * an unrelated cloud cycle.
+   * @param {string} id
+   */
+  const waitForBrowserUpdate = useCallback(async (id) => {
+    const startedAt = Date.now()
+    const deadline = startedAt + BROWSER_UPDATE_WAIT_MS
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => {
+        browserUpdateTimer.current = setTimeout(resolve, BROWSER_UPDATE_POLL_MS)
+      })
+      browserUpdateTimer.current = null
+      let accounts = null
+      try {
+        const res = await fetchRivalAccounts({})
+        accounts = res?.ok ? (res.body?.data?.items || []) : null
+      } catch {
+        accounts = null
+      }
+      const row = Array.isArray(accounts)
+        ? accounts.find((account) => String(account?.id) === String(id))
+        : null
+      const checked = Date.parse(String(row?.last_checked_at || ''))
+      if (Number.isFinite(checked) && checked >= startedAt - 1_000) {
+        void reloadRivalFeed()
+        return
+      }
+    }
+  }, [reloadRivalFeed])
+
+  /**
+   * 「更新这个账号（浏览器）」的唯一入口（Issue #3556 / #3839）。
+   *
+   * 账号行与空态按钮都走这里：先向 Host 要一次性 token，再用默认浏览器打开带
+   * token 的主页；失败时给一句气泡，绝不假装已经打开。抽成回调而不是在两处各写
+   * 一遍，是因为第二份实现迟早会和 Host 的 400/422 契约漂开。
+   */
+  const requestBrowserUpdate = useCallback(async (id) => {
+    let result
+    try {
+      result = await requestRivalPluginRefresh(id)
+    } catch {
+      result = null
+    }
+    const url = result?.body?.data?.url
+    if (!result || result.ok === false || typeof url !== 'string' || url === '') {
+      showToast(t('rivalAccounts.refresh.pluginFailed'))
+      return false
+    }
+    if (!openExternalUrl(url)) {
+      showToast(t('rivalAccounts.refresh.pluginFailed'))
+      return false
+    }
+    showToast(t('rivalAccounts.refresh.pluginOpened'))
+    // 连点两次不该叠出两个等待；旧的那个直接作废。
+    if (browserUpdateTimer.current !== null) clearTimeout(browserUpdateTimer.current)
+    void waitForBrowserUpdate(id)
+    return true
+  }, [showToast, t, waitForBrowserUpdate])
 
   /**
    * 合集卡「加入会话」：同一时刻只处理一个合集。
@@ -646,24 +738,7 @@ export function InspirationSection({ t, active }) {
             }}
             onRefresh={rivalFeed.retryAccount}
             onRetry={rivalFeed.retryAccount}
-            onPluginRefresh={async (id) => {
-              let result
-              try {
-                result = await requestRivalPluginRefresh(id)
-              } catch {
-                result = null
-              }
-              const url = result?.body?.data?.url
-              if (!result || result.ok === false || typeof url !== 'string' || url === '') {
-                showToast(t('rivalAccounts.refresh.pluginFailed'))
-                return
-              }
-              if (!openExternalUrl(url)) {
-                showToast(t('rivalAccounts.refresh.pluginFailed'))
-                return
-              }
-              showToast(t('rivalAccounts.refresh.pluginOpened'))
-            }}
+            onPluginRefresh={requestBrowserUpdate}
             quotaLeft={rivalQuota?.left}
             refreshBusy={rivalFeed.refreshBusy}
             active={active !== false}
@@ -680,6 +755,7 @@ export function InspirationSection({ t, active }) {
               }}
               onAccountImported={handleAccountImported}
               onBrowseTrend={() => setTab('public')}
+              onBrowserUpdate={requestBrowserUpdate}
             />
           </div>
         </div>

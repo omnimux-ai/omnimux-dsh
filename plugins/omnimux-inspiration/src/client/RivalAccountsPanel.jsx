@@ -44,11 +44,12 @@ export { buildRivalPlatformOptions }
  *   onImported?: (item?: Record<string, any>) => void,
  *   onAccountImported?: (account?: Record<string, any>) => void,
  *   onBrowseTrend?: () => void,
+ *   onBrowserUpdate?: (id: string) => Promise<boolean> | boolean,
  * }} props
  */
 export function RivalAccountsPanel(props) {
   const {
-    t, active = true, feed, onImported, onAccountImported, onBrowseTrend,
+    t, active = true, feed, onImported, onAccountImported, onBrowseTrend, onBrowserUpdate,
   } = props
   const [importOpen, setImportOpen] = useState(false)
   const [detailRow, setDetailRow] = useState(null)
@@ -278,6 +279,7 @@ export function RivalAccountsPanel(props) {
           onImport={() => setImportOpen(true)}
           onRetryFetch={feed.retryFetch}
           onBrowseTrend={onBrowseTrend}
+          onBrowserUpdate={onBrowserUpdate}
         />
       )}
 

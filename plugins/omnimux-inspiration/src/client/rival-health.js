@@ -13,6 +13,7 @@
  * 规格 N12）。
  */
 
+import { PLUGIN_REFRESH_PLATFORMS } from '../rival/constants.js'
 import { zh } from './locales.js'
 
 const MS_PER_MINUTE = 60_000
@@ -20,6 +21,27 @@ const MS_PER_MINUTE = 60_000
 /** Identity failures need a corrected profile URL rather than another collection. */
 export function accountNeedsReimport(account) {
   return account?.error_code === 'identity-unverified' || account?.error_code === 'identity-unresolved'
+}
+
+/**
+ * Whether this account's only working refresh channel is the browser plugin
+ * (Issue #3839).
+ *
+ * `platform-unsupported` is a *capability* terminal state: the cloud has no
+ * collector, so the row's「重试」re-queues a cycle that is guaranteed to fail the
+ * same way and never collects a single post. 小红书 is the platform this
+ * matters for today — it is importable, its notes are only reachable through the
+ * user's own logged-in browser.
+ *
+ * The platform list comes from `constants.js`, the same list the Host refuses a
+ * token against, so the row can never offer a button the Host answers with 400.
+ * @param {Record<string, any> | null | undefined} account
+ * @returns {boolean}
+ */
+export function browserRefreshAvailable(account) {
+  if (!account || account.error_code !== 'platform-unsupported') return false
+  const platform = String(account.platform || '')
+  return platform !== '' && PLUGIN_REFRESH_PLATFORMS.includes(platform)
 }
 
 /** Translate known failure codes only; upstream text can contain credentials. */

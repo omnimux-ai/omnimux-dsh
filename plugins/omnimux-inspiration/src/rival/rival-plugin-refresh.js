@@ -25,7 +25,7 @@
  */
 
 import { randomBytes } from 'node:crypto'
-import { POSTS_CACHE_MAX_ROWS, RIVAL_ERROR_CODES } from './constants.js'
+import { PLUGIN_REFRESH_PLATFORMS, CLOUD_RIVAL_PLATFORMS, POSTS_CACHE_MAX_ROWS, RIVAL_ERROR_CODES } from './constants.js'
 import { rivalProfileUrl } from './rival-identity.js'
 import { detectPlatformFromUrl, normalizeUrl } from '../url-normalizer.js'
 
@@ -33,11 +33,11 @@ import { detectPlatformFromUrl, normalizeUrl } from '../url-normalizer.js'
 export const PLUGIN_REFRESH_TTL_MS = 2 * 60 * 1000
 
 /**
- * Platforms the browser capture supports. The content script only runs on
- * these two profile pages (`specs/account-plugin-refresh.spec.md` §3.4), so a
- * token for any other platform could never be claimed and is refused up front.
+ * Platforms the browser capture supports — re-exported from `constants.js`,
+ * which is the single source the account row also reads to decide whether
+ * 「浏览器更新」is the action to offer (Issue #3839).
  */
-export const PLUGIN_REFRESH_PLATFORMS = Object.freeze(['tiktok', 'x'])
+export { PLUGIN_REFRESH_PLATFORMS }
 
 /** Local error codes (mirrors the module's other codes; not in `constants.js`). */
 const CODES = Object.freeze({
@@ -286,11 +286,47 @@ function nullableCount(value) {
 }
 
 /**
+ * Media facts a captured post carries, reduced to the row's own columns.
+ *
+ * A browser capture reports `media: [{ type: 'image'|'video', url }]`; the row
+ * builder has no such field, so the first image becomes the cover and the first
+ * video becomes the playable address. Without this, every captured 小红书 note
+ * (and every TikTok photo post) landed as a text row with no cover — the account
+ * monitor showed a title and nothing else.
+ *
+ * The `type` follows the same evidence: a video address means `video`, else a
+ * cover means `image`, else the row really is text-only. A media entry with no
+ * http(s) address is ignored rather than trusted.
+ * @param {unknown} value
+ * @returns {{ cover_url: string, video_url: string | null, type: 'video'|'image'|'text' }}
+ */
+function capturedMedia(value) {
+  const media = Array.isArray(value) ? value : []
+  let cover = ''
+  let video = ''
+  for (const entry of media) {
+    if (!isPlainObject(entry)) continue
+    const url = typeof entry.url === 'string' ? entry.url.trim() : ''
+    if (!/^https?:\/\//i.test(url)) continue
+    if (entry.type === 'video') {
+      if (!video) video = url
+      continue
+    }
+    if (!cover) cover = url
+  }
+  return {
+    cover_url: cover,
+    video_url: video || null,
+    type: video ? 'video' : (cover ? 'image' : 'text'),
+  }
+}
+
+/**
  * Rows handed to the store's `commitPluginRefresh`.
  *
  * The store's row builder owns the persisted shape; this only maps the capture
- * vocabulary (`content`, `source_url`, `platform_post_id`) onto it and drops
- * rows that carry no usable identity rather than writing an `''`-id row.
+ * vocabulary (`content`, `source_url`, `platform_post_id`, `media`) onto it and
+ * drops rows that carry no usable identity rather than writing an `''`-id row.
  * @param {unknown} posts
  * @returns {Record<string, any>[]}
  */
@@ -304,17 +340,22 @@ function capturedPostRows(posts) {
     const id = capturedPostId(post)
     if (!id) continue
     const stats = isPlainObject(post.stats) ? post.stats : {}
+    const media = capturedMedia(post.media)
     rows.push({
       id,
       url: typeof post.source_url === 'string' ? post.source_url : '',
       title: typeof post.title === 'string' ? post.title : '',
       text: typeof post.content === 'string' ? post.content : '',
       posted_at: nonEmptyText(post.posted_at) ?? null,
+      type: media.type,
+      cover_url: media.cover_url,
+      video_url: media.video_url,
       stats: {
         likes: nullableCount(stats.likes),
         comments: nullableCount(stats.comments),
         views: nullableCount(stats.views),
         shares: nullableCount(stats.shares),
+        saves: nullableCount(stats.collects),
       },
     })
   }
@@ -333,7 +374,10 @@ export function handlePluginRefreshRequest(ctx) {
     return fail(404, CODES.ACCOUNT_NOT_FOUND, `对标账号不存在 (account not found): ${accountId}`)
   }
   if (!PLUGIN_REFRESH_PLATFORMS.includes(account.platform)) {
-    return fail(400, CODES.PLATFORM_UNSUPPORTED, '仅 TikTok / X 账号支持浏览器插件更新')
+    // Named from the list itself: a hard-coded "TikTok / X" drifted the moment
+    // 小红书 was added, and the copy is the only place the user learns which
+    // platforms this channel covers.
+    return fail(400, CODES.PLATFORM_UNSUPPORTED, `仅 ${PLUGIN_REFRESH_PLATFORMS.join(' / ')} 账号支持浏览器插件更新`)
   }
   const pageUrl = profilePageUrl(account).split('#')[0]
   if (!pageUrl) {
@@ -437,9 +481,17 @@ export function handlePluginRefreshComplete(ctx) {
   }
 
   const intervalHours = Number(account.refresh_interval_hours)
-  const hasSchedule = Number.isFinite(intervalHours) && intervalHours > 0
+  // A platform without a cloud collector has no automatic channel to schedule:
+  // the tick would queue a cloud cycle that refuses with `platform-unsupported`
+  // again, flipping the row straight back to `error` (and pre-charging budget
+  // for it). Browser capture is manual-only by nature — it needs the user's own
+  // logged-in page — so the honest schedule is「仅手动」(interval 0), which is
+  // also the one value `isRefreshDue` refuses to queue on.
+  const schedulable = CLOUD_RIVAL_PLATFORMS.includes(account.platform)
+  const hasSchedule = schedulable && Number.isFinite(intervalHours) && intervalHours > 0
   const accountPatch = {
     ...profilePatch(capture),
+    ...(schedulable ? {} : { refresh_interval_hours: 0 }),
     last_checked_at: new Date(at).toISOString(),
     last_refresh_at: new Date(at).toISOString(),
     refresh_state: 'idle',

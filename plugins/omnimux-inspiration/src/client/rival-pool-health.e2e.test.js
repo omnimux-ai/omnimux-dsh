@@ -224,3 +224,100 @@ describe('E2E：冷却中账号的分钟数判据', () => {
     }
   })
 })
+
+/**
+ * #3839 端到端：小红书账号从「导入即终态」走到「笔记在时间线上」。
+ *
+ * 这条链路横跨三层，任何一层单独测都证明不了用户看到的结果：
+ *   1. Host 导入小红书账号 → 云端零调用、行落 `platform-unsupported`；
+ *   2. 浏览器通道放行 → 一次性 token → claim → complete 回写笔记；
+ *   3. Client 判据在真实 E1 行上判为「已停止」：
+ *      `assert.equal(accountHealth(before, NOW), 'stopped')`。「浏览器更新」按钮的
+ *      判据与渲染由 `rival-health.test.js` + `rival-pool-health-render.test.js` 覆盖；
+ *   4. 回写后 E15 作品流真的能列出这些笔记。
+ */
+describe('E2E：小红书账号的浏览器更新闭环（#3839）', () => {
+  const XHS_UID = '5e4896d200000000010062cc'
+  const XHS_URL = `https://www.xiaohongshu.com/user/profile/${XHS_UID}`
+  const XHS_CAPTURE = {
+    platform: 'xiaohongshu',
+    handle: XHS_UID,
+    nickname: 'Miss圆滚滚',
+    avatar_url: 'https://sns-avatar-qc.xhscdn.com/a.jpg',
+    bio: '记录日常',
+    followers: 12_000,
+    following: 30,
+    posts_count: 88,
+    posts: [{
+      platform_post_id: '66aa11bb22cc33dd44ee55ff',
+      source_url: `https://www.xiaohongshu.com/explore/66aa11bb22cc33dd44ee55ff?xsec_token=abc`,
+      title: '第一条笔记',
+      content: '第一条笔记正文',
+      posted_at: '2026-10-04T04:00:00.000Z',
+      stats: { likes: 321, collects: 99 },
+      media: [{ type: 'image', url: 'https://sns-webpic-qc.xhscdn.com/a.jpg' }],
+    }],
+    captured_at: new Date(NOW).toISOString(),
+    extractor: 'xiaohongshu-profile',
+  }
+
+  it('导入→终态→浏览器回写→作品流出现笔记，且全程零云端调用', async () => {
+    try {
+      const world = makeWorld()
+      const imported = await call(world.dispatcher, 'POST', RIVAL_PREFIX, { url: XHS_URL })
+      assert.equal(imported.status, 201)
+      const accountId = imported.body.data.id
+      await world.scheduler.settled()
+
+      // 1. 导入后是能力终态，云端一次都没被调用。
+      const before = (await call(world.dispatcher, 'GET', RIVAL_PREFIX)).body.data.items
+        .find((row) => row.id === accountId)
+      assert.equal(before.refresh_state, 'error')
+      assert.equal(before.error_code, 'platform-unsupported')
+      assert.equal(before.next_auto_refresh_at, null)
+      assert.equal(before.post_count, 0)
+      // 2. 判据「这行该给浏览器更新」由 rival-health.test.js 与
+      //    rival-pool-health-render.test.js 承担（判据 + 真实渲染）；这里只钉
+      //    dispatcher 事实，避免同一个判据出现第三份会漂的副本。
+      assert.equal(accountHealth(before, NOW), 'stopped')
+
+      // 3. 浏览器通道：token → claim → complete。
+      const requested = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/${accountId}/plugin-refresh-request`)
+      assert.equal(requested.status, 201)
+      const token = requested.body.data.token
+      assert.equal(requested.body.data.url, `${XHS_URL}#omnimux-refresh=${token}`)
+      const claimed = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/plugin-refresh/claim`, {
+        token,
+        page_url: XHS_URL,
+        handle: XHS_UID,
+      })
+      assert.equal(claimed.status, 200)
+      const completed = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/plugin-refresh/complete`, {
+        token,
+        account: XHS_CAPTURE,
+      })
+      assert.equal(completed.status, 200)
+      assert.equal(completed.body.data.new_posts, 1)
+
+      // 4. 回写后：行回到可读状态，笔记在作品流里，封面与收藏都在。
+      const after = (await call(world.dispatcher, 'GET', RIVAL_PREFIX)).body.data.items
+        .find((row) => row.id === accountId)
+      assert.equal(after.refresh_state, 'idle')
+      assert.equal(after.error_code, null)
+      assert.equal(after.nickname, 'Miss圆滚滚')
+      assert.equal(after.post_count, 1)
+      assert.equal(accountHealth(after, NOW), 'normal')
+
+      const feed = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/posts?page=1&page_size=20`)
+      assert.equal(feed.status, 200)
+      const row = feed.body.data.items.find((item) => item.id === '66aa11bb22cc33dd44ee55ff')
+      assert.ok(row, '回写的笔记必须出现在作品流里')
+      assert.equal(row.title, '第一条笔记')
+      assert.equal(row.source_platform, 'xiaohongshu')
+      assert.equal(row.cover_src, 'https://sns-webpic-qc.xhscdn.com/a.jpg')
+      assert.equal(row.stats.likes, 321)
+    } finally {
+      await cleanup()
+    }
+  })
+})

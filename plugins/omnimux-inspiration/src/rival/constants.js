@@ -20,6 +20,19 @@ export const RIVAL_PLATFORMS = Object.freeze(['tiktok', 'instagram', 'youtube', 
  */
 export const CLOUD_RIVAL_PLATFORMS = Object.freeze(['tiktok', 'instagram', 'youtube', 'x'])
 
+/**
+ * Platforms the browser-plugin "update this account" capture can read (Issue
+ * #3839). Two layers need the same answer: the Host refuses a token for a
+ * platform its content script cannot read, and the account row decides whether
+ * 「浏览器更新」is the action to offer instead of a cloud retry. A client-side
+ * copy of this list is how the row would end up offering a button the Host
+ * always answers with 400.
+ *
+ * 小红书 is here and NOT in `CLOUD_RIVAL_PLATFORMS`: the cloud has no collector
+ * for it, so the browser capture is its only refresh channel.
+ */
+export const PLUGIN_REFRESH_PLATFORMS = Object.freeze(['tiktok', 'x', 'xiaohongshu'])
+
 /** Directory and file naming. Data and media are two separate trees. */
 export const RIVAL_DATA_DIR_NAME = 'rival-accounts'
 export const RIVAL_MEDIA_DIR_NAME = 'rival-accounts'

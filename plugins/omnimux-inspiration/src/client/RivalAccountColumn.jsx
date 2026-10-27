@@ -183,6 +183,7 @@ export function RivalAccountColumn(props) {
                   onMore={openMore}
                   menuOpen={menu?.id === row.id}
                   onRetry={onRetry}
+                  onPluginRefresh={onPluginRefresh}
                   quotaLeft={quotaLeft}
                   refreshBusy={refreshBusy}
                   onOpenProfile={(url) => openExternalUrl(url)}

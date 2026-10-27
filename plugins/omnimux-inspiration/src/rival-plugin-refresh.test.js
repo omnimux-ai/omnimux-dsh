@@ -688,3 +688,169 @@ describe('route table of the plugin-refresh endpoints', () => {
     assert.equal(unknown.status, 404)
   })
 })
+
+/**
+ * #3839：小红书走同一条浏览器通道。
+ *
+ * 云端没有小红书的采集器（`CLOUD_RIVAL_PLATFORMS` 不含它），所以浏览器采集是
+ * 它唯一的刷新通道。这一组用例把「通道可用」「笔记能显示」「不排云端定时」三件事
+ * 一起钉住：任何一条退化，用户看到的都是「账号在、笔记永远空」。
+ */
+describe('#3839 xiaohongshu through the browser-refresh channel', () => {
+  const XHS_UID = '5e4896d200000000010062cc'
+  const XHS_URL = `https://www.xiaohongshu.com/user/profile/${XHS_UID}`
+  /** 一条图文笔记 + 一条视频笔记，形状同扩展的 `captureAccount()` 输出。 */
+  const XHS_CAPTURE_POSTS = [
+    {
+      platform_post_id: '66aa11bb22cc33dd44ee55ff',
+      source_url: `https://www.xiaohongshu.com/explore/66aa11bb22cc33dd44ee55ff?xsec_token=abc`,
+      title: '第一条笔记',
+      content: '第一条笔记正文',
+      posted_at: '2026-10-20T04:00:00.000Z',
+      stats: { likes: 321, collects: 99, comments: 22 },
+      media: [{ type: 'image', url: 'https://sns-webpic-qc.xhscdn.com/a.jpg' }],
+    },
+    {
+      platform_post_id: '66aa11bb22cc33dd44ee5600',
+      source_url: `https://www.xiaohongshu.com/explore/66aa11bb22cc33dd44ee5600?xsec_token=def`,
+      title: '第二条笔记',
+      content: '',
+      posted_at: '2026-10-19T04:00:00.000Z',
+      stats: { likes: 12 },
+      media: [
+        { type: 'image', url: 'https://sns-webpic-qc.xhscdn.com/b.jpg' },
+        { type: 'video', url: 'https://sns-video-qc.xhscdn.com/b.mp4' },
+      ],
+    },
+  ]
+
+  function seedXhsAccount(world, overrides) {
+    return seedAccount(world, Object.assign({
+      platform: 'xiaohongshu',
+      external_id: XHS_UID,
+      external_id_kind: 'uid',
+      handle: XHS_UID,
+      profile_url: XHS_URL,
+      nickname: '',
+      avatar_url: '',
+      bio: '',
+      followers: null,
+      posts_count: null,
+      refresh_state: 'error',
+      error_code: 'platform-unsupported',
+      error_message: '该平台暂不支持自动刷新（云端采集未接入）',
+      next_auto_refresh_at: null,
+      consecutive_failures: 1,
+    }, overrides))
+  }
+
+  function xhsCapture(overrides) {
+    return Object.assign({
+      platform: 'xiaohongshu',
+      handle: XHS_UID,
+      nickname: 'Miss圆滚滚',
+      avatar_url: 'https://sns-avatar-qc.xhscdn.com/a.jpg',
+      bio: '记录日常',
+      followers: 12000,
+      following: 30,
+      posts_count: 88,
+      posts: XHS_CAPTURE_POSTS.slice(),
+      captured_at: NOW_ISO,
+      extractor: 'xiaohongshu-profile',
+    }, overrides)
+  }
+
+  it('mints a token for a 小红书 account and points it at the profile page', () => {
+    const world = makeWorld()
+    const account = seedXhsAccount(world)
+    const result = requestToken(world, account.id)
+    assert.equal(result.status, 201)
+    assert.match(result.body.data.token, /^[0-9a-f]{32}$/)
+    assert.equal(result.body.data.url, `${XHS_URL}#omnimux-refresh=${result.body.data.token}`)
+    assert.equal(world.store.getAccount(account.id).plugin_refresh.token, result.body.data.token)
+  })
+
+  it('claims with the uid handle and merges the captured notes', () => {
+    const world = makeWorld()
+    const account = seedXhsAccount(world)
+    const requested = requestToken(world, account.id)
+    const token = requested.body.data.token
+    const claimed = claimToken(world, { token, page_url: XHS_URL, handle: XHS_UID })
+    assert.equal(claimed.status, 200)
+    assert.equal(claimed.body.data.platform, 'xiaohongshu')
+
+    const completed = completeToken(world, { token, account: xhsCapture() })
+    assert.equal(completed.status, 200)
+    assert.equal(completed.body.data.new_posts, 2)
+    assert.equal(completed.body.data.updated_posts, 0)
+
+    const merged = world.store.getAccount(account.id)
+    assert.equal(merged.nickname, 'Miss圆滚滚')
+    assert.equal(merged.followers, 12000)
+    assert.equal(merged.posts_count, 88)
+    assert.equal(merged.refresh_state, 'idle')
+    assert.equal(merged.error_code, null)
+    assert.equal(merged.consecutive_failures, 0)
+
+    const posts = world.store.readPosts(account.id)
+    assert.equal(posts.length, 2)
+    const first = posts.find((row) => row.id === '66aa11bb22cc33dd44ee55ff')
+    assert.equal(first.title, '第一条笔记')
+    assert.equal(first.text, '第一条笔记正文')
+    assert.equal(first.type, 'image')
+    assert.equal(first.cover_url, 'https://sns-webpic-qc.xhscdn.com/a.jpg')
+    assert.equal(first.stats.likes, 321)
+    assert.equal(first.stats.saves, 99)
+    assert.equal(first.source, 'plugin')
+    assert.equal(first.url, `https://www.xiaohongshu.com/explore/66aa11bb22cc33dd44ee55ff?xsec_token=abc`)
+  })
+
+  it('derives a video row from the captured media so the player has an address', () => {
+    const world = makeWorld()
+    const account = seedXhsAccount(world)
+    const flow = runFlow(world, account.id, {
+      pageUrl: XHS_URL,
+      handle: XHS_UID,
+      capture: xhsCapture(),
+    })
+    assert.equal(flow.completed.status, 200)
+    const second = world.store.readPosts(account.id).find((row) => row.id === '66aa11bb22cc33dd44ee5600')
+    assert.equal(second.type, 'video')
+    assert.equal(second.cover_url, 'https://sns-webpic-qc.xhscdn.com/b.jpg')
+    assert.equal(second.video_url, 'https://sns-video-qc.xhscdn.com/b.mp4')
+    // 没有正文的图文笔记仍有标题与封面，不会被当成空行丢掉。
+    assert.equal(second.title, '第二条笔记')
+  })
+
+  it('does not schedule a cloud cycle the platform can never serve', () => {
+    const world = makeWorld()
+    const account = seedXhsAccount(world)
+    const flow = runFlow(world, account.id, {
+      pageUrl: XHS_URL,
+      handle: XHS_UID,
+      capture: xhsCapture(),
+    })
+    assert.equal(flow.completed.status, 200)
+    const merged = world.store.getAccount(account.id)
+    // 24h 间隔在别的平台会排下一次；小红书没有云端通道，排了也只会再失败一次。
+    // 因此这次回写把间隔归到「仅手动」(0)，`isRefreshDue` 从此不会再排它。
+    assert.equal(merged.refresh_interval_hours, 0)
+    assert.equal(merged.next_auto_refresh_at, null)
+    assert.deepEqual(world.scheduler.tick().due, [])
+  })
+
+  it('still refuses a platform the content script cannot read', () => {
+    const world = makeWorld()
+    const account = seedAccount(world, {
+      platform: 'instagram',
+      external_id: '@alice',
+      handle: '@alice',
+      profile_url: 'https://www.instagram.com/@alice',
+    })
+    const result = requestToken(world, account.id)
+    assert.equal(result.status, 400)
+    assert.equal(result.body.code, 'platform-unsupported')
+    // 文案由平台清单生成，不再写死「TikTok / X」。
+    assert.match(result.body.error, /xiaohongshu/)
+  })
+})
