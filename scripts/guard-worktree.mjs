@@ -320,6 +320,31 @@ const VALUE_TAKING_FLAGS = new Set([
   '--fetch-retry-mintimeout', '--fetch-retry-maxtimeout', '--child-concurrency',
 ])
 
+/**
+ * install 是否冻结了 lockfile。
+ *
+ * `--frozen-lockfile` 是 pnpm 与 yarn 的共同 flag，语义是「manifest 与 lockfile
+ * 不匹配时失败退出，而不是改写 lockfile」——实测 pnpm 在 manifest 加依赖后
+ * 带该 flag 会失败且 lockfile 哈希不变。`npm ci` 天然冻结，由调用方单独放行。
+ *
+ * @param {string[]} words 已解包、已去引号的完整命令词
+ * @returns {boolean}
+ */
+export function isFrozenInstall(words) {
+  return words.some((word) => {
+    const value = String(word || '').toLowerCase()
+    // --frozen-lockfile / --frozen-lockfile=true；pnpm 也接受 --frozen-lockfile=false，
+    // 那种写法等于关闭冻结，必须判为不冻结。
+    if (value === '--frozen-lockfile') return true
+    if (value.startsWith('--frozen-lockfile=')) {
+      const flagValue = value.slice('--frozen-lockfile='.length)
+      return flagValue !== 'false' && flagValue !== '0'
+    }
+    // npm 的等价形态：--prefer-offline 不改 lockfile 但仍可能写，故不认；只认 ci 与冻结 flag。
+    return false
+  })
+}
+
 function positionalArgs(words) {
   const positional = []
   for (let i = 0; i < words.length; i++) {
@@ -986,6 +1011,17 @@ export function decideMainCheckoutBuildCommand(command, cwd) {
             command: seg,
           }
         }
+        // 主检出的 install 必须冻结 lockfile：不带冻结 flag 时 pnpm 会按 manifest
+        // 重写 pnpm-lock.yaml，这一步不经过 edit/write，因而绕开 tracked-file 保护
+        // （实测：manifest 加一个依赖后 lockfile 哈希即变）。`ci` 天然冻结，跳过本判定。
+        if (subcommand !== 'ci' && !isFrozenInstall(effectiveWords)) {
+          return {
+            decision: 'deny',
+            reason: 'forbidden-main-checkout-unfrozen-install',
+            command: seg,
+            manager: effectiveVerb,
+          }
+        }
       }
     }
 
@@ -1373,6 +1409,16 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
         '📌 事故防范守则：本地主分支堆积了未在云端合入的私有提交，若直接物化将导致未经评审的半成品脏代码流入共享开发环境。',
         '👉 强制标准流程：',
         '  请保持本地 main 与 origin/main 严格 1:1 对齐 (0 ahead, 0 behind)，所有改动走 PR 合并后再执行物化！',
+      ].join('\n')
+    } else if (reason === 'forbidden-main-checkout-unfrozen-install') {
+      output.permissionDecisionReason = [
+        '🚫【OmniMux 主检出硬隔离拦截】主检出的 install 必须冻结 lockfile，否则会静默改写 pnpm-lock.yaml。',
+        `🎯 被拦截的命令：${extra.command || 'install 命令'}`,
+        '📌 为什么：不带冻结 flag 的 install 会按 package.json 重写 lockfile，这一步不经过 edit/write，因而绕开 tracked-file 保护——主检出反复出现 lockfile 漂移就是这么来的。',
+        '👉 正确做法（任选其一）：',
+        `   1. 依赖维护加冻结 flag：${extra.manager === 'npm' ? 'npm ci' : `${extra.manager || 'pnpm'} install --frozen-lockfile`}`,
+        '   2. 需要真正改动依赖时，切入专属 Worktree 再改；',
+        '   3. 若确属 lockfile 已漂移需要修复，先在工作树里改好并合入，再回主检出同步。',
       ].join('\n')
     } else if (reason === 'forbidden-main-checkout-build') {
       output.permissionDecisionReason = [
