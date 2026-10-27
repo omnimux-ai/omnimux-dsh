@@ -25,6 +25,7 @@ import { readBudgetOverrun } from './rival-accounts-store.js'
 import {
   BACKOFF_MINUTES,
   BUDGET_REASONS,
+  CLOUD_RIVAL_PLATFORMS,
   IDENTITY_KINDS,
   LIMIT_CALLS_PER_ACCOUNT_CYCLE,
   MANUAL_COOLDOWN_MINUTES,
@@ -431,6 +432,12 @@ export function createRivalRefreshScheduler(deps) {
       // pass above, so a row still reading `paused` is a row that is still
       // parked.
       if (account.refresh_state === 'error' || account.refresh_state === 'paused') continue
+      // A platform the cloud cannot collect never enters the automatic queue: the
+      // cycle would throw `platform-unsupported` before its first call and park
+      // the row back in `error`, spending two reservations to learn nothing. The
+      // account's own interval is left as the user set it — the refusal lives
+      // here, at the one place that decides what to queue.
+      if (!CLOUD_RIVAL_PLATFORMS.includes(account.platform)) continue
       if (queued.has(account.id) || inFlight.has(account.id)) continue
       if (!store.isRefreshDue(account, at)) continue
       due.push(account.id)

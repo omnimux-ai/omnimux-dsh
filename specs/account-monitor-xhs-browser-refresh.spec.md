@@ -117,7 +117,7 @@
 
 必须改的理由：首版跑出 `tick().due === ['riv_…']`——`next_auto_refresh_at` 为 `null` 时 `Date.parse('')` 是 `NaN`，`isRefreshDue` 把它当「立即到期」，于是回写刚成功账号就被 tick 重新排队，下一次云端周期又必然 `platform-unsupported`，行会立刻弹回「已停止」。这不是断言写松了，是首版断言把缺陷当成期望。
 
-新期望证据：同一用例改断言 `refresh_interval_hours === 0`（「仅手动」，`isRefreshDue` 唯一会拒绝排队的间隔值）且 `next_auto_refresh_at === null`，`tick().due` 为空；对应实现见 §4.1 的 `schedulable` 分支。
+新期望证据：同一用例改断言 `refresh_interval_hours` **仍是用户设的 24**（间隔是用户的设置，回写不得改写它），`next_auto_refresh_at` 为 `null`，且 `tick().due` 为空——拒绝排队发生在 scheduler（`tick`/`enqueueMany` 跳过云端无采集能力的平台），而不是靠把间隔偷改成 0。§4.1 的 `schedulable` 分支已被移除。
 
 - `plugins/omnimux-inspiration/src/client/rival-pool-health.e2e.test.js` :: `导入→终态→浏览器回写→作品流出现笔记，且全程零云端调用`
 

@@ -481,17 +481,16 @@ export function handlePluginRefreshComplete(ctx) {
   }
 
   const intervalHours = Number(account.refresh_interval_hours)
-  // A platform without a cloud collector has no automatic channel to schedule:
-  // the tick would queue a cloud cycle that refuses with `platform-unsupported`
-  // again, flipping the row straight back to `error` (and pre-charging budget
-  // for it). Browser capture is manual-only by nature — it needs the user's own
-  // logged-in page — so the honest schedule is「仅手动」(interval 0), which is
-  // also the one value `isRefreshDue` refuses to queue on.
+  // Two different facts, kept apart on purpose:
+  // - `refresh_interval_hours` is the user's setting, so this module never
+  //   rewrites it;
+  // - `next_auto_refresh_at` is the *derived* schedule, and a platform without a
+  //   cloud collector has none — the scheduler skips it (`rival-refresh.js`), so
+  //   promising a timestamp here would be a time that never arrives.
   const schedulable = CLOUD_RIVAL_PLATFORMS.includes(account.platform)
   const hasSchedule = schedulable && Number.isFinite(intervalHours) && intervalHours > 0
   const accountPatch = {
     ...profilePatch(capture),
-    ...(schedulable ? {} : { refresh_interval_hours: 0 }),
     last_checked_at: new Date(at).toISOString(),
     last_refresh_at: new Date(at).toISOString(),
     refresh_state: 'idle',

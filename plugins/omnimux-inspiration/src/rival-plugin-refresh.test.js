@@ -832,10 +832,11 @@ describe('#3839 xiaohongshu through the browser-refresh channel', () => {
     })
     assert.equal(flow.completed.status, 200)
     const merged = world.store.getAccount(account.id)
-    // 24h 间隔在别的平台会排下一次；小红书没有云端通道，排了也只会再失败一次。
-    // 因此这次回写把间隔归到「仅手动」(0)，`isRefreshDue` 从此不会再排它。
-    assert.equal(merged.refresh_interval_hours, 0)
+    // 间隔是用户的设置，回写不得改写它：24h 仍是 24h。
+    assert.equal(merged.refresh_interval_hours, 24)
     assert.equal(merged.next_auto_refresh_at, null)
+    // 拒绝排队发生在 scheduler：云端没有采集能力的平台永不进自动队列，
+    // 否则 tick 会把它排上去、下一轮又必然失败并打回「已停止」。
     assert.deepEqual(world.scheduler.tick().due, [])
   })
 
