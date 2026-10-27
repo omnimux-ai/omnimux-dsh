@@ -24,16 +24,18 @@ subsystem: "omnimux-accounts"
 | MUST | 首次打开后子树保活：`everOpened`（或等价 keep 旗）+ 关闭用 `display:none` / `aria-hidden`，禁止关页卸树 |
 | MUST NOT | 以 `if (!open …) return null` 作为**已打开过**的关页路径 |
 | 允许 | 从未打开：`if (!stage \|\| !everOpened) return null`；**Modal/Dialog** 关闭 `return null` |
-| 金标（doctor / `pnpm verify:stages` **FAIL** 若回归） | `AccountsStage.jsx`、`ProductsStage.jsx`、`AssetsStage.jsx`（已合入 main） |
+| 金标（doctor / `pnpm verify:stages` **FAIL** 若回归） | `AccountsStage.jsx`、`AssetsStage.jsx`（已合入 main）。产品库不再是独立 Stage：它作为**资产库内产品库 Tab**（`omnimux-assets:library` 的 `ProductTab.jsx`）承载，保活随 assets 一起判 |
 | 工作台 Tab 根（**FAIL**） | `ProjectLibraryPage.jsx`、`plaza-shell.js`（或继任 `PlazaTab`）、各 `*Stage.jsx` 在迁入右栏后仍要保活 |
 | 已知债（doctor **WARN**） | `WorkflowStage.jsx`（已不再挂 overlay，遗留文件）、`AppsStage.jsx`（未挂载货架）、`ClipStage.jsx`（仅 portal） |
+
+产品插件本身已降级为「宿主能力 + 浏览器安全 UI 源库」：`products_*` 工具、`/omnimux/products*` 路由与存储不变，但 `omnimux-products` 不再注册工作台 Tab，也不再声明 `sidebar.extra` / `shell.overlay`；旧 Tab id `omnimux-products:library` 已全站下架。见 [products-into-assets.spec.md](../../specs/products-into-assets.spec.md)。
 
 ## 1.1 工作台座门禁（#318）
 
 `scripts/verify-stage-contracts.mjs` 必须同时扫：
 
 1. Tab / Stage 根保活（上表）。
-2. **禁止库页 overlay 回潮**：下列包的 `src/client/index.js`（market 为 `src/client/apply.js`）**不得** `slots.inject('shell.overlay')`：`omnimux-assets` / `products` / `accounts` / `inspiration` / `publish` / `analytics` / `workflow` / `market`。
+2. **禁止库页 overlay 回潮**：下列包的 `src/client/index.js`（market 为 `src/client/apply.js`）**不得** `slots.inject('shell.overlay')`：`omnimux-assets` / `accounts` / `inspiration` / `publish` / `analytics` / `workflow` / `market`。（`omnimux-products` 已无客户端装配入口，不再在列；它的 UI 源库 `src/client/ui.js` 也不得声明 slot。）
 3. **允许 overlay 白名单**：`plugins/omnimux/src/client/index.js`（LoginGate）、`plugins/omnimux-clip/src/client/index.js`（ClipStage portal only）。
 4. **禁止库页 claim**：迁入名单包的 sidebar / workbench-store 源码不得出现 `claimProductStage` / `stage.claim(`（clip portal 除外）。
 
@@ -65,4 +67,4 @@ subsystem: "omnimux-accounts"
 
 ## 5. 非本契约本轮实现范围
 
-共享 StageShell、修卸树债、修 install/catalog / config 闸、改 Skills fallback —— 见 backlog；除 accounts/products 关页与 pluginRestart / assertLocalWrite 存在性外，债项本轮进 doctor **WARN**，不进 FAIL 集。
+共享 StageShell、修卸树债、修 install/catalog / config 闸、改 Skills fallback —— 见 backlog；除 accounts 关页与 pluginRestart / assertLocalWrite 存在性外，债项本轮进 doctor **WARN**，不进 FAIL 集。

@@ -8,42 +8,66 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const root = path.resolve(__dirname, '../../')
 
-test('E2E: 修复资产库「添加产品」点击无响应与二级表单唤起链路验证', () => {
-  const assetsStagePath = path.join(root, 'plugins/omnimux-assets/src/client/AssetsStage.jsx')
-  const productsViewPath = path.join(root, 'plugins/omnimux-assets/src/client/ProductsView.jsx')
-  const productsStagePath = path.join(root, 'plugins/omnimux-products/src/client/ProductsStage.jsx')
+const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf-8')
 
-  const assetsStageContent = fs.readFileSync(assetsStagePath, 'utf-8')
-  const productsViewContent = fs.readFileSync(productsViewPath, 'utf-8')
-  const productsStageContent = fs.readFileSync(productsStagePath, 'utf-8')
+test('E2E: 资产库「添加产品」就地展开二级表单，不再跳转独立产品页', () => {
+  const assetsStage = read('plugins/omnimux-assets/src/client/AssetsStage.jsx')
+  const productTab = read('plugins/omnimux-assets/src/client/ProductTab.jsx')
 
-  // 1. 验证 AssetsStage 中 handleOpenCreateProduct 彻底消除了不存在的 api.openTab
+  // 1. 严禁调用未定义的 api.openTab（历史缺陷：点击被静默吞掉）
   assert.ok(
-    !assetsStageContent.includes('api.openTab'),
-    'AssetsStage 严禁调用未定义的 api.openTab，防止点击被静默吞掉'
+    !assetsStage.includes('api.openTab'),
+    'AssetsStage 严禁调用未定义的 api.openTab，防止点击被静默吞掉',
   )
 
-  // 2. 验证 AssetsStage 中正确调用工作台 open/openWorkbench 并通过意图/事件通信
+  // 2. 严禁再跳去独立产品页 —— 跨 Tab 跳转正是「返回」落回旧页面列表的根因
   assert.ok(
-    assetsStageContent.includes("window.__omnimuxProductsIntent = intent") &&
-    assetsStageContent.includes("window.dispatchEvent(new CustomEvent('omnimux-products:open', { detail: intent }))") &&
-    assetsStageContent.includes("api.open({ tabId: 'omnimux-products:library' })"),
-    'AssetsStage 必须设置 __omnimuxProductsIntent 并派发 omnimux-products:open 事件，且通过 api.open 唤起工作台 Tab'
+    !assetsStage.includes("api.open({ tabId: 'omnimux-products:library' })") &&
+    !assetsStage.includes("api.openWorkbench({ tabId: 'omnimux-products:library' })"),
+    '资产库不得再把产品交互移交给独立的 omnimux-products:library Tab',
   )
 
-  // 3. 验证 ProductsView 中卡片点击传递了 product.id
+  // 3. 改为在同一 Tab 内切到产品库并下发意图
   assert.ok(
-    productsViewContent.includes("handleCreate(isDigital ? 'digital' : 'physical', product.id)") &&
-    productsViewContent.includes("const handleCreate = (kind, productId) =>"),
-    'ProductsView 必须在点击卡片时传递 product.id 以联动编辑二级页'
+    assetsStage.includes("setSourceTab('product')") &&
+    assetsStage.includes('setProductIntent({'),
+    '点击卡片/添加产品必须切到产品库 Tab 并下发就地展开意图',
   )
 
-  // 4. 验证 ProductsStage 中接入意图消费与事件监听
+  // 4. 意图由产品库 Tab 自己消费：创建走 handleCreate，编辑走 handleOpenProduct
   assert.ok(
-    productsStageContent.includes("window.__omnimuxProductsIntent") &&
-    productsStageContent.includes("window.addEventListener('omnimux-products:open'") &&
-    productsStageContent.includes("handleCreate(intent.kind)") &&
-    productsStageContent.includes("handleOpenProduct({ id: intent.productId })"),
-    'ProductsStage 必须消费 __omnimuxProductsIntent 并监听 omnimux-products:open 事件，无缝切入创建与编辑二级页'
+    productTab.includes("if (intent.mode === 'create')") &&
+    productTab.includes('handleCreate(intent.kind)') &&
+    productTab.includes('void handleOpenProduct('),
+    'ProductTab 必须消费就地展开意图，覆盖创建与编辑两条路径',
   )
+
+  // 5. 二级页挂在同一 Tab 的 Stage 根上（铺满整个区域），返回即回本列表
+  assert.ok(
+    assetsStage.includes('<ProductFormPage') &&
+    assetsStage.includes("productView.name === 'form'") &&
+    productTab.includes("onViewChange(view.name === 'form'") &&
+    productTab.includes('setView(LIST_VIEW)'),
+    '二级页必须挂在资产库 Stage 根上就地覆盖，且返回落回本页列表',
+  )
+})
+
+test('E2E: 旧独立产品页已下架，资产库产品库成为唯一入口', () => {
+  const legacyFiles = [
+    'plugins/omnimux-products/src/client/ProductsStage.jsx',
+    'plugins/omnimux-products/src/client/index.js',
+    'plugins/omnimux-products/src/client/sidebar-entry.js',
+    'plugins/omnimux-assets/src/client/ProductsView.jsx',
+  ]
+  for (const rel of legacyFiles) {
+    assert.equal(fs.existsSync(path.join(root, rel)), false, `${rel} 应已删除`)
+  }
+
+  const manifest = JSON.parse(read('plugins/omnimux-products/dsh.manifest.json'))
+  assert.deepEqual(manifest.capabilities.slots, [], '产品插件不得再声明 sidebar.extra / shell.overlay slot')
+
+  const pkg = JSON.parse(read('plugins/omnimux-products/package.json'))
+  assert.equal(pkg.exports['./ui'], './src/client/ui.js', '产品插件必须以 ./ui 暴露浏览器安全 UI 源库')
+  assert.equal(pkg.exports['./client'], undefined, '产品插件不再提供客户端插件入口')
+  assert.equal(pkg.dsh.client, undefined, '产品插件不再声明 dsh.client')
 })

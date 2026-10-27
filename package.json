@@ -84,7 +84,7 @@
     "verify:live": "node scripts/agent-live-qa.mjs",
     "test:worktree-web": "node scripts/worktree-web-qa.mjs",
     "test:worktree-web:unit": "node --test scripts/worktree-web-qa.test.mjs",
-    "verify:gates": "corepack pnpm note:lint && corepack pnpm doc:pairing && corepack pnpm verify:skill-bilingual && corepack pnpm archived:verify && corepack pnpm check:boundaries && corepack pnpm verify:product-baseline && corepack pnpm verify:silent-catch && corepack pnpm check:package-files && corepack pnpm verify:licenses && corepack pnpm test:licenses && corepack pnpm verify:tools && corepack pnpm test:agent-tools && corepack pnpm verify:stages && corepack pnpm verify:stage-scroll && corepack pnpm verify:stage-inset && corepack pnpm verify:slots && corepack pnpm test:ui && corepack pnpm verify:dsh-lockfile && corepack pnpm test:gates && corepack pnpm verify:forms && corepack pnpm test:craft && corepack pnpm presets:verify",
+    "verify:gates": "corepack pnpm note:lint && corepack pnpm doc:pairing && corepack pnpm verify:skill-bilingual && corepack pnpm archived:verify && corepack pnpm check:boundaries && corepack pnpm verify:product-baseline && corepack pnpm verify:silent-catch && corepack pnpm check:package-files && corepack pnpm verify:licenses && corepack pnpm verify:agents-skills && corepack pnpm test:agents-skills && corepack pnpm test:licenses && corepack pnpm verify:tools && corepack pnpm test:agent-tools && corepack pnpm verify:stages && corepack pnpm verify:stage-scroll && corepack pnpm verify:stage-inset && corepack pnpm verify:slots && corepack pnpm test:ui && corepack pnpm verify:dsh-lockfile && corepack pnpm test:gates && corepack pnpm verify:forms && corepack pnpm test:craft && corepack pnpm presets:verify",
     "verify:all": "corepack pnpm verify:gates && corepack pnpm test && corepack pnpm registry:verify && corepack pnpm doctor",
     "sync:presets": "bash scripts/sync-agent-presets.sh",
     "presets:build": "node scripts/build-agent-presets.mjs",
@@ -107,7 +107,9 @@
     "verify:app": "node scripts/worktree-app-qa.mjs",
     "verify:plugin-load": "node scripts/verify-plugin-load.mjs",
     "test:plugin-load": "node --test scripts/verify-plugin-load.test.mjs",
-    "verify:app:live": "node scripts/worktree-app-qa.mjs --mode=live"
+    "verify:app:live": "node scripts/worktree-app-qa.mjs --mode=live",
+    "verify:agents-skills": "node scripts/verify-agents-skills-symlinks.mjs",
+    "test:agents-skills": "node --test scripts/verify-agents-skills-symlinks.test.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-util-code-language": "0.2.1-rc.3",

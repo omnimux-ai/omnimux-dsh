@@ -90,3 +90,33 @@ Alpha 名单（`plugins/omnimux/src/plugin-lifecycle.json`）与生产排除早�
   - 原断言：`assert.doesNotMatch(menu, /plugin-lifecycle\.json/)`，要求菜单模块源码里不出现 `plugin-lifecycle.json` 这个字符串。
   - 必须改的理由：该正则同时命中新写的注释文本（注释里说明「真源仍是 `plugin-lifecycle.json`」），把「不得 import 注册表」误判成「不得提到它」。断言点应指向 import 语句而不是任意出现。
   - 新期望证据：改为 `/^\s*import\b[^\n]*plugin-lifecycle\.json/m` 的 `doesNotMatch`，即菜单模块不得 import 生命周期注册表；同时保留「必须复用 `isAlphaEntry`」「不得内联 `stage === 'alpha'`」「不得有第二份 Alpha 名单常量」三条。
+
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `10 行文案与顺序逐字等于真源清单`
+  - 原断言：`assert.equal(TRUTH.length, 10)` / `assert.equal(menu.rows.length, 10)` / `assert.deepEqual(menu.rows.map((row) => row.children), EXPECTED_LABELS)` / `[data-stub-row]` 计数 10。
+  - 必须改的理由：两条独立的既有事实同时前移。其一，`origin/main` 的 #3816 把产品库并入资产库，菜单真源从 10 项变 9 项，计数与文案集合随之变化；其二，本任务把 Alpha 项行内容改成「文案 + 标识」片段，`children` 不再是字符串。冲突解决必须同时保留「9 项」与「文案文本提取」两个口径，否则不是丢标识就是丢产品库并入的结论。用例名同步改为 `9 行文案与顺序逐字等于真源清单`。
+  - 新期望证据：`TRUTH.length` / `menu.rows.length` / `[data-stub-row]` 计数为 9；文案比较改走 `labelTextOf(row.children)`，仍与真源清单逐字相等。
+
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `运行时注册项出现在菜单末尾`
+  - 原断言：`menu.rows.length === 10`（未注册）与 `=== 11`（注册后）。
+  - 必须改的理由：合并 `origin/main` 的 #3816 后菜单真源从 10 项变 9 项，行数随之各减一；这不是放宽标准，而是断言点随真源一起前移。
+  - 新期望证据：未注册 9 行、注册后 10 行；`labels.at(-1) === '快讯中枢'`、`labels.at(0) === '应用'` 保持不变。
+
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `注销后注册项从菜单消失，回到 10 行`
+  - 原断言：注册后 `=== 11`、注销后 `=== 10`，用例名写死「回到 10 行」。
+  - 必须改的理由：同上，真源 9 项后行数各减一；用例名同步改为「回到 9 行」，避免名字与断言自相矛盾。
+  - 新期望证据：注册后 10 行、注销后 9 行；注销项不再渲染的断言保留。
+
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `与内置 id 冲突的注册项不出现（内置文案不被冒充）`
+  - 原断言：`menu.rows.length === 10`。
+  - 必须改的理由：同上，真源 9 项后冲突注册不新增行，总行数为 9。
+  - 新期望证据：`menu.rows.length === 9`；首项仍为「应用」、冒充项不出现两条断言保留。
+
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `分组分隔线：上一项 dividerAfter 决定下一行 separatorBefore`
+  - 原断言：`assert.deepEqual(SEPARATOR_OWNERS, ['产品库', '数据分析'], '视频剪辑后、手机管理后各一条分隔线')`。
+  - 必须改的理由：`origin/main` 的 #3816 把产品库并入资产库，菜单真源里不再有「产品库」，分隔线拥有者前移为「发布」与「数据分析」（`main` 上已是这个值，本分支的旧值来自合并前）。
+  - 新期望证据：与 `origin/main` 一致为 `['发布', '数据分析']`；`EXPECTED_SEPARATORS` 与首行不画线两条断言保留。
+
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `Alpha 内测项带行内标识，非 Alpha 项保持纯字符串文案（Issue #3823）`
+  - 原断言（本任务上一版）：`plainLabels` 期望 `['应用', '视频剪辑', '产品库', '手机管理', '社交采收']` 共 5 项。
+  - 必须改的理由：合并 `origin/main` 的 #3816 后菜单只剩 9 项、非 Alpha 项变为 4 项（产品库已并入资产库）。Alpha 项 5 项不受影响。
+  - 新期望证据：`plainLabels` 期望 `['应用', '视频剪辑', '手机管理', '社交采收']`；`alphaLabels` 仍为 `['发布', '账号', '数据分析', '自动化', '任务表单']`，标识元素计数仍为 5。

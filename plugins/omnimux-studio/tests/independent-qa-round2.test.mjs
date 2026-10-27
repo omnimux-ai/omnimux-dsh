@@ -13,7 +13,8 @@ const root = new URL('../../../', import.meta.url).pathname
 test('QA2 existing eight production Stage contracts retain strict sidebar validation', async () => {
   const targets = await captureStageContracts(root)
   assert.deepEqual(targets.map(target => target.stage), selectStages('all'))
-  assert.equal(targets.length, 8)
+  // 数量由真源推导，不在测试里硬编码：产品库并入资产库后从 8 降为 7。
+  assert.equal(targets.length, selectStages('all').length)
   for (const target of targets) {
     assert.notEqual(target.adapter, 'community-tab')
     const state = { hasState: true, sessionId: 'qa', contextSessionId: 'qa', entryCount: 1,

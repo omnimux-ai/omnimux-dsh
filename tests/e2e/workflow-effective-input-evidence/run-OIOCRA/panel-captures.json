@@ -1,0 +1,1013 @@
+[
+  {
+    "requests": [
+      {
+        "capability": "text",
+        "prompt": "1dog",
+        "operation": "image_to_text",
+        "model": "qa-text",
+        "dest": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/products-into-assets/tests/e2e/workflow-effective-input-evidence/run-OIOCRA/executions/qa_1760/34a04005bcaf206eec990bd9637d9fdb6725e0a0c0d4aebf003f17f4c956eb5c-7b1907fc-e29f-42db-b31f-c7c1ee0a530a.txt",
+        "signal": {},
+        "mockFail": false
+      }
+    ],
+    "captureOnly": true,
+    "generationCompleted": false,
+    "snapshot": {
+      "nodes": [
+        {
+          "id": "正文甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "正文甲",
+            "status": "completed",
+            "content": "OLD",
+            "generatedContent": "1dog"
+          }
+        },
+        {
+          "id": "空正文",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "空正文",
+            "status": "completed",
+            "generatedContent": "",
+            "content": "不得回退旧正文"
+          }
+        },
+        {
+          "id": "target",
+          "type": "material",
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "generate",
+            "kind": "generate",
+            "label": "生成目标",
+            "prompt": "",
+            "params": {
+              "model": "qa-text",
+              "operation": "text_to_text"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-0",
+          "source": "正文甲",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "text"
+          }
+        },
+        {
+          "id": "edge-1",
+          "source": "空正文",
+          "target": "target",
+          "targetHandle": "input",
+          "data": {
+            "feedType": "text"
+          }
+        }
+      ],
+      "targetId": "target"
+    },
+    "prepared": {
+      "nodes": [
+        {
+          "id": "正文甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "正文甲",
+            "status": "completed",
+            "content": "OLD",
+            "generatedContent": "1dog"
+          }
+        },
+        {
+          "id": "空正文",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "空正文",
+            "status": "completed",
+            "generatedContent": "",
+            "content": "不得回退旧正文"
+          }
+        },
+        {
+          "id": "target",
+          "type": "material",
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "generate",
+            "kind": "generate",
+            "label": "生成目标",
+            "prompt": "",
+            "params": {
+              "model": "qa-text",
+              "operation": "text_to_text"
+            },
+            "slotBindings": {},
+            "slotConflicts": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-0",
+          "source": "正文甲",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "text"
+          }
+        },
+        {
+          "id": "edge-1",
+          "source": "空正文",
+          "target": "target",
+          "targetHandle": "input",
+          "data": {
+            "feedType": "text"
+          }
+        }
+      ]
+    },
+    "identity": {
+      "builtAt": "2026-10-27T03:53:46.530Z",
+      "sha256": "381efd15c36f31dcac6c2d9d7a396b36fb609099b74c439e57d79c226240af1b",
+      "backendSha256": "ba1c82ba2f6fdd7fc124487e3a690553149488b1525eff753bf1a31a95eed664",
+      "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/products-into-assets"
+    }
+  },
+  {
+    "requests": [
+      {
+        "capability": "image",
+        "prompt": "1dog",
+        "image": "http://127.0.0.1:59354/media/a.svg",
+        "references": [
+          {
+            "type": "image",
+            "role": "reference",
+            "pathOrUrl": "http://127.0.0.1:59354/media/a.svg",
+            "targetSlot": "images",
+            "sourceNodeId": "图片甲",
+            "edgeId": "edge-1",
+            "mimeType": "image/svg+xml"
+          }
+        ],
+        "operation": "image_to_image",
+        "model": "qa-image",
+        "dest": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/products-into-assets/tests/e2e/workflow-effective-input-evidence/run-OIOCRA/executions/qa_1760/34a04005bcaf206eec990bd9637d9fdb6725e0a0c0d4aebf003f17f4c956eb5c-08058bb6-9583-4f12-957a-38c50579600e.png",
+        "signal": {},
+        "mockFail": false
+      }
+    ],
+    "captureOnly": true,
+    "generationCompleted": false,
+    "snapshot": {
+      "nodes": [
+        {
+          "id": "空图片",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "image",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "空图片",
+            "status": "completed"
+          }
+        },
+        {
+          "id": "图片甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "image",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "图片甲",
+            "status": "completed",
+            "mediaUrl": "http://127.0.0.1:59354/media/a.svg",
+            "mimeType": "image/svg+xml"
+          }
+        },
+        {
+          "id": "正文甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "正文甲",
+            "status": "completed",
+            "content": "OLD",
+            "generatedContent": "1dog"
+          }
+        },
+        {
+          "id": "target",
+          "type": "material",
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "data": {
+            "materialType": "image",
+            "nodeKind": "generate",
+            "kind": "generate",
+            "label": "生成目标",
+            "prompt": "",
+            "params": {
+              "model": "qa-image",
+              "operation": "image_to_image"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-0",
+          "source": "空图片",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "image"
+          }
+        },
+        {
+          "id": "edge-1",
+          "source": "图片甲",
+          "target": "target",
+          "targetHandle": "input",
+          "data": {
+            "feedType": "image"
+          }
+        },
+        {
+          "id": "edge-2",
+          "source": "正文甲",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "text"
+          }
+        }
+      ],
+      "targetId": "target"
+    },
+    "prepared": {
+      "nodes": [
+        {
+          "id": "空图片",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "image",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "空图片",
+            "status": "completed"
+          }
+        },
+        {
+          "id": "图片甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "image",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "图片甲",
+            "status": "completed",
+            "mediaUrl": "http://127.0.0.1:59354/media/a.svg",
+            "mimeType": "image/svg+xml"
+          }
+        },
+        {
+          "id": "正文甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "正文甲",
+            "status": "completed",
+            "content": "OLD",
+            "generatedContent": "1dog"
+          }
+        },
+        {
+          "id": "target",
+          "type": "material",
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "data": {
+            "materialType": "image",
+            "nodeKind": "generate",
+            "kind": "generate",
+            "label": "生成目标",
+            "prompt": "",
+            "params": {
+              "model": "qa-image",
+              "operation": "image_to_image"
+            },
+            "slotBindings": {
+              "images": [
+                {
+                  "sourceNodeId": "图片甲",
+                  "edgeId": "edge-1",
+                  "outputId": "http://127.0.0.1:59354/media/a.svg",
+                  "pinned": false
+                }
+              ]
+            },
+            "slotConflicts": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-0",
+          "source": "空图片",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "image"
+          }
+        },
+        {
+          "id": "edge-1",
+          "source": "图片甲",
+          "target": "target",
+          "targetHandle": "input",
+          "data": {
+            "feedType": "image"
+          }
+        },
+        {
+          "id": "edge-2",
+          "source": "正文甲",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "text"
+          }
+        }
+      ]
+    },
+    "identity": {
+      "builtAt": "2026-10-27T03:53:46.530Z",
+      "sha256": "381efd15c36f31dcac6c2d9d7a396b36fb609099b74c439e57d79c226240af1b",
+      "backendSha256": "ba1c82ba2f6fdd7fc124487e3a690553149488b1525eff753bf1a31a95eed664",
+      "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/products-into-assets"
+    }
+  },
+  {
+    "requests": [
+      {
+        "capability": "audio",
+        "prompt": "1dog",
+        "audio": "http://127.0.0.1:59354/media/silence.wav",
+        "references": [
+          {
+            "type": "audio",
+            "role": "reference",
+            "pathOrUrl": "http://127.0.0.1:59354/media/silence.wav",
+            "targetSlot": "reference_audio",
+            "sourceNodeId": "音频甲",
+            "edgeId": "edge-1",
+            "mimeType": "audio/wav",
+            "durationSec": 1
+          }
+        ],
+        "operation": "text_to_music",
+        "model": "qa-audio",
+        "dest": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/products-into-assets/tests/e2e/workflow-effective-input-evidence/run-OIOCRA/executions/qa_1760/34a04005bcaf206eec990bd9637d9fdb6725e0a0c0d4aebf003f17f4c956eb5c-d988ffd8-ab7d-4341-a75e-39801c857a6e.mp3",
+        "signal": {},
+        "mockFail": false
+      }
+    ],
+    "captureOnly": true,
+    "generationCompleted": false,
+    "snapshot": {
+      "nodes": [
+        {
+          "id": "空音频",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "audio",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "空音频",
+            "status": "completed"
+          }
+        },
+        {
+          "id": "音频甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "audio",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "音频甲",
+            "status": "completed",
+            "mediaUrl": "http://127.0.0.1:59354/media/silence.wav",
+            "mimeType": "audio/wav",
+            "durationSec": 1
+          }
+        },
+        {
+          "id": "正文甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "正文甲",
+            "status": "completed",
+            "content": "OLD",
+            "generatedContent": "1dog"
+          }
+        },
+        {
+          "id": "target",
+          "type": "material",
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "data": {
+            "materialType": "audio",
+            "nodeKind": "generate",
+            "kind": "generate",
+            "label": "生成目标",
+            "prompt": "",
+            "params": {
+              "model": "qa-audio",
+              "operation": "text_to_music"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-0",
+          "source": "空音频",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "audio"
+          }
+        },
+        {
+          "id": "edge-1",
+          "source": "音频甲",
+          "target": "target",
+          "targetHandle": "input",
+          "data": {
+            "feedType": "audio"
+          }
+        },
+        {
+          "id": "edge-2",
+          "source": "正文甲",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "text"
+          }
+        }
+      ],
+      "targetId": "target"
+    },
+    "prepared": {
+      "nodes": [
+        {
+          "id": "空音频",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "audio",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "空音频",
+            "status": "completed"
+          }
+        },
+        {
+          "id": "音频甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "audio",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "音频甲",
+            "status": "completed",
+            "mediaUrl": "http://127.0.0.1:59354/media/silence.wav",
+            "mimeType": "audio/wav",
+            "durationSec": 1
+          }
+        },
+        {
+          "id": "正文甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "正文甲",
+            "status": "completed",
+            "content": "OLD",
+            "generatedContent": "1dog"
+          }
+        },
+        {
+          "id": "target",
+          "type": "material",
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "data": {
+            "materialType": "audio",
+            "nodeKind": "generate",
+            "kind": "generate",
+            "label": "生成目标",
+            "prompt": "",
+            "params": {
+              "model": "qa-audio",
+              "operation": "text_to_music"
+            },
+            "slotBindings": {
+              "reference_audio": [
+                {
+                  "sourceNodeId": "音频甲",
+                  "edgeId": "edge-1",
+                  "outputId": "http://127.0.0.1:59354/media/silence.wav",
+                  "pinned": false
+                }
+              ]
+            },
+            "slotConflicts": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-0",
+          "source": "空音频",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "audio"
+          }
+        },
+        {
+          "id": "edge-1",
+          "source": "音频甲",
+          "target": "target",
+          "targetHandle": "input",
+          "data": {
+            "feedType": "audio"
+          }
+        },
+        {
+          "id": "edge-2",
+          "source": "正文甲",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "text"
+          }
+        }
+      ]
+    },
+    "identity": {
+      "builtAt": "2026-10-27T03:53:46.530Z",
+      "sha256": "381efd15c36f31dcac6c2d9d7a396b36fb609099b74c439e57d79c226240af1b",
+      "backendSha256": "ba1c82ba2f6fdd7fc124487e3a690553149488b1525eff753bf1a31a95eed664",
+      "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/products-into-assets"
+    }
+  },
+  {
+    "requests": [],
+    "readiness": {
+      "nodeId": "target",
+      "reasonCode": "operation_incompatible",
+      "message": "当前模型不支持已保存的生成方式 video_to_text"
+    },
+    "snapshot": {
+      "nodes": [
+        {
+          "id": "空视频",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "video",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "空视频",
+            "status": "completed"
+          }
+        },
+        {
+          "id": "视频甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "video",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "视频甲",
+            "status": "completed",
+            "mediaUrl": "http://127.0.0.1:59354/media/demo.mp4",
+            "mimeType": "video/mp4",
+            "durationSec": 6
+          }
+        },
+        {
+          "id": "正文甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "正文甲",
+            "status": "completed",
+            "content": "OLD",
+            "generatedContent": "1dog"
+          }
+        },
+        {
+          "id": "图片甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "image",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "图片甲",
+            "status": "completed",
+            "mediaUrl": "http://127.0.0.1:59354/media/a.svg",
+            "mimeType": "image/svg+xml"
+          }
+        },
+        {
+          "id": "音频甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "audio",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "音频甲",
+            "status": "completed",
+            "mediaUrl": "http://127.0.0.1:59354/media/silence.wav",
+            "mimeType": "audio/wav",
+            "durationSec": 1
+          }
+        },
+        {
+          "id": "target",
+          "type": "material",
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "generate",
+            "kind": "generate",
+            "label": "生成目标",
+            "prompt": "",
+            "params": {
+              "model": "qa-media-only",
+              "operation": "video_to_text"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-0",
+          "source": "空视频",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "video"
+          }
+        },
+        {
+          "id": "edge-1",
+          "source": "视频甲",
+          "target": "target",
+          "targetHandle": "input",
+          "data": {
+            "feedType": "video"
+          }
+        },
+        {
+          "id": "edge-2",
+          "source": "正文甲",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "text"
+          }
+        },
+        {
+          "id": "edge-3",
+          "source": "图片甲",
+          "target": "target",
+          "targetHandle": "input",
+          "data": {
+            "feedType": "image"
+          }
+        },
+        {
+          "id": "edge-4",
+          "source": "音频甲",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "audio"
+          }
+        }
+      ],
+      "targetId": "target"
+    },
+    "prepared": {
+      "nodes": [
+        {
+          "id": "空视频",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "video",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "空视频",
+            "status": "completed"
+          }
+        },
+        {
+          "id": "视频甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "video",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "视频甲",
+            "status": "completed",
+            "mediaUrl": "http://127.0.0.1:59354/media/demo.mp4",
+            "mimeType": "video/mp4",
+            "durationSec": 6
+          }
+        },
+        {
+          "id": "正文甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "正文甲",
+            "status": "completed",
+            "content": "OLD",
+            "generatedContent": "1dog"
+          }
+        },
+        {
+          "id": "图片甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "image",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "图片甲",
+            "status": "completed",
+            "mediaUrl": "http://127.0.0.1:59354/media/a.svg",
+            "mimeType": "image/svg+xml"
+          }
+        },
+        {
+          "id": "音频甲",
+          "type": "material",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "materialType": "audio",
+            "nodeKind": "import",
+            "kind": "import",
+            "label": "音频甲",
+            "status": "completed",
+            "mediaUrl": "http://127.0.0.1:59354/media/silence.wav",
+            "mimeType": "audio/wav",
+            "durationSec": 1
+          }
+        },
+        {
+          "id": "target",
+          "type": "material",
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "data": {
+            "materialType": "text",
+            "nodeKind": "generate",
+            "kind": "generate",
+            "label": "生成目标",
+            "prompt": "",
+            "params": {
+              "model": "qa-media-only",
+              "operation": "video_to_text"
+            },
+            "slotBindings": {
+              "videos": [
+                {
+                  "sourceNodeId": "视频甲",
+                  "edgeId": "edge-1",
+                  "outputId": "http://127.0.0.1:59354/media/demo.mp4",
+                  "pinned": false
+                }
+              ]
+            },
+            "slotConflicts": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-0",
+          "source": "空视频",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "video"
+          }
+        },
+        {
+          "id": "edge-1",
+          "source": "视频甲",
+          "target": "target",
+          "targetHandle": "input",
+          "data": {
+            "feedType": "video"
+          }
+        },
+        {
+          "id": "edge-2",
+          "source": "正文甲",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "text"
+          }
+        },
+        {
+          "id": "edge-3",
+          "source": "图片甲",
+          "target": "target",
+          "targetHandle": "input",
+          "data": {
+            "feedType": "image"
+          }
+        },
+        {
+          "id": "edge-4",
+          "source": "音频甲",
+          "target": "target",
+          "targetHandle": "in",
+          "data": {
+            "feedType": "audio"
+          }
+        }
+      ]
+    },
+    "identity": {
+      "builtAt": "2026-10-27T03:53:46.530Z",
+      "sha256": "381efd15c36f31dcac6c2d9d7a396b36fb609099b74c439e57d79c226240af1b",
+      "backendSha256": "ba1c82ba2f6fdd7fc124487e3a690553149488b1525eff753bf1a31a95eed664",
+      "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/products-into-assets"
+    }
+  }
+]

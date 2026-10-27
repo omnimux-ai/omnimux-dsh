@@ -9,22 +9,19 @@ const __dirname = path.dirname(__filename)
 const root = path.resolve(__dirname, '../../')
 
 test('E2E: 资产库一级 Tab 整合产品库及操作按钮动态联动验证', () => {
-  const assetsStagePath = path.join(root, 'plugins/omnimux-assets/src/client/AssetsStage.jsx')
-  const localesPath = path.join(root, 'plugins/omnimux-assets/src/client/locales.js')
-  const productsViewPath = path.join(root, 'plugins/omnimux-assets/src/client/ProductsView.jsx')
-  const stylesPath = path.join(root, 'plugins/omnimux-assets/src/client/styles.js')
-
-  const stageContent = fs.readFileSync(assetsStagePath, 'utf-8')
-  const localesContent = fs.readFileSync(localesPath, 'utf-8')
-  const productsViewContent = fs.readFileSync(productsViewPath, 'utf-8')
-  const stylesContent = fs.readFileSync(stylesPath, 'utf-8')
+  const stageContent = fs.readFileSync(path.join(root, 'plugins/omnimux-assets/src/client/AssetsStage.jsx'), 'utf-8')
+  const localesContent = fs.readFileSync(path.join(root, 'plugins/omnimux-assets/src/client/locales.js'), 'utf-8')
+  const productTabContent = fs.readFileSync(path.join(root, 'plugins/omnimux-assets/src/client/ProductTab.jsx'), 'utf-8')
+  const categoryNavContent = fs.readFileSync(path.join(root, 'plugins/omnimux-assets/src/client/ProductCategoryNav.jsx'), 'utf-8')
+  const assetsStyles = fs.readFileSync(path.join(root, 'plugins/omnimux-assets/src/client/styles.js'), 'utf-8')
+  const productsStyles = fs.readFileSync(path.join(root, 'plugins/omnimux-products/src/client/styles.js'), 'utf-8')
 
   // 1. 验证一级选项卡扩充为「本地、云端、产品库」
   assert.ok(
     stageContent.includes("{ id: 'local', label: t('source.local') }") &&
     stageContent.includes("{ id: 'cloud', label: t('source.cloud') }") &&
     stageContent.includes("{ id: 'product', label: t('source.product') || '产品库' }"),
-    'AssetsFilterBar 必须包含 local、cloud、product 三项一级选项卡'
+    'AssetsFilterBar 必须包含 local、cloud、product 三项一级选项卡',
   )
 
   // 2. 验证多语言词条包含产品库及其操作项
@@ -33,47 +30,46 @@ test('E2E: 资产库一级 Tab 整合产品库及操作按钮动态联动验证'
     localesContent.includes("'source.product': 'Products'") &&
     localesContent.includes("'product.create': '添加产品'") &&
     localesContent.includes("'product.chatButton': '对话中添加'"),
-    'locales.js 必须包含中英文产品库及按钮动作词条'
+    'locales.js 必须包含中英文产品库及按钮动作词条',
   )
 
   // 3. 验证进入产品库后一级按钮动态切换为带下拉分流菜单的「添加产品」
   assert.ok(
     stageContent.includes("if (sourceTab === 'product')") &&
-    stageContent.includes("<CreateProductMenu") &&
+    stageContent.includes('<CreateProductMenu') &&
     stageContent.includes("{t('product.chatButton') || '对话中添加'}") &&
     stageContent.includes("{t('add.button')}") &&
     stageContent.includes("{t('import.button')}"),
-    'AssetsActionRow 必须在 sourceTab 为 product 时切换为主操作 CreateProductMenu 菜单，其他 Tab 保持「添加资产」'
+    'AssetsActionRow 必须在 sourceTab 为 product 时切换为主操作 CreateProductMenu 菜单，其他 Tab 保持「添加资产」',
   )
 
-  // 4. 验证产品库二级分类 ProductCategoryNav 平级挂载与左侧对齐规范
+  // 4. 产品库二级分类平级挂载；列表与二级页都由 ProductTab 就地承载
   assert.ok(
     stageContent.includes("{sourceTab === 'product' ? (") &&
-    stageContent.includes("<ProductCategoryNav") &&
-    stageContent.includes("<ProductsView") &&
-    productsViewContent.includes("omnimux-products-list-view") &&
-    productsViewContent.includes("omnimux-assets-cloud-chip") &&
-    productsViewContent.includes("omnimux-products-empty"),
-    'AssetsStage 必须将 ProductCategoryNav 平级挂载于 FilterBar 下方，消除嵌套 padding 错配'
+    stageContent.includes('<ProductCategoryNav') &&
+    stageContent.includes('<ProductTab'),
+    'AssetsStage 必须将 ProductCategoryNav 平级挂载于 FilterBar 下方，并由 ProductTab 就地承载列表与二级页',
   )
 
   assert.ok(
-    stylesContent.includes(".omnimux-products-empty") &&
-    stylesContent.includes(".omnimux-products-card") &&
-    stylesContent.includes(".omnimux-products-body {\n  flex: 1;\n  min-height: 0;\n  overflow: auto;\n  padding: 0;\n}") &&
-    stylesContent.includes("var(--dsw-alias-border-l4)"),
-    '产品库主体 padding 必须收敛为 0 以保证与顶层 24px 左对齐基准线严格吻合'
+    categoryNavContent.includes('omnimux-assets-cloud-chip') &&
+    productTabContent.includes('omnimux-products-list-view'),
+    '产品分类胶囊复用资产库胶囊样式，列表根节点沿用产品库列表视图类名',
   )
 
-  // 5. 验证空状态已彻底移除重复操作按钮且侧边栏不再注册产品库
-  const productsIndexPath = path.join(root, 'plugins/omnimux-products/src/client/index.js')
-  const productsIndexContent = fs.readFileSync(productsIndexPath, 'utf-8')
+  // 5. 产品样式收敛为单一真源：资产库不再重复定义，产品插件提供
   assert.ok(
-    !productsViewContent.includes('<CreateProductMenu'),
-    'ProductsView 空状态中必须移除 CreateProductMenu 按钮，避免遮挡'
+    !assetsStyles.includes('.omnimux-products-card') &&
+    !assetsStyles.includes('.omnimux-products-empty') &&
+    productsStyles.includes('.omnimux-products-card') &&
+    productsStyles.includes('.omnimux-products-empty'),
+    '产品卡片与空状态样式必须只在产品插件里定义一次，避免两份同名不同值',
   )
-  assert.ok(
-    !productsIndexContent.includes('mountSidebarEntry'),
-    'omnimux-products 客户端入口不得再注册独立的侧边栏入口'
+
+  // 6. 产品插件不再注册独立侧边栏入口与工作台 Tab
+  assert.equal(
+    fs.existsSync(path.join(root, 'plugins/omnimux-products/src/client/index.js')),
+    false,
+    'omnimux-products 不再有客户端插件入口，因此不可能注册独立侧边栏或工作台 Tab',
   )
 })

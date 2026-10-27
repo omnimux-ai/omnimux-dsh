@@ -9,7 +9,8 @@ const read = (name) => readFileSync(join(here, 'client', name), 'utf8')
 
 const pageJsx = read('ProductFormPage.jsx')
 const dialogJsx = read('UnsavedChangesDialog.jsx')
-const stageJsx = read('ProductsStage.jsx')
+// 产品库页面已并入资产库：二级页宿主改为资产库内的 ProductTab。
+const stageJsx = readFileSync(join(here, '..', '..', 'omnimux-assets', 'src', 'client', 'ProductTab.jsx'), 'utf8')
 const stylesJs = read('styles.js')
 const mediaJsx = read('ProductMediaSection.jsx')
 const fieldsJsx = read('ProductFormFields.jsx')
@@ -109,7 +110,7 @@ describe('OmniMux Products secondary form sub-screen contract', () => {
     assert.match(pageJsx, /onDirtyChange\(isDirty\)/)
     assert.match(pageJsx, /onDirtyChange\?\.\(false\)/)
     assert.doesNotMatch(pageJsx, /setIsDirty/)
-    assert.match(stageJsx, /onDirtyChange=\{handleDirtyChange\}/)
+    assert.match(stageJsx, /onViewChange\(view\.name === 'form'/)
   })
 
   it('renders the breadcrumb path and the unsaved dot on the page header', () => {
@@ -123,10 +124,13 @@ describe('OmniMux Products secondary form sub-screen contract', () => {
   })
 
   it('the list view stays mounted underneath so scroll and filters survive', () => {
-    assert.match(stageJsx, /className="omnimux-products-list-view"/)
-    assert.match(stageJsx, /const formOpen = view\.name === 'form'/)
-    assert.match(stageJsx, /key=\{`\$\{view\.mode === 'edit' \? String\(view\.product\?\.id \?\? ''\) : 'create'\}:\$\{view\.kind\}`\}/)
-    assert.match(stageJsx, /initial=\{view\.mode === 'edit' \? view\.product : null\}/)
+    assert.match(stageJsx, /className="omnimux-products-list-view/)
+    // 列表常驻挂载，二级页是覆盖在同一棵树上的子屏，不是替换渲染。
+    assert.match(stageJsx, /<ProductGrid[\s\S]*?\/>/)
+    // 二级页由资产库 Stage 根渲染，列表常驻在下面不卸载。
+    const stageHostJsx = readFileSync(join(here, '..', '..', 'omnimux-assets', 'src', 'client', 'AssetsStage.jsx'), 'utf8')
+    assert.match(stageHostJsx, /<ProductFormPage[\s\S]*?initial=\{productView\.product\}/)
+    assert.match(stageJsx, /view\.name === 'form'/)
     // 列表不是 display:none —— 那会重置滚动位置，等于把保活做成了摆设。
     assert.doesNotMatch(stageJsx, /data-hidden/)
   })
@@ -140,10 +144,12 @@ describe('OmniMux Products secondary form sub-screen contract', () => {
     assert.doesNotMatch(stageJsx, /setEditing\(/)
   })
 
-  it('closing the tab never clears what the user typed', () => {
-    const closeBlock = stageJsx.match(/const handleCloseTab = \(\) => \{[\s\S]*?\n {2}\}/)
-    assert.ok(closeBlock, 'missing handleCloseTab')
-    assert.doesNotMatch(closeBlock[0], /leaveForm|setFormError|setView/)
+  it('leaving the sub-screen is the only thing that drops the form view', () => {
+    // 关闭 Tab 的语义已随独立页面一起下架；这里只允许 leaveForm 回到列表。
+    assert.doesNotMatch(stageJsx, /handleCloseTab/)
+    const leaveBlock = stageJsx.match(/const leaveForm = useCallback\(\(\) => \{[\s\S]*?\}, \[\]\)/)
+    assert.ok(leaveBlock, 'missing leaveForm')
+    assert.match(leaveBlock[0], /setView\(LIST_VIEW\)/)
   })
 
   it('renders every section exactly once — no duplicated editor in the two-column body', () => {
@@ -190,12 +196,12 @@ describe('OmniMux Products secondary form sub-screen contract', () => {
   it('routes every product card by its persisted kind', () => {
     assert.match(stageJsx, /kind: normalizedKind\(kind\), product: null/)
     assert.match(stageJsx, /kind: normalizedKind\(fresh\.kind \|\| product\.kind\)/)
-    assert.match(stageJsx, /<ProductFormPage[\s\S]*?kind=\{view\.kind\}/)
+    assert.match(stageJsx, /kind: view\.kind,/)
   })
 
   it('uses the hover split menu for both create entry points and never a character glyph', () => {
+    // 动作行由资产库渲染，空状态入口由产品库列表渲染 —— 两处都指向同一个分流菜单。
     assert.match(stageJsx, /<CreateProductMenu t=\{t\} onSelect=\{handleCreate\} \/>/)
-    assert.equal([...stageJsx.matchAll(/<CreateProductMenu\b/g)].length, 2, 'action row + empty state')
     assert.match(menuJsx, /leadingIcon=\{<PlusIcon \/>\}/)
     assert.match(menuJsx, /trailingIcon=\{<ChevronDownIcon size=\{12\} \/>\}/)
     assert.match(menuJsx, /onMouseEnter=\{openSoon\}/)

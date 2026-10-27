@@ -40,8 +40,8 @@ test('E2E-3: 新建产品分流菜单单一真源收敛与资产库副本清除'
   const assetsMenuPath = path.join(root, 'plugins/omnimux-assets/src/client/CreateProductMenu.jsx');
   const assetsMenu = fs.readFileSync(assetsMenuPath, 'utf-8');
   assert.ok(
-    assetsMenu.includes('omnimux-products/src/client/CreateProductMenu.jsx'),
-    '资产库 CreateProductMenu 必须直接从 omnimux-products 单一真源导出'
+    assetsMenu.includes("from 'omnimux-products/ui'"),
+    '资产库 CreateProductMenu 必须经包级出口从 omnimux-products 单一真源导出'
   );
 
   const productsMenuPath = path.join(root, 'plugins/omnimux-products/src/client/CreateProductMenu.jsx');
@@ -62,8 +62,9 @@ test('E2E-4: 删除二次确认弹窗原生 ConfirmModal 替代与薄包装清�
   const assetsStage = fs.readFileSync(path.join(root, 'plugins/omnimux-assets/src/client/AssetsStage.jsx'), 'utf-8');
   assert.ok(assetsStage.includes('<ConfirmModal'), '资产库 Stage 必须直接内联使用 ConfirmModal');
 
-  const productsStage = fs.readFileSync(path.join(root, 'plugins/omnimux-products/src/client/ProductsStage.jsx'), 'utf-8');
-  assert.ok(productsStage.includes('<ConfirmModal'), '商品库 Stage 必须直接内联使用 ConfirmModal');
+  // 商品库宿主已并入资产库的 ProductTab，确认弹窗在那里内联使用。
+  const productTab = fs.readFileSync(path.join(root, 'plugins/omnimux-assets/src/client/ProductTab.jsx'), 'utf-8');
+  assert.ok(productTab.includes('<ConfirmModal'), '产品库宿主必须直接内联使用 ConfirmModal');
 
   const inspSection = fs.readFileSync(path.join(root, 'plugins/omnimux-inspiration/src/client/InspirationSection.jsx'), 'utf-8');
   assert.ok(inspSection.includes('<ConfirmModal'), '灵感库 Section 必须直接内联使用 ConfirmModal');

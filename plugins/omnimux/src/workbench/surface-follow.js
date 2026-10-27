@@ -12,12 +12,15 @@
  * 另：自动跟随不消耗 Agent 的每会话切换配额。
  */
 
-/** 工具名前缀/全名 → 工作台页签。顺序敏感：先匹配长前缀。 */
+/**
+ * 工具名前缀/全名 → 工作台页签。顺序敏感：先匹配长前缀。
+ * `view` 可选：跟随到该页签时一并带上的子视图请求（当前只有产品库需要过滤）。
+ */
 const SURFACE_RULES = Object.freeze([
   { match: /^canvas_/, tabId: 'omnimux-workflow:canvas' },
   { match: /^workflow_/, tabId: 'omnimux-workflow:canvas' },
   { match: /^clip_/, tabId: 'omnimux-clip:studio' },
-  { match: /^products_/, tabId: 'omnimux-products:library' },
+  { match: /^products_/, tabId: 'omnimux-assets:library', view: Object.freeze({ filterType: 'product' }) },
   { match: /^inspiration_/, tabId: 'omnimux-inspiration:library' },
   { match: /^omnimux_inspiration_/, tabId: 'omnimux-inspiration:library' },
   { match: /^omnimux_image_/, tabId: 'omnimux:media-viewer' },
@@ -26,17 +29,26 @@ const SURFACE_RULES = Object.freeze([
 ])
 
 /**
+ * 解析某个工具命中的规则项（内部用，携带可选 view）。
+ * @param {unknown} toolName
+ */
+function resolveSurfaceRule(toolName) {
+  if (typeof toolName !== 'string' || toolName.length === 0) return null
+  const name = toolName.replace(/^.*:/, '')
+  for (const rule of SURFACE_RULES) {
+    if (rule.match.test(name)) return rule
+  }
+  return null
+}
+
+/**
  * 解析某个工具属于哪个工作面。
+ * 返回契约保持为字符串（既有调用方与测试依赖）；子视图请求由 `decideSurfaceFollow` 另行返回。
  * @param {unknown} toolName
  * @returns {string | null} 目标页签；不属于任何工作面时返回 null
  */
 export function resolveSurfaceForTool(toolName) {
-  if (typeof toolName !== 'string' || toolName.length === 0) return null
-  const name = toolName.replace(/^.*:/, '')
-  for (const rule of SURFACE_RULES) {
-    if (rule.match.test(name)) return rule.tabId
-  }
-  return null
+  return resolveSurfaceRule(toolName)?.tabId ?? null
 }
 
 /**
@@ -62,7 +74,7 @@ export function isAutoFollowEnabled(settings) {
  *   activeTabId?: string|null,
  *   panelOpen?: boolean,
  * }} input
- * @returns {{ action: 'switch', tabId: string } | { action: 'skip', code: string }}
+ * @returns {{ action: 'switch', tabId: string, view?: object } | { action: 'skip', code: string }}
  */
 export function decideSurfaceFollow(input) {
   const { follow, toolName, turn, sessionId, activeTabId = null, panelOpen = true } = input || {}
@@ -70,12 +82,13 @@ export function decideSurfaceFollow(input) {
   if (follow.mutedSessionId && follow.mutedSessionId === sessionId && follow.mutedTurn === turn) {
     return { action: 'skip', code: 'user-took-over' }
   }
-  const tabId = resolveSurfaceForTool(toolName)
+  const rule = resolveSurfaceRule(toolName)
+  const tabId = rule?.tabId
   if (!tabId) return { action: 'skip', code: 'not-a-surface-tool' }
   if (!panelOpen) return { action: 'skip', code: 'panel-collapsed' }
   if (activeTabId === tabId) return { action: 'skip', code: 'already-active' }
   if (follow.followedTabIds?.has(tabId)) return { action: 'skip', code: 'already-followed-this-turn' }
-  return { action: 'switch', tabId }
+  return rule.view ? { action: 'switch', tabId, view: rule.view } : { action: 'switch', tabId }
 }
 
 /**
@@ -162,6 +175,7 @@ export function mountSurfaceFollow(ctx, deps) {
           method: 'open',
           tabId: decision.tabId,
           path: decision.tabId,
+          ...(decision.view ? { view: decision.view } : {}),
           reason: 'auto-surface-follow',
           previousTabId: activeTabId,
           sessionId,
@@ -181,5 +195,9 @@ export function mountSurfaceFollow(ctx, deps) {
 
 /** 供设置页与测试引用的映射表快照。 */
 export const SURFACE_MAP = Object.freeze(
-  SURFACE_RULES.map((rule) => ({ pattern: String(rule.match), tabId: rule.tabId })),
+  SURFACE_RULES.map((rule) => ({
+    pattern: String(rule.match),
+    tabId: rule.tabId,
+    ...(rule.view ? { view: rule.view } : {}),
+  })),
 )

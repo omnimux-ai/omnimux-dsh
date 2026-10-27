@@ -417,7 +417,7 @@ test('移除回归：侧栏不再渲染探索行，源码不再残留浮动菜�
   // 真源与激活委托必须保留：官方「更多」菜单仍复用它们
   assert.equal(typeof resolveExploreMenuItems, 'function', '合并函数是真源，必须保留')
   assert.equal(typeof activateExploreItem, 'function', '激活委托必须保留')
-  assert.equal(resolveExploreMenuItems().length, 10)
+  assert.equal(resolveExploreMenuItems().length, 9)
 
   const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'sidebar-coordinator.js'), 'utf8')
   assert.doesNotMatch(source, /omnimux-explore-entry/, '源码不得残留探索行 id')
@@ -471,7 +471,7 @@ test('常驻行按 rank 挂载在侧栏，探索行不再出现在最下方', as
   }
 })
 
-test('非核心插件（video, products, device, clip, social-harvest, apps 等）收敛，不渲染独立行', async () => {
+test('非核心插件（video, products 旧入口, device, clip, social-harvest, apps 等）收敛，不渲染独立行', async () => {
   setup()
   const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
   installSidebarGlobal()
@@ -479,6 +479,7 @@ test('非核心插件（video, products, device, clip, social-harvest, apps 等�
 
   const targets = [
     { id: 'omnimux-video-entry', rank: 7.5 },
+    // 产品库已并入资产库：旧版本仍可能注册该入口，必须收敛而不是留一行死条目。
     { id: 'omnimux-products-entry', rank: 8 },
     { id: 'omnimux-device-entry', rank: 3.5 },
     { id: 'omnimux-clip-entry', rank: 8.2 },
@@ -607,13 +608,13 @@ test('activateExploreItem 中 item.action 返回非 false 时阻止后续 regist
   }
 })
 
-test('运行时注册接缝：未注册与内置 10 项完全一致，注册后追加末尾、注销即消失', async () => {
+test('运行时注册接缝：未注册与内置 9 项完全一致，注册后追加末尾、注销即消失', async () => {
   setup()
   installSidebarGlobal()
   const api = SIDEBAR_GLOBAL()
 
   // AC1：未注册时合并结果 === 内置白名单（同长度、同序、同 id）
-  assert.equal(EXPLORE_MENU_ITEMS.length, 10, '内置白名单 10 项')
+  assert.equal(EXPLORE_MENU_ITEMS.length, 9, '内置白名单 9 项')
   assert.deepEqual(
     resolveExploreMenuItems().map((item) => item.id),
     EXPLORE_MENU_ITEMS.map((item) => item.id),
@@ -630,7 +631,7 @@ test('运行时注册接缝：未注册与内置 10 项完全一致，注册后�
   assert.equal(typeof unregister, 'function', '注册返回注销函数')
 
   const registered = resolveExploreMenuItems()
-  assert.equal(registered.length, 11, '注册后共 11 项')
+  assert.equal(registered.length, 10, '注册后共 10 项')
   const last = registered.at(-1)
   assert.equal(last.id, 'fast-news-workbench', '注册项追加在末尾')
   assert.equal(last.label, '快讯中枢')
@@ -646,7 +647,7 @@ test('运行时注册接缝：未注册与内置 10 项完全一致，注册后�
 
   // AC6：注销后集合不再包含该项
   unregister()
-  assert.equal(resolveExploreMenuItems().length, 10, '注销后回到 10 项')
+  assert.equal(resolveExploreMenuItems().length, 9, '注销后回到 9 项')
   assert.equal(
     resolveExploreMenuItems().some((item) => item.id === 'fast-news-workbench'),
     false,
@@ -677,11 +678,11 @@ test('运行时注册接缝：action 优先于 tabId，非法形状与 id 冲突
     assert.equal(typeof dispose, 'function', '非法输入仍返回注销函数')
     dispose()
   }
-  assert.equal(resolveExploreMenuItems().length, 10, '非法输入不改变菜单集合')
+  assert.equal(resolveExploreMenuItems().length, 9, '非法输入不改变菜单集合')
 
   // AC5：与内置 id 冲突时不注册
   const conflict = api.registerExploreItem({ id: 'apps', label: '伪装应用', iconSvg: '<svg></svg>' })
-  assert.equal(resolveExploreMenuItems().length, 10, '内置 id 冲突项被忽略')
+  assert.equal(resolveExploreMenuItems().length, 9, '内置 id 冲突项被忽略')
   conflict()
 
   // AC5：同 id 二次注册覆盖，不产生重复项
@@ -718,6 +719,6 @@ test('运行时注册接缝：action 优先于 tabId，非法形状与 id 冲突
 
   unregisterFirst()
   unregisterSecond()
-  assert.equal(resolveExploreMenuItems().length, 10, '全部注销后回到 10 项')
+  assert.equal(resolveExploreMenuItems().length, 9, '全部注销后回到 9 项')
   delete window.__omnimuxWorkbench
 })

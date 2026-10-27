@@ -108,8 +108,9 @@ done
 
 echo
 echo "== 8. 关页保活（stage-guards；只扫白名单 Stage/plaza） =="
-# FAIL 金标（已合入 main）：accounts / products
-# WARN 推进中：assets / plaza-shell（文件缺失则跳过）
+# 下列白名单一律按 FAIL 判（金标：accounts / assets）。
+# products 已并入资产库产品库 Tab（omnimux-assets:library），不再有自己的 Stage 根，
+# 其保活由 assets 承载；这里只保留它仍在的写闸与 locale 检查。
 # WARN 债：WorkflowStage / AppsStage
 stage_has_keepalive() {
   local f="$1"
@@ -141,7 +142,7 @@ check_stage_keepalive() {
   fi
   if stage_close_unmount "$f"; then
     if [ "$mode" = "fail" ]; then
-      bad "$rel 关页卸树反模式（if (!open…) return null）→ 对齐 accounts/products everOpened+display:none"
+      bad "$rel 关页卸树反模式（if (!open…) return null）→ 对齐 accounts/assets everOpened+display:none"
     else
       warn "$rel 关页仍 return null 卸树（契约 MUST，待升 FAIL / backlog）"
     fi
@@ -157,7 +158,6 @@ check_stage_keepalive() {
 }
 for rel in \
   omnimux-accounts/src/client/AccountsStage.jsx \
-  omnimux-products/src/client/ProductsStage.jsx \
   omnimux-assets/src/client/AssetsStage.jsx \
   omnimux-market/src/client/plaza-shell.js \
   omnimux-workflow/src/client/WorkflowStage.jsx \
