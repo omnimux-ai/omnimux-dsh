@@ -23,7 +23,8 @@
     "scripts/catalog-snapshot.mjs",
     "scripts/export-voice-previews.mjs",
     "cordis.patch.yml",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "build": "node scripts/build-media-inspect.mjs && node scripts/build-client.mjs",

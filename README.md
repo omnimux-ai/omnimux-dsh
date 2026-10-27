@@ -6,8 +6,8 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Source--Available-blue.svg" alt="License: Source-Available"></a>
-  <a href="COMMERCIAL.md"><img src="https://img.shields.io/badge/Edition-Community%20%7C%20Enterprise-success.svg" alt="Community | Enterprise"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg" alt="License: AGPL-3.0"></a>
+  <a href="COMMERCIAL.md"><img src="https://img.shields.io/badge/Commercial-Dual%20Licensing-success.svg" alt="Commercial dual licensing"></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-%3E%3D22.19%20%7C%7C%20%3E%3D24-brightgreen.svg" alt="Node Version"></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/Ecosystem-DeepSeek%20Harness-purple.svg" alt="DSH Ecosystem"></a>
   <a href="https://discord.gg/omnimux"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2.svg?logo=discord&logoColor=white" alt="Discord"></a>
@@ -58,21 +58,20 @@
 | 软件使用与商业授权 | [许可原文](LICENSE)、[商业授权说明](COMMERCIAL.md)，不等于生成免费 |
 | 第三方来源与许可 | [致谢与第三方声明](ACKNOWLEDGEMENTS.md) |
 
-## 💼 版本许可 (Community vs Enterprise)
+## 💼 许可
 
-OmniMux 采用标准的 **Open-Core** 模式与 **Sustainable Source** 许可：
+OmniMux 自行编写的插件代码采用 **[AGPL-3.0](LICENSE)**，另附 [NOTICE](NOTICE) 中的 AGPLv3 第 7 条署名要求；同时提供商业授权，与 [new-api](https://github.com/QuantumNous/new-api) 的做法相同。
 
-以下保留既有许可说明；不以许可版本推导生成费用或企业功能已经交付。
-
-| 特性 | Community Edition (社区开源自托管) | Commercial / Enterprise (商业企业版) |
+| 用法 | AGPL-3.0（免费） | 商业授权 |
 | :--- | :---: | :---: |
-| **源码完全开放与二次开发** | ✅ 自由修改与本地扩展 | ✅ 支持私有化源码交付与定制 |
-| **个人使用 / 学术研究** | ✅ 永久免费 | ✅ 永久免费 |
-| **企业内部业务自用 (Self-Hosted)** | ✅ 永久免费 (无限制) | ✅ 免费 (提供专属部署技术支持) |
-| **商业转售与白标 OEM 贴牌** | ❌ (明确禁止) | ✅ 官方授权 OEM 品牌独立售卖 |
-| **托管云服务运营 (Cloud SaaS)** | ❌ (明确禁止) | ✅ 官方商业 SaaS 运营授权 |
+| 个人、团队或企业使用、修改、自行部署，包括商业用途 | ✅ | ✅ |
+| 修改后对外提供服务或分发，且公开修改后的源码 | ✅ | ✅ |
+| 修改后对外提供服务或分发，但不公开修改 | ❌ | ✅ |
+| 移除 `Powered by OmniMux` 署名，以自有品牌发布 | ❌ | ✅ |
 
-*详细说明与授权流程请查阅 [COMMERCIAL.md](COMMERCIAL.md)。*
+从上游 fork 或引入的代码保留原许可（多为 MIT），见 [CONTRIBUTING.md](CONTRIBUTING.md) 第 4 节与 [ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md)。2026-10-28 之前发布的版本按其发布时的许可证授权。许可不等于生成免费，详见 [COMMERCIAL.md](COMMERCIAL.md)。
+
+统一源码公开仓：[omnimux-ai/omnimux-ai](https://github.com/omnimux-ai/omnimux-ai)（`plugins/` 将收录本仓源码）。
 
 ## 🚀 快速启动 (Quickstart)
 
@@ -156,13 +155,13 @@ OmniMux 的构建与演进站在了开源巨人的肩膀上，我们对以下直
 
 ---
 
-## 📄 开源许可与商业授权 (License & Commercial)
+## 📄 许可与商业授权 (License & Commercial)
 
-* **开源自托管许可**：本项目遵循 **[OmniMux Sustainable Source License (Version 1.0)](LICENSE)**（Source-Available 模式）。个人使用、科研学术及企业内部自建业务完全免费。
-* **商业授权**：若您需要将 OmniMux 包装成商业产品转售（OEM 贴牌）、搭建收费 SaaS 云服务或采购 Enterprise 企业版，请联系 `hello@omnimux.ai` 或查阅 **[COMMERCIAL.md](COMMERCIAL.md)**。
+* **许可**：OmniMux 自行编写的代码采用 **[AGPL-3.0](LICENSE)**，附 [NOTICE](NOTICE) 中的第 7 条署名要求。可以免费使用、修改、自行部署，包括商业用途；修改后对外提供服务或分发时须公开对应源码，并保留署名。
+* **商业授权**：不想公开修改、需要移除 OmniMux 品牌，或公司政策不接受 AGPL 时，请联系 `hello@omnimux.ai` 或查阅 **[COMMERCIAL.md](COMMERCIAL.md)**。
 
 ---
 
 <p align="center">
-  <sub>Copyright © 2026 OmniMux Project. All rights reserved.</sub>
+  <sub>Copyright © 2026 OmniMux Project and Contributors. Licensed under AGPL-3.0.</sub>
 </p>

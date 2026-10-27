@@ -2,8 +2,9 @@
   "schemaVersion": "1.0.0",
   "description": "包许可声明真源。class: original=全自有代码；fork=上游代码占主体，保持上游许可；vendor=上游代码为子目录，复合许可。",
   "rootLicense": "LICENSE",
-  "rootLicenseTitle": "OmniMux Sustainable Source License (Version 1.0)",
-  "nonSpdxNotice": "SPDX 无该许可标识；原创与 vendor 包统一用 \"SEE LICENSE IN LICENSE\"，包内 LICENSE 为原文。",
+  "rootNotice": "NOTICE",
+  "rootLicenseTitle": "GNU Affero General Public License v3.0",
+  "nonSpdxNotice": "根许可为 AGPL-3.0（SPDX: AGPL-3.0-only），另有根 NOTICE 中的 AGPLv3 第 7 条附加条款。原创与 vendor 包统一用 \"SEE LICENSE IN LICENSE\"：vendor 包是 MIT 与 AGPL 的复合许可，单一 SPDX 标识无法表达；原创包保持同一写法，使 npm 使用者一并读到包内 LICENSE 与仓库 NOTICE。2026-10-28 之前发布的版本保持当时的 Sustainable Source 1.0 或 MIT 声明。",
   "packages": {
     "omnimux": {
       "class": "original",
