@@ -212,6 +212,7 @@
     "composer-inline-e2e.mjs",
     "dev-replay.mjs",
     "dev-replay.test.mjs",
+    "worktree-cleanup-3820.test.mjs",
     "dev-smoke.mjs",
     "dev-smoke.test.mjs",
     "director-acceptance-3289.mjs",

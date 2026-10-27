@@ -59,6 +59,26 @@ Dev 与 Prod 都不得 link 工作树或接收未合并产物；没有未合并�
 - `recover(COMMITTED)` 仅清理自有 scratch，不退版。提交后反向转换须带 `--expect-reverse-receipt`，精确绑定同 profile 的成功正向 receipt，以其 after 为 before、其 before 为新输入；重新构建和验证候选，不允许任意降级。旧原 tgz 必须仍可读取。
 - 幂等需 live source/installed/lock 全图和同一转换 receipt 同时匹配；仅相同 version 或历史 receipt 不够。转换后仍分别验 Dev Host 和 #765 ego；磁盘成功不替代运行验收。
 
+## worktree 交付清理
+
+交付收尾必须把任务 worktree 真正删掉，而不是留在 `.worktrees/` 里堆积。
+
+**为什么不能直接 `git worktree remove`**：规格草稿按契约留在任务 worktree、不进提交（[Quality Loop](../../AGENTS.md)），所以任何已交付的 worktree 都必然有未提交文件，`git worktree remove` 会直接拒绝：
+
+```
+fatal: '<path>' contains modified or untracked files, use --force to delete it
+```
+
+**规定动作**（`scripts/worktree.sh ship` 已实现，#3820）：
+
+1. 删除前归档本任务证据到 `.tmp/worktree-archive/<task>/`：只取该 worktree 里**未跟踪的 `specs/*.md`** 与其 `git diff`，不整目录复制（每个 worktree 都带着 main 的全量 specs，全量复制既慢又掩盖真正的任务草稿）。归档失败要显式告警，不静默跳过。
+2. 用 `git worktree remove --force` 删除，失败再 `rm -rf` 兜底。
+3. 删除分支后 `git worktree prune`。
+
+**巡检入口**：`bash scripts/worktree.sh audit` 只读列出可清理对象——判据是 `rev-list --count origin/main..<branch> == 0`（无未合并提交）；分支为 `main` 或就是当前所在 worktree 时一律保留待人工判断。它**不自动删除**。
+
+`cmd_remove` 的 `--discard` 与 `cmd_clean` 遇到脏工作区主动 skip，是刻意保守的人工确认语义，不属于本节的自动清理路径。
+
 ## 刷新与重启
 
 - Client 热更新是产品默认行为，不是可选开关（[Hub WebSocket 热更新](hmr.md)）：watcher 产出新 Client 产物后，Hub 经事件通道通知已打开页面失效缓存、预取并重挂载，无需手动刷新。官方原生 `client-hmr` 行必须保持禁用；在更高层重新启用会被 Host 挂载检查拒绝。

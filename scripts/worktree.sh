@@ -25,11 +25,93 @@ if [ -z "${ROOT}" ]; then
   exit 2
 fi
 
+# 主检出根：从任意 worktree 里调用时，--show-toplevel 返回的是那个 worktree 自己，
+# 而巡检必须看主检出的 .worktrees/。git-common-dir 在所有 worktree 里都指向同一份 .git。
+GIT_COMMON_DIR="$(git rev-parse --git-common-dir 2>/dev/null || echo "${ROOT}/.git")"
+case "${GIT_COMMON_DIR}" in
+  /*) : ;;
+  *) GIT_COMMON_DIR="${ROOT}/${GIT_COMMON_DIR}" ;;
+esac
+PRIMARY_ROOT="$(cd "$(dirname "${GIT_COMMON_DIR}")" 2>/dev/null && pwd || echo "${ROOT}")"
+
 WT_DIR="${ROOT}/.worktrees"
+PRIMARY_WT_DIR="${PRIMARY_ROOT}/.worktrees"
 TASK_RE='^[a-z0-9][a-z0-9-]*$'
 
 die() { echo "worktree.sh: ❌ $*" >&2; exit 1; }
 say() { echo "==> $*"; }
+
+# -----------------------------------------------------------------------------
+# Worktree evidence archive (#3820)
+# -----------------------------------------------------------------------------
+
+# Fixed destination for evidence taken from a worktree right before it is removed.
+# Kept inside the repo's .tmp/ (an existing scratch allowlist) so the data survives
+# the task and can be inspected later.
+ARCHIVE_ROOT="${ROOT}/.tmp/worktree-archive"
+
+# Copy a worktree's task-owned, never-committed evidence somewhere durable before
+# the directory disappears. Only the task's own untracked specs and its tracked diff
+# are kept — never the whole specs/ tree, which every worktree carries from main.
+# Failure is reported loudly but does not block removal: losing the archive is worse
+# than a noisy line, but blocking delivery on it would be worse still.
+archive_worktree_evidence() {
+  local wt="$1" task="$2"
+  [ -d "${wt}" ] || return 0
+  local dest="${ARCHIVE_ROOT}/${task}"
+  local specs tracked
+  specs=$(git -C "${wt}" status --porcelain -uall 2>/dev/null \
+    | awk '$1=="??"{print $2}' | grep -E '^specs/.*\.md$' || true)
+  tracked=$(git -C "${wt}" diff --stat 2>/dev/null | tail -1)
+  if [ -z "${specs}" ] && [ -z "${tracked}" ]; then
+    return 0
+  fi
+  mkdir -p "${dest}" 2>/dev/null || {
+    echo "worktree.sh: ⚠️  无法创建证据归档目录 ${dest}；继续删除 worktree，未归档内容将丢失。" >&2
+    return 0
+  }
+  local f
+  for f in ${specs}; do
+    local base
+    base=$(basename "${f}")
+    cp "${wt}/${f}" "${dest}/${base}" 2>/dev/null \
+      || echo "worktree.sh: ⚠️  归档失败 ${f}" >&2
+  done
+  git -C "${wt}" diff > "${dest}/tracked-changes.patch" 2>/dev/null || true
+  printf '%s\n' "${tracked}" > "${dest}/tracked-changes.summary" 2>/dev/null || true
+  say "已归档本任务证据 → ${dest} ($(ls -1 "${dest}" 2>/dev/null | wc -l | tr -d ' ') 个文件)"
+}
+
+# List worktrees whose branch is fully merged and has no unmerged commits, so a human
+# can clean them without guessing. Read-only: never removes anything.
+audit_worktrees() {
+  local remote_branch="${REMOTE}/${DEFAULT_BRANCH}"
+  say "巡检 worktree（基线 ${remote_branch}）"
+  local name wt branch ahead merged verdict
+  for wt in "${PRIMARY_WT_DIR}"/*; do
+    [ -d "${wt}" ] || continue
+    name=$(basename "${wt}")
+    branch=$(git -C "${wt}" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+    [ -n "${branch}" ] || continue
+    if [ "${branch}" = "${DEFAULT_BRANCH}" ]; then
+      verdict="保留：分支是 ${DEFAULT_BRANCH}，需人工判断"
+    else
+      ahead=$(git -C "${PRIMARY_ROOT}" rev-list --count "${remote_branch}..${branch}" 2>/dev/null || echo "?")
+      if [ "${ahead}" = "0" ] && [ "${wt}" = "${ROOT}" ]; then
+        # 当前所在的 worktree 还没提交时 ahead 也是 0，不能据此判可清理。
+        verdict="保留：这是当前所在 worktree"
+      elif [ "${ahead}" = "0" ]; then
+        verdict="可清理"
+      else
+        verdict="保留：ahead=${ahead}"
+      fi
+    fi
+    printf '%-46s %-46s %s\n' "${name}" "${branch}" "${verdict}"
+    if [ "${verdict}" = "可清理" ]; then
+      printf '    清理: bash scripts/worktree.sh remove %s --pr <n>\n' "${name}"
+    fi
+  done
+}
 
 # -----------------------------------------------------------------------------
 # Remote & Branch Detection
@@ -585,8 +667,13 @@ cmd_ship() {
       say "PR MERGED; Dev materialization status: ${MATERIALIZE_STATUS} ($(materialize_dev_state)). Worktree retained (--keep-worktree): ${wt}"
     fi
   else
-    say "git worktree remove ${wt}"
-    git worktree remove "${wt}" 2>/dev/null || rm -rf "${wt}"
+    # 规格草稿按契约留在任务 worktree、不进提交，所以交付时 worktree 必然是脏的；
+    # `git worktree remove` 会以 "contains modified or untracked files" 直接拒绝，
+    # 旧写法只靠 `|| rm -rf` 兜底，一旦没跑 ship 或兜底未生效就会永久堆积（#3820）。
+    # 先归档本任务证据，再 force 删除。
+    archive_worktree_evidence "${wt}" "${task}"
+    say "git worktree remove --force ${wt}"
+    git worktree remove --force "${wt}" 2>/dev/null || rm -rf "${wt}"
     if [ -n "${branch}" ] && git show-ref --verify --quiet "refs/heads/${branch}"; then
       git branch -d "${branch}" 2>/dev/null || git branch -D "${branch}" 2>/dev/null || true
     fi
@@ -820,6 +907,7 @@ Usage:
   worktree.sh new <task> [base] [--type ...] create .worktrees/<task>
   worktree.sh auto-new <issue_id>            fetch GitHub Issue and create worktree automatically
   worktree.sh list                           show active worktrees and dirty counts
+  worktree.sh audit                          list merged worktrees safe to clean (read-only)
   worktree.sh ship <task> --pr <num> [--keep-worktree] verify matching PR MERGED, sync ${DEFAULT_BRANCH}, materialize Dev, and clean worktree
   worktree.sh remove <task> [flags]          safely remove worktree (--discard, --abandon, --pr <num>)
   worktree.sh prune                          drop stale worktree records & list safe-to-delete branches
@@ -848,6 +936,7 @@ case "${cmd}" in
   new)      [ "$#" -ge 1 ] || die "usage: worktree.sh new <task> [base] [--type feat|fix|chore|agent] [--issue <id>]"; cmd_new "$@" ;;
   auto-new) [ "$#" -ge 1 ] || die "usage: worktree.sh auto-new <issue_id>"; cmd_auto_new "$@" ;;
   list)     cmd_list ;;
+  audit)    audit_worktrees ;;
   ship)     [ "$#" -ge 1 ] || die "usage: worktree.sh ship <task> --pr <num> [--keep-worktree]"; cmd_ship "$@" ;;
   finish)   [ "$#" -ge 1 ] || die "usage: worktree.sh ship <task> --pr <num> [--keep-worktree]"; cmd_ship "$@" ;;
   remove)   [ "$#" -ge 1 ] || die "usage: worktree.sh remove <task> [--discard] [--abandon] [--pr <num>]"; cmd_remove "$@" ;;
