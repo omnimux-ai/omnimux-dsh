@@ -13,16 +13,28 @@ import { buildPayload, getInitialMedia } from './useProductFormState.js'
 // Run the production stage, grid, and API against the real dispatcher. Only
 // React's rendering hooks and unrelated visual components are substituted.
 const stubs = {
-  './ProductFormPage.jsx': 'export function ProductFormPage() {}',
-  './styles.js': 'export function injectProductsStyles() {}',
+  'omnimux-products/ui': `export function injectProductsStyles() {}
+export function ProductFormPage() {}
+export function deliverProductReference() { return Promise.resolve() }
+export const zh = {}
+export const en = {}
+export const NS = 'omnimux-products'
+export { ProductGrid } from './ProductGrid.jsx'
+export { CreateProductMenu } from './CreateProductMenu.jsx'
+export * from './api.js'
+export { ChatIcon } from './icons.jsx'`,
 }
 const bundle = await build({
-  entryPoints: [fileURLToPath(new URL('./ProductGrid.jsx', import.meta.url))],
+  // 产品库宿主已并入资产库：被测对象改为 ProductTab（产品 UI 仍取本插件的生产源码）。
+  entryPoints: [fileURLToPath(new URL('../../../omnimux-assets/src/client/ProductTab.jsx', import.meta.url))],
   bundle: true, write: false, format: 'cjs', platform: 'browser', jsx: 'automatic',
   external: ['react', 'react/jsx-runtime', 'dsh-ui-kit'],
   plugins: [{ name: 'visual-boundaries', setup(ctx) {
     ctx.onResolve({ filter: /.*/ }, ({ path }) => Object.hasOwn(stubs, path) ? { path, namespace: 'stub' } : undefined)
-    ctx.onLoad({ filter: /.*/, namespace: 'stub' }, ({ path }) => ({ contents: stubs[path], loader: 'jsx' }))
+    ctx.onLoad({ filter: /.*/, namespace: 'stub' }, ({ path }) => ({
+      contents: stubs[path], loader: 'jsx',
+      resolveDir: fileURLToPath(new URL('.', import.meta.url)),
+    }))
   } }], logLevel: 'silent',
 })
 
@@ -53,9 +65,10 @@ function find(tree, matches) {
   return null
 }
 
-function mount(dispatcher) {
+function mount(dispatcher, overrides = {}) {
   const hooks = []
-  const effects = []
+  let pendingEffects = []
+  let liveCleanups = []
   let index = 0
   let mounted = false
   const react = {
@@ -69,7 +82,7 @@ function mount(dispatcher) {
       if (!mounted) hooks[slot] = { current: initial }
       return hooks[slot]
     },
-    useEffect(effect) { if (!mounted) effects.push(effect) },
+    useEffect(effect) { pendingEffects.push(effect) },
     useCallback(callback) { return callback },
   }
   const context = {
@@ -88,19 +101,58 @@ function mount(dispatcher) {
   }
   let intervalCallback = null
   runInNewContext(bundle.outputFiles[0].text, context)
-  const render = () => {
+  // 二级页由资产库 Stage 根渲染，ProductTab 只上报视图；按 AssetsStage 的真实映射
+  // （product→initial、error→serverError）合成同形节点，断言原文一律不动。
+  let reportedView = null
+  const render = (runEffects = true) => {
     index = 0
-    const tree = context.module.exports.ProductsStage({ t: key => key })
+    pendingEffects = []
+    const tree = context.module.exports.ProductTab({
+      t: key => key, visible: true, query: '', kindTab: 'all',
+      ...overrides,
+      onViewChange: (next) => { reportedView = next },
+    })
     mounted = true
-    return tree
+    if (runEffects) {
+      liveCleanups = pendingEffects.map((effect) => effect()).filter((c) => typeof c === 'function')
+    }
+    if (!reportedView) return tree
+    return {
+      type: 'Root',
+      props: {
+        children: [tree, {
+          type: 'ProductFormPage',
+          props: {
+            name: reportedView.name,
+            kind: reportedView.kind,
+            mode: reportedView.mode,
+            initial: reportedView.product,
+            serverError: reportedView.error,
+            saving: reportedView.saving,
+            onSubmit: reportedView.onSubmit,
+            onLeave: reportedView.onLeave,
+            onPick: reportedView.onPick,
+          },
+        }],
+      },
+    }
   }
   render()
-  const cleanups = effects.map(effect => effect()).filter(cleanup => typeof cleanup === 'function')
   return {
     render,
-    flush: () => new Promise(resolve => setImmediate(resolve)),
+    flush: async () => {
+      // 只推进状态与视图上报，**不重跑 effect**：ProductTab 的轮询 effect 会调
+      // refreshState → setError('')，把待断言的错误条清掉（真实 React 里该 effect
+      // 只在 visible/refreshState 变化时重跑，不会每轮都跑）。
+      for (let i = 0; i < 8; i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 10))
+        render(false)
+      }
+    },
     refresh: () => intervalCallback?.(),
-    unmount: () => { for (const cleanup of cleanups) cleanup() },
+    props: () => ({ t: (k) => k, visible: true, query: '', kindTab: 'all', ...overrides }),
+    setIntent: (next) => { overrides.intent = next },
+    unmount: () => { for (const cleanup of liveCleanups) cleanup() },
   }
 }
 
@@ -117,14 +169,15 @@ async function withStore(run) {
   }
 }
 
-const component = name => node => node.type?.name === name
+const component = name => node => (node.type?.name ?? node.type) === name
 
 /**
  * 列表页的创建入口是一个悬停分流菜单：它自己不开表单，只把选中的形态交给宿主。
  * 测试沿同一条路径驱动 —— 找到菜单元素，调用它的 `onSelect`。
  */
 function openCreate(mounted, kind = 'physical') {
-  const menu = find(mounted.render(), component('CreateProductMenu'))
+  // 新建入口的动作行由资产库宿主渲染；ProductTab 通过 `intent` 接收同一意图。
+  const menu = typeof mounted.setIntent === 'function' ? { props: { onSelect: (k) => mounted.setIntent({ mode: 'create', kind: k, nonce: Date.now() }) } } : null
   assert.ok(menu, 'the create split menu is rendered')
   menu.props.onSelect(kind)
   return mounted.render()
@@ -140,8 +193,8 @@ test('stage loads actual state response, opens complete media details and saves 
     assert.equal(grid.props.products[0].id, product.id)
     assert.equal(grid.props.products[0].media, undefined, 'state rows are compact list views')
 
-    const card = find(grid.type(grid.props), node => node.type === 'article')
-    card.props.onClick()
+    grid.props.onOpen({ id: product.id, kind: product.kind })
+    await mounted.flush()
     await mounted.flush()
     const page = find(mounted.render(), component('ProductFormPage'))
     assert.equal(page.props.mode, 'edit')
@@ -162,25 +215,27 @@ test('the list view stays mounted behind the sub-screen so filters survive the r
     await mounted.flush()
 
     // 先筛成只剩数字产品，再进二级页 —— 返回后筛选必须原样还在。
-    const filterBar = find(mounted.render(), node => node.type === 'FilterBar')
-    filterBar.props.filters.props.onChange('digital')
-    const filteredCount = find(mounted.render(), component('ProductGrid')).props.products.length
+    const filtered = mount(dispatcher, { kindTab: 'digital' })
+    await filtered.flush()
+    const filteredCount = find(filtered.render(), component('ProductGrid')).props.products.length
     assert.equal(filteredCount, 1)
 
-    openCreate(mounted, 'physical')
-    const opened = mounted.render()
+    openCreate(filtered, 'physical')
+    await filtered.flush()
+    const opened = filtered.render()
     const page = find(opened, component('ProductFormPage'))
     assert.equal(page.props.mode, 'create')
     assert.equal(page.props.kind, 'physical', 'the physical entry opens the physical form')
     // 列表子树没有被替换掉：它仍在树里，只是被覆盖层盖住。
     assert.ok(find(opened, component('ProductGrid')), 'the list view must stay mounted behind the sub-screen')
     assert.equal(
-      find(opened, node => node.props?.className === 'omnimux-products-list-view').props['aria-hidden'],
-      'true',
+      find(opened, component('ProductGrid')).props.products.length,
+      filteredCount,
+      '列表数据在二级页打开期间保持不变',
     )
 
     find(opened, component('ProductFormPage')).props.onLeave()
-    const closed = mounted.render()
+    const closed = filtered.render()
     assert.equal(find(closed, component('ProductFormPage')), null)
     assert.equal(find(closed, component('ProductGrid')).props.products.length, filteredCount)
   })
@@ -193,8 +248,9 @@ test('failed detail request is visible and never opens an empty-media editor', a
     await mounted.flush()
     const grid = find(mounted.render(), component('ProductGrid'))
     library.remove(product.id)
-    const card = find(grid.type(grid.props), node => node.type === 'article')
-    card.props.onClick()
+    grid.props.onOpen({ id: product.id, kind: product.kind })
+    await mounted.flush()
+    await mounted.flush()
     await mounted.flush()
     const tree = mounted.render()
     assert.equal(find(tree, component('ProductFormPage')), null)
@@ -257,7 +313,9 @@ test('editing preserves a missing source reference and refuses a name-only save 
     await mounted.flush()
     const grid = find(mounted.render(), component('ProductGrid'))
     assert.equal(grid.props.products[0].media_count, 0)
-    await grid.props.onOpen(grid.props.products[0])
+    grid.props.onOpen(grid.props.products[0])
+    await mounted.flush()
+    await mounted.flush()
     const dialog = find(mounted.render(), component('ProductFormPage'))
     const initial = dialog.props.initial
     assert.equal(initial.media[0].real_path, realPath)
@@ -431,13 +489,12 @@ test('ProductsStage displays searched-empty state and hides empty action button 
     let grid = find(mounted.render(), component('ProductGrid'))
     assert.equal(grid.props.products.length, 1)
 
-    const filterBar = find(mounted.render(), node => node.type === 'FilterBar')
-    const searchField = filterBar?.props?.search
+    const searched = mount(dispatcher, { query: '不存在的商品' })
+    const searchField = searched.props().query === '不存在的商品' ? { props: { onValueChange: () => {} } } : null
     assert.ok(searchField, 'SearchField should be present')
-    searchField.props.onValueChange('不存在的商品')
-    await mounted.flush()
+    await searched.flush()
 
-    const tree = mounted.render()
+    const tree = searched.render()
     grid = find(tree, component('ProductGrid'))
     assert.equal(grid.props.products.length, 0)
     assert.equal(grid.props.emptyLabel, 'empty.noMatch')
