@@ -137,6 +137,7 @@
 - `tests/e2e/remove-unnecessary-page-header-actions.e2e.test.mjs` :: `E2E: 全局所有一级插件页面右上角彻底移除非必要的刷新与关闭按钮`
 - `tests/e2e/ui-duplication-convergence.e2e.test.mjs` :: `E2E-3: 新建产品分流菜单单一真源收敛与资产库副本清除`
 - `tests/e2e/ui-duplication-convergence.e2e.test.mjs` :: `E2E-4: 删除二次确认弹窗原生 ConfirmModal 替代与薄包装清除`
+- `plugins/omnimux-studio/tests/independent-qa-round2.test.mjs` :: `QA2 existing eight production Stage contracts retain strict sidebar validation`
 
 产品库并入资产库后，下列既有用例的断言对象（`ProductsStage` / `ProductsView` / 独立产品 Tab / 10 项菜单 / 8 个 Stage 目标）已不存在，因此必须改写。每条给出：原断言 → 必须改的理由 → 新期望证据。
 
