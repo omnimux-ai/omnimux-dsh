@@ -14,7 +14,12 @@
  * resolve hubHomeDir() (media task ledger, auth store, plugin manage routes, …) can never
  * touch the developer machine's real ~/.dsh.
  *
- * Usage: node scripts/run-workspace-tests.mjs [--json <file>] [--logs <dir>] [package-name ...]
+ * Sharding (CI runs one shard per parallel job): `--shard <name>` or env `OMNIMUX_TEST_SHARD`.
+ * Named shards list their packages explicitly; `rest` takes every package no named shard lists,
+ * so a newly added package always runs somewhere. A listed package that no longer exists fails
+ * the run instead of silently shrinking coverage.
+ *
+ * Usage: node scripts/run-workspace-tests.mjs [--json <file>] [--logs <dir>] [--shard <name>] [package-name ...]
  */
 
 import { spawnSync } from 'node:child_process'
@@ -30,6 +35,33 @@ const PROXY_VARIABLES = [
 ]
 
 /** @typedef {{ name: string, dir: string, command: string }} WorkspacePackage */
+
+/**
+ * Packages pinned to their own CI job, balanced by measured duration (merge_group run
+ * 40513342576: omnimux 126s, inspiration 95s, workflow 60s + market 43s). Everything else is `rest`.
+ */
+export const TEST_SHARDS = Object.freeze({
+  hub: Object.freeze(['omnimux']),
+  inspiration: Object.freeze(['omnimux-inspiration']),
+  'workflow-market': Object.freeze(['omnimux-workflow', 'omnimux-market']),
+})
+export const REST_SHARD = 'rest'
+export const SHARD_NAMES = Object.freeze([...Object.keys(TEST_SHARDS), REST_SHARD])
+
+/**
+ * @param {WorkspacePackage[]} packages
+ * @param {string} shard
+ * @returns {WorkspacePackage[]}
+ */
+export function selectShard(packages, shard) {
+  if (!SHARD_NAMES.includes(shard)) throw new Error(`unknown shard "${shard}" (expected one of: ${SHARD_NAMES.join(', ')})`)
+  const names = new Set(packages.map((pkg) => pkg.name))
+  const pinned = Object.values(TEST_SHARDS).flat()
+  const missing = pinned.filter((name) => !names.has(name))
+  if (missing.length) throw new Error(`shard table lists missing package(s): ${missing.join(', ')}`)
+  if (shard === REST_SHARD) return packages.filter((pkg) => !pinned.includes(pkg.name))
+  return packages.filter((pkg) => TEST_SHARDS[shard].includes(pkg.name))
+}
 /** @typedef {{ location: string, name: string, error: string }} TestFailure */
 /**
  * @typedef {{
@@ -120,6 +152,7 @@ export function judge({ exitCode, tap }) {
 export function packageEnv(pkgDir, base = process.env, dshHome) {
   const env = { ...base }
   for (const key of PROXY_VARIABLES) delete env[key]
+  delete env.OMNIMUX_TEST_SHARD
   env.NODE_OPTIONS = [base.NODE_OPTIONS, '--test-reporter=tap'].filter(Boolean).join(' ')
   env.PATH = [join(pkgDir, 'node_modules', '.bin'), join(repoRoot, 'node_modules', '.bin'), base.PATH].filter(Boolean).join(delimiter)
   env.DSH_HOME = dshHome
@@ -149,19 +182,38 @@ function runPackage(pkg, logsDir) {
   return { name: pkg.name, exitCode, seconds: Math.round((Date.now() - started) / 1000), tap, reasons: judge({ exitCode, tap }) }
 }
 
-function parseArgs(argv) {
-  const options = { json: '', logs: '', only: [] }
+function parseArgs(argv, env) {
+  // An explicitly set but empty shard is a misconfiguration, not "run everything".
+  const options = { json: '', logs: '', shard: Object.hasOwn(env, 'OMNIMUX_TEST_SHARD') ? env.OMNIMUX_TEST_SHARD : null, only: [] }
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--json') options.json = argv[++i]
     else if (argv[i] === '--logs') options.logs = argv[++i]
+    else if (argv[i] === '--shard') options.shard = argv[++i] ?? ''
     else options.only.push(argv[i])
   }
   return options
 }
 
-export function main(argv = process.argv.slice(2)) {
-  const options = parseArgs(argv)
+export function main(argv = process.argv.slice(2), env = process.env) {
+  const options = parseArgs(argv, env)
   let packages = discoverPackages()
+  if (options.shard !== null) {
+    if (options.only.length) {
+      console.error('--shard cannot be combined with explicit package names')
+      return 2
+    }
+    try {
+      packages = selectShard(packages, options.shard)
+    } catch (error) {
+      console.error(error.message)
+      return 2
+    }
+    console.log(`shard ${options.shard}: ${packages.map((pkg) => pkg.name).join(', ')}`)
+  }
+  if (!packages.length) {
+    console.error('no packages selected')
+    return 2
+  }
   if (options.only.length) {
     const unknown = options.only.filter((name) => !packages.some((pkg) => pkg.name === name))
     if (unknown.length) {

@@ -13,6 +13,7 @@
  * 规格 N12）。
  */
 
+import { CLOUD_RIVAL_PLATFORMS, PLUGIN_REFRESH_PLATFORMS } from '../rival/constants.js'
 import { zh } from './locales.js'
 
 const MS_PER_MINUTE = 60_000
@@ -20,6 +21,45 @@ const MS_PER_MINUTE = 60_000
 /** Identity failures need a corrected profile URL rather than another collection. */
 export function accountNeedsReimport(account) {
   return account?.error_code === 'identity-unverified' || account?.error_code === 'identity-unresolved'
+}
+
+/**
+ * Whether the browser plugin is this platform's only refresh channel
+ * (Issue #3839).
+ *
+ * This is a *platform* fact, not a failure fact: the cloud has no collector for
+ * 小红书 at all, so no cloud refresh can ever work there — whether the row
+ * currently reads `idle` (a capture just succeeded) or `error`. The account row
+ * uses it to decide which action to offer; the menu uses it to decide which item
+ * to render. Keying off `error_code` would have made the menu flip back to
+ * 「刷新」the moment a capture cleared that code, which is exactly the dead
+ * action this ticket removes.
+ * @param {string} platform
+ * @returns {boolean}
+ */
+export function browserOnlyPlatform(platform) {
+  const slug = String(platform || '')
+  if (slug === '') return false
+  return PLUGIN_REFRESH_PLATFORMS.includes(slug) && !CLOUD_RIVAL_PLATFORMS.includes(slug)
+}
+
+/**
+ * Whether the account row should offer「浏览器更新」instead of「重试」.
+ *
+ * `platform-unsupported` is a *capability* terminal state: the row is stopped
+ * because the cloud cannot collect this platform, so「重试」would re-queue a
+ * cycle that is guaranteed to fail the same way and never collects a single
+ * post. 小红书 is the platform this matters for today — it is importable, and
+ * its notes are only reachable through the user's own logged-in browser.
+ *
+ * The platform list comes from `constants.js`, the same list the Host refuses a
+ * token against, so the row can never offer a button the Host answers with 400.
+ * @param {Record<string, any> | null | undefined} account
+ * @returns {boolean}
+ */
+export function browserRefreshAvailable(account) {
+  if (!account || account.error_code !== 'platform-unsupported') return false
+  return browserOnlyPlatform(account.platform)
 }
 
 /** Translate known failure codes only; upstream text can contain credentials. */

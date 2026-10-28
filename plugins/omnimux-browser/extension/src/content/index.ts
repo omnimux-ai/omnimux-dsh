@@ -349,6 +349,12 @@ function isAccountProfilePath(hostname: string, pathname: string): boolean {
     if (/^\/(?:home|explore|search|notifications|messages|i|settings|login|signup|logout|compose)\b/.test(pathname)) return false
     return /^\/[A-Za-z0-9_]+\/?$/.test(pathname)
   }
+  // 小红书 profile: /user/profile/<24 hex uid>. The note page (`/explore/<id>`)
+  // and every other route are not profiles; a signed-out redirect to `/login`
+  // fails this pattern, so no capture starts on it.
+  if (hostname === 'xiaohongshu.com' || hostname.endsWith('.xiaohongshu.com')) {
+    return /^\/user\/profile\/[0-9a-fA-F]{24}\/?$/.test(pathname)
+  }
   return false
 }
 
@@ -389,7 +395,9 @@ async function runAccountRefresh(token: string): Promise<void> {
     overlay.remove()
     return
   }
-  // Accumulate across limited scrolling: X virtualizes its list, so each pass is merged.
+  // Accumulate across limited scrolling: X virtualizes its list and 小红书
+  // lazily fills its note grid, so each pass is captured and merged instead of
+  // replacing the previous one.
   for (let pass = 0; pass < ACCOUNT_REFRESH_SCROLL_TIMES; pass += 1) {
     if (account.posts.length >= ACCOUNT_REFRESH_POST_TARGET) break
     const before = account.posts.length

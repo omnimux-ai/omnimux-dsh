@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   accountHealth,
+  browserOnlyPlatform,
+  browserRefreshAvailable,
   coolingMinutesLeft,
   manualCooldownMinutesLeft,
   poolQuota,
@@ -199,7 +201,7 @@ describe('#3454 platform-unsupported 终态原因', () => {
     assert.equal(rivalErrorKey('platform-unsupported'), 'rivalAccounts.error.platformUnsupported')
     assert.equal(
       zh['rivalAccounts.error.platformUnsupported'],
-      '该平台暂不支持自动刷新（云端采集未接入）',
+      '该平台不走云端自动刷新，请点「浏览器更新」采集',
     )
     // 与身份类失败互斥：它是「已停止」（可手动重试），不是「需要重新导入」。
     assert.equal(accountHealth({ refresh_state: 'error', error_code: 'platform-unsupported' }), 'stopped')
@@ -207,5 +209,80 @@ describe('#3454 platform-unsupported 终态原因', () => {
       accountHealth({ refresh_state: 'error', error_code: 'identity-unverified' }),
       'reimport',
     )
+  })
+})
+
+/**
+ * #3839：能力缺口不是故障，行内动作必须是真正能采到内容的那条通道。
+ *
+ * 判据与 Host 的 `PLUGIN_REFRESH_PLATFORMS` 同源；两侧写两份清单就是「界面给按钮、
+ * Host 回 400」的经典漂移。
+ */
+describe('#3839 browserRefreshAvailable — 只有浏览器通道能救的账号', () => {
+  it('小红书 + platform-unsupported → 是', () => {
+    assert.equal(
+      browserRefreshAvailable({ platform: 'xiaohongshu', error_code: 'platform-unsupported' }),
+      true,
+    )
+  })
+
+  it('其它错误码 → 否（身份/云端失败仍走原来的修法）', () => {
+    for (const code of ['identity-unverified', 'cloud-error', 'no-content', null, undefined]) {
+      assert.equal(browserRefreshAvailable({ platform: 'xiaohongshu', error_code: code }), false)
+    }
+  })
+
+  it('没有浏览器采集能力的平台 → 否（抖音当前不在通道内）', () => {
+    assert.equal(
+      browserRefreshAvailable({ platform: 'douyin', error_code: 'platform-unsupported' }),
+      false,
+    )
+    assert.equal(
+      browserRefreshAvailable({ platform: 'instagram', error_code: 'platform-unsupported' }),
+      false,
+    )
+  })
+
+  it('缺账号或缺平台 → 否', () => {
+    assert.equal(browserRefreshAvailable(null), false)
+    assert.equal(browserRefreshAvailable({ error_code: 'platform-unsupported' }), false)
+  })
+})
+
+/**
+ * #3839：菜单里该不该出现「刷新」，取决于**平台**有没有云端采集能力，而不是
+ * 这一行此刻的错误码。
+ *
+ * 判据若挂在 `error_code` 上，浏览器回写成功把码清空之后，菜单又会把「刷新」
+ * 放回来——那正是本单要删掉的死动作（点了必然 409）。这一组用例把两种判据的
+ * 差异钉住。
+ */
+describe('#3839 browserOnlyPlatform — 平台能力事实，与错误码无关', () => {
+  it('小红书是「只有浏览器通道」的平台', () => {
+    assert.equal(browserOnlyPlatform('xiaohongshu'), true)
+  })
+
+  it('有云端采集器的平台不是', () => {
+    for (const platform of ['tiktok', 'instagram', 'youtube', 'x']) {
+      assert.equal(browserOnlyPlatform(platform), false)
+    }
+  })
+
+  it('抖音既没有浏览器通道也没有云端采集器 → 不是「浏览器更新」对象', () => {
+    assert.equal(browserOnlyPlatform('douyin'), false)
+  })
+
+  it('空平台或未知名 → false，不猜', () => {
+    assert.equal(browserOnlyPlatform(''), false)
+    assert.equal(browserOnlyPlatform(null), false)
+    assert.equal(browserOnlyPlatform(undefined), false)
+    assert.equal(browserOnlyPlatform('weibo'), false)
+  })
+
+  it('与 browserRefreshAvailable 的差别：后者还要求当前是能力终态', () => {
+    // 回写成功后的真实行：idle + 错误码已清空。
+    const captured = { platform: 'xiaohongshu', refresh_state: 'idle', error_code: null }
+    assert.equal(browserOnlyPlatform(captured.platform), true, '平台事实不变')
+    assert.equal(browserRefreshAvailable(captured), false, '行内不再需要「浏览器更新」救场')
   })
 })

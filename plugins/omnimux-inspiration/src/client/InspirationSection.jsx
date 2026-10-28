@@ -24,7 +24,7 @@ import { revealLandedCard, withLandedItem } from './import-landing.js'
 import { injectInspirationStyles } from './styles.js'
 import { useInspirationFeed } from './use-inspiration-feed.js'
 import { useRivalFeed } from './use-rival-feed.js'
-import { removeRivalAccount, requestRivalPluginRefresh } from './rival-api.js'
+import { fetchRivalAccounts, removeRivalAccount, requestRivalPluginRefresh } from './rival-api.js'
 import { openExternalUrl } from './open-url.js'
 import {
   accountHealth,
@@ -38,6 +38,16 @@ const TOAST_VISIBLE_MS = 2500
 
 /** 退场动画时长，必须与样式表里 `.omnimux-inspiration-toast` 的 transition 一致。 */
 const TOAST_FADE_MS = 180
+
+/**
+ * 浏览器采集回写的等待窗口与轮询间隔。
+ *
+ * 采集发生在用户自己的浏览器里，host 不推送结果，所以点完必须自己问一次
+ * 「回来了没有」。窗口比一次性 token 的 2 分钟略宽（用户可能还没登录、要扫码），
+ * 但不会无限等：超时后不再重读，用户手动刷新页面也能看到。
+ */
+const BROWSER_UPDATE_WAIT_MS = 150_000
+const BROWSER_UPDATE_POLL_MS = 3_000
 
 /**
  * 账号导入成功的提示文案：账号带 handle 就点名，没带就退回一句通用话术 ——
@@ -211,6 +221,22 @@ export function InspirationSection({ t, active }) {
   }, [toastLeaving])
 
   /**
+   * State of the pending browser-capture wait.
+   *
+   * `generation` retires an older wait when the user clicks again, and
+   * `cancelled` retires it when the page unmounts. Both are read *after* the
+   * timer fires rather than by clearing it: a cleared timer would leave its
+   * promise pending forever, which is a leak with no upside.
+   */
+  const browserUpdateWait = useRef({ timer: null, generation: 0, cancelled: false })
+
+  // The wait outlives a single render but not the tab: leaving the page must
+  // stop it from reading again (the pending timer is allowed to fire once).
+  useEffect(() => () => {
+    browserUpdateWait.current.cancelled = true
+  }, [])
+
+  /**
    * 账号导入成功后的统一收口（顶部「导入灵感」弹窗与账号监控页内的弹窗共用）。
    *
    * 只切 tab 是不够的：用户本来就在账号监控页时 tab 不变、`useRivalFeed` 的
@@ -236,6 +262,86 @@ export function InspirationSection({ t, active }) {
   }, [handleImportSuccess, showToast, t])
 
   const libraryCollections = useInspirationCollections({ feed, collectionId, setCollectionId, t, showToast })
+
+  /**
+   * Wait for the capture to land, then re-read the feed.
+   *
+   * The capture happens in the user's own browser and the Host pushes nothing
+   * back, so a click that only opens a tab looks like「点了没反应」the moment the
+   * user returns. `last_checked_at` is the only field this path writes — a cloud
+   * refresh writes `last_refresh_at` — so waiting on it cannot be satisfied by
+   * an unrelated cloud cycle.
+   *
+   * The baseline is captured *before* the token request, not before the wait:
+   * an account the user updated a minute ago already has a fresh
+   * `last_checked_at`, and comparing against the click time would end this wait
+   * on that older fact.
+   * @param {string} id
+   * @param {number} baselineMs
+   * @param {number} generation
+   */
+  const waitForBrowserUpdate = useCallback(async (id, baselineMs, generation) => {
+    const state = browserUpdateWait.current
+    const deadline = Date.now() + BROWSER_UPDATE_WAIT_MS
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => {
+        state.timer = setTimeout(resolve, BROWSER_UPDATE_POLL_MS)
+      })
+      state.timer = null
+      // A newer click or an unmounted page retires this wait before it reads.
+      if (state.cancelled || state.generation !== generation) return
+      let accounts = null
+      try {
+        const res = await fetchRivalAccounts({})
+        accounts = res?.ok ? (res.body?.data?.items || []) : null
+      } catch {
+        accounts = null
+      }
+      if (state.cancelled || state.generation !== generation) return
+      const row = Array.isArray(accounts)
+        ? accounts.find((account) => String(account?.id) === String(id))
+        : null
+      const checked = Date.parse(String(row?.last_checked_at || ''))
+      if (Number.isFinite(checked) && checked > baselineMs) {
+        void reloadRivalFeed()
+        return
+      }
+    }
+  }, [reloadRivalFeed])
+
+  /**
+   * 「更新这个账号（浏览器）」的唯一入口（Issue #3556 / #3839）。
+   *
+   * 账号行与空态按钮都走这里：先向 Host 要一次性 token，再用默认浏览器打开带
+   * token 的主页；失败时给一句气泡，绝不假装已经打开。抽成回调而不是在两处各写
+   * 一遍，是因为第二份实现迟早会和 Host 的 400/422 契约漂开。
+   */
+  const requestBrowserUpdate = useCallback(async (id) => {
+    const state = browserUpdateWait.current
+    // The baseline is read before the request: everything the capture writes
+    // lands after it.
+    const baselineMs = Date.now()
+    let result
+    try {
+      result = await requestRivalPluginRefresh(id)
+    } catch {
+      result = null
+    }
+    const url = result?.body?.data?.url
+    if (!result || result.ok === false || typeof url !== 'string' || url === '') {
+      showToast(t('rivalAccounts.refresh.pluginFailed'))
+      return false
+    }
+    if (!openExternalUrl(url)) {
+      showToast(t('rivalAccounts.refresh.pluginFailed'))
+      return false
+    }
+    showToast(t('rivalAccounts.refresh.pluginOpened'))
+    // A second click retires the previous wait instead of stacking another poll.
+    state.generation += 1
+    void waitForBrowserUpdate(id, baselineMs, state.generation)
+    return true
+  }, [showToast, t, waitForBrowserUpdate])
 
   /**
    * 合集卡「加入会话」：同一时刻只处理一个合集。
@@ -646,24 +752,7 @@ export function InspirationSection({ t, active }) {
             }}
             onRefresh={rivalFeed.retryAccount}
             onRetry={rivalFeed.retryAccount}
-            onPluginRefresh={async (id) => {
-              let result
-              try {
-                result = await requestRivalPluginRefresh(id)
-              } catch {
-                result = null
-              }
-              const url = result?.body?.data?.url
-              if (!result || result.ok === false || typeof url !== 'string' || url === '') {
-                showToast(t('rivalAccounts.refresh.pluginFailed'))
-                return
-              }
-              if (!openExternalUrl(url)) {
-                showToast(t('rivalAccounts.refresh.pluginFailed'))
-                return
-              }
-              showToast(t('rivalAccounts.refresh.pluginOpened'))
-            }}
+            onPluginRefresh={requestBrowserUpdate}
             quotaLeft={rivalQuota?.left}
             refreshBusy={rivalFeed.refreshBusy}
             active={active !== false}
@@ -680,6 +769,7 @@ export function InspirationSection({ t, active }) {
               }}
               onAccountImported={handleAccountImported}
               onBrowseTrend={() => setTab('public')}
+              onBrowserUpdate={requestBrowserUpdate}
             />
           </div>
         </div>

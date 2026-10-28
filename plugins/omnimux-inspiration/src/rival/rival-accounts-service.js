@@ -248,6 +248,9 @@ export function createRivalAccountsService(deps) {
     if (existing) {
       const hasPosts = store.readPosts(existing.id).length > 0
       if (args.force === true && !hasPosts) {
+        if (!CLOUD_RIVAL_PLATFORMS.includes(existing.platform)) {
+          return { account: markUnsupported(existing), existing: true, is_duplicate: true, job: null }
+        }
         const queued = scheduler.enqueue({ account_id: existing.id, mode: 'first' })
         return { account: existing, existing: true, is_duplicate: true, job: queued.queued ? 'running' : queued.status }
       }
@@ -265,11 +268,41 @@ export function createRivalAccountsService(deps) {
       next_auto_refresh_at: new Date(now()).toISOString(),
     })
     if (args.background === false) return { account, existing: false, is_duplicate: false, job: null }
+    // A platform the cloud cannot collect never gets a cycle: enqueueing one
+    // reserves two cloud calls for a run that throws before its first call, and
+    // the day's allowance is a cap on attempts, not on real traffic. The row is
+    // parked in the same terminal state the failed cycle would have produced,
+    // so the account list reads the same while the budget stays untouched.
+    if (!CLOUD_RIVAL_PLATFORMS.includes(identity.platform)) {
+      return { account: markUnsupported(account), existing: false, is_duplicate: false, job: null }
+    }
     const queued = scheduler.enqueue({ account_id: account.id, mode: 'first' })
     if (queued.status === 'budget') {
       return { account: store.getAccount(account.id) || account, existing: false, is_duplicate: false, job: 'paused' }
     }
     return { account, existing: false, is_duplicate: false, job: queued.queued ? 'running' : queued.status }
+  }
+
+  /**
+   * Park an account whose platform has no cloud collector.
+   *
+   * Writes exactly what `onFailure` writes for `PLATFORM_UNSUPPORTED`: a terminal
+   * `error` row with no next attempt, so the tick cannot queue it again. The
+   * message names the cloud, because that is the part that is missing — the
+   * browser capture is a separate, user-driven channel.
+   * @param {Record<string, any>} account
+   * @returns {Record<string, any>}
+   */
+  function markUnsupported(account) {
+    store.updateAccount(account.id, {
+      refresh_state: 'error',
+      consecutive_failures: (account.consecutive_failures || 0) + 1,
+      error_code: RIVAL_ERROR_CODES.PLATFORM_UNSUPPORTED,
+      error_message: '该平台暂不支持自动刷新（云端采集未接入）',
+      last_refresh_at: new Date(now()).toISOString(),
+      next_auto_refresh_at: null,
+    })
+    return store.getAccount(account.id) || account
   }
 
   /**
@@ -416,6 +449,17 @@ export function createRivalAccountsService(deps) {
       throw new RivalServiceError(RIVAL_ERROR_CODES.BUDGET_EXHAUSTED, '刷新额度已用尽，请稍后再试', 429, {
         reason: perAccount?.reason || snapshot.paused.reason || BUDGET_REASONS.ACCOUNT_DAILY_CAP,
       })
+    }
+    if (result.status === 'unsupported') {
+      // A 4xx, not a 202: nothing was queued, so answering「已排队」would make
+      // the row look like it is refreshing and then fail on its own. The message
+      // names the channel that *does* work instead of a code.
+      throw new RivalServiceError(
+        RIVAL_ERROR_CODES.PLATFORM_UNSUPPORTED,
+        '该平台不走云端自动刷新，请用「浏览器更新」采集',
+        409,
+        { reason: 'no-cloud-collector' },
+      )
     }
     return {
       account_id: accountId,

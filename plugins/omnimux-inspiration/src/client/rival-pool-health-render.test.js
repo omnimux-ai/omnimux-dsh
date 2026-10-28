@@ -215,6 +215,20 @@ async function mountStage(options = {}) {
         data: { account_id: decodeURIComponent(retryMatch[1]), job: 'running', status: 'queued' },
       })
     }
+    // #3839「浏览器更新」：Host 发一次性 token 并回带 token 的主页地址。
+    const pluginRefreshMatch = path.match(new RegExp(`${RIVAL_PREFIX}/([^/]+)/plugin-refresh-request$`))
+    if (pluginRefreshMatch && method === 'POST') {
+      const id = decodeURIComponent(pluginRefreshMatch[1])
+      const target = accounts.find((account) => account.id === id)
+      return jsonResponse(201, {
+        success: true,
+        data: {
+          token: 'a'.repeat(32),
+          url: options.pluginRefreshUrl ?? `${target?.profile_url || ''}#omnimux-refresh=${'a'.repeat(32)}`,
+          expires_at: new Date(Date.now() + 120_000).toISOString(),
+        },
+      })
+    }
     if (path.includes(RIVAL_PREFIX) && method === 'GET') {
       return jsonResponse(200, {
         success: true,
@@ -585,5 +599,77 @@ describe('账号采集失败的可见、安全恢复 (#3374)', () => {
       assert.ok(mounted.container.querySelector('[role="dialog"]'))
       assert.ok(!mounted.calls.some((call) => call.method === 'POST' && /\/refresh$/.test(call.path)))
     } finally { await mounted.unmount(); mounted.close() }
+  })
+})
+
+/**
+ * #3839：小红书账号的终态原因不是「故障」，而是「云端没有这个平台的采集器」。
+ * 这一组用例钉住界面上的唯一正确动作：给「浏览器更新」，不给必然再失败的「重试」。
+ *
+ * 为什么必须在渲染层测：`browserRefreshAvailable` 的单测只证明判据对，证明不了
+ * 那个按钮真的接上了 `onPluginRefresh`（历史缺陷正是判据对、按钮接错回调）。
+ */
+describe('#3839 小红书账号行给出浏览器更新，不给无效重试', () => {
+  const XHS_UID = '5e4896d200000000010062cc'
+  const xhsAccount = {
+    id: 'ra_xhs',
+    nickname: 'Miss圆滚滚',
+    handle: XHS_UID,
+    platform: 'xiaohongshu',
+    profile_url: `https://www.xiaohongshu.com/user/profile/${XHS_UID}`,
+    refresh_state: 'error',
+    error_code: 'platform-unsupported',
+    consecutive_failures: 1,
+    next_auto_refresh_at: null,
+    post_count: 0,
+  }
+
+  const rowButtons = (row) => [...row.querySelectorAll('button')].map((node) => node.textContent.trim())
+
+  it('行内只有「浏览器更新」，没有「重试」', async () => {
+    const mounted = await mountStage({ accounts: [xhsAccount] })
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => rowById(mounted.container, 'ra_xhs'))
+      const row = rowById(mounted.container, 'ra_xhs')
+      assert.equal(row.getAttribute('data-health'), 'stopped')
+      const labels = rowButtons(row)
+      assert.ok(labels.includes(zh['rivalAccounts.health.browserUpdate']), `行内必须有浏览器更新 (got ${JSON.stringify(labels)})`)
+      assert.equal(labels.includes(zh['rivalAccounts.health.retry']), false, '能力缺口不该给必然失败的云端重试')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('点击后向 Host 要 token 并用默认浏览器打开带 token 的主页', async () => {
+    const mounted = await mountStage({
+      accounts: [xhsAccount],
+      pluginRefreshUrl: `https://www.xiaohongshu.com/user/profile/${XHS_UID}#omnimux-refresh=abc`,
+    })
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => rowById(mounted.container, 'ra_xhs'))
+      const row = rowById(mounted.container, 'ra_xhs')
+      const button = [...row.querySelectorAll('button')]
+        .find((node) => node.textContent.trim() === zh['rivalAccounts.health.browserUpdate'])
+      assert.ok(button, '浏览器更新按钮必须存在')
+      const opened = []
+      const previousOpen = mounted.document.defaultView.open
+      mounted.document.defaultView.open = (...args) => { opened.push(args); return null }
+      try {
+        await mounted.click(button)
+      } finally {
+        mounted.document.defaultView.open = previousOpen
+      }
+      const requested = mounted.calls.filter((call) => call.path.includes('/plugin-refresh-request'))
+      assert.equal(requested.length, 1, '一次点击只申请一次 token')
+      assert.equal(requested[0].method, 'POST')
+      assert.equal(opened.length, 1, '拿到 URL 后必须真的打开默认浏览器')
+      assert.equal(opened[0][0], `https://www.xiaohongshu.com/user/profile/${XHS_UID}#omnimux-refresh=abc`)
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
   })
 })

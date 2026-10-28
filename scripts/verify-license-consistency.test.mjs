@@ -9,7 +9,7 @@ import { readRegistry, listPluginDirs, verifyLicenseConsistency } from './verify
 const repoRoot = fileURLToPath(new URL('..', import.meta.url))
 
 /** 造一个最小仓库：根 LICENSE、registry、N 个插件包。 */
-function fixture({ packages, rootLicense = 'ROOT LICENSE TEXT\n' }) {
+function fixture({ packages, rootLicense = 'ROOT LICENSE TEXT\n', rootNotice }) {
   const root = mkdtempSync(join(tmpdir(), 'lic-'))
   writeFileSync(join(root, 'LICENSE'), rootLicense)
   mkdirSync(join(root, 'scripts'))
@@ -17,6 +17,7 @@ function fixture({ packages, rootLicense = 'ROOT LICENSE TEXT\n' }) {
   writeFileSync(join(root, 'scripts', 'license-registry.json'), JSON.stringify({
     schemaVersion: '1.0.0',
     rootLicense: 'LICENSE',
+    ...(rootNotice ? { rootNotice } : {}),
     packages,
   }))
   for (const [name, spec] of Object.entries(packages)) {
@@ -170,6 +171,71 @@ test('警告：上游基线 commit 未记录', () => {
   const { errors, warnings } = verifyLicenseConsistency(root)
   assert.deepEqual(errors, [])
   assert.ok(warnings.some(w => /上游基线 commit 未记录/.test(w)))
+  rmSync(root, { recursive: true, force: true })
+})
+
+test('失败：registry 声明 rootNotice 但根 NOTICE 缺失（Issue #3841）', () => {
+  const root = fixture({
+    rootNotice: 'NOTICE',
+    packages: { 'p-one': { ...originalEntry(), pkgLicense: 'SEE LICENSE IN LICENSE', files: ['src', 'LICENSE', 'NOTICE'], files_on_disk: { LICENSE: 'ROOT LICENSE TEXT\n', NOTICE: 'ROOT NOTICE\n' } } },
+  })
+  const { errors } = verifyLicenseConsistency(root)
+  assert.ok(errors.some(e => /根 NOTICE 文件不存在/.test(e)))
+  rmSync(root, { recursive: true, force: true })
+})
+
+test('失败：vendor 包缺 NOTICE（Issue #3841）', () => {
+  const root = fixture({
+    rootNotice: 'NOTICE',
+    packages: {
+      'p-vendor': {
+        class: 'vendor', license: 'SEE LICENSE IN LICENSE',
+        upstream: [{ project: 'up', repo: 'https://example.invalid/up', commit: 'abc', license: 'MIT', copyright: 'Copyright (c) 2026 Upstream', noticeFile: 'LICENSE.upstream.txt', textFile: 'LICENSE.upstream.txt', paths: ['src/vendored/'] }],
+        pkgLicense: 'SEE LICENSE IN LICENSE', files: ['src', 'LICENSE', 'NOTICE'],
+        files_on_disk: { LICENSE: 'Scope\n  - src/vendored/\nROOT LICENSE TEXT\n', 'LICENSE.upstream.txt': 'MIT License\n\nCopyright (c) 2026 Upstream\n' },
+      },
+    },
+  })
+  writeFileSync(join(root, 'NOTICE'), 'ROOT NOTICE\n')
+  const { errors } = verifyLicenseConsistency(root)
+  assert.ok(errors.some(e => /p-vendor.*包根缺少 NOTICE/.test(e)))
+  rmSync(root, { recursive: true, force: true })
+})
+
+test('失败：根有 NOTICE 时，原创包缺 NOTICE、内容漂移或 files 未包含（Issue #3841）', () => {
+  const ok = { ...originalEntry(), pkgLicense: 'SEE LICENSE IN LICENSE', files: ['src', 'LICENSE', 'NOTICE'] }
+  const root = fixture({
+    rootNotice: 'NOTICE',
+    packages: {
+      'p-missing': { ...ok, files_on_disk: { LICENSE: 'ROOT LICENSE TEXT\n' } },
+      'p-drift': { ...ok, files_on_disk: { LICENSE: 'ROOT LICENSE TEXT\n', NOTICE: 'OLD NOTICE\n' } },
+      'p-unlisted': { ...ok, files: ['src', 'LICENSE'], files_on_disk: { LICENSE: 'ROOT LICENSE TEXT\n', NOTICE: 'ROOT NOTICE\n' } },
+      'p-good': { ...ok, files_on_disk: { LICENSE: 'ROOT LICENSE TEXT\n', NOTICE: 'ROOT NOTICE\n' } },
+    },
+  })
+  writeFileSync(join(root, 'NOTICE'), 'ROOT NOTICE\n')
+  const { errors } = verifyLicenseConsistency(root)
+  assert.ok(errors.some(e => /p-missing.*包根缺少 NOTICE/.test(e)))
+  assert.ok(errors.some(e => /p-drift.*与根 NOTICE 不一致/.test(e)))
+  assert.ok(errors.some(e => /p-unlisted.*未显式包含 "NOTICE"/.test(e)))
+  assert.ok(!errors.some(e => /p-good/.test(e)))
+  rmSync(root, { recursive: true, force: true })
+})
+
+test('通过：fork 类（上游 MIT）不要求 NOTICE', () => {
+  const root = fixture({
+    rootNotice: 'NOTICE',
+    packages: {
+      'p-fork': {
+        class: 'fork', license: 'MIT',
+        upstream: [{ project: 'up', repo: 'https://example.invalid/up', commit: 'abc', license: 'MIT', copyright: 'Copyright (c) 2026 Upstream', noticeFile: 'LICENSE', textFile: 'LICENSE' }],
+        pkgLicense: 'MIT', files: ['LICENSE'],
+        files_on_disk: { LICENSE: 'MIT License\n\nCopyright (c) 2026 Upstream\n' },
+      },
+    },
+  })
+  writeFileSync(join(root, 'NOTICE'), 'ROOT NOTICE\n')
+  assert.deepEqual(verifyLicenseConsistency(root).errors, [])
   rmSync(root, { recursive: true, force: true })
 })
 

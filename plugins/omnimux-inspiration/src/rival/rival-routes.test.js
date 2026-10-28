@@ -837,3 +837,111 @@ describe('#3454: douyin / xiaohongshu import succeeds but refresh is a terminal 
     }
   })
 })
+
+/**
+ * #3839 阻塞项：手动入口不能把「云端没有采集器」的账号排进队列。
+ *
+ * 浏览器回写成功之后，小红书账号会回到 `idle` + 间隔 24h；这时它看起来和
+ * 一个正常账号没区别，行内「刷新」和工具栏「刷新全部」都能点到。但那一次
+ * 周期在第一次远端调用之前就抛 `platform-unsupported`，而预算是按「尝试」
+ * 计费的（每次 +2、无退款）——白烧额度，还把共享的每日 50 次推向耗尽，
+ * 饿死真正能采集的账号。这一组用例把三条手动入口逐条钉住。
+ */
+describe('#3839 手动刷新入口拒绝云端无采集能力的平台', () => {
+  const XHS_UID = '5e4896d200000000010062cc'
+  const XHS_URL = `https://www.xiaohongshu.com/user/profile/${XHS_UID}`
+
+  async function seedCapturedXhs(world) {
+    const imported = await call(world.dispatcher, 'POST', RIVAL_PREFIX, { url: XHS_URL })
+    assert.equal(imported.status, 201)
+    const accountId = imported.body.data.id
+    await world.scheduler.settled()
+    const requested = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/${accountId}/plugin-refresh-request`)
+    const token = requested.body.data.token
+    await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/plugin-refresh/claim`, {
+      token,
+      page_url: XHS_URL,
+      handle: XHS_UID,
+    })
+    const completed = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/plugin-refresh/complete`, {
+      token,
+      account: {
+        platform: 'xiaohongshu',
+        handle: XHS_UID,
+        nickname: 'Miss圆滚滚',
+        avatar_url: '',
+        bio: '',
+        followers: 1,
+        following: 0,
+        posts_count: 1,
+        posts: [{
+          platform_post_id: '66aa11bb22cc33dd44ee55ff',
+          source_url: 'https://www.xiaohongshu.com/explore/66aa11bb22cc33dd44ee55ff?xsec_token=abc',
+          title: '第一条笔记',
+          content: '',
+          posted_at: null,
+          stats: { likes: 1 },
+          media: [],
+        }],
+        captured_at: new Date(FIXED_NOW).toISOString(),
+        extractor: 'xiaohongshu-profile',
+      },
+    })
+    assert.equal(completed.status, 200)
+    return accountId
+  }
+
+  it('单账号「刷新」返回 409 且不花任何额度', async () => {
+    const world = makeWorld({ limits: WIDE })
+    const accountId = await seedCapturedXhs(world)
+    const before = world.store.readBudget().global_calls
+
+    const refused = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/${accountId}/refresh`, { manual: true })
+    assert.equal(refused.status, 409)
+    assert.equal(refused.body.code, 'platform-unsupported')
+    // 预算是「尝试」计费，所以「没排队」必须等价于「没花钱」。
+    assert.equal(world.store.readBudget().global_calls, before)
+    assert.equal(world.cloud.calls.length, 0)
+    // 行仍是回写后的可读状态，没有被打回终态。
+    const row = (await call(world.dispatcher, 'GET', RIVAL_PREFIX)).body.data.items
+      .find((item) => item.id === accountId)
+    assert.equal(row.refresh_state, 'idle')
+    assert.equal(row.error_code, null)
+  })
+
+  it('「刷新全部」跳过它、只排能采集的账号，并点名原因', async () => {
+    const world = makeWorld({ limits: WIDE })
+    const xhsId = await seedCapturedXhs(world)
+    const tiktok = await call(world.dispatcher, 'POST', RIVAL_PREFIX, { url: 'https://www.tiktok.com/@a' })
+    await world.scheduler.settled()
+    const before = world.store.readBudget().global_calls
+
+    const result = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/refresh-all`, { manual: true })
+    assert.equal(result.status, 202)
+    assert.deepEqual(result.body.data.queued, [tiktok.body.data.id])
+    const skippedXhs = result.body.data.skipped.find((entry) => entry.id === xhsId)
+    assert.ok(skippedXhs, '被跳过的小红书账号必须在 skipped 里点名')
+    assert.equal(skippedXhs.reason_key, 'rivalAccounts.skip.noCloudCollector')
+    // 只花了 tiktok 那一份（2 次），小红书一分没花。
+    assert.equal(world.store.readBudget().global_calls, before + 2)
+    await world.scheduler.settled()
+    const row = (await call(world.dispatcher, 'GET', RIVAL_PREFIX)).body.data.items
+      .find((item) => item.id === xhsId)
+    assert.equal(row.refresh_state, 'idle')
+    assert.equal(row.error_code, null)
+  })
+
+  it('自动 tick 同样不排它', async () => {
+    const world = makeWorld({ limits: WIDE })
+    const xhsId = await seedCapturedXhs(world)
+    const before = world.store.readBudget().global_calls
+    // 把时间推到远超 24h 间隔之后：排期已过，但平台没有云端通道。
+    world.scheduler.tick(FIXED_NOW + 100 * 3_600_000)
+    await world.scheduler.settled()
+    assert.equal(world.store.readBudget().global_calls, before)
+    assert.equal(world.cloud.calls.length, 0)
+    const row = (await call(world.dispatcher, 'GET', RIVAL_PREFIX)).body.data.items
+      .find((item) => item.id === xhsId)
+    assert.equal(row.refresh_state, 'idle')
+  })
+})

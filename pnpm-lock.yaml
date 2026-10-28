@@ -774,8 +774,8 @@ importers:
         specifier: 0.1.2-rc.1 || >=0.2.1-rc.3 <0.3.0-0
         version: 0.1.2-rc.1(@deepseek-ai/cordis@4.0.2)
       dsh-better-sidebar:
-        specifier: 0.28.0
-        version: 0.28.0(41adee356d88e4c3b9b7bcf324ae02c5)
+        specifier: 0.28.1
+        version: 0.28.1(41adee356d88e4c3b9b7bcf324ae02c5)
       dsh-ui-kit:
         specifier: file:./dsh-ui-kit-0.1.0.tgz
         version: file:plugins/omnimux-studio/dsh-ui-kit-0.1.0.tgz(@deepseek-ai/dsh-client-ui-primitives@0.1.2-rc.1(@deepseek-ai/cordis@4.0.2))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -6375,8 +6375,8 @@ packages:
   draco3d@1.5.7:
     resolution: {integrity: sha512-m6WCKt/erDXcw+70IJXnG7M3awwQPAsZvJGX5zY7beBqpELw6RDGkYVU0W43AFxye4pDZ5i2Lbyc/NNGqwjUVQ==}
 
-  dsh-better-sidebar@0.28.0:
-    resolution: {integrity: sha512-x7+/YmH/HrSlXWOBZkhL7qQqcDgZEnDcWrhR5GlizzUZjz+w84FbQ6jo8trJC9tyaQxMaNvXVnXwDxn4I330Ew==}
+  dsh-better-sidebar@0.28.1:
+    resolution: {integrity: sha512-O6oITCaJ8nowqmfbNL2Yy5QU+21aSo9I4FZYM90bCjSJABcUWWI/OkSJREBep1EPzX8zfaw4ts4Tz2O/pqU9gg==}
     engines: {node: '>=20'}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.5
@@ -14422,7 +14422,7 @@ snapshots:
 
   draco3d@1.5.7: {}
 
-  dsh-better-sidebar@0.28.0(41adee356d88e4c3b9b7bcf324ae02c5):
+  dsh-better-sidebar@0.28.1(41adee356d88e4c3b9b7bcf324ae02c5):
     dependencies:
       '@codemirror/commands': 6.11.0
       '@codemirror/lang-cpp': 6.0.3

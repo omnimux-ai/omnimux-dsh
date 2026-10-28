@@ -13,7 +13,8 @@
     "prompts",
     "cordis.patch.yml",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "test": "node --test 'src/**/*.test.js'"

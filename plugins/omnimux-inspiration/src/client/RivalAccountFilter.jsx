@@ -10,7 +10,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Button, IconButton } from 'dsh-ui-kit'
 import { isSafeExternalUrl } from './open-url.js'
-import { accountHealth, coolingMinutesLeft, rivalErrorKey, stoppedReasonText } from './rival-health.js'
+import { accountHealth, browserRefreshAvailable, coolingMinutesLeft, rivalErrorKey, stoppedReasonText } from './rival-health.js'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
 
 const ICON_EXTERNAL = (
@@ -53,11 +53,12 @@ const ICON_WARNING = (
  *   onMore?: (event: any, id: string) => void,
  *   onOpenProfile: (url: string) => void,
  *   onRetry?: (id: string) => void,
+ *   onPluginRefresh?: (id: string) => void,
  *   quotaLeft?: number,
  *   refreshBusy?: boolean,
  * }} props
  */
-export function AccountFilterRow({ row, t, selected = false, onSelect, onMore, onOpenProfile, onRetry, quotaLeft, refreshBusy, menuOpen = false }) {
+export function AccountFilterRow({ row, t, selected = false, onSelect, onMore, onOpenProfile, onRetry, onPluginRefresh, quotaLeft, refreshBusy, menuOpen = false }) {
   const profileUrlSafe = isSafeExternalUrl(row.profileUrl)
   const health = accountHealth(row)
   const cooling = health === 'cooling' ? coolingMinutesLeft(row) : null
@@ -167,20 +168,41 @@ export function AccountFilterRow({ row, t, selected = false, onSelect, onMore, o
           </span>
         ) : null}
         {health === 'stopped' ? (
-          <Button
-            variant="ghost"
-            size="xs"
-            className={`omnimux-rival-retry${quotaEmpty ? ' is-blocked' : ''}`}
-            aria-disabled={quotaEmpty || refreshBusy ? 'true' : 'false'}
-            disabled={refreshBusy || quotaEmpty}
-            title={quotaEmpty ? quotaReason : t('rivalAccounts.health.retry')}
-            aria-label={t('rivalAccounts.health.retry')}
-            onClick={handleRetry}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <span className="omnimux-rival-retry-icon" aria-hidden="true">{ICON_RETRY}</span>
-            <span className="omnimux-rival-retry-label">{t('rivalAccounts.health.retry')}</span>
-          </Button>
+          browserRefreshAvailable(row) ? (
+            // 小红书等「云端没有采集能力」的平台：终态原因不是故障，是能力缺口，
+            // 再点一次云端刷新必然同样失败。行内只给真正能采到笔记的那条通道。
+            <Button
+              variant="ghost"
+              size="xs"
+              className="omnimux-rival-retry is-browser-update"
+              title={t('rivalAccounts.health.browserUpdateHint')}
+              aria-label={t('rivalAccounts.health.browserUpdate')}
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                onPluginRefresh?.(row.id)
+              }}
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <span className="omnimux-rival-retry-icon" aria-hidden="true">{ICON_RETRY}</span>
+              <span className="omnimux-rival-retry-label">{t('rivalAccounts.health.browserUpdate')}</span>
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="xs"
+              className={`omnimux-rival-retry${quotaEmpty ? ' is-blocked' : ''}`}
+              aria-disabled={quotaEmpty || refreshBusy ? 'true' : 'false'}
+              disabled={refreshBusy || quotaEmpty}
+              title={quotaEmpty ? quotaReason : t('rivalAccounts.health.retry')}
+              aria-label={t('rivalAccounts.health.retry')}
+              onClick={handleRetry}
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <span className="omnimux-rival-retry-icon" aria-hidden="true">{ICON_RETRY}</span>
+              <span className="omnimux-rival-retry-label">{t('rivalAccounts.health.retry')}</span>
+            </Button>
+          )
         ) : null}
         <IconButton
           variant="ghost"

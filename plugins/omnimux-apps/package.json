@@ -18,7 +18,8 @@
     "scripts",
     "catalog",
     "cordis.patch.yml",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "dsh": {
     "bundle": {

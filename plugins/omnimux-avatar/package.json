@@ -16,7 +16,8 @@
     "cordis.patch.yml",
     "dsh.manifest.json",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "build": "node scripts/build-host.mjs && node scripts/build-client.mjs",

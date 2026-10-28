@@ -14,7 +14,8 @@
     "scripts",
     "cordis.patch.yml",
     "dsh.manifest.json",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",

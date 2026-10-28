@@ -7,6 +7,8 @@
  * 2. package.json 的 license 字段必须与 registry 登记值一致；
  * 3. 每个包根必须有 LICENSE 文件，且 files 白名单必须显式包含 "LICENSE"；
  * 4. original 类（全自有代码）的包内 LICENSE 必须与仓库根 LICENSE 逐字节相同；
+ *    根目录存在 NOTICE 时，original 与 vendor 类还须随包分发与根 NOTICE 逐字节相同的 NOTICE，
+ *    且 files 白名单显式包含 "NOTICE"（AGPLv3 第 7 条附加条款随包可见，Issue #3841）；
  * 5. fork / vendor 类包的上游许可原文文件必须存在，且含登记的上游版权行；
  * 6. vendor 类包的包内 LICENSE 必须逐一提到登记的上游代码路径范围。
  *
@@ -74,6 +76,15 @@ export function verifyLicenseConsistency(root = repoRoot) {
     return { errors: ['根许可文件不存在: ' + registry.rootLicense], warnings, audited: 0, counts }
   }
   const rootLicenseText = readFileSync(rootLicensePath, 'utf8')
+  // registry 声明了 rootNotice 时，根 NOTICE 必须存在；未声明则不启用 NOTICE 检查（兼容最小测试夹具）
+  let rootNoticeText = null
+  if (registry.rootNotice) {
+    const rootNoticePath = join(root, registry.rootNotice)
+    if (!existsSync(rootNoticePath)) {
+      return { errors: ['根 NOTICE 文件不存在: ' + registry.rootNotice], warnings, audited: 0, counts }
+    }
+    rootNoticeText = readFileSync(rootNoticePath, 'utf8')
+  }
 
   for (const dir of onDisk) {
     const entry = registered[dir]
@@ -114,6 +125,19 @@ export function verifyLicenseConsistency(root = repoRoot) {
       const text = readFileSync(licensePath, 'utf8')
       if (text !== rootLicenseText) {
         errors.push('[' + dir + '] 原创包的 LICENSE 与根 LICENSE 不一致（应为逐字节相同）')
+      }
+    }
+
+    // 检查 4b: 含 OmniMux 自有代码的包（original / vendor）必须随包分发根 NOTICE（AGPLv3 第 7 条附加条款）
+    if (rootNoticeText !== null && (entry.class === 'original' || entry.class === 'vendor')) {
+      const noticePath = join(pluginDir, 'NOTICE')
+      if (!existsSync(noticePath)) {
+        errors.push('[' + dir + '] 包根缺少 NOTICE，npm 消费者读不到 AGPLv3 第 7 条附加条款')
+      } else if (readFileSync(noticePath, 'utf8') !== rootNoticeText) {
+        errors.push('[' + dir + '] 包内 NOTICE 与根 NOTICE 不一致（应为逐字节相同）')
+      }
+      if (Array.isArray(pkg.files) && !pkg.files.some(f => f === 'NOTICE' || f === './NOTICE')) {
+        errors.push('[' + dir + '] files 白名单未显式包含 "NOTICE"')
       }
     }
 
