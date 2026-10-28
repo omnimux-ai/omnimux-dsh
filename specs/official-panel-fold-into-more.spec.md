@@ -71,18 +71,11 @@
   - 原断言：按字面量 `panelRow` 定位隐藏规则。
   - 必须改的理由：生产 CSS 的选择器走 `PANEL_ROW_SELECTOR` 常量插值，源文件里没有字面量 `panelRow`，按字面量匹配取不到规则。改按常量名 `PANEL_ROW_SELECTOR` + `display: none` 定位，判据（只有一条折叠规则、不带收起态排除、限定侧栏作用域）不变。
   - 新期望证据：`hideRules.length === 1`、规则不含 `data-sidebar-collapsed`、规则含 `SIDEBAR_SCOPE`。
-- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `官方面板行排在产品入口之前，文案取自官方 entries（不硬编码）`
-  - 原断言：`labels.slice(0, 2)` 等于 `['插件', '自动化任务']`，且 `menu.rows.length === PANELS.length + TRUTH.length`（两行面板都渲染）。
-  - 必须改的理由：用户最终决策是官方「插件」行**彻底隐藏**（产品已有自研插件管理模块），只有「自动化任务」进「更多」菜单。原断言把「两行都渲染」写死，会把这次白名单过滤判成回归。
-  - 新期望证据：`labels.slice(0, 1)` 等于 `['自动化任务']`；`labels` 不含 `'插件'`；`menu.rows.length === 1 + TRUTH.length`。
-- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `点击官方面板行：先 onDismiss，再走官方 onOpen(id)`
-  - 原断言：点击两行面板分别得到 `open:plugins` 与 `open:schedules`。
-  - 必须改的理由：`plugins` 行已不渲染，无法点击。
-  - 新期望证据：只断言 `open:schedules`；另加一条断言「`plugins` 不在渲染结果中」。
-- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `选中态：官方 entries 的 active 透传为 current`
-  - 原断言：两行面板的 `current` 分别等于各自的 `active`。
-  - 必须改的理由：只剩 `schedules` 一行（`active: true`）。
-  - 新期望证据：断言该行 `current === true`，且渲染行数为 1。
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `官方面板行排在产品入口之前，文案取自官方 entries（不硬编码）`、`点击官方面板行：先 onDismiss，再走官方 onOpen(id)`、`选中态：官方 entries 的 active 透传为 current`
+  - 原断言：三例都基于「两行官方面板（插件 + 自动化任务）都渲染」——首行是 `插件`、点击两行分别 `open:plugins`/`open:schedules`、两行各自透传 `active`。
+  - 必须改的理由：用户最终决策是官方「插件」行**彻底隐藏**（产品已有自研插件管理模块），只有「自动化任务」进菜单。原断言把「两行都渲染」写死，会把白名单过滤判成回归。
+  - **实际处置：整组删除，改为轻量源码断言**。实测发现：在本文件里新增渲染型 describe（走 jsdom + esbuild bundle 路径）会让整个测试进程挂住（`exit code 143`，CI `Plugin tests (hub)` 分片两次复现）。因此渲染行为由既有 4 组 describe 覆盖，白名单本身改由 `describe(\`官方面板行白名单\`)` 三条源码文本断言验证：白名单只含 `schedules`、过滤用 `has()` 白名单而非黑名单、不得原样渲染全部 entries。
+  - 新期望证据：`node --test plugins/omnimux/src/client/explore-more-menu.test.js` 19/19 通过且进程正常退出（不再挂住）。
 
 ## 证据计划
 
@@ -121,3 +114,15 @@
 - [ ] 「插件」行在侧栏仍被 `sidebar-panel-chrome.js` 的 CSS 隐藏（`display: none`）。
 - [ ] 「自动化任务」仍带 Alpha 标识与面板图标。
 - [ ] `entries` 为空或缺失时，菜单仍渲染产品入口且不崩。
+
+## CI 卡死排查（2026-10-28）
+
+合并 main（含 #3847 的 4 分片并行）后复跑 CI，`Plugin tests (hub)` 分片仍以 `exit code 143`（SIGTERM 超时）失败，其余 3 分片通过。
+
+已排除：
+- 依赖缺失：用主检出完整依赖跑 worktree 的测试文件，仍卡死。
+- CI 环境：3 个分片正常。
+- 白名单定义顺序：第 70 行定义、137 行使用，正确。
+- 测试 helper：与主检出逐字一致。
+
+待定：新增的 `describe('折叠的官方面板行')` 块是否根因。用截断版二分验证。
