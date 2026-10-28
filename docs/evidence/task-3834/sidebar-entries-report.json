@@ -1,0 +1,33 @@
+{
+  "task": "3834",
+  "scenario": "sidebar-entries-after-automation-retirement",
+  "generatedAt": "2026-10-28T12:57:51.596Z",
+  "source": "plugins/omnimux/src/client/sidebar-coordinator.js#EXPLORE_MENU_ITEMS",
+  "entryCount": 8,
+  "entryIds": [
+    "apps",
+    "clip",
+    "publish",
+    "accounts",
+    "device",
+    "analytics",
+    "forms",
+    "social-harvest"
+  ],
+  "automationPresent": false,
+  "assertions": [
+    {
+      "name": "侧栏入口清单不含 automation",
+      "pass": true
+    },
+    {
+      "name": "入口清单非空（未被整体误删）",
+      "pass": true
+    },
+    {
+      "name": "其余入口仍带 pluginId",
+      "pass": true
+    }
+  ],
+  "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-retire-automation-issue-3834/docs/evidence/task-3834/sidebar-entries-after-automation-retirement.png"
+}
