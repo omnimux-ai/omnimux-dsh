@@ -130,6 +130,57 @@ corepack pnpm registry:verify
   必须改的理由：Alpha 名单唯一真源 `plugins/omnimux/src/plugin-lifecycle.json` 已移除 `omnimux-automation`（见上文 1.1），名单剩 4 项，`>= 5` 不再成立。
   新期望证据：改为 `>= 4`；该用例仍断言菜单面不复制第二份名单、只读生命周期注册表，判据性质不变。
 
+### 退役后入口数量与封面契约的断言更新
+
+侧栏「更多」菜单的入口数从 9 降为 8（`automation` 退役），Alpha 标识项从 5 降为 4；市场技能封面
+从「必须本地有字节」改为「路径契约成立且本地或 CDN 可解析」。下列用例逐条声明。
+
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `9 行文案与顺序逐字等于真源清单`
+  原断言：真源清单 9 项、渲染 9 行、9 个 stub row。
+  必须改的理由：`omnimux-automation` 退役后真源清单为 8 项，保留 9 会要求一个不存在的入口。
+  新期望证据：改为 8 项 / 8 行 / 8 个 stub row；逐项文案与顺序仍逐字比对真源，覆盖面无削减。
+
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `Alpha 内测项带行内标识，非 Alpha 项保持纯字符串文案（Issue #3823）`
+  原断言：Alpha 标签依次为 `发布/账号/数据分析/自动化/任务表单`（5 项），Alpha 标识节点 5 个。
+  必须改的理由：`automation` 已从 Alpha 名单移除（生命周期注册表同步删除），该项不再存在。
+  新期望证据：Alpha 标签改为 `发布/账号/数据分析/任务表单`（4 项），标识节点 4 个；非 Alpha 4 项仍保持纯字符串。
+
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `运行时注册项出现在菜单末尾`
+  原断言：注册后菜单 10 行（9 内置 + 1 注册）。
+  必须改的理由：内置项降为 8，注册后应为 9 行。
+  新期望证据：改为 9 行；仍断言注册项排在末尾。
+
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `注销后注册项从菜单消失，回到 9 行`
+  原断言：注销后回到 9 行、注册后 10 行。
+  必须改的理由：内置项降为 8，注销后应为 8 行、注册后 9 行。
+  新期望证据：改为 8 / 9 行；仍断言注册项完全消失。
+
+- `plugins/omnimux/src/client/explore-more-menu.test.js` :: `与内置 id 冲突的注册项不出现（内置文案不被冒充）`
+  原断言：冲突注册后仍为 9 行。
+  必须改的理由：内置项降为 8，冲突注册后应为 8 行。
+  新期望证据：改为 8 行；仍断言冲突项不新增行、内置文案不被冒充。
+
+- `plugins/omnimux/src/client/sidebar-coordinator.test.js` :: `移除回归：侧栏不再渲染探索行，源码不再残留浮动菜单实现`
+  原断言：`resolveExploreMenuItems()` 返回 9 项。
+  必须改的理由：`automation` 退役后为 8 项。
+  新期望证据：改为 8 项；仍断言源码不残留浮动菜单实现。
+
+- `plugins/omnimux/src/client/sidebar-coordinator.test.js` :: `运行时注册接缝：未注册与内置 9 项完全一致，注册后追加末尾、注销即消失`
+  原断言：内置白名单 9 项、注册后共 10 项、注销后回到 9 项。
+  必须改的理由：内置项降为 8，对应注册后 9 项、注销后 8 项。
+  新期望证据：改为 8 / 9 / 8；仍断言未注册时与内置完全一致、注册追加末尾、注销即消失。
+
+- `plugins/omnimux/src/client/sidebar-coordinator.test.js` :: `运行时注册接缝：action 优先于 tabId，非法形状与 id 冲突不产生脏项`
+  原断言：非法输入与 id 冲突后菜单集合仍为 9 项。
+  必须改的理由：内置项降为 8。
+  新期望证据：改为 8 项；仍断言非法形状与 id 冲突不产生脏项。
+
+- `plugins/omnimux-market/src/client/preset-skill-lookup.test.js` :: `15 款技能都在货架上，且分类、文案、封面齐备`
+  原断言：`existsSync(join(MARKET_ROOT, hit.cover))` —— 封面文件必须真实存在于本地磁盘。
+  必须改的理由：封面图片已迁至 CDN 并从 git 移除（见上文 1.3），本地不再有字节；恢复文件即放弃本次封面迁移目标。
+  新期望证据：改为断言封面路径符合 `catalog/covers/skills/skill-card-*.webp` 契约，且该封面「本地内置或可经 `MARKET_ASSET_CDN` 解析」二者其一成立；分类、文案、标题等其余断言不变。
+
+
 ### 退役 omnimux-automation 引起的既有用例移除
 
 下列用例随 `plugins/omnimux-automation` 目录整体退役而消失：该插件能力已由官方

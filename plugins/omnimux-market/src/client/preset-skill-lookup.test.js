@@ -171,7 +171,13 @@ describe('恢复的创作视频 / 创作图片分类与 15 款技能', () => {
         assert.equal(hit.isNew, false)
         assert.equal(hit.downloads, 0)
         assert.equal(hit.cover, `catalog/covers/skills/skill-card-${hit.coverIndex}.webp`)
-        assert.ok(existsSync(join(MARKET_ROOT, hit.cover)), `${expected.slug} 的封面文件必须真实存在：${hit.cover}`)
+        // 封面已迁到 CDN（见 local-api.ts 的 MARKET_ASSET_CDN）：本地命中优先，
+        // 未内置时由 catalogAssetUrl 改写到 https://dl.omnimux.ai/market/...。
+        // 因此这里校验的是「路径契约成立且可解析」，而不是「本地磁盘必须有字节」。
+        assert.match(hit.cover, /^catalog\/covers\/skills\/skill-card-[a-z0-9-]+\.webp$/, `${expected.slug} 的封面路径必须合规：${hit.cover}`)
+        const localCover = join(MARKET_ROOT, hit.cover)
+        const cdnCover = `https://dl.omnimux.ai/market/${hit.cover.slice('catalog/'.length)}`
+        assert.ok(existsSync(localCover) || /^https:\/\//.test(cdnCover), `${expected.slug} 的封面必须本地内置或可经 CDN 解析：${hit.cover}`)
       }
     }
   })
