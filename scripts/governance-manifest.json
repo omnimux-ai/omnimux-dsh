@@ -203,7 +203,6 @@
     "worktree.sh"
   ],
   "manual": [
-    "automation-alpha-verification.test.mjs",
     "backup-shared.qa.test.py",
     "batch-generate-home-covers.mjs",
     "capture-media-preview-evidence.mjs",
@@ -308,6 +307,7 @@
     "sync-targets.test.mjs",
     "sync-to-app.sh",
     "tab-switch-scroll-anchor-qa.mjs",
+    "task-3834-sidebar-acceptance.mjs",
     "test-env-credentials.test.mjs",
     "test-env-root-diagnosis.test.mjs",
     "test-fixtures/plugin-load/plugins/fixture-client-loader-bad/lib/client.js",
@@ -338,7 +338,6 @@
     "verify-asset-card-compact-cta.mjs",
     "verify-asset-picker-add-card-browser.mjs",
     "verify-asset-picker-add-card.mjs",
-    "verify-automation-sidebar.mjs",
     "verify-breakdown-pipeline.mjs",
     "verify-browser-settings-label-layout.mjs",
     "verify-card-hover-aspect.mjs",

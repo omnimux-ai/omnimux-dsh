@@ -47,7 +47,7 @@ test('e2e: 三栏分栏状态下连续切换所有工作台页签，当前状态
     ['omnimux-workflow:library', { mode: WORKBENCH_FOCUS.split, explicit: true }],
     ['omnimux-workflow:canvas', { mode: WORKBENCH_FOCUS.gui, explicit: true }],
     ['omnimux-assets:library', { mode: WORKBENCH_FOCUS.gui, explicit: true }],
-    ['omnimux-automation:workbench', { mode: WORKBENCH_FOCUS.gui, explicit: true }],
+    ['omnimux-avatar:studio', { mode: WORKBENCH_FOCUS.gui, explicit: true }],
     ['omnimux-inspiration:library', { mode: WORKBENCH_FOCUS.gui, explicit: true }],
   ])
 
@@ -80,7 +80,7 @@ test('e2e: 三栏分栏状态下连续切换所有工作台页签，当前状态
   const targetTabs = [
     'omnimux-workflow:canvas',
     'omnimux-assets:library',
-    'omnimux-automation:workbench',
+    'omnimux-avatar:studio',
     'omnimux-inspiration:library',
   ]
 

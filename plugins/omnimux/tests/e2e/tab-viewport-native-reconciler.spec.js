@@ -188,13 +188,13 @@ test('AC-5: 同会话内部换页签锁当前分栏，不按目标页默认弹�
   reconciler.reset()
 })
 
-test('AC-6: 自动化 Tab 身份收敛与侧栏激活仲裁验证 (Issue #2046)', async () => {
+test('AC-6: 数字人 Tab 身份收敛与侧栏激活仲裁验证 (Issue #2046)', async () => {
   const { resolveSidebarActiveTarget, mapNativeTabKeyToRailTab } = await import('../../src/client/workbench/sidebar-activation.js')
-  const AUTO = 'omnimux-automation:workbench'
+  const AUTO = 'omnimux-avatar:studio'
 
   assert.equal(mapNativeTabKeyToRailTab(AUTO), AUTO, 'Tab ID 应直接映射为合规的左栏 tabId')
-  assert.equal(mapNativeTabKeyToRailTab('自动化'), AUTO, 'Tab Title 自动化 应映射为合规的左栏 tabId')
-  assert.equal(mapNativeTabKeyToRailTab(' 自动化 '), AUTO, '带空格的 Tab Title 应容错映射')
+  assert.equal(mapNativeTabKeyToRailTab('数字人'), AUTO, 'Tab Title 数字人 应映射为合规的左栏 tabId')
+  assert.equal(mapNativeTabKeyToRailTab(' 数字人 '), AUTO, '带空格的 Tab Title 应容错映射')
 
   const verdict = resolveSidebarActiveTarget({
     selectedSessionRows: 0,
@@ -202,8 +202,8 @@ test('AC-6: 自动化 Tab 身份收敛与侧栏激活仲裁验证 (Issue #2046)'
     panelExpanded: true,
     activeTabKey: AUTO,
   })
-  assert.equal(verdict.winner, 'row', '自动化页面激活时侧边栏应胜出激活行')
-  assert.equal(verdict.tabId, AUTO, '胜出的 tabId 必须严格等于自动化 Tab ID')
+  assert.equal(verdict.winner, 'row', '数字人页面激活时侧边栏应胜出激活行')
+  assert.equal(verdict.tabId, AUTO, '胜出的 tabId 必须严格等于数字人 Tab ID')
 })
 
 test('AC-7: 调和器对已展开分栏保持静默，进全屏由打开序列负责 (Issue #2516)', async () => {

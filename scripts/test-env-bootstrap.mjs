@@ -253,7 +253,6 @@ const PREPARATION_OUTPUTS = {
   'plugins/omnimux-assets': ['lib/client.js'],
   'plugins/omnimux-browser': ['lib/index.js', 'lib/protocol.js', 'lib/client.js'],
   'plugins/omnimux-workflow': ['dist/index.js', 'lib/client.js', 'lib/canvas.js', 'lib/director.js'],
-  'plugins/omnimux-automation': ['lib/client.js'],
 };
 // The build body comes from the candidate manifest, so a candidate that rewrote it would otherwise
 // have its own script executed here; only these reviewed values may run.
@@ -264,7 +263,6 @@ const PREPARATION_BUILD_SCRIPTS = {
   'plugins/omnimux-assets': 'node scripts/build-client.mjs',
   'plugins/omnimux-browser': 'tsc -b --pretty false && tsdown && node -e "require(\'node:fs\').copyFileSync(\'src/client.js\', \'lib/client.js\')"',
   'plugins/omnimux-workflow': 'node scripts/build-host.mjs && node scripts/build-client.mjs && node scripts/build-canvas.mjs && node scripts/build-director.mjs',
-  'plugins/omnimux-automation': 'node scripts/build-client.mjs',
 };
 
 /**
@@ -272,7 +270,7 @@ const PREPARATION_BUILD_SCRIPTS = {
  * canvas/workflow packages, so canvas-level task work can be installed and
  * loaded from the task's own candidate build instead of a Dev-backed profile.
  */
-export const TASK_RUNTIME_PLUGINS = Object.freeze(['omnimux-inspiration', 'omnimux-browser', 'omnimux-assets', 'omnimux-workflow', 'omnimux-automation']);
+export const TASK_RUNTIME_PLUGINS = Object.freeze(['omnimux-inspiration', 'omnimux-browser', 'omnimux-assets', 'omnimux-workflow']);
 export function normalizeTaskPlugins(value) {
   if (!Array.isArray(value) || value.some(name => !TASK_RUNTIME_PLUGINS.includes(name)) || new Set(value).size !== value.length) throw failure('OPTIONS');
   return ['omnimux', ...value.slice().sort()];

@@ -20,6 +20,6 @@ test('director acceptance harness keeps the fresh task-source installation contr
   assert.equal(source.includes("startTestEnvironment"), true, 'runner must start the task-private app');
   assert.equal(source.includes("task-source-installed"), true, 'runner must assert installed-loaded evidence level');
   assert.equal(source.includes("DIRECTOR_FFMPEG"), true, 'runner must decode media with an independent decoder');
-  assert.deepEqual(normalizeTaskPlugins(['omnimux-workflow', 'omnimux-automation']), ['omnimux', 'omnimux-automation', 'omnimux-workflow']);
+  assert.deepEqual(normalizeTaskPlugins(['omnimux-workflow', 'omnimux-assets']), ['omnimux', 'omnimux-assets', 'omnimux-workflow']);
   assert.throws(() => normalizeTaskPlugins(['omnimux-video']), { code: 'TEST_ENV_OPTIONS' });
 });

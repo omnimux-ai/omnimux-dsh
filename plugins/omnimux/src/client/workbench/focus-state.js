@@ -27,7 +27,6 @@ export const WORKBENCH_TAB_TITLE_FALLBACKS = Object.freeze({
   'omnimux-analytics:library': '数据分析',
   'omnimux-workflow:library': '项目',
   'omnimux-market:plaza': '技能/专家',
-  'omnimux-automation:workbench': '自动化',
   'omnimux-avatar:studio': '数字人',
 })
 
@@ -45,7 +44,6 @@ export const WORKBENCH_TAB_TITLE_FALLBACKS_EN = Object.freeze({
   'omnimux-analytics:library': 'Analytics',
   'omnimux-workflow:library': 'Projects',
   'omnimux-market:plaza': 'Skills & Experts',
-  'omnimux-automation:workbench': 'Automation',
 })
 
 function isEnLocale() {

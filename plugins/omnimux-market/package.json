@@ -23,6 +23,7 @@
     "README.md",
     "LICENSE",
     "catalog",
+    "!catalog/covers",
     "THIRD_PARTY_NOTICES.md"
   ],
   "keywords": [
