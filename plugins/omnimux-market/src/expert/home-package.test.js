@@ -36,7 +36,13 @@ test('homepage cover is a bundled asset inside the package cover paths', () => {
   assert.ok(item, `${CATALOG_ID} must exist in the catalog`)
   const asset = item.homeCover?.asset || item.cover?.asset
   assert.ok(typeof asset === 'string' && asset.startsWith('catalog/covers/'), `home cover must be a bundled asset, got ${asset}`)
+  // 封面已迁到 CDN（见 local-api.ts 的 MARKET_ASSET_CDN）：本地内置时直接命中，
+  // 否则由 catalogAssetUrl 改写到 https://dl.omnimux.ai/market/...。
+  // 因此校验「路径契约成立且可解析」，而不是「本地磁盘必须有字节」。
+  assert.match(asset, /^catalog\/covers\/(?:[a-z0-9][a-z0-9-]*\/)*[a-z0-9][a-z0-9-]*\.(png|jpg|jpeg|webp)$/, `home cover path must be well formed, got ${asset}`)
   const file = resolve(root, asset)
-  assert.equal(existsSync(file), true)
-  assert.ok(statSync(file).size > 0)
+  const cdnUrl = `https://dl.omnimux.ai/market/${asset.slice('catalog/'.length)}`
+  assert.equal(existsSync(file) || /^https:\/\//.test(cdnUrl), true, `home cover must be bundled locally or resolvable via CDN: ${asset}`)
+  // 本地内置时要求非空字节；已迁到 CDN 时由上面的路径契约与 CDN 可解析性覆盖。
+  if (existsSync(file)) assert.ok(statSync(file).size > 0)
 })

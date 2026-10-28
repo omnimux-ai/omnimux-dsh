@@ -307,6 +307,7 @@
     "sync-targets.test.mjs",
     "sync-to-app.sh",
     "tab-switch-scroll-anchor-qa.mjs",
+    "task-3834-sidebar-acceptance.mjs",
     "test-env-credentials.test.mjs",
     "test-env-root-diagnosis.test.mjs",
     "test-fixtures/plugin-load/plugins/fixture-client-loader-bad/lib/client.js",

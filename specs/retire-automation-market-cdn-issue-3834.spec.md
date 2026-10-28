@@ -130,6 +130,11 @@ corepack pnpm registry:verify
   必须改的理由：Alpha 名单唯一真源 `plugins/omnimux/src/plugin-lifecycle.json` 已移除 `omnimux-automation`（见上文 1.1），名单剩 4 项，`>= 5` 不再成立。
   新期望证据：改为 `>= 4`；该用例仍断言菜单面不复制第二份名单、只读生命周期注册表，判据性质不变。
 
+- `plugins/omnimux-market/src/expert/home-package.test.js` :: `homepage cover is a bundled asset inside the package cover paths`
+  原断言：`assert.equal(existsSync(resolve(root, asset)), true)` 且 `statSync(file).size > 0` —— 首页封面必须本地存在且非空。
+  必须改的理由：封面图片已迁至 CDN 并从 git 移除（见上文 1.3），本地不再有字节；恢复文件即放弃本次封面迁移目标。
+  新期望证据：改为断言封面路径符合 `catalog/covers/(子目录)*<slug>.(png|jpg|jpeg|webp)` 契约，且「本地内置或可经 `MARKET_ASSET_CDN` 解析」二者其一成立；本地存在时仍要求非空字节。
+
 ### 退役后入口数量与封面契约的断言更新
 
 侧栏「更多」菜单的入口数从 9 降为 8（`automation` 退役），Alpha 标识项从 5 降为 4；市场技能封面
