@@ -111,6 +111,15 @@ export function verifyTestStandardDeclarations({ root, base = 'origin/main' } = 
       const inspection = inspectTestStandardChange(before, after)
       if (inspection.allowed) continue
       const cases = Array.isArray(inspection.changedCases) ? inspection.changedCases : []
+      // 整文件被删除（或移出保护集）且含未落在具名 test/it 内的断言时，
+      // `inspectTestStandardChange` 会因 unattributed 断言优先返回 `changedCases: []`。
+      // 对在原文件内改写断言，这保持保守拒绝；但对「整文件随模块/插件退役删除」
+      // （`after === ''`），没有剩余文件内容可改写，要求文件级声明 `- \`<path>\` :: \`*\`` 即可闭环审查。
+      if (after === '' && DECLARABLE_TEST_STANDARD_REASONS.has(inspection.reason) && cases.length === 0) {
+        const missing = missingFor({ declarations, path: subject, cases: [FILE_LEVEL_CASE] })
+        if (missing.length) violations.push({ path: subject, status: change.status, reason: inspection.reason, missing, declarable: true })
+        continue
+      }
       if (!DECLARABLE_TEST_STANDARD_REASONS.has(inspection.reason) || cases.length === 0) {
         violations.push({ path: subject, status: change.status, reason: inspection.reason, missing: [], declarable: false })
         continue

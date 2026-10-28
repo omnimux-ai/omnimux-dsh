@@ -263,3 +263,20 @@ test('声明校验步骤必须真的执行该命令，而不是被 echo 或注�
   assert.match(workflow, /^\s*node scripts\/verify-test-standard-declarations\.mjs \. "\$QA_BASE"\s*$/m)
   assert.match(workflow, /^\s*node --test scripts\/verify-test-standard-declarations\.test\.mjs\s*$/m)
 })
+
+test('含无归属断言的测试文件被整体删除时：要求文件级声明（模块退役场景）', () => {
+  withFixtureRepo(repo => {
+    const helperWithAssert = "import test from 'node:test'\nimport assert from 'node:assert/strict'\nfunction check(v) { assert.equal(v, 1) }\ntest('uses helper', () => { check(1) })\n"
+    repo.write(TEST_FILE, helperWithAssert)
+    const base = repo.commit('base with helper assertion')
+    repo.remove(TEST_FILE)
+    repo.commit('retire module and its test')
+    const flagged = verifyTestStandardDeclarations({ root: repo.root, base })
+    assert.equal(flagged.violations.length, 1)
+    assert.equal(flagged.violations[0].declarable, true)
+    assert.deepEqual(flagged.violations[0].missing, ['*'])
+    repo.write(SPEC_FILE, `${SPEC_HEADER}\n## 旧标准变更\n\n- \`${TEST_FILE}\` :: \`*\`\n  - 理由：模块整体退役，测试文件随模块删除。\n`)
+    repo.commit('declare retired test file at file level')
+    assert.deepEqual(verifyTestStandardDeclarations({ root: repo.root, base }).violations, [])
+  })
+})

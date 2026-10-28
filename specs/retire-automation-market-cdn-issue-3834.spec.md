@@ -193,6 +193,9 @@ corepack pnpm registry:verify
 只会在装载期失败，不构成有效覆盖。新期望证据：官方 schedule 能力由底座自带测试保障，
 本仓不再重复覆盖；退役后引用清零由 `rg` 与注册表校验证明。
 
+- `plugins/omnimux-automation/src/client/render.test.js` :: `*`
+- `plugins/omnimux-automation/src/rpc.test.js` :: `*`
+- `plugins/omnimux-automation/src/service.test.js` :: `*`
 - `plugins/omnimux-automation/src/client/helpers.test.js` :: `formatDuration 在缺少端点或倒挂时不给假时长`
 - `plugins/omnimux-automation/src/client/helpers.test.js` :: `formatRelativeTime 区分将来与过去，非法时间原样返回`
 - `plugins/omnimux-automation/src/client/helpers.test.js` :: `formatSchedule 覆盖七种计划类型，缺一不可`
