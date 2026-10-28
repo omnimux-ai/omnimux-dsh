@@ -456,3 +456,32 @@ describe('官方「更多」菜单运行时注册接缝', () => {
     }
   })
 })
+
+/**
+ * 官方面板行白名单（#3809 用户最终决策）。
+ *
+ * 决策：官方「插件」行彻底隐藏（产品已有自研插件管理模块），只有「自动化任务」
+ * 进「更多」菜单。用白名单而非黑名单，官方将来新增面板不会未经决策自动出现。
+ *
+ * 这里只断言白名单集合本身，不渲染菜单——渲染路径依赖 jsdom + esbuild bundle，
+ * 在本文件里新增渲染型 describe 会让整个测试进程挂住（已实测），因此把纯逻辑
+ * 与渲染分离验证。菜单实际渲染行为由既有 4 组 describe 覆盖。
+ */
+describe('官方面板行白名单', () => {
+  it('只放行「自动化任务」，官方「插件」被排除', () => {
+    const m = source.match(/PANEL_ENTRY_WHITELIST\s*=\s*new Set\(\[([^\]]*)\]\)/)
+    assert.ok(m, '必须声明 PANEL_ENTRY_WHITELIST')
+    const ids = m[1].split(',').map((v) => v.trim().replace(/[\x27"]/g, '')).filter(Boolean)
+    assert.deepEqual(ids, ['schedules'], '白名单只应有「自动化任务」')
+  })
+
+  it('过滤用白名单，不是黑名单', () => {
+    assert.match(source, /entries\.filter\(\(entry\) => PANEL_ENTRY_WHITELIST\.has\(entry\?\.id\)\)/,
+      '必须用白名单 has() 过滤，官方新增面板默认不进菜单')
+  })
+
+  it('未跟踪的官方面板不会被无条件渲染', () => {
+    assert.doesNotMatch(source, /const panels = Array\.isArray\(entries\) \? entries : \[\]/,
+      '不得原样渲染全部 entries（那是 #3809 决策前的行为）')
+  })
+})

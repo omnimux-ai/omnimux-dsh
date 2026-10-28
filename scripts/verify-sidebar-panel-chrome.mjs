@@ -8,7 +8,7 @@
  *
  * 页面骨架镜像官方结构，不复制本模块逻辑：样式、位移、材质全部由被测模块产出。
  *
- * 产物落 `docs/evidence/sidebar-more-menu-top-align-3804/`：
+ * 产物落 `docs/evidence/official-panel-fold-into-more/`：
  *   - sidebar-panel-chrome.png   展开态侧栏 + 已打开的「更多」菜单
  *   - sidebar-panel-chrome.json  runId、Chrome 版本、逐条断言 pass/actual
  *
@@ -26,7 +26,8 @@ import { randomUUID } from 'node:crypto'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const SOURCE = path.join(ROOT, 'plugins/omnimux/src/client/sidebar-panel-chrome.js')
-const EVIDENCE_DIR = path.join(ROOT, 'docs/evidence/sidebar-more-menu-top-align-3804')
+const MENU_SOURCE_DIR = path.join(ROOT, 'plugins/omnimux/src/client')
+const EVIDENCE_DIR = path.join(ROOT, 'docs/evidence/official-panel-fold-into-more')
 const PNG_PATH = path.join(EVIDENCE_DIR, 'sidebar-panel-chrome.png')
 const JSON_PATH = path.join(EVIDENCE_DIR, 'sidebar-panel-chrome.json')
 
@@ -180,16 +181,11 @@ function buildIndexHtml() {
 
   <main class="stage">会话列（骨架，仅用于证明菜单没有压在侧栏上）</main>
 
-  <!-- 官方「更多」菜单：portal 到 body，React 每帧写 inline left/top。 -->
+  <!-- 官方「更多」菜单：portal 到 body，React 每帧写 inline left/top。
+       行内容由生产组件 explore-more-menu.jsx 渲染（见下方 renderMenuRows）。 -->
   <div id="qa-more-menu" data-menu-material="translucent" class="MenuSurface_surface__qa SidebarRoot_moreMenu__qa"
     role="menu" style="left: 8px; top: 210px;">
     <div aria-hidden="true" class="MenuSurface_material__qa"></div>
-    <button type="button" class="Menu_item__qa" role="menuitem">
-      <span class="Menu_itemIcon__qa">${ICON}</span><span>应用</span>
-    </button>
-    <button type="button" class="Menu_item__qa" role="menuitem">
-      <span class="Menu_itemIcon__qa">${ICON}</span><span>视频剪辑</span>
-    </button>
   </div>
 
   <!-- 反例：另一个同样使用半透明材质的官方浮层（设置菜单），材质不得被改。 -->
@@ -201,6 +197,7 @@ function buildIndexHtml() {
 
 <script type="module">
 import * as chrome from '/bundle.js'
+import * as menu from '/menu.js'
 
 window.__qaErrors = []
 window.addEventListener('error', (event) => window.__qaErrors.push(String(event.message || event)))
@@ -258,6 +255,56 @@ window.__QA = {
   },
   shift: () => document.getElementById('qa-more-menu').style.getPropertyValue('--omnimux-more-menu-shift'),
   styleNodeCount: () => document.querySelectorAll('#omnimux-sidebar-panel-chrome').length,
+  /** 面板行可见性：官方面板行应被折叠，「更多」行应仍可见（展开态与收起态各测一次）。 */
+  panelRowVisibility: () => Array.from(document.querySelectorAll('[class*="panelRow"]')).map((row) => ({
+    label: row.getAttribute('aria-label'),
+    isMore: row.getAttribute('aria-haspopup') === 'menu',
+    display: window.getComputedStyle(row).display,
+    height: Math.round(row.getBoundingClientRect().height),
+  })),
+  /** 模拟侧栏收起（壳层把 data-sidebar-collapsed 写在 AppFrame 上）。 */
+  setCollapsed: (collapsed) => {
+    const frame = document.querySelector('[data-pane="sidebar"]')
+    if (collapsed) frame.setAttribute('data-sidebar-collapsed', '')
+    else frame.removeAttribute('data-sidebar-collapsed')
+  },
+  /**
+   * 用生产组件渲染「更多」菜单行。
+   * entries / onOpen 是官方 owner props 的最小形状：官方 sidebar.panellist.actions
+   * 传入的 SidebarPanelActionEntry[] 加选中委托。
+   */
+  renderMenuRows: async ({ entries, onOpen }) => {
+    const MenuItemButton = ({ children, icon, current, separatorBefore, onSelect }) => menu.React.createElement(
+      'div',
+      { 'data-qa-item': '', 'data-qa-current': current === true ? '1' : '0', 'data-qa-separator': separatorBefore === true ? '1' : '0' },
+      menu.React.createElement('button', { type: 'button', role: 'menuitem', class: 'Menu_item__qa', onClick: onSelect },
+        icon === undefined ? null : menu.React.createElement('span', { class: 'Menu_itemIcon__qa' }, icon),
+        menu.React.createElement('span', null, children),
+      ),
+    )
+    const Content = menu.createExploreMoreMenuContent({ MenuItemButton })
+    const host = document.createElement('div')
+    host.id = 'qa-menu-rows'
+    document.getElementById('qa-more-menu').append(host)
+    const root = menu.ReactDOMClient.createRoot(host)
+    await menu.React.act(async () => {
+      root.render(menu.React.createElement(Content, {
+        onDismiss: () => {},
+        entries,
+        onOpen,
+      }))
+    })
+    return Array.from(host.querySelectorAll('[data-qa-item]')).map((item) => ({
+      label: item.textContent.trim(),
+      current: item.getAttribute('data-qa-current') === '1',
+      separatorBefore: item.getAttribute('data-qa-separator') === '1',
+    }))
+  },
+  /** 点击菜单里第 index 行（触发生产组件的 onSelect）。 */
+  clickMenuRow: (index) => {
+    const rows = document.querySelectorAll('#qa-menu-rows [data-qa-item] button')
+    rows[index].click()
+  },
 }
 </script>
 </body>
@@ -267,7 +314,7 @@ window.__QA = {
 const ICON =
   '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2"/></svg>'
 
-function startStaticServer(html, bundle) {
+function startStaticServer(html, bundle, menuBundle) {
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1')
     if (url.pathname === '/' || url.pathname === '/index.html') {
@@ -278,6 +325,11 @@ function startStaticServer(html, bundle) {
     if (url.pathname === '/bundle.js') {
       res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' })
       res.end(bundle)
+      return
+    }
+    if (url.pathname === '/menu.js') {
+      res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' })
+      res.end(menuBundle)
       return
     }
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
@@ -417,7 +469,25 @@ async function main() {
     logLevel: 'silent',
   })
   const bundleText = bundle.outputFiles[0].text
-  const { server, origin } = await startStaticServer(buildIndexHtml(), bundleText)
+  // 「更多」菜单内容组件同样验生产源码：与 react 一起打进同一 realm，
+  // 点击行因此真的走官方 onOpen 委托，而不是被替身糊过去。
+  const menuBundle = await esbuild.build({
+    absWorkingDir: MENU_SOURCE_DIR,
+    stdin: {
+      contents: "export * from './explore-more-menu.jsx'\nexport * as React from 'react'\nexport * as ReactDOMClient from 'react-dom/client'\n",
+      resolveDir: MENU_SOURCE_DIR,
+      loader: 'js',
+    },
+    bundle: true,
+    write: false,
+    format: 'esm',
+    platform: 'browser',
+    target: 'es2022',
+    jsx: 'automatic',
+    logLevel: 'silent',
+  })
+  const menuBundleText = menuBundle.outputFiles[0].text
+  const { server, origin } = await startStaticServer(buildIndexHtml(), bundleText, menuBundleText)
   const profileDir = await fs.mkdtemp(path.join(os.tmpdir(), 'panel-chrome-qa-'))
   let chrome
   let cdp
@@ -445,27 +515,103 @@ async function main() {
     const record = (name, pass, actual, expected) => assertions.push({ name, pass, actual, expected })
 
     const custom = await evaluate(cdp, sessionId, `window.__QA.rowMetrics(document.querySelector('[data-qa-row="custom-workflow"]'))`)
-    const panels = {}
-    for (const id of ['plugins', 'schedules', 'more']) {
-      panels[id] = await evaluate(cdp, sessionId, `window.__QA.rowMetrics(document.querySelector('[data-qa-row="${id}"]'))`)
-    }
+    // 官方面板行已折叠（display:none，量不到几何），因此行度量只在仍然可见的
+    // 「更多」行上比对；折叠本身由 AC-10 单独断言。
+    const moreRow = await evaluate(cdp, sessionId, `window.__QA.rowMetrics(document.querySelector('[data-qa-row="more"]'))`)
 
-    // AC-1：官方三行与产品行逐项同度量。
+    // AC-1：仍然可见的官方「更多」行与产品行逐项同度量。
     // `minHeight` 不参与逐项比对：产品行用 `height`，官方行用 `min-height`，两者都是
     // 32px 的约束来源，比的是「实际渲染出来的那一组几何」。官方行的 min-height 另条断言。
     const comparable = (metrics) => {
       const { minHeight, ...rest } = metrics
       return rest
     }
-    for (const [id, metrics] of Object.entries(panels)) {
-      record(
-        `AC-1 行度量对齐 ${id}`,
-        JSON.stringify(comparable(metrics)) === JSON.stringify(comparable(custom)),
-        comparable(metrics),
-        comparable(custom),
-      )
-      record(`AC-1b 官方行约束为 32px ${id}`, metrics.minHeight === '32px', metrics.minHeight, '32px')
-    }
+    record(
+      'AC-1 行度量对齐 more',
+      JSON.stringify(comparable(moreRow)) === JSON.stringify(comparable(custom)),
+      comparable(moreRow),
+      comparable(custom),
+    )
+    record('AC-1b 官方行约束为 32px more', moreRow.minHeight === '32px', moreRow.minHeight, '32px')
+
+    // AC-10：官方面板行（插件 / 自动化任务）在展开态不显示，「更多」行仍可见。
+    const expandedRows = await evaluate(cdp, sessionId, 'window.__QA.panelRowVisibility()')
+    const officialRows = expandedRows.filter((row) => !row.isMore)
+    record(
+      'AC-10 展开态官方面板行已折叠',
+      officialRows.length >= 2 && officialRows.every((row) => row.display === 'none' && row.height === 0),
+      officialRows,
+      '每行 display=none 且高度 0',
+    )
+    record(
+      'AC-10b 展开态「更多」行仍可见',
+      expandedRows.filter((row) => row.isMore).every((row) => row.display !== 'none' && row.height > 0),
+      expandedRows.filter((row) => row.isMore),
+      'display≠none 且高度 > 0',
+    )
+
+    // AC-11：收起态同样折叠（轨道上不留面板图标）。
+    await evaluate(cdp, sessionId, 'window.__QA.setCollapsed(true)')
+    await sleep(120)
+    const collapsedRows = await evaluate(cdp, sessionId, 'window.__QA.panelRowVisibility()')
+    record(
+      'AC-11 收起态官方面板行仍折叠',
+      collapsedRows.filter((row) => !row.isMore).every((row) => row.display === 'none'),
+      collapsedRows.filter((row) => !row.isMore),
+      '每行 display=none',
+    )
+    await evaluate(cdp, sessionId, 'window.__QA.setCollapsed(false)')
+    await sleep(120)
+
+    // AC-12：折叠的官方面板行出现在「更多」菜单里，点击走官方 onOpen(id)。
+    // 官方 entries 不含固定面板（plugins）：官方按 `id !== FIXED_PANEL_ID` 过滤，
+    // 所以这里按官方真源只传 schedules；插件入口由官方「浏览更多插件」行承担。
+    await evaluate(cdp, sessionId, `window.__qaOpened = []; window.__QA.renderMenuRows({
+      entries: [
+        { id: 'schedules', label: '自动化任务', pinned: false, active: true },
+      ],
+      onOpen: (id) => window.__qaOpened.push(id),
+    })`)
+    await sleep(200)
+    const menuRows = await evaluate(cdp, sessionId, `Array.from(document.querySelectorAll('#qa-menu-rows [data-qa-item]')).map((item) => ({
+      label: item.textContent.trim(),
+      current: item.getAttribute('data-qa-current') === '1',
+      separatorBefore: item.getAttribute('data-qa-separator') === '1',
+    }))`)
+    record(
+      'AC-12 折叠的官方面板行在菜单首部',
+      menuRows[0]?.label === '自动化任务',
+      menuRows.slice(0, 2),
+      '首行为「自动化任务」',
+    )
+    record(
+      'AC-12b 折叠块与产品入口之间有分隔线',
+      menuRows[1]?.separatorBefore === true && menuRows[0]?.separatorBefore === false,
+      { row0: menuRows[0]?.separatorBefore, row1: menuRows[1]?.separatorBefore },
+      '首行不画线、第二行画线',
+    )
+    record(
+      'AC-12c 当前选中的官方面板带选中态',
+      menuRows[0]?.current === true,
+      { schedules: menuRows[0]?.current },
+      'schedules=true',
+    )
+    record(
+      'AC-12d 产品 10 项仍在折叠块之后',
+      menuRows.length === 11,
+      { rowCount: menuRows.length, labels: menuRows.map((row) => row.label) },
+      '1 个官方面板行 + 10 个产品入口 = 11',
+    )
+
+    await evaluate(cdp, sessionId, 'window.__QA.clickMenuRow(0)')
+    await sleep(120)
+    const opened = await evaluate(cdp, sessionId, 'window.__qaOpened')
+    record(
+      'AC-12e 点击官方面板行走官方 onOpen',
+      JSON.stringify(opened) === JSON.stringify(['schedules']),
+      opened,
+      "['schedules']",
+    )
 
     // AC-2：图标槽与 svg 都是 14×14。
     const glyph = await evaluate(cdp, sessionId, `window.__QA.glyphMetrics(document.querySelector('[data-qa-row="more"]'))`)

@@ -1,3 +1,16 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "path": "plugins/omnimux-assets/src/client/AssetsStage.jsx",
+      "rule": "SC2",
+      "line": 559,
+      "reason": "宿主能力探测：window.__omnimuxWorkbench 的 setConversationCollapsed 是可选接缝，老宿主没有时保持原状是刻意行为，不属于吞错。该行在 origin/main 上已存在，本任务只解决 #3810 与 main 的合并冲突、未修改此文件；合并期间基线取 merge-base(HEAD, origin/main) 偏老，把存量代码误判为新增。"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/client/AssetsStage.jsx",
+      "rule": "SC2",
+      "line": 560,
+      "reason": "同上：window.__omnimuxWorkbench 的 setFocus 也是可选接缝，老宿主没有时保持原状是刻意行为。该行在 origin/main 上已存在，本任务未修改此文件，属合并期间基线偏老导致的误判。"
+    }
+  ]
 }

@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-10-28"
+updated: "2026-10-29"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux-assets"
 ---
@@ -29,6 +29,19 @@ Official source of the numbers: `dsh-client-ui-workspace` session row (`.session
 | Hover / active | `--dsw-alias-interactive-bg-hover` / `--dsw-alias-interactive-bg-active` | Hover is the same token as the official session row; the official **selected** row paints with the *hover* token family, so plugin active and session selected are not the same shade — an accepted, documented difference (D-2), not a defect to "fix" by touching official CSS |
 
 MUST NOT use 13px labels or 16px filled icons on these rows. MUST NOT invent a second visual scale next to 工作区. Icon box and label font-size MUST be the same number (14px).
+
+## 官方 panel 行折叠进「更多」菜单
+
+官方左侧栏自带内置面板行（`插件` order 0 / `自动化任务` order 10）。它们是**官方入口，不是产品入口**，与产品自定义行混排会占满侧栏第一屏，因此在侧栏**不显示**，改由官方「更多」菜单提供。
+
+| Rule | Detail |
+|---|---|
+| 折叠范围 | 侧栏面板列表内**除「更多」行以外的所有面板行**都不显示（展开态与收起态都折叠）；「更多」行必须保留，否则入口全丢 |
+| 识别方式 | 官方「更多」行带 `aria-haspopup="menu"`，其余面板行没有 —— 用 `[class*="panelRow"]:not([aria-haspopup="menu"])` 判定，**MUST NOT** 按面板 id、文案或语言匹配（那需要第二份 id 清单，官方加面板 / 改文案即漂移） |
+| 菜单内呈现 | `explore-more-menu.jsx` 用官方 owner props（`entries` + `onOpen`）渲染折叠行：文案取 `entry.label`、选中态取 `entry.active`、点击先 `onDismiss()` 再 `onOpen(id)`；MUST NOT 复制面板 id 或另写导航 |
+| 分组 | 折叠块排在最前，与产品入口之间一条分隔线；折叠块内部不画线 |
+| 插件入口 | 官方 `entries` 不含固定面板 `plugins`（官方按 `id !== FIXED_PANEL_ID` 过滤），插件入口由官方「浏览更多插件」行承担 —— MUST NOT 自行补一行伪造入口 |
+| 单一真源 | 面板清单、文案、选中态、选中委托全部来自官方 owner props；官方新增面板自动进菜单，无需改本仓代码 |
 
 ## 官方 panel 行同样消费本表度量（#3802）
 
