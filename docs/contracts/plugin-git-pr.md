@@ -81,7 +81,7 @@ R0/R1 不在无人值守机器预授权范围内，由协调 Agent 接收现场�
 - 合并前在隔离 worktree 完成相关自动化测试、静态检查与独立评审；没有独立 App/Host 测试环境。Agent 的交付证据在自身隔离 worktree 内取得（ego-browser 或 worktree 隔离 Web QA 运行器）；PR 满足 required CI 经 Merge Queue 合入后，必须把本次合并的插件改动装进 Dev `~/.omnimux-dev`（只写开发版，不写正式版）。45120 的真机验收归人工，Agent 不必等待、不作为交付卡点。壳层或平台门控改动额外要求 Electron renderer 证据。
 - 独立评审与实施分离；测试通过、PR 绿灯或 merge 命令发出不能替代适用的隔离 worktree Web 验证证据；Dev 真机验收归人工，不作为 Agent 交付卡点。评审者核对什么归 [plugin-qa · 评审与验收结论](plugin-qa.md#评审与验收结论)；本「净室评审协议」只规定输入怎么交付（做法取自 [MiniMax mcode-stack](https://github.com/MiniMax-AI/mcode-stack) independent-review，MIT）：
   - **准备**：规格与代码先提交再生成评审包（工作区不干净时按设计拒绝）；每份证据必须记录 `git rev-parse HEAD` 的输出（至少前 7 位），且不得含密钥；截图等二进制材料不作证据文件。
-  - **输入**：评审者必须是全新上下文（DSH `subagent`，不用 `subagent_fork`；或新会话），拿 `pnpm review:packet --spec <规格> --evidence <测试输出>` 打印的评审包路径（已提交 diff + 规格原文 + 测试证据原文）；R0 另附授权记录；界面任务另附截图/结构化报告的路径。不得给实施者的对话、计划或自评。
+  - **输入**：评审者必须是全新上下文（DSH `subagent`，不用 `subagent_fork`；或新会话），拿 `pnpm review:packet --spec <规格> --evidence <测试输出>` 打印的评审包路径（已提交 diff + 规格原文 + 测试证据原文）；另附授权依据（Issue/PR 中的授权范围与风险等级；R0 须为明确授权记录）；界面任务另附截图/结构化报告的路径。不得给实施者的对话、计划或自评。
   - **重点**：在 plugin-qa 核对项之上补充关注未验证的假设、未覆盖的需求条目、不走需求路径也能通过的测试、超出范围的行为改动；不替代 plugin-qa。
   - **发现格式**：每条写明 问题 / 位置 / 证据 / 严重度（阻断·建议·细节）/ 对应需求条目。
   - **处理**：实施者先核实每条发现再修；不采纳的写明理由。评审结论绑定评审包的 head SHA，head 变化即失效，需重新生成评审包并评审。

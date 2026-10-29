@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 
 import { withFixtureRepo, runNodeCli, REPO_ROOT } from './lib/git-fixture-repo.mjs'
-import { DEFAULT_OUT_DIR, HEAD_BINDING_MESSAGE, PACKET_SECTIONS, createReviewPacket, fenceFor, inputHash } from './review-packet.mjs'
+import { DEFAULT_OUT_DIR, HEAD_BINDING_MESSAGE, PACKET_SECTIONS, createReviewPacket, fenceFor, findSecrets, inputHash } from './review-packet.mjs'
 
 const CLI = join(REPO_ROOT, 'scripts/review-packet.mjs')
 const SPEC_REL = 'specs/demo.spec.md'
@@ -73,7 +73,7 @@ test('干净工作区生成评审包：三段输入 + 评审要求 + SHA，无�
     const result = runNodeCli([CLI, '--spec', SPEC_REL, '--evidence', evidence, '--base', 'main', '--out-dir', outDir], { cwd: repo.root })
     assert.equal(result.status, 0, result.stderr)
     const outPath = result.stdout.trim()
-    const hash8 = inputHash(SPEC_TEXT, [evidenceText(headSha)])
+    const hash8 = inputHash({ baseSha, spec: { name: SPEC_REL, text: SPEC_TEXT }, evidence: [{ name: 'unit.log', text: evidenceText(headSha) }] })
     assert.match(hash8, /^[0-9a-f]{8}$/)
     assert.equal(outPath, join(outDir, `feature-demo-${headSha.slice(0, 12)}-${hash8}.md`))
     assert.ok(relative(repo.root, outPath).startsWith('..'), '评审包不得写进仓库')
@@ -107,11 +107,11 @@ test('干净工作区生成评审包：三段输入 + 评审要求 + SHA，无�
 
 test('默认输出目录在系统临时目录下', () => {
   withFixtureRepo(repo => withScratch(scratch => {
-    const { headSha } = prepareFeature(repo)
+    const { baseSha, headSha } = prepareFeature(repo)
     const evidence = writeEvidence(scratch, headSha)
     const outPath = createReviewPacket({ cwd: repo.root, spec: SPEC_REL, evidence: [evidence], base: 'main' })
     try {
-      const hash8 = inputHash(SPEC_TEXT, [evidenceText(headSha)])
+      const hash8 = inputHash({ baseSha, spec: { name: SPEC_REL, text: SPEC_TEXT }, evidence: [{ name: 'unit.log', text: evidenceText(headSha) }] })
       assert.equal(outPath, join(realpathSync(DEFAULT_OUT_DIR), `feature-demo-${headSha.slice(0, 12)}-${hash8}.md`))
       assert.ok(existsSync(outPath))
       assert.equal(statSync(realpathSync(DEFAULT_OUT_DIR)).mode & 0o777, 0o700, '默认目录即使已存在也收紧到 0700')
@@ -226,7 +226,7 @@ test('证据含高置信密钥：拒绝生成，报 文件:行 但不回显密�
     const result = runNodeCli([CLI, '--spec', SPEC_REL, '--evidence', leaky, '--base', 'main', '--out-dir', outDir], { cwd: repo.root })
     assert.equal(result.status, 1)
     assert.match(result.stderr, /疑似含密钥/)
-    assert.match(result.stderr, /leaky\.log:6 疑似OpenAI 风格 API key/)
+    assert.match(result.stderr, /leaky\.log:6 疑似OpenAI\/Anthropic 风格 API key/)
     assert.ok(!result.stderr.includes(fakeKey), '错误信息不得回显密钥')
     assert.ok(!result.stderr.includes('Ab3Ab3'), '错误信息不得含密钥片段')
     assert.equal(result.stdout, '')
@@ -287,4 +287,66 @@ test('围栏长度始终长于内容里的反引号串', () => {
   assert.equal(fenceFor('plain'), '```')
   assert.equal(fenceFor('has ``` inside'), '````')
   assert.equal(fenceFor('has ````` inside'), '``````')
+})
+
+test('密钥规则逐条命中主流格式，且不误报普通词与提交号', () => {
+  // 运行时拼接，避免测试源码本身被密钥扫描器命中
+  const j = (...parts) => parts.join('')
+  const body = 'Ab3x'.repeat(10)
+  const positives = {
+    openaiProject: j('s', 'k-', 'proj-', body),
+    anthropic: j('s', 'k-', 'ant-api03-', body),
+    githubOauth: j('g', 'ho_', body),
+    githubClassic: j('g', 'hp_', body),
+    githubPat: j('github', '_pat_', body),
+    google: j('AI', 'za', 'B'.repeat(35)),
+    aws: j('AK', 'IA', 'ABCDEFGHIJKLMNOP'),
+    slack: j('xo', 'xb-', '1234567890-abc'),
+    privateKey: j('-----BEGIN ', 'RSA PRIVATE', ' KEY-----'),
+  }
+  for (const [label, secret] of Object.entries(positives)) {
+    const hits = findSecrets([{ name: 'e.log', text: `line1\nKEY=${secret}\n` }])
+    assert.equal(hits.length >= 1, true, `${label} 必须命中`)
+    assert.match(hits[0], /^e\.log:2 疑似/)
+    assert.ok(!hits.join('').includes(secret), `${label} 不得回显`)
+  }
+  const sha = 'a'.repeat(40)
+  const negatives = [`task-${sha}`, 'risk-assessmentForThePluginQaFlow', j('X', 'AKIA', 'ABCDEFGHIJKLMNOPQ'), `commit ${sha}`, 'ask-question-about-the-review-flow-please']
+  for (const text of negatives) assert.deepEqual(findSecrets([{ name: 'e.log', text }]), [], `不得误报：${text}`)
+})
+
+test('换 base、证据改名或证据拼接方式不同都得到不同文件名', () => {
+  const spec = { name: 's.md', text: 'spec' }
+  const one = inputHash({ baseSha: 'b1', spec, evidence: [{ name: 'a.log', text: 'x' }] })
+  assert.notEqual(one, inputHash({ baseSha: 'b2', spec, evidence: [{ name: 'a.log', text: 'x' }] }), '换 base')
+  assert.notEqual(one, inputHash({ baseSha: 'b1', spec, evidence: [{ name: 'b.log', text: 'x' }] }), '证据改名')
+  assert.notEqual(
+    inputHash({ baseSha: 'b1', spec, evidence: [{ name: 'e', text: 'ab' }, { name: 'e', text: 'c' }] }),
+    inputHash({ baseSha: 'b1', spec, evidence: [{ name: 'e', text: 'a' }, { name: 'e', text: 'bc' }] }),
+    '拼接歧义',
+  )
+})
+
+test('规格未提交（被忽略）或在仓库外：拒绝生成', () => {
+  withFixtureRepo(repo => withScratch(scratch => {
+    const { headSha } = prepareFeature(repo)
+    const evidence = writeEvidence(scratch, headSha)
+    const outDir = join(scratch, 'out')
+    repo.write('.gitignore', 'specs/ignored.spec.md\n')
+    repo.commit('ignore draft spec')
+    const head2 = repo.git(['rev-parse', 'HEAD']).trim()
+    const evidence2 = writeEvidence(scratch, head2, 'unit2.log')
+    repo.write('specs/ignored.spec.md', SPEC_TEXT)
+    assert.throws(
+      () => createReviewPacket({ cwd: repo.root, spec: 'specs/ignored.spec.md', evidence: [evidence2], base: 'main', outDir }),
+      /规格未提交/,
+    )
+    const outside = join(scratch, 'outside.spec.md')
+    writeFileSync(outside, SPEC_TEXT)
+    assert.throws(
+      () => createReviewPacket({ cwd: repo.root, spec: outside, evidence: [evidence2], base: 'main', outDir }),
+      /仓库内已提交/,
+    )
+    assert.ok(existsSync(evidence))
+  }))
 })

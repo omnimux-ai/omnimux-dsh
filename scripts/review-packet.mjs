@@ -30,13 +30,19 @@ export const PACKET_SECTIONS = ['## 需求（规格原文）', '## 改动（diff
 export const HEAD_BINDING_PREFIX = 7
 export const HEAD_BINDING_MESSAGE = '证据未绑定当前 head（请在证据中记录 git rev-parse HEAD 的输出）'
 
-/** 高置信密钥模式：只报种类与 文件:行，绝不回显匹配值。 */
+/**
+ * 高置信密钥模式：只报种类与 文件:行，绝不回显匹配值。
+ * 前缀前要求非单词字符或行首（`(?<![A-Za-z0-9_-])`），避免 `task-<sha>`、`risk-…` 这类普通词误报；
+ * 主体允许 `-`/`_`，覆盖 sk-proj-…、sk-ant-api03-… 等新格式。
+ */
+const NOT_WORD_BEFORE = String.raw`(?<![A-Za-z0-9_-])`
 export const SECRET_PATTERNS = [
-  { kind: 'OpenAI 风格 API key', pattern: /sk-[A-Za-z0-9]{20,}/ },
-  { kind: 'GitHub classic token', pattern: /ghp_[A-Za-z0-9]{30,}/ },
-  { kind: 'GitHub fine-grained token', pattern: /github_pat_[A-Za-z0-9_]{20,}/ },
-  { kind: 'AWS access key id', pattern: /AKIA[0-9A-Z]{16}/ },
-  { kind: 'Slack token', pattern: /xox[abpr]-[A-Za-z0-9-]{10,}/ },
+  { kind: 'OpenAI/Anthropic 风格 API key', pattern: new RegExp(`${NOT_WORD_BEFORE}sk-[A-Za-z0-9_-]{20,}`) },
+  { kind: 'GitHub token', pattern: new RegExp(`${NOT_WORD_BEFORE}gh[opsur]_[A-Za-z0-9]{30,}`) },
+  { kind: 'GitHub fine-grained token', pattern: new RegExp(`${NOT_WORD_BEFORE}github_pat_[A-Za-z0-9_]{20,}`) },
+  { kind: 'Google API key', pattern: new RegExp(`${NOT_WORD_BEFORE}AIza[0-9A-Za-z_-]{35}`) },
+  { kind: 'AWS access key id', pattern: new RegExp(`${NOT_WORD_BEFORE}(?:AKIA|ASIA)[0-9A-Z]{16}(?![0-9A-Z])`) },
+  { kind: 'Slack token', pattern: new RegExp(`${NOT_WORD_BEFORE}xox[abpr]-[A-Za-z0-9-]{10,}`) },
   { kind: '私钥', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
 ]
 
@@ -121,11 +127,24 @@ export function findSecrets(items) {
   return findings
 }
 
-/** 输入内容哈希前 8 位：同输入同文件名，换证据得新文件名。 */
-export function inputHash(specText, evidenceTexts) {
+/**
+ * 输入指纹前 8 位：同输入同文件名；换 base、换证据内容或证据名都得到新文件名。
+ * 每个字段带长度前缀，避免 ["ab","c"] 与 ["a","bc"] 拼接后相同。
+ */
+export function inputHash({ baseSha = '', spec, evidence }) {
   const hash = createHash('sha256')
-  hash.update(specText)
-  for (const text of evidenceTexts) hash.update(text)
+  const field = value => {
+    const text = String(value)
+    hash.update(`${Buffer.byteLength(text)}:`)
+    hash.update(text)
+  }
+  field(baseSha)
+  field(spec.name)
+  field(spec.text)
+  for (const item of evidence) {
+    field(item.name)
+    field(item.text)
+  }
   return hash.digest('hex').slice(0, 8)
 }
 
@@ -219,7 +238,7 @@ export function buildPacket({ state, spec, evidence, generatedAt }) {
     '',
     PACKET_SECTIONS[3],
     '',
-    '- 你在全新上下文中评审，只依据本包的需求、改动与测试证据（R0 另附授权记录，界面任务另附截图/结构化报告路径）；不要索取或参考实施者的对话、计划或自评。',
+    '- 你在全新上下文中评审，只依据本包的需求、改动与测试证据（另附 Issue/PR 中的授权范围与风险等级，R0 须为明确授权记录；界面任务另附截图/结构化报告路径）；不要索取或参考实施者的对话、计划或自评。',
     '- 核对项以 docs/contracts/plugin-qa.md「评审与验收结论」为准（实际 diff、测试证据、授权、未解决风险），并补充关注：未验证的假设；未被覆盖的需求条目；不真正执行需求路径也能通过的测试；超出范围的行为改动。',
     '- 每条发现必须包含：问题 / 位置（文件:行）/ 证据 / 严重度（阻断·建议·细节）/ 对应需求条目。',
     `- 结论只对 head \`${state.headSha}\` 有效；head 变化后需重新评审。`,
@@ -244,6 +263,13 @@ export function createReviewPacket({ cwd = process.cwd(), spec, evidence = [], b
     return { path, text: readRequiredText(path, '测试证据文件') }
   })
   const state = collectGitState({ cwd, base })
+  // 规格必须是 head 中已跟踪的文件（工作区已干净，故内容即 head 版本）；仓库外或被忽略的规格不受提交约束
+  const specReal = realpathLoose(specPath)
+  if (!isInside(specReal, state.root)) throw new ReviewPacketError(`规格必须是仓库内已提交的文件：${basename(specReal)}`)
+  const specRel = relative(state.root, specReal)
+  if (git(state.root, ['ls-files', '--error-unmatch', '--', specRel]).status !== 0) {
+    throw new ReviewPacketError(`规格未提交到 git（或被忽略）：${specRel}；请先提交规格再生成评审包`)
+  }
   const specInput = { name: displayName(specPath, state.root), text: specText }
   const evidenceInputs = evidenceItems.map(item => ({ name: displayName(item.path, state.root), text: item.text }))
 
@@ -268,7 +294,7 @@ export function createReviewPacket({ cwd = process.cwd(), spec, evidence = [], b
   mkdirSync(outReal, { recursive: true, mode: 0o700 })
   // mkdir 的 mode 只在新建时生效；本工具独占的默认目录若已存在则收紧到 0700。用户自带目录不改其权限。
   if (outReal === realpathLoose(DEFAULT_OUT_DIR)) chmodSync(outReal, 0o700)
-  const hash8 = inputHash(specText, evidenceItems.map(item => item.text))
+  const hash8 = inputHash({ baseSha: state.baseSha, spec: specInput, evidence: evidenceInputs })
   const outPath = join(outReal, `${sanitizeBranch(state.branch)}-${state.headSha.slice(0, 12)}-${hash8}.md`)
   writeFileSync(outPath, markdown, { mode: 0o600 })
   chmodSync(outPath, 0o600)
