@@ -6,16 +6,27 @@
  * 测试分层：
  * - Layer 1: 静态契约与 JSON Schema 严格校验 (Contract & Schema Lint)
  * - Layer 2: 隔离沙箱与容错执行测试 (Isolated Execution & Error-handling)
- * - Layer 3: Agent 意图诱发与调用准确率评测 (Agent Tool Calling E2E Eval)
+ * - Layer 3: 离线路由冒烟（正则模拟，非真实模型评测）(Offline Routing Smoke)
  * - Layer 4: 权限边界与破坏性保护门禁 (Security & Sandbox Gates)
+ * - Layer 5: 上下文预算与缓存站位（只拦相对基线新增）(Context Budget Ratchet)
  */
 
-import { resolve } from 'node:path';
-import { loadAllPluginTools } from './agent-tools-suite/loader.mjs';
+import { fileURLToPath } from 'node:url';
+import { loadAllPluginSurfaces, loadBudgetSurfaces } from './agent-tools-suite/loader.mjs';
 import { validateToolContract } from './agent-tools-suite/schema-lint.mjs';
 import { testToolExecution } from './agent-tools-suite/execution-guard.mjs';
 import { testToolSecurity } from './agent-tools-suite/security-guard.mjs';
 import { runAgentToolEval } from './agent-tools-suite/eval-runner.mjs';
+import {
+  BUDGET_LIMITS,
+  baselineFromReport,
+  buildBudgetReport,
+  evaluateAgainstBaseline,
+  readBaseline,
+  writeBaseline,
+} from './agent-tools-suite/budget.mjs';
+
+const BUDGET_BASELINE_PATH = fileURLToPath(new URL('./agent-tools-suite/budget-baseline.json', import.meta.url));
 
 const colors = {
   reset: '\x1b[0m',
@@ -34,6 +45,13 @@ const runContract = runAll || args.includes('--contract');
 const runExec = runAll || args.includes('--exec');
 const runEval = runAll || args.includes('--eval');
 const runSecurity = runAll || args.includes('--security');
+const writeBudgetBaseline = args.includes('--write-baseline');
+const runBudget = runAll || args.includes('--budget') || writeBudgetBaseline;
+
+function argValue(flag) {
+  const index = args.indexOf(flag);
+  return index >= 0 ? args[index + 1] : undefined;
+}
 
 async function main() {
   console.log(`\n${colors.bold}${colors.cyan}══════════════════════════════════════════════════════════════${colors.reset}`);
@@ -42,7 +60,8 @@ async function main() {
 
   const rootDir = process.cwd();
   console.log(`${colors.cyan}ℹ${colors.reset} 正在自动装载工作区插件并发现可用工具...`);
-  const allToolsMap = await loadAllPluginTools(rootDir);
+  const surfaces = await loadAllPluginSurfaces(rootDir);
+  const allToolsMap = surfaces.tools;
   console.log(`${colors.green}✔${colors.reset} 成功扫描装配 ${colors.bold}${allToolsMap.size}${colors.reset} 个插件工具\n`);
 
   let totalFailures = 0;
@@ -97,10 +116,10 @@ async function main() {
   }
 
   // ───────────────────────────────────────────
-  // Layer 3: Agent 意图诱导与工具调度评测
+  // Layer 3: 离线路由冒烟（正则模拟器，不调用模型，不代表真实模型路由准确率）
   // ───────────────────────────────────────────
   if (runEval) {
-    console.log(`${colors.bold}${colors.magenta}=== Layer 3: Agent 意图诱导评测 (Tool Calling Eval) ===${colors.reset}`);
+    console.log(`${colors.bold}${colors.magenta}=== Layer 3: 离线路由冒烟（正则模拟，非模型评测）===${colors.reset}`);
     const evalReport = await runAgentToolEval(allToolsMap);
 
     for (const r of evalReport.results) {
@@ -115,7 +134,7 @@ async function main() {
       }
     }
 
-    console.log(`  ${colors.bold}评测通过率: ${evalReport.passed} / ${evalReport.total} (${Math.round((evalReport.passed / evalReport.total) * 100)}%)${colors.reset}\n`);
+    console.log(`  ${colors.bold}离线冒烟通过: ${evalReport.passed} / ${evalReport.total}（正则模拟，不代表模型调用准确率）${colors.reset}\n`);
     if (evalReport.failed > 0) {
       totalFailures += evalReport.failed;
     }
@@ -137,6 +156,53 @@ async function main() {
     }
 
     console.log(`  ${colors.green}✔ 安全审计完成: 共检测 ${secNoted} 个敏感变更工具，防护策略就绪${colors.reset}\n`);
+  }
+
+  // ───────────────────────────────────────────
+  // Layer 5: 上下文预算与缓存站位（棘轮：只拦相对基线新增）
+  // ───────────────────────────────────────────
+  if (runBudget) {
+    console.log(`${colors.bold}${colors.magenta}=== Layer 5: 上下文预算与缓存站位（单位：字符，非 token）===${colors.reset}`);
+    const budgetSurfaces = await loadBudgetSurfaces(rootDir, surfaces);
+    const report = buildBudgetReport(budgetSurfaces);
+
+    for (const [plugin, row] of Object.entries(report.perPlugin).sort(([a], [b]) => a.localeCompare(b))) {
+      if (row.tools === 0 && row.sections === 0) continue;
+      const staticNote = row.staticTools > 0 ? ` ${colors.yellow}（${row.staticTools} 个静态提取工具参数未计入）${colors.reset}` : '';
+      console.log(`  ${plugin}: 工具 ${row.tools} 个 / 定义 ${row.toolChars} 字符；提示词段 ${row.sections} 个 / ${row.promptChars} 字符${staticNote}`);
+    }
+    for (const p of budgetSurfaces.plugins.filter((item) => item.loadError)) {
+      console.log(`  ${colors.yellow}⚠ ${p.name} 未纳入度量：${p.loadError}${colors.reset}`);
+    }
+    console.log(`  合计：工具定义 ${report.totals.toolChars} 字符，提示词段 ${report.totals.promptChars} 字符`);
+    for (const pair of report.duplicates) {
+      console.log(`  ${colors.yellow}⚠ 疑似重复工具（建议按用户意图合并）: ${pair.key} (${pair.similarity})${colors.reset}`);
+    }
+    for (const key of report.volatile) {
+      console.log(`  ${colors.yellow}⚠ 易变提示词段（每轮变化会使系统消息原地替换，应改用 systemPrompt.context）: ${key}${colors.reset}`);
+    }
+
+    if (writeBudgetBaseline) {
+      // 构建产物缺失时写基线会漏掉整个插件，下次构建后被误判为「新增」；必须先构建
+      const unbuilt = budgetSurfaces.plugins.filter((p) => p.loadError?.startsWith('入口产物不存在'));
+      if (unbuilt.length > 0) {
+        throw new Error(`拒绝写入基线：${unbuilt.map((p) => p.name).join(', ')} 缺少构建产物，请先运行 node scripts/build-all.mjs 与 omnimux-workflow 的 build-host`);
+      }
+      const baseline = baselineFromReport(report, argValue('--reason'));
+      writeBaseline(BUDGET_BASELINE_PATH, baseline);
+      console.log(`  ${colors.green}✔ 已写入基线 ${BUDGET_BASELINE_PATH}（理由：${baseline.reason}）${colors.reset}\n`);
+    } else {
+      const failures = evaluateAgainstBaseline(report, readBaseline(BUDGET_BASELINE_PATH), BUDGET_LIMITS);
+      for (const f of failures) {
+        console.log(`  ${colors.red}✖ [${f.kind}] ${f.subject}: ${f.detail}${colors.reset}`);
+      }
+      if (failures.length === 0) {
+        console.log(`  ${colors.green}✔ 相对基线无新增超标、重复或易变段${colors.reset}\n`);
+      } else {
+        console.log(`  ${colors.red}✖ 上下文预算新增 ${failures.length} 项问题；确需放行时运行 --write-baseline --reason "<≥8 字理由>" 并在 PR 中说明${colors.reset}\n`);
+        totalFailures += failures.length;
+      }
+    }
   }
 
   // ───────────────────────────────────────────

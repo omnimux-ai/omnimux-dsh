@@ -10,6 +10,13 @@ import { validateToolContract } from './agent-tools-suite/schema-lint.mjs';
 import { testToolExecution } from './agent-tools-suite/execution-guard.mjs';
 import { testToolSecurity } from './agent-tools-suite/security-guard.mjs';
 import { runAgentToolEval } from './agent-tools-suite/eval-runner.mjs';
+import {
+  baselineFromReport,
+  buildBudgetReport,
+  descriptionSimilarity,
+  evaluateAgainstBaseline,
+  readBaseline,
+} from './agent-tools-suite/budget.mjs';
 
 describe('DSH Agent Tools Unified Test Suite', async () => {
   const allToolsMap = await loadAllPluginTools(process.cwd());
@@ -85,5 +92,71 @@ describe('DSH Agent Tools Unified Test Suite', async () => {
     assert.equal(falseMissingRes.ok, false);
     assert.equal(falseMissingRes.phase, 'argument_consumption');
     assert.ok(falseMissingRes.error.includes('targetId'));
+  });
+});
+
+describe('Layer 5: 上下文预算棘轮', () => {
+  const tool = (plugin, name, description, extra = {}) => ({
+    _plugin: plugin,
+    _source: 'dynamic',
+    name,
+    description,
+    parameters: { type: 'object', properties: {} },
+    ...extra,
+  });
+  const surfaces = (tools, prompts = []) => ({
+    tools: new Map(tools.map((t) => [t.name, t])),
+    prompts,
+    plugins: [],
+  });
+  const fixture = () =>
+    surfaces([
+      tool('demo', 'demo_image_submit', 'Submit an image generation task to the gateway and return the task id.'),
+      tool('demo', 'demo_video_submit', 'Submit a video generation task to the gateway and return the task id.'),
+      tool('demo', 'demo_list', '列出当前项目下全部演示素材，按更新时间倒序。'),
+      tool('other', 'other_huge', 'x'.repeat(2100)),
+      tool('other', 'other_static', 'static only', { _source: 'static' }),
+    ], [
+      { plugin: 'demo', kind: 'section', name: 'demo:clock', text: () => `now ${Date.now()}` },
+      { plugin: 'demo', kind: 'section', name: 'demo:fixed', text: () => 'fixed rules' },
+      { plugin: 'demo', kind: 'context', name: 'demo:ctx', text: () => `now ${Date.now()}` },
+    ]);
+
+  test('超标、近似重复与易变段各命中一次，无关项不误报', () => {
+    const report = buildBudgetReport(fixture());
+    assert.deepEqual(report.duplicates.map((d) => d.key), ['demo_image_submit~demo_video_submit']);
+    assert.deepEqual(report.volatile, ['demo:demo:clock']);
+    const failures = evaluateAgainstBaseline(report, { tools: [], pluginToolChars: {}, duplicates: [], volatile: [] });
+    assert.deepEqual(failures.map((f) => `${f.kind}:${f.subject}`).sort(), [
+      'new-duplicate-tools:demo_image_submit~demo_video_submit',
+      'new-tool-over-budget:other_huge',
+      'new-volatile-section:demo:demo:clock',
+    ]);
+  });
+
+  test('静态提取工具参数未计入，不参与体积与超标判定', () => {
+    const report = buildBudgetReport(fixture());
+    assert.equal(report.perPlugin.other.staticTools, 1);
+    assert.equal(report.toolSizes.some((t) => t.name === 'other_static'), false);
+  });
+
+  test('基线存量不失败；插件总量超过基线 ×1.10 失败', () => {
+    const report = buildBudgetReport(fixture());
+    const baseline = baselineFromReport(report, '冻结夹具存量用于测试');
+    assert.deepEqual(evaluateAgainstBaseline(report, baseline), []);
+    const shrunk = { ...baseline, pluginToolChars: { ...baseline.pluginToolChars, demo: 10 } };
+    assert.deepEqual(evaluateAgainstBaseline(report, shrunk).map((f) => f.kind), ['plugin-tool-growth']);
+  });
+
+  test('写基线必须给出 ≥8 字理由；基线缺失或格式无效时报错退出', () => {
+    const report = buildBudgetReport(fixture());
+    assert.throws(() => baselineFromReport(report, undefined), /--reason/);
+    assert.throws(() => baselineFromReport(report, '太短'), /--reason/);
+    assert.throws(() => readBaseline('/nonexistent/budget-baseline.json'), /不存在/);
+  });
+
+  test('仓库基线可读，且描述相似度对无关文本接近 0', () => {
+    readBaseline(new URL('./agent-tools-suite/budget-baseline.json', import.meta.url).pathname);
+    assert.ok(descriptionSimilarity('上传素材到资产库', 'Fetch YouTube channel stats') < 0.1);
   });
 });
