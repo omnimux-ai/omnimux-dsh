@@ -40,3 +40,12 @@ Issue: [#3851](https://github.com/omnimux-ai/omnimux-dsh/issues/3851) · 风险 
 - 本分支：`gitleaks git . --config .gitleaks.toml --log-opts="origin/main..HEAD" --redact --no-banner --exit-code 1` 必须退出 0。
 - 从工作流抽出 denylist 步骤脚本，在一次性仓库用虚构值（文档保留段 IP、虚构主机名）跑：secret 缺失 + `pull_request` 退出 0 并告警；缺失 + `merge_group` 退出 1；新增行命中退出 1 且只打印提交与文件；只在删除行或提交说明里出现退出 0；非法正则退出 1。
 - `node scripts/verify-product-baseline.mjs` 与 `node --test plugins/omnimux/src/client/icon-compat-rc3-fixture.test.js` 保持通过；对 6 个文件 grep 维护者家目录前缀 0 命中。
+
+## 旧标准变更
+
+本节声明把 `leak-gate` 接入既有聚合检查时对 CI 契约测试断言的改写，每条给出原断言、必须改的理由与新期望。
+
+- `scripts/style-dom-probe.test.mjs` :: `quality gate retains existing verdict and uploads only explicit failure receipt paths`
+  - 原断言：`static-and-tests.needs` 恰好等于 `['gates', 'plugin-tests', 'full-scan']`，「Require upstream jobs」不含 `LEAK_GATE` 结果检查。
+  - 理由：本任务新增 `leak-gate` job 且必须经既有 required check 生效——不并入聚合 `needs` 与结果断言，门禁就只是非阻断的旁路，任何人去掉它都不会红。这是新增能力的必经接线，不是削弱覆盖：既有三个上游的结果断言原样保留。
+  - 新期望：`needs` 为 `['gates', 'plugin-tests', 'full-scan', 'leak-gate']` 且「Require upstream jobs」含 `test "$LEAK_GATE" = success`；`job.if === always()`、`full-scan` 的 merge_group 跳过条件与其余断言不变。
