@@ -70,3 +70,8 @@
 - 运行 `node scripts/test-agent-tools.mjs --budget`：若报告的插件数或 section 数明显少于源码中 `systemPrompt.section(` 注册点（13 个文件），说明捕获口径不成立。
 - 单测用夹具验证：返回 `Date.now()` 的段必须判为易变、返回常量的段必须稳定；超标/近似重复各命中一次，无关工具零误报；基线存量项不失败、新增项失败、缺 `--reason` 写基线报错退出。任一断言失败即证伪。
 - 在当前 `main` 上首次生成基线后立即重跑，必须零失败；否则说明棘轮会误伤存量。
+
+## 第二轮净室评审（head 12798e136，APPROVE_WITH_COMMENTS）
+
+- N1 已修：补装时传 `{ catalog: { remote: false }, apps: { remote: false } }`，`--budget` 不再联网（fetch 探针实测 0 次）。
+- N2–N7 为建议/细节级（时钟断言粒度、工具粒度缺席、补装路径无单测、Date()/async 求值口径、browser/forms 不在基线、HOME 隔离残留），属已知局限，记入后续跟进，不阻塞本 PR。

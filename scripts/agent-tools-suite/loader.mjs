@@ -220,7 +220,9 @@ async function probePlugin(rootDir, plugin, tools, prompts) {
     try {
       const mod = await import(pathToFileURL(entry).href);
       if (typeof mod.apply !== 'function') throw new Error('入口未导出 apply');
-      await mod.apply(ctx, {});
+      // 规格 §5「不联网」：catalog/apps 的 remote 默认 true，会在补装时取远端价目，
+      // 显式关掉使预算探针保持离线。
+      await mod.apply(ctx, { catalog: { remote: false }, apps: { remote: false } });
       for (const [name, tool] of tools) {
         if (tool._plugin === plugin.name && tool._source === 'static') tools.delete(name);
       }
