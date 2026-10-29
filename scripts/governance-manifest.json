@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated": "2026-10-27",
+  "updated": "2026-10-29",
   "description": "scripts/ 全量源码库存（含 tests/helpers/fixtures/Python）。ciRequired=支持语法下工作流执行根静态可能可达；localRequired=仅根包执行或语法引用可证；manual=未证明自动可达（不承诺无未知调用）；deprecated=现存退役且禁自动引用。静态可能可达不等于真实CI运行、函数执行或覆盖率。",
   "ciRequired": [
     "agent-tools-suite/eval-runner.mjs",
@@ -81,6 +81,8 @@
     "report-blocker.mjs",
     "report-blocker.test.mjs",
     "resolve-omnimux-profile.test.mjs",
+    "review-packet.mjs",
+    "review-packet.test.mjs",
     "run-workspace-tests.mjs",
     "run-workspace-tests.test.mjs",
     "sidebar-chrome-qa-fixture.mjs",
