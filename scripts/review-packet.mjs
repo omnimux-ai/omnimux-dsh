@@ -266,6 +266,8 @@ export function createReviewPacket({ cwd = process.cwd(), spec, evidence = [], b
     generatedAt: now.toISOString().slice(0, 10),
   })
   mkdirSync(outReal, { recursive: true, mode: 0o700 })
+  // mkdir 的 mode 只在新建时生效；本工具独占的默认目录若已存在则收紧到 0700。用户自带目录不改其权限。
+  if (outReal === realpathLoose(DEFAULT_OUT_DIR)) chmodSync(outReal, 0o700)
   const hash8 = inputHash(specText, evidenceItems.map(item => item.text))
   const outPath = join(outReal, `${sanitizeBranch(state.branch)}-${state.headSha.slice(0, 12)}-${hash8}.md`)
   writeFileSync(outPath, markdown, { mode: 0o600 })

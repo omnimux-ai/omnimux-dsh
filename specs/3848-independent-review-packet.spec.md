@@ -12,7 +12,7 @@
 
 - 新增 `scripts/review-packet.mjs`：从当前 HEAD 相对 base 的已提交改动、指定规格文件、指定测试证据文件生成一份 Markdown 评审包，写到仓库外的临时目录并打印绝对路径。规格必须先提交再生成评审包（工作区不干净时按设计拒绝）。
 - 输入校验：规格与证据按字节读取，含 NUL 或不是严格 UTF-8 即拒绝（截图等二进制按协议以路径交给评审者）；每份证据必须含当前 head SHA 前 7 位；写出前扫描高置信密钥模式，命中即失败，只报 文件:行，不回显匹配值。
-- 输出：头信息含 base 提交时间（`git show -s --format=%cI`）供判断新鲜度；仓库外文件只显示文件名；目录 0700、文件 0600；文件名 `<branch>-<head12>-<hash8>.md`（hash8 为规格与证据文本 sha256 前 8 位），同输入同文件，换证据得新文件，不覆盖旧包。
+- 输出：头信息含 base 提交时间（`git show -s --format=%cI`）供判断新鲜度；仓库外文件只显示文件名；新建目录 0700（默认目录已存在时也收紧到 0700，用户自带 `--out-dir` 不改权限）、文件 0600；文件名 `<branch>-<head12>-<hash8>.md`（hash8 为规格与证据文本 sha256 前 8 位），同输入同文件，换证据得新文件，不覆盖旧包。
 - 新增 `scripts/review-packet.test.mjs`，并加入 `test:gates` 首个 `node --test` 列表与 CI；`package.json` 新增 `review:packet`；在治理注册表登记。
 - `docs/contracts/plugin-git-pr.md` 在既有「独立评审」条目上扩展净室评审协议（只管输入怎么交付）。
 - `.agents/skills/omnimux-repo-workflow/SKILL.md`：明确在范围内的两处改动——（1）委派规则：只委派中间产出后续不需要、只要结论的工作（如独立调研、黑盒验证、净室评审），不按角色拆分（该规则经用户确认）；（2）合并前独立评审指向 `pnpm review:packet` 与净室评审协议。

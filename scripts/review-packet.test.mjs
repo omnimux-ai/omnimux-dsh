@@ -114,6 +114,8 @@ test('默认输出目录在系统临时目录下', () => {
       const hash8 = inputHash(SPEC_TEXT, [evidenceText(headSha)])
       assert.equal(outPath, join(realpathSync(DEFAULT_OUT_DIR), `feature-demo-${headSha.slice(0, 12)}-${hash8}.md`))
       assert.ok(existsSync(outPath))
+      assert.equal(statSync(realpathSync(DEFAULT_OUT_DIR)).mode & 0o777, 0o700, '默认目录即使已存在也收紧到 0700')
+      assert.equal(statSync(outPath).mode & 0o777, 0o600)
       assert.equal(repo.git(['status', '--porcelain']), '')
     } finally {
       rmSync(outPath, { force: true })
