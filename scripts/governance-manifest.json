@@ -82,6 +82,8 @@
     "report-blocker.mjs",
     "report-blocker.test.mjs",
     "resolve-omnimux-profile.test.mjs",
+    "review-packet.mjs",
+    "review-packet.test.mjs",
     "run-workspace-tests.mjs",
     "run-workspace-tests.test.mjs",
     "sidebar-chrome-qa-fixture.mjs",
