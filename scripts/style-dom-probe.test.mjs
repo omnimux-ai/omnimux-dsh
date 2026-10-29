@@ -318,10 +318,12 @@ test('quality gate retains existing verdict and uploads only explicit failure re
   const job = workflow.jobs['static-and-tests']
   assert.equal(job.name, 'Static L0 QA & Tests', 'required check name must not change')
   assert.equal(job.if, '${{ always() }}')
-  assert.deepEqual(job.needs, ['gates', 'plugin-tests', 'full-scan'])
+  assert.deepEqual(job.needs, ['gates', 'plugin-tests', 'full-scan', 'leak-gate'])
   const requireUpstream = job.steps.find(step => step.name === 'Require upstream jobs')
   assert.equal(requireUpstream.if, undefined, 'upstream failures must fail the aggregate job')
   assert.match(requireUpstream.run, /^test "\$GATES" = success$/m)
+  assert.match(requireUpstream.run, /^test "\$LEAK_GATE" = success$/m,
+    'the leak gate must be enforced through the existing required check')
   assert.match(requireUpstream.run, /^test "\$PLUGIN_TESTS" = success$/m)
   assert.match(requireUpstream.run, /test "\$EVENT_NAME" != merge_group && test "\$FULL_SCAN" = skipped/)
   const report = gates.steps.find(step => step.name === 'Upload L0 report for verdict')
