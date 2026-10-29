@@ -7,6 +7,9 @@
  * 规格见 specs/3848-independent-review-packet.spec.md。
  *
  * 只用 git 与 Node 内置模块；不读会话日志与环境密钥，不联网，不往仓库里写文件。
+ * 输入校验：规格与证据必须是 UTF-8 文本（二进制如截图按协议以路径交付）；每份证据必须含当前 head
+ * SHA 前 7 位；写出前扫描高置信密钥模式，命中即失败且不回显匹配值。
+ * 输出：目录 0700、文件 0600；文件名含输入内容哈希，换证据生成新文件，不覆盖旧包。
  *
  * 用法：
  *   node scripts/review-packet.mjs --spec <path> --evidence <file> [--evidence <file> ...]
@@ -15,7 +18,8 @@
  */
 
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { chmodSync, existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -23,6 +27,18 @@ import { fileURLToPath } from 'node:url'
 export const DEFAULT_BASE = 'origin/main'
 export const DEFAULT_OUT_DIR = join(tmpdir(), 'omnimux-review')
 export const PACKET_SECTIONS = ['## 需求（规格原文）', '## 改动（diff）', '## 测试证据（原文）', '## 评审要求']
+export const HEAD_BINDING_PREFIX = 7
+export const HEAD_BINDING_MESSAGE = '证据未绑定当前 head（请在证据中记录 git rev-parse HEAD 的输出）'
+
+/** 高置信密钥模式：只报种类与 文件:行，绝不回显匹配值。 */
+export const SECRET_PATTERNS = [
+  { kind: 'OpenAI 风格 API key', pattern: /sk-[A-Za-z0-9]{20,}/ },
+  { kind: 'GitHub classic token', pattern: /ghp_[A-Za-z0-9]{30,}/ },
+  { kind: 'GitHub fine-grained token', pattern: /github_pat_[A-Za-z0-9_]{20,}/ },
+  { kind: 'AWS access key id', pattern: /AKIA[0-9A-Z]{16}/ },
+  { kind: 'Slack token', pattern: /xox[abpr]-[A-Za-z0-9-]{10,}/ },
+  { kind: '私钥', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
+]
 
 export class ReviewPacketError extends Error {
   constructor(message) {
@@ -68,17 +84,49 @@ function gitOk(cwd, args, failure) {
   return result.stdout
 }
 
+const strictUtf8 = new TextDecoder('utf-8', { fatal: true })
+
+/** 按 Buffer 读取并严格解码；含 NUL 或非法 UTF-8 一律拒绝（二进制证据应以路径交付）。 */
 function readRequiredText(path, label) {
   if (!existsSync(path)) throw new ReviewPacketError(`${label}不存在：${path}`)
   if (!statSync(path).isFile()) throw new ReviewPacketError(`${label}不是文件：${path}`)
-  let text
+  let buffer
   try {
-    text = readFileSync(path, 'utf8')
+    buffer = readFileSync(path)
   } catch (error) {
     throw new ReviewPacketError(`${label}无法读取：${path}（${error.message}）`)
   }
+  const binaryHint = `${label}不是 UTF-8 文本：${path}。截图等二进制材料请按净室评审协议以路径交给评审者，不要作为证据文件传入`
+  if (buffer.includes(0)) throw new ReviewPacketError(`${binaryHint}（含 NUL 字节）`)
+  let text
+  try {
+    text = strictUtf8.decode(buffer)
+  } catch (error) {
+    throw new ReviewPacketError(`${binaryHint}（${error.message}）`)
+  }
   if (text.trim() === '') throw new ReviewPacketError(`${label}为空：${path}`)
   return text
+}
+
+/** 扫描高置信密钥模式；返回 `名称:行 种类` 列表，不含匹配值。 */
+export function findSecrets(items) {
+  const findings = []
+  for (const { name, text } of items) {
+    text.split('\n').forEach((line, index) => {
+      for (const { kind, pattern } of SECRET_PATTERNS) {
+        if (pattern.test(line)) findings.push(`${name}:${index + 1} 疑似${kind}`)
+      }
+    })
+  }
+  return findings
+}
+
+/** 输入内容哈希前 8 位：同输入同文件名，换证据得新文件名。 */
+export function inputHash(specText, evidenceTexts) {
+  const hash = createHash('sha256')
+  hash.update(specText)
+  for (const text of evidenceTexts) hash.update(text)
+  return hash.digest('hex').slice(0, 8)
 }
 
 /** 取最长已存在前缀做 realpath，再拼回剩余部分，避免 /tmp 等符号链接让「仓库内」判断失真。 */
@@ -128,6 +176,7 @@ export function collectGitState({ cwd, base }) {
   }
   const headSha = gitOk(root, ['rev-parse', '--verify', 'HEAD^{commit}'], '无法解析 HEAD').trim()
   const baseSha = gitOk(root, ['rev-parse', '--verify', `${base}^{commit}`], `无法解析 base：${base}`).trim()
+  const baseDate = gitOk(root, ['show', '-s', '--format=%cI', baseSha], `无法读取 base 提交时间：${base}`).trim()
   const mergeBase = gitOk(root, ['merge-base', baseSha, headSha], `无法计算 ${base} 与 HEAD 的 merge-base`).trim()
   const branchRaw = gitOk(root, ['rev-parse', '--abbrev-ref', 'HEAD'], '无法读取当前分支').trim()
   const branch = branchRaw === 'HEAD' ? 'detached' : branchRaw
@@ -136,7 +185,7 @@ export function collectGitState({ cwd, base }) {
   if (diff.trim() === '') throw new ReviewPacketError(`diff 为空：HEAD ${headSha.slice(0, 12)} 相对 ${base} 的 merge-base 没有已提交改动`)
   const files = gitOk(root, ['diff', '--no-color', '--no-ext-diff', '-M', '--name-status', range], '无法生成改动文件列表')
     .split('\n').filter(Boolean).map(line => line.split('\t'))
-  return { root, branch, base, baseSha, mergeBase, headSha, diff, files }
+  return { root, branch, base, baseSha, baseDate, mergeBase, headSha, diff, files }
 }
 
 /** 纯函数：由已收集的输入拼出评审包 Markdown。 */
@@ -147,6 +196,7 @@ export function buildPacket({ state, spec, evidence, generatedAt }) {
     `# 评审包 · ${state.branch} @ ${state.headSha.slice(0, 12)}`,
     '',
     `- base：\`${state.base}\`（\`${state.baseSha}\`）`,
+    `- base 提交时间：${state.baseDate}`,
     `- merge-base：\`${state.mergeBase}\``,
     `- head：\`${state.headSha}\``,
     `- 分支：\`${state.branch}\``,
@@ -169,17 +219,18 @@ export function buildPacket({ state, spec, evidence, generatedAt }) {
     '',
     PACKET_SECTIONS[3],
     '',
-    '- 你在全新上下文中评审，只依据本包的需求、改动与测试证据；不要索取或参考实施者的对话、计划或自评。',
-    '- 重点：未验证的假设；未被覆盖的需求条目；不真正执行需求路径也能通过的测试；超出范围的行为改动。',
+    '- 你在全新上下文中评审，只依据本包的需求、改动与测试证据（R0 另附授权记录，界面任务另附截图/结构化报告路径）；不要索取或参考实施者的对话、计划或自评。',
+    '- 核对项以 docs/contracts/plugin-qa.md「评审与验收结论」为准（实际 diff、测试证据、授权、未解决风险），并补充关注：未验证的假设；未被覆盖的需求条目；不真正执行需求路径也能通过的测试；超出范围的行为改动。',
     '- 每条发现必须包含：问题 / 位置（文件:行）/ 证据 / 严重度（阻断·建议·细节）/ 对应需求条目。',
     `- 结论只对 head \`${state.headSha}\` 有效；head 变化后需重新评审。`,
     '',
   ].join('\n')
 }
 
+/** 仓库内显示相对路径；仓库外只显示文件名，不泄露绝对路径。 */
 function displayName(path, root) {
   const real = realpathLoose(path)
-  return isInside(real, root) ? relative(root, real) : real
+  return isInside(real, root) ? relative(root, real) : basename(real)
 }
 
 /** 校验输入、生成并写出评审包，返回绝对路径。任何缺失都抛 ReviewPacketError。 */
@@ -193,17 +244,32 @@ export function createReviewPacket({ cwd = process.cwd(), spec, evidence = [], b
     return { path, text: readRequiredText(path, '测试证据文件') }
   })
   const state = collectGitState({ cwd, base })
+  const specInput = { name: displayName(specPath, state.root), text: specText }
+  const evidenceInputs = evidenceItems.map(item => ({ name: displayName(item.path, state.root), text: item.text }))
+
+  const headPrefix = state.headSha.slice(0, HEAD_BINDING_PREFIX)
+  const unbound = evidenceInputs.filter(item => !item.text.includes(headPrefix)).map(item => item.name)
+  if (unbound.length > 0) {
+    throw new ReviewPacketError(`${HEAD_BINDING_MESSAGE}：${unbound.join('、')} 不含 head ${headPrefix}`)
+  }
+  const secrets = findSecrets([specInput, ...evidenceInputs])
+  if (secrets.length > 0) {
+    throw new ReviewPacketError(`规格或证据疑似含密钥，拒绝生成评审包（不回显匹配内容；请删除后重试）：\n${secrets.join('\n')}`)
+  }
+
   const outReal = realpathLoose(resolve(cwd, outDir))
   if (isInside(outReal, state.root)) throw new ReviewPacketError(`--out-dir 不能在仓库内：${outReal}`)
   const markdown = buildPacket({
     state,
-    spec: { name: displayName(specPath, state.root), text: specText },
-    evidence: evidenceItems.map(item => ({ name: displayName(item.path, state.root), text: item.text })),
+    spec: specInput,
+    evidence: evidenceInputs,
     generatedAt: now.toISOString().slice(0, 10),
   })
-  mkdirSync(outReal, { recursive: true })
-  const outPath = join(outReal, `${sanitizeBranch(state.branch)}-${state.headSha.slice(0, 12)}.md`)
-  writeFileSync(outPath, markdown)
+  mkdirSync(outReal, { recursive: true, mode: 0o700 })
+  const hash8 = inputHash(specText, evidenceItems.map(item => item.text))
+  const outPath = join(outReal, `${sanitizeBranch(state.branch)}-${state.headSha.slice(0, 12)}-${hash8}.md`)
+  writeFileSync(outPath, markdown, { mode: 0o600 })
+  chmodSync(outPath, 0o600)
   return outPath
 }
 
