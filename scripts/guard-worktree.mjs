@@ -17,7 +17,7 @@
 
 import { spawnSync } from 'node:child_process'
 import { lstatSync, realpathSync, readFileSync } from 'node:fs'
-import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { pathToFileURL, fileURLToPath } from 'node:url'
 
 const MAIN_PLUGINS_MARK = `${sep}omnimux-dsh${sep}plugins${sep}`
@@ -149,21 +149,40 @@ export function isEphemeralPath(fullPath) {
   return EPHEMERAL_SUFFIXES.some((suffix) => base.endsWith(suffix))
 }
 
+// Precondition: fullPath is an absolute path (all callers pass toFullPath /
+// canonicalTarget output). Relative inputs return false — resolve first.
 export function isProtectedScope(fullPath, cwd) {
   const root = gitRoot(cwd) || cwd
   const normalizedFull = String(fullPath || '').replace(/\\/g, '/')
-  const normalizedRoot = String(root || '').replace(/\\/g, '/').replace(/\/+$/, '')
+  // git rev-parse 输出真实路径（macOS 上 /tmp 会解析为 /private/tmp），
+  // 但 fullPath 可能携带调用方传入的逻辑路径；两边都要归一化后再比较。
+  let normalizedRoot = String(root || '').replace(/\\/g, '/').replace(/\/+$/, '')
+  let normalizedFullReal = normalizedFull
+  try {
+    if (normalizedRoot && normalizedRoot.startsWith('/')) normalizedRoot = realpathSync(normalizedRoot)
+    if (normalizedFull.startsWith('/')) {
+      const resolvedAncestor = canonicalTarget(normalizedFull)
+      if (resolvedAncestor) normalizedFullReal = resolvedAncestor
+    }
+  } catch {
+    // canonicalTarget/realpathSync 失败时按原值兜底，交给后面的 marker 兜底分支
+  }
 
-  let relative = normalizedFull
-  if (normalizedRoot && normalizedFull.startsWith(normalizedRoot + '/')) {
-    relative = normalizedFull.slice(normalizedRoot.length + 1)
-  } else if (normalizedFull.startsWith('/')) {
+  let relative = normalizedFullReal
+  const insideRepo = normalizedRoot && normalizedFullReal.startsWith(normalizedRoot + '/')
+  if (insideRepo) {
+    relative = normalizedFullReal.slice(normalizedRoot.length + 1)
+  } else if (normalizedFullReal.startsWith('/')) {
     const marker = '/omnimux-dsh/'
-    const idx = normalizedFull.lastIndexOf(marker)
+    const idx = normalizedFullReal.lastIndexOf(marker)
     if (idx !== -1) {
-      relative = normalizedFull.slice(idx + marker.length)
+      relative = normalizedFullReal.slice(idx + marker.length)
     }
   }
+
+  // 仓库外路径（如 ~/.agents/skills 绝对展开后）不受仓库保护目录约束；
+  // relative 未被改写 = 两条剥壳分支都没走，前缀兜底只是误伤
+  if (!insideRepo && relative === normalizedFullReal) return false
 
   // 1. 核心目录前缀匹配
   if (PROTECTED_DIR_PREFIXES.some((prefix) => relative.startsWith(prefix) || relative.includes('/' + prefix))) {
@@ -259,7 +278,13 @@ export function isGitTracked(fullPath, cwd) {
 
 function toFullPath(filePath, cwd) {
   if (!filePath) return ''
-  return filePath.startsWith('/') || isAbsolute(filePath) ? filePath : resolve(cwd, filePath)
+  const home = homedirValue()
+  const expanded = filePath === '~'
+    ? home
+    : filePath.startsWith('~/')
+      ? join(home, filePath.slice(2))
+      : filePath
+  return expanded.startsWith('/') || isAbsolute(expanded) ? expanded : resolve(cwd, expanded)
 }
 
 export function getUnpushedCommits(cwd) {
