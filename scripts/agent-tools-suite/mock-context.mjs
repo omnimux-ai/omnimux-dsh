@@ -21,12 +21,22 @@ export function createMockToolContext(options = {}) {
 
   const logs = [];
   const registeredTools = new Map();
+  // 插件注册的系统提示词贡献（section 与 context），供第 5 层上下文预算度量
+  const promptContributions = [];
+
+  const recordPrompt = (kind) => (contribution) => {
+    if (contribution && typeof contribution.name === 'string') {
+      promptContributions.push({ kind, ...contribution });
+    }
+    return () => {};
+  };
 
   const ctx = {
     sessionId,
     workspaceDir: tempDir,
     isReadOnly,
     logs,
+    promptContributions,
     tools: {
       register(tool) {
         if (!tool || !tool.name) return;
@@ -43,7 +53,8 @@ export function createMockToolContext(options = {}) {
       },
     },
     systemPrompt: {
-      section: () => () => {},
+      section: recordPrompt('section'),
+      context: recordPrompt('context'),
     },
     logger: {
       info: (...args) => logs.push({ level: 'info', args }),

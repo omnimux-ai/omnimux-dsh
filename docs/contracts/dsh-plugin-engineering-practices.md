@@ -77,7 +77,31 @@ subsystem: "global"
 - **文档跟代码一起改**：受影响 README/JSDoc 同 PR 更新；文档只写现在时，一个事实一个家。
 - **破坏性/外部可感知变更立刻登记**（官方对应 upgrade-guide；本仓对应 release notes / RC 验收记录）。
 
-## 九、从官方剔除、不适用的部分
+## 九、上下文预算与缓存站位
+
+每次对话请求都要带上全部工具定义和系统提示词段，用不用都占上下文；系统提示词段一旦文本变化，宿主会原地替换系统消息，使缓存前缀失效（[官方系统提示词文档](https://deepseek-harness.github.io/deepseek-harness/reference/subsystems/system-prompt.md)）。规则改编自 MiniMax [mcode-stack](https://github.com/MiniMax-AI/mcode-stack) 的 `tool-budget-audit` / `context-tax-audit`（MIT）。
+
+- **按用户意图合并工具**：不按接口一对一映射；能用一个参数区分的变体（如图片 / 视频 / 音频提交）不拆成多个描述几乎相同的工具。描述写清返回格式，相似工具的描述必须可区分。
+- **固定内容走 `systemPrompt.section`，每轮变化的内容走 `systemPrompt.context`**：section 文本里不放时间、随机数、实时状态。
+- **精度够用即可**：需要时间就到日期或分钟，不带秒；数字不写多余位数。
+- **不改已写入的历史**：提醒只影响之后的轮次。
+
+门禁：`node scripts/test-agent-tools.mjs --budget`（第 5 层，`scripts/agent-tools-suite/budget.mjs`；CI「Agent tool context budget ratchet」步骤在构建后运行）按字符数（不是 token 数）报告各插件工具定义与提示词段体积，并对照提交的 `budget-baseline.json` 只拦**新增**问题：
+
+| 失败条件 | 阈值 |
+| --- | --- |
+| 基线外的新工具定义（name + description + parameters 序列化）超长 | > 2,000 字符（存量 p90 为 1,614） |
+| 插件工具定义总量增长 | > 基线 × 1.10 |
+| 同插件新出现描述高度相似的工具对 | 字符二元组 Dice ≥ 0.8 |
+| 新出现易变 section（两组不同时钟/随机序列下渲染结果不同） | 任一 |
+| 基线里度量过的插件或提示词段这次没量到（装载失败、缺构建产物） | 任一 |
+| 新出现求值抛错的 section | 任一 |
+
+- 存量问题只报告；确需放行时运行 `node scripts/test-agent-tools.mjs --budget --write-baseline --reason "<≥8 字理由>"`，理由写入基线并在 PR 中说明。写基线前须先构建全部插件，缺构建产物时拒绝写入。
+- 从未装载成功的插件列出原因、不纳入度量；静态正则提取的工具参数为空，只计数不计体积。补装在一次性 HOME 下执行，不写开发机主目录。
+- 易变检测替换 `Date.now` / `new Date()` / `performance.now` / `Math.random` / `crypto.randomUUID`，用同一合成会话求值两次；读文件、网络或全局可变状态的段落测不出来。
+
+## 十、从官方剔除、不适用的部分
 
 官方 AGENTS.md 里以下内容是「框架内部」或「阶段性」，插件侧不需要：
 

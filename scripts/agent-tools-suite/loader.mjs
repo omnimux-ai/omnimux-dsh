@@ -3,7 +3,8 @@
  * @description 全局工具动态加载器：从各插件中扫描并收集全量 DSH Agent 工具
  */
 
-import { readdirSync, existsSync, readFileSync } from 'node:fs';
+import { readdirSync, existsSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createMockToolContext } from './mock-context.mjs';
@@ -59,10 +60,22 @@ function extractStaticTools(pluginDir) {
  * @returns {Promise<Map<string, object>>} toolName -> ToolObject
  */
 export async function loadAllPluginTools(rootDir = process.cwd()) {
+  const { tools } = await loadAllPluginSurfaces(rootDir);
+  return tools;
+}
+
+/**
+ * 一次装配同时收集工具与系统提示词贡献（第 5 层上下文预算使用）
+ * @param {string} rootDir 仓库根目录
+ * @returns {Promise<{ tools: Map<string, object>, prompts: Array<object>, plugins: Array<{ name: string, dynamic: boolean }> }>}
+ */
+export async function loadAllPluginSurfaces(rootDir = process.cwd()) {
   const pluginsDir = join(rootDir, 'plugins');
   const allTools = new Map();
+  const prompts = [];
+  const plugins = [];
 
-  if (!existsSync(pluginsDir)) return allTools;
+  if (!existsSync(pluginsDir)) return { tools: allTools, prompts, plugins };
 
   const pluginFolders = readdirSync(pluginsDir, { withFileTypes: true })
     .filter((d) => d.isDirectory() && !d.name.startsWith('.'))
@@ -121,8 +134,107 @@ export async function loadAllPluginTools(rootDir = process.cwd()) {
       }
     }
 
+    for (const contribution of mockCtx.promptContributions) {
+      prompts.push({ ...contribution, plugin: pluginName });
+    }
+    plugins.push({ name: pluginName, dynamic: dynamicSuccess });
+
     mockCtx.cleanup();
   }
 
-  return allTools;
+  return { tools: allTools, prompts, plugins };
+}
+
+function packageEntry(pluginDir) {
+  const pkgPath = join(pluginDir, 'package.json');
+  if (!existsSync(pkgPath)) return null;
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+  const root = pkg.exports?.['.'];
+  const rel = typeof root === 'string' ? root : root?.default || root?.import || pkg.main;
+  return rel ? join(pluginDir, rel) : null;
+}
+
+/**
+ * 第 5 层专用装配：在 loadAllPluginSurfaces 基础上，对动态装载失败的插件再按 package 入口、
+ * 以最小宿主桩（provide / inject / effect / on / get）补装一次，只用于体积度量。
+ * 不影响第 1–4 层的覆盖面；补装仍失败的插件如实记录原因，不伪造度量。
+ * @param {string} rootDir 仓库根目录
+ * @param {Awaited<ReturnType<typeof loadAllPluginSurfaces>>} [loaded] 已装配结果，传入可避免重复装载
+ */
+export async function loadBudgetSurfaces(rootDir = process.cwd(), loaded) {
+  const base = loaded ?? (await loadAllPluginSurfaces(rootDir));
+  const tools = new Map(base.tools);
+  const prompts = [...base.prompts];
+  const plugins = [];
+
+  // 补装会执行插件 apply；把 HOME / DSH_HOME 指向一次性目录，避免在开发机真实主目录留下文件
+  const isolatedHome = mkdtempSync(join(tmpdir(), 'dsh-budget-home-'));
+  const savedEnv = { HOME: process.env.HOME, DSH_HOME: process.env.DSH_HOME };
+  process.env.HOME = isolatedHome;
+  process.env.DSH_HOME = join(isolatedHome, '.dsh');
+  try {
+    for (const plugin of base.plugins) {
+      plugins.push(await probePlugin(rootDir, plugin, tools, prompts));
+    }
+  } finally {
+    for (const [key, value] of Object.entries(savedEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    rmSync(isolatedHome, { recursive: true, force: true });
+  }
+
+  return { tools, prompts, plugins };
+}
+
+async function probePlugin(rootDir, plugin, tools, prompts) {
+  {
+    if (plugin.dynamic) return plugin;
+    const pluginDir = join(rootDir, 'plugins', plugin.name);
+    const entry = packageEntry(pluginDir);
+    if (!entry || !existsSync(entry)) {
+      return { ...plugin, loadError: entry ? `入口产物不存在: ${entry}` : 'package.json 未声明入口' };
+    }
+    const ctx = createMockToolContext();
+    Object.assign(ctx, {
+      provide() {},
+      // 只把 systemPrompt / tools 交给回调（插件常在 inject 回调里注册提示词段）；其余服务视为不可用
+      inject(deps, callback) {
+        const wanted = Array.isArray(deps) ? deps : [];
+        if (typeof callback === 'function' && wanted.every((name) => name === 'systemPrompt' || name === 'tools')) {
+          callback(ctx);
+        }
+        return () => {};
+      },
+      effect(fn) {
+        const dispose = fn();
+        return typeof dispose === 'function' ? dispose : () => {};
+      },
+      on() {
+        return () => {};
+      },
+      get() {
+        return undefined;
+      },
+    });
+    try {
+      const mod = await import(pathToFileURL(entry).href);
+      if (typeof mod.apply !== 'function') throw new Error('入口未导出 apply');
+      // 规格 §5「不联网」：catalog/apps 的 remote 默认 true，会在补装时取远端价目，
+      // 显式关掉使预算探针保持离线。
+      await mod.apply(ctx, { catalog: { remote: false }, apps: { remote: false } });
+      for (const [name, tool] of tools) {
+        if (tool._plugin === plugin.name && tool._source === 'static') tools.delete(name);
+      }
+      for (const tool of ctx.tools.list()) {
+        tools.set(tool.name, { ...tool, _plugin: plugin.name, _source: 'budget-probe' });
+      }
+      for (const contribution of ctx.promptContributions) prompts.push({ ...contribution, plugin: plugin.name });
+      return { ...plugin, dynamic: true, probe: true };
+    } catch (err) {
+      return { ...plugin, loadError: String(err?.message || err).split('\n')[0].slice(0, 160) };
+    } finally {
+      ctx.cleanup();
+    }
+  }
 }
