@@ -630,6 +630,40 @@ describe('guard-worktree bash command write safety guard (防命令行绕过篡�
     )
   })
 
+  it('allows writes outside the repo even when they match a protected prefix (#3853)', () => {
+    // /Users/x/.agents/skills/x 是仓库外的家目录路径，不能被 /.agents/ 前缀误伤
+    assert.equal(
+      decideBashCommand({
+        command: `ln -sfn /tmp/skill-src /tmp/.agents/skills/x`,
+        cwd: mainRepoRoot,
+      }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({
+        command: `ln -sfn /tmp/skill-src ${join('/private/tmp', 'outside.agents', 'x')}`,
+        cwd: mainRepoRoot,
+      }).decision,
+      'allow',
+    )
+    // 展开 ~ 后仍落在仓库外
+    assert.equal(
+      decideBashCommand({
+        command: `ln -sfn /tmp/skill-src ~/.agents/skills/x`,
+        cwd: mainRepoRoot,
+      }).decision,
+      'allow',
+    )
+    // 仓库内同名受保护前缀依然 deny（通过绝对路径命中主 checkout）
+    assert.equal(
+      decideBashCommand({
+        command: `ln -sfn /tmp/src ${mainRepoRoot}/.agents/skills/x`,
+        cwd: mainRepoRoot,
+      }).decision,
+      'deny',
+    )
+  })
+
   it('strictly allows legitimate git synchronization commands on the main checkout', () => {
     const gitSyncCommands = [
       'git pull origin main',
