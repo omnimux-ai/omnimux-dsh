@@ -20,7 +20,7 @@ Agent 在 Bash 里执行 `ln -sfn <skill-src> ~/.agents/skills/<name>`（或其�
 
 | # | 场景 | 期望 |
 |---|---|---|
-| A1 | `ln -sfn src ~/.agents/skills/x`（`~` 在 hook 里以 cwd 为基解析为 `cwd/~/.agents/...`，命中仓内 `.agents/`）| 视实现而定：若视为仓外则 allow，若 `~` 先于 isProtectedScope 被 shell 展开则无此场景 |
+| A1 | `ln -sfn src ~/.agents/skills/x`（`toFullPath` 将 `~` 展开为 `$HOME`，落在仓库外）| `decision: 'allow'` |
 | A2 | `ln -sfn src /Users/x/.agents/skills/x`（绝对路径，在仓库外）| `decision: 'allow'` |
 | A3 | `cp src /tmp/.agents/x` | `decision: 'allow'`（`/tmp` 在仓库外）|
 | A4 | 仓内 `.agents/skills/x` 写目标 | `decision: 'deny'`（回归不变）|

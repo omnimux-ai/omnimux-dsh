@@ -149,6 +149,8 @@ export function isEphemeralPath(fullPath) {
   return EPHEMERAL_SUFFIXES.some((suffix) => base.endsWith(suffix))
 }
 
+// Precondition: fullPath is an absolute path (all callers pass toFullPath /
+// canonicalTarget output). Relative inputs return false — resolve first.
 export function isProtectedScope(fullPath, cwd) {
   const root = gitRoot(cwd) || cwd
   const normalizedFull = String(fullPath || '').replace(/\\/g, '/')
