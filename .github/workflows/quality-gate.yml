@@ -438,6 +438,13 @@ jobs:
           test -s plugins/omnimux-workflow/dist/index.js
           test -s plugins/omnimux-workflow/lib/canvas.js
 
+      # 第 5 层上下文预算棘轮：依赖上一步的 workflow 产物与 apps host 产物；规则见 dsh-plugin-engineering-practices §九
+      - name: Agent tool context budget ratchet
+        run: |
+          node plugins/omnimux-apps/scripts/build-host.mjs
+          test -s plugins/omnimux-apps/dist/index.js
+          node scripts/test-agent-tools.mjs --budget
+
       # verify-plugin-load 在真实 Cordis 内加载每个插件（声明的 inject 由兄弟桩纤维提供），
       # 替代原静态 verify-dsh-contracts。插件单测见 plugin-tests 矩阵。
       - name: Plugin load check (Cordis runtime)

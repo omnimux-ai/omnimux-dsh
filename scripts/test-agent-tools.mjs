@@ -46,11 +46,14 @@ const runExec = runAll || args.includes('--exec');
 const runEval = runAll || args.includes('--eval');
 const runSecurity = runAll || args.includes('--security');
 const writeBudgetBaseline = args.includes('--write-baseline');
-const runBudget = runAll || args.includes('--budget') || writeBudgetBaseline;
+// 第 5 层需要全部插件构建产物，只在显式 --budget 时运行（CI 在构建后单独调用），默认入口行为不变
+const runBudget = args.includes('--budget') || writeBudgetBaseline;
 
 function argValue(flag) {
   const index = args.indexOf(flag);
-  return index >= 0 ? args[index + 1] : undefined;
+  const value = index >= 0 ? args[index + 1] : undefined;
+  // 下一个参数本身是开关（如 --budget）时视为未提供，避免被误当成理由
+  return typeof value === 'string' && !value.startsWith('--') ? value : undefined;
 }
 
 async function main() {
@@ -181,6 +184,11 @@ async function main() {
     for (const key of report.volatile) {
       console.log(`  ${colors.yellow}⚠ 易变提示词段（每轮变化会使系统消息原地替换，应改用 systemPrompt.context）: ${key}${colors.reset}`);
     }
+    for (const item of report.renderErrors) {
+      console.log(`  ${colors.yellow}⚠ 提示词段求值失败（无法判定易变）: ${item.key}: ${item.error}${colors.reset}`);
+    }
+    const dynamicSections = report.prompts.filter((p) => p.dynamic).length;
+    console.log(`  提示词段 ${report.prompts.length} 个，其中函数型 ${dynamicSections} 个参与易变检测`);
 
     if (writeBudgetBaseline) {
       // 构建产物缺失时写基线会漏掉整个插件，下次构建后被误判为「新增」；必须先构建

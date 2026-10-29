@@ -3,7 +3,8 @@
  * @description 全局工具动态加载器：从各插件中扫描并收集全量 DSH Agent 工具
  */
 
-import { readdirSync, existsSync, readFileSync } from 'node:fs';
+import { readdirSync, existsSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createMockToolContext } from './mock-context.mjs';
@@ -166,21 +167,45 @@ export async function loadBudgetSurfaces(rootDir = process.cwd(), loaded) {
   const prompts = [...base.prompts];
   const plugins = [];
 
-  for (const plugin of base.plugins) {
-    if (plugin.dynamic) {
-      plugins.push(plugin);
-      continue;
+  // 补装会执行插件 apply；把 HOME / DSH_HOME 指向一次性目录，避免在开发机真实主目录留下文件
+  const isolatedHome = mkdtempSync(join(tmpdir(), 'dsh-budget-home-'));
+  const savedEnv = { HOME: process.env.HOME, DSH_HOME: process.env.DSH_HOME };
+  process.env.HOME = isolatedHome;
+  process.env.DSH_HOME = join(isolatedHome, '.dsh');
+  try {
+    for (const plugin of base.plugins) {
+      plugins.push(await probePlugin(rootDir, plugin, tools, prompts));
     }
+  } finally {
+    for (const [key, value] of Object.entries(savedEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    rmSync(isolatedHome, { recursive: true, force: true });
+  }
+
+  return { tools, prompts, plugins };
+}
+
+async function probePlugin(rootDir, plugin, tools, prompts) {
+  {
+    if (plugin.dynamic) return plugin;
     const pluginDir = join(rootDir, 'plugins', plugin.name);
     const entry = packageEntry(pluginDir);
     if (!entry || !existsSync(entry)) {
-      plugins.push({ ...plugin, loadError: entry ? `入口产物不存在: ${entry}` : 'package.json 未声明入口' });
-      continue;
+      return { ...plugin, loadError: entry ? `入口产物不存在: ${entry}` : 'package.json 未声明入口' };
     }
     const ctx = createMockToolContext();
     Object.assign(ctx, {
       provide() {},
-      inject() {},
+      // 只把 systemPrompt / tools 交给回调（插件常在 inject 回调里注册提示词段）；其余服务视为不可用
+      inject(deps, callback) {
+        const wanted = Array.isArray(deps) ? deps : [];
+        if (typeof callback === 'function' && wanted.every((name) => name === 'systemPrompt' || name === 'tools')) {
+          callback(ctx);
+        }
+        return () => {};
+      },
       effect(fn) {
         const dispose = fn();
         return typeof dispose === 'function' ? dispose : () => {};
@@ -203,13 +228,11 @@ export async function loadBudgetSurfaces(rootDir = process.cwd(), loaded) {
         tools.set(tool.name, { ...tool, _plugin: plugin.name, _source: 'budget-probe' });
       }
       for (const contribution of ctx.promptContributions) prompts.push({ ...contribution, plugin: plugin.name });
-      plugins.push({ ...plugin, dynamic: true, probe: true });
+      return { ...plugin, dynamic: true, probe: true };
     } catch (err) {
-      plugins.push({ ...plugin, loadError: String(err?.message || err).split('\n')[0].slice(0, 160) });
+      return { ...plugin, loadError: String(err?.message || err).split('\n')[0].slice(0, 160) };
     } finally {
       ctx.cleanup();
     }
   }
-
-  return { tools, prompts, plugins };
 }

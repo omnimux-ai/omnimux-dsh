@@ -46,9 +46,20 @@
 ## 7. 实施记录（阶段 0 实测）
 
 - 现有 loader 只尝试 `src/index.js`，hub `omnimux`、`omnimux-workflow`、`omnimux-market`、`omnimux-video`、`omnimux-viewer` 动态装载失败，最大的体积来源未被度量。第 5 层改用独立装配 `loadBudgetSurfaces`：按 package 入口、以最小宿主桩补装一次，只用于体积度量，不扩大第 1–4 层覆盖面（hub 补装后有 14 个工具在第 2 层空参调用下报错，混入会引入与本任务无关的失败）。
-- 补装后实测：155 个工具定义共 140,127 字符，9 个提示词段共 16,222 字符；单工具 p50 443 / p90 1,614 / p95 2,200；最大 `workflow_director` 33,065 字符。`omnimux-browser`（需宿主网关流）、`omnimux-forms`（需 `webServer`）仍无法装载，如实列为未纳入。
+- 补装后实测（首轮，F3 修复前）：155 个工具定义共 140,127 字符，9 个提示词段共 16,222 字符；单工具 p50 443 / p90 1,614 / p95 2,200；最大 `workflow_director` 33,065 字符。`omnimux-browser`（需宿主网关流）、`omnimux-forms`（需 `webServer`）仍无法装载，如实列为未纳入。
 - 相似度阈值 0.6 时命中 30 对，多为同族 CRUD 模板化描述（噪声）；提高到 0.8 后剩 5 对，均为真正可合并的候选（图片/视频/音频提交三连、TikTok/YouTube 搜索、灵感 get/delete）。
 - 当前没有易变 section。写基线要求先构建全部插件，避免缺产物插件下次构建后被误判为新增。
+
+## 8. 净室评审退修（head 6865e6607，REQUEST_CHANGES）
+
+- F1 治理库存未登记：`budget.mjs` 登记为 `ciRequired`（f616c34c5）。
+- F2 门禁失灵静默放行：基线记录 `measuredPlugins` / `sectionKeys` / `renderErrors`；基线里度量过的插件或 section 缺席即失败。实测移走 `omnimux-workflow/dist` 后 exit 1（`plugin-unmeasured`）。
+- F3 market 7 个 section 漏抓：补装桩的 `inject` 对只依赖 `systemPrompt`/`tools` 的回调同步执行。补齐后 16 个 section（其中函数型 3 个）共 21,751 字符。
+- F4 易变检测口径窄、抛错崩溃：同时替换 `new Date()`、`performance.now`、`crypto.randomUUID`，用同一合成会话求值；抛错记 `renderError`，新增抛错算失败。
+- F5 未接入 CI：新增 CI「Agent tool context budget ratchet」步骤，放在 workflow 构建之后，并先构建 apps host。
+- F6 测试不走真实路径：新增 mock 记录、缺席失败、口径扩展、基线结构校验的用例，并断言仓库基线覆盖 hub 且 section ≥10。
+- F7 默认入口行为变化、写真实 HOME：第 5 层改为只在显式 `--budget` 时运行；补装在一次性 HOME/DSH_HOME 下执行。`.config/omnimux/profile.json` 是第 1–4 层装载时就有的存量写入，不属于本任务。
+- F8 注释章节号、F9 `--reason` 被开关吞掉：均已修。
 
 ## 假设
 

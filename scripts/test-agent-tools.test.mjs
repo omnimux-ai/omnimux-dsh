@@ -15,8 +15,11 @@ import {
   buildBudgetReport,
   descriptionSimilarity,
   evaluateAgainstBaseline,
+  measurePrompt,
   readBaseline,
+  validateBaseline,
 } from './agent-tools-suite/budget.mjs';
+import { createMockToolContext } from './agent-tools-suite/mock-context.mjs';
 
 describe('DSH Agent Tools Unified Test Suite', async () => {
   const allToolsMap = await loadAllPluginTools(process.cwd());
@@ -153,10 +156,67 @@ describe('Layer 5: 上下文预算棘轮', () => {
     assert.throws(() => baselineFromReport(report, undefined), /--reason/);
     assert.throws(() => baselineFromReport(report, '太短'), /--reason/);
     assert.throws(() => readBaseline('/nonexistent/budget-baseline.json'), /不存在/);
+    const valid = baselineFromReport(report, '冻结夹具存量用于测试');
+    assert.equal(validateBaseline(valid), null);
+    assert.match(validateBaseline({ ...valid, version: 0 }), /version/);
+    const { tools: _dropped, ...missingTools } = valid;
+    assert.match(validateBaseline(missingTools), /tools/);
+    assert.match(validateBaseline({ ...valid, measuredPlugins: 'demo' }), /measuredPlugins/);
   });
 
   test('仓库基线可读，且描述相似度对无关文本接近 0', () => {
-    readBaseline(new URL('./agent-tools-suite/budget-baseline.json', import.meta.url).pathname);
+    const baseline = readBaseline(new URL('./agent-tools-suite/budget-baseline.json', import.meta.url).pathname);
+    assert.ok(baseline.measuredPlugins.includes('omnimux'), '基线必须覆盖 hub 插件');
+    assert.ok(baseline.sectionKeys.length >= 10, '基线必须捕获到各插件注册的提示词段');
     assert.ok(descriptionSimilarity('上传素材到资产库', 'Fetch YouTube channel stats') < 0.1);
+  });
+
+  test('基线里度量过的插件或提示词段这次缺席时失败，不静默放行', () => {
+    const report = buildBudgetReport(fixture());
+    const baseline = baselineFromReport(report, '冻结夹具存量用于测试');
+    const withoutOther = buildBudgetReport(
+      surfaces([...fixture().tools.values()].filter((t) => t._plugin !== 'other'), fixture().prompts),
+    );
+    assert.deepEqual(
+      evaluateAgainstBaseline(withoutOther, baseline).map((f) => `${f.kind}:${f.subject}`),
+      ['plugin-unmeasured:other'],
+    );
+    const withoutFixed = buildBudgetReport(surfaces([...fixture().tools.values()], fixture().prompts.filter((p) => p.name !== 'demo:fixed')));
+    assert.deepEqual(
+      evaluateAgainstBaseline(withoutFixed, baseline).map((f) => `${f.kind}:${f.subject}`),
+      ['section-unmeasured:demo:demo:fixed'],
+    );
+    assert.deepEqual(evaluateAgainstBaseline(buildBudgetReport(surfaces([])), baseline).map((f) => f.kind).sort(), [
+      'plugin-unmeasured',
+      'plugin-unmeasured',
+    ]);
+  });
+
+  test('易变检测覆盖 new Date()、performance.now 与 randomUUID；求值抛错记为 renderError 不崩溃', () => {
+    const section = (name, text) => ({ plugin: 'p', kind: 'section', name, text });
+    assert.equal(measurePrompt(section('date', () => new Date().toISOString().slice(0, 16))).volatile, true);
+    assert.equal(measurePrompt(section('day', () => new Date().toISOString().slice(0, 10))).volatile, false);
+    assert.equal(measurePrompt(section('perf', () => String(Math.floor(performance.now())))).volatile, true);
+    assert.equal(measurePrompt(section('uuid', () => crypto.randomUUID())).volatile, true);
+    assert.equal(measurePrompt(section('session', (a) => `s=${a.agent.session.id}`)).volatile, false);
+    const broken = measurePrompt(section('broken', (a) => a.missing.deep));
+    assert.equal(broken.volatile, false);
+    assert.match(broken.renderError, /missing|undefined/);
+    const empty = baselineFromReport(buildBudgetReport(surfaces([])), '空基线仅用于本测试');
+    const report = buildBudgetReport(surfaces([], [section('broken', (a) => a.missing.deep)]));
+    assert.deepEqual(evaluateAgainstBaseline(report, empty).map((f) => f.kind), ['section-render-error']);
+    assert.ok(Math.abs(Date.now() - new Date().getTime()) < 1000, '求值后必须恢复真实时钟');
+  });
+
+  test('mock 上下文记录 section 与 context，并返回 disposer', () => {
+    const ctx = createMockToolContext();
+    try {
+      const dispose = ctx.systemPrompt.section({ name: 's', order: 1, text: 'a' });
+      ctx.systemPrompt.context({ name: 'c', order: 1, text: () => 'b' });
+      assert.equal(typeof dispose, 'function');
+      assert.deepEqual(ctx.promptContributions.map((p) => `${p.kind}:${p.name}`), ['section:s', 'context:c']);
+    } finally {
+      ctx.cleanup();
+    }
   });
 });

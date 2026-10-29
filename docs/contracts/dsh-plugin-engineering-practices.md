@@ -86,7 +86,7 @@ subsystem: "global"
 - **精度够用即可**：需要时间就到日期或分钟，不带秒；数字不写多余位数。
 - **不改已写入的历史**：提醒只影响之后的轮次。
 
-门禁：`pnpm test:agent-tools` 第 5 层（`scripts/agent-tools-suite/budget.mjs`）按字符数（不是 token 数）报告各插件工具定义与提示词段体积，并对照提交的 `budget-baseline.json` 只拦**新增**问题：
+门禁：`node scripts/test-agent-tools.mjs --budget`（第 5 层，`scripts/agent-tools-suite/budget.mjs`；CI「Agent tool context budget ratchet」步骤在构建后运行）按字符数（不是 token 数）报告各插件工具定义与提示词段体积，并对照提交的 `budget-baseline.json` 只拦**新增**问题：
 
 | 失败条件 | 阈值 |
 | --- | --- |
@@ -94,9 +94,12 @@ subsystem: "global"
 | 插件工具定义总量增长 | > 基线 × 1.10 |
 | 同插件新出现描述高度相似的工具对 | 字符二元组 Dice ≥ 0.8 |
 | 新出现易变 section（两组不同时钟/随机序列下渲染结果不同） | 任一 |
+| 基线里度量过的插件或提示词段这次没量到（装载失败、缺构建产物） | 任一 |
+| 新出现求值抛错的 section | 任一 |
 
 - 存量问题只报告；确需放行时运行 `node scripts/test-agent-tools.mjs --budget --write-baseline --reason "<≥8 字理由>"`，理由写入基线并在 PR 中说明。写基线前须先构建全部插件，缺构建产物时拒绝写入。
-- 动态装载失败的插件列出原因、不纳入度量；静态正则提取的工具参数为空，只计数不计体积。易变检测只覆盖时钟与随机数，读文件、网络或全局可变状态的段落测不出来。
+- 从未装载成功的插件列出原因、不纳入度量；静态正则提取的工具参数为空，只计数不计体积。补装在一次性 HOME 下执行，不写开发机主目录。
+- 易变检测替换 `Date.now` / `new Date()` / `performance.now` / `Math.random` / `crypto.randomUUID`，用同一合成会话求值两次；读文件、网络或全局可变状态的段落测不出来。
 
 ## 十、从官方剔除、不适用的部分
 
