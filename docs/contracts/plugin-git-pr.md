@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-24"
-updated: "2026-09-22"
+updated: "2026-10-29"
 authors: ["x", "agent-architect"]
 subsystem: "global"
 ---
@@ -83,6 +83,7 @@ R0/R1 不在无人值守机器预授权范围内，由协调 Agent 接收现场�
 - `qa:pass` 只能由已授权的 CI 聚合机制在合入前静态与测试真实通过后写入；不表示 Dev 已物化或验收通过。本地 Agent、PR 作者和当前 `auto-pipeline` 不得自打该标签。
 - 只有 GitHub 返回 `state=MERGED`、`mergedAt` 和 merge commit 才算合入确认。未确认前不得执行合并后物化或清理 worktree。
 - 模型合同遵循 [model-api-authority](model-api-authority.md)，不得用真实模型请求代替官方文档与离线合同验证。
+- 泄露门禁：`quality-gate.yml` 的 `leak-gate` job 经 `static-and-tests` 成为 required check，只扫本次变更的提交（gitleaks + 根目录 `.gitleaks.toml` 的家目录路径规则），并用仓库 secret `LEAK_DENYLIST_REGEX` 拦截新增行里的部署敏感字面量；该 secret 只能由维护者设置，缺失时 PR 只告警、Merge Queue 直接失败，敏感值不得写进仓库或配置文件。
 
 ## 合并后与收尾
 

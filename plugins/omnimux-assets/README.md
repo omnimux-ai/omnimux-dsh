@@ -32,7 +32,7 @@ OmniMux **创作资产库**（v0.2）：一条资产是有名字、类型、描�
 日常进 App：
 
 ```sh
-cd /Users/x/Desktop/Project/omnimux-desktop-fork
+cd <omnimux-desktop-fork 检出目录>
 corepack yarn omnimux:sync omnimux-assets
 corepack yarn omnimux:restart
 ```
@@ -126,7 +126,7 @@ cloud-catalog/
 
 生成脚本 `scripts/build-cloud-assets-catalog.mjs`：
 
-- 默认读 `/Users/x/Desktop/Project/OPC/资产库`，可用 `--assets-root=` 换根、`--out=` 换输出、`--dry-run` 只统计
+- 必须用 `--assets-root=<OPC 资产库根目录>` 指定扫描根（无默认值，缺省即报错退出）；`--out=` 换输出、`--dry-run` 只统计
 - 每个数据源都可缺失：缺源只让该分类变空，不会让整次构建失败
 - 灵感社区是独立系统，按目录名跳过；只有专业生图画廊与 Loomi 两处按精确路径读它的素材
 - 素材路径写 `file:<相对 assets-root 的路径>`；同时有本地副本与可公开访问的远端地址时，远端地址存进

@@ -22,7 +22,8 @@ DeepSeek Harness 插件共用 UI 包。扩容结构性组件与原子控件：Bu
 ## 安装
 
 ```bash
-pnpm add dsh-ui-kit@file:/Users/x/Desktop/Project/dsh-plugin/personal/dsh-ui-kit
+# 在本仓 plugins/<plugin>/ 下（与现有插件的 package.json 写法一致）
+pnpm add dsh-ui-kit@file:../../packages/dsh-ui-kit
 ```
 
 peer：`react`、`react-dom`、`@deepseek-ai/dsh-client-ui-primitives`（与宿主 ModuleLoader 共享，零冗余打包）。
@@ -284,7 +285,7 @@ import { GenWaveCard } from 'dsh-ui-kit'
 ## 本地开发与构建
 
 ```bash
-cd /Users/x/Desktop/Project/dsh-plugin/personal/dsh-ui-kit
+cd packages/dsh-ui-kit   # 从本仓根目录出发
 pnpm typecheck
 pnpm build
 node --test src/kit-export.test.js

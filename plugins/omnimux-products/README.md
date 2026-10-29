@@ -19,7 +19,7 @@ OmniMux **产品库**（P0）：一条产品是名称 + 怎么卖 + 可选主图
 日常进 App：
 
 ```sh
-cd /Users/x/Desktop/Project/omnimux-desktop-fork
+cd <omnimux-desktop-fork 检出目录>
 corepack yarn omnimux:sync omnimux-products
 corepack yarn omnimux:restart
 ```

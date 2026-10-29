@@ -567,9 +567,104 @@ jobs:
       - name: Full-repo secret & extension outbound scan
         run: node scripts/auto-qa-gate.mjs . --all
 
+  # 泄露门禁（Issue #3851）：只扫本次变更的提交（BASE..HEAD），存量不阻塞。
+  # gitleaks 默认规则 + .gitleaks.toml 的家目录路径规则；部署相关字面量（源站地址、
+  # 内部主机别名）只放在仓库 secret LEAK_DENYLIST_REGEX，公开配置里不写。
+  # fork PR 拿不到 secret 时只告警；merge_group 一定带 secret，缺失即失败。
+  # 用 CLI + sha256 而非 gitleaks-action：后者 v2 对组织仓库要求 license。
+  leak-gate:
+    name: Leak gate (gitleaks + denylist)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+      GITLEAKS_VERSION: 8.30.1
+      # gitleaks_8.30.1_linux_x64.tar.gz，取自官方 release 的 gitleaks_8.30.1_checksums.txt
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve change range
+        run: |
+          set -euo pipefail
+          [[ "${BASE_SHA:-}" =~ ^[0-9a-f]{40}$ && "${HEAD_SHA:-}" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::cannot resolve BASE_SHA/HEAD_SHA for event ${GITHUB_EVENT_NAME}"; exit 1; }
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git cat-file -e "${HEAD_SHA}^{commit}"
+          echo "range ${BASE_SHA}..${HEAD_SHA}: $(git rev-list --count "${BASE_SHA}..${HEAD_SHA}") commit(s)"
+
+      - name: Install gitleaks (pinned, sha256-verified)
+        run: |
+          set -euo pipefail
+          f="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$f" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$f"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$f" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$f" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" version
+
+      - name: gitleaks on the commits in this change
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/gitleaks" git . --config .gitleaks.toml \
+            --log-opts="${BASE_SHA}..${HEAD_SHA}" --redact --no-banner --exit-code 1
+
+      # 只打印命中的提交与文件，绝不打印命中的行或 secret 本身。
+      - name: Private denylist on added lines
+        env:
+          LEAK_DENYLIST_REGEX: ${{ secrets.LEAK_DENYLIST_REGEX }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [ -z "${LEAK_DENYLIST_REGEX:-}" ]; then
+            if [ "$EVENT_NAME" = merge_group ]; then
+              echo "::error::secret LEAK_DENYLIST_REGEX is not set; the merge queue requires it (a maintainer must set it)"
+              exit 1
+            fi
+            echo "::warning::secret LEAK_DENYLIST_REGEX is unavailable on this ${EVENT_NAME} run (unset, or a fork PR); denylist skipped here, the merge queue enforces it"
+            exit 0
+          fi
+          diff_file="$RUNNER_TEMP/change.diff"
+          hit_file="$RUNNER_TEMP/denylist-hit-lines"
+          git log -p --no-color --no-ext-diff --no-textconv --format='commit %H' "${BASE_SHA}..${HEAD_SHA}" > "$diff_file"
+          # grep 只输出行号（cut 去掉内容）；退出码 1 = 无命中，2 = 正则无效。
+          set +e
+          grep -nE -e "$LEAK_DENYLIST_REGEX" -- "$diff_file" 2>/dev/null | cut -d: -f1 > "$hit_file"
+          status=("${PIPESTATUS[@]}")
+          set -e
+          if [ "${status[0]}" -gt 1 ]; then
+            echo "::error::LEAK_DENYLIST_REGEX is not a valid extended regular expression (value not printed)"
+            exit 1
+          fi
+          if [ ! -s "$hit_file" ]; then
+            echo "denylist: no added line matches"
+            exit 0
+          fi
+          # 只认 hunk 内的新增行：diff 文件头（diff --git 到第一个 @@）与提交说明都不算。
+          located="$RUNNER_TEMP/denylist-locations"
+          awk -v hits="$hit_file" '
+            BEGIN { while ((getline n < hits) > 0) hit[n] = 1 }
+            /^commit [0-9a-f]+$/ { commit = substr($2, 1, 12); inhunk = 0; next }
+            /^diff --git / { inhunk = 0; file = ""; next }
+            !inhunk && /^\+\+\+ / { file = substr($0, 5); sub(/^b\//, "", file); next }
+            /^@@ / { inhunk = 1; next }
+            inhunk && /^\+/ && (FNR in hit) { print commit " " file }
+          ' "$diff_file" > "$located"
+          count="$(wc -l < "$located" | tr -d ' ')"
+          if [ "$count" = 0 ]; then
+            echo "denylist: no added line matches"
+            exit 0
+          fi
+          echo "::error::${count} added line(s) match the private denylist (values not printed). Remove them from these commits/files:"
+          sort -u "$located" | sed 's/^/  /'
+          exit 1
+
   static-and-tests:
     name: Static L0 QA & Tests
-    needs: [gates, plugin-tests, full-scan]
+    needs: [gates, plugin-tests, full-scan, leak-gate]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     env:
@@ -605,11 +700,13 @@ jobs:
           GATES: ${{ needs.gates.result }}
           PLUGIN_TESTS: ${{ needs.plugin-tests.result }}
           FULL_SCAN: ${{ needs.full-scan.result }}
+          LEAK_GATE: ${{ needs.leak-gate.result }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          echo "gates=$GATES plugin-tests=$PLUGIN_TESTS full-scan=$FULL_SCAN event=$EVENT_NAME"
+          echo "gates=$GATES plugin-tests=$PLUGIN_TESTS full-scan=$FULL_SCAN leak-gate=$LEAK_GATE event=$EVENT_NAME"
           test "$GATES" = success
           test "$PLUGIN_TESTS" = success
+          test "$LEAK_GATE" = success
           test "$FULL_SCAN" = success || { test "$EVENT_NAME" != merge_group && test "$FULL_SCAN" = skipped; }
 
       # 缺失报告时 ci-verdict 读不到输入即判失败，不会放行。
