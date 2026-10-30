@@ -1,5 +1,5 @@
 /**
- * dsh 0.1.5 Host adapter.
+ * dsh ≥0.2.1-rc.3 Host adapter.
  *
  * Unary calls go directly through TypertGateway. Long-lived Session and
  * forwarded-event streams use the Gateway wire seam, while `$events/result`
@@ -24,7 +24,7 @@ import {
 import { NULL_PRODUCED_REGISTRY, type ProducedRegistry } from './produced-registry.ts'
 import type { RespondResult } from './protocol.ts'
 
-/** Structural subset of dsh 0.1.5's Host TypertGateway service. */
+/** Structural subset of the Host TypertGateway service (dsh ≥0.2.1-rc.3). */
 export interface TypertGatewayLike {
   readonly wireStream: {
     open(endpoint: string, payload: unknown, signal: AbortSignal): Promise<AsyncIterable<unknown>>
@@ -38,7 +38,7 @@ export interface TypertGatewayLike {
   }): Promise<unknown>
 }
 
-/** Structural subset of dsh 0.1.5's Host Connection service. */
+/** Structural subset of the Host Connection service (dsh ≥0.2.1-rc.3). */
 export interface HostConnectionLike {
   createSharedFetchHandler(channel: '/api'): {
     fetch(request: Request): Promise<Response>
@@ -68,7 +68,7 @@ interface PendingQuestion {
 }
 
 /**
- * Build the dsh 0.1.5 Host implementation.
+ * Build the Host adapter implementation (dsh ≥0.2.1-rc.3 wireStream contract).
  * @param gateway - Host TypertGateway service.
  * @param connection - Host Connection service ($events/result carrier).
  * @param produced - the produced-media allowlist this adapter feeds from the

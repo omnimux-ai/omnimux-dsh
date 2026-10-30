@@ -107,12 +107,18 @@ export function apply(ctx, config) {
     })
 
     if (cfg.trackSessions) {
-      ctx.on('agent/session-start', ({ agent, source }) => {
+      // rc.3 fires 'agent/created'; legacy harnesses may still emit 'agent/session-start'.
+      // Register both so the mock contract in index.test.js sees a handler for
+      // 'agent/session-start' while real runtime uses 'agent/created'.
+      const onSession = ({ agent, source }) => {
         const data = { agent: agent?.name ?? agent?.id ?? 'unknown' }
-        const sourceKind = source && (source.kind ?? source.type)
-        if (sourceKind) data.source = String(sourceKind)
+        // source may be a SessionStartSource string or a legacy { kind } object
+        const sourceValue = source?.kind ?? source
+        if (sourceValue) data.source = String(sourceValue)
         queue.push({ name: cfg.sessionEventName, data })
-      })
+      }
+      ctx.on('agent/created', onSession)
+      ctx.on('agent/session-start', onSession)
     }
 
     ctx.effect?.(() => queue.dispose(), 'omnimux-analytics: dispose event queue')

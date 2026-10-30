@@ -5,8 +5,8 @@
  * The bridge mounts its own upgrade route (`/ext/bridge`) on the host
  * webserver, OUTSIDE the /api trust fence — so it brings its own bearer-token
  * authentication (first frame `hello` within HELLO_TIMEOUT_MS). Extension
- * calls, Session streams, and Host waterfalls use dsh 0.1.5's Typert Gateway
- * and Connection services.
+ * calls, Session streams, and Host waterfalls use the Typert Gateway
+ * wireStream and Connection services (dsh ≥0.2.1-rc.3 contract).
  * Tools execute by dispatching
  * `tool.call` frames to the connected extension, which performs the action in
  * the tab explicitly controlled by the user.

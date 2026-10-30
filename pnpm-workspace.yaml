@@ -2,6 +2,15 @@ packages:
   - plugins/*
   - packages/*
   - plugins/omnimux-browser/extension
+
+peerDependencyRules:
+  allowedVersions:
+    "@deepseek-ai/dsh-*": "0.2.1-rc.3"
+    "@deepseek-ai/cordis": "4.0.2"
+
+overrides:
+  '@deepseek-ai/dsh-*': 0.2.1-rc.3
+
 allowBuilds:
   '@deepseek-ai/dsh-subprocess-local': true
   '@google/genai': false
