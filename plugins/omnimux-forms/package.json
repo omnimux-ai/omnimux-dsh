@@ -20,7 +20,8 @@
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",
-    "test": "node --test src/*.test.mjs src/client/*.test.mjs"
+    "test": "node --test src/*.test.mjs src/client/*.test.mjs",
+    "prepublishOnly": "node ../../scripts/verify-publish-source.mjs ."
   },
   "devDependencies": {
     "esbuild": "^0.25.0",

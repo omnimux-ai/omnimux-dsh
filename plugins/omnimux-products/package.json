@@ -16,7 +16,8 @@
     "NOTICE"
   ],
   "scripts": {
-    "test": "node --test src/*.test.js src/client-form-subscreen.test.js src/client/*.test.js tests/e2e/*.spec.js"
+    "test": "node --test src/*.test.js src/client-form-subscreen.test.js src/client/*.test.js tests/e2e/*.spec.js",
+    "prepublishOnly": "node ../../scripts/verify-publish-source.mjs ."
   },
   "dsh": {
     "bundle": {

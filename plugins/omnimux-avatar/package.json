@@ -21,7 +21,8 @@
   ],
   "scripts": {
     "build": "node scripts/build-host.mjs && node scripts/build-client.mjs",
-    "test": "node --test src/*.test.mjs src/client/*.test.mjs src/client/*.test.js src/client/lib/*.test.mjs src/client/hooks/*.test.mjs src/client/components/*.test.mjs"
+    "test": "node --test src/*.test.mjs src/client/*.test.mjs src/client/*.test.js src/client/lib/*.test.mjs src/client/hooks/*.test.mjs src/client/components/*.test.mjs",
+    "prepublishOnly": "node ../../scripts/verify-publish-source.mjs ."
   },
   "dependencies": {
     "dsh-ui-kit": "file:../../packages/dsh-ui-kit"

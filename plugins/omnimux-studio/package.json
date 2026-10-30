@@ -22,7 +22,8 @@
   "scripts": {
     "build": "node scripts/build-client.mjs",
     "prepare": "npm run build",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "prepublishOnly": "node ../../scripts/verify-publish-source.mjs ."
   },
   "dsh": {
     "bundle": {

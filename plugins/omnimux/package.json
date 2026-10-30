@@ -30,7 +30,8 @@
     "build": "node scripts/build-media-inspect.mjs && node scripts/build-client.mjs",
     "prepare": "npm run build",
     "test": "node scripts/run-tests.mjs",
-    "test:e2e": "node --test tests/e2e/*.e2e.test.js"
+    "test:e2e": "node --test tests/e2e/*.e2e.test.js",
+    "prepublishOnly": "node ../../scripts/verify-publish-source.mjs ."
   },
   "dependencies": {
     "@aws-crypto/sha256-js": "5.2.0",

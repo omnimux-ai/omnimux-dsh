@@ -110,6 +110,7 @@ jobs:
           node --test scripts/verify-governance-registry.test.mjs scripts/lib/governance-registry.test.mjs
           node --test scripts/lib/child-lifecycle.test.mjs
           node --test scripts/guard-anti-cheat.test.mjs
+          node --test scripts/verify-publish-source.test.mjs
 
       # 旧测试标准声明闭环：写入时刻的门禁只能做早期反馈——声明被消费之后没人再校验它，
       # 而声明可以写在未跟踪的 specs/*.md 里（读得到、不进 PR diff），也可以事后删除。

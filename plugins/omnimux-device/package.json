@@ -25,7 +25,8 @@
     "build": "node scripts/build-client.mjs",
     "prepare": "npm run build",
     "pretest": "npm run build",
-    "test": "node --test src/*.test.js tests/e2e/*.spec.js"
+    "test": "node --test src/*.test.js tests/e2e/*.spec.js",
+    "prepublishOnly": "node ../../scripts/verify-publish-source.mjs ."
   },
   "dsh": {
     "bundle": {

@@ -24,7 +24,8 @@
     "build": "node scripts/build-client.mjs",
     "prepare": "npm run build",
     "test": "node --test src/*.test.js src/timeline/*.test.js src/client/store/timelineStore.test.js src/client/*.test.js",
-    "prepack": "node scripts/build-client.mjs"
+    "prepack": "node scripts/build-client.mjs",
+    "prepublishOnly": "node ../../scripts/verify-publish-source.mjs ."
   },
   "dsh": {
     "bundle": {

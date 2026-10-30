@@ -21,7 +21,8 @@
   ],
   "scripts": {
     "test": "node --test",
-    "typecheck:contracts": "tsc -p tsconfig.json --noEmit"
+    "typecheck:contracts": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "node ../../scripts/verify-publish-source.mjs ."
   },
   "devDependencies": {
     "@types/node": "^25.9.4",

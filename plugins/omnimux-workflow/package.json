@@ -31,7 +31,8 @@
     "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.canvas.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.host.json --noEmit && node node_modules/typescript/bin/tsc -p src/director/tsconfig.json",
     "test": "node --test \"src/**/*.test.mjs\" \"src/**/*.test.js\" \"tests/*.test.mjs\"",
     "verify:m5": "node scripts/m5-self-verify.mjs",
-    "perf:baseline": "node scripts/perf-baseline.mjs"
+    "perf:baseline": "node scripts/perf-baseline.mjs",
+    "prepublishOnly": "node ../../scripts/verify-publish-source.mjs ."
   },
   "dsh": {
     "bundle": {
