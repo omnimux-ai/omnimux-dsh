@@ -30,7 +30,8 @@
     "build": "node scripts/build-host.mjs && node scripts/build-client.mjs",
     "prepare": "npm run build",
     "typecheck": "tsc --noEmit",
-    "test": "node --test 'src/**/*.test.mjs' 'src/**/*.test.ts'"
+    "test": "node --test 'src/**/*.test.mjs' 'src/**/*.test.ts'",
+    "prepublishOnly": "node ../../scripts/verify-publish-source.mjs ."
   },
   "dependencies": {
     "lucide-react": "^1.33.0"
