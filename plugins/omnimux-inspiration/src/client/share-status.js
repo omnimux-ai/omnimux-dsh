@@ -167,8 +167,8 @@ export function shareSteps(row, translate) {
  * What the result area must say about an asset the share had to leave out.
  *
  * The cloud's public media endpoint cannot serve a publication's video/image
- * today (upstream storage defect laozhong86/OmniMux#257), and that is not
- * something this side can fix — so a share that still succeeds without it says
+ * today (a known upstream storage defect), and that is not something this side
+ * can fix — so a share that still succeeds without it says
  * so, in the same place the link appears. Rendering the link silently would hand
  * the user a share whose player opens onto nothing.
  * @param {unknown} row

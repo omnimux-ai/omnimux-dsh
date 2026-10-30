@@ -383,8 +383,8 @@ export function createInspirationShareApi(deps) {
      *
      * Readability is probed before publishing, and the two assets are not equal:
      * a cover the cloud cannot serve means there is nothing to show, so the
-     * publish is refused; a video or image the cloud cannot serve (upstream
-     * defect laozhong86/OmniMux#257) must NOT sink a share that can still carry
+     * publish is refused; a video or image the cloud cannot serve (a known
+     * upstream storage defect) must NOT sink a share that can still carry
      * the cover and the copy — instead the unreadable address is left out of the
      * payload entirely and reported on the result, so the caller can say which
      * part is missing rather than hand out a link whose player cannot open.
