@@ -388,8 +388,17 @@ export function isTaskEvidencePath(relPath) {
 
 /* ------------------------------------------------- bash 命令识别 */
 
-/** 疑似通过终端写入业务源码。 */
-export function bashWritesSource(command) {
+/**
+ * 疑似通过终端写入业务源码。
+ *
+ * 只在写目标真实落在「任务所在仓库根」内才算：Dev profile 物化目录
+ * （~/.omnimux-dev/.../plugins/<pkg>/src/...）、/tmp 等仓库外路径同样带
+ * `plugins/` 字样但不是仓库源码，不该被规格门禁拦。先按旧正则粗筛
+ * 「可疑写入形态」，再把命中的写目标 token resolve 到 cwd，全在仓库外时排除。
+ * 不传 cwd 时保持旧行为（任何命中即 true），兼容既有调用与测试。
+ * 提取不到具体目标（eval/管道只出现片段）时从严：宁可误拦，不放行仓库内写入。
+ */
+export function bashWritesSource(command, cwd) {
   if (!command || typeof command !== 'string') return false
   if (!/plugins\/|packages\//.test(command)) return false
 
@@ -405,7 +414,36 @@ export function bashWritesSource(command) {
     /\b(?:node|nodejs)\b[^\n]*\b(?:-e|--eval)\b[^\n]*(?:plugins|packages)\//,
     /\bpython3?\b[^\n]*\s-c\b[^\n]*(?:plugins|packages)\//,
   ]
-  return patterns.some((p) => p.test(command))
+  if (!patterns.some((p) => p.test(command))) return false
+  if (cwd === undefined) return true
+
+  const root = findRepoRoot(cwd)
+  const targets = extractWriteTargets(command, cwd)
+  if (targets.length === 0) return true
+  return targets.some((abs) => isBusinessSourceFile(abs, root))
+}
+
+/** 提取命令里以 plugins/|packages/ 开头或绝对路径中含这两段的写目标，resolve 到 cwd。 */
+function extractWriteTargets(command, cwd) {
+  const seen = new Set()
+  const targets = []
+  const push = (raw) => {
+    if (typeof raw !== 'string' || !raw) return
+    const abs = isAbsolute(raw) ? resolve(raw) : resolve(cwd, raw)
+    if (seen.has(abs)) return
+    seen.add(abs)
+    targets.push(abs)
+  }
+  // shell 重定向 / tee / dd of= / cp|mv|install|ln|sed 的「写目标」token
+  const shellTarget = /(?:>>?|\btee\b[^|\n]*?|\bof=|\b(?:cp|mv|install|ln|sed)\b[^\n]*?)\s*['"]?([^\s'"|;>&]+?(?:plugins|packages)\/[^\s'"|;>&]+)/g
+  for (const m of command.matchAll(shellTarget)) push(m[1])
+  // writeFileSync / appendFileSync / createWriteStream / open(...,'w') 首参
+  const apiTarget = /(?:writeFileSync|appendFileSync|createWriteStream|open)\s*\(\s*['"`]([^'"`]*(?:plugins|packages)\/[^'"`]*)['"`]/g
+  for (const m of command.matchAll(apiTarget)) push(m[1])
+  // python -c "open('plugins/x/src/a.js','w')" 形式
+  const pyTarget = /open\s*\(\s*['"]([^'"]*(?:plugins|packages)\/[^'"]*)['"]\s*,\s*['"][wa]/g
+  for (const m of command.matchAll(pyTarget)) push(m[1])
+  return targets
 }
 
 /** 剥离 git 全局选项（-C/-c/--git-dir/--work-tree 等），避免 `git -C <路径> commit` 这类常见写法漏判。 */
@@ -516,7 +554,7 @@ export function decideQualityGate({ toolName, toolInput, cwd }) {
       }
       return { decision: 'allow' }
     }
-    if (bashWritesSource(command) && taskSpecs(root).length === 0) {
+    if (bashWritesSource(command, workdir) && taskSpecs(root).length === 0) {
       return { decision: 'deny', reason: 'missing-spec-for-source-code' }
     }
     return { decision: 'allow' }
