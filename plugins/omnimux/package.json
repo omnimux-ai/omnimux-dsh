@@ -50,12 +50,23 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
+    "@shikijs/langs": "4.4.3",
+    "anser": "2.3.5",
     "esbuild": "0.25.12",
     "jsdom": "^30.0.1",
+    "mdast-util-from-markdown": "2.0.3",
+    "mdast-util-gfm": "3.0.0",
+    "mdast-util-math": "3.0.0",
     "mediabunny": "1.55.3",
+    "micromark-core-commonmark": "2.0.3",
+    "micromark-extension-gfm": "3.0.0",
+    "micromark-extension-math": "3.0.0",
+    "micromark-util-classify-character": "2.0.1",
+    "micromark-factory-space": "2.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sharp": "0.35.5",
+    "shiki": "4.4.3",
     "typescript": "5.9.3"
   },
   "peerDependencies": {
