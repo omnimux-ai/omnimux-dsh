@@ -151,6 +151,39 @@ test('bashWritesSource detects terminal writes to business source', () => {
   assert.equal(bashWritesSource('echo hi > /tmp/notes.txt'), false)
 })
 
+/**
+ * CONVERGENCE: cwd-scoped bashWritesSource only counts writes that resolve inside the repo root.
+ * Dev profile 物化目录（~/.omnimux-dev 等）同样带 plugins/<pkg>/src/ 字样但不在仓库内，
+ * ship 收尾时同步这类文件不应被规格门禁拦（Issue #3855）。
+ */
+test('CONVERGENCE: bashWritesSource ignores out-of-repo write targets when cwd given', () => {
+  // gitleaks absolute-home-path 规则把 /Users/<name>/ 当泄露面拦；用豁免名单里的 test 名。
+  const outside = '/Users/test/.omnimux-dev/profiles/omnimux/node_modules/dsh-ui-kit/src/icons/fixtures/x.txt'
+  const outsideSrc = '/Users/test/.omnimux-dev/profiles/omnimux/.materialize-snapshots/plugins/dsh-ui-kit/src/icons/fixtures/x.txt'
+  const repo = '/repo'
+
+  // 仓库外绝对路径 → false（不修门禁）
+  assert.equal(bashWritesSource(`cp ${outsideSrc} ${outside}`, repo), false)
+  assert.equal(bashWritesSource(`echo x > ${outside}`, repo), false)
+  assert.equal(bashWritesSource(`sed -i s/a/b/ ${outside}`, repo), false)
+  assert.equal(bashWritesSource(`ln -s src ${outside}`, repo), false)
+
+  // 仓库内绝对路径 → true（仍拦）
+  assert.equal(bashWritesSource(`echo x > ${repo}/plugins/omnimux/src/client/a.js`, repo), true)
+  assert.equal(bashWritesSource(`sed -i s/a/b/ ${repo}/plugins/omnimux/src/client/a.js`, repo), true)
+  assert.equal(bashWritesSource(`cp /tmp/x ${repo}/plugins/omnimux/src/client/a.js`, repo), true)
+
+  // 仓库内相对路径 → true（旧行为不变）
+  assert.equal(bashWritesSource('echo x > plugins/omnimux/src/client/a.js', repo), true)
+  assert.equal(bashWritesSource("python3 -c \"open('plugins/x/src/a.js','w').write('y')\"", repo), true)
+
+  // 提取不到目标的形态（eval/管道）→ 兜底 true，不误放
+  assert.equal(bashWritesSource('node -e "require(\'fs\').writeFileSync(\'plugins/x/src/a.js\',\'y\')"', repo), true)
+
+  // 混合：一条命令既有仓库内又有仓库外目标 → true（从严）
+  assert.equal(bashWritesSource(`cp ${outside} ${repo}/plugins/omnimux/src/client/a.js`, repo), true)
+})
+
 test('isDeliveryCommand recognises commit / push / PR commands', () => {
   assert.equal(isDeliveryCommand('git commit -m "x"'), true)
   assert.equal(isDeliveryCommand('git push -u origin agent/x'), true)
