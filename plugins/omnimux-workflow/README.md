@@ -53,7 +53,7 @@ npm run build      # 显式重建：dist/index.js + lib/client.js + lib/canvas.j
 ```jsonc
 {
   "dependencies": {
-    "omnimux-workflow": "link:/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/plugins/omnimux-workflow"
+    "omnimux-workflow": "link:<omnimux-dsh 检出目录>/plugins/omnimux-workflow"
   },
   "dsh": { "profile": { "bundles": [ /* ...既有 bundles... */ "omnimux-workflow" ] } }
 }

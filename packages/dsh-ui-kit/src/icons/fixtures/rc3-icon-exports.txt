@@ -2,7 +2,7 @@
 #
 # 来源：官方包 `@deepseek-ai/dsh-client-ui-primitives@0.2.1-rc.3` 的
 #       `lib/types/icons/index.d.ts`，取自桌面壳仓库的运行时 vendor：
-#       /Users/x/Desktop/Project/omnimux-desktop-fork
+#       <omnimux-desktop-fork 检出目录>
 #       `git show <rev>:vendor/dsh-runtime/0.2.1-rc.3/deepseek-ai-dsh-client-ui-primitives-0.2.1-rc.3.tgz`
 # tarball SHA-256: b8a5928919229576663e74e5f87a0bebe25aa05fb824f9ceabcbc7a33ad5dfb1
 # 提取：tar -xzf <tarball> && grep -o 'declare \(const\|function\) Icon[A-Za-z0-9]*' \

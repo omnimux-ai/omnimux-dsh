@@ -1,0 +1,28 @@
+# gitleaks config for the CI leak gate (job `leak-gate` in .github/workflows/quality-gate.yml).
+# The gate scans only the commits in the change (BASE..HEAD), so existing debt does not block.
+#
+# Deployment-specific literals (the origin address, internal host aliases) are deliberately
+# NOT listed here: a public config would itself publish them. The CI job reads them from the
+# repository secret LEAK_DENYLIST_REGEX instead.
+title = "omnimux-dsh"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "absolute-home-path"
+description = "Absolute developer home path (/Users/<name>/ or /home/<name>/)"
+# The reported secret is group 1 (no leading slash) on purpose: the default global allowlist
+# drops any secret matching ^/(?:bin|etc|home|...)/..., which would silently exempt /home/<name>/.
+regex = '''/((?:Users|home)/[A-Za-z0-9._-]+/)'''
+secretGroup = 1
+keywords = ["/users/", "/home/"]
+  [[rules.allowlists]]
+  description = "Synthetic fixture homes used by tests and docs"
+  regexTarget = "match"
+  regexes = ['''^(?:/Users|/home)/(?:me|test|user|someone|example|runner|username|you|alice|bob|tester|USER|name)/$''']
+
+[[allowlists]]
+description = "Public Supabase local-dev demo JWT (iss=supabase-demo, 127.0.0.1:54321) in local-only data scripts"
+targetRules = ["jwt"]
+paths = ['''^scripts/(?:check-avatars|check-other-tables|inspect-avatar-keys|inspect-gxgen-tiktok|list-tables|resolve-covers|scan-tiktok-items|search-avatars)\.mjs$''']

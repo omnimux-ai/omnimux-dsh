@@ -10,7 +10,7 @@
   },
   "response": {
     "message": "Saved 1 image(s)",
-    "sourcePath": "/Users/x/.dsh/plugins/subscriptions/images/image-2026-09-09T03-48-09-504Z-aoxiyo-0.png",
+    "sourcePath": "~/.dsh/plugins/subscriptions/images/image-2026-09-09T03-48-09-504Z-aoxiyo-0.png",
     "actualProvider": null,
     "actualModel": null,
     "limitation": "Tool returns only a saved path. Requested gpt (documented GPT image2 preference); actual provider/model and fallback use are not independently attested."
