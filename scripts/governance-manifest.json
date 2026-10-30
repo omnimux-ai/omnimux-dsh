@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated": "2026-10-29",
+  "updated": "2026-10-30",
   "description": "scripts/ 全量源码库存（含 tests/helpers/fixtures/Python）。ciRequired=支持语法下工作流执行根静态可能可达；localRequired=仅根包执行或语法引用可证；manual=未证明自动可达（不承诺无未知调用）；deprecated=现存退役且禁自动引用。静态可能可达不等于真实CI运行、函数执行或覆盖率。",
   "ciRequired": [
     "agent-tools-suite/budget.mjs",
@@ -128,6 +128,8 @@
     "verify-product-baseline.mjs",
     "verify-product-baseline.test.mjs",
     "verify-profile-preflight.test.mjs",
+    "verify-publish-source.mjs",
+    "verify-publish-source.test.mjs",
     "verify-silent-catch.mjs",
     "verify-silent-catch.test.mjs",
     "verify-skill-bilingual.mjs",
