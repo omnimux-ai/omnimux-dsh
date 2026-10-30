@@ -336,8 +336,8 @@ export function apply(ctx: Context, config: Config): void {
       return next()
     })
 
-    // 当会话启动时，通过 tools.restrict 动态屏蔽不相关的多模态生成工具，实现“不显示”
-    ctx.on('agent/session-start' as any, ({ agent }: { agent: any }) => {
+    // 当 agent 注册时（rc.3+ 事件），通过 tools.restrict 动态屏蔽不相关的多模态生成工具，实现“不显示”
+    ctx.on('agent/created' as any, ({ agent }: { agent: any }) => {
       const sessionId = sessionIdFromExec(agent)
       if (!sessionId) return
       const sel = getSessionModel(sessionId)

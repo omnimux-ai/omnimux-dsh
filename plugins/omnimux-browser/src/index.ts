@@ -5,8 +5,8 @@
  * The bridge mounts its own upgrade route (`/ext/bridge`) on the host
  * webserver, OUTSIDE the /api trust fence — so it brings its own bearer-token
  * authentication (first frame `hello` within HELLO_TIMEOUT_MS). Extension
- * calls, Session streams, and Host waterfalls use dsh 0.1.5's Typert Gateway
- * and Connection services.
+ * calls, Session streams, and Host waterfalls use the Typert Gateway
+ * wireStream and Connection services (dsh ≥0.2.1-rc.3 contract).
  * Tools execute by dispatching
  * `tool.call` frames to the connected extension, which performs the action in
  * the tab explicitly controlled by the user.
@@ -255,7 +255,7 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
   const gateway = ctx.get('typertGateway') as unknown as GatewayCandidate | undefined
   const connection = ctx.get('connection') as unknown as HostConnectionLike | undefined
   if (gateway === undefined || !hasRemoteWireStream(gateway)) {
-    throw new Error('bridge-browser: dsh 0.1.5-rc.2 or a compatible newer runtime is required (Gateway wireStream unavailable)')
+    throw new Error('bridge-browser: a dsh runtime with Gateway wireStream support is required (dsh ≥0.2.1-rc.3)')
   }
   if (connection === undefined) throw new Error('bridge-browser: dsh connection service is required')
   const tokenRes = await resolveToken(resolved.token)

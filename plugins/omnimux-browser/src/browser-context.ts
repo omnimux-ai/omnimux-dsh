@@ -3,7 +3,7 @@
  *
  * The extension captures the page immediately after the user chooses to
  * follow it. A live Agent receives that snapshot at once; a deferred session
- * keeps only its newest snapshot until `agent/session-start` publishes the
+ * keeps only its newest snapshot until `agent/created` publishes the
  * Agent. Live inboxes also keep only the newest unclaimed browser snapshot.
  * Injection deliberately does not wake an idle Agent — the snapshot is
  * claimed together with the user's next message.
