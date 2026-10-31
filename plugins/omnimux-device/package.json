@@ -45,7 +45,7 @@
     "dsh-ui-kit": "file:../../packages/dsh-ui-kit"
   },
   "peerDependencies": {
-    "cordis": "^3.18.1"
+    "@deepseek-ai/cordis": "^4.0.2"
   },
   "license": "SEE LICENSE IN LICENSE"
 }

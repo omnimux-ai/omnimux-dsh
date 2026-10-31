@@ -617,9 +617,9 @@ importers:
 
   plugins/omnimux-device:
     dependencies:
-      cordis:
-        specifier: ^3.18.1
-        version: 3.18.1
+      '@deepseek-ai/cordis':
+        specifier: ^4.0.2
+        version: 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.10)(@deepseek-ai/cordis-plugin-loader@1.0.6)
       dsh-ui-kit:
         specifier: file:../../packages/dsh-ui-kit
         version: file:packages/dsh-ui-kit(@deepseek-ai/dsh-client-ui-primitives@0.2.1-rc.3(@deepseek-ai/cordis@4.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -1364,29 +1364,6 @@ packages:
 
   '@codemirror/view@6.43.15':
     resolution: {integrity: sha512-HHsfpqFeHyXLs983pSRe38Xajs0vFWZQ2BuX0m7Ki8w3jZ5iD8cuR3lBz2/5/X53Dhf32SBHKh6rtSTB6tKeGw==}
-
-  '@cordisjs/core@3.18.1':
-    resolution: {integrity: sha512-yRuATOamFxeD1ztE2L3o1SaHuT2zw5DTXijQYxt9azVNeILbvtomfGG6sLZegrynJO9XZbNvXbOlQ7LBJDOlAg==}
-
-  '@cordisjs/loader@0.13.1':
-    resolution: {integrity: sha512-YGw22gT1F/jXT1UeWMjIavt7WHMfEmKve83v4PTg63SW4eC2s89ivsN4RQWi5YWe0LQNNg8LItL66FeEcgQS5w==}
-    peerDependencies:
-      '@cordisjs/core': ^3.18.1
-
-  '@cordisjs/logger@0.3.3':
-    resolution: {integrity: sha512-UcyZRXAL86YLAEEta+fxJM1CcDanJvoIMD9ywCyP2AZJuib68UynENGTFo4mYkeg+8WMXrlA/aNNwENMiLUlXA==}
-    peerDependencies:
-      '@cordisjs/core': ^3.17.1
-
-  '@cordisjs/schema@0.1.1':
-    resolution: {integrity: sha512-AYTSyEXEASO6uVHqXBHIId+8OGFs0idtFoj3q7qee9J7OGcMjVEUsrsdiP9SnmzTR4ea17esShledUC50fco1g==}
-    peerDependencies:
-      '@cordisjs/core': ^3.17.0
-
-  '@cordisjs/timer@0.3.2':
-    resolution: {integrity: sha512-frdIvc+1AqKVHMWnNacqqZ2Cm52FfoYKPpBQ+kZgr/cFs7HXDKqetL35CLy/EZAF22l/6VTvpQOYUwS6tvVJZA==}
-    peerDependencies:
-      '@cordisjs/core': ^3.12.0
 
   '@csstools/color-helpers@5.1.0':
     resolution: {integrity: sha512-S11EXWJyy0Mz5SYvRmY8nJYTFFd1LCNV+7cXyAgQtOOuzb4EsgfqDufL+9esx72/eLhsRdGZwaldu/h+E4t4BA==}
@@ -5729,10 +5706,6 @@ packages:
     resolution: {integrity: sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==}
     engines: {node: '>= 0.8'}
 
-  cac@6.7.14:
-    resolution: {integrity: sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==}
-    engines: {node: '>=8'}
-
   cac@7.1.0:
     resolution: {integrity: sha512-LMDU/U2yA4IPIY8KT0NsNPWEYZvAMkbgyspxJ6btJaYV+WMDOHAZCmB0lsTObiHaRS1V/ztKAl7+TSkTqXyeoA==}
     engines: {node: '>=20.19.0'}
@@ -5832,11 +5805,6 @@ packages:
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
 
-  cordis@3.18.1:
-    resolution: {integrity: sha512-9IbthFbFBVJ15WBDNPqHdl59TyEAMNWxF1Dxsdi14625ePQkMX35WvcqgGno0BcXlpXDbUaBZgQ+jfBYT+uuSQ==}
-    engines: {node: ^18.0.0 || >=20.0.0}
-    hasBin: true
-
   cose-base@1.0.3:
     resolution: {integrity: sha512-s9whTXInMSgAp/NVXVNuVxVKzGH2qck3aQlVHxDCdAEPgtMKwc4Wq6/QKhgdEdgbLSi9rBTAcPoRa6JpiG4ksg==}
 
@@ -5846,9 +5814,6 @@ packages:
   cosmiconfig@7.1.0:
     resolution: {integrity: sha512-AdmX6xUzdNASswsFtmwSt7Vj8po9IuqXm0UXz7QKPuEUmPB4XyjGfaAr2PSuELMwkRMVH1EpIkX5bTZGRB3eCA==}
     engines: {node: '>=10'}
-
-  cosmokit@1.8.1:
-    resolution: {integrity: sha512-PDBv4l90xZKrUsZ0vtoycgZpO/j4iFsqJXrAxsyBDsnQRI7ZMJXIjgDJsKNjd5L8jnVnnlrDCdhkFbTncgCVjQ==}
 
   crelt@1.0.7:
     resolution: {integrity: sha512-aK6BbWfhf4U/wCcLHKPJl/xa6VkVstRaPywWtMKGwuOLc/wZTyQYuoxgvZnNsBvv7Kg3YTBQYYBCggcviQczuA==}
@@ -6115,10 +6080,6 @@ packages:
 
   dompurify@3.4.17:
     resolution: {integrity: sha512-B/pSlYVHQ58kqISD/yDjuJ1yfzI34m1gF4lAod2bwSRhiN4K5Cl3H8Af7hqB2PmTL911tdEudnnXn5FnhRoz0w==}
-
-  dotenv@16.6.1:
-    resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
-    engines: {node: '>=12'}
 
   draco3d@1.5.9:
     resolution: {integrity: sha512-MqC0eAfW5gPATGY3GABIyFWpHwdDGAyewTdek5R/e+mhI9ZDUMKb2mTDkTMUW0+Vm7an+ThEMUop3+svS72Uug==}
@@ -6395,10 +6356,6 @@ packages:
   hachure-fill@0.5.2:
     resolution: {integrity: sha512-3GKBOn+m2LX9iq+JC1064cSFprJY4jL1jCXTcpnfER5HYE2l/4EfWSGzkPa/ZDBmYI0ZOEj5VHV/eKnPGkHuOg==}
 
-  has-flag@4.0.0:
-    resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
-    engines: {node: '>=8'}
-
   hasown@2.0.4:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
@@ -6642,10 +6599,6 @@ packages:
 
   khroma@2.1.0:
     resolution: {integrity: sha512-Ls993zuzfayK269Svk9hzpeGUKob/sIgZzyHYdjQoAdQetRKpOLj+k/QQQ/6Qi0Yz65mlROrfd+Ev+1+7dz9Kw==}
-
-  kleur@4.1.5:
-    resolution: {integrity: sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ==}
-    engines: {node: '>=6'}
 
   koffi@3.1.1:
     resolution: {integrity: sha512-mRX6AMeeKCxSOeOopqAcLAl5jcNvge7NAG8l7rF/8gGJATI0tdHFYjteIdE0mGOtWdsrJOij+PjnP8Q9c1gwgA==}
@@ -7049,10 +7002,6 @@ packages:
     resolution: {integrity: sha512-RSn9F68PjH9HqtltsSnqYC1XXoWe9Bju5+213R98cNGttag9q9yAOTzdbsqvIa7aNm5WffBZFpWYr2aWrklWAw==}
     engines: {node: '>= 6'}
 
-  object-inspect@1.13.4:
-    resolution: {integrity: sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==}
-    engines: {node: '>= 0.4'}
-
   obug@2.2.1:
     resolution: {integrity: sha512-XrsrhT5sybtKI6wakr2SPOlGZWWYbUXZ7a0jT8/QOeAPau+1X/bSegNe5YR75oJmEZQbKningirmGOEJCIk61Q==}
     engines: {node: '>=12.20.0'}
@@ -7385,9 +7334,6 @@ packages:
   regex@6.1.0:
     resolution: {integrity: sha512-6VwtthbV4o/7+OaAF9I5L5V3llLEsoPyq9P1JVXkedTP33c7MfCG0/5NOPcSJn0TzXcG9YUrR0gQSWioew3LDg==}
 
-  reggol@1.7.1:
-    resolution: {integrity: sha512-0Vr1vRYDFnsA14BipkHRn3+4FxlZxQJ4VQG2pFE2obSrR68hTHVbbQzS3/ZAHNb6l/+ThaJrc5BPgrYDM3yNyg==}
-
   require-from-string@2.0.2:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
@@ -7510,9 +7456,6 @@ packages:
   scheduler@0.27.0:
     resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
 
-  schemastery@3.18.0:
-    resolution: {integrity: sha512-Jw2uxjoyyqc/yeurmChUEc/jbi8GsrdXV/KmqRUDZXJAXAmrJiPsz8vKa17l/VckyzljHZ9oGaul443CQiXxtA==}
-
   semver@6.3.1:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
     hasBin: true
@@ -7610,10 +7553,6 @@ packages:
     resolution: {integrity: sha512-DhuTmvZWux4H1UOnWMB3sk0sbaCVOoQZjv8u1rDoTV0HTdGem9hkAZtl4JZy8P2z4Bg0nT+YMeOFyVr4zcG5Tw==}
     engines: {node: '>=16 || 14 >=14.17'}
     hasBin: true
-
-  supports-color@8.1.1:
-    resolution: {integrity: sha512-MpUEN2OodtUzxvKQl72cUF7RQ5EiHsGvSsVG0ia9c5RbWGL2CI4C7EpPS8UTBIplnlzZiNuV56w+FuNxy3ty2Q==}
-    engines: {node: '>=10'}
 
   supports-preserve-symlinks-flag@1.0.0:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
@@ -8851,34 +8790,6 @@ snapshots:
       crelt: 1.0.7
       style-mod: 4.1.4
       w3c-keyname: 2.2.8
-
-  '@cordisjs/core@3.18.1':
-    dependencies:
-      cosmokit: 1.8.1
-
-  '@cordisjs/loader@0.13.1(@cordisjs/core@3.18.1)':
-    dependencies:
-      '@cordisjs/core': 3.18.1
-      cosmokit: 1.8.1
-      dotenv: 16.6.1
-      js-yaml: 4.3.2
-
-  '@cordisjs/logger@0.3.3(@cordisjs/core@3.18.1)':
-    dependencies:
-      '@cordisjs/core': 3.18.1
-      cosmokit: 1.8.1
-      reggol: 1.7.1
-
-  '@cordisjs/schema@0.1.1(@cordisjs/core@3.18.1)':
-    dependencies:
-      '@cordisjs/core': 3.18.1
-      cosmokit: 1.8.1
-      schemastery: 3.18.0
-
-  '@cordisjs/timer@0.3.2(@cordisjs/core@3.18.1)':
-    dependencies:
-      '@cordisjs/core': 3.18.1
-      cosmokit: 1.8.1
 
   '@csstools/color-helpers@5.1.0': {}
 
@@ -13441,8 +13352,6 @@ snapshots:
 
   bytes@3.1.2: {}
 
-  cac@6.7.14: {}
-
   cac@7.1.0: {}
 
   cacheable-lookup@7.0.0: {}
@@ -13534,18 +13443,6 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  cordis@3.18.1:
-    dependencies:
-      '@cordisjs/core': 3.18.1
-      '@cordisjs/loader': 0.13.1(@cordisjs/core@3.18.1)
-      '@cordisjs/logger': 0.3.3(@cordisjs/core@3.18.1)
-      '@cordisjs/schema': 0.1.1(@cordisjs/core@3.18.1)
-      '@cordisjs/timer': 0.3.2(@cordisjs/core@3.18.1)
-      cac: 6.7.14
-      cosmokit: 1.8.1
-      kleur: 4.1.5
-      reggol: 1.7.1
-
   cose-base@1.0.3:
     dependencies:
       layout-base: 1.0.2
@@ -13561,8 +13458,6 @@ snapshots:
       parse-json: 5.2.0
       path-type: 4.0.0
       yaml: 1.10.3
-
-  cosmokit@1.8.1: {}
 
   crelt@1.0.7: {}
 
@@ -13839,8 +13734,6 @@ snapshots:
   dompurify@3.4.17:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
-
-  dotenv@16.6.1: {}
 
   draco3d@1.5.9: {}
 
@@ -14172,8 +14065,6 @@ snapshots:
 
   hachure-fill@0.5.2: {}
 
-  has-flag@4.0.0: {}
-
   hasown@2.0.4:
     dependencies:
       function-bind: 1.1.2
@@ -14450,8 +14341,6 @@ snapshots:
       '@keyv/serialize': 1.1.1
 
   khroma@2.1.0: {}
-
-  kleur@4.1.5: {}
 
   koffi@3.1.1:
     optionalDependencies:
@@ -15049,8 +14938,6 @@ snapshots:
 
   object-hash@3.0.0: {}
 
-  object-inspect@1.13.4: {}
-
   obug@2.2.1: {}
 
   on-headers@1.1.0: {}
@@ -15333,12 +15220,6 @@ snapshots:
     dependencies:
       regex-utilities: 2.3.0
 
-  reggol@1.7.1:
-    dependencies:
-      cosmokit: 1.8.1
-      object-inspect: 1.13.4
-      supports-color: 8.1.1
-
   require-from-string@2.0.2: {}
 
   resolve-alpn@1.2.1: {}
@@ -15503,11 +15384,6 @@ snapshots:
 
   scheduler@0.27.0: {}
 
-  schemastery@3.18.0:
-    dependencies:
-      '@standard-schema/spec': 1.1.0
-      cosmokit: 1.8.1
-
   semver@6.3.1: {}
 
   semver@7.8.5: {}
@@ -15616,10 +15492,6 @@ snapshots:
       pirates: 4.0.7
       tinyglobby: 0.2.17
       ts-interface-checker: 0.1.13
-
-  supports-color@8.1.1:
-    dependencies:
-      has-flag: 4.0.0
 
   supports-preserve-symlinks-flag@1.0.0: {}
 

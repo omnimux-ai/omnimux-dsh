@@ -82,7 +82,7 @@
     "dsh-ui-kit": "file:../../packages/dsh-ui-kit"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.0",
+    "@deepseek-ai/cordis": "^4.0.2",
     "@deepseek-ai/dsh-agent": ">=0.1.0-rc.1 <0.1.1-0 || >=0.1.1-rc.0 <0.1.2-0 || >=0.2.1-rc.3 <0.3.0-0",
     "@deepseek-ai/dsh-attachment": ">=0.1.0-rc.1 <0.1.1-0 || >=0.1.1-rc.0 <0.1.2-0 || >=0.2.1-rc.3 <0.3.0-0",
     "@deepseek-ai/dsh-fs": ">=0.1.0-rc.1 <0.1.1-0 || >=0.1.1-rc.0 <0.1.2-0 || >=0.2.1-rc.3 <0.3.0-0",
