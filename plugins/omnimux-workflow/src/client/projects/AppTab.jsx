@@ -516,6 +516,9 @@ export function AppTab(props) {
     || tabBoundAppId
 
   const [appId, setAppId] = useState(seedAppId)
+  // 「最新请求胜出」守卫：连续切应用时，先发出的慢响应不得覆盖后发的新应用。
+  // 只比对返回体的 appId 拦不住——旧响应本身就是旧应用，必须比对当前期望的 appId。
+  const requestedAppIdRef = useRef(seedAppId)
   const [manifest, setManifest] = useState(() => {
     return explicitManifest || readCachedManifest(seedAppId)
   })
@@ -544,7 +547,10 @@ export function AppTab(props) {
         return
       }
       // 内置应用没有本地缓存，事件里也可能只带 appId（中枢 openApp 通道）：走只读接口解析。
+      requestedAppIdRef.current = nextId
       void fetchAppManifest(nextId).then((remote) => {
+        // 慢响应晚到：此时标签页已经切到别的应用，本次结果必须丢弃。
+        if (requestedAppIdRef.current !== nextId) return
         if (!remote) {
           setManifest((prev) => (prev && prev.appId === nextId ? prev : null))
           return
@@ -584,8 +590,10 @@ export function AppTab(props) {
       return
     }
     let cancelled = false
+    requestedAppIdRef.current = appId
     void fetchAppManifest(appId).then((remote) => {
-      if (cancelled) return
+      // cancelled：effect 已换到别的 appId；requestedAppIdRef：慢响应晚于更新的请求。
+      if (cancelled || requestedAppIdRef.current !== appId) return
       // 解析不出来时必须清掉旧 manifest：否则上一个应用的表单会挂在新 appId 下，
       // 把「读不到」渲染成「这是另一个应用」。清空后走既有空态分支。
       if (!remote) {

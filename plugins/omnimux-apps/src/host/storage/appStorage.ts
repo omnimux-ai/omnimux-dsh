@@ -29,6 +29,24 @@ export class AppStorageError extends Error {
   }
 }
 
+/** appId 只允许这组字符：它是目录名，任何路径分隔或 `..` 都必须在这里被拒。 */
+export const APP_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
+/**
+ * 版本号进入文件名 `manifest@<version>.json`：允许 semver 的点号与预发布标记，
+ * 但绝不允许路径分隔符，也不允许整体是 `..`。
+ */
+export const APP_VERSION_PATTERN = /^(?!\.\.?$)[a-zA-Z0-9._+-]+$/;
+
+/**
+ * appId 是否可作为目录名。写路径由 schemaValidator 校验，读路径（getManifest /
+ * 任务记录）此前没有任何校验——`%2F` 解码出的 `/` 会直接拼进 path.join，
+ * 读走应用目录外的 JSON。判定必须落在存储层，不能只靠某个调用方拦。
+ */
+export function isValidAppId(appId: unknown): appId is string {
+  return typeof appId === 'string' && APP_ID_PATTERN.test(appId);
+}
+
 /** Lightweight metadata index persisted at ~/.omnimux/apps/<appId>/app.json */
 export interface AppIndexEntry {
   appId: string;
@@ -158,6 +176,7 @@ export class AppStorage {
    * If version is omitted, returns the manifest corresponding to `latestVersion`.
    */
   public async getManifest(appId: string, version?: string): Promise<ApplicationManifest | null> {
+    if (!isValidAppId(appId)) return null;
     const appDir = path.join(this.baseDir, appId);
     let targetVersion = version;
 
@@ -170,13 +189,19 @@ export class AppStorage {
         const raw = await fs.promises.readFile(indexPath, 'utf-8');
         const index = JSON.parse(raw) as AppIndexEntry;
         targetVersion = index.latestVersion;
-      } catch {
-        return null;
+      } catch (err: any) {
+        // 索引存在但读不出/解析不了 = 存储损坏，不是「没有这个应用」。
+        // 静默 return null 会让调用方回落出厂版本，把用户覆盖发布的应用无声换回官方原版。
+        throw new AppStorageError('io_error', `Failed to read app index ${indexPath}: ${err.message}`);
       }
     }
 
     if (!targetVersion) {
       return null;
+    }
+    // 版本号同样进入文件名，必须挡住分隔符与 `..`。
+    if (typeof targetVersion !== 'string' || !APP_VERSION_PATTERN.test(targetVersion)) {
+      throw new AppStorageError('invalid_manifest', `Invalid version identifier: ${String(targetVersion)}`);
     }
 
     const manifestPath = path.join(appDir, `manifest@${targetVersion}.json`);
@@ -232,8 +257,14 @@ export class AppStorage {
    * Record a task projection for an application.
    */
   public async recordTask(appId: string, taskRecord: TaskRecord): Promise<{ success: boolean; taskId: string }> {
+    if (!isValidAppId(appId)) {
+      throw new AppStorageError('invalid_manifest', `Invalid appId: ${String(appId)}`);
+    }
     if (!taskRecord.taskId || !taskRecord.taskId.trim()) {
       throw new AppStorageError('io_error', 'taskRecord.taskId must be a non-empty string');
+    }
+    if (!APP_ID_PATTERN.test(taskRecord.taskId)) {
+      throw new AppStorageError('invalid_manifest', `Invalid taskId: ${String(taskRecord.taskId)}`);
     }
     if (taskRecord.appId !== appId) {
       throw new AppStorageError('io_error', `taskRecord.appId (${taskRecord.appId}) does not match appId (${appId})`);
@@ -255,6 +286,7 @@ export class AppStorage {
    * Retrieve a recorded task.
    */
   public async getTask(appId: string, taskId: string): Promise<TaskRecord | null> {
+    if (!isValidAppId(appId) || !APP_ID_PATTERN.test(String(taskId ?? ''))) return null;
     const taskPath = path.join(this.baseDir, appId, 'tasks', `${taskId}.json`);
     if (!fs.existsSync(taskPath)) {
       return null;
@@ -271,6 +303,7 @@ export class AppStorage {
    * List task history for an application.
    */
   public async listTasks(appId: string, limit: number = 50): Promise<TaskRecord[]> {
+    if (!isValidAppId(appId)) return [];
     const tasksDir = path.join(this.baseDir, appId, 'tasks');
     if (!fs.existsSync(tasksDir)) {
       return [];

@@ -254,6 +254,19 @@ async function mountAppTab({ sidebar, tab, seed, fetchImpl = null, t = (key) => 
     container: env.container,
     title: () => env.container.querySelector('.omx-apptab-title')?.textContent.trim() ?? null,
     badge: () => env.container.querySelector('.omx-apptab-badge')?.textContent.trim() ?? null,
+    /** 重挂载成新的导航参数：宿主对同一 kind 只保留一个标签页，换应用就是这样重建记录的。 */
+    rerender(nextTab) {
+      root.render(React.createElement(AppTab, {
+        ctx: { t, betterSidebar: sidebar },
+        t,
+        store: null,
+        scope: { sessionId: 'sess-1' },
+        tab: { ...tab, ...nextTab },
+        visible: true,
+        expanded: [],
+        revealed: [],
+      }))
+    },
     async teardown() {
       await act(async () => root.unmount())
       env.teardown()
@@ -647,5 +660,77 @@ test('旅程 8：内置应用与用户应用合并展示，内置卡片无删除
     )
   } finally {
     await tab.teardown()
+  }
+})
+
+test('旅程 9：内置应用解析失败/慢响应时不得伪造内容，也不得被旧响应覆盖（Issue #3876）', async () => {
+  const sidebar = makeSidebar()
+
+  // ① 先显示一个有效应用，再切到接口 404 的 appId：必须清掉旧 manifest 并回到空态。
+  const notFoundFetch = async (url) => {
+    const appId = String(url).split('/').pop()
+    if (appId === 'app_builtin_missing') {
+      return { ok: false, status: 404, async json() { return { error: 'app_not_found' } } }
+    }
+    return {
+      ok: true,
+      status: 200,
+      async json() { return { app: { appId, version: '1.0.0', metadata: { name: '应用A', category: 'video' } } } },
+    }
+  }
+  const missingTab = await mountAppTab({
+    sidebar,
+    fetchImpl: notFoundFetch,
+    tab: { id: 'tabA', type: APP_TAB_ID, meta: { appId: 'app_builtin_ok_a' }, title: 'AI 应用' },
+  })
+  try {
+    await missingTab.act(async () => { await new Promise((done) => setTimeout(done, 40)) })
+    assert.equal(missingTab.title(), '应用A', '前置：先要真的显示出一个有效应用')
+    // 走 effect 路径（meta.appId 变化触发重挂载），清空逻辑就在这个 effect 里。
+    await missingTab.act(async () => {
+      missingTab.rerender({ meta: { appId: 'app_builtin_missing' } })
+    })
+    await missingTab.act(async () => { await new Promise((done) => setTimeout(done, 40)) })
+    assert.equal(
+      missingTab.title(),
+      null,
+      '解析失败时必须回到空态；继续显示「应用A」就是把读不到伪装成了另一个应用',
+    )
+    assert.equal(
+      Boolean(missingTab.container.querySelector('.omx-apptab-empty')),
+      true,
+      '解析失败必须落在既有空态分支',
+    )
+  } finally {
+    await missingTab.teardown()
+  }
+
+  // ② 慢响应晚到：先发的 A 响应不得覆盖后切的 B。
+  const slowFetch = async (url) => {
+    const appId = String(url).split('/').pop()
+    if (appId === 'app_builtin_slow_a') {
+      await new Promise((done) => setTimeout(done, 60))
+      return { ok: true, status: 200, async json() { return { app: { appId, version: '1.0.0', metadata: { name: '应用A', category: 'video' } } } } }
+    }
+    return { ok: true, status: 200, async json() { return { app: { appId, version: '1.0.0', metadata: { name: '应用B', category: 'video' } } } } }
+  }
+  const raceTab = await mountAppTab({
+    sidebar,
+    fetchImpl: slowFetch,
+    tab: { id: 'tabB', type: APP_TAB_ID, meta: { appId: 'app_builtin_fast_b' }, title: 'AI 应用' },
+  })
+  try {
+    await raceTab.act(async () => {
+      globalThis.window.dispatchEvent(new globalThis.window.CustomEvent('omnimux-app-open', {
+        detail: { appId: 'app_builtin_slow_a' },
+      }))
+      globalThis.window.dispatchEvent(new globalThis.window.CustomEvent('omnimux-app-open', {
+        detail: { appId: 'app_builtin_fast_b' },
+      }))
+    })
+    await raceTab.act(async () => { await new Promise((done) => setTimeout(done, 120)) })
+    assert.equal(raceTab.title(), '应用B', '先发的慢响应不得覆盖后切的应用')
+  } finally {
+    await raceTab.teardown()
   }
 })

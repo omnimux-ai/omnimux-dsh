@@ -21,7 +21,7 @@ function fakeRes() {
   };
 }
 
-function makeRoutes(service = {}) {
+function makeRoutes(service = {}, options = {}) {
   return createAppsRoutes({
     service: {
       getManifest: async () => null,
@@ -32,6 +32,7 @@ function makeRoutes(service = {}) {
       ...service,
     },
     getHeadlessSeam: () => null,
+    ...options,
   });
 }
 
@@ -55,6 +56,23 @@ describe('GET /omnimux-apps/api/apps：官方内置清单', () => {
       assert.ok(app.metadata?.name, `${app.appId} 必须带 metadata.name，否则卡片没有标题`);
       assert.ok(app.metadata?.category, `${app.appId} 必须带 metadata.category，否则卡片没有分类`);
     }
+  });
+
+  test('内置清单读不到时回 503，不伪装成空清单', async () => {
+    const routes = makeRoutes({}, { loadBuiltinApps: () => null });
+    const res = fakeRes();
+    const handled = await routes.handle({ url: '/omnimux-apps/api/apps', method: 'GET' }, res);
+    assert.equal(handled, true);
+    assert.equal(res.state.status, 503, '读不到必须回 503；回 200 空数组等于把故障说成空数据');
+    assert.equal(JSON.parse(res.state.body).error, 'builtin_apps_unavailable');
+  });
+
+  test('内置清单真的为空数组时回 200（与读不到区分开）', async () => {
+    const routes = makeRoutes({}, { loadBuiltinApps: () => [] });
+    const res = fakeRes();
+    await routes.handle({ url: '/omnimux-apps/api/apps', method: 'GET' }, res);
+    assert.equal(res.state.status, 200);
+    assert.deepEqual(JSON.parse(res.state.body).apps, []);
   });
 
   test('非 GET 方法回 405 并声明 Allow，不被误认成保存 manifest', async () => {
@@ -109,8 +127,14 @@ describe('GET /omnimux-apps/api/apps/:appId：单个 manifest', () => {
 
     // 存储读失败必须如实报错：静默回落到出厂版本会让用户覆盖发布的应用无声变回原版。
     assert.equal(res.state.status, 500, '存储读失败必须回 500，不能伪装成拿到了官方原版');
-    assert.equal(JSON.parse(res.state.body).error, 'manifest_read_failed');
-    assert.equal(JSON.parse(res.state.body).message, 'disk unavailable', '必须把真实原因带给调用方');
+    const parsed = JSON.parse(res.state.body);
+    assert.equal(parsed.error, 'manifest_read_failed');
+    assert.equal(parsed.message, '读取应用清单失败', '对外只给稳定文案，不透传可能含绝对路径的底层错误');
+    assert.equal(
+      res.state.body.includes('disk unavailable'),
+      false,
+      '底层错误文本（可能含本机绝对路径）不得回给浏览器',
+    );
   });
 
   test('非法百分号编码回 400，不抛 URIError', async () => {
@@ -143,5 +167,46 @@ describe('GET /omnimux-apps/api/apps/:appId：单个 manifest', () => {
     // 没有 headless seam 时既有语义是 503；关键是不能被单项接口当成 appId=app_x 处理。
     assert.equal(res.state.status, 503, 'executions 子路径必须继续走执行路由');
     assert.equal(handled, true);
+  });
+
+  test('保留路径 manifest 不被单项 GET 当成 appId 吞掉', async () => {
+    const routes = makeRoutes();
+    const res = fakeRes();
+    const handled = await routes.handle({ url: '/omnimux-apps/api/apps/manifest', method: 'GET' }, res);
+    assert.equal(handled, false, 'GET /apps/manifest 必须继续走既有语义，不能被单项接口认领成 appId=manifest');
+  });
+
+  test('%2F 路径穿越被拒：appId 只允许 [a-zA-Z0-9_-]', async () => {
+    const routes = makeRoutes({
+      getManifest: async (appId) => {
+        // 若路由把穿越串放进来，这里会「读到」目录外的内容。
+        if (String(appId).includes('/') || String(appId).includes('..')) {
+          return { appId: 'SECRET-MANIFEST', version: '1.0.0', metadata: { name: '目录外内容', category: 'video' } };
+        }
+        return null;
+      },
+    });
+    for (const payload of ['..%2F..%2F..%2Fsecret', 'a%2Fb', '..%2Fapp', '%2E%2E%2Fsecret']) {
+      const res = fakeRes();
+      const handled = await routes.handle({ url: `/omnimux-apps/api/apps/${payload}`, method: 'GET' }, res);
+      assert.equal(handled, true);
+      assert.equal(res.state.status, 400, `${payload} 必须在路由层被拒，不能落到存储层`);
+      assert.equal(JSON.parse(res.state.body).error, 'invalid_app_id');
+      assert.equal(res.state.body.includes('SECRET-MANIFEST'), false, '绝不允许返回应用目录外的内容');
+    }
+  });
+
+  test('executions 子路径的非法编码同样回 400，不抛 URIError', async () => {
+    const routes = makeRoutes();
+    for (const [url, method] of [
+      ['/omnimux-apps/api/apps/app_x/executions/%E0%A4%A', 'GET'],
+      ['/omnimux-apps/api/apps/app_x/executions/%E0%A4%A/cancel', 'POST'],
+      ['/omnimux-apps/api/apps/%E0%A4%A/executions', 'POST'],
+    ]) {
+      const res = fakeRes();
+      const handled = await routes.handle({ url, method, body: {} }, res);
+      assert.equal(handled, true, `${method} ${url} 必须被路由处理`);
+      assert.equal(res.state.status, 400, `${method} ${url} 必须回 400，而不是连接级 URIError`);
+    }
   });
 });

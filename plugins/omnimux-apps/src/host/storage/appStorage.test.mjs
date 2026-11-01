@@ -233,3 +233,69 @@ test('T02.5: recordTask, getTask, and listTasks manage task projections reliably
   assert.equal(taskList.length, 1);
   assert.equal(taskList[0].taskId, 'task_001');
 });
+
+test('T02.6: getManifest 拒绝路径穿越 appId，绝不读到 baseDir 之外的文件（Issue #3876）', async () => {
+  const tempDir = createTempDir();
+  const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), 'omnimux-apps-outside-'));
+  try {
+    // 在应用目录之外放一份「可被穿越读到」的清单
+    fs.mkdirSync(path.join(outsideDir, 'secret'), { recursive: true });
+    fs.writeFileSync(
+      path.join(outsideDir, 'secret', 'app.json'),
+      JSON.stringify({ appId: 'SECRET', latestVersion: '1.0.0' }),
+      'utf-8',
+    );
+    fs.writeFileSync(
+      path.join(outsideDir, 'secret', 'manifest@1.0.0.json'),
+      JSON.stringify({ appId: 'SECRET', version: '1.0.0', metadata: { name: '目录外内容', category: 'video' } }),
+      'utf-8',
+    );
+
+    const baseDir = path.join(tempDir, 'apps');
+    fs.mkdirSync(baseDir, { recursive: true });
+    const storage = new AppStorage({ baseDir });
+
+    // 相对穿越：从 baseDir 往上跳到 outsideDir
+    const relativeEscape = path.relative(baseDir, path.join(outsideDir, 'secret'));
+    for (const candidate of [relativeEscape, '../secret', '..', 'a/b', '.']) {
+      const manifest = await storage.getManifest(candidate);
+      assert.equal(manifest, null, `appId=${JSON.stringify(candidate)} 必须被拒并返回 null，不能读到目录外内容`);
+    }
+
+    // 绝对路径同样必须被拒
+    const absoluteEscape = path.join(outsideDir, 'secret');
+    assert.equal(await storage.getManifest(absoluteEscape), null, '绝对路径 appId 必须被拒');
+
+    // 合法 appId 仍然可用（不误伤正常路径）
+    await storage.saveManifest(createSampleManifest('app_legit_001', '1.0.0'));
+    const loaded = await storage.getManifest('app_legit_001');
+    assert.equal(loaded?.appId, 'app_legit_001', '合法 appId 必须照常读回');
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    fs.rmSync(outsideDir, { recursive: true, force: true });
+  }
+});
+
+test('T02.7: app.json 索引损坏时报错，不静默返回 null 让调用方回落出厂版本', async () => {
+  const tempDir = createTempDir();
+  try {
+    const baseDir = path.join(tempDir, 'apps');
+    const appDir = path.join(baseDir, 'app_corrupt_001');
+    fs.mkdirSync(appDir, { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'app.json'), '{ not json', 'utf-8');
+    fs.writeFileSync(
+      path.join(appDir, 'manifest@1.0.0.json'),
+      JSON.stringify({ appId: 'app_corrupt_001', version: '1.0.0', metadata: { name: '用户覆盖版', category: 'video' } }),
+      'utf-8',
+    );
+
+    const storage = new AppStorage({ baseDir });
+    await assert.rejects(
+      () => storage.getManifest('app_corrupt_001'),
+      (error) => error instanceof AppStorageError && error.code === 'io_error',
+      '索引损坏必须抛 io_error；返回 null 会让上层无声换回官方原版',
+    );
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});

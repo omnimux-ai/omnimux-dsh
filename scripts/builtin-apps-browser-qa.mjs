@@ -16,18 +16,25 @@
  */
 import assert from 'node:assert/strict'
 import { execFileSync, spawn } from 'node:child_process'
-import { randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { createHash, randomUUID } from 'node:crypto'
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import http from 'node:http'
 import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { findChromePath, assertPng } from './worktree-web-qa.mjs'
-import { createAppsRoutes } from '../plugins/omnimux-apps/dist/index.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
+
+// host 半边必须来自**当前源码**：先重建 dist，再从 dist 导入。否则证据会跑在旧产物上，
+// 报告里的 head 标签与真正执行的代码对不上（独立评审 B5）。
+execFileSync(process.execPath, [join(root, 'plugins/omnimux-apps/scripts/build-host.mjs')], {
+  cwd: join(root, 'plugins/omnimux-apps'),
+  stdio: 'pipe',
+})
+const { createAppsRoutes } = await import('../plugins/omnimux-apps/dist/index.js')
 const require = createRequire(join(root, 'package.json'))
 
 const runId = randomUUID()
@@ -35,11 +42,15 @@ const evidenceDir = join(root, '.workbuddy/evidence/worktree-qa', `builtin-apps-
 mkdirSync(evidenceDir, { recursive: true })
 
 const headSha = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+// 记录真正执行的 host 产物哈希：head 标签 + 产物哈希一起才能证明「跑的就是这份源码」。
+const hostDistPath = join(root, 'plugins/omnimux-apps/dist/index.js')
+const hostDistSha256 = createHash('sha256').update(readFileSync(hostDistPath)).digest('hex')
 
 const report = {
   runId,
   head: headSha,
   headShort: headSha.slice(0, 7),
+  hostDist: { path: hostDistPath, sha256: hostDistSha256, bytes: statSync(hostDistPath).size },
   task: 'Issue #3876 项目页「AI应用」同时列出官方内置应用',
   startedAt: new Date().toISOString(),
   completedAt: null,

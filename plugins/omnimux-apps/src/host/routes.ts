@@ -16,9 +16,12 @@ import { fileURLToPath } from 'node:url';
 import type { OmnimuxAppsService } from './index.ts';
 import type { HeadlessExecutionSeam } from './executionBridge.ts';
 import { BUILTIN_MANIFESTS } from '../shared/builtinCatalogData.ts';
+import { isValidAppId } from './storage/appStorage.ts';
 
 const PREFIX = '/omnimux-apps/api/apps';
 const LIST_PATH = PREFIX;
+/** `manifest` 是保存清单的保留路径，不能被单项 GET 当成 appId 吞掉。 */
+const RESERVED_SEGMENTS = new Set(['manifest']);
 const ITEM_PATH_RE = new RegExp(`^${PREFIX}/([^/]+)$`);
 const EXECUTION_POST_RE = new RegExp(`^${PREFIX}/([^/]+)/executions$`);
 const EXECUTION_ITEM_RE = new RegExp(`^${PREFIX}/([^/]+)/executions/([^/]+)$`);
@@ -65,8 +68,11 @@ export function createAppsRoutes(deps: {
   service: OmnimuxAppsService;
   getHeadlessSeam: () => HeadlessExecutionSeam | null;
   getModelCatalog?: () => any;
+  /** 可注入的内置清单读取（测试据此覆盖「读不到」分支）；默认读随包清单。 */
+  loadBuiltinApps?: () => any[] | null;
 }) {
   const { service, getHeadlessSeam, getModelCatalog } = deps;
+  const readBuiltinApps = deps.loadBuiltinApps ?? loadBuiltinApps;
 
   return {
     async handle(req: any, res: any): Promise<boolean> {
@@ -109,7 +115,7 @@ export function createAppsRoutes(deps: {
           sendJson(405, { error: 'method_not_allowed', message: '清单接口只支持 GET' });
           return true;
         }
-        const apps = loadBuiltinApps();
+        const apps = readBuiltinApps();
         if (!apps) {
           sendJson(503, { error: 'builtin_apps_unavailable', message: '官方内置应用清单不可用' });
           return true;
@@ -120,14 +126,15 @@ export function createAppsRoutes(deps: {
 
       // 0b. GET /omnimux-apps/api/apps/:appId（单个 manifest：用户已发布优先，内置兜底）
       const manifestMatch = ITEM_PATH_RE.exec(pathname);
-      if (manifestMatch && method === 'GET') {
+      if (manifestMatch && method === 'GET' && !RESERVED_SEGMENTS.has(manifestMatch[1] || '')) {
         const appId = decodeSegment(manifestMatch[1] || '');
         if (appId === null) {
           sendJson(400, { error: 'invalid_app_id', message: 'appId 编码非法' });
           return true;
         }
-        if (!appId) {
-          sendJson(400, { error: 'invalid_app_id', message: 'appId is required' });
+        // appId 是目录名：解码出的 `/`、`..` 必须在这里就被拒，不能交给 path.join。
+        if (!isValidAppId(appId)) {
+          sendJson(400, { error: 'invalid_app_id', message: 'appId 非法' });
           return true;
         }
         let stored: any = null;
@@ -139,14 +146,12 @@ export function createAppsRoutes(deps: {
         }
         // 存储读错时不能静默回落到出厂版本：用户覆盖发布过的应用会无声变回官方原版，
         // 用户看不到「你的版本读失败了」。回 500 让调用方给出真实错误。
+        // 错误详情不外泄给浏览器（可能含绝对路径），只回稳定错误码。
         if (storedError) {
-          sendJson(500, {
-            error: 'manifest_read_failed',
-            message: storedError?.message || '读取应用清单失败',
-          });
+          sendJson(500, { error: 'manifest_read_failed', message: '读取应用清单失败' });
           return true;
         }
-        const manifest = stored || loadBuiltinApps()?.find((a) => a?.appId === appId) || null;
+        const manifest = stored || readBuiltinApps()?.find((a) => a?.appId === appId) || null;
         if (!manifest) {
           sendJson(404, { error: 'app_not_found', message: `应用 ${appId} 未找到` });
           return true;
@@ -177,13 +182,17 @@ export function createAppsRoutes(deps: {
       // 1. POST /omnimux-apps/api/apps/:appId/executions
       const postMatch = EXECUTION_POST_RE.exec(pathname);
       if (postMatch && method === 'POST') {
-        const appId = decodeURIComponent(postMatch[1] || '');
+        const appId = decodeSegment(postMatch[1] || '');
+        if (appId === null || !isValidAppId(appId)) {
+          sendJson(400, { error: 'invalid_app_id', message: 'appId 非法' });
+          return true;
+        }
         const body = await readBody();
         const inputs = body.inputs || {};
 
         let manifest = await service.getManifest(appId, body.version);
         if (!manifest) {
-          const builtins = loadBuiltinApps() ?? [];
+          const builtins = readBuiltinApps() ?? [];
           manifest = builtins.find((a) => a.appId === appId) || null;
         }
         if (!manifest && body.manifest && body.manifest.appId === appId) {
@@ -225,7 +234,11 @@ export function createAppsRoutes(deps: {
       // 2. POST /omnimux-apps/api/apps/:appId/executions/:executionId/cancel
       const cancelMatch = EXECUTION_CANCEL_RE.exec(pathname);
       if (cancelMatch && method === 'POST') {
-        const executionId = decodeURIComponent(cancelMatch[2] || '');
+        const executionId = decodeSegment(cancelMatch[2] || '');
+        if (executionId === null) {
+          sendJson(400, { error: 'invalid_execution_id', message: 'executionId 编码非法' });
+          return true;
+        }
         const headlessSeam = getHeadlessSeam();
         if (!headlessSeam) {
           sendJson(503, { error: 'seam_unavailable', message: '后台工作流执行通道尚未就绪' });
@@ -243,7 +256,11 @@ export function createAppsRoutes(deps: {
       // 3. GET /omnimux-apps/api/apps/:appId/executions/:executionId
       const itemMatch = EXECUTION_ITEM_RE.exec(pathname);
       if (itemMatch && method === 'GET') {
-        const executionId = decodeURIComponent(itemMatch[2] || '');
+        const executionId = decodeSegment(itemMatch[2] || '');
+        if (executionId === null) {
+          sendJson(400, { error: 'invalid_execution_id', message: 'executionId 编码非法' });
+          return true;
+        }
         const headlessSeam = getHeadlessSeam();
         if (!headlessSeam) {
           sendJson(503, { error: 'seam_unavailable', message: '后台工作流执行通道尚未就绪' });

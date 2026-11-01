@@ -89,22 +89,12 @@
 
 ## 旧标准变更
 
-- `plugins/omnimux-apps/src/host/routes.list.test.mjs` :: `非 GET 方法回 405 并声明 Allow，不被误认成保存 manifest`
-  - 原断言：`assert.equal(handled, false)` —— 断言的是路由内部返回值，不是 HTTP 状态码。
-  - 必须改的理由：独立评审 F2 指出 AC-1 要求非 GET 返回 405，而该断言让「405 缺失」也能绿；实现已改为清单路径自己认领并回 405。
-  - 新期望证据：改为逐方法断言 `handled === true`、`status === 405`、`error === 'method_not_allowed'`。
-
-- `plugins/omnimux-apps/src/host/routes.list.test.mjs` :: `非 GET 方法不被清单接口认领（交给既有路由语义）`
-  - 原断言：`assert.equal(handled, false)` —— 断言的是路由内部返回值，不是 HTTP 状态码。
-  - 必须改的理由：独立评审 F2 指出 AC-1 要求非 GET 返回 405，而该断言让「405 缺失」也能绿；实现已改为清单路径自己认领并回 405。
-  - 新期望证据：改为逐方法断言 `handled === true`、`status === 405`、`error === 'method_not_allowed'`；用例名保持不变。
-
-- `plugins/omnimux-apps/src/host/routes.list.test.mjs` :: `存储读取抛错时仍按内置兜底，不把整页打成 500`
-  - 原断言：`assert.equal(res.state.status, 200)` 且回落到内置 manifest。
-  - 必须改的理由：独立评审 F10 指出该降级会让用户覆盖发布过的应用在存储读失败时无声变回官方原版；实现已改为回 500 `manifest_read_failed`。
-  - 新期望证据：改为断言 `status === 500`、`error === 'manifest_read_failed'`，并单独保留「存储正常但无记录」时回落内置的用例。
-
 - `plugins/omnimux-workflow/tests/ai-app-library.e2e.test.mjs` :: `旅程 8：内置应用与用户应用合并展示，内置卡片无删除入口且标签页按 appId 解析（Issue #3876）`
   - 原断言：`assert.deepEqual(cards.map(cardName), ['商品生视频', '爆款复刻'])`，其中 `cardName` 只剥离分类副标题。
   - 必须改的理由：本用例的卡片带「官方」badge，`cardName` 把 badge 文案一起算进应用名，得到 `官方商品生视频`；这是用例新增后立刻发现的断言缺陷，不是产品行为变化。
   - 新期望证据：改为读 `.dshUk-MediaCard-title` 的真实标题文本再比较；产品行为与断言意图（内置应用按清单顺序、用户覆盖版本替换同名条目）不变。
+
+- `plugins/omnimux-workflow/tests/ai-app-library.e2e.test.mjs` :: `旅程 9：内置应用解析失败/慢响应时不得伪造内容，也不得被旧响应覆盖（Issue #3876）`
+  - 原断言：先挂载到 404 的 appId 再断言空态；此时初始 manifest 本就是 null，删掉清空分支测试仍绿（独立评审 B2 指出零覆盖）。
+  - 必须改的理由：改为「先显示有效应用 → 再切到 404 的 appId」，让清空分支成为通过的必要条件。
+  - 新期望证据：实测删掉 `setManifest(... : null)` 分支后该用例变红（停在「应用A」）；恢复后变绿。
