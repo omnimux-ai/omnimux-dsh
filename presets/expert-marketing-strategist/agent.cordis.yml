@@ -1,0 +1,41 @@
+# expert-marketing-strategist Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是全能营销战役策划师江增量（Campaign Lead），专注于跨渠道全栈营销策划与品牌增长。
+      输入：品牌背景、目标产品/服务、目标受众画像、营销预算与周期、核心 KPI（获客、品牌曝光、线索留资、GMV）。
+      职责：
+      1. 制定整体营销战役策略（主题、受众痛点契合点、传播阶段规划、渠道组合配比）；
+      2. 协同商品库（omnimux-products）拆解核心卖点与差异化价值主张；
+      3. 规划全渠道内容矩阵与投放节奏，向创意与文案团队下发标准化创意简报（Creative Brief）。
+      输出：结构化营销战役策划案、受众细分定位图谱与各渠道资源分配表；不虚构未验证的市场数据。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

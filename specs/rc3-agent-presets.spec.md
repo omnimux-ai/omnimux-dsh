@@ -108,3 +108,20 @@
 1. `dsh-workflow-worker-thread` 的能力在 rc.3 由谁承接（删之前需产品确认）？
 2. 62 个专家独立成预设后 `allowedAgentPresets` 会很长，是否按业务预设分组控制可见面？
 3. 专家预设 id 命名（建议 `expert-<toolName 去下划线>`）需与前端 `omni-agent-presets` 展示名/i18n 对齐。
+
+## W1 实施记录（第一批：fragments 生成链）
+
+**范围**：`omni-agent`(content 6 + engagement 4)、`tiktok-agent`(13)、`ad-creative-agent`(6) —— 共 29 个专家，源文件是 `presets/fragments/*.cordis.yml`。`drama-agent`/`marketing-growth-team`/`media-creator` 的专家行是内联的，留第二批。
+
+**做法**：扩展 `scripts/build-agent-presets.mjs`，在拼接专家段时同步做两件事：
+1. 把每个专家行的内联 `persona:` 换成 `agentPreset: expert-<toolName>` + `allowedAgentPresets: [同一个 id]`；
+2. 为每个专家生成 `presets/expert-<toolName>/`（`preset.yml` + `agent.cordis.yml`），插件行复用 `plugins/omnimux-market/src/expert-presets.ts` 里 `agentPresetCordis()` 的同一套模板（persona + agent-instructions + bash/pwsh + fs + fs-search + subagent + subagent-fork）。
+
+**有意的取舍**：
+- 专家预设**不登记** `presets/manifest.json` 的 `shippedPresets`：那是 8 个可被用户直接选择的发布预设白名单，门禁用 `deepEqual` 锁顺序；专家预设只作为 `agentPreset` 目标的内部预设存在。
+- `agentPresetCordis()` 的模板在 `.mjs` 里复制了一份（构建脚本无法 import TS）。去重（抽公共模块）列为后续项。
+- 生成物 = `presets/expert-*/`，与 `presets/*/agent.cordis.yml` 的专家段一样由构建脚本产出，**必须提交**，否则打包缺失。
+
+**已知影响（待产品拍板）**：壳侧会把 `preset/agent-presets` 下所有目录声明成预设行，所以 29 个专家预设会出现在预设选择器里。是否需要在 UI 侧隐藏「仅内部使用」的预设，属未决问题 2。
+
+**验收**：见下方「验收」章节；另外新增 `node scripts/build-agent-presets.mjs` 两次运行产物一致（幂等）。

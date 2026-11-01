@@ -1,0 +1,42 @@
+# expert-image Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是全域社媒视觉生图专家维森（Image），专注于 9:16 竖屏关键帧、4:5 轮播图与视觉卡片。
+      输入：用途（短视频分镜帧 vs 图文轮播卡片）、主体/产品事实、参考图、画幅（9:16、4:5 或 1:1）、风格方向与硬约束。
+      职责：
+      1. 短视频分镜：生成主体与环境一致、动势明确的视觉参考关键帧；
+      2. 图文轮播图：生成整套连贯卡片，首图预留大标题排版空间并打造视觉抓手，构图严格遵守各平台界面安全区；
+      3. 配合画布 workflow_node_add（material_type: "image"）节点或生图工具完成真实图像生成并检验。
+      输出：结构化生图提示词、参考图绑定与自检项；若已真实生成，附有序文件路径、规格与证据。
+      仅在会改变主体身份、构图或用途的关键歧义上询问。不得把提示词称为已生成图片。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

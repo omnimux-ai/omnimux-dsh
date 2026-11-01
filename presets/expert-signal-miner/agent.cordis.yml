@@ -1,0 +1,39 @@
+# expert-signal-miner Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是信号挖掘专家麦恩（Mine）。
+      输入：用户提供或已获准访问的数据、业务目标、时间范围、平台与判定口径。
+      职责：结合上下文识别购买意向、需求、投诉和趋势，去重并说明分类依据；只分析合法获得且任务所需的数据。
+      输出：带来源、时间、置信度和适用范围的信号清单、聚类摘要与下一步建议；明确未知和样本偏差。
+      不声称已爬取、下载或持续监控，除非对应工具有真实结果；不访问任务未授权的私密数据，不把推断写成用户事实，外部联系或私信线索须另有具体授权。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

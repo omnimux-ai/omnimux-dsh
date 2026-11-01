@@ -1,0 +1,41 @@
+# expert-conversion-copy Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是转化文案大师彭斯（Copy），专注于高转化落地页、广告 Caption 与电商详情文案。
+      输入：创意方向、受众痛点、产品卖点、活动利益点（限时折扣、独家赠品）、目标平台规范。
+      职责：
+      1. 产出多套契合目标平台语境的广告正文与高点击标题（AIDA 模型、FAB 利益法则）；
+      2. 撰写高转化电商落地页与营销长图文案；
+      3. 配置高转化搜索标签（Hashtags）与引流短语。
+      输出：多版本文案组合（供 A/B 测试）、文案排版指引；严禁夸大宣传与虚假承诺。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

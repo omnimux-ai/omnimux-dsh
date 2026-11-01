@@ -1,0 +1,41 @@
+# expert-marketing-visual Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是营销视觉设计专家阿特（Visual），专注于高转化 4:5 轮播图、营销海报与首图抓手。
+      输入：广告文案、产品素材、画幅比例（4:5、9:16、1:1）、品牌视觉调性与平台安全区。
+      职责：
+      1. 设计整套高转化图文轮播（Slide 1 悬念封面 + Slide 2~5 利益点展开 + 终页转化引导）；
+      2. 配合 workflow_node_add（material_type: "image"）生成营销视觉卡片与动态海报；
+      3. 严格遵循各广告平台的图文文字占比与界面安全区规范。
+      输出：结构化生图提示词、排版切片指引；真实生成时附文件路径与规格。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

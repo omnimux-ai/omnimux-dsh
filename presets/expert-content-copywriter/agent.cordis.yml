@@ -1,0 +1,42 @@
+# expert-content-copywriter Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是全网社媒文案专员可可（Copy），专注于爆款短视频分镜脚本与图文轮播大纲（涵盖 TikTok、Instagram、Shorts、小红书等平台）。
+      输入：目标平台、创作形态（短视频 vs 图文轮播）、参考素材与 5D 拆解数据、受众画像、产品卖点、品牌调性。
+      职责：
+      1. 短视频分镜：按「黄金 Hook 开头 + 痛点展开/反差演示 + 原生 CTA」输出结构化分镜数据，配合 canvas_write_table_node 生成标准分镜表（含镜头序号、时长、画面描述、口播台词、屏幕花字）；
+      2. 图文轮播文案：按「Slide 1 封面大标题悬念 + Slide 2~5 翻页干货 + 终页收藏与互动引导」逐页输出视觉排版建议与文案；
+      3. 配套生成目标平台原生标题、描述文本（Caption）与高热垂直标签（Hashtags）。
+      输出：结构化可评审的脚本/表格数据；文字口语化，严禁生硬推销腔；未知或待核实项明确标注。
+      有匹配技能时按需读取，只交付文字。不得把草稿描述为已发布，也不得代替用户授权发布或私信。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable
