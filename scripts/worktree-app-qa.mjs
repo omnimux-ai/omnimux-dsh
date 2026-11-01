@@ -1018,18 +1018,20 @@ function contractRequest(options, io) {
   });
 }
 
-/** Validate correspondence between independently observed facts, never create installation/loading evidence. */
 /**
- * 宿主包锚点必须属于这台机器的实际安装布局（`app` 或 `app.asar`）。
+ * 宿主包锚点必须与这台机器**实际使用**的布局一致，而不是两种布局二选一放行。
  *
  * 旧实现写死 `app.asar`：壳改成 `asar: false` 后锚点推导与实际布局不一致，
- * 每次契约校验都会拒掉真实安装（Issue #3871）。
+ * 每次契约校验都会拒掉真实安装（Issue #3871）。但只做「二选一」又会把
+ * 「app 布局却报 app.asar 锚点」放过去，所以这里按实际存在的布局精确比对。
  */
-function sameAnchorLayout(anchor, runtimeExecutable) {
+function sameAnchorLayout(anchor, runtimeExecutable, appLayout) {
   if (typeof anchor !== 'string' || typeof runtimeExecutable !== 'string') return false;
+  // 布局来自安装记录（安装时探测得到），校验只做精确比对：
+  // 既不再写死 app.asar，也不会把「app 布局却报 app.asar 锚点」放过去。
+  if (appLayout !== 'app' && appLayout !== 'app.asar') return false;
   const resources = resolve(dirname(runtimeExecutable), '..', 'Resources');
-  return anchor === join(resources, 'app/node_modules/@deepseek-ai/dsh/package.json')
-    || anchor === join(resources, 'app.asar/node_modules/@deepseek-ai/dsh/package.json');
+  return anchor === join(resources, `${appLayout}/node_modules/@deepseek-ai/dsh/package.json`);
 }
 
 export function validateTaskRuntimeBinding({ root, taskId, runId, taskPlugins, candidate, origin, installation, serverLoading, clientLoading }) {
@@ -1042,7 +1044,7 @@ export function validateTaskRuntimeBinding({ root, taskId, runId, taskPlugins, c
     || installation.origin !== origin || !Number.isSafeInteger(installation.pid) || installation.pid <= 0
     || typeof installation.runtimeExecutable !== 'string' || !installation.runtimeExecutable.startsWith('/')
     || resolve(installation.runtimeExecutable) !== installation.runtimeExecutable
-    || !sameAnchorLayout(installation.appAnchor, installation.runtimeExecutable)
+    || !sameAnchorLayout(installation.appAnchor, installation.runtimeExecutable, installation.appLayout)
     || installation.base !== candidate?.base?.resolvedSha || installation.head !== candidate?.head?.resolvedSha
     || !digest(installation.candidateDigest) || installation.candidateDigest !== candidate?.candidate?.contentDigest
     || !digest(installation.inputsDigest) || installation.inputsDigest !== candidate?.inputs?.contentDigest
@@ -1103,7 +1105,7 @@ export function validateTaskRuntimeBinding({ root, taskId, runId, taskPlugins, c
   }
   return { installation: { taskId, runId, sourceRoot: root, privateRoot: installation.privateRoot, profile: installation.profile,
     base: installation.base, head: installation.head, candidateDigest: installation.candidateDigest, inputsDigest: installation.inputsDigest,
-    pid: installation.pid, origin, runtimeExecutable: installation.runtimeExecutable, appAnchor: installation.appAnchor,
+    pid: installation.pid, origin, runtimeExecutable: installation.runtimeExecutable, appAnchor: installation.appAnchor, appLayout: installation.appLayout,
     dependencyCount: installation.packages.length - plugins.length,
     peerCount: installation.hostPeerExpectations.length,
     packages: plugins.map(({ name, version, installedRoot, payload, serverEntry, clientBundle }) => ({ name, version, installedRoot,

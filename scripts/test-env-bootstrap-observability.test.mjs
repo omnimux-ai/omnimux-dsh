@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { archiveCommandFailure, createSkippedInputTracker, safeError } from './test-env-bootstrap.mjs'
+import { agentPresetPatchText, archiveCommandFailure, createSkippedInputTracker, safeError } from './test-env-bootstrap.mjs'
 import { sanitizeFailureReport, sanitizeFailureText } from './worktree-app-qa.mjs'
 
 test('skipped input tracker keeps a bounded sample and the true total', () => {
@@ -85,4 +85,31 @@ test('redaction decides on the full value so tail truncation cannot strip the ke
   const value = `Authorization: Bearer sk-live-ABCDEF1234567890 ${'z'.repeat(1170)}`
   assert.equal(sanitizeFailureText(value, { tail: true, limit: 1200 }), '[redacted]')
   assert.equal(sanitizeFailureReport('TEST_ENV_RUNTIME_EXIT', 'RUNTIME_EXIT', { stderrTail: value }).detail.stderrTail, '[redacted]')
+})
+
+test('preset 声明失败必须响亮抛出，不能退化成空串（静默降级回归）', () => {
+  const layout = { appRoot: '/fake/App/Contents/Resources/app', layout: 'app' };
+  // 预设目录不存在
+  assert.throws(() => agentPresetPatchText(layout, { hasShippedPresetRoot: () => false }),
+    { code: 'TEST_ENV_PRESET_ROOT_MISSING' });
+  // 合成过程抛错
+  assert.throws(() => agentPresetPatchText(layout, {
+    hasShippedPresetRoot: () => true,
+    createRequire: () => ({ resolve: () => '/x' }),
+    composeAgentPresetRows: () => { throw new Error('boom'); },
+  }), { code: 'TEST_ENV_PRESET_COMPOSE_FAILED' });
+  // 合成结果为空
+  assert.throws(() => agentPresetPatchText(layout, {
+    hasShippedPresetRoot: () => true,
+    createRequire: () => ({ resolve: () => '/x' }),
+    composeAgentPresetRows: () => ({ rows: [] }),
+  }), { code: 'TEST_ENV_PRESET_ROWS_EMPTY' });
+  // 正常路径返回片段
+  const text = agentPresetPatchText(layout, {
+    hasShippedPresetRoot: () => true,
+    createRequire: () => ({ resolve: () => '/x' }),
+    composeAgentPresetRows: () => ({ rows: [{ id: 'omnimux-preset-x', name: '@deepseek-ai/dsh-agent-preset', config: { id: 'x' } }] }),
+    stringifyStructuredFile: () => '- insert: []\n',
+  });
+  assert.match(text, /dsh-agent-preset|insert/);
 })

@@ -49,31 +49,63 @@ const isFile = (path) => {
 };
 
 /**
+ * 归档布局是否真的可用。
+ *
+ * 只看 `app.asar` 是否存在不够：普通 Node 读不了归档，Electron 里它又被当成目录，
+ * 两种上下文里「存在」都不等于「能读到里面的 preset / 宿主包」。判据必须是
+ * **能在该布局下列出 `preset/agent-presets`**——这正是隔离 profile 需要的唯一东西。
+ * 读不到就返回 false，让上层响亮报 `RUNTIME_MISSING`，而不是给一个「可用但下游全空」的布局。
+ */
+function probeArchive(io, archive) {
+  // 与 statSync 一致：探测能力缺失是调用方错误，不能悄悄换成真实 fs 去读。
+  if (typeof io.readdirSync !== 'function') {
+    throw new TypeError('resolveHostRuntimeLayout: io.readdirSync is required to probe an asar layout');
+  }
+  try {
+    return io.readdirSync(join(archive, 'preset', 'agent-presets')).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * 探测宿主安装布局。
  * @param {{ bundle?: string }} [options]
  * @returns {{ bundle: string, executable: string, wrapper: string, appRoot: string, layout: 'app' | 'app.asar', candidates: string[] }}
  */
 export function resolveHostRuntimeLayout(options = {}) {
   const bundle = options.bundle ?? DEV_APP_BUNDLE;
+  const resources = join(bundle, 'Contents/Resources');
   const candidates = WRAPPER_CANDIDATES.map((relative) => join(bundle, relative));
   // 调用方可以注入 fs（测试用 stub）：验收脚本本身走真实 fs，测试不依赖本机装没装 App。
-  const io = options.io ?? { statSync };
-  const isFile = (path) => {
-    // 注入的 fs 可能只实现少量方法（单测 stub）：缺少探测能力时按默认布局放行，
-    // 由后续 accessSync(executable) 与真实运行暴露缺件，而不是在这里静默失败。
-    if (typeof io.statSync !== 'function') return true;
+  const io = options.io ?? { statSync, readdirSync };
+  const probe = (path) => {
+    // 探测能力缺失是调用方错误，不是「布局可用」的证据：显式报错，别静默当成存在。
+    if (typeof io.statSync !== 'function') {
+      throw new TypeError('resolveHostRuntimeLayout: io.statSync is required to probe the host layout');
+    }
     try {
       return io.statSync(path).isFile();
     } catch {
       return false;
     }
   };
-  const wrapper = candidates.find((path) => isFile(path));
+  /**
+   * 两种布局的判据不同：
+   * - `Resources/app` 是目录，脚本入口是真实文件，按文件探测；
+   * - `Resources/app.asar` 是单个归档文件，入口在归档内部，stat 内部路径只会得到
+   *   `ENOENT`/`ENOTDIR`。这里按归档本身是否为文件判定，路径仍交给 Electron 去读。
+   */
+  const modernWrapper = join(resources, 'app', 'lib', 'desktop-cli.js');
+  const legacyArchive = join(resources, 'app.asar');
+  let wrapper;
+  if (probe(modernWrapper)) wrapper = modernWrapper;
+  else if (probeArchive(io, legacyArchive)) wrapper = join(legacyArchive, 'lib', 'desktop-cli.js');
   if (!wrapper) {
     const error = new Error(`TEST_ENV_RUNTIME_MISSING: 宿主 App 缺少 desktop-cli 入口：${candidates.join(' / ')}`);
     error.code = 'TEST_ENV_RUNTIME_MISSING';
     error.hint = `候选入口都不存在：${candidates.join(' / ')}`;
-    error.detail = { candidates };
+    error.detail = { candidates, legacyArchive };
     throw error;
   }
   const appRoot = dirname(dirname(wrapper));
@@ -116,7 +148,11 @@ const loaderJsTag = {
   tag: 'tag:yaml.org,2002:js',
   resolve: (value) => ({ __jsExpr: value }),
   identify: (value) => value !== null && typeof value === 'object' && Object.hasOwn(value, '__jsExpr'),
-  stringify: (item) => item.__jsExpr,
+  // yaml v2 传给 stringify 的是 Scalar 节点，表达式在 `node.value.__jsExpr`；
+  // 早期实现直接读 `item.__jsExpr`，结果把 68 处平台条件写成 `!!js undefined`。
+  // 表达式按「双引号标量」写回：裸字符串会被 yaml 当 plain scalar，含 `#`、`: `、
+  // 行首 `-`/`!`/`&` 或多行时会截断或直接抛错。双引号能安全承载任意表达式文本。
+  stringify: (item) => JSON.stringify(item?.value?.__jsExpr ?? item?.__jsExpr ?? ''),
 };
 
 /** 读一份 YAML/JSON 文档，保留 loader 的 `!!js` 表达式。 */
@@ -133,22 +169,68 @@ export function stringifyStructuredFile(value) {
   return stringify(value, { customTags: [loaderJsTag] });
 }
 
-/** 裁剪 rc.3 会拒绝的 subagent 字段；返回新数组，不改原对象。 */
+/**
+ * 裁剪 rc.3 会拒绝的 subagent 字段；返回新数组，不改原对象。
+ *
+ * 壳的实现（宿主 `profile-*.js` 的 `reduceSubagentRow`）会**递归进 `config` 数组**：
+ * 预设里的 `delegation` 组内嵌了多条 `tool-subagent` 行，只裁顶层会让这些行带着
+ * `persona` 交给 rc.3 内核，内核直接 throw，整个预设被标 broken。
+ */
 export function pruneRejectedFields(plugins) {
-  if (!Array.isArray(plugins)) return { plugins: [], reduced: false };
   let reduced = false;
-  const next = plugins.map((row) => {
-    if (!row || typeof row !== 'object') return row;
-    if (row.name !== '@deepseek-ai/dsh-tool-subagent') return row;
+
+  const pruneRow = (row) => {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+    let next = row;
     const config = row.config;
-    if (!config || typeof config !== 'object') return row;
-    const offending = REJECTED_SUBAGENT_FIELDS.filter((field) => Object.hasOwn(config, field));
-    if (!offending.length) return row;
-    reduced = true;
-    const clean = { ...config };
-    for (const field of offending) delete clean[field];
-    return { ...row, config: clean };
-  });
+    if (config && typeof config === 'object' && !Array.isArray(config)) {
+      let removedField = false;
+      const cleaned = { ...config };
+      if (next.name === '@deepseek-ai/dsh-tool-subagent') {
+        for (const field of REJECTED_SUBAGENT_FIELDS) {
+          if (Object.hasOwn(cleaned, field)) {
+            delete cleaned[field];
+            removedField = true;
+            reduced = true;
+          }
+        }
+      }
+      // 没有真删字段就先不复制，保持「无改动返回同一引用」的语义。
+      if (removedField) next = { ...next, config: cleaned };
+    }
+    // 递归：`cordis:group` 的 config 本身可能就是行数组（preset 的 delegation 组就是这样）。
+    const configAfter = next.config;
+    if (Array.isArray(configAfter)) {
+      const prunedArray = pruneRows(configAfter);
+      if (prunedArray !== configAfter) next = { ...next, config: prunedArray };
+    } else if (configAfter && typeof configAfter === 'object') {
+      let changed = false;
+      const nested = { ...configAfter };
+      for (const [key, value] of Object.entries(configAfter)) {
+        if (!Array.isArray(value)) continue;
+        const prunedArray = pruneRows(value);
+        if (prunedArray !== value) {
+          nested[key] = prunedArray;
+          changed = true;
+        }
+      }
+      if (changed) next = { ...next, config: nested };
+    }
+    return next;
+  };
+
+  const pruneRows = (rows) => {
+    let changed = false;
+    const next = rows.map((row) => {
+      const pruned = pruneRow(row);
+      if (pruned !== row) changed = true;
+      return pruned;
+    });
+    return changed ? next : rows;
+  };
+
+  if (!Array.isArray(plugins)) return { plugins: [], reduced: false };
+  const next = pruneRows(plugins);
   return { plugins: next, reduced };
 }
 
@@ -161,17 +243,42 @@ export function pruneRejectedFields(plugins) {
 export function pruneUnresolvable(plugins, resolvable) {
   const dropped = [];
   const kept = [];
-  for (const row of Array.isArray(plugins) ? plugins : []) {
-    const name = row && typeof row === 'object' ? row.name : undefined;
-    const loaderBuiltin = typeof name === 'string' && name.startsWith('cordis:');
-    if (typeof name === 'string' && name.length > 0 && !loaderBuiltin && typeof resolvable === 'function' && !resolvable(name)) {
-      dropped.push(name);
-      continue;
-    }
-    kept.push(row);
-  }
+  for (const row of pruneRows(Array.isArray(plugins) ? plugins : [], resolvable, dropped)) kept.push(row);
   return { plugins: kept, dropped };
 }
+
+/** 递归遍历行数组：`cordis:group` 的 config 里还挂着同构行，壳也是递归处理的。 */
+function pruneRows(rows, resolvable, dropped) {
+  return rows.map((row) => {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+    const name = row.name;
+    const needsResolution = typeof name === 'string' && name.startsWith('@');
+    if (needsResolution && typeof resolvable === 'function' && !resolvable(name)) {
+      dropped.push(name);
+      return PRUNE_DROP;
+    }
+    const config = row.config;
+    if (Array.isArray(config)) {
+      const pruned = pruneRows(config, resolvable, dropped);
+      if (pruned !== config) return { ...row, config: pruned };
+    } else if (config && typeof config === 'object') {
+      let changed = false;
+      const nested = { ...config };
+      for (const [key, value] of Object.entries(config)) {
+        if (!Array.isArray(value)) continue;
+        const pruned = pruneRows(value, resolvable, dropped);
+        if (pruned !== value) { nested[key] = pruned; changed = true; }
+      }
+      if (changed) return { ...row, config: nested };
+    }
+    return row;
+  }).filter((row) => row !== PRUNE_DROP);
+}
+
+/** 哨兵：被丢弃的行（filter 阶段剔除）。 */
+const PRUNE_DROP = Symbol('prune-drop');
+
+
 
 /** 上游 bundle 已经声明过的 preset id：重复声明会让 Loader 直接拒绝启动。 */
 export function upstreamPresetIds(appRoot, options = {}) {
@@ -208,13 +315,15 @@ export function upstreamPresetIds(appRoot, options = {}) {
 export function composeAgentPresetRows(options) {
   const presetRoot = options.presetRoot ?? join(options.appRoot, PRESET_ROOT);
   if (!isDirectory(presetRoot)) {
-    return { rows: [], skippedPresetIds: [], droppedPackages: [], reducedPresetIds: [] };
+    return { rows: [], skippedPresetIds: [], droppedPackages: [], reducedPresetIds: [], unreadablePresetIds: [], unreadablePresetReasons: [] };
   }
   const upstream = upstreamPresetIds(options.appRoot, { directory: options.upstreamDirectory });
   const rows = [];
   const skippedPresetIds = [];
   const droppedPackages = [];
   const reducedPresetIds = [];
+  const unreadablePresetIds = [];
+  const unreadablePresetReasons = [];
   const ids = readdirSync(presetRoot)
     .filter((entry) => !entry.startsWith('.') && isDirectory(join(presetRoot, entry)))
     .sort();
@@ -227,10 +336,17 @@ export function composeAgentPresetRows(options) {
     let plugins;
     try {
       plugins = isFile(cordisPath) ? readStructuredFile(cordisPath) : undefined;
-    } catch {
-      plugins = undefined;
+    } catch (error) {
+      // 壳在同样情况下会抛错。这里不静默丢：记进诊断，由调用方决定是否响亮失败。
+      unreadablePresetIds.push(id);
+      unreadablePresetReasons.push(`${id}: ${error?.message ?? error}`);
+      continue;
     }
-    if (!Array.isArray(plugins)) continue;
+    if (!Array.isArray(plugins)) {
+      unreadablePresetIds.push(id);
+      unreadablePresetReasons.push(`${id}: agent.cordis.yml 不是行数组`);
+      continue;
+    }
     const pruned = pruneUnresolvable(plugins, options.resolvable);
     droppedPackages.push(...pruned.dropped);
     const reduced = pruneRejectedFields(pruned.plugins);
@@ -254,6 +370,8 @@ export function composeAgentPresetRows(options) {
     skippedPresetIds: [...new Set(skippedPresetIds)].sort(),
     droppedPackages: [...new Set(droppedPackages)].sort(),
     reducedPresetIds: [...new Set(reducedPresetIds)].sort(),
+    unreadablePresetIds: [...new Set(unreadablePresetIds)].sort(),
+    unreadablePresetReasons,
   };
 }
 

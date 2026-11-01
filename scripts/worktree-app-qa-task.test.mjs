@@ -90,8 +90,10 @@ function bindingFixture() {
     clientBundle: { path: 'lib/client.js', sha256: clientHash, bytes: 20 } };
   });
   const runtimeExecutable = '/Applications/OmniMux QA.app/Contents/MacOS/OmniMux';
+  // 布局由安装记录提供，锚点按该布局推导（不再写死 app.asar，也不读本机文件系统）。
+  const appLayout = 'app.asar';
   const installation = { ...shared, sourceRoot: root, privateRoot, profile: join(privateRoot, 'dsh/profiles/web'), packages, hostPeerExpectations: [],
-    runtimeExecutable, appAnchor: resolve(dirname(runtimeExecutable), '../Resources/app.asar/node_modules/@deepseek-ai/dsh/package.json') };
+    runtimeExecutable, appLayout, appAnchor: resolve(dirname(runtimeExecutable), `../Resources/${appLayout}/node_modules/@deepseek-ai/dsh/package.json`) };
   const serverLoading = { ...shared, kind: 'task-server-loading', runtimeExecutable, peers: [], peerObserver: null, modules: packages.map(pkg => ({ name: pkg.name,
     path: pkg.serverEntry.path, sha256: pkg.serverEntry.sha256, loadedScriptSha256: pkg.serverEntry.sha256,
     loadedScriptUrl: pathToFileURL(join(pkg.installedRoot, pkg.serverEntry.path)).href, matchingScriptCount: 1 })) };
@@ -136,6 +138,21 @@ test('ordinary dependency instances may share a name without merging their actua
   value.installation.packages.push(...['1.0.0', '2.0.0'].map(version => ({ name: 'dependency', version,
     installedRoot: join(value.installation.privateRoot, 'deps', version), payload: [{ path: 'package.json', sha256: '1'.repeat(64), size: 2 }] })));
   assert.equal(validateTaskRuntimeBinding(value).installation.dependencyCount, 2);
+});
+
+test('锚点布局与安装记录不一致时拒绝（app 布局报 app.asar 锚点）', () => {
+  const value = bindingFixture();
+  const mismatched = value.installation.appLayout === 'app' ? 'app.asar' : 'app';
+  value.installation.appAnchor = resolve(dirname(value.installation.runtimeExecutable), `../Resources/${mismatched}/node_modules/@deepseek-ai/dsh/package.json`);
+  assert.throws(() => validateTaskRuntimeBinding(value), { code: 'TEST_APP_QA_TASK_BINDING' });
+});
+
+test('安装记录缺 appLayout 或值非法时拒绝', () => {
+  for (const layout of [undefined, null, 'asar', 'App']) {
+    const value = bindingFixture();
+    value.installation.appLayout = layout;
+    assert.throws(() => validateTaskRuntimeBinding(value), { code: 'TEST_APP_QA_TASK_BINDING' });
+  }
 });
 
 test('consumer requires actual peer receipts that bind declared dependency versions and installed bytes', () => {

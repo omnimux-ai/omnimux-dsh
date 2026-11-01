@@ -17,11 +17,11 @@ function shippingAppRoot(appAnchor) {
   return appAnchor.split(marker)[0] + (marker.startsWith('/app.asar') ? '/app.asar' : '/app')
 }
 
-/** 锚点是否属于该可执行文件的实际安装布局。 */
-function shippingAnchorBelongs(appAnchor, runtimeExecutable) {
+/** 锚点是否与该可执行文件**实际使用**的安装布局一致（布局取自安装记录，精确比对）。 */
+export function shippingAnchorBelongs(appAnchor, runtimeExecutable, appLayout) {
+  if (appLayout !== 'app' && appLayout !== 'app.asar') return false
   const resources = resolve(dirname(runtimeExecutable), '..', 'Resources')
-  return appAnchor === join(resources, 'app/node_modules/@deepseek-ai/dsh/package.json')
-    || appAnchor === join(resources, 'app.asar/node_modules/@deepseek-ai/dsh/package.json')
+  return appAnchor === join(resources, `${appLayout}/node_modules/@deepseek-ai/dsh/package.json`)
 }
 
 function localOrigin(value) {
@@ -467,7 +467,7 @@ export async function verifyTaskServerLoading({ inspectorUrl, pid, installation 
     }
     const { peers, peerObserver } = await captureTaskPeerProof(connection, installation)
     if (peers.some(peer => peer.scope === 'shipping-app')) {
-      assert.ok(shippingAnchorBelongs(installation.appAnchor, runtimeExecutable),
+      assert.ok(shippingAnchorBelongs(installation.appAnchor, runtimeExecutable, installation.appLayout),
         'Task shipping anchor does not belong to the actual server executable')
     }
     assert.equal(installationBinding(installation, installationIdentity(installation)), binding, 'Task installation identity changed during server proof')
