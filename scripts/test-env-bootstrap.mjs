@@ -631,27 +631,31 @@ async function runTaskPreparation({ options, io, deps }) {
  * @param {{ appRoot: string }} layout 宿主布局
  * @returns {string} 追加到 cordis.patch.yml 的 YAML 片段（无预设可声明时为空串）
  */
-function agentPresetPatchText(layout) {
+export function agentPresetPatchText(layout, deps = {}) {
+  const probePresetRoot = deps.hasShippedPresetRoot ?? hasShippedPresetRoot;
+  const compose = deps.composeAgentPresetRows ?? composeAgentPresetRows;
+  const stringify = deps.stringifyStructuredFile ?? stringifyStructuredFile;
+  const makeRequire = deps.createRequire ?? createRequire;
   // 布局判据已保证「能列出 preset/agent-presets」；这里再按实际可读性判定，
   // 不按布局名一刀切——归档可读时同样要声明，读不到才响亮失败。
   // 读不到就是环境坏了，必须响亮失败，
   // 否则隔离 profile 拿不到任何声明，宿主照常启动、只在建会话时才报
   // agent-preset/not-found（评审指出的静默降级）。
-  if (!hasShippedPresetRoot(layout.appRoot)) {
+  if (!probePresetRoot(layout.appRoot)) {
     throw failure('PRESET_ROOT_MISSING', `宿主缺少 preset/agent-presets 目录：${layout.appRoot}`);
   }
   let composition;
   try {
-    const resolver = createRequire(join(layout.appRoot, 'lib', 'desktop-cli.js'));
+    const resolver = makeRequire(join(layout.appRoot, 'lib', 'desktop-cli.js'));
     const resolvable = (name) => { try { resolver.resolve(name); return true; } catch { return false; } };
-    composition = composeAgentPresetRows({ appRoot: layout.appRoot, resolvable });
+    composition = compose({ appRoot: layout.appRoot, resolvable });
   } catch (error) {
     throw failure('PRESET_COMPOSE_FAILED', `合成 agent preset 声明失败：${error?.message ?? error}`);
   }
   if (!composition.rows.length) {
     throw failure('PRESET_ROWS_EMPTY', `预设目录存在但没合成出任何声明：${layout.appRoot}`);
   }
-  const text = stringifyStructuredFile([{ insert: composition.rows }]);
+  const text = stringify([{ insert: composition.rows }]);
   return `\n# QA 隔离环境：按壳的规则声明出厂 agent preset（绕过壳启动时壳不会注入这些行）。\n${text}`;
 }
 

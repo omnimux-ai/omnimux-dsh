@@ -20,7 +20,7 @@
 
 | 事实 | 位置 | 本次动作 |
 |---|---|---|
-| asar 是归档文件，不是目录 | 实测 `statSync(.../app.asar/lib/desktop-cli.js)` → `ENOENT` | 候选探测改为「`app` 布局按文件探测；`app.asar` 布局按归档存在性探测（`app.asar` 自身 `isFile`）」，Electron 能读归档内部 |
+| asar 是归档文件，不是目录；普通 Node 读不到归档内部 | 实测 `statSync(.../app.asar/lib/desktop-cli.js)` → `ENOENT`，`readdirSync(archive/preset/agent-presets)` → `ENOTDIR` | `app` 布局按入口文件探测；`app.asar` 布局的判据是**能列出归档内 `preset/agent-presets`**（普通 Node 必失败、Electron 下归档表现为可读目录时成立），不可读即 `RUNTIME_MISSING` |
 | `!!js` 表达式节点形状 | `yaml` v2 `stringify` 回调收到 `Scalar` | 改为读 `item?.value?.__jsExpr` |
 | 壳的裁剪是递归的 | 宿主 `profile-*.js` 的 `reduceSubagentRow` 会进 `config` 数组 | 递归遍历 `config` 数组内同构行 |
 | 单测 fakeBundle 造的是名为 `app.asar` 的目录 | `scripts/host-runtime-layout.test.mjs` | 改为造真实语义：`app.asar` 是文件 |
@@ -29,7 +29,7 @@
 
 1. `resolveHostRuntimeLayout`：
    - 先探测 `Contents/Resources/app/lib/desktop-cli.js` 是否 `isFile`；
-   - 否则探测 `Contents/Resources/app.asar` 是否 `isFile`（归档本身），命中即返回该布局的 wrapper 路径（不 stat 归档内部）；
+   - 否则尝试列出 `Contents/Resources/app.asar/preset/agent-presets`：能列出才认为该布局可用并返回归档内 wrapper 路径；普通 Node 下这一步必然失败，因此旧布局在这条链路上会响亮报 `RUNTIME_MISSING`，而不是给出「可用但下游全空」的布局；
    - 都缺才 `RUNTIME_MISSING`。
 2. `stringifyStructuredFile`：`stringify: (item) => item?.value?.__jsExpr ?? item?.__jsExpr`，并补 round-trip 测试（解析 → 序列化 → 再解析，断言 `!!js` 表达式仍在）。
 3. `pruneRejectedFields`：递归处理 `config` 里的数组（壳同款），返回 `reduced` 标记；`pruneUnresolvable` 同步只对 `@` 作用域包名做解析判定（与壳一致），避免误删 `cordis:` 之外的本地别名。
@@ -43,7 +43,7 @@
 
 ## 5. 验收标准（可观察）
 
-- [ ] 旧 `app.asar` 归档布局能探测到并返回该布局 wrapper（单测用真实语义：`app.asar` 为文件）。
+- [ ] `app.asar` 归档布局的可用性由「能否列出归档内 preset」判定：可读归档（单测用目录模拟 Electron 语义）返回该布局 wrapper；不可读归档（真实语义：归档是文件）响亮报 `TEST_ENV_RUNTIME_MISSING`。
 - [ ] `!!js` 表达式 round-trip 后仍为表达式，不出现 `!!js undefined`。
 - [ ] 嵌套在 `config` 数组里的 `persona`/`toolFilter` 被裁掉，`reduced` 标记正确。
 - [ ] 真实 App（asar:false 2.0.21）上 smoke 仍通过；合成出的 patch 里 `!!js` 表达式完好。
@@ -55,13 +55,13 @@
 
 ## 假设
 
-- 假设 A：Electron 的 `--expose-internals <app.asar>/lib/desktop-cli.js` 能读归档内部，因此「归档存在」即可作为旧布局可用判据，无需 stat 内部文件。
+- 假设 A：Electron 运行时把 `.asar` 当作可读目录，因此「能列出归档内 `preset/agent-presets`」等价于「该布局可用」；普通 Node 读不到归档属预期，判据失败即响亮报错。
 - 假设 B：壳的裁剪语义就是「递归进 config 数组裁掉 rc.3 拒绝字段」，因此隔离 profile 用同一套规则不会写出被拒的 preset。
 - 假设 C：yaml v2 的 `stringify` 自定义 tag 回调收到的是 `Scalar`（`value` 为原始表达式字符串），因此取 `item.value.__jsExpr` 才能写回 `!!js`。
 
 ## 证伪方式
 
-- 证伪 A：在旧 asar 布局机器上探测仍报 `RUNTIME_MISSING`，或 Electron 启动报找不到 `desktop-cli.js` → 说明判据不对，需要改成「归档 + 内部路径」双条件。
+- 证伪 A：在 Electron 上下文里能列出归档内 preset，但探测仍报 `RUNTIME_MISSING`（或反之：普通 Node 下读不到却判为可用）→ 说明判据与实际可读性不一致，需要按运行时能力显式分流。
 - 证伪 B：隔离环境启动后仍有预设被标 broken（`agent-preset/invalid`）→ 说明裁剪规则与壳不一致，需要抓壳实际写入的 patch 逐行对比。
 - 证伪 C：round-trip 后 `!!js` 变成字符串或 `undefined` → 说明节点取错，应改为按 `Scalar` 实例判断并保留 `source`。
 
