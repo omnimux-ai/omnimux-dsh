@@ -19,6 +19,8 @@
 | 引用内核包 | 24 个 `@deepseek-ai/*`，rc.3 缺失 1 个：`@deepseek-ai/dsh-workflow-worker-thread`（10 个预设各 1 行） |
 | 专家预设可行性 | `@deepseek-ai/dsh-subagent-spawn-in-process` 声明 `capabilities.agentPreset: true`，spawn 路径支持独立预设 |
 | 预设文件是生成物 | `presets/*/agent.cordis.yml` 的专家段由 `scripts/build-agent-presets.mjs` 从 `presets/fragments/*.cordis.yml` 拼接；W1 必须改 fragments，改 agent.cordis.yml 会被重建覆盖 |
+| 预设白名单 | `presets/manifest.json` 的 `shippedPresets` 是打包白名单（门禁用 `deepEqual` 校验 id 顺序），新增专家预设必须登记，否则不进包 |
+| 门禁断言 | `scripts/verify-agent-presets.test.mjs` 对每个 alias 要求：存在 `preset.yml`/`agent.cordis.yml`、含 `prefix: |`、不含 `text: |`、含 `sampleOverCapGlobResults: false`、含 `provider: spawn`；另有 legacy alias 列表与 `sync-agent-presets.sh` 的 `KEEP=(...)` 数组断言 |
 | 预设自带技能 | 3 个预设共 6 个技能目录（`cordis 2 / omni-agent 2 / tiktok-agent 2`）；rc.3 壳侧 `seedPresetSkills` 只读 `preset/skills`（插件技能），不读 `preset/agent-presets/<id>/skills` |
 
 ## 方案
@@ -76,7 +78,8 @@
 1. 抽取全部 `persona:` 块（源文件是 `presets/fragments/*.cordis.yml`，不是 agent.cordis.yml），建立 `toolName → persona 文本 → 目标预设 id` 映射（62 条）。
 2. 每个专家生成一个预设目录，`plugins:` = `persona` + `agent-instructions` + 该专家实际需要的工具行（从同预设的通用 subagent 行复制后裁剪）。
 3. 原预设的专家行删 `persona`，加 `agentPreset`；`agentPreset` 必须同时出现在 `allowedAgentPresets` 里，否则报 `agentPreset must be included in allowedAgentPresets`。
-4. 分批落地：先 `omni-agent`，再 `media-creator`/`tiktok-agent`，最后其余四个。
+4. 分批落地：先 `omni-agent`（源在 fragments：content 6 + engagement 4），再 `tiktok-agent`(13)/`ad-creative-agent`(6)（同源 fragments），最后 3 个内联预设 `drama-agent`(6)/`marketing-growth-team`(4)/`media-creator`(13)（这些不在 fragments 生成链上，直接改文件）。
+5. 新增的专家预设目录要登记进 `presets/manifest.json` 的 `shippedPresets`；同时 `scripts/sync-agent-presets.sh` 的 `KEEP`/legacy alias 逻辑与门禁测试需要同步评估（注意：测试文件改动受 `.dsh` anti-cheat 守卫约束，按 spec 声明的旧标准变更通道走，不能静默削弱）。
 
 ### W2 失效引用
 
