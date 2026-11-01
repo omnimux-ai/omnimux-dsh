@@ -187,3 +187,14 @@
 **删除**：`scripts/sync-agent-presets-targets.test.mjs`（它断言的「写入目标目录」行为已不存在）。
 
 **验收**：`bash scripts/sync-agent-presets.sh` 退出 0 且不产生任何文件变更；`node --test scripts/verify-agent-presets.test.mjs` 18/18（KEEP/LEGACY 断言仍满足）；`scripts/sync-plugin-scope.test.mjs` 的 `presets:` 事件断言不受影响（调用链保留）。
+
+## 旧标准变更
+
+- `scripts/sync-agent-presets-targets.test.mjs` :: `sync-agent-presets preserves a case-sensitive custom ~/ target`
+  原断言：脚本把预设物化到目标 home 的 `<profile>/node_modules/@deepseek-ai/dsh/config/agent-presets`（并验证 `--target=~/…` 路径不被拆分）。
+  必须改的理由：W3 已把脚本降级为只校验——rc.3 起预设随签名包分发、由 profile 组合期声明，物化写入行为被移除，该用例断言的输出不再存在。
+  新期望证据：`bash scripts/sync-agent-presets.sh`（含 `--target=~/…`、`--prod --dsh` 调用）退出 0 且不产生任何文件变更；`node --test scripts/verify-agent-presets.test.mjs` 18/18，KEEP/LEGACY_ALIASES 逐字断言仍满足。
+- `scripts/sync-agent-presets-targets.test.mjs` :: `sync-agent-presets keeps preset directories it does not own`
+  原断言：物化时保留目标目录中非本脚本拥有的预设目录，且不误删。
+  必须改的理由：同上，物化已移除；「保留非自有目录」不再是一个存在的行为，保留该用例只会断言一个不存在的写入器。
+  新期望证据：治理注册表与 `.github/workflows/quality-gate.yml`、`scripts/verify-ci-gates.test.mjs` 三处登记已同步移除；`node --test scripts/verify-governance-registry.test.mjs` 4/4。
