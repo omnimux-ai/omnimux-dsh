@@ -209,4 +209,47 @@ describe('GET /omnimux-apps/api/apps/:appId：单个 manifest', () => {
       assert.equal(res.state.status, 400, `${method} ${url} 必须回 400，而不是连接级 URIError`);
     }
   });
+
+  test('保留段按解码后判定：%6Danifest 与 /manifest 语义一致', async () => {
+    const routes = makeRoutes();
+    for (const path of ['/omnimux-apps/api/apps/manifest', '/omnimux-apps/api/apps/%6Danifest']) {
+      const res = fakeRes();
+      const handled = await routes.handle({ url: path, method: 'GET' }, res);
+      assert.equal(handled, false, `${path} 不得被单项 GET 认领成 appId`);
+    }
+  });
+
+  test('executions 路由接住存储异常，回稳定 500 而不是空响应（评审 N2）', async () => {
+    const ioError = Object.assign(new Error('Failed to read app index /opt/synthetic/secret/app.json'), { code: 'io_error' });
+    const routes = makeRoutes({ getManifest: async () => { throw ioError; } });
+    const res = fakeRes();
+    const handled = await routes.handle({
+      url: '/omnimux-apps/api/apps/app_corrupt_001/executions',
+      method: 'POST',
+      body: { inputs: {} },
+    }, res);
+
+    assert.equal(handled, true, 'executions 必须被路由处理，不能抛到连接层');
+    assert.equal(res.state.status, 500);
+    const parsed = JSON.parse(res.state.body);
+    assert.equal(parsed.error, 'manifest_read_failed');
+    assert.equal(parsed.message, '读取应用清单失败', '对外只给稳定文案');
+    assert.equal(res.state.body.includes('/opt/synthetic/secret'), false, '绝对路径不得漏给浏览器');
+  });
+
+  test('写路径 500 也不透绝对路径（评审 N5）', async () => {
+    const routes = makeRoutes({
+      saveManifest: async () => { throw new Error('ENOENT: /opt/synthetic/private/apps/app_x/manifest@1.json'); },
+    });
+    const res = fakeRes();
+    await routes.handle({
+      url: '/omnimux-apps/api/apps/manifest',
+      method: 'POST',
+      body: { appId: 'app_x', version: '1.0.0' },
+    }, res);
+
+    assert.equal(res.state.status, 500);
+    assert.equal(res.state.body.includes('/opt/synthetic/private'), false, '写路径同样不得泄漏本机绝对路径');
+    assert.equal(JSON.parse(res.state.body).message, '保存应用清单失败');
+  });
 });

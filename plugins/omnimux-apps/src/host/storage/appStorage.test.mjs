@@ -299,3 +299,46 @@ test('T02.7: app.json 索引损坏时报错，不静默返回 null 让调用方�
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 });
+
+test('T02.8: recordTask 拒绝非法 appId / taskId，不把穿越串写进任务目录（Issue #3876）', async () => {
+  const tempDir = createTempDir();
+  try {
+    const baseDir = path.join(tempDir, 'apps');
+    fs.mkdirSync(baseDir, { recursive: true });
+    const storage = new AppStorage({ baseDir });
+
+    const baseTask = {
+      taskId: 'task_001',
+      appId: 'app_task_owner',
+      status: 'completed',
+      inputs: { prompt: 'x' },
+      outputs: [],
+      createdAt: '2026-11-01T00:00:00.000Z',
+    };
+
+    await assert.rejects(
+      () => storage.recordTask('../escape', { ...baseTask, appId: '../escape' }),
+      (error) => error instanceof AppStorageError && error.code === 'invalid_manifest',
+      '非法 appId 必须被拒，不能把任务写到应用目录之外',
+    );
+    await assert.rejects(
+      () => storage.recordTask('app_task_owner', { ...baseTask, taskId: '../escape' }),
+      (error) => error instanceof AppStorageError && error.code === 'invalid_manifest',
+      '非法 taskId 必须被拒',
+    );
+
+    // 生产方 task_<ts>_<rand> 形态不得被误伤
+    const legitTaskId = 'task_1767225600000_abc123';
+    const saved = await storage.recordTask('app_task_owner', { ...baseTask, taskId: legitTaskId });
+    assert.equal(saved.success, true, '合法 taskId 必须照常写入');
+    const loaded = await storage.getTask('app_task_owner', legitTaskId);
+    assert.equal(loaded?.taskId, legitTaskId, '合法任务必须能读回');
+
+    // 读路径同样拒绝穿越
+    assert.equal(await storage.getTask('../escape', legitTaskId), null);
+    assert.equal(await storage.getTask('app_task_owner', '../escape'), null);
+    assert.deepEqual(await storage.listTasks('../escape'), []);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});

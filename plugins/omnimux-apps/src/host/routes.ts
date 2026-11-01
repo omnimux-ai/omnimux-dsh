@@ -126,12 +126,15 @@ export function createAppsRoutes(deps: {
 
       // 0b. GET /omnimux-apps/api/apps/:appId（单个 manifest：用户已发布优先，内置兜底）
       const manifestMatch = ITEM_PATH_RE.exec(pathname);
-      if (manifestMatch && method === 'GET' && !RESERVED_SEGMENTS.has(manifestMatch[1] || '')) {
+      if (manifestMatch && method === 'GET') {
         const appId = decodeSegment(manifestMatch[1] || '');
         if (appId === null) {
           sendJson(400, { error: 'invalid_app_id', message: 'appId 编码非法' });
           return true;
         }
+        // 保留段必须按**解码后**的值判定：`%6Danifest` 解码后同样是 manifest，
+        // 按原始编码比对会漏过去，让保存路径的 GET 语义与 `/apps/manifest` 分叉。
+        if (RESERVED_SEGMENTS.has(appId)) return false;
         // appId 是目录名：解码出的 `/`、`..` 必须在这里就被拒，不能交给 path.join。
         if (!isValidAppId(appId)) {
           sendJson(400, { error: 'invalid_app_id', message: 'appId 非法' });
@@ -171,10 +174,12 @@ export function createAppsRoutes(deps: {
           const res = await service.saveManifest(body);
           sendJson(200, { success: true, filePath: res.filePath, appId: body.appId });
         } catch (err: any) {
-          sendJson(err?.code === 'version_conflict' ? 409 : 500, {
-            error: err?.code || 'save_failed',
-            message: err?.message || '保存应用清单失败',
-          });
+          const code = err?.code === 'version_conflict' ? 409 : (err?.code === 'invalid_manifest' ? 400 : 500);
+          // 对外只给稳定文案：底层错误可能含本机绝对路径（评审 N5 实测会漏出去）。
+          const message = err?.code === 'version_conflict'
+            ? '该应用版本已存在且不可覆盖'
+            : (err?.code === 'invalid_manifest' ? '应用清单校验失败' : '保存应用清单失败');
+          sendJson(code, { error: err?.code || 'save_failed', message });
         }
         return true;
       }
@@ -190,7 +195,18 @@ export function createAppsRoutes(deps: {
         const body = await readBody();
         const inputs = body.inputs || {};
 
-        let manifest = await service.getManifest(appId, body.version);
+        // 存储层现在会对损坏的索引抛 io_error；这里必须接住并回稳定错误码，
+        // 否则异常会穿过路由变成连接级失败（评审 N2 实测：从 404 JSON 退化成空响应）。
+        let manifest: any = null;
+        try {
+          manifest = await service.getManifest(appId, body.version);
+        } catch (err: any) {
+          if (err?.code === 'io_error' || err?.code === 'invalid_manifest') {
+            sendJson(500, { error: 'manifest_read_failed', message: '读取应用清单失败' });
+            return true;
+          }
+          throw err;
+        }
         if (!manifest) {
           const builtins = readBuiltinApps() ?? [];
           manifest = builtins.find((a) => a.appId === appId) || null;

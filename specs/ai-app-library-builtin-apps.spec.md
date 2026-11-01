@@ -89,12 +89,17 @@
 
 ## 旧标准变更
 
-- `plugins/omnimux-workflow/tests/ai-app-library.e2e.test.mjs` :: `旅程 8：内置应用与用户应用合并展示，内置卡片无删除入口且标签页按 appId 解析（Issue #3876）`
-  - 原断言：`assert.deepEqual(cards.map(cardName), ['商品生视频', '爆款复刻'])`，其中 `cardName` 只剥离分类副标题。
-  - 必须改的理由：本用例的卡片带「官方」badge，`cardName` 把 badge 文案一起算进应用名，得到 `官方商品生视频`；这是用例新增后立刻发现的断言缺陷，不是产品行为变化。
-  - 新期望证据：改为读 `.dshUk-MediaCard-title` 的真实标题文本再比较；产品行为与断言意图（内置应用按清单顺序、用户覆盖版本替换同名条目）不变。
+- `plugins/omnimux-apps/src/host/routes.list.test.mjs` :: `executions 路由接住存储异常，回稳定 500 而不是空响应（评审 N2）`
+  - 原断言：错误文案与「响应体不得包含该路径」的断言里写死了**开发机真实家目录前缀**。
+  - 必须改的理由：用例本身是本分支新增的，但其中的真实家目录前缀被 CI leak gate（`.gitleaks.toml` 的 `absolute-home-path` 规则）判为 4 处泄漏，导致 Leak gate 与 Static L0 双红。
+  - 新期望证据：改成 `/opt/synthetic/...` 合成路径，断言意图（底层错误里的绝对路径不得回给浏览器）完全不变。
 
-- `plugins/omnimux-workflow/tests/ai-app-library.e2e.test.mjs` :: `旅程 9：内置应用解析失败/慢响应时不得伪造内容，也不得被旧响应覆盖（Issue #3876）`
-  - 原断言：先挂载到 404 的 appId 再断言空态；此时初始 manifest 本就是 null，删掉清空分支测试仍绿（独立评审 B2 指出零覆盖）。
-  - 必须改的理由：改为「先显示有效应用 → 再切到 404 的 appId」，让清空分支成为通过的必要条件。
-  - 新期望证据：实测删掉 `setManifest(... : null)` 分支后该用例变红（停在「应用A」）；恢复后变绿。
+- `plugins/omnimux-apps/src/host/routes.list.test.mjs` :: `写路径 500 也不透绝对路径（评审 N5）`
+  - 原断言：错误文案写死同一条真实家目录前缀下的具体文件路径，并断言响应体不含该前缀。
+  - 必须改的理由：同上，真实家目录前缀触发 leak gate。
+  - 新期望证据：改为 `/opt/synthetic/private/...` 合成路径，断言意图不变。
+
+- `plugins/omnimux-workflow/tests/ai-app-library.e2e.test.mjs` :: `旅程 8：内置应用与用户应用合并展示，内置卡片无删除入口且标签页按 appId 解析（Issue #3876）`
+  - 原断言：只断言标题、badge 与空态，未验证 `formSchema` 是否真的渲染成表单控件（第三轮评审 N3：把 `properties` 强制清空后该用例仍绿）。
+  - 必须改的理由：内置应用标签页的核心价值就是「能填表并执行」，只断言标题会让「表单没渲染」静默通过。
+  - 新期望证据：追加「容器内必须存在真实表单控件」与「字段标题必须出现」两条断言；实测强制 `EMPTY_PROPS` 后该用例变红。

@@ -20,7 +20,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import http from 'node:http'
 import { createRequire } from 'node:module'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { findChromePath, assertPng } from './worktree-web-qa.mjs'
@@ -40,6 +40,8 @@ const require = createRequire(join(root, 'package.json'))
 const runId = randomUUID()
 const evidenceDir = join(root, '.workbuddy/evidence/worktree-qa', `builtin-apps-${runId}`)
 mkdirSync(evidenceDir, { recursive: true })
+/** 报告里的路径一律写成相对仓库根：绝对路径既泄露本机家目录，也让证据无法在别处复现。 */
+const relToRoot = (absolute) => relative(root, absolute)
 
 const headSha = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
 // 记录真正执行的 host 产物哈希：head 标签 + 产物哈希一起才能证明「跑的就是这份源码」。
@@ -50,7 +52,7 @@ const report = {
   runId,
   head: headSha,
   headShort: headSha.slice(0, 7),
-  hostDist: { path: hostDistPath, sha256: hostDistSha256, bytes: statSync(hostDistPath).size },
+  hostDist: { path: relToRoot(hostDistPath), sha256: hostDistSha256, bytes: statSync(hostDistPath).size },
   task: 'Issue #3876 项目页「AI应用」同时列出官方内置应用',
   startedAt: new Date().toISOString(),
   completedAt: null,
@@ -412,7 +414,7 @@ async function main() {
     const dims = assertPng(png)
     const shotPath = join(evidenceDir, 'builtin-apps-library.png')
     writeFileSync(shotPath, png)
-    report.screenshot = { path: shotPath, width: dims.width, height: dims.height, bytes: png.length }
+    report.screenshot = { path: relToRoot(shotPath), width: dims.width, height: dims.height, bytes: png.length }
     report.assertions.push({ name: 'screenshot-png-verified', pass: true, dimensions: dims })
 
     writeFileSync(join(evidenceDir, 'dom-state.json'), JSON.stringify({ cards, merged, formState, tab }, null, 2))

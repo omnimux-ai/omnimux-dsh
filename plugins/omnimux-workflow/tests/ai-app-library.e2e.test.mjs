@@ -658,6 +658,19 @@ test('旅程 8：内置应用与用户应用合并展示，内置卡片无删除
       null,
       '内置应用不得停在「暂无已加载的 AI 应用」空态',
     )
+    // manifest 里的 formSchema 必须真的变成可填控件：只断言标题会漏掉「表单没渲染」。
+    const renderedFields = [...tab.container.querySelectorAll('input, textarea, select, [role="radio"], [role="switch"]')]
+      .filter((el) => el.closest('.omx-apptab-root'))
+    assert.equal(
+      renderedFields.length > 0,
+      true,
+      '内置应用标签页必须把 formSchema 渲染成真实表单控件，而不是只显示标题',
+    )
+    assert.match(
+      tab.container.textContent,
+      /参考视频/,
+      'formSchema.properties 里的字段标题必须出现在表单上',
+    )
   } finally {
     await tab.teardown()
   }
@@ -732,5 +745,39 @@ test('旅程 9：内置应用解析失败/慢响应时不得伪造内容，也�
     assert.equal(raceTab.title(), '应用B', '先发的慢响应不得覆盖后切的应用')
   } finally {
     await raceTab.teardown()
+  }
+
+  // ③ fetch → 本地缓存命中：慢响应回来时守卫必须已经推进到缓存应用，
+  //    否则刚点开的有缓存应用会被先前那个内置应用的响应覆盖（评审 N1）。
+  const cacheRaceFetch = async (url) => {
+    const appId = String(url).split('/').pop()
+    assert.equal(appId, 'app_builtin_slow_c', `只应为内置应用发请求，实际 ${appId}`)
+    await new Promise((done) => setTimeout(done, 60))
+    return { ok: true, status: 200, async json() { return { app: { appId, version: '1.0.0', metadata: { name: '内置应用C', category: 'video' } } } } }
+  }
+  const cacheRaceTab = await mountAppTab({
+    sidebar,
+    fetchImpl: cacheRaceFetch,
+    seed: seedTwoApps,
+    tab: { id: 'tabC', type: APP_TAB_ID, meta: { appId: 'app_demo_video_001' }, title: 'AI 应用' },
+  })
+  try {
+    await cacheRaceTab.act(async () => {
+      // 先点内置应用（无缓存，走 fetch），紧接着点一个有本地缓存的应用。
+      globalThis.window.dispatchEvent(new globalThis.window.CustomEvent('omnimux-app-open', {
+        detail: { appId: 'app_builtin_slow_c' },
+      }))
+      globalThis.window.dispatchEvent(new globalThis.window.CustomEvent('omnimux-app-open', {
+        detail: { appId: 'app_demo_image_002' },
+      }))
+    })
+    await cacheRaceTab.act(async () => { await new Promise((done) => setTimeout(done, 120)) })
+    assert.equal(
+      cacheRaceTab.title(),
+      '商品图生成器',
+      '后点开的缓存应用必须胜出；被先发的内置应用响应覆盖就是错源',
+    )
+  } finally {
+    await cacheRaceTab.teardown()
   }
 })

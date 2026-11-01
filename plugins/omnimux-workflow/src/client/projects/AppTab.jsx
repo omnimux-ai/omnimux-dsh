@@ -540,6 +540,10 @@ export function AppTab(props) {
       const nextId = typeof detail?.appId === 'string' ? detail.appId : ''
       if (!nextId) return
       if (tabBoundAppId && tabBoundAppId !== nextId) return
+      // 先推进「最新请求胜出」守卫，再走任何分支：缓存命中是同步返回的，
+      // 若只在发请求时推进，先前那个还在飞的内置应用响应回来后守卫仍判等通过，
+      // 就会把刚点开的有缓存应用覆盖掉。
+      requestedAppIdRef.current = nextId
       setAppId(nextId)
       const next = detail?.manifest || readCachedManifest(nextId)
       if (next) {
@@ -547,7 +551,6 @@ export function AppTab(props) {
         return
       }
       // 内置应用没有本地缓存，事件里也可能只带 appId（中枢 openApp 通道）：走只读接口解析。
-      requestedAppIdRef.current = nextId
       void fetchAppManifest(nextId).then((remote) => {
         // 慢响应晚到：此时标签页已经切到别的应用，本次结果必须丢弃。
         if (requestedAppIdRef.current !== nextId) return
