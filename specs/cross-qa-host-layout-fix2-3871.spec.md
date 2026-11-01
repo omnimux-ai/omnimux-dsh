@@ -75,3 +75,13 @@
 ## 10. 文档影响
 
 `docs/contracts/plugin-qa.md` 已描述布局规则，本轮不改契约语义，只在实现层修正探测判据；若契约里「app.asar 回退」表述需要补充归档语义，同步一行说明。
+
+## 旧标准变更
+
+- `scripts/host-runtime-layout.test.mjs` :: `注入的 fs 缺 statSync 时退回默认布局，不因本机没装 App 报错`
+
+原断言：注入缺少 `statSync` 的 stub fs 时，探测返回默认 `app` 布局且不报错。
+
+必须改的理由：这正是评审指出的「生产模块里的静默降级」——把「没有探测能力」当成「布局存在」，会让任何注入不完整 io 的调用方直接命中第一个候选，与 spec §6「缺件显式失败、不静默降级」冲突。
+
+新期望证据：同一场景改为断言 `resolveHostRuntimeLayout({ io: stub })` 抛 `TypeError`（`io.statSync is required`），即探测能力缺失是调用方错误而不是布局可用证据；对应实现把该分支从「返回 true」改为 `throw`，并新增 `defaultHostLayout()` 承担「不探测文件系统」的显式路径（由 `defaultHostLayout 不探测文件系统` 用例覆盖）。
