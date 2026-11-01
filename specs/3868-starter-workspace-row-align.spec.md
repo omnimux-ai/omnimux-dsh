@@ -1,6 +1,6 @@
 # 3868 新会话引导页工作区行未与输入框对齐
 
-Issue: #3868 · 分支 `agent/omnimux-starter-row-align-issue-3868` · 风险等级 R2（单插件非破坏性修复）
+Issue: #3868 · 分支 `agent/omnimux-starter-row-align-issue-3868` · 风险等级 **R1**（hub 客户端 CSS + `scripts/` 回归门禁 + 根 `package.json` 入口；见文末风险说明）
 
 ## 背景
 
@@ -34,13 +34,13 @@ Issue: #3868 · 分支 `agent/omnimux-starter-row-align-issue-3868` · 风险等
 ## 假设
 
 - 运行中的 Dev 包仍按当前源码注入两份样式（已核对 `~/.omnimux-dev/profiles/omnimux/node_modules/omnimux/src/client/session-guide/styles.js` 含同样的 680 规则），所以修复只需改源码规则优先级，不需要改注入机制。
-- 引导页根节点同时带 `data-phase` 与 `data-omnimux-starter-host`；若未来官方改掉 `data-phase` 根节点，本规则会失效，需要用回归测试里的 DOM 命中断言兜住。
+- 引导页根节点同时带 `data-phase` 与 `data-omnimux-starter-host`（当前生产链已核对：`SessionGuide.jsx` 把属性设在 `closest('[data-phase]')`，官方 `ConversationMainPanel` 根节点带 `data-phase`）。若未来官方改掉根节点，本规则会失效；静态回归测试硬编码合成 DOM，只能锁定当前选择器组合，**不能**兜住官方 DOM 结构变更，届时应由真实应用验收或宿主变更评审发现。
 - 工作区行与输入框卡片左缘对齐（行内 `padding` 为 0，二者同宽同左缘）就是本任务期望的「对齐」口径；不恢复官方 20px 行内缩进。
 
 ## 证伪方式
 
 - 在真实浏览器里把两份样式分别以「先 GUIDE 后 COMPOSER」「先 COMPOSER 后 GUIDE」两种顺序注入同一 DOM，修复前两种顺序结果不一致（一行 680 / 一行 920 且左缘差 120px），修复后两种顺序都必须得到 680 且左缘差 0px。
-- `node --test plugins/omnimux/src/client/starter-hero-row-cascade.test.js`：删除/还原本次特异性改动后必须红（断言特异性严格大于通用规则），恢复后绿。
+- `node --test plugins/omnimux/src/client/starter-hero-row-cascade.test.mjs`：删除/还原本次特异性改动后必须红（断言特异性严格大于通用规则），恢复后绿。
 - `rg "heroWorkspaceRow" plugins/omnimux/src/client/session-guide/styles.js` 确认普通态与分栏态引导页选择器都带 `[data-phase]` 复合条件。
 
 ## 验收
@@ -48,9 +48,11 @@ Issue: #3868 · 分支 `agent/omnimux-starter-row-align-issue-3868` · 风险等
 - [x] 引导页工作区行 `max-width` 等于输入框卡片（680 / `min(680px, calc(100% - 24px))`），二者水平中心与左缘一致；修复前红、修复后绿（浏览器门禁反向对照 + 两种注入顺序）。
 - [x] 分栏紧凑态下引导页工作区行同样保持 680 上限与居中（选择器覆盖分栏/紧凑四条变体，静态测试逐条断言特异性）。
 - [x] 普通英雄页（无 starter 引导卡）工作区行样式不变（通用规则原样保留，测试断言其仍为原生内容宽）。
-- [x] 新回归测试在还原修复后失败、修复后通过；`pnpm --filter omnimux test`、`pnpm --filter omnimux-inspiration test` 通过。
-- [x] 隔离工作树内真实浏览器证据（截图 + 结构化报告，两种注入顺序 + 反向对照）留存。
-- [ ] 独立评审核对范围、回归风险、证据与授权。
+- [x] 新回归测试在还原修复后失败、修复后通过（本地 5/5；还原后 2 条转红）。CI required plugin tests 在 PR 上全绿（hub / inspiration / rest / workflow-market 四个 job 均 pass）。
+  - 本工作树本地直跑有既有环境差异：`pnpm --filter omnimux test` 3693 项中 3 项失败（`agents/local.test.js` 2 项、`generation-core-package.test.js` 的 `pnpm pack`），`pnpm --filter omnimux-inspiration test` 269 项中 3 项失败。其中 `agents/local.test.js` 与 inspiration 这 3 项在**未改动的 main 检出**上用同一命令同样失败；`generation-core-package.test.js` 在 main 检出通过、仅在本工作树 pnpm 安装态下报 `ERR_PNPM_CANNOT_RESOLVE_WORKSPACE_PROTOCOL`（环境性）。以上均与本改动无关，未标记为通过。
+- [x] **机制级**真实浏览器证据（真实 Chromium + 生产 CSS 常量 + 两种注入顺序 + 修复前反向对照）留存：`scripts/starter-workspace-row-align-qa.mjs`，本次 3/3 断言通过，截图与 `report.json` 见 `.workbuddy/evidence/starter-row-align-qa/777ce4f4-5d69-4b77-9b7e-30ad2bc48866/`。
+- [ ] **真实功能路径**（启动应用/加载插件后的会话页）浏览器验收：**BLOCKED**（环境漂移，见「浏览器验证」）。按 `plugin-qa`，私有 harness 只能算局部机制证据，不替代功能路径验收；本项不勾承诺。
+- [ ] 独立评审核对范围、回归风险、证据与授权（首轮 changes-requested 的阻断项已修复，待最终 head 复审）。
 
 > 风险等级：本任务除 hub 客户端 CSS 外新增 `scripts/` 回归门禁与根 `package.json` 入口，按 `plugin-git-pr.md` 规则上调为 **R1**。
 
@@ -58,7 +60,7 @@ Issue: #3868 · 分支 `agent/omnimux-starter-row-align-issue-3868` · 风险等
 
 - 反例：把 starter 工作区行选择器里的 `[data-phase]` 复合条件删掉（修复前形态），并让通用 Hero 规则后注入。
 - 造之前绿 / 造之后红：浏览器门禁内建「反向对照」断言，用同一份页面在修复前形态下实测必须复现「行宽 920、左移约 120px」；夹具失真（对照不红）时整条门禁失败。
-- 真实输出：`prefix-bug.png` + `report.json`（widthDelta=240、leftDelta≈120）；恢复 `[data-phase]` 后两种注入顺序均 widthDelta=0、leftDelta=0，门禁 3/3 PASS。
+- 真实输出：`prefix-bug.png` + `report.json`（行宽 920、左移约 120）；恢复 `[data-phase]` 后两种注入顺序均 widthDelta=0、leftDelta=0，门禁 3/3 PASS（A/B 标签与注入顺序已按评审意见校正后重跑）。
 - 静态回归测试 `starter-hero-row-cascade.test.mjs`：还原 `[data-phase]` 后 `is strictly more specific…` 与 `tags every starter row sizing selector…` 两条断言转红；恢复后 5/5 PASS（已在本地执行并记录）。
 
 ## 新用户基线
@@ -67,22 +69,24 @@ Issue: #3868 · 分支 `agent/omnimux-starter-row-align-issue-3868` · 风险等
 
 ## 浏览器验证（隔离工作树）
 
-全应用级入口 `pnpm verify:app` 在本机被两个环境漂移阻断，未取得可用证据：
+**结论：真实功能路径浏览器验收 BLOCKED，未取得；机制级真实浏览器证据已取得。**
 
-1. `scripts/test-env-bootstrap.mjs` 把宿主脚本硬编码到 `/Applications/OmniMux Dev.app/Contents/Resources/app.asar/lib/desktop-cli.js`，但本机已安装的 Dev 包是解包布局（`Resources/app/`，没有 `app.asar`），启动即 `TEST_ENV_RUNTIME_EXIT`。临时把解包布局克隆成 `app.asar` 目录后应用可启动，说明代码本身未崩，纯属布局漂移。
-2. 继续到任务准备阶段后报 `TEST_ENV_PREPARE_SOURCE_MUTATED`（`packages/dsh-ui-kit/lib/index.d.ts`）：该包 `build` 在隔离 stage 里重新生成的产物与仓库里提交的产物不一致（提交产物来自另一版 tsdown 生成器），属仓库既有生成物漂移，与本任务 CSS 改动无关。
+全应用级入口 `pnpm verify:app` 在本机被两个环境漂移阻断：
 
-因此本任务新增**仓库自有的真实浏览器门禁** `scripts/starter-workspace-row-align-qa.mjs`（`pnpm qa:starter-row-align`），沿用既有 QA 脚本模式（`docked-slot-position-qa.mjs`）：真实 Chromium、动态端口、临时 profile、用完即焚，两份样式**整段取自生产源码**，不手写补丁。同一页面内实测三种状态：
+1. `scripts/test-env-bootstrap.mjs` 把宿主脚本硬编码到 `/Applications/OmniMux Dev.app/Contents/Resources/app.asar/lib/desktop-cli.js`，但本机已安装的 Dev 包是解包布局（`Resources/app/`，没有 `app.asar`），启动即 `TEST_ENV_RUNTIME_EXIT`。临时把解包布局克隆成 `app.asar` 目录后应用可启动，说明代码本身未崩，纯属布局漂移；**该临时克隆（约 1.5G）已在排查结束后删除**，`Resources/app/` 原布局未改动（13:5x 已核对 `app/lib/desktop-cli.js` 存在、`app.asar` 不存在）。
+2. 继续到任务准备阶段后报 `TEST_ENV_PREPARE_SOURCE_MUTATED`（`packages/dsh-ui-kit/lib/index.d.ts`）：该包 `build` 在隔离 stage 里重新生成的产物与仓库里提交的产物不一致（提交产物来自另一版 tsdown 生成器），属仓库既有生成物漂移，与本任务 CSS 改动无关，且修复它需要动 `packages/dsh-ui-kit` 生成物或 QA 引导脚本，超出本任务边界。
 
-| 状态 | 注入顺序 | 期望 |
+因此改为**机制级**真实浏览器门禁 `scripts/starter-workspace-row-align-qa.mjs`（`pnpm qa:starter-row-align`，沿用既有 `docked-slot-position-qa.mjs` 模式）：真实 Chromium、动态端口、临时 profile、用完即焚；两份样式**直接 import 生产模块取得已求值常量**（`${...}` 插值不丢真）；`report.pass` 同时要求断言全绿、无 error、Chrome 已停、临时 profile 已删。同一页面内实测三种状态：
+
+| 状态 | 实际注入顺序（DOM 中在后者胜出） | 期望 |
 |---|---|---|
-| 反向对照：starter 规则去掉 `[data-phase]` 复合条件（修复前形态） | GUIDE → 通用规则（通用后注入） | 复现行宽 920、相对卡片左移约 120px |
-| 正向 A | GUIDE → 通用规则 | 行宽 680、左缘差 0 |
-| 正向 B | 通用规则 → GUIDE | 行宽 680、左缘差 0 |
+| 反向对照：starter 规则去掉 `[data-phase]` 复合条件（修复前形态） | 通用规则在后 | 复现行宽 920、相对卡片左移约 120px |
+| 正向 A | 通用规则 → GUIDE（历史输掉的顺序） | 行宽 680、左缘差 0 |
+| 正向 B | GUIDE → 通用规则 | 行宽 680、左缘差 0 |
 
-实跑结果（2026-11-01，本工作树）：3/3 断言通过；反向对照截图可见两个胶囊在卡片左缘外约 120px，修复后两种顺序截图均与卡片左缘对齐。证据：`.workbuddy/evidence/starter-row-align-qa/<runId>/{report.json,prefix-bug.png,guide-first.png,composer-first.png}`。
+实跑结果（2026-11-01，本工作树）：3/3 断言通过；反向对照截图可见两个胶囊在卡片左缘外约 120px，修复后两种顺序截图均与卡片左缘对齐。证据：`.workbuddy/evidence/starter-row-align-qa/777ce4f4-5d69-4b77-9b7e-30ad2bc48866/{report.json,prefix-bug.png,guide-first.png,composer-first.png}`。
 
-真机 Dev 验收仍按合同归人工：合并后 `worktree.sh ship` 物化到 `~/.omnimux-dev`，由用户在 Dev App 里查看新会话引导页。**Agent 不声称完成 Dev 真机验收。**
+**限界（不隐藏）**：该门禁是真实浏览器 + 生产 CSS，但页面是合成 DOM，不是「启动应用 + 加载插件后的功能路径」，按 `plugin-qa` 只能算局部机制证据，**不替代** client/CSS 的功能路径验收；分栏/紧凑态也只有静态特异性断言、没有浏览器几何。功能路径验收与 Dev 真机验收均归人工：合并后 `worktree.sh ship` 物化到 `~/.omnimux-dev`，由用户在 Dev App 新会话引导页确认。**Agent 不声称完成功能路径验收或 Dev 真机验收。**
 
 ## 文档影响
 

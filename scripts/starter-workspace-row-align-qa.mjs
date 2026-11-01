@@ -21,7 +21,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import http from 'node:http'
 import { dirname, join, relative, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { PNG } from 'pngjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -38,20 +38,12 @@ function findChromePath() {
     '/usr/bin/google-chrome',
     '/usr/bin/chromium',
     '/usr/bin/chromium-browser',
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
   ]
   const found = candidates.find((candidate) => existsSync(candidate))
   if (found) return found
-  throw new Error('未找到 Chrome')
-}
-
-/** 从生产源码里整段取模板字符串常量（不手写补丁）。 */
-export function extractTemplate(source, exportName) {
-  const marker = `export const ${exportName} = \``
-  const start = source.indexOf(marker)
-  assert.ok(start > 0, `未找到 ${exportName}`)
-  const end = source.indexOf('\n`', start + marker.length)
-  assert.ok(end > start, `未闭合 ${exportName}`)
-  return source.slice(start + marker.length, end)
+  throw new Error('未找到 Chrome：请安装 Chrome/Chromium，或用 CHROME_PATH 指定可执行文件')
 }
 
 /** 修复前形态：去掉 starter 行规则的 [data-phase] 复合条件。 */
@@ -156,8 +148,11 @@ async function main() {
   let chrome = null
   let socket = null
   try {
-    const guideCss = extractTemplate(readFileSync(join(ROOT, GUIDE_PATH), 'utf8'), 'GUIDE_CSS')
-    const compactCss = extractTemplate(readFileSync(join(ROOT, COMPACT_PATH), 'utf8'), 'COMPOSER_COMPACT_CSS')
+    // 直接 import 生产模块拿到已求值的 CSS 常量（含 ${...} 插值），不用正则抠模板原文。
+    const [{ GUIDE_CSS: guideCss }, { COMPOSER_COMPACT_CSS: compactCss }] = await Promise.all([
+      import(pathToFileURL(join(ROOT, GUIDE_PATH)).href),
+      import(pathToFileURL(join(ROOT, COMPACT_PATH)).href),
+    ])
     const fixedGuide = guideCss
     const legacyGuide = legacyGuideCss(guideCss)
     assert.notEqual(legacyGuide, fixedGuide, '反向对照必须真的去掉 [data-phase] 复合条件')
@@ -264,34 +259,36 @@ async function main() {
     report.prefixBug = bug
     report.evidence.bugPng = await capturePng('prefix-bug.png')
 
-    // 2) 正向顺序 A：生产 GUIDE 先注入、通用规则后注入（历史上输掉的顺序）。
+    // 2) 正向顺序 A：通用规则先注入、生产 GUIDE 后注入（历史上输掉的顺序）。
     await setSheet(send, STYLE_IDS.compact, compactCss)
     await setSheet(send, STYLE_IDS.guide, fixedGuide, STYLE_IDS.compact)
     const fixedA = await readMetrics()
     const judgeA = judge(fixedA)
     report.assertions.push({
-      name: 'guide-first-composer-last-aligned',
+      name: 'composer-first-guide-last-aligned',
       pass: judgeA.widthAligned && judgeA.leftAligned && judgeA.capped,
       metrics: fixedA,
     })
-    report.fixedGuideFirst = fixedA
-    report.evidence.guideFirstPng = await capturePng('guide-first.png')
+    report.fixedComposerFirst = fixedA
+    report.evidence.composerFirstPng = await capturePng('composer-first.png')
 
-    // 3) 正向顺序 B：通用规则先注入、生产 GUIDE 后注入。
+    // 3) 正向顺序 B：生产 GUIDE 先注入、通用规则后注入。
     await setSheet(send, STYLE_IDS.guide, fixedGuide)
     await setSheet(send, STYLE_IDS.compact, compactCss, STYLE_IDS.guide)
     const fixedB = await readMetrics()
     const judgeB = judge(fixedB)
     report.assertions.push({
-      name: 'composer-first-guide-last-aligned',
+      name: 'guide-first-composer-last-aligned',
       pass: judgeB.widthAligned && judgeB.leftAligned && judgeB.capped,
       metrics: fixedB,
     })
-    report.fixedGuideLast = fixedB
-    report.evidence.composerFirstPng = await capturePng('composer-first.png')
+    report.fixedGuideFirst = fixedB
+    report.evidence.guideFirstPng = await capturePng('guide-first.png')
 
-    report.pass = report.assertions.every((item) => item.pass)
-    assert.ok(report.pass, `门禁断言失败: ${JSON.stringify(report.assertions.filter((item) => !item.pass))}`)
+    assert.ok(
+      report.assertions.every((item) => item.pass),
+      `门禁断言失败: ${JSON.stringify(report.assertions.filter((item) => !item.pass))}`,
+    )
   } catch (error) {
     report.errors.push(error instanceof Error ? error.message : String(error))
   } finally {
@@ -320,6 +317,10 @@ async function main() {
       report.cleanup.chromeProfile = 'remove-failed'
     }
     report.cleanup.chromeStopped = chrome ? chrome.exitCode !== null : true
+    // 用完即焚必须计入通过条件：临时 profile 未删或 Chrome 未停都不算通过。
+    report.cleanupOk = report.cleanup.chromeProfile === 'removed' && report.cleanup.chromeStopped === true
+    report.pass = report.errors.length === 0 && report.assertions.length > 0
+      && report.assertions.every((item) => item.pass) && report.cleanupOk
     const reportPath = join(evidenceDir, 'report.json')
     writeFileSync(reportPath, JSON.stringify(report, null, 2) + '\n')
     console.log(`${report.pass ? '✅' : '❌'} starter workspace row align QA`)

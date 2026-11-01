@@ -67,7 +67,7 @@ body[data-ds-dark-theme] {
    SessionGuide 的 closest('[data-phase]') 设置）：通用 Hero 行规则在
    composer-compact.js 里用 [data-phase='hero'] [class*="heroWorkspaceRow"]，
    同权重 !important 下谁后注入谁赢，而两份样式来自不同插件的 <style>，
-   注入顺序不保证（Issue #3868 实测通用规则赢，行宽变成原生 920、左移 120）。
+   注入顺序不保证（Issue 3868 实测通用规则赢，行宽变成原生 920、左移 120）。
    多一个属性选择器让本规则在两种注入顺序下都稳定胜出。 */
 [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
   width:100%!important;
