@@ -62,6 +62,8 @@ async function loadCard() {
   const mod = { exports: {} }
   // eslint-disable-next-line no-new-func
   new Function('require', 'module', 'exports', result.outputFiles[0].text)(pluginRequire, mod, mod.exports)
+  // 悬停起播的停留门槛由视图导出（#3875）：测试按它等待，不猜魔法数。
+  assert.equal(typeof mod.exports.HOVER_AUDITION_DELAY_MS, 'number', 'view must export its hover delay')
   return mod.exports.CloudAssetCard
 }
 
@@ -106,8 +108,9 @@ test('CloudAssetCard audio: explicit click owns the card until pointer leaves (#
   assert.ok(thumb, 'thumb rendered')
   assert.equal(thumb.getAttribute('aria-pressed'), 'false')
 
-  // 1) 指针进入：hover 副作用自动开始试听
+  // 1) 指针进入：hover 副作用在停留门槛之后自动开始试听（#3875）。
   await fire(card, 'mouseover')
+  await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 260) }) })
   assert.equal(calls.length, 1, 'hover should auto-start audition')
   playing = true
   await render()
@@ -124,6 +127,7 @@ test('CloudAssetCard audio: explicit click owns the card until pointer leaves (#
   await fire(card, 'mouseout')
   assert.equal(calls.length, 2, 'mouseout after explicit pause must not toggle')
   await fire(card, 'mouseover')
+  await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 260) }) })
   assert.equal(calls.length, 3, 'fresh hover resumes auto audition')
   playing = true
   await render()
@@ -133,6 +137,7 @@ test('CloudAssetCard audio: explicit click owns the card until pointer leaves (#
   calls.length = 0
   playing = false
   await render()
+  await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 260) }) })
   assert.equal(calls.length, 1, 'playing drop while hovered restarts audition once')
   await fire(thumb, 'click')
   playing = false
@@ -147,6 +152,7 @@ test('CloudAssetCard audio: explicit click owns the card until pointer leaves (#
   playing = false
   await render()
   await fire(card, 'mouseover')
+  await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 260) }) })
   assert.equal(calls.length, 1, 'fresh hover auto-starts again')
   playing = true
   await render()
@@ -217,8 +223,9 @@ test('CloudAssetCard audio: save/chat press does not own the card; detail press 
   assert.ok(card && body && saveBtn && chatBtn, 'card, body and both action buttons rendered')
   assert.equal(card.querySelectorAll('button').length, 2, 'exactly the save and chat buttons sit in the cluster')
 
-  // 1) 悬停自动开始试听
+  // 1) 悬停自动开始试听（停留门槛之后，#3875）
   await fire(card, 'mouseover')
+  await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 260) }) })
   assert.equal(calls.length, 1, 'hover auto-starts audition')
   playing = true
   await render()
@@ -235,6 +242,7 @@ test('CloudAssetCard audio: save/chat press does not own the card; detail press 
   // 3) 再次进入恢复自动试听；会话钮按下同样不接管，移出照旧停止。
   calls.length = 0
   await fire(card, 'mouseover')
+  await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 260) }) })
   assert.equal(calls.length, 1, 'fresh hover resumes auto audition')
   playing = true
   await render()
@@ -248,6 +256,7 @@ test('CloudAssetCard audio: save/chat press does not own the card; detail press 
   // 4) 会话钮上的键盘按下也不算接管（Enter 激活按钮而非打开详情）。
   calls.length = 0
   await fire(card, 'mouseover')
+  await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 260) }) })
   assert.equal(calls.length, 1, 'hover restarts once more')
   playing = true
   await render()
@@ -263,6 +272,7 @@ test('CloudAssetCard audio: save/chat press does not own the card; detail press 
   //    翻回 false 后，悬停副作用不得把试听复活（F4 不退化）。
   calls.length = 0
   await fire(card, 'mouseover')
+  await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 260) }) })
   assert.equal(calls.length, 1, 'hover auto-starts before detail press')
   playing = true
   await render()

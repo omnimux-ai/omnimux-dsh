@@ -47,8 +47,14 @@ test('E2E 契约三：封面懒加载并取消整批全量预解码 (AC-3)', () 
   assert.match(viewSrc, /loading="lazy"/)
   // 严禁对整个 items 全量提前解码
   assert.doesNotMatch(viewSrc, /const covers = items\s*\.filter/)
-  // 仅在尾部保留下一屏条数的提前缓冲
-  assert.match(viewSrc, /items\.slice\(Math\.max\(0, items\.length - pageSize\)\)/)
+  // Issue #3875：尾部下一屏的预取也已移除——它与 loading="lazy" 的视口策略互相
+  // 抵消，首屏还没画完就把末尾十几张几兆大图挤进网络管道。加载顺序交给浏览器。
+  assert.equal(
+    /items\.slice\(Math\.max\(0, items\.length - pageSize\)\)/.test(viewSrc),
+    false,
+    '尾部整批预取必须移除',
+  )
+  assert.equal(/preloadMedia/.test(viewSrc), false, '视图不得再引用预取工具')
 })
 
 test('E2E 契约四：骨架屏张数与视口推导条数严格一致 (AC-4)', () => {

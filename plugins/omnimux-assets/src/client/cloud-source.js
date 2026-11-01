@@ -2,13 +2,17 @@
  * Where the cloud asset catalog's *metadata* comes from.
  *
  * The catalog is a static paginated tree — `manifest.json`, a flat
- * `index.json`, and per-scope `page-NNNN.json` shards — and it exists in two
- * places: the production gateway that Caddy serves straight off disk, and the
- * copy mounted next to this plugin that the local Host answers under
- * /omnimux/assets/cloud. The gateway is authoritative and always current, so it
- * is tried first; the local copy is the fallback that keeps the cloud tab
- * working offline, on installs that cannot reach the gateway, and while a
- * catalog rebuild is still on its way.
+ * `index.json`, and per-scope `page-NNNN.json` shards — and it is shipped inside
+ * this package, mounted next to the plugin, where the local Host answers it under
+ * /omnimux/assets/cloud. That shipped copy is the default: it needs no network,
+ * no probe, and no warm-up before the shelf can paint.
+ *
+ * A remote gateway can still be pointed at explicitly (see the configuration
+ * below) for a deployment that publishes a newer catalog than the installed
+ * package. It is never tried by default: the production gateway URL was
+ * measured answering 404 on every session start, so the old "gateway first,
+ * local as fallback" order cost a network round trip — 0.67–1.71 s in three
+ * samples — to learn what the shipped copy could have answered immediately.
  *
  * Only metadata moves. Media bytes stay on the Host proxy: a `file:` locator can
  * only be resolved against the machine that holds the assets, and a remote
@@ -19,20 +23,32 @@
  *   1. `globalThis.__OMNIMUX_CLOUD_ASSETS_BASE_URL__` — runtime override
  *   2. `CLOUD_ASSETS_BASE_URL` in the build environment — inlined into the
  *      bundle by scripts/build-client.mjs
- *   3. `DEFAULT_CLOUD_ASSETS_BASE_URL`
+ *   3. `DEFAULT_CLOUD_ASSETS_BASE_URL` — the shipped local copy
  *
  * The values `local`, `off`, `host`, `none`, the Host route prefix itself, and
  * an empty string pin the local Host proxy and skip the probe entirely.
  */
 
-/** Production gateway base URL, without a trailing slash. */
-export const DEFAULT_CLOUD_ASSETS_BASE_URL = 'https://omnimux.ai/cloud-assets-catalog'
+/**
+ * The gateway a deployment may opt into. Exported so an operator (and the tests
+ * that pin the default) can name the URL without spelling it out, and so it is
+ * obvious that it is an explicit destination rather than a fallback.
+ */
+export const REMOTE_CLOUD_ASSETS_BASE_URL = 'https://omnimux.ai/cloud-assets-catalog'
 
 /**
  * Sentinel for "read from the local Host". Deliberately the empty string so a
  * URL builder only has one thing to test.
  */
 export const LOCAL_CLOUD_BASE_URL = ''
+
+/**
+ * Default catalog source: the copy shipped inside this package.
+ *
+ * Reading locally is the product baseline — a brand-new install has this file on
+ * disk and must not need to reach any gateway before the 公共 shelf renders.
+ */
+export const DEFAULT_CLOUD_ASSETS_BASE_URL = LOCAL_CLOUD_BASE_URL
 
 /** Prefix of the Host routes that serve the catalog mounted in this install. */
 export const LOCAL_CLOUD_ROUTE = '/omnimux/assets/cloud'

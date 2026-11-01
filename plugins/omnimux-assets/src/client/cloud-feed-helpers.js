@@ -140,6 +140,20 @@ export function subCategoryTabs(manifest, category) {
 }
 
 /**
+ * A locator that can be handed to an `<img>` without going through the Host.
+ *
+ * Only `http(s)` qualifies: a legacy `file:` locator names a path on the machine
+ * that built the catalog, so it must keep travelling through the Host route that
+ * knows how to resolve it.
+ * @param {unknown} value
+ * @returns {string}
+ */
+export function directMediaUrl(value) {
+  const url = String(value ?? '')
+  return /^https?:\/\//i.test(url) ? url : ''
+}
+
+/**
  * Normalize one catalog row for rendering.
  *
  * The catalog is committed data, so a malformed row is possible after a manual
@@ -169,6 +183,11 @@ export function normalizeCloudAsset(row) {
     playable: row?.meta?.playable !== false,
     hasCover: String(row?.cover_url ?? '') !== '',
     hasMedia: String(row?.media_url ?? '') !== '',
+    // The two locators a card may load itself. `thumbUrl` is the small WebP the
+    // image build published; `coverUrl` is the original. Both stay empty for a
+    // `file:` locator, so those rows keep using the Host route.
+    thumbUrl: directMediaUrl(row?.thumb_url),
+    coverUrl: directMediaUrl(row?.cover_url),
     // Issue #3058: stable voice identity and the hub preview DTO travel through
     // paging, search and detail untouched — play eligibility and action gating
     // read `preview`, never the display name or the row id.
