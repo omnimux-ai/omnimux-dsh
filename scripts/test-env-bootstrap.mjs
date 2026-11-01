@@ -13,7 +13,7 @@ import { runPnpm } from './managed-tarball.mjs';
 import { privatePnpmEnvironment } from './materialize-cache.mjs';
 import { prepareFiles, payloadManifest, hashFile, readJson, stable } from './materialize-graph.mjs';
 import { createTaskPnpmTool, installTaskRuntime } from './task-runtime-install.mjs';
-import { resolveHostRuntimeLayout, appAnchorFor, composeAgentPresetRows, stringifyStructuredFile } from './host-runtime-layout.mjs';
+import { resolveHostRuntimeLayout, defaultHostLayout, composeAgentPresetRows, stringifyStructuredFile } from './host-runtime-layout.mjs';
 
 /**
  * 宿主布局按实际安装探测（asar:false 的 `Resources/app` 优先，旧 `app.asar` 回退）。
@@ -26,8 +26,11 @@ import { resolveHostRuntimeLayout, appAnchorFor, composeAgentPresetRows, stringi
  * 这些测试只关心启动参数与环境隔离，不关心本机装的是哪种打包布局。
  */
 const hostLayout = (io) => {
-  if (io === undefined || io === fs || typeof io.statSync !== 'function') return resolveHostRuntimeLayout();
-  return resolveHostRuntimeLayout({ io });
+  // 真实 fs：按本机实际安装布局探测。
+  if (io === undefined || io === fs) return resolveHostRuntimeLayout();
+  // 注入的 fs 是单测 stub：不探测本机文件系统（CI 上没有 App），按默认布局返回，
+  // 由调用方后续的 accessSync 与真实运行暴露缺件。
+  return defaultHostLayout();
 };
 const OFFICIAL_ENDPOINT = 'https://api.deepseek.com';
 const SYNTHETIC_KEY = 'QA-SYNTHETIC-NOT-A-REAL-KEY';

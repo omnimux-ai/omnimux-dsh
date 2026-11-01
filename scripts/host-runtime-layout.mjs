@@ -88,6 +88,17 @@ export function resolveHostRuntimeLayout(options = {}) {
 }
 
 /**
+ * 默认布局（`asar: false`）：不探测文件系统，供单测 stub 与文档引用使用。
+ * @param {{ bundle?: string }} [options]
+ */
+export function defaultHostLayout(options = {}) {
+  const bundle = options.bundle ?? DEV_APP_BUNDLE;
+  const wrapper = join(bundle, WRAPPER_CANDIDATES[0]);
+  const appRoot = dirname(dirname(wrapper));
+  return { bundle, executable: join(bundle, 'Contents/MacOS/OmniMux'), wrapper, appRoot, layout: 'app', candidates: WRAPPER_CANDIDATES.map((relative) => join(bundle, relative)) };
+}
+
+/**
  * 宿主包锚点：`<Resources>/<app|app.asar>/node_modules/@deepseek-ai/dsh/package.json`。
  * @param {string} wrapper desktop-cli 入口绝对路径
  */

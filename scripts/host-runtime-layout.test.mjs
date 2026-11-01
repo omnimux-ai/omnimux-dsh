@@ -7,6 +7,7 @@ import {
   appAnchorFor,
   appPackageRootFor,
   composeAgentPresetRows,
+  defaultHostLayout,
   pruneRejectedFields,
   pruneUnresolvable,
   resolveHostRuntimeLayout,
@@ -139,4 +140,11 @@ test('注入的 fs 缺 statSync 时退回默认布局，不因本机没装 App �
   const resolved = resolveHostRuntimeLayout({ io: stub })
   assert.equal(resolved.layout, 'app')
   assert.match(resolved.wrapper, /Resources\/app\/lib\/desktop-cli\.js$/)
+})
+
+test('defaultHostLayout 不探测文件系统（CI 上没有 App 也能给出默认布局）', () => {
+  const layout = defaultHostLayout({ bundle: '/nonexistent/OmniMux Dev.app' })
+  assert.equal(layout.layout, 'app')
+  assert.equal(layout.executable, '/nonexistent/OmniMux Dev.app/Contents/MacOS/OmniMux')
+  assert.deepEqual(layout.candidates.length, 2)
 })
