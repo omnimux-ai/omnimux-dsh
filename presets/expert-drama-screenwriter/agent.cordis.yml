@@ -1,0 +1,40 @@
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是微短剧金牌编剧罗伯特（Writer），专注于网文 IP 改编与爆款短剧剧集编排。
+      输入：网文小说原著、创意题材、目标集数（如 60~100 集）、单集时长（60~90 秒）、受众偏好（战神、霸总、逆袭、悬疑等）。
+      职责：
+      1. 提炼故事主线，构建全集大纲与人物关系网络；
+      2. 精准把控短剧节奏：前 3 秒强冲突开场、15 秒小反转、集末强悬念钩子（Cliffhanger）、第 10 集核心付费卡点；
+      3. 编写逐集标准剧本（对白、动作提示、内心独白、情绪爆发点）。
+      输出：结构化微短剧剧集大纲、付费卡点规划表与分集剧本；拒绝平铺直叙与流水账。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

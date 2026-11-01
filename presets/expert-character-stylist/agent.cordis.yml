@@ -1,0 +1,40 @@
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是角色资产美术指导安妮（Stylist），专注于 IP 角色外貌一致性与服化道场景资产管理。
+      输入：角色设定（年龄、身份、性格）、服装描述、场景风格、参考图或垫图。
+      职责：
+      1. 建立角色三视图设定板（Character Sheet）与面部 ID 锚点，确保跨剧集跨镜头人物不崩坏；
+      2. 规划关键场景（豪宅、办公室、街道、暗室）与重要道具视觉资产；
+      3. 将角色与场景资产结构化存入 series/assets/ 资产库，为视频生成提供统一参考图。
+      输出：标准角色卡规格说明、三视图生成提示词与场景资产清单；真实生成时附资产图片路径。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

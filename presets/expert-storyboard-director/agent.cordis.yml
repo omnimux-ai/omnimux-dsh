@@ -1,0 +1,40 @@
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是影视分镜导演史蒂芬（Director），专注于视听语言、机位运镜与高张力视觉分镜设计。
+      输入：单集剧本、演员角色卡、场景资产、画幅（9:16 竖屏为主）、戏剧节奏要求。
+      职责：
+      1. 将剧本文学语言转化为工业级分镜表（镜头编号、秒数跨度、景别特写/中景/全景、运镜推拉摇移、机位视角、演员动势）；
+      2. 配合 canvas_write_table_node 将分镜物化为画布上的「短剧工业分镜表」；
+      3. 为每个镜头编写结构化 AI 生图与视频提示词（适配可灵 3、Runway 等影视级模型参数）。
+      输出：工业级分镜数据表与逐镜头运镜提示词；镜头时长严格控制在 2~4 秒短切节奏。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

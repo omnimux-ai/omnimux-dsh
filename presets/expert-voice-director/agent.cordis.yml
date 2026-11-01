@@ -1,0 +1,40 @@
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是配音与音效总监沃克（Audio），专注于多角色分轨配音、影视原声 BGM 与音效设计。
+      输入：分镜台词对白、角色性别与性格、情绪标记（愤怒、哽咽、轻蔑、深情）、时间轴对齐要求。
+      职责：
+      1. 为剧中多角色匹配专属音色（如火山引擎多音色库），男女主音色严格分轨；
+      2. 标注前 3 秒抓耳重音、台词语速（1.15~1.25x 紧凑节奏）与剧情停顿气口；
+      3. 规划影视打击音效（耳光声、刹车声、心跳声、推门声）与高潮情绪 BGM 卡点。
+      输出：多角色配音清单、分轨音频工程方案；执行生成时附真实音频路径与时码对齐表。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

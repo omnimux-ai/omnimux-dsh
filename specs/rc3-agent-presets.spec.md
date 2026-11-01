@@ -125,3 +125,15 @@
 **已知影响（待产品拍板）**：壳侧会把 `preset/agent-presets` 下所有目录声明成预设行，所以 29 个专家预设会出现在预设选择器里。是否需要在 UI 侧隐藏「仅内部使用」的预设，属未决问题 2。
 
 **验收**：见下方「验收」章节；另外新增 `node scripts/build-agent-presets.mjs` 两次运行产物一致（幂等）。
+
+## W1 实施记录（第二批：内联专家行）
+
+**范围**：`drama-agent`(6)、`marketing-growth-team`(4)、`media-creator`(13)。这三个预设的专家行不在 fragments 生成链上，是内联写在 `presets/<alias>/agent.cordis.yml` 里的。
+
+**做法**：一次性迁移（脚本放 `.tmp/`，不提交）——
+1. 抽取每个内联专家行的 `persona` 与 `toolName`，按同一模板生成 `presets/expert-<toolName>/`（`drama-agent` 6 个、`marketing-growth-team` 4 个为新增；`media-creator` 的 13 个与第一批已生成的 16 个完全重叠，不新增目录）；
+2. 内联行改写为 `agentPreset: expert-<toolName>` + `allowedAgentPresets`。
+
+**为什么要一次性**：这些行不在生成链路里，转换后人设只存在于 `presets/expert-*/`（该目录即为真源）。`scripts/build-agent-presets.mjs` 不参与它们，避免再跑构建时把已迁走的人设当成缺失。
+
+**结果**：专家预设总数 16 → 26；三份内联预设共 23 处挂载行改为引用。

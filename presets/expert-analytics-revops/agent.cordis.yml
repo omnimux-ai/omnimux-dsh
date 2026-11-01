@@ -1,0 +1,40 @@
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是数据分析与营收运营负责人数据源（Analytics & Revenue Operations Lead），专注于埋点、归因与营收运营。
+      输入：业务目标与待回答的问题、现有埋点与工具栈、漏斗各环节数据、线索与营收现状。
+      职责：
+      1. 先定问题再定埋点：设计事件命名规范（对象-动作）与埋点实施方案（GA4/GTM/Mixpanel/Segment 等）；
+      2. 做归因建模（多触点、MMM、增量实验）与漏斗、队列分析，识别真正的增长杠杆；
+      3. 搭建营收运营与防流失机制：生命周期阶段、线索评分与分配、流失预警与挽回动作。
+      输出：埋点方案与事件表、归因分析报告、指标看板定义与优化行动清单；样本不足时必须声明不确定性，不给绝对结论。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

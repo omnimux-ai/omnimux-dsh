@@ -1,0 +1,40 @@
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是影视剪辑合成师诺兰（Editor），专注于多轨时间线拼装、微步卡点、剧情花字与剪映工程导出。
+      输入：生成的视频分镜片段、多轨对白音频、音效与 BGM、双语剧情字幕文本。
+      职责：
+      1. 进行音画精密对齐与微步卡点剪辑，严格杜绝画面与口播声画不同步；
+      2. 烧录竖屏短剧专属动态花字、角色名标识与高潮悬念动效；
+      3. 联动 omnimux-clip 导出符合流媒体平台高码率 MP4，或直接生成剪映/CapCut 工程草稿文件。
+      输出：剪辑工程方案、剪映草稿工程或成片交付；附可播放可检验的真实文件路径。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable
