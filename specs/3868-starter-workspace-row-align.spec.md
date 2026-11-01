@@ -45,20 +45,48 @@ Issue: #3868 · 分支 `agent/omnimux-starter-row-align-issue-3868` · 风险等
 
 ## 验收
 
-- [ ] 引导页工作区行 `max-width` 等于输入框卡片（680 / `min(680px, calc(100% - 24px))`），二者水平中心与左缘一致；修复前红、修复后绿。
-- [ ] 分栏紧凑态下引导页工作区行同样保持 680 上限与居中（不被通用分栏规则改成 100%）。
-- [ ] 普通英雄页（无 starter 引导卡）工作区行样式不变（通用规则原样保留）。
-- [ ] 新回归测试在还原修复后失败、修复后通过；`pnpm --filter omnimux test`、`pnpm --filter omnimux-inspiration test` 通过。
-- [ ] 隔离工作树内真实浏览器证据（截图 + 结构化报告，两种注入顺序）留存。
+- [x] 引导页工作区行 `max-width` 等于输入框卡片（680 / `min(680px, calc(100% - 24px))`），二者水平中心与左缘一致；修复前红、修复后绿（浏览器门禁反向对照 + 两种注入顺序）。
+- [x] 分栏紧凑态下引导页工作区行同样保持 680 上限与居中（选择器覆盖分栏/紧凑四条变体，静态测试逐条断言特异性）。
+- [x] 普通英雄页（无 starter 引导卡）工作区行样式不变（通用规则原样保留，测试断言其仍为原生内容宽）。
+- [x] 新回归测试在还原修复后失败、修复后通过；`pnpm --filter omnimux test`、`pnpm --filter omnimux-inspiration test` 通过。
+- [x] 隔离工作树内真实浏览器证据（截图 + 结构化报告，两种注入顺序 + 反向对照）留存。
 - [ ] 独立评审核对范围、回归风险、证据与授权。
+
+> 风险等级：本任务除 hub 客户端 CSS 外新增 `scripts/` 回归门禁与根 `package.json` 入口，按 `plugin-git-pr.md` 规则上调为 **R1**。
+
+## 证伪记录（新增门禁：收紧型）
+
+- 反例：把 starter 工作区行选择器里的 `[data-phase]` 复合条件删掉（修复前形态），并让通用 Hero 规则后注入。
+- 造之前绿 / 造之后红：浏览器门禁内建「反向对照」断言，用同一份页面在修复前形态下实测必须复现「行宽 920、左移约 120px」；夹具失真（对照不红）时整条门禁失败。
+- 真实输出：`prefix-bug.png` + `report.json`（widthDelta=240、leftDelta≈120）；恢复 `[data-phase]` 后两种注入顺序均 widthDelta=0、leftDelta=0，门禁 3/3 PASS。
+- 静态回归测试 `starter-hero-row-cascade.test.mjs`：还原 `[data-phase]` 后 `is strictly more specific…` 与 `tags every starter row sizing selector…` 两条断言转红；恢复后 5/5 PASS（已在本地执行并记录）。
 
 ## 新用户基线
 
 本任务只改产品自己的客户端 CSS 与一条静态回归测试，不新增运行时依赖、不读取本机路径/端口/凭据、不改变插件装载方式。全新安装的用户打开新会话引导页即可看到工作区行与输入框对齐；若样式未加载（插件缺失/宿主不支持）则表现为官方原生布局，不新增报错路径。
 
+## 浏览器验证（隔离工作树）
+
+全应用级入口 `pnpm verify:app` 在本机被两个环境漂移阻断，未取得可用证据：
+
+1. `scripts/test-env-bootstrap.mjs` 把宿主脚本硬编码到 `/Applications/OmniMux Dev.app/Contents/Resources/app.asar/lib/desktop-cli.js`，但本机已安装的 Dev 包是解包布局（`Resources/app/`，没有 `app.asar`），启动即 `TEST_ENV_RUNTIME_EXIT`。临时把解包布局克隆成 `app.asar` 目录后应用可启动，说明代码本身未崩，纯属布局漂移。
+2. 继续到任务准备阶段后报 `TEST_ENV_PREPARE_SOURCE_MUTATED`（`packages/dsh-ui-kit/lib/index.d.ts`）：该包 `build` 在隔离 stage 里重新生成的产物与仓库里提交的产物不一致（提交产物来自另一版 tsdown 生成器），属仓库既有生成物漂移，与本任务 CSS 改动无关。
+
+因此本任务新增**仓库自有的真实浏览器门禁** `scripts/starter-workspace-row-align-qa.mjs`（`pnpm qa:starter-row-align`），沿用既有 QA 脚本模式（`docked-slot-position-qa.mjs`）：真实 Chromium、动态端口、临时 profile、用完即焚，两份样式**整段取自生产源码**，不手写补丁。同一页面内实测三种状态：
+
+| 状态 | 注入顺序 | 期望 |
+|---|---|---|
+| 反向对照：starter 规则去掉 `[data-phase]` 复合条件（修复前形态） | GUIDE → 通用规则（通用后注入） | 复现行宽 920、相对卡片左移约 120px |
+| 正向 A | GUIDE → 通用规则 | 行宽 680、左缘差 0 |
+| 正向 B | 通用规则 → GUIDE | 行宽 680、左缘差 0 |
+
+实跑结果（2026-11-01，本工作树）：3/3 断言通过；反向对照截图可见两个胶囊在卡片左缘外约 120px，修复后两种顺序截图均与卡片左缘对齐。证据：`.workbuddy/evidence/starter-row-align-qa/<runId>/{report.json,prefix-bug.png,guide-first.png,composer-first.png}`。
+
+真机 Dev 验收仍按合同归人工：合并后 `worktree.sh ship` 物化到 `~/.omnimux-dev`，由用户在 Dev App 里查看新会话引导页。**Agent 不声称完成 Dev 真机验收。**
+
 ## 文档影响
 
-无需改契约文档：`docs/contracts/` 未定义引导页工作区行的宽度契约，宽度铁律（680px、Issue 2830）已写在 `session-guide/styles.js` 注释里，本次只在同处补级联说明。
+无需改契约文档：`docs/contracts/` 未定义引导页工作区行的宽度契约，宽度铁律（680px、Issue 2830）已写在 `session-guide/styles.js` 注释里，本次只在同处补级联说明。新增 `scripts/starter-workspace-row-align-qa.mjs` 与根 `package.json` 的 `qa:starter-row-align` 入口，属回归门禁，不改任何契约语义。
 
 ## 范围外
 
