@@ -780,4 +780,37 @@ test('旅程 9：内置应用解析失败/慢响应时不得伪造内容，也�
   } finally {
     await cacheRaceTab.teardown()
   }
+
+  // ④ 走 effect 路径（重挂载到有本地缓存的应用）：守卫同样必须已经推进，
+  //    否则先前那个慢内置应用的响应会覆盖掉重挂载后的应用（评审第四轮建议 1）。
+  const effectRaceFetch = async (url) => {
+    const appId = String(url).split('/').pop()
+    await new Promise((done) => setTimeout(done, 60))
+    return { ok: true, status: 200, async json() { return { app: { appId, version: '1.0.0', metadata: { name: '内置应用D', category: 'video' } } } } }
+  }
+  const effectRaceTab = await mountAppTab({
+    sidebar,
+    fetchImpl: effectRaceFetch,
+    seed: seedTwoApps,
+    tab: { id: 'tabD', type: APP_TAB_ID, meta: { appId: 'app_demo_video_001' }, title: 'AI 应用' },
+  })
+  try {
+    await effectRaceTab.act(async () => {
+      // 先让一个无缓存的内置应用发请求（慢），再重挂载到有本地缓存的应用。
+      globalThis.window.dispatchEvent(new globalThis.window.CustomEvent('omnimux-app-open', {
+        detail: { appId: 'app_builtin_slow_d' },
+      }))
+    })
+    await effectRaceTab.act(async () => {
+      effectRaceTab.rerender({ meta: { appId: 'app_demo_image_002' } })
+    })
+    await effectRaceTab.act(async () => { await new Promise((done) => setTimeout(done, 120)) })
+    assert.equal(
+      effectRaceTab.title(),
+      '商品图生成器',
+      '重挂载到缓存应用后，先发的内置应用慢响应不得覆盖它',
+    )
+  } finally {
+    await effectRaceTab.teardown()
+  }
 })

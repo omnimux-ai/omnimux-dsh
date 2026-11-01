@@ -1,23 +1,23 @@
 {
-  "runId": "b2ce0c0f-6be1-4329-b9eb-b44442460270",
-  "head": "0b86262daacbbe82513be7d035c80a729cd2c103",
-  "headShort": "0b86262",
+  "runId": "d20c7a54-5656-410d-8783-458ae8123061",
+  "head": "dc6ebbfc9d355235b23b391e8d34ba624efa48e7",
+  "headShort": "dc6ebbf",
   "hostDist": {
     "path": "plugins/omnimux-apps/dist/index.js",
     "sha256": "6acfe82a31fdd058f75738c488d78223de4828e3d5e735b0cc1686392af4e449",
     "bytes": 149862
   },
   "task": "Issue #3876 项目页「AI应用」同时列出官方内置应用",
-  "startedAt": "2026-11-01T12:08:46.503Z",
-  "completedAt": "2026-11-01T12:08:48.005Z",
+  "startedAt": "2026-11-01T12:57:04.373Z",
+  "completedAt": "2026-11-01T12:57:05.871Z",
   "pass": true,
-  "serverPort": 50820,
-  "cdpPort": 50822,
+  "serverPort": 54491,
+  "cdpPort": 54492,
   "assertions": [
     {
       "name": "client-bundle-built",
       "pass": true,
-      "bytes": 6785614
+      "bytes": 6785719
     },
     {
       "name": "host-route-lists-builtin-apps",
@@ -53,13 +53,18 @@
         "width": 1440,
         "height": 813
       }
+    },
+    {
+      "name": "browser-process-exited",
+      "pass": true
     }
   ],
   "screenshot": {
-    "path": ".workbuddy/evidence/worktree-qa/builtin-apps-b2ce0c0f-6be1-4329-b9eb-b44442460270/builtin-apps-library.png",
+    "path": ".workbuddy/evidence/worktree-qa/builtin-apps-d20c7a54-5656-410d-8783-458ae8123061/builtin-apps-library.png",
     "width": 1440,
     "height": 813,
-    "bytes": 148171
+    "bytes": 148133
   },
-  "errors": []
+  "errors": [],
+  "browserExited": true
 }

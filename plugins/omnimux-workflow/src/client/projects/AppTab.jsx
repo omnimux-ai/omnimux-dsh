@@ -571,6 +571,11 @@ export function AppTab(props) {
   // 官方内置应用从不写 localStorage：本地缓存查不到时按 appId 走只读 HTTP 缝解析，
   // 否则内置应用的标签页会永远停在「暂无已加载的 AI 应用」。接口失败保持既有空态。
   useEffect(() => {
+    // 「最新请求胜出」守卫必须在这个 effect 的**每一条**分支之前推进：
+    // 显式 manifest 与缓存命中都是同步返回的，若只在发请求时推进，先前那个
+    // 还在飞的内置应用响应回来后守卫仍判等通过，就会覆盖掉刚切过来的应用。
+    if (explicitManifest) requestedAppIdRef.current = explicitManifest.appId || appId
+    else if (appId) requestedAppIdRef.current = appId
     if (explicitManifest) {
       setManifest((prev) => {
         if (!prev) return explicitManifest
@@ -593,7 +598,6 @@ export function AppTab(props) {
       return
     }
     let cancelled = false
-    requestedAppIdRef.current = appId
     void fetchAppManifest(appId).then((remote) => {
       // cancelled：effect 已换到别的 appId；requestedAppIdRef：慢响应晚于更新的请求。
       if (cancelled || requestedAppIdRef.current !== appId) return

@@ -17,7 +17,7 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawn } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import http from 'node:http'
 import { createRequire } from 'node:module'
 import { dirname, join, relative, resolve } from 'node:path'
@@ -282,8 +282,12 @@ async function main() {
   const port = server.address().port
   report.serverPort = port
 
+  // 独立 profile：不碰用户真实 Chrome 配置，跑完即删（与仓内其它浏览器 QA 一致）。
+  const profileDir = join(evidenceDir, 'chrome-profile')
+  mkdirSync(profileDir, { recursive: true })
   const chrome = spawn(findChromePath(), [
-    '--headless=new', '--remote-debugging-port=0', '--no-first-run', '--no-default-browser-check',
+    '--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profileDir}`,
+    '--no-first-run', '--no-default-browser-check',
     '--disable-gpu', '--window-size=1440,900', 'about:blank',
   ])
   const cdpPort = await new Promise((res, rej) => {
@@ -422,7 +426,16 @@ async function main() {
   } finally {
     try { cdp?.ws?.close() } catch {}
     try { chrome.kill('SIGTERM') } catch {}
+    // 核验浏览器真的退出了：残留进程会占着 profile 与端口，下一次运行结果不可信。
+    const exited = await new Promise((done) => {
+      if (chrome.exitCode !== null || chrome.signalCode !== null) { done(true); return }
+      const timer = setTimeout(() => done(false), 5000)
+      chrome.once('exit', () => { clearTimeout(timer); done(true) })
+    })
+    report.browserExited = exited
+    report.assertions.push({ name: 'browser-process-exited', pass: exited })
     try { server.close() } catch {}
+    try { rmSync(profileDir, { recursive: true, force: true }) } catch {}
     report.completedAt = new Date().toISOString()
     writeFileSync(join(evidenceDir, 'report.json'), JSON.stringify(report, null, 2) + '\n')
   }
