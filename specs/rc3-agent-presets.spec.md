@@ -137,3 +137,21 @@
 **为什么要一次性**：这些行不在生成链路里，转换后人设只存在于 `presets/expert-*/`（该目录即为真源）。`scripts/build-agent-presets.mjs` 不参与它们，避免再跑构建时把已迁走的人设当成缺失。
 
 **结果**：专家预设总数 16 → 26；三份内联预设共 23 处挂载行改为引用。
+
+## W5（新发现）：预设内缺 `workflowEngine` 提供者
+
+**现象**：预设装载通过后，新建会话报
+`agent-preset/invalid: tool-workflow (@deepseek-ai/dsh-tool-workflow): waiting for workflowEngine`。
+
+**原因**：`delegation` 组用 `isolate: { workflowEngine: true }` 给每个预设开私有 realm，组内 `tool-workflow`/`tool-ralph` 消费 `workflowEngine`；旧内核由宿主提供该服务，rc.3 改为**每个预设自带引擎**（上游 `presets/*.patch.yml` 在组内挂 `@deepseek-ai/dsh-workflow-ptc`）。OmniMux 预设只挂了消费方、没挂提供方，realm 里永远等不到服务。
+
+**修法**：在 `delegation` 组的 `config` 里、`tool-workflow` 之前插入
+```yaml
+    - id: workflow-ptc
+      name: '@deepseek-ai/dsh-workflow-ptc'
+      config:
+        provider: spawn
+```
+10 个含 workflow 行主的预设各一处；`workflow-ptc` 的其余 inject（`ptcRuntime`/`subagents`/`sandboxPolicy`/`workingDirectory`）由父 realm 解析。
+
+**验收**：`node --test scripts/verify-agent-presets.test.mjs` 18/18；`grep -c 'dsh-workflow-ptc' presets/*/agent.cordis.yml` 每个含 workflow 的预设 ≥1；真机新建会话不再报 `waiting for workflowEngine`。
