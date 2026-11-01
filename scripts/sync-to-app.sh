@@ -306,6 +306,29 @@ assert_managed_dsh_ui_kit_is_ready() {
   done
 }
 
+# 构建产物在版本控制里，而构建工具链是浮动的（`tsdown: ^0.22.14`），因此每次
+# `corepack pnpm build` 都会把 `lib/` 重写成与入库版本不同的字节——差异是注释
+# 与格式化风格，语义等价，但 `assert_omnimux_sync_main` 看到「已跟踪文件改动」
+# 就会拒绝下一次物化，形成自我污染循环（Issue #3887）。
+#
+# 构建产物已经复制进各 profile，这里把仓库里的 `lib/` 恢复到 HEAD，让工作区回到
+# 干净状态。**只**作用于构建产物目录：开发者自己改的源码永远不在此列，门禁对
+# 真实源码改动的拦截保持原样。
+restore_built_kit_artifacts() {
+  local dir="$DSH_UI_KIT_DIR/lib"
+  [ -d "$dir" ] || return 0
+  # 只在确有改动时才动 git，避免无谓的索引写入。
+  if [ -z "$(git -C "$ROOT" status --porcelain --untracked-files=no -- "$dir" 2>/dev/null)" ]; then
+    return 0
+  fi
+  if git -C "$ROOT" checkout -- "$dir" 2>/dev/null; then
+    echo "· 已把 dsh-ui-kit 构建产物恢复到 HEAD（工具链版本差异，语义等价）"
+  else
+    # 恢复失败不中断物化：产物已进 profile，只是工作区会留一点脏。
+    echo "⚠️ 无法恢复 dsh-ui-kit 构建产物，工作区可能留下未提交改动。" >&2
+  fi
+}
+
 materialize_authoritative_dsh_ui_kit() {
   local profile="$1" managed_kit parent temporary backup=''
   managed_kit="$(managed_dsh_ui_kit_dir "$profile")"
@@ -386,6 +409,12 @@ ensure_dsh_ui_kit_fresh() {
   for profile in "${TARGET_PROFILES[@]}"; do
     materialize_authoritative_dsh_ui_kit "$profile" || exit 1
   done
+
+  # 产物已复制进每个 profile，此时再把仓库里的构建产物恢复回 HEAD：
+  # 早于物化会让 profile 拿到旧产物，晚于此处则工作区已被下一次门禁判脏。
+  if [ "${OMNIMUX_SKIP_KIT_BUILD:-0}" != "1" ]; then
+    restore_built_kit_artifacts
+  fi
 }
 
 plugin_declares_dsh_ui_kit() {
