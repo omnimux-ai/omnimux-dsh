@@ -85,3 +85,19 @@
 必须改的理由：这正是评审指出的「生产模块里的静默降级」——把「没有探测能力」当成「布局存在」，会让任何注入不完整 io 的调用方直接命中第一个候选，与 spec §6「缺件显式失败、不静默降级」冲突。
 
 新期望证据：同一场景改为断言 `resolveHostRuntimeLayout({ io: stub })` 抛 `TypeError`（`io.statSync is required`），即探测能力缺失是调用方错误而不是布局可用证据；对应实现把该分支从「返回 true」改为 `throw`，并新增 `defaultHostLayout()` 承担「不探测文件系统」的显式路径（由 `defaultHostLayout 不探测文件系统` 用例覆盖）。
+
+- `scripts/host-runtime-layout.test.mjs` :: `preset 合成丢弃宿主解析不到的包行，但放过 Loader 内建别名`
+
+原断言：任何解析不到的 `name`（含裸本地别名 `not-installed-anywhere`）都被丢弃。
+
+必须改的理由：评审实测壳只对 `@` 作用域包名做解析判定；对裸本地别名一律丢弃会误删合法行。实现已收敛到 `@`，断言必须同步。
+
+新期望证据：同一用例改为断言只丢 `@deepseek-ai/dsh-missing`，`cordis:group` 与裸别名 `local-alias` 都保留；另加 `pruneUnresolvable 只对 @ 作用域包名做解析判定` 用例固定该语义。
+
+- `scripts/host-runtime-layout.test.mjs` :: `没有预设目录的旧 App 返回空合成结果`
+
+原断言：`app.asar` 布局下没有 preset 目录时返回空合成结果。
+
+必须改的理由：归档布局的判据已改为「能列出归档内 `preset/agent-presets`」——不可读归档现在直接 `RUNTIME_MISSING`，不会再走到「返回空结果」。该用例的语义已由 `不可读的 app.asar 归档被判为不可用，响亮报 RUNTIME_MISSING` 覆盖，原用例改为在 `app` 布局上验证「无预设目录 → 空结果」，与新语义一致。
+
+新期望证据：`没有预设目录时返回空合成结果（调用方据此响亮失败）` 在 `app` 布局断言空结果含诊断字段；归档不可用场景由独立用例断言抛 `TEST_ENV_RUNTIME_MISSING`。
