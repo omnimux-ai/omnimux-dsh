@@ -15,7 +15,7 @@ import { activateRowKeydown } from './a11y.js'
 import { addAssetToConversation } from './add-to-chat.js'
 import { cloudMediaUrl } from './api.js'
 import { activeDimensionCount, dimensionLabelOf, optionLabelOf } from './character-dimensions.js'
-import { cloudAudioTheme, cloudCardKind, isOfficialVoicePreviewAsset, isOfficialVoicePreviewPlayable } from './cloud-feed-helpers.js'
+import { cloudAudioTheme, cloudCardKind, coverLadderOf, isOfficialVoicePreviewAsset, isOfficialVoicePreviewPlayable, nextLadderStep } from './cloud-feed-helpers.js'
 import { CLOUD_ALL_CATEGORY } from './cloud-feed-helpers.js'
 import { useCloudAssetsFeed } from './use-cloud-assets-feed.js'
 import { useGridColumns } from './use-grid-columns.js'
@@ -78,7 +78,11 @@ export const HOVER_AUDITION_DELAY_MS = 200
  * stylesheet already fades in.
  * @param {{ asset: any, broken: boolean, onBroken: () => void, hovering: boolean }} props
  */
-function CloudTileMedia(props) {
+/**
+ * The tile's picture surface, exported so its fallback ladder can be exercised
+ * as real DOM behaviour instead of by matching source text (#3879).
+ */
+export function CloudTileMedia(props) {
   const { asset, broken, onBroken, hovering } = props
   /**
    * How far down the picture ladder this tile has fallen.
@@ -94,15 +98,13 @@ function CloudTileMedia(props) {
   const isVideo = asset.mediaType === 'video'
   const hasCover = asset.hasCover === true
   /**
-   * The picture the tile draws, cheapest first: the published WebP thumbnail
-   * (69 KB against a 3.3 MB original), then the original cover when it is a
-   * locator the browser can load itself, and only then the Host route.
+   * The picture the tile draws, cheapest first. The order lives in
+   * `coverLadderOf` so the "an image row walks the same ladder" rule — and the
+   * fact that a failed load always advances instead of stranding the tile — can
+   * be asserted as pure behaviour rather than by matching this source text.
    */
-  const coverLadder = hasCover
-    ? [asset.thumbUrl, asset.coverUrl, cloudMediaUrl(asset.id, 'cover')].filter((url) => url !== '')
-    : []
-  const coverSrc = coverLadder[srcStep] ?? ''
-  const imageSrc = asset.mediaType === 'image' ? cloudMediaUrl(asset.id, 'media') : coverSrc
+  const ladder = coverLadderOf(asset, cloudMediaUrl)
+  const imageSrc = ladder[srcStep] ?? ''
   const hasClip = asset.hasMedia === true
   // The clip is mounted for every video row — that is what plays on hover — and
   // for any other row whose file is the only thing left to draw. It is bare when
@@ -139,15 +141,15 @@ function CloudTileMedia(props) {
   const handleImageError = () => {
     // Step down the ladder before giving up. Only when there is no further
     // picture to try does the tile fall back to its clip (for a video row) or
-    // to its type icon.
-    if (srcStep < coverLadder.length - 1) {
-      setSrcStep(srcStep + 1)
+    // to its type icon. Every row walks the same ladder, so this reaches the
+    // last resort on the very first failure at the final rung — it never
+    // depends on one URL failing repeatedly.
+    const next = nextLadderStep({ ladder, step: srcStep, mediaType: asset.mediaType, hasClip })
+    if (next.kind === 'advance') {
+      setSrcStep(next.step)
       return
     }
-    // A lost picture is survivable only when a clip can take its place: there is
-    // no second image source to try, because the row's original is a clip. A
-    // picture row has no clip behind it, so there the icon is the last resort.
-    if (asset.mediaType !== 'image' && hasClip) setSrcStep(coverLadder.length)
+    if (next.kind === 'hand-over-to-clip') setSrcStep(ladder.length)
     else onBroken()
   }
 
@@ -334,17 +336,25 @@ export function CloudAssetCard(props) {
   // Issue #3875：进入要停留 HOVER_AUDITION_DELAY_MS 才起播。指针从一排卡片上
   // 快速划过时，旧行为会逐张下载 400 KB 级的原声，与正在加载的封面抢带宽；
   // 显式点击播放键仍走 togglePlay，零延迟，不受这个门槛影响。
+  //
+  // The callback is held in a ref, not in the dependency list. `onTogglePlay`
+  // is rebuilt whenever the stage re-renders (`useCloudAudition` returns a fresh
+  // object every time), and a dependency on it would restart this effect — and
+  // therefore clear the pending timer — on every parent render. A parent that
+  // re-renders faster than the delay would then never start the audition at all.
+  const togglePlayRef = useRef(onTogglePlay)
+  useEffect(() => { togglePlayRef.current = onTogglePlay }, [onTogglePlay])
   useEffect(() => {
     if (!canPlay || userControlledRef.current || autoplaySuppressed) return undefined
     if (hovering && !playing) {
-      const timer = setTimeout(() => { onTogglePlay(asset) }, HOVER_AUDITION_DELAY_MS)
+      const timer = setTimeout(() => { togglePlayRef.current(asset) }, HOVER_AUDITION_DELAY_MS)
       return () => { clearTimeout(timer) }
     }
     if (!hovering && playing) {
-      onTogglePlay(asset)
+      togglePlayRef.current(asset)
     }
     return undefined
-  }, [hovering, canPlay, playing, asset, onTogglePlay, autoplaySuppressed])
+  }, [hovering, canPlay, playing, asset, autoplaySuppressed])
 
   // The control sits over the card's top-right corner, so it claims its own
   // pointer event: without that, using it would also open the preview behind it.

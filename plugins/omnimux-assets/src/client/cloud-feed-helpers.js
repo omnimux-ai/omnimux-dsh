@@ -142,15 +142,17 @@ export function subCategoryTabs(manifest, category) {
 /**
  * A locator that can be handed to an `<img>` without going through the Host.
  *
- * Only `http(s)` qualifies: a legacy `file:` locator names a path on the machine
- * that built the catalog, so it must keep travelling through the Host route that
- * knows how to resolve it.
+ * Only `https` qualifies. The catalog is cloud-only and its single exit is the
+ * CDN over TLS, so a plaintext `http:` locator is either a legacy artefact or a
+ * mistake — either way it keeps travelling through the Host route instead of
+ * being loaded as a mixed-content downgrade. A legacy `file:` locator names a
+ * path on the machine that built the catalog, so it likewise stays on the Host.
  * @param {unknown} value
  * @returns {string}
  */
 export function directMediaUrl(value) {
   const url = String(value ?? '')
-  return /^https?:\/\//i.test(url) ? url : ''
+  return /^https:\/\//i.test(url) ? url : ''
 }
 
 /**
@@ -269,6 +271,53 @@ export function voicePreviewCandidateUrls(asset) {
  * @param {any} asset normalized cloud row (see `normalizeCloudAsset`)
  * @returns {'audio' | 'media' | 'text'}
  */
+/**
+ * The ordered picture ladder a card walks before it gives up.
+ *
+ * Cheapest first: the published WebP thumbnail (69 KB against a 3.3 MB
+ * original), then the original cover when it is a locator the browser can load
+ * itself, and only then the Host route.
+ *
+ * An image row is its own cover, so it walks the same ladder with `which=media`
+ * as its last rung. Letting images skip the ladder — as an earlier revision did
+ * — meant PNG image covers never got a thumbnail, and worse: the step counter
+ * advanced while the rendered src did not, so a single failed request stranded
+ * the tile on a broken URL forever instead of falling back to its type icon.
+ *
+ * Empty rungs are dropped, so a catalog without thumbnails simply starts at the
+ * original. A row with no cover at all yields an empty ladder and the caller
+ * goes straight to its fallback.
+ * @param {any} asset normalized cloud row (see `normalizeCloudAsset`)
+ * @param {(id: string, which: 'media' | 'cover') => string} hostRoute
+ * @returns {string[]}
+ */
+export function coverLadderOf(asset, hostRoute) {
+  const id = String(asset?.id ?? '')
+  const lastRung = asset?.mediaType === 'image'
+    ? hostRoute(id, 'media')
+    : hostRoute(id, 'cover')
+  return [asset?.thumbUrl, asset?.coverUrl, lastRung].filter((url) => typeof url === 'string' && url !== '')
+}
+
+/**
+ * Where one failed load lands the card.
+ *
+ * `step` is the rung that just failed. A step below the last rung advances;
+ * at the last rung the card gives up — a video row with a clip hands the frame
+ * over to the clip, everything else reports broken so the tile paints its type
+ * icon. This is a pure decision so the "never stranded on a broken URL"
+ * property can be asserted without a browser.
+ * @param {{ ladder: string[], step: number, mediaType?: string, hasClip?: boolean }} input
+ * @returns {{ kind: 'advance', step: number } | { kind: 'hand-over-to-clip' } | { kind: 'broken' }}
+ */
+export function nextLadderStep(input) {
+  const ladder = Array.isArray(input?.ladder) ? input.ladder : []
+  const step = Number(input?.step) || 0
+  if (step < ladder.length - 1) return { kind: 'advance', step: step + 1 }
+  if (input?.mediaType !== 'image' && input?.hasClip === true) return { kind: 'hand-over-to-clip' }
+  return { kind: 'broken' }
+}
+
 export function cloudCardKind(asset) {
   const hasMedia = asset?.hasMedia === true
   // 立绘优先：数字人 / 拟人角色的素材是语音样本，但卡片门面是那张立绘。

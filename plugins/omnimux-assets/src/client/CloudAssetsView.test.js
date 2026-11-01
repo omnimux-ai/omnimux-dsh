@@ -200,7 +200,8 @@ describe('every shelf in the shipped catalog has a label', () => {
  */
 describe('Cloud text card renders the text, not a placeholder plate', () => {
   it('branches the card body on the row kind', () => {
-    assert.match(viewJsx, /import \{ cloudAudioTheme, cloudCardKind, isOfficialVoicePreviewAsset, isOfficialVoicePreviewPlayable \} from '\.\/cloud-feed-helpers\.js'/)
+    // 导入行现在也带上取图阶梯的两个纯函数（#3879）。
+    assert.match(viewJsx, /import \{ cloudAudioTheme, cloudCardKind, coverLadderOf, isOfficialVoicePreviewAsset, isOfficialVoicePreviewPlayable, nextLadderStep \} from '\.\/cloud-feed-helpers\.js'/)
     assert.match(viewJsx, /const kind = cloudCardKind\(asset\)/)
     assert.match(viewJsx, /className=\{`omnimux-assets-card omnimux-assets-cloud-card omnimux-assets-cloud-card--\$\{kind\}`\}/)
     assert.match(viewJsx, /data-kind=\{kind\}/)
@@ -310,7 +311,10 @@ describe('Cloud video tile keeps its own frame and plays on hover', () => {
   it('never points the image at a clip', () => {
     assert.doesNotMatch(viewJsx, /retriedWithMedia/)
     assert.doesNotMatch(viewJsx, /cloudMediaUrl\(asset\.id, wantsCover \? 'cover' : 'media'\)/)
-    assert.match(viewJsx, /const imageSrc = asset\.mediaType === 'image' \? cloudMediaUrl\(asset\.id, 'media'\) : coverSrc/)
+    // image 行也走同一阶梯，只是末档是 which=media（#3879：不再绕过缩略图）。
+    // 顺序由 `coverLadderOf` 持有，行为断言在 cloud-feed-helpers.test.js。
+    assert.match(viewJsx, /const ladder = coverLadderOf\(asset, cloudMediaUrl\)/)
+    assert.match(viewJsx, /const imageSrc = ladder\[srcStep\] \?\? ''/)
   })
 
   it('gives a poster-less clip the face of the tile and only then loads it', () => {
@@ -322,11 +326,12 @@ describe('Cloud video tile keeps its own frame and plays on hover', () => {
   })
 
   it('falls back to the type icon only when nothing is left to draw', () => {
-    // 取图是一条阶梯（缩略图 → 原图 → Host 路由，见 #3875）：失败先逐级降档，
-    // 只有走到尽头才交给片段或类型图标兜底。
-    assert.match(viewJsx, /if \(srcStep < coverLadder\.length - 1\)/)
-    assert.match(viewJsx, /setSrcStep\(srcStep \+ 1\)/)
-    assert.match(viewJsx, /if \(asset\.mediaType !== 'image' && hasClip\) setSrcStep\(coverLadder\.length\)\n    else onBroken\(\)/)
+    // 取图是一条阶梯（缩略图 → 原图 → Host 路由，见 #3875/#3879）：失败先逐级降档，
+    // 只有走到尽头才交给片段或类型图标兜底。落到哪由 `nextLadderStep` 决定，
+    // 其行为断言在 cloud-feed-helpers.test.js。
+    assert.match(viewJsx, /const next = nextLadderStep\(\{ ladder, step: srcStep, mediaType: asset\.mediaType, hasClip \}\)/)
+    assert.match(viewJsx, /if \(next\.kind === 'advance'\) \{/)
+    assert.match(viewJsx, /if \(next\.kind === 'hand-over-to-clip'\) setSrcStep\(ladder\.length\)\n    else onBroken\(\)/)
     assert.match(viewJsx, /if \(bareClip\) onBroken\(\)/)
   })
 })

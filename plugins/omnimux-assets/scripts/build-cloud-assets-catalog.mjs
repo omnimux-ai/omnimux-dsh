@@ -686,8 +686,6 @@ function makeAsset(ctx, spec) {
     name: clamp(spec.name, 80) || '未命名',
     description: clamp(spec.description, MAX_DESCRIPTION),
     cover_url: remoteCover,
-    // Filled in later from the thumbnail manifest; a collector never sets it.
-    thumb_url: '',
     media_url: remoteMedia,
     media_type: bucketOf(extOf(localMedia || remoteMedia)),
     tags: uniqTags(spec.tags ?? []),

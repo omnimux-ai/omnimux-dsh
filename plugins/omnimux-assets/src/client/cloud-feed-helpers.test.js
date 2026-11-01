@@ -9,10 +9,12 @@ import {
   cloudAudioTheme,
   cloudCardKind,
   cloudScope,
+  coverLadderOf,
   findCategory,
   isOfficialVoicePreviewAsset,
   isOfficialVoicePreviewPlayable,
   mediaLabelOf,
+  nextLadderStep,
   normalizeCloudAsset,
   pageCountOf,
   subCategoryTabs,
@@ -530,5 +532,86 @@ describe('normalizeCloudAsset - official voice preview identity (Issue #3058)', 
       meta: { ...VOICE_ROW.meta, playable: false, preview: { ...PREVIEW, state: 'unverified', primary_url: null } },
     })
     assert.equal(cloudCardKind(unverified), 'text')
+  })
+})
+
+/**
+ * 取图阶梯（Issue #3879）。
+ *
+ * 这些是纯函数行为断言，不依赖源码文本匹配：把「阶梯顺序」与「失败后落到哪」
+ * 从组件里抽出来，才能证明 image 行不会绕过缩略图、也不会永久停在破图。
+ */
+describe('coverLadderOf · 取图阶梯', () => {
+  const route = (id, which) => `/omnimux/assets/cloud/media?id=${id}&which=${which}`
+
+  it('图片行也走阶梯：缩略图 → 原图 → Host which=media', () => {
+    const ladder = coverLadderOf({
+      id: 'scene-1',
+      mediaType: 'image',
+      thumbUrl: 'https://cdn/t.webp',
+      coverUrl: 'https://cdn/o.png',
+    }, route)
+    assert.deepEqual(ladder, [
+      'https://cdn/t.webp',
+      'https://cdn/o.png',
+      '/omnimux/assets/cloud/media?id=scene-1&which=media',
+    ])
+  })
+
+  it('非图片行的末档是 which=cover', () => {
+    const ladder = coverLadderOf({
+      id: 'voice-1',
+      mediaType: 'audio',
+      thumbUrl: '',
+      coverUrl: 'https://cdn/o.png',
+    }, route)
+    assert.deepEqual(ladder, ['https://cdn/o.png', '/omnimux/assets/cloud/media?id=voice-1&which=cover'])
+  })
+
+  it('没有缩略图时直接从原图开始，空档被丢弃', () => {
+    const ladder = coverLadderOf({
+      id: 'scene-2',
+      mediaType: 'image',
+      thumbUrl: '',
+      coverUrl: 'https://cdn/o.png',
+    }, route)
+    assert.deepEqual(ladder, ['https://cdn/o.png', '/omnimux/assets/cloud/media?id=scene-2&which=media'])
+  })
+
+  it('没有封面时只剩 Host 兜底，绝不返回空串档位', () => {
+    const ladder = coverLadderOf({ id: 'scene-3', mediaType: 'image', thumbUrl: '', coverUrl: '' }, route)
+    assert.deepEqual(ladder, ['/omnimux/assets/cloud/media?id=scene-3&which=media'])
+    assert.equal(ladder.includes(''), false)
+  })
+})
+
+describe('nextLadderStep · 失败后落到哪', () => {
+  const ladder = ['https://cdn/t.webp', 'https://cdn/o.png', '/omnimux/assets/cloud/media?id=x&which=media']
+
+  it('未到末档时逐级降档', () => {
+    assert.deepEqual(nextLadderStep({ ladder, step: 0, mediaType: 'image' }), { kind: 'advance', step: 1 })
+    assert.deepEqual(nextLadderStep({ ladder, step: 1, mediaType: 'image' }), { kind: 'advance', step: 2 })
+  })
+
+  it('末档失败即 broken —— 一次 404 就够，不靠反复报错', () => {
+    assert.deepEqual(nextLadderStep({ ladder, step: 2, mediaType: 'image', hasClip: true }), { kind: 'broken' })
+  })
+
+  it('越界的 step 同样 broken，不会无限递增', () => {
+    assert.deepEqual(nextLadderStep({ ladder, step: 99, mediaType: 'image' }), { kind: 'broken' })
+  })
+
+  it('有封面的视频行末档失败交给片段，而不是图标', () => {
+    assert.deepEqual(
+      nextLadderStep({ ladder, step: 2, mediaType: 'video', hasClip: true }),
+      { kind: 'hand-over-to-clip' },
+    )
+  })
+
+  it('视频行没有片段时仍走 broken', () => {
+    assert.deepEqual(
+      nextLadderStep({ ladder, step: 2, mediaType: 'video', hasClip: false }),
+      { kind: 'broken' },
+    )
   })
 })
