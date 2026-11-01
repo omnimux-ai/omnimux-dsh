@@ -1019,6 +1019,19 @@ function contractRequest(options, io) {
 }
 
 /** Validate correspondence between independently observed facts, never create installation/loading evidence. */
+/**
+ * 宿主包锚点必须属于这台机器的实际安装布局（`app` 或 `app.asar`）。
+ *
+ * 旧实现写死 `app.asar`：壳改成 `asar: false` 后锚点推导与实际布局不一致，
+ * 每次契约校验都会拒掉真实安装（Issue #3871）。
+ */
+function sameAnchorLayout(anchor, runtimeExecutable) {
+  if (typeof anchor !== 'string' || typeof runtimeExecutable !== 'string') return false;
+  const resources = resolve(dirname(runtimeExecutable), '..', 'Resources');
+  return anchor === join(resources, 'app/node_modules/@deepseek-ai/dsh/package.json')
+    || anchor === join(resources, 'app.asar/node_modules/@deepseek-ai/dsh/package.json');
+}
+
 export function validateTaskRuntimeBinding({ root, taskId, runId, taskPlugins, candidate, origin, installation, serverLoading, clientLoading }) {
   const reject = () => { throw qaFailure('TEST_APP_QA_TASK_BINDING'); };
   const digest = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
@@ -1029,7 +1042,7 @@ export function validateTaskRuntimeBinding({ root, taskId, runId, taskPlugins, c
     || installation.origin !== origin || !Number.isSafeInteger(installation.pid) || installation.pid <= 0
     || typeof installation.runtimeExecutable !== 'string' || !installation.runtimeExecutable.startsWith('/')
     || resolve(installation.runtimeExecutable) !== installation.runtimeExecutable
-    || installation.appAnchor !== resolve(dirname(installation.runtimeExecutable), '../Resources/app.asar/node_modules/@deepseek-ai/dsh/package.json')
+    || !sameAnchorLayout(installation.appAnchor, installation.runtimeExecutable)
     || installation.base !== candidate?.base?.resolvedSha || installation.head !== candidate?.head?.resolvedSha
     || !digest(installation.candidateDigest) || installation.candidateDigest !== candidate?.candidate?.contentDigest
     || !digest(installation.inputsDigest) || installation.inputsDigest !== candidate?.inputs?.contentDigest
