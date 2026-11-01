@@ -24,6 +24,7 @@ import {
   restoreBuiltinAppDefault,
   toPublishedAppEntry,
 } from './appLibrary.js'
+import { fetchAppManifest } from './builtinApps.js'
 import { fetchSessionProjectBinding, listProjects } from '../api.js'
 import { activateProjectCanvas, getBetterSidebar } from './projectCanvas.js'
 import { ForkAppProjectDialog } from './ForkAppProjectDialog.jsx'
@@ -434,7 +435,13 @@ function IconLink2({ size = 16, className = '' }) {
 }
 
 /**
- * Reads manifest from localStorage cache by appId or gets the newest manifest.
+ * Reads manifest from localStorage cache by appId, or the newest manifest when
+ * no appId is known (legacy tabs that only carry a title).
+ *
+ * 指定了 appId 却查不到时**必须**返回 null：官方内置应用从不写这份缓存，
+ * 若继续回落「最新一条」就会把用户最近发布的应用表单渲染到内置应用标签页上，
+ * 张冠李戴。调用方拿到 null 后再走只读接口按 appId 解析。
+ *
  * @param {string} [appId]
  * @returns {object|null}
  */
@@ -444,7 +451,8 @@ export function readCachedManifest(appId) {
     const raw = window.localStorage?.getItem('omnimux_apps_manifests')
     if (!raw) return null
     const map = JSON.parse(raw)
-    if (appId && map[appId]) return map[appId]
+    const wanted = typeof appId === 'string' ? appId.trim() : ''
+    if (wanted) return map[wanted] || null
     const values = Object.values(map)
     if (values.length > 0) {
       return values.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))[0]
@@ -508,6 +516,9 @@ export function AppTab(props) {
     || tabBoundAppId
 
   const [appId, setAppId] = useState(seedAppId)
+  // 「最新请求胜出」守卫：连续切应用时，先发出的慢响应不得覆盖后发的新应用。
+  // 只比对返回体的 appId 拦不住——旧响应本身就是旧应用，必须比对当前期望的 appId。
+  const requestedAppIdRef = useRef(seedAppId)
   const [manifest, setManifest] = useState(() => {
     return explicitManifest || readCachedManifest(seedAppId)
   })
@@ -529,9 +540,26 @@ export function AppTab(props) {
       const nextId = typeof detail?.appId === 'string' ? detail.appId : ''
       if (!nextId) return
       if (tabBoundAppId && tabBoundAppId !== nextId) return
+      // 先推进「最新请求胜出」守卫，再走任何分支：缓存命中是同步返回的，
+      // 若只在发请求时推进，先前那个还在飞的内置应用响应回来后守卫仍判等通过，
+      // 就会把刚点开的有缓存应用覆盖掉。
+      requestedAppIdRef.current = nextId
       setAppId(nextId)
       const next = detail?.manifest || readCachedManifest(nextId)
-      if (next) setManifest(next)
+      if (next) {
+        setManifest(next)
+        return
+      }
+      // 内置应用没有本地缓存，事件里也可能只带 appId（中枢 openApp 通道）：走只读接口解析。
+      void fetchAppManifest(nextId).then((remote) => {
+        // 慢响应晚到：此时标签页已经切到别的应用，本次结果必须丢弃。
+        if (requestedAppIdRef.current !== nextId) return
+        if (!remote) {
+          setManifest((prev) => (prev && prev.appId === nextId ? prev : null))
+          return
+        }
+        setManifest((prev) => (prev && prev.appId === remote.appId ? prev : remote))
+      })
     }
     window.addEventListener('omnimux-app-open', onAppOpen)
     return () => {
@@ -540,7 +568,14 @@ export function AppTab(props) {
   }, [tabBoundAppId])
 
   // 应用身份变化（或显式 manifest 后到）时同步面板内容。
+  // 官方内置应用从不写 localStorage：本地缓存查不到时按 appId 走只读 HTTP 缝解析，
+  // 否则内置应用的标签页会永远停在「暂无已加载的 AI 应用」。接口失败保持既有空态。
   useEffect(() => {
+    // 「最新请求胜出」守卫必须在这个 effect 的**每一条**分支之前推进：
+    // 显式 manifest 与缓存命中都是同步返回的，若只在发请求时推进，先前那个
+    // 还在飞的内置应用响应回来后守卫仍判等通过，就会覆盖掉刚切过来的应用。
+    if (explicitManifest) requestedAppIdRef.current = explicitManifest.appId || appId
+    else if (appId) requestedAppIdRef.current = appId
     if (explicitManifest) {
       setManifest((prev) => {
         if (!prev) return explicitManifest
@@ -554,12 +589,31 @@ export function AppTab(props) {
     }
     if (!appId) return
     const cached = readCachedManifest(appId)
-    if (!cached) return
-    setManifest((prev) => (
-      prev && prev.appId === cached.appId && prev.version === cached.version && prev.updatedAt === cached.updatedAt
-        ? prev
-        : cached
-    ))
+    if (cached) {
+      setManifest((prev) => (
+        prev && prev.appId === cached.appId && prev.version === cached.version && prev.updatedAt === cached.updatedAt
+          ? prev
+          : cached
+      ))
+      return
+    }
+    let cancelled = false
+    void fetchAppManifest(appId).then((remote) => {
+      // cancelled：effect 已换到别的 appId；requestedAppIdRef：慢响应晚于更新的请求。
+      if (cancelled || requestedAppIdRef.current !== appId) return
+      // 解析不出来时必须清掉旧 manifest：否则上一个应用的表单会挂在新 appId 下，
+      // 把「读不到」渲染成「这是另一个应用」。清空后走既有空态分支。
+      if (!remote) {
+        setManifest((prev) => (prev && prev.appId === appId ? prev : null))
+        return
+      }
+      setManifest((prev) => (
+        prev && prev.appId === remote.appId && prev.version === remote.version
+          ? prev
+          : remote
+      ))
+    })
+    return () => { cancelled = true }
   }, [explicitManifest, appId])
 
   // 把 chip 标题改成应用名：宿主记录表首次铸造时不通知订阅者，不主动改名的话

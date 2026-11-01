@@ -429,3 +429,139 @@ test('搜索框在「AI应用」分类下按应用名过滤', async () => {
     assert.match(cards[0].textContent, /播客音频/)
   } finally { await page.teardown() }
 })
+
+// ── Issue #3876：官方内置应用与用户已发布应用合并展示 ─────────────────────────
+
+const BUILTIN_ENDPOINT = '/omnimux-apps/api/apps'
+
+const builtinRow = (appId, name, extra = {}) => ({
+  schemaVersion: '1.0.0',
+  appId,
+  version: '1.0.0',
+  workflowBinding: { workspaceId: `ws_${appId}`, workflowVersion: 1 },
+  metadata: { name, category: 'video', description: `${name} 官方出厂` },
+  ...extra,
+})
+
+/** 只替换 fetch：内置清单接口走这份桩，其他请求仍走真实失败路径。 */
+function stubBuiltinFetch(payload, { ok = true, fail = false } = {}) {
+  const calls = []
+  const original = globalThis.fetch
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init })
+    if (fail) throw new Error('offline')
+    return {
+      ok,
+      status: ok ? 200 : 500,
+      async json() { return payload },
+    }
+  }
+  return { calls, restore() { globalThis.fetch = original } }
+}
+
+test('只有内置应用时不出空态：内置应用全部渲染成卡片', async () => {
+  const fetchStub = stubBuiltinFetch({
+    apps: [
+      builtinRow('app-builtin-product-video', '商品生视频'),
+      builtinRow('app-creatify-app-demo', '手机与网页交互实机演示'),
+    ],
+  })
+  const page = await mountPage()
+  try {
+    await openAppsTab(page.act, page.container)
+    const cards = cardEls(page.container)
+    assert.equal(cards.length, 2, '内置应用必须出现在「AI应用」分类里')
+    assert.match(page.container.textContent, /商品生视频/)
+    assert.doesNotMatch(page.container.textContent, /还没有 AI 应用/, '有内置应用时不得显示空态')
+    assert.ok(
+      fetchStub.calls.some((call) => call.url === BUILTIN_ENDPOINT),
+      '必须真的请求内置清单接口，而不是客户端硬编码清单',
+    )
+  } finally {
+    fetchStub.restore()
+    await page.teardown()
+  }
+})
+
+test('内置卡片带「官方」标识且没有「更多」菜单；点它仍能打开 app_<appId> 标签页', async () => {
+  const opened = []
+  const sidebar = { openTab: (seed) => opened.push(seed), closeTab() {} }
+  const fetchStub = stubBuiltinFetch({ apps: [builtinRow('app-builtin-video-to-prompt', '视频转提示词')] })
+  const page = await mountPage({ sidebar })
+  try {
+    await openAppsTab(page.act, page.container)
+    const card = cardEls(page.container)[0]
+    assert.ok(card, '内置卡片必须渲染')
+    assert.match(card.textContent, /官方/, '内置卡片必须有官方标识，与用户应用可区分')
+    assert.equal(
+      page.container.querySelectorAll('[aria-haspopup="menu"]').length,
+      0,
+      '内置应用是出厂内容，不得提供删除/编辑菜单',
+    )
+
+    await page.act(async () => card.click())
+    assert.equal(opened.length, 1)
+    assert.equal(opened[0].id, 'app_app-builtin-video-to-prompt')
+    assert.equal(opened[0].type, 'omnimux-workflow:app')
+    assert.equal(opened[0].meta.appId, 'app-builtin-video-to-prompt')
+  } finally {
+    fetchStub.restore()
+    await page.teardown()
+  }
+})
+
+test('用户已发布应用与内置应用合并：用户在前、同 appId 只留用户版且仍可删除', async () => {
+  const fetchStub = stubBuiltinFetch({
+    apps: [
+      builtinRow('app-builtin-product-video', '商品生视频'),
+      builtinRow('app-builtin-viral-replication', '爆款复刻'),
+    ],
+  })
+  const page = await mountPage()
+  try {
+    seedManifests([appRow('app-builtin-product-video', '我的商品生视频', '2026-09-10T00:00:00.000Z')])
+    await openAppsTab(page.act, page.container)
+
+    const cards = cardEls(page.container)
+    assert.equal(cards.length, 2, '同 appId 去重后应只剩用户版 + 另一个内置应用')
+    assert.match(cards[0].textContent, /我的商品生视频/, '用户已发布应用排在最前')
+    assert.match(cards[1].textContent, /爆款复刻/)
+    assert.equal(
+      page.container.querySelectorAll('[aria-haspopup="menu"]').length,
+      1,
+      '只有用户应用带「更多」菜单',
+    )
+  } finally {
+    fetchStub.restore()
+    await page.teardown()
+  }
+})
+
+test('内置清单接口失败：给出真实错误提示，用户已发布应用照常显示', async () => {
+  const fetchStub = stubBuiltinFetch({ apps: [] }, { fail: true })
+  const page = await mountPage()
+  try {
+    seedManifests([appRow('app_marketing', '营销短片', '2026-09-10T00:00:00.000Z')])
+    await openAppsTab(page.act, page.container)
+
+    assert.equal(cardEls(page.container).length, 1, '内置失败不得连带清掉用户应用')
+    assert.match(page.container.textContent, /官方内置应用暂时读取失败/, '必须显式报错，不能把读不到当成没有')
+  } finally {
+    fetchStub.restore()
+    await page.teardown()
+  }
+})
+
+test('内置清单非 2xx 也是错误：不渲染任何内置卡片', async () => {
+  const fetchStub = stubBuiltinFetch({ apps: [builtinRow('app_x', '不该出现')] }, { ok: false })
+  const page = await mountPage()
+  try {
+    await openAppsTab(page.act, page.container)
+    assert.equal(cardEls(page.container).length, 0)
+    assert.match(page.container.textContent, /官方内置应用暂时读取失败/)
+    assert.match(page.container.textContent, /还没有 AI 应用/, '两边都空时仍给真空态')
+  } finally {
+    fetchStub.restore()
+    await page.teardown()
+  }
+})

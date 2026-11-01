@@ -134,7 +134,8 @@ function makeSidebar() {
 }
 
 /** jsdom + 宿主全局的最小真实环境（库页与应用标签页共用同一套）。 */
-function createDomEnv(sidebar) {
+function createDomEnv(sidebar, fetchImpl = null) {
+  assert.equal(typeof (fetchImpl ?? (() => {})), 'function', '内置清单 fetch 桩必须是函数或 null')
   const { JSDOM } = require('jsdom')
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', { pretendToBeVisual: true, url: 'http://localhost/' })
   const defineGlobal = (name, value) => Object.defineProperty(globalThis, name, { value, writable: true, configurable: true })
@@ -165,20 +166,33 @@ function createDomEnv(sidebar) {
   defineGlobal('cancelAnimationFrame', dom.window.cancelAnimationFrame.bind(dom.window))
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
   globalThis.__testProjects = [{ id: 'proj_alpha', title: '项目甲', canvasWorkspaceIds: ['ws_alpha'], pages: [] }]
+  // 内置应用清单接口（GET /omnimux-apps/api/apps）：jsdom 里没有真实 Host，
+  // 不装桩就必然失败并把「官方内置应用读取失败」横幅渲染进页面。默认给一份空清单的
+  // 成功响应，让内置侧保持中性；内置清单本身的契约由 builtinApps.test.mjs 与
+  // projectLibraryPage.apps.test.mjs 覆盖。需要真实内置应用的用例可传入 fetchImpl。
+  defineGlobal('fetch', fetchImpl ?? (async (url) => {
+    const target = String(url)
+    assert.equal(
+      target,
+      '/omnimux-apps/api/apps',
+      '本旅程只允许请求内置清单接口，其他请求必须显式暴露而不是静默成功',
+    )
+    return { ok: true, status: 200, async json() { return { apps: [] } } }
+  }))
   if (sidebar) dom.window.__omnimuxBetterSidebar = sidebar
   return {
     dom,
     container: dom.window.document.getElementById('root'),
     teardown() {
       dom.window.close()
-      for (const name of ['window', 'document', 'localStorage', 'CustomEvent', 'Event', 'MouseEvent', 'KeyboardEvent', 'PointerEvent']) delete globalThis[name]
+      for (const name of ['window', 'document', 'localStorage', 'CustomEvent', 'Event', 'MouseEvent', 'KeyboardEvent', 'PointerEvent', 'fetch']) delete globalThis[name]
       delete globalThis.__testProjects
     },
   }
 }
 
-async function mountPage({ sidebar, t = (key) => zh[key] || key } = {}) {
-  const env = createDomEnv(sidebar)
+async function mountPage({ sidebar, fetchImpl = null, t = (key) => zh[key] || key } = {}) {
+  const env = createDomEnv(sidebar, fetchImpl)
   const { ProjectLibraryPage } = await loadPage()
   const reactDomClient = require('react-dom/client')
   const { act } = require('react')
@@ -196,6 +210,7 @@ async function mountPage({ sidebar, t = (key) => zh[key] || key } = {}) {
     }))
   })
   await act(async () => { await Promise.resolve() })
+  assert.equal(env.container.isConnected, true, '库页容器必须挂在真实 document 上')
   return {
     dom: env.dom,
     act,
@@ -211,8 +226,8 @@ async function mountPage({ sidebar, t = (key) => zh[key] || key } = {}) {
  * 挂载应用标签页本体（AppTab），props 形状对齐宿主原生 surface：
  * 标签页 id 由宿主生成（实测 `tab6`），应用身份只走 `tab.meta.appId`。
  */
-async function mountAppTab({ sidebar, tab, seed, t = (key) => zh[key] || key } = {}) {
-  const env = createDomEnv(sidebar)
+async function mountAppTab({ sidebar, tab, seed, fetchImpl = null, t = (key) => zh[key] || key } = {}) {
+  const env = createDomEnv(sidebar, fetchImpl)
   // 标签页在首次渲染时就按 appId 读 manifest，播种必须发生在挂载之前。
   seed?.(env.dom.window)
   const { AppTab } = await loadPage()
@@ -232,12 +247,26 @@ async function mountAppTab({ sidebar, tab, seed, t = (key) => zh[key] || key } =
     }))
   })
   await act(async () => { await Promise.resolve() })
+  assert.equal(env.container.isConnected, true, '应用标签页容器必须挂在真实 document 上')
   return {
     dom: env.dom,
     act,
     container: env.container,
     title: () => env.container.querySelector('.omx-apptab-title')?.textContent.trim() ?? null,
     badge: () => env.container.querySelector('.omx-apptab-badge')?.textContent.trim() ?? null,
+    /** 重挂载成新的导航参数：宿主对同一 kind 只保留一个标签页，换应用就是这样重建记录的。 */
+    rerender(nextTab) {
+      root.render(React.createElement(AppTab, {
+        ctx: { t, betterSidebar: sidebar },
+        t,
+        store: null,
+        scope: { sessionId: 'sess-1' },
+        tab: { ...tab, ...nextTab },
+        visible: true,
+        expanded: [],
+        revealed: [],
+      }))
+    },
     async teardown() {
       await act(async () => root.unmount())
       env.teardown()
@@ -516,5 +545,272 @@ test('旅程 3c：标签页已挂载时，打开另一个应用会切过去；�
     assert.equal(legacy.title(), '商品图生成器', '自有面板布局下每个应用各自一个标签页，不得被别的应用抢走')
   } finally {
     await legacy.teardown()
+  }
+})
+
+test('旅程 8：内置应用与用户应用合并展示，内置卡片无删除入口且标签页按 appId 解析（Issue #3876）', async () => {
+  const sidebar = makeSidebar()
+  // 只为本用例把内置清单接口换成有内容的响应；其他请求仍按默认桩暴露。
+  const builtinRows = [
+    {
+      appId: 'app-builtin-product-video',
+      version: '1.0.0',
+      workflowBinding: { workspaceId: 'ws-app-builtin-product-video', workflowVersion: 1 },
+      metadata: { name: '商品生视频', category: 'video', description: '官方出厂应用' },
+      formSchema: {
+        type: 'object',
+        properties: {
+          product_image: { type: 'string', title: '商品主图', widget: 'input-text' },
+        },
+      },
+    },
+    {
+      appId: 'app-builtin-viral-replication',
+      version: '1.0.0',
+      workflowBinding: { workspaceId: 'ws-app-builtin-viral-replication', workflowVersion: 1 },
+      metadata: { name: '爆款复刻', category: 'video', description: '官方出厂应用' },
+      formSchema: {
+        type: 'object',
+        properties: {
+          reference_video: { type: 'string', title: '参考视频', widget: 'input-text' },
+        },
+      },
+    },
+  ]
+  const fetchBuiltin = async (url) => {
+    const target = String(url)
+    assert.equal(target.startsWith('/omnimux-apps/api/apps'), true, `内置应用只应访问只读缝，实际请求 ${target}`)
+    if (target === '/omnimux-apps/api/apps') {
+      return { ok: true, status: 200, async json() { return { apps: builtinRows } } }
+    }
+    const appId = target.split('/').pop()
+    const hit = builtinRows.find((row) => row.appId === appId)
+    return hit
+      ? { ok: true, status: 200, async json() { return { app: hit } } }
+      : { ok: false, status: 404, async json() { return { error: 'app_not_found' } } }
+  }
+  const page = await mountPage({ sidebar, fetchImpl: fetchBuiltin })
+  try {
+    await page.act(async () => categoryTabs(page.container)[2].click())
+    await page.act(async () => { await Promise.resolve() })
+
+    const cards = cardEls(page.container)
+    assert.equal(cards.length, 2, '两个内置应用都必须出现，且不得显示空态')
+    assert.deepEqual(
+      cards.map((card) => card.querySelector('.dshUk-MediaCard-title')?.textContent.trim()),
+      ['商品生视频', '爆款复刻'],
+      '内置应用按清单顺序展示',
+    )
+    assert.equal(page.container.querySelectorAll('[aria-label="更多操作"]').length, 0, '内置应用不提供删除/编辑菜单')
+    assert.match(cards[0].textContent, new RegExp(zh['projects.appBuiltinBadge']), '内置卡片必须带「官方」标识')
+
+    // 用户已发布同名应用时只留用户版本，并可正常删除
+    globalThis.window.localStorage.setItem(APP_MANIFESTS_STORAGE_KEY, JSON.stringify({
+      app_builtin_override: manifestRow('app-builtin-product-video', '我的商品生视频', '2026-09-20T00:00:00.000Z'),
+    }))
+    await page.act(async () => categoryTabs(page.container)[0].click())
+    await page.act(async () => categoryTabs(page.container)[2].click())
+    await page.act(async () => { await Promise.resolve() })
+    const merged = cardEls(page.container)
+    assert.equal(merged.length, 2, '同 appId 去重后应只剩用户版 + 另一个内置应用')
+    assert.deepEqual(
+      merged.map((card) => card.querySelector('.dshUk-MediaCard-title')?.textContent.trim()),
+      ['我的商品生视频', '爆款复刻'],
+      '用户覆盖版本替换同名内置条目，其余内置应用保持在后',
+    )
+    assert.equal(page.container.querySelectorAll('[aria-label="更多操作"]').length, 1, '只有用户应用带「更多」菜单')
+
+    // 点内置卡片 → 打开 app_<appId>
+    await page.act(async () => merged[1].click())
+    const appOpen = sidebar.opened.find((entry) => String(entry.seed.id).startsWith(APP_TAB_ID_PREFIX))
+    assert.equal(appOpen.seed.id, `${APP_TAB_ID_PREFIX}app-builtin-viral-replication`)
+    assert.deepEqual(appOpen.seed.meta, { appId: 'app-builtin-viral-replication' })
+  } finally {
+    await page.teardown()
+  }
+
+  // 标签页按只读接口解析出内置 manifest：mountAppTab 会重建一份 DOM 环境，
+  // 必须等库页环境彻底拆掉之后再挂，否则两套 window 会互相拆台。
+  const tabFetch = async (url) => {
+    const target = String(url)
+    assert.equal(target, '/omnimux-apps/api/apps/app-builtin-viral-replication', `标签页只应请求单项接口，实际 ${target}`)
+    return { ok: true, status: 200, async json() { return { app: builtinRows[1] } } }
+  }
+  const tab = await mountAppTab({
+    sidebar,
+    fetchImpl: tabFetch,
+    // 关键：本地缓存里有一条「更新」的用户应用。旧实现按 appId 查不到时会回落
+    // 最新一条，把「商品图生成器」渲染成内置应用的表单——这条 seed 让该回归必红。
+    seed: seedTwoApps,
+    tab: { id: 'tab9', type: APP_TAB_ID, meta: { appId: 'app-builtin-viral-replication' }, title: 'AI 应用' },
+  })
+  // 内置 manifest 走异步 fetch，渲染落定需要多跑几轮微任务 + act。
+  await tab.act(async () => { await new Promise((done) => setTimeout(done, 30)) })
+  try {
+    assert.equal(
+      tab.title(),
+      '爆款复刻',
+      '内置应用标签页必须解析出正确的 manifest；回落「最新一条」会渲染成「商品图生成器」',
+    )
+    assert.equal(tab.badge(), zh['projects.appCategoryVideo'])
+    assert.equal(
+      tab.container.querySelector('.omx-apptab-empty'),
+      null,
+      '内置应用不得停在「暂无已加载的 AI 应用」空态',
+    )
+    // manifest 里的 formSchema 必须真的变成可填控件：只断言标题会漏掉「表单没渲染」。
+    const renderedFields = [...tab.container.querySelectorAll('input, textarea, select, [role="radio"], [role="switch"]')]
+      .filter((el) => el.closest('.omx-apptab-root'))
+    assert.equal(
+      renderedFields.length > 0,
+      true,
+      '内置应用标签页必须把 formSchema 渲染成真实表单控件，而不是只显示标题',
+    )
+    assert.match(
+      tab.container.textContent,
+      /参考视频/,
+      'formSchema.properties 里的字段标题必须出现在表单上',
+    )
+  } finally {
+    await tab.teardown()
+  }
+})
+
+test('旅程 9：内置应用解析失败/慢响应时不得伪造内容，也不得被旧响应覆盖（Issue #3876）', async () => {
+  const sidebar = makeSidebar()
+
+  // ① 先显示一个有效应用，再切到接口 404 的 appId：必须清掉旧 manifest 并回到空态。
+  const notFoundFetch = async (url) => {
+    const appId = String(url).split('/').pop()
+    if (appId === 'app_builtin_missing') {
+      return { ok: false, status: 404, async json() { return { error: 'app_not_found' } } }
+    }
+    return {
+      ok: true,
+      status: 200,
+      async json() { return { app: { appId, version: '1.0.0', metadata: { name: '应用A', category: 'video' } } } },
+    }
+  }
+  const missingTab = await mountAppTab({
+    sidebar,
+    fetchImpl: notFoundFetch,
+    tab: { id: 'tabA', type: APP_TAB_ID, meta: { appId: 'app_builtin_ok_a' }, title: 'AI 应用' },
+  })
+  try {
+    await missingTab.act(async () => { await new Promise((done) => setTimeout(done, 40)) })
+    assert.equal(missingTab.title(), '应用A', '前置：先要真的显示出一个有效应用')
+    // 走 effect 路径（meta.appId 变化触发重挂载），清空逻辑就在这个 effect 里。
+    await missingTab.act(async () => {
+      missingTab.rerender({ meta: { appId: 'app_builtin_missing' } })
+    })
+    await missingTab.act(async () => { await new Promise((done) => setTimeout(done, 40)) })
+    assert.equal(
+      missingTab.title(),
+      null,
+      '解析失败时必须回到空态；继续显示「应用A」就是把读不到伪装成了另一个应用',
+    )
+    assert.equal(
+      Boolean(missingTab.container.querySelector('.omx-apptab-empty')),
+      true,
+      '解析失败必须落在既有空态分支',
+    )
+  } finally {
+    await missingTab.teardown()
+  }
+
+  // ② 慢响应晚到：先发的 A 响应不得覆盖后切的 B。
+  const slowFetch = async (url) => {
+    const appId = String(url).split('/').pop()
+    if (appId === 'app_builtin_slow_a') {
+      await new Promise((done) => setTimeout(done, 60))
+      return { ok: true, status: 200, async json() { return { app: { appId, version: '1.0.0', metadata: { name: '应用A', category: 'video' } } } } }
+    }
+    return { ok: true, status: 200, async json() { return { app: { appId, version: '1.0.0', metadata: { name: '应用B', category: 'video' } } } } }
+  }
+  const raceTab = await mountAppTab({
+    sidebar,
+    fetchImpl: slowFetch,
+    tab: { id: 'tabB', type: APP_TAB_ID, meta: { appId: 'app_builtin_fast_b' }, title: 'AI 应用' },
+  })
+  try {
+    await raceTab.act(async () => {
+      globalThis.window.dispatchEvent(new globalThis.window.CustomEvent('omnimux-app-open', {
+        detail: { appId: 'app_builtin_slow_a' },
+      }))
+      globalThis.window.dispatchEvent(new globalThis.window.CustomEvent('omnimux-app-open', {
+        detail: { appId: 'app_builtin_fast_b' },
+      }))
+    })
+    await raceTab.act(async () => { await new Promise((done) => setTimeout(done, 120)) })
+    assert.equal(raceTab.title(), '应用B', '先发的慢响应不得覆盖后切的应用')
+  } finally {
+    await raceTab.teardown()
+  }
+
+  // ③ fetch → 本地缓存命中：慢响应回来时守卫必须已经推进到缓存应用，
+  //    否则刚点开的有缓存应用会被先前那个内置应用的响应覆盖（评审 N1）。
+  const cacheRaceFetch = async (url) => {
+    const appId = String(url).split('/').pop()
+    assert.equal(appId, 'app_builtin_slow_c', `只应为内置应用发请求，实际 ${appId}`)
+    await new Promise((done) => setTimeout(done, 60))
+    return { ok: true, status: 200, async json() { return { app: { appId, version: '1.0.0', metadata: { name: '内置应用C', category: 'video' } } } } }
+  }
+  const cacheRaceTab = await mountAppTab({
+    sidebar,
+    fetchImpl: cacheRaceFetch,
+    seed: seedTwoApps,
+    tab: { id: 'tabC', type: APP_TAB_ID, meta: { appId: 'app_demo_video_001' }, title: 'AI 应用' },
+  })
+  try {
+    await cacheRaceTab.act(async () => {
+      // 先点内置应用（无缓存，走 fetch），紧接着点一个有本地缓存的应用。
+      globalThis.window.dispatchEvent(new globalThis.window.CustomEvent('omnimux-app-open', {
+        detail: { appId: 'app_builtin_slow_c' },
+      }))
+      globalThis.window.dispatchEvent(new globalThis.window.CustomEvent('omnimux-app-open', {
+        detail: { appId: 'app_demo_image_002' },
+      }))
+    })
+    await cacheRaceTab.act(async () => { await new Promise((done) => setTimeout(done, 120)) })
+    assert.equal(
+      cacheRaceTab.title(),
+      '商品图生成器',
+      '后点开的缓存应用必须胜出；被先发的内置应用响应覆盖就是错源',
+    )
+  } finally {
+    await cacheRaceTab.teardown()
+  }
+
+  // ④ 走 effect 路径（重挂载到有本地缓存的应用）：守卫同样必须已经推进，
+  //    否则先前那个慢内置应用的响应会覆盖掉重挂载后的应用（评审第四轮建议 1）。
+  const effectRaceFetch = async (url) => {
+    const appId = String(url).split('/').pop()
+    await new Promise((done) => setTimeout(done, 60))
+    return { ok: true, status: 200, async json() { return { app: { appId, version: '1.0.0', metadata: { name: '内置应用D', category: 'video' } } } } }
+  }
+  const effectRaceTab = await mountAppTab({
+    sidebar,
+    fetchImpl: effectRaceFetch,
+    seed: seedTwoApps,
+    tab: { id: 'tabD', type: APP_TAB_ID, meta: { appId: 'app_demo_video_001' }, title: 'AI 应用' },
+  })
+  try {
+    await effectRaceTab.act(async () => {
+      // 先让一个无缓存的内置应用发请求（慢），再重挂载到有本地缓存的应用。
+      globalThis.window.dispatchEvent(new globalThis.window.CustomEvent('omnimux-app-open', {
+        detail: { appId: 'app_builtin_slow_d' },
+      }))
+    })
+    await effectRaceTab.act(async () => {
+      effectRaceTab.rerender({ meta: { appId: 'app_demo_image_002' } })
+    })
+    await effectRaceTab.act(async () => { await new Promise((done) => setTimeout(done, 120)) })
+    assert.equal(
+      effectRaceTab.title(),
+      '商品图生成器',
+      '重挂载到缓存应用后，先发的内置应用慢响应不得覆盖它',
+    )
+  } finally {
+    await effectRaceTab.teardown()
   }
 })

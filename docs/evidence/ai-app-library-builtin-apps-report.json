@@ -1,0 +1,70 @@
+{
+  "runId": "d20c7a54-5656-410d-8783-458ae8123061",
+  "head": "dc6ebbfc9d355235b23b391e8d34ba624efa48e7",
+  "headShort": "dc6ebbf",
+  "hostDist": {
+    "path": "plugins/omnimux-apps/dist/index.js",
+    "sha256": "6acfe82a31fdd058f75738c488d78223de4828e3d5e735b0cc1686392af4e449",
+    "bytes": 149862
+  },
+  "task": "Issue #3876 项目页「AI应用」同时列出官方内置应用",
+  "startedAt": "2026-11-01T12:57:04.373Z",
+  "completedAt": "2026-11-01T12:57:05.871Z",
+  "pass": true,
+  "serverPort": 54491,
+  "cdpPort": 54492,
+  "assertions": [
+    {
+      "name": "client-bundle-built",
+      "pass": true,
+      "bytes": 6785719
+    },
+    {
+      "name": "host-route-lists-builtin-apps",
+      "pass": true,
+      "count": 10
+    },
+    {
+      "name": "builtin-cards-rendered",
+      "pass": true,
+      "count": 10
+    },
+    {
+      "name": "published-and-builtin-merged",
+      "pass": true,
+      "total": 11
+    },
+    {
+      "name": "builtin-card-opens-app-tab",
+      "pass": true,
+      "tabId": "app_app-builtin-viral-replication"
+    },
+    {
+      "name": "builtin-app-tab-renders-form",
+      "pass": true,
+      "title": "爆款复刻",
+      "badge": "视频应用",
+      "fieldCount": 3
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1440,
+        "height": 813
+      }
+    },
+    {
+      "name": "browser-process-exited",
+      "pass": true
+    }
+  ],
+  "screenshot": {
+    "path": ".workbuddy/evidence/worktree-qa/builtin-apps-d20c7a54-5656-410d-8783-458ae8123061/builtin-apps-library.png",
+    "width": 1440,
+    "height": 813,
+    "bytes": 148133
+  },
+  "errors": [],
+  "browserExited": true
+}

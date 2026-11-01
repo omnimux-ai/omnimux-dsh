@@ -1,0 +1,288 @@
+{
+  "cards": [
+    {
+      "text": "官方手机与网页交互实机演示视频应用",
+      "hasMenu": false,
+      "hasCover": true,
+      "role": "button"
+    },
+    {
+      "text": "官方巨型商品撞屏与荒诞追逐视频应用",
+      "hasMenu": false,
+      "hasCover": true,
+      "role": "button"
+    },
+    {
+      "text": "官方海外达人自拍第一视角口播评测视频应用",
+      "hasMenu": false,
+      "hasCover": true,
+      "role": "button"
+    },
+    {
+      "text": "官方3D 视效粒子与动态破屏大片视频应用",
+      "hasMenu": false,
+      "hasCover": true,
+      "role": "button"
+    },
+    {
+      "text": "官方模特动态走秀穿搭与场景变装视频应用",
+      "hasMenu": false,
+      "hasCover": true,
+      "role": "button"
+    },
+    {
+      "text": "官方15秒焦点商业大促带货广告视频应用",
+      "hasMenu": false,
+      "hasCover": true,
+      "role": "button"
+    },
+    {
+      "text": "官方高空跌落耐用防摔与折扣实测视频应用",
+      "hasMenu": false,
+      "hasCover": true,
+      "role": "button"
+    },
+    {
+      "text": "官方商品生视频视频应用",
+      "hasMenu": false,
+      "hasCover": false,
+      "role": "button"
+    },
+    {
+      "text": "官方爆款复刻视频应用",
+      "hasMenu": false,
+      "hasCover": false,
+      "role": "button"
+    },
+    {
+      "text": "官方视频转提示词视频应用",
+      "hasMenu": false,
+      "hasCover": false,
+      "role": "button"
+    }
+  ],
+  "merged": [
+    {
+      "text": "我的商品生视频视频应用",
+      "hasMenu": true
+    },
+    {
+      "text": "我发布的应用图片应用",
+      "hasMenu": true
+    },
+    {
+      "text": "官方手机与网页交互实机演示视频应用",
+      "hasMenu": false
+    },
+    {
+      "text": "官方巨型商品撞屏与荒诞追逐视频应用",
+      "hasMenu": false
+    },
+    {
+      "text": "官方海外达人自拍第一视角口播评测视频应用",
+      "hasMenu": false
+    },
+    {
+      "text": "官方3D 视效粒子与动态破屏大片视频应用",
+      "hasMenu": false
+    },
+    {
+      "text": "官方模特动态走秀穿搭与场景变装视频应用",
+      "hasMenu": false
+    },
+    {
+      "text": "官方15秒焦点商业大促带货广告视频应用",
+      "hasMenu": false
+    },
+    {
+      "text": "官方高空跌落耐用防摔与折扣实测视频应用",
+      "hasMenu": false
+    },
+    {
+      "text": "官方爆款复刻视频应用",
+      "hasMenu": false
+    },
+    {
+      "text": "官方视频转提示词视频应用",
+      "hasMenu": false
+    }
+  ],
+  "formState": {
+    "title": "爆款复刻",
+    "badge": "视频应用",
+    "fieldCount": 3,
+    "hasEmptyState": false,
+    "bodyText": "爆款复刻视频应用v1.0.0以爆款参考视频为蓝本，按你的改写意图复刻同款结构与节奏编辑应用生成模型选择生成底座模型，智能推荐为当前场景最优模型Seedance 2.0参考视频*粘贴链接或上传，自动解析。支持 TikTok解析参考灵感从灵感库"
+  },
+  "tab": {
+    "type": "omnimux-workflow:app",
+    "id": "app_app-builtin-viral-replication",
+    "title": "爆款复刻",
+    "path": "app://app-builtin-viral-replication",
+    "meta": {
+      "appId": "app-builtin-viral-replication"
+    },
+    "extra": {
+      "manifest": {
+        "schemaVersion": "1.0.0",
+        "appId": "app-builtin-viral-replication",
+        "version": "1.0.0",
+        "workflowBinding": {
+          "workspaceId": "ws-app-builtin-viral-replication",
+          "workflowVersion": 1
+        },
+        "metadata": {
+          "name": "爆款复刻",
+          "category": "video",
+          "description": "以爆款参考视频为蓝本，按你的改写意图复刻同款结构与节奏",
+          "icon": "video",
+          "tags": [
+            "builtin",
+            "viral-video",
+            "replication"
+          ],
+          "author": "OmniMux Official"
+        },
+        "formSchema": {
+          "type": "object",
+          "properties": {
+            "reference_video": {
+              "type": "string",
+              "title": "参考视频",
+              "description": "粘贴链接或上传，自动解析。支持 TikTok",
+              "widget": "media-extractor",
+              "placeholder": "粘贴视频链接或上传，自动解析"
+            },
+            "reference_inspiration": {
+              "type": "string",
+              "title": "参考灵感",
+              "description": "从灵感库选一条爆款作为参考",
+              "widget": "library-picker",
+              "library": "inspiration",
+              "placeholder": "从灵感库选择"
+            },
+            "rewrite_intent": {
+              "type": "string",
+              "title": "改写意图",
+              "description": "说明要替换的商品、人设或卖点",
+              "widget": "textarea",
+              "maxLength": 300,
+              "placeholder": "请输入改写意图..."
+            },
+            "platforms": {
+              "type": "array",
+              "title": "投放平台",
+              "description": "选择本次成片要适配的平台，最多 3 个",
+              "widget": "multi-tags",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 3,
+              "options": [
+                {
+                  "label": "TikTok",
+                  "value": "TikTok"
+                },
+                {
+                  "label": "Instagram",
+                  "value": "Instagram"
+                },
+                {
+                  "label": "YouTube",
+                  "value": "YouTube"
+                },
+                {
+                  "label": "Facebook",
+                  "value": "Facebook"
+                },
+                {
+                  "label": "快手",
+                  "value": "快手"
+                },
+                {
+                  "label": "小红书",
+                  "value": "小红书"
+                }
+              ],
+              "default": [
+                "TikTok"
+              ]
+            },
+            "aspect_ratio": {
+              "type": "string",
+              "title": "成片比例",
+              "description": "选择适用的平台播放比例",
+              "widget": "ratio-cards",
+              "default": "9:16",
+              "options": [
+                {
+                  "label": "9:16 竖屏 (TikTok / Shorts)",
+                  "value": "9:16"
+                },
+                {
+                  "label": "16:9 横屏 (YouTube / 官网)",
+                  "value": "16:9"
+                },
+                {
+                  "label": "1:1 方屏 (Instagram / 推广)",
+                  "value": "1:1"
+                }
+              ]
+            }
+          },
+          "required": [
+            "reference_video",
+            "rewrite_intent"
+          ],
+          "additionalProperties": false
+        },
+        "fieldMappings": {
+          "reference_video": {
+            "nodeId": "node-slot-reference-video",
+            "targetField": "mediaUrl",
+            "mappingType": "media",
+            "widget": "media-extractor",
+            "required": true
+          },
+          "reference_inspiration": {
+            "nodeId": "node-slot-reference-inspiration",
+            "targetField": "mediaUrl",
+            "mappingType": "media",
+            "widget": "library-picker",
+            "required": false
+          },
+          "rewrite_intent": {
+            "nodeId": "node-slot-rewrite-intent",
+            "targetField": "content",
+            "mappingType": "text",
+            "widget": "textarea",
+            "required": true
+          },
+          "platforms": {
+            "nodeId": "node-video-generation-core",
+            "targetField": "params.platforms",
+            "mappingType": "param",
+            "widget": "multi-tags",
+            "required": false,
+            "defaultValue": [
+              "TikTok"
+            ]
+          },
+          "aspect_ratio": {
+            "nodeId": "node-video-generation-core",
+            "targetField": "params.aspectRatio",
+            "mappingType": "param",
+            "widget": "ratio-cards",
+            "required": false,
+            "defaultValue": "9:16"
+          }
+        },
+        "showcase": {
+          "mode": "carousel",
+          "items": []
+        }
+      },
+      "appId": "app-builtin-viral-replication"
+    }
+  }
+}
