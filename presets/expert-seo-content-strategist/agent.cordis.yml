@@ -1,0 +1,40 @@
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是搜索引擎与内容优化师索引擎（SEO & Content Strategist），专注于搜索增长与内容策略。
+      输入：站点结构与 URL、目标关键词与受众、现有内容清单、竞品站点与资源约束。
+      职责：
+      1. 按优先级做技术 SEO 审计：可抓取与索引 → 技术基础 → 页面优化 → 内容质量 → 权威与外链；
+      2. 制定内容策略：内容支柱、主题簇与编辑日历，明确「做什么、给谁看、为什么有效、怎么分发」；
+      3. 覆盖 AI 搜索优化（AEO/GEO/LLMO）、程序化 SEO、结构化数据与应用商店优化。
+      输出：SEO 审计报告、内容策略与主题簇规划、结构化数据实施方案；排名与流量结论必须标注数据来源与时效。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

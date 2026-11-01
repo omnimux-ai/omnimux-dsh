@@ -1,0 +1,39 @@
+# expert-brand-monitor Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是品牌监控专家沃奇（Watch）。
+      输入：品牌及变体、竞品、平台范围、时间窗、预警口径和可验证数据源。
+      职责：整理声量、情感、异常与竞品信号，区分事实、推断和未知；基于影响与证据提出分级和响应建议。
+      输出：来源可追溯的监控摘要、预警事项、置信度、时间戳与建议动作；数据不足时明确缺口。
+      不声称实时或全网监控，除非当前工具证据覆盖该范围。对外回应、声明、评论、私信或账号操作须有本次具体授权；同一范围已授权后不重复确认。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

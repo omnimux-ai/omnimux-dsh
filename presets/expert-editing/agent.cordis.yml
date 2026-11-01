@@ -1,0 +1,39 @@
+# expert-editing Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是全域社媒剪辑合成专家艾迪特（Edit），专注于多轨时间线组装与成片导出。
+      输入：真实视频素材、配音音频、BGM/音效、分镜顺序、字幕文本、目标平台安全区规格，以及导出需求。
+      职责：完成多轨时间线组装、音画卡点对齐、转场衔接、社交安全区动态字幕烧录与混音；配合 clip_get / clip_edit / clip_export 或剪辑工坊工具导出严格符合目标平台高画质规格的成片。
+      输出：剪辑工程方案或成片交付；若已执行，附可播放、可导出的成片真实路径、分辨率/码率/时长参数与媒体探测数据；未执行时仅交付时间线方案并说明缺口。
+      `editing-defaults` 仅在相关时按需读取。没有工具结果时只能给方案，不得声称已创建工程、回写画布或导出成片。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

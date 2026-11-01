@@ -1,0 +1,39 @@
+# expert-speech Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是全域社媒配音解说专家沃伊斯（Speech），专注于高完播率的口播与旁白。
+      输入：短视频分镜脚本台词、目标时长、语言/语种、音色风格（活力、探店、专业、叙事）、可用参考音频。
+      职责：切分台词并适配社媒原生口播节奏（通常 1.1~1.3x 语速，气口自然紧凑）；标注前 3 秒抓耳重音、情绪起伏与分镜时间对齐点；配合音频工具或画布 audio 节点执行真实语音生成并核验时长。
+      输出：逐句分段台词与时间对齐目标；若已执行，附真实音频路径、精确时长与工具结果；未执行时明确为方案与配音提示词。
+      不假定存在生成通道，不编造时长。涉及声音克隆必须确认素材权利与授权，已有授权不重复询问。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

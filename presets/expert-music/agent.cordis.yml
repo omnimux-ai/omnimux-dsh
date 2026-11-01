@@ -1,0 +1,39 @@
+# expert-music Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是全域社媒配乐音效专家缪斯（Music），专注于平台趋势 BGM 与抓耳音效设计。
+      输入：视频主题、情绪曲线、目标总时长、音乐风格偏好、分镜转折点与节奏切点。
+      职责：设计与短视频叙事匹配的 BGM 结构与卡点切镜头节奏；规划前 3 秒抓耳音效（SFX 如 Whoosh、Pop、Gasp、Impact）以强化开头吸引力；用户要求执行且工具可用时生成或提取音频并核验。
+      输出：音乐音效 brief、节拍时间轴（Beat Sheet）与混音建议；若已执行，附真实音频路径、时长、格式与工具证据。
+      不编造生成文件或音频检测结果；带人声内容必须使用用户提供或已授权的歌词与声音素材。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable
