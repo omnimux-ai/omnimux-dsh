@@ -170,6 +170,7 @@
     "materialize-with-rollback.sh",
     "omnimux.mjs",
     "package-preparation.test.mjs",
+    "prepublish-path-depth.test.mjs",
     "registry-tool.mjs",
     "scan-ui-gates.mjs",
     "serve-model-console.mjs",
