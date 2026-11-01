@@ -1,9 +1,13 @@
 /**
  * tests/e2e/assets-cover-payload.e2e.test.mjs
- * 资产中心首屏封面负载瘦身与请求减法端到端契约测试（Issue #3875）
+ * 资产中心首屏封面负载瘦身与请求减法端到端契约测试（Issue #3875 / #3879）
  *
- * 全部断言都跑在真实数据上：随包目录 `cloud-catalog/` 的真实分页文件，加上
- * 真实生成的 `thumb-manifest.json`。不联网、不 mock。
+ * 两条硬规则：
+ *   1. 只读仓库内的真实数据（随包目录 `cloud-catalog/`）与现场生成的产物；
+ *      绝不读 `.workbuddy/` 等 gitignored 路径——干净 checkout 与 CI 必须能跑。
+ *   2. 断言「工具与客户端能力正确」，不冒充「线上已生效」。缩略图对象上传 CDN
+ *      并由 `--thumb-manifest` 重建目录之后，随包目录才会带上 `thumb_url`；
+ *      在那之前，本文件断言的是**回落路径**与**产出正确性**。
  */
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -35,48 +39,54 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '../../')
 const catalogDir = path.join(root, 'plugins/omnimux-assets/cloud-catalog')
 const clientDir = path.join(root, 'plugins/omnimux-assets/src/client')
-const manifestPath = path.join(root, '.workbuddy/evidence/assets-cover-payload/thumb-manifest.json')
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'))
 const readText = (file) => fs.readFileSync(file, 'utf8')
 
 /** 首屏这一页的真实行。 */
 const firstPage = readJson(path.join(catalogDir, 'character/page-0000.json'))
-const thumbManifest = readJson(manifestPath)
-const thumbBytesById = new Map(thumbManifest.rows.map((row) => [row.id, row.bytes]))
+const catalogIndex = readJson(path.join(catalogDir, 'index.json'))
 
-test('E2E 契约一：角色首屏封面预算从 79 MB 降到 2 MB 以内 (AC-1)', () => {
-  // 真实封面体积由 evidence 报告采集（HEAD content-length），这里断言其结论。
-  const report = readJson(path.join(root, '.workbuddy/evidence/assets-cover-payload/cover-payload-report.json'))
-
+test('E2E 契约一：随包目录是云端的唯一事实来源，缩略图字段可选 (AC-1, AC-5)', () => {
   assert.equal(firstPage.items.length, 24, '首屏必须还是 24 行')
-  assert.ok(report.firstPage.originalMB > 70, `原始封面体积应远超 70 MB，实测 ${report.firstPage.originalMB}`)
-  assert.ok(
-    report.firstPage.thumbnailMB <= 2,
-    `缩略图首屏预算必须 ≤ 2 MB，实测 ${report.firstPage.thumbnailMB} MB`,
+
+  // 缩略图尚未上传时，随包目录一行都不带 `thumb_url`——这正是「可选字段」的定义。
+  // 一旦上传并重建，这里会变成非零；两种状态都不得出现「空串占位」。
+  const withEmptyThumb = catalogIndex.filter(
+    (row) => Object.hasOwn(row, 'thumb_url') && String(row.thumb_url) === '',
   )
-  assert.equal(report.firstPage.coveredRows, 24, '首屏 24 行必须全部有缩略图')
-  assert.ok(
-    report.firstPage.reductionPercent >= 90,
-    `降幅必须 ≥ 90%，实测 ${report.firstPage.reductionPercent}%`,
+  assert.deepEqual(withEmptyThumb.map((row) => row.id), [], 'index 不得出现空串 thumb_url')
+
+  const pageWithEmptyThumb = firstPage.items.filter(
+    (row) => Object.hasOwn(row, 'thumb_url') && String(row.thumb_url) === '',
   )
+  assert.deepEqual(pageWithEmptyThumb.map((row) => row.id), [], '页分片不得出现空串 thumb_url')
+
+  // 有 thumb_url 的行必须是 https 直链。
+  for (const row of catalogIndex) {
+    if (!Object.hasOwn(row, 'thumb_url')) continue
+    assert.match(String(row.thumb_url), /^https:\/\//, `${row.id} 的 thumb_url 必须是 https`)
+  }
 })
 
-test('E2E 契约二：PNG 行除损坏源外均有缩略图，单张 ≤ 160 KB (AC-8)', () => {
-  const index = readJson(path.join(catalogDir, 'index.json'))
-  const pngRows = index.filter((row) => String(row.cover_url ?? '').endsWith('.png'))
-
-  // 111 张 PNG 里 6 张源文件本身已截断（CDN 上就是坏图），缩略图脚本如实跳过。
-  const BROKEN = 6
+test('E2E 契约二：PNG 行的缩略图计划覆盖完整，清单可现场生成 (AC-8)', () => {
+  const pngRows = catalogIndex.filter((row) => String(row.cover_url ?? '').endsWith('.png'))
   assert.equal(pngRows.length, 111, 'PNG 行数应为 111')
-  assert.equal(thumbManifest.rows.length, 111 - BROKEN, '除 6 张损坏源外都应产出缩略图')
 
-  const oversize = thumbManifest.rows.filter((row) => row.bytes > 160 * 1024)
-  assert.deepEqual(oversize.map((row) => row.id), [], '不得有单张超过 160 KB 的缩略图')
+  const plan = planThumbs(catalogIndex)
+  // 6 张源文件在 CDN 上本身已截断（整数字节截断、IDAT 不完整），编码阶段才暴露；
+  // 计划阶段仍应包含全部 111 张，脚本对失败行如实 SKIP 而不是静默缩小计划。
+  assert.equal(plan.length, 111, '计划阶段应包含全部 111 张 PNG')
 
-  assert.equal(thumbManifest.width, THUMB_WIDTH)
-  assert.equal(thumbManifest.quality, THUMB_QUALITY)
-  assert.equal(thumbManifest.schema, THUMB_MANIFEST_SCHEMA)
+  const manifest = buildManifest({
+    rows: plan.map((row) => ({ id: row.id, key: row.key, bytes: 70 * 1024, width: THUMB_WIDTH })),
+    generatedAt: '2026-01-01T00:00:00.000Z',
+  })
+  assert.equal(manifest.total, 111, '清单按传入行数记账')
+  assert.equal(manifest.width, THUMB_WIDTH)
+  assert.equal(manifest.quality, THUMB_QUALITY)
+  assert.equal(manifest.schema, THUMB_MANIFEST_SCHEMA)
+  assert.equal(manifest.format, 'webp')
 })
 
 test('E2E 契约三：缩略图对象键稳定且不可越出前缀', () => {
@@ -131,7 +141,6 @@ test('E2E 契约六：清单只认目录里存在的 id 与相对对象键', () 
 })
 
 test('E2E 契约七：卡片取图优先级为 缩略图 → 原图 → Host 兜底 (AC-2)', () => {
-  // 归一化层：两个直链字段只接受 http(s)，file: 留给 Host 路由。
   const row = normalizeCloudAsset({
     id: 'x',
     name: 'n',
@@ -155,18 +164,32 @@ test('E2E 契约七：卡片取图优先级为 缩略图 → 原图 → Host 兜
   assert.equal(legacy.coverUrl, '', 'file: 定位符不得直连')
   assert.equal(legacy.hasCover, true, '有封面这一事实仍成立，只是走 Host')
 
+  // 只有 https 可以直连；http 与 file: 都必须留在 Host 路由上。
   assert.equal(directMediaUrl('https://a/b.webp'), 'https://a/b.webp')
-  assert.equal(directMediaUrl('http://a/b.webp'), 'http://a/b.webp')
+  assert.equal(directMediaUrl('http://a/b.webp'), '', 'http 不得直连（AC-2 仅 https）')
   assert.equal(directMediaUrl('file:a/b.webp'), '')
   assert.equal(directMediaUrl(undefined), '')
 
-  // 视图源码：阶梯顺序与逐级降档。
+  // 视图源码：阶梯顺序与降档决策都委托给纯函数，行为断言在 cloud-feed-helpers.test.js。
   const viewSrc = readText(path.join(clientDir, 'CloudAssetsView.jsx'))
-  assert.match(viewSrc, /\[asset\.thumbUrl, asset\.coverUrl, cloudMediaUrl\(asset\.id, 'cover'\)\]/)
-  assert.match(viewSrc, /if \(srcStep < coverLadder\.length - 1\)/)
+  assert.match(viewSrc, /const ladder = coverLadderOf\(asset, cloudMediaUrl\)/)
+  assert.match(viewSrc, /const next = nextLadderStep\(\{ ladder, step: srcStep, mediaType: asset\.mediaType, hasClip \}\)/)
 })
 
-test('E2E 契约八：视图不再整批预取尾部封面，视频不提前拉流 (AC-3, AC-4)', () => {
+test('E2E 契约八：image 行也走取图阶梯，不会绕过缩略图 (AC-1, AC-2)', () => {
+  const viewSrc = readText(path.join(clientDir, 'CloudAssetsView.jsx'))
+  // 渲染的 src 必须来自阶梯，不能再出现「image 行直接拼 media 路由」的绕过写法。
+  assert.equal(
+    /const imageSrc = asset\.mediaType === 'image' \? cloudMediaUrl/.test(viewSrc),
+    false,
+    'image 行不得绕过阶梯',
+  )
+  assert.match(viewSrc, /const imageSrc = ladder\[srcStep\] \?\? ''/)
+  // 阶梯耗尽必然落到兜底，不依赖同一 URL 反复报错。
+  assert.match(viewSrc, /if \(next\.kind === 'hand-over-to-clip'\) setSrcStep\(ladder\.length\)\n    else onBroken\(\)/)
+})
+
+test('E2E 契约九：视图不再整批预取尾部封面，视频不提前拉流 (AC-3, AC-4)', () => {
   const viewSrc = readText(path.join(clientDir, 'CloudAssetsView.jsx'))
   assert.doesNotMatch(viewSrc, /import \{ preloadMedia \}/)
   assert.doesNotMatch(viewSrc, /preloadMedia\(covers\)/)
@@ -177,32 +200,38 @@ test('E2E 契约八：视图不再整批预取尾部封面，视频不提前拉�
   assert.match(viewSrc, /if \(!element \|\| !bareClip \|\| element\.readyState > 0\) return/)
 })
 
-test('E2E 契约九：悬停试听有停留门槛，显式点击不受限 (AC-5)', () => {
+test('E2E 契约十：悬停试听有停留门槛，回调不经 effect 依赖抖动 (AC-5)', () => {
   const viewSrc = readText(path.join(clientDir, 'CloudAssetsView.jsx'))
   assert.match(viewSrc, /export const HOVER_AUDITION_DELAY_MS = 200/)
-  assert.match(viewSrc, /setTimeout\(\(\) => \{ onTogglePlay\(asset\) \}, HOVER_AUDITION_DELAY_MS\)/)
+  assert.match(viewSrc, /setTimeout\(\(\) => \{ togglePlayRef\.current\(asset\) \}, HOVER_AUDITION_DELAY_MS\)/)
+  // 回调必须经 ref 持有，否则父级每次重渲染都会清掉待触发的 timer。
+  assert.match(viewSrc, /const togglePlayRef = useRef\(onTogglePlay\)/)
+  assert.equal(
+    /\}, \[hovering, canPlay, playing, asset, onTogglePlay, autoplaySuppressed\]\)/.test(viewSrc),
+    false,
+    'onTogglePlay 不得留在依赖数组里',
+  )
   // 显式点击走 togglePlay，不经过门槛。
   assert.match(viewSrc, /const togglePlay = useCallback\(\(\) => \{/)
 })
 
-test('E2E 契约十：默认目录源为本地，远端仅显式配置 (AC-7)', () => {
+test('E2E 契约十一：默认目录源为本地，远端仅显式配置 (AC-7)', () => {
   assert.equal(configuredCloudBaseUrl({}), LOCAL_CLOUD_BASE_URL)
   assert.equal(cloudManifestUrl(configuredCloudBaseUrl({})), '/omnimux/assets/cloud/manifest.json')
-  // 显式覆盖仍然生效。
   assert.equal(
     configuredCloudBaseUrl({ __OMNIMUX_CLOUD_ASSETS_BASE_URL__: 'https://gateway.test/c' }),
     'https://gateway.test/c',
   )
 })
 
-test('E2E 契约十一：302 响应可缓存，本地 stream 缓存策略不变 (AC-6)', () => {
+test('E2E 契约十二：302 响应可缓存，本地 stream 缓存策略不变 (AC-6)', () => {
   const routesSrc = readText(path.join(root, 'plugins/omnimux-assets/src/http-routes.js'))
   assert.match(routesSrc, /'Cache-Control': 'private, max-age=3600'/, '302 必须可缓存')
   assert.doesNotMatch(routesSrc, /'Cache-Control': 'no-store'/, '不得再禁止缓存')
   assert.match(routesSrc, /'Cache-Control': 'private, max-age=30'/, '本地 stream 保持原策略')
 })
 
-test('E2E 契约十二：清单构建保持确定性（同输入同输出）', () => {
+test('E2E 契约十三：清单构建保持确定性（同输入同输出）', () => {
   const rows = [
     { id: 'b', key: 'thumbs/b.webp', bytes: 100, width: THUMB_WIDTH },
     { id: 'a', key: 'thumbs/a.webp', bytes: 200, width: THUMB_WIDTH },
@@ -213,4 +242,20 @@ test('E2E 契约十二：清单构建保持确定性（同输入同输出）', (
   assert.deepEqual(one.rows.map((row) => row.id), ['a', 'b'])
   assert.equal(one.total, 2)
   assert.equal(one.totalBytes, 300)
+})
+
+test('E2E 契约十四：构建脚本不把空串 thumb_url 写进任何产物 (AC-5)', () => {
+  const builderSrc = readText(path.join(root, 'plugins/omnimux-assets/scripts/build-cloud-assets-catalog.mjs'))
+  // `makeAsset` 不得给行预置空串：页分片原样序列化它的返回值，
+  // 一个空串字段会让 6388 行的字节全部变化，破坏「构建字节可复现」。
+  assert.equal(
+    /thumb_url: ''/.test(builderSrc),
+    false,
+    'makeAsset 不得预置空串 thumb_url',
+  )
+  // 缩略图只在 attach 阶段、且只对非空 URL 赋值。
+  assert.match(builderSrc, /row\.thumb_url = url/)
+  assert.match(builderSrc, /if \(url === undefined\) continue/)
+  // index 侧仍然只发射非空值。
+  assert.match(builderSrc, /if \(typeof row\.thumb_url === 'string' && row\.thumb_url !== ''\) entry\.thumb_url = row\.thumb_url/)
 })
