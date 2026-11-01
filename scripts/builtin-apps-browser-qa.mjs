@@ -15,7 +15,7 @@
  * 不写 ~/.omnimux-dev，不占用共享端口，跑完自清理。
  */
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import http from 'node:http'
@@ -34,8 +34,12 @@ const runId = randomUUID()
 const evidenceDir = join(root, '.workbuddy/evidence/worktree-qa', `builtin-apps-${runId}`)
 mkdirSync(evidenceDir, { recursive: true })
 
+const headSha = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+
 const report = {
   runId,
+  head: headSha,
+  headShort: headSha.slice(0, 7),
   task: 'Issue #3876 项目页「AI应用」同时列出官方内置应用',
   startedAt: new Date().toISOString(),
   completedAt: null,
@@ -326,6 +330,14 @@ async function main() {
     assert.ok(cards.every((c) => c.role === 'button'), '每张卡片必须是可点击的 role=button')
     assert.ok(cards.every((c) => c.hasMenu === false), '内置卡片不得提供「更多」菜单（无删除入口）')
     assert.ok(cards.some((c) => c.text.includes('官方')), '内置卡片必须有「官方」标识')
+    // 封面来自 manifest（metadata.coverUrl 或 showcase posterUrl）：有封面的条目必须真的渲染出 img。
+    const withCoverInManifest = apiList.apps.filter((app) => app.metadata?.coverUrl || app.showcase?.items?.length).length
+    const renderedWithCover = cards.filter((c) => c.hasCover).length
+    assert.equal(
+      renderedWithCover,
+      withCoverInManifest,
+      `清单里 ${withCoverInManifest} 个应用带封面，页面上必须同样多张卡片渲染出封面图，实际 ${renderedWithCover}`,
+    )
     assert.ok(!(await evaluate(`document.body.innerText.includes('还没有 AI 应用')`)), '有内置应用时不得显示空态')
     report.assertions.push({ name: 'builtin-cards-rendered', pass: true, count: cards.length })
 

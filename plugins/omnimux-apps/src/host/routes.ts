@@ -24,7 +24,11 @@ const EXECUTION_POST_RE = new RegExp(`^${PREFIX}/([^/]+)/executions$`);
 const EXECUTION_ITEM_RE = new RegExp(`^${PREFIX}/([^/]+)/executions/([^/]+)$`);
 const EXECUTION_CANCEL_RE = new RegExp(`^${PREFIX}/([^/]+)/executions/([^/]+)/cancel$`);
 
-function loadBuiltinApps(): any[] {
+/**
+ * 读取随包内置清单。返回 null 表示**读不到**（内联清单缺失且文件也读不出来），
+ * 与「读到了但清单为空」是两种不同的结果——调用方据此回 503 而不是伪装成空清单。
+ */
+function loadBuiltinApps(): any[] | null {
   if (Array.isArray(BUILTIN_MANIFESTS) && BUILTIN_MANIFESTS.length > 0) {
     return BUILTIN_MANIFESTS as any[];
   }
@@ -40,11 +44,21 @@ function loadBuiltinApps(): any[] {
     ];
     for (const p of candidatePaths) {
       if (fs.existsSync(p)) {
-        return JSON.parse(fs.readFileSync(p, 'utf-8'));
+        const parsed = JSON.parse(fs.readFileSync(p, 'utf-8'));
+        if (Array.isArray(parsed)) return parsed;
       }
     }
   } catch {}
-  return [];
+  return null;
+}
+
+/** 路径段解码：非法百分号编码返回 null，由调用方回 400 而不是抛 URIError。 */
+function decodeSegment(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
 }
 
 export function createAppsRoutes(deps: {
@@ -88,8 +102,18 @@ export function createAppsRoutes(deps: {
       };
 
       // 0. GET /omnimux-apps/api/apps (官方内置应用清单；只读，不含用户已发布记录)
-      if (pathname === LIST_PATH && method === 'GET') {
+      //    读不到清单回 503，绝不伪装成「成功但零个应用」——那是把故障说成空数据。
+      if (pathname === LIST_PATH) {
+        if (method !== 'GET') {
+          res.setHeader?.('Allow', 'GET');
+          sendJson(405, { error: 'method_not_allowed', message: '清单接口只支持 GET' });
+          return true;
+        }
         const apps = loadBuiltinApps();
+        if (!apps) {
+          sendJson(503, { error: 'builtin_apps_unavailable', message: '官方内置应用清单不可用' });
+          return true;
+        }
         sendJson(200, { apps });
         return true;
       }
@@ -97,20 +121,32 @@ export function createAppsRoutes(deps: {
       // 0b. GET /omnimux-apps/api/apps/:appId（单个 manifest：用户已发布优先，内置兜底）
       const manifestMatch = ITEM_PATH_RE.exec(pathname);
       if (manifestMatch && method === 'GET') {
-        const appId = decodeURIComponent(manifestMatch[1] || '');
+        const appId = decodeSegment(manifestMatch[1] || '');
+        if (appId === null) {
+          sendJson(400, { error: 'invalid_app_id', message: 'appId 编码非法' });
+          return true;
+        }
         if (!appId) {
           sendJson(400, { error: 'invalid_app_id', message: 'appId is required' });
           return true;
         }
-        let manifest: any = null;
+        let stored: any = null;
+        let storedError: any = null;
         try {
-          manifest = await service.getManifest(appId);
-        } catch {
-          manifest = null;
+          stored = await service.getManifest(appId);
+        } catch (err: any) {
+          storedError = err;
         }
-        if (!manifest) {
-          manifest = loadBuiltinApps().find((a) => a?.appId === appId) || null;
+        // 存储读错时不能静默回落到出厂版本：用户覆盖发布过的应用会无声变回官方原版，
+        // 用户看不到「你的版本读失败了」。回 500 让调用方给出真实错误。
+        if (storedError) {
+          sendJson(500, {
+            error: 'manifest_read_failed',
+            message: storedError?.message || '读取应用清单失败',
+          });
+          return true;
         }
+        const manifest = stored || loadBuiltinApps()?.find((a) => a?.appId === appId) || null;
         if (!manifest) {
           sendJson(404, { error: 'app_not_found', message: `应用 ${appId} 未找到` });
           return true;
@@ -147,7 +183,7 @@ export function createAppsRoutes(deps: {
 
         let manifest = await service.getManifest(appId, body.version);
         if (!manifest) {
-          const builtins = loadBuiltinApps();
+          const builtins = loadBuiltinApps() ?? [];
           manifest = builtins.find((a) => a.appId === appId) || null;
         }
         if (!manifest && body.manifest && body.manifest.appId === appId) {

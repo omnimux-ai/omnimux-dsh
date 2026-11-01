@@ -626,12 +626,19 @@ test('旅程 8：内置应用与用户应用合并展示，内置卡片无删除
   const tab = await mountAppTab({
     sidebar,
     fetchImpl: tabFetch,
+    // 关键：本地缓存里有一条「更新」的用户应用。旧实现按 appId 查不到时会回落
+    // 最新一条，把「商品图生成器」渲染成内置应用的表单——这条 seed 让该回归必红。
+    seed: seedTwoApps,
     tab: { id: 'tab9', type: APP_TAB_ID, meta: { appId: 'app-builtin-viral-replication' }, title: 'AI 应用' },
   })
   // 内置 manifest 走异步 fetch，渲染落定需要多跑几轮微任务 + act。
   await tab.act(async () => { await new Promise((done) => setTimeout(done, 30)) })
   try {
-    assert.equal(tab.title(), '爆款复刻', '内置应用标签页必须解析出正确的 manifest，而不是回落用户最新应用')
+    assert.equal(
+      tab.title(),
+      '爆款复刻',
+      '内置应用标签页必须解析出正确的 manifest；回落「最新一条」会渲染成「商品图生成器」',
+    )
     assert.equal(tab.badge(), zh['projects.appCategoryVideo'])
     assert.equal(
       tab.container.querySelector('.omx-apptab-empty'),

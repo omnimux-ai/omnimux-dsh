@@ -57,11 +57,15 @@ describe('GET /omnimux-apps/api/apps：官方内置清单', () => {
     }
   });
 
-  test('非 GET 方法不被清单接口认领（交给既有路由语义）', async () => {
+  test('非 GET 方法回 405 并声明 Allow，不被误认成保存 manifest', async () => {
     const routes = makeRoutes();
-    const res = fakeRes();
-    const handled = await routes.handle({ url: '/omnimux-apps/api/apps', method: 'POST', body: {} }, res);
-    assert.equal(handled, false, 'POST /apps 不是清单接口，不得被误认成保存 manifest');
+    for (const method of ['POST', 'PUT', 'DELETE', 'PATCH']) {
+      const res = fakeRes();
+      const handled = await routes.handle({ url: '/omnimux-apps/api/apps', method, body: {} }, res);
+      assert.equal(handled, true, `${method} /apps 必须由清单接口自己处理，不能落到兜底 404`);
+      assert.equal(res.state.status, 405, `${method} /apps 必须回 405`);
+      assert.equal(JSON.parse(res.state.body).error, 'method_not_allowed');
+    }
   });
 });
 
@@ -103,8 +107,20 @@ describe('GET /omnimux-apps/api/apps/:appId：单个 manifest', () => {
     const res = fakeRes();
     await routes.handle({ url: '/omnimux-apps/api/apps/app-creatify-ugc-selfie', method: 'GET' }, res);
 
-    assert.equal(res.state.status, 200);
-    assert.equal(JSON.parse(res.state.body).app.appId, 'app-creatify-ugc-selfie');
+    // 存储读失败必须如实报错：静默回落到出厂版本会让用户覆盖发布的应用无声变回原版。
+    assert.equal(res.state.status, 500, '存储读失败必须回 500，不能伪装成拿到了官方原版');
+    assert.equal(JSON.parse(res.state.body).error, 'manifest_read_failed');
+    assert.equal(JSON.parse(res.state.body).message, 'disk unavailable', '必须把真实原因带给调用方');
+  });
+
+  test('非法百分号编码回 400，不抛 URIError', async () => {
+    const routes = makeRoutes();
+    const res = fakeRes();
+    const handled = await routes.handle({ url: '/omnimux-apps/api/apps/%E0%A4%A', method: 'GET' }, res);
+
+    assert.equal(handled, true);
+    assert.equal(res.state.status, 400, '非法编码必须是 4xx，而不是连接级异常');
+    assert.equal(JSON.parse(res.state.body).error, 'invalid_app_id');
   });
 
   test('两边都没有时 404 并给出 app_not_found', async () => {

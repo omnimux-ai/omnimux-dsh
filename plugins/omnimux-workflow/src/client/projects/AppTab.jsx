@@ -545,7 +545,10 @@ export function AppTab(props) {
       }
       // 内置应用没有本地缓存，事件里也可能只带 appId（中枢 openApp 通道）：走只读接口解析。
       void fetchAppManifest(nextId).then((remote) => {
-        if (!remote) return
+        if (!remote) {
+          setManifest((prev) => (prev && prev.appId === nextId ? prev : null))
+          return
+        }
         setManifest((prev) => (prev && prev.appId === remote.appId ? prev : remote))
       })
     }
@@ -582,7 +585,13 @@ export function AppTab(props) {
     }
     let cancelled = false
     void fetchAppManifest(appId).then((remote) => {
-      if (cancelled || !remote) return
+      if (cancelled) return
+      // 解析不出来时必须清掉旧 manifest：否则上一个应用的表单会挂在新 appId 下，
+      // 把「读不到」渲染成「这是另一个应用」。清空后走既有空态分支。
+      if (!remote) {
+        setManifest((prev) => (prev && prev.appId === appId ? prev : null))
+        return
+      }
       setManifest((prev) => (
         prev && prev.appId === remote.appId && prev.version === remote.version
           ? prev

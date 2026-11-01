@@ -20,8 +20,8 @@ import { appCategoryLabelKey } from './appLibrary.js'
  *   app: { appId: string, name: string, category: string, coverUrl: string, isBuiltin?: boolean },
  *   t: (key: string) => string,
  *   onOpen: (app: object) => void,
- *   onEdit?: (app: object) => void,
- *   onDelete?: (app: object) => void,
+ *   onEdit: (app: object) => void,
+ *   onDelete: (app: object) => void,
  * }} props
  */
 export function AIAppCard({ app, t, onOpen, onEdit, onDelete }) {
@@ -40,8 +40,8 @@ export function AIAppCard({ app, t, onOpen, onEdit, onDelete }) {
 
   const handleSelect = useCallback((id) => {
     setMenuOpen(false)
-    if (id === 'edit') onEdit?.(app)
-    else if (id === 'delete') onDelete?.(app)
+    if (id === 'edit') onEdit(app)
+    else if (id === 'delete') onDelete(app)
   }, [app, onDelete, onEdit])
 
   const items = [

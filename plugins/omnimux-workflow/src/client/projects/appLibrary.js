@@ -1,11 +1,13 @@
 /**
- * 已发布 AI 应用清单（「项目」页「AI应用」分类的数据源）。
+ * 已发布 AI 应用清单（「项目」页「AI应用」分类的**用户自发布**数据源）。
  *
  * 唯一真实落点：浏览器 `localStorage['omnimux_apps_manifests']`，
  * 结构 `Record<appId, ApplicationManifest>`；写入方是创作画布的发布向导
  * （`src/canvas/editor/components/publish/PublishWizardModal.tsx`）。
- * `plugins/omnimux-apps` 未接入运行时（无 cordis.patch.yml、无 dsh 字段、
- * 全仓零 import），不作为数据源；也没有服务端注册表。
+ *
+ * 官方随包内置应用是**另一个**数据源，只走 `omnimux-apps` 的只读 HTTP 缝
+ * （见 `builtinApps.js`，`GET /omnimux-apps/api/apps`）；它们从不写这份 localStorage，
+ * 两者由 `mergeAppEntries` 合并展示，同 `appId` 以用户版本为准。
  *
  * 本模块只做纯数据变换 + 存储读写，不依赖 React，便于单测。
  */
