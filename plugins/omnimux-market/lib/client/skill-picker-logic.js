@@ -577,7 +577,12 @@ export function buildPlazaSearchPayload(submitted, category, page = 1, pageSize 
         channels: q ? [...PLAZA_QUERY_CHANNELS] : [...PLAZA_DEFAULT_CHANNELS],
     };
 }
-/** 技能/专家工作台 Tab id：会话内入口与会话创建共用同一个落脚页。 */
+/**
+ * 技能/专家工作台 Tab id（与 plaza Tab 的注册值一致）。
+ *
+ * 说明：本模块只声明「会话内入口打开参数」用到的 Tab 值；plaza-shell.js 与
+ * session-create.js 里既有的同值字面量不在本任务重构范围内，避免扩大改动面。
+ */
 export const PLAZA_WORKBENCH_TAB_ID = 'omnimux-market:plaza';
 /**
  * 会话内入口（输入框技能面板「探索更多」）打开技能/专家工作台的参数。
