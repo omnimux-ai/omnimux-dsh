@@ -55,10 +55,11 @@ const isFile = (path) => {
  */
 export function resolveHostRuntimeLayout(options = {}) {
   const bundle = options.bundle ?? DEV_APP_BUNDLE;
+  const resources = join(bundle, 'Contents/Resources');
   const candidates = WRAPPER_CANDIDATES.map((relative) => join(bundle, relative));
   // 调用方可以注入 fs（测试用 stub）：验收脚本本身走真实 fs，测试不依赖本机装没装 App。
   const io = options.io ?? { statSync };
-  const isFile = (path) => {
+  const probe = (path) => {
     // 注入的 fs 可能只实现少量方法（单测 stub）：缺少探测能力时按默认布局放行，
     // 由后续 accessSync(executable) 与真实运行暴露缺件，而不是在这里静默失败。
     if (typeof io.statSync !== 'function') return true;
@@ -68,12 +69,22 @@ export function resolveHostRuntimeLayout(options = {}) {
       return false;
     }
   };
-  const wrapper = candidates.find((path) => isFile(path));
+  /**
+   * 两种布局的判据不同：
+   * - `Resources/app` 是目录，脚本入口是真实文件，按文件探测；
+   * - `Resources/app.asar` 是单个归档文件，入口在归档内部，stat 内部路径只会得到
+   *   `ENOENT`/`ENOTDIR`。这里按归档本身是否为文件判定，路径仍交给 Electron 去读。
+   */
+  const modernWrapper = join(resources, 'app', 'lib', 'desktop-cli.js');
+  const legacyArchive = join(resources, 'app.asar');
+  let wrapper;
+  if (probe(modernWrapper)) wrapper = modernWrapper;
+  else if (probe(legacyArchive)) wrapper = join(legacyArchive, 'lib', 'desktop-cli.js');
   if (!wrapper) {
     const error = new Error(`TEST_ENV_RUNTIME_MISSING: 宿主 App 缺少 desktop-cli 入口：${candidates.join(' / ')}`);
     error.code = 'TEST_ENV_RUNTIME_MISSING';
     error.hint = `候选入口都不存在：${candidates.join(' / ')}`;
-    error.detail = { candidates };
+    error.detail = { candidates, legacyArchive };
     throw error;
   }
   const appRoot = dirname(dirname(wrapper));
@@ -116,7 +127,9 @@ const loaderJsTag = {
   tag: 'tag:yaml.org,2002:js',
   resolve: (value) => ({ __jsExpr: value }),
   identify: (value) => value !== null && typeof value === 'object' && Object.hasOwn(value, '__jsExpr'),
-  stringify: (item) => item.__jsExpr,
+  // yaml v2 传给 stringify 的是 Scalar 节点，表达式在 `node.value.__jsExpr`；
+  // 早期实现直接读 `item.__jsExpr`，结果把 68 处平台条件写成 `!!js undefined`。
+  stringify: (item) => item?.value?.__jsExpr ?? item?.__jsExpr,
 };
 
 /** 读一份 YAML/JSON 文档，保留 loader 的 `!!js` 表达式。 */
@@ -133,22 +146,68 @@ export function stringifyStructuredFile(value) {
   return stringify(value, { customTags: [loaderJsTag] });
 }
 
-/** 裁剪 rc.3 会拒绝的 subagent 字段；返回新数组，不改原对象。 */
+/**
+ * 裁剪 rc.3 会拒绝的 subagent 字段；返回新数组，不改原对象。
+ *
+ * 壳的实现（宿主 `profile-*.js` 的 `reduceSubagentRow`）会**递归进 `config` 数组**：
+ * 预设里的 `delegation` 组内嵌了多条 `tool-subagent` 行，只裁顶层会让这些行带着
+ * `persona` 交给 rc.3 内核，内核直接 throw，整个预设被标 broken。
+ */
 export function pruneRejectedFields(plugins) {
-  if (!Array.isArray(plugins)) return { plugins: [], reduced: false };
   let reduced = false;
-  const next = plugins.map((row) => {
-    if (!row || typeof row !== 'object') return row;
-    if (row.name !== '@deepseek-ai/dsh-tool-subagent') return row;
+
+  const pruneRow = (row) => {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+    let next = row;
     const config = row.config;
-    if (!config || typeof config !== 'object') return row;
-    const offending = REJECTED_SUBAGENT_FIELDS.filter((field) => Object.hasOwn(config, field));
-    if (!offending.length) return row;
-    reduced = true;
-    const clean = { ...config };
-    for (const field of offending) delete clean[field];
-    return { ...row, config: clean };
-  });
+    if (config && typeof config === 'object' && !Array.isArray(config)) {
+      let removedField = false;
+      const cleaned = { ...config };
+      if (next.name === '@deepseek-ai/dsh-tool-subagent') {
+        for (const field of REJECTED_SUBAGENT_FIELDS) {
+          if (Object.hasOwn(cleaned, field)) {
+            delete cleaned[field];
+            removedField = true;
+            reduced = true;
+          }
+        }
+      }
+      // 没有真删字段就先不复制，保持「无改动返回同一引用」的语义。
+      if (removedField) next = { ...next, config: cleaned };
+    }
+    // 递归：`cordis:group` 的 config 本身可能就是行数组（preset 的 delegation 组就是这样）。
+    const configAfter = next.config;
+    if (Array.isArray(configAfter)) {
+      const prunedArray = pruneRows(configAfter);
+      if (prunedArray !== configAfter) next = { ...next, config: prunedArray };
+    } else if (configAfter && typeof configAfter === 'object') {
+      let changed = false;
+      const nested = { ...configAfter };
+      for (const [key, value] of Object.entries(configAfter)) {
+        if (!Array.isArray(value)) continue;
+        const prunedArray = pruneRows(value);
+        if (prunedArray !== value) {
+          nested[key] = prunedArray;
+          changed = true;
+        }
+      }
+      if (changed) next = { ...next, config: nested };
+    }
+    return next;
+  };
+
+  const pruneRows = (rows) => {
+    let changed = false;
+    const next = rows.map((row) => {
+      const pruned = pruneRow(row);
+      if (pruned !== row) changed = true;
+      return pruned;
+    });
+    return changed ? next : rows;
+  };
+
+  if (!Array.isArray(plugins)) return { plugins: [], reduced: false };
+  const next = pruneRows(plugins);
   return { plugins: next, reduced };
 }
 

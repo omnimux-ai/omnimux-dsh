@@ -8,21 +8,37 @@ import {
   appPackageRootFor,
   composeAgentPresetRows,
   defaultHostLayout,
+  readStructuredFile,
+  stringifyStructuredFile,
   pruneRejectedFields,
   pruneUnresolvable,
   resolveHostRuntimeLayout,
   upstreamPresetIds,
 } from './host-runtime-layout.mjs'
 
+/** 把序列化结果写回临时目录并返回路径（round-trip 用）。 */
+function writeAndReturn(directory, text) {
+  const file = join(directory, 'round-trip.yml')
+  writeFileSync(file, text)
+  return file
+}
+
 /** 造一个 App bundle 目录：layout = 'app' | 'app.asar'。 */
 function fakeBundle(t, layout) {
   const bundle = mkdtempSync(join(tmpdir(), 'omnimux-layout-'))
   t.after(() => rmSync(bundle, { recursive: true, force: true }))
-  const appRoot = join(bundle, 'Contents', 'Resources', layout)
-  mkdirSync(join(appRoot, 'lib'), { recursive: true })
-  writeFileSync(join(appRoot, 'lib', 'desktop-cli.js'), '// wrapper\n')
-  mkdirSync(join(appRoot, 'node_modules', '@deepseek-ai', 'dsh'), { recursive: true })
-  writeFileSync(join(appRoot, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'), '{"name":"@deepseek-ai/dsh"}\n')
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  const appRoot = join(resources, layout)
+  if (layout === 'app.asar') {
+    // 真实语义：app.asar 是单个归档文件，入口在归档内部（stat 内部路径只会 ENOTDIR）。
+    writeFileSync(appRoot, 'asar-archive-bytes')
+  } else {
+    mkdirSync(join(appRoot, 'lib'), { recursive: true })
+    writeFileSync(join(appRoot, 'lib', 'desktop-cli.js'), '// wrapper\n')
+    mkdirSync(join(appRoot, 'node_modules', '@deepseek-ai', 'dsh'), { recursive: true })
+    writeFileSync(join(appRoot, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'), '{"name":"@deepseek-ai/dsh"}\n')
+  }
   return { bundle, appRoot }
 }
 
@@ -42,10 +58,12 @@ test('布局探测优先 asar:false 的 Resources/app，并回退旧 app.asar', 
   assert.equal(resolved.appRoot, modern.appRoot)
   assert.equal(resolved.executable, join(modern.bundle, 'Contents/MacOS/OmniMux'))
 
+  // 旧布局：app.asar 是归档文件，按「归档存在」判定，wrapper 仍是归档内路径。
   const legacy = fakeBundle(t, 'app.asar')
   const fallback = resolveHostRuntimeLayout({ bundle: legacy.bundle })
   assert.equal(fallback.layout, 'app.asar')
   assert.equal(fallback.wrapper, join(legacy.appRoot, 'lib/desktop-cli.js'))
+  assert.equal(fallback.appRoot, legacy.appRoot)
 })
 
 test('两种入口都缺失时报 RUNTIME_MISSING 并列出候选路径', (t) => {
@@ -147,4 +165,46 @@ test('defaultHostLayout 不探测文件系统（CI 上没有 App 也能给出默
   assert.equal(layout.layout, 'app')
   assert.equal(layout.executable, '/nonexistent/OmniMux Dev.app/Contents/MacOS/OmniMux')
   assert.deepEqual(layout.candidates.length, 2)
+})
+
+test('!!js 表达式 round-trip 后仍是表达式，不会写成 undefined', () => {
+  const source = [
+    '- id: tool-x',
+    '  name: "@deepseek-ai/dsh-tool-x"',
+    '  config:',
+    '    disabled: !!js process.platform === "win32"',
+    '',
+  ].join('\n')
+  const directory = mkdtempSync(join(tmpdir(), 'omnimux-js-tag-'))
+  const file = join(directory, 'rows.yml')
+  writeFileSync(file, source)
+  const rows = readStructuredFile(file)
+  assert.equal(rows[0].config.disabled.__jsExpr, 'process.platform === "win32"')
+  const written = stringifyStructuredFile(rows)
+  assert.match(written, /!!js process\.platform === "win32"/)
+  assert.doesNotMatch(written, /!!js undefined/)
+  const roundTrip = readStructuredFile(writeAndReturn(directory, written))
+  assert.equal(roundTrip[0].config.disabled.__jsExpr, 'process.platform === "win32"')
+})
+
+test('嵌套在 cordis:group 的 config 数组里的 persona/toolFilter 也被裁掉', () => {
+  const plugins = [{
+    id: 'delegation', name: 'cordis:group', group: true,
+    config: [
+      { id: 'sub', name: '@deepseek-ai/dsh-tool-subagent', config: { provider: 'spawn', persona: 'x', toolFilter: ['y'] } },
+      { id: 'keep', name: 'omnimux' },
+    ],
+  }]
+  const { plugins: pruned, reduced } = pruneRejectedFields(plugins)
+  assert.equal(reduced, true)
+  assert.deepEqual(pruned[0].config[0].config, { provider: 'spawn' })
+  assert.deepEqual(pruned[0].config[1], { id: 'keep', name: 'omnimux' })
+  assert.equal(plugins[0].config[0].config.persona, 'x', '不得改动传入对象')
+})
+
+test('没有嵌套拒绝字段时 reduced 为 false，且返回同一引用', () => {
+  const plugins = [{ id: 'a', name: 'omnimux', config: { keep: 1 } }]
+  const { plugins: pruned, reduced } = pruneRejectedFields(plugins)
+  assert.equal(reduced, false)
+  assert.equal(pruned, plugins)
 })
