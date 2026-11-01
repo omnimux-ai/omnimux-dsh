@@ -134,7 +134,8 @@ function makeSidebar() {
 }
 
 /** jsdom + 宿主全局的最小真实环境（库页与应用标签页共用同一套）。 */
-function createDomEnv(sidebar) {
+function createDomEnv(sidebar, fetchImpl = null) {
+  assert.equal(typeof (fetchImpl ?? (() => {})), 'function', '内置清单 fetch 桩必须是函数或 null')
   const { JSDOM } = require('jsdom')
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', { pretendToBeVisual: true, url: 'http://localhost/' })
   const defineGlobal = (name, value) => Object.defineProperty(globalThis, name, { value, writable: true, configurable: true })
@@ -165,20 +166,33 @@ function createDomEnv(sidebar) {
   defineGlobal('cancelAnimationFrame', dom.window.cancelAnimationFrame.bind(dom.window))
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
   globalThis.__testProjects = [{ id: 'proj_alpha', title: '项目甲', canvasWorkspaceIds: ['ws_alpha'], pages: [] }]
+  // 内置应用清单接口（GET /omnimux-apps/api/apps）：jsdom 里没有真实 Host，
+  // 不装桩就必然失败并把「官方内置应用读取失败」横幅渲染进页面。默认给一份空清单的
+  // 成功响应，让内置侧保持中性；内置清单本身的契约由 builtinApps.test.mjs 与
+  // projectLibraryPage.apps.test.mjs 覆盖。需要真实内置应用的用例可传入 fetchImpl。
+  defineGlobal('fetch', fetchImpl ?? (async (url) => {
+    const target = String(url)
+    assert.equal(
+      target,
+      '/omnimux-apps/api/apps',
+      '本旅程只允许请求内置清单接口，其他请求必须显式暴露而不是静默成功',
+    )
+    return { ok: true, status: 200, async json() { return { apps: [] } } }
+  }))
   if (sidebar) dom.window.__omnimuxBetterSidebar = sidebar
   return {
     dom,
     container: dom.window.document.getElementById('root'),
     teardown() {
       dom.window.close()
-      for (const name of ['window', 'document', 'localStorage', 'CustomEvent', 'Event', 'MouseEvent', 'KeyboardEvent', 'PointerEvent']) delete globalThis[name]
+      for (const name of ['window', 'document', 'localStorage', 'CustomEvent', 'Event', 'MouseEvent', 'KeyboardEvent', 'PointerEvent', 'fetch']) delete globalThis[name]
       delete globalThis.__testProjects
     },
   }
 }
 
-async function mountPage({ sidebar, t = (key) => zh[key] || key } = {}) {
-  const env = createDomEnv(sidebar)
+async function mountPage({ sidebar, fetchImpl = null, t = (key) => zh[key] || key } = {}) {
+  const env = createDomEnv(sidebar, fetchImpl)
   const { ProjectLibraryPage } = await loadPage()
   const reactDomClient = require('react-dom/client')
   const { act } = require('react')
@@ -196,6 +210,7 @@ async function mountPage({ sidebar, t = (key) => zh[key] || key } = {}) {
     }))
   })
   await act(async () => { await Promise.resolve() })
+  assert.equal(env.container.isConnected, true, '库页容器必须挂在真实 document 上')
   return {
     dom: env.dom,
     act,
@@ -211,8 +226,8 @@ async function mountPage({ sidebar, t = (key) => zh[key] || key } = {}) {
  * 挂载应用标签页本体（AppTab），props 形状对齐宿主原生 surface：
  * 标签页 id 由宿主生成（实测 `tab6`），应用身份只走 `tab.meta.appId`。
  */
-async function mountAppTab({ sidebar, tab, seed, t = (key) => zh[key] || key } = {}) {
-  const env = createDomEnv(sidebar)
+async function mountAppTab({ sidebar, tab, seed, fetchImpl = null, t = (key) => zh[key] || key } = {}) {
+  const env = createDomEnv(sidebar, fetchImpl)
   // 标签页在首次渲染时就按 appId 读 manifest，播种必须发生在挂载之前。
   seed?.(env.dom.window)
   const { AppTab } = await loadPage()
@@ -232,6 +247,7 @@ async function mountAppTab({ sidebar, tab, seed, t = (key) => zh[key] || key } =
     }))
   })
   await act(async () => { await Promise.resolve() })
+  assert.equal(env.container.isConnected, true, '应用标签页容器必须挂在真实 document 上')
   return {
     dom: env.dom,
     act,
@@ -516,5 +532,113 @@ test('旅程 3c：标签页已挂载时，打开另一个应用会切过去；�
     assert.equal(legacy.title(), '商品图生成器', '自有面板布局下每个应用各自一个标签页，不得被别的应用抢走')
   } finally {
     await legacy.teardown()
+  }
+})
+
+test('旅程 8：内置应用与用户应用合并展示，内置卡片无删除入口且标签页按 appId 解析（Issue #3876）', async () => {
+  const sidebar = makeSidebar()
+  // 只为本用例把内置清单接口换成有内容的响应；其他请求仍按默认桩暴露。
+  const builtinRows = [
+    {
+      appId: 'app-builtin-product-video',
+      version: '1.0.0',
+      workflowBinding: { workspaceId: 'ws-app-builtin-product-video', workflowVersion: 1 },
+      metadata: { name: '商品生视频', category: 'video', description: '官方出厂应用' },
+      formSchema: {
+        type: 'object',
+        properties: {
+          product_image: { type: 'string', title: '商品主图', widget: 'input-text' },
+        },
+      },
+    },
+    {
+      appId: 'app-builtin-viral-replication',
+      version: '1.0.0',
+      workflowBinding: { workspaceId: 'ws-app-builtin-viral-replication', workflowVersion: 1 },
+      metadata: { name: '爆款复刻', category: 'video', description: '官方出厂应用' },
+      formSchema: {
+        type: 'object',
+        properties: {
+          reference_video: { type: 'string', title: '参考视频', widget: 'input-text' },
+        },
+      },
+    },
+  ]
+  const fetchBuiltin = async (url) => {
+    const target = String(url)
+    assert.equal(target.startsWith('/omnimux-apps/api/apps'), true, `内置应用只应访问只读缝，实际请求 ${target}`)
+    if (target === '/omnimux-apps/api/apps') {
+      return { ok: true, status: 200, async json() { return { apps: builtinRows } } }
+    }
+    const appId = target.split('/').pop()
+    const hit = builtinRows.find((row) => row.appId === appId)
+    return hit
+      ? { ok: true, status: 200, async json() { return { app: hit } } }
+      : { ok: false, status: 404, async json() { return { error: 'app_not_found' } } }
+  }
+  const page = await mountPage({ sidebar, fetchImpl: fetchBuiltin })
+  try {
+    await page.act(async () => categoryTabs(page.container)[2].click())
+    await page.act(async () => { await Promise.resolve() })
+
+    const cards = cardEls(page.container)
+    assert.equal(cards.length, 2, '两个内置应用都必须出现，且不得显示空态')
+    assert.deepEqual(
+      cards.map((card) => card.querySelector('.dshUk-MediaCard-title')?.textContent.trim()),
+      ['商品生视频', '爆款复刻'],
+      '内置应用按清单顺序展示',
+    )
+    assert.equal(page.container.querySelectorAll('[aria-label="更多操作"]').length, 0, '内置应用不提供删除/编辑菜单')
+    assert.match(cards[0].textContent, new RegExp(zh['projects.appBuiltinBadge']), '内置卡片必须带「官方」标识')
+
+    // 用户已发布同名应用时只留用户版本，并可正常删除
+    globalThis.window.localStorage.setItem(APP_MANIFESTS_STORAGE_KEY, JSON.stringify({
+      app_builtin_override: manifestRow('app-builtin-product-video', '我的商品生视频', '2026-09-20T00:00:00.000Z'),
+    }))
+    await page.act(async () => categoryTabs(page.container)[0].click())
+    await page.act(async () => categoryTabs(page.container)[2].click())
+    await page.act(async () => { await Promise.resolve() })
+    const merged = cardEls(page.container)
+    assert.equal(merged.length, 2, '同 appId 去重后应只剩用户版 + 另一个内置应用')
+    assert.deepEqual(
+      merged.map((card) => card.querySelector('.dshUk-MediaCard-title')?.textContent.trim()),
+      ['我的商品生视频', '爆款复刻'],
+      '用户覆盖版本替换同名内置条目，其余内置应用保持在后',
+    )
+    assert.equal(page.container.querySelectorAll('[aria-label="更多操作"]').length, 1, '只有用户应用带「更多」菜单')
+
+    // 点内置卡片 → 打开 app_<appId>
+    await page.act(async () => merged[1].click())
+    const appOpen = sidebar.opened.find((entry) => String(entry.seed.id).startsWith(APP_TAB_ID_PREFIX))
+    assert.equal(appOpen.seed.id, `${APP_TAB_ID_PREFIX}app-builtin-viral-replication`)
+    assert.deepEqual(appOpen.seed.meta, { appId: 'app-builtin-viral-replication' })
+  } finally {
+    await page.teardown()
+  }
+
+  // 标签页按只读接口解析出内置 manifest：mountAppTab 会重建一份 DOM 环境，
+  // 必须等库页环境彻底拆掉之后再挂，否则两套 window 会互相拆台。
+  const tabFetch = async (url) => {
+    const target = String(url)
+    assert.equal(target, '/omnimux-apps/api/apps/app-builtin-viral-replication', `标签页只应请求单项接口，实际 ${target}`)
+    return { ok: true, status: 200, async json() { return { app: builtinRows[1] } } }
+  }
+  const tab = await mountAppTab({
+    sidebar,
+    fetchImpl: tabFetch,
+    tab: { id: 'tab9', type: APP_TAB_ID, meta: { appId: 'app-builtin-viral-replication' }, title: 'AI 应用' },
+  })
+  // 内置 manifest 走异步 fetch，渲染落定需要多跑几轮微任务 + act。
+  await tab.act(async () => { await new Promise((done) => setTimeout(done, 30)) })
+  try {
+    assert.equal(tab.title(), '爆款复刻', '内置应用标签页必须解析出正确的 manifest，而不是回落用户最新应用')
+    assert.equal(tab.badge(), zh['projects.appCategoryVideo'])
+    assert.equal(
+      tab.container.querySelector('.omx-apptab-empty'),
+      null,
+      '内置应用不得停在「暂无已加载的 AI 应用」空态',
+    )
+  } finally {
+    await tab.teardown()
   }
 })

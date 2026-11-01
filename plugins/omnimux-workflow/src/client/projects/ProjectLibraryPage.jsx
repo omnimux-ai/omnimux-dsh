@@ -46,6 +46,7 @@ import {
   resolveAppEditTarget,
   resolveOwningProject,
 } from './appLibrary.js'
+import { fetchBuiltinApps, mergeAppEntries } from './builtinApps.js'
 
 export const WORKFLOW_LIBRARY_TAB_ID = 'omnimux-workflow:library'
 
@@ -139,10 +140,15 @@ export function ProjectLibraryPage(props) {
   const [pendingAppDelete, setPendingAppDelete] = useState(null)
   const [promptModal, setPromptModal] = useState(null)
   const [libraryTab, setLibraryTab] = useState('local')
-  // 「AI应用」分类的独立数据源：localStorage['omnimux_apps_manifests']
-  // （发布向导写的唯一真实落点），与顶层项目列表互不影响。
-  const [apps, setApps] = useState([])
+  // 「AI应用」分类的独立数据源：用户已发布清单（localStorage，发布向导写的唯一真实落点）
+  // + 官方内置应用清单（只读 HTTP 缝）。两者合并展示，内置条目不可删。
+  const [publishedApps, setPublishedApps] = useState([])
+  const [builtinApps, setBuiltinApps] = useState([])
   const [appsError, setAppsError] = useState('')
+  const apps = React.useMemo(
+    () => mergeAppEntries(publishedApps, builtinApps),
+    [publishedApps, builtinApps],
+  )
 
   // 1. 重新加载顶层项目列表
   const reload = useCallback(async () => {
@@ -163,30 +169,36 @@ export function ProjectLibraryPage(props) {
     if (visible) void reload()
   }, [visible, reload])
 
-  // 1b. 「AI应用」分类的独立列表：数据源是发布向导写入的 manifest 映射。
+  // 1b. 「AI应用」分类的独立列表：用户已发布 manifest 映射 + 官方内置清单。
   // 存储根本不可用（隐私模式 / 被策略禁用）与清单损坏是两种不同的失败，
-  // 各自给真实错误；空映射才是真空态——三者不混。
-  const reloadApps = useCallback(() => {
+  // 内置清单读不到又是第三种；三者各自给真实错误，且都不吞掉另一路已经拿到的数据。
+  const reloadApps = useCallback(async () => {
+    const errors = []
     if (!defaultAppStorage()) {
-      setApps([])
-      setAppsError(t('projects.appStorageUnavailable') || '本地存储不可用，无法读取应用清单。')
-      return
+      setPublishedApps([])
+      errors.push(t('projects.appStorageUnavailable') || '本地存储不可用，无法读取应用清单。')
+    } else {
+      try {
+        setPublishedApps(listPublishedApps())
+      } catch {
+        setPublishedApps([])
+        errors.push(t('projects.appStorageUnreadable') || '应用清单读取失败，请刷新后重试。')
+      }
     }
-    try {
-      setApps(listPublishedApps())
-      setAppsError('')
-    } catch {
-      setApps([])
-      setAppsError(t('projects.appStorageUnreadable') || '应用清单读取失败，请刷新后重试。')
+    const builtin = await fetchBuiltinApps()
+    setBuiltinApps(builtin.entries)
+    if (builtin.error) {
+      errors.push(t('projects.appBuiltinUnavailable') || '官方内置应用暂时读取失败，请刷新后重试。')
     }
+    setAppsError(errors.join(' '))
   }, [t])
 
   useEffect(() => {
     if (!visible || libraryTab !== 'apps') return undefined
-    reloadApps()
+    void reloadApps()
     if (typeof window === 'undefined') return undefined
     // 发布向导发布成功后派发（PublishWizardModal），列表就地刷新。
-    const onAppTabsChanged = () => { reloadApps() }
+    const onAppTabsChanged = () => { void reloadApps() }
     window.addEventListener('omnimux-app-tabs-changed', onAppTabsChanged)
     return () => window.removeEventListener('omnimux-app-tabs-changed', onAppTabsChanged)
   }, [visible, libraryTab, reloadApps])
@@ -367,7 +379,7 @@ export function ProjectLibraryPage(props) {
       return
     }
     closeAppTab(target.appId)
-    reloadApps()
+    void reloadApps()
   }
 
   // 5. 在项目内新建创作页

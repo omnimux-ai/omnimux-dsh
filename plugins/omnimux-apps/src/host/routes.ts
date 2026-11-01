@@ -2,6 +2,9 @@
  * plugins/omnimux-apps/src/host/routes.ts
  *
  * HTTP API Routes for omnimux-apps:
+ * - GET /omnimux-apps/api/apps (list shipped built-in manifests)
+ * - GET /omnimux-apps/api/apps/:appId (one manifest: user-published first, built-in fallback)
+ * - POST /omnimux-apps/api/apps/manifest (persist a user-published manifest)
  * - POST /omnimux-apps/api/apps/:appId/executions (launch headless execution)
  * - GET /omnimux-apps/api/apps/:appId/executions/:executionId (poll status & outputs)
  * - POST /omnimux-apps/api/apps/:appId/executions/:executionId/cancel (cancel execution)
@@ -15,6 +18,8 @@ import type { HeadlessExecutionSeam } from './executionBridge.ts';
 import { BUILTIN_MANIFESTS } from '../shared/builtinCatalogData.ts';
 
 const PREFIX = '/omnimux-apps/api/apps';
+const LIST_PATH = PREFIX;
+const ITEM_PATH_RE = new RegExp(`^${PREFIX}/([^/]+)$`);
 const EXECUTION_POST_RE = new RegExp(`^${PREFIX}/([^/]+)/executions$`);
 const EXECUTION_ITEM_RE = new RegExp(`^${PREFIX}/([^/]+)/executions/([^/]+)$`);
 const EXECUTION_CANCEL_RE = new RegExp(`^${PREFIX}/([^/]+)/executions/([^/]+)/cancel$`);
@@ -82,7 +87,39 @@ export function createAppsRoutes(deps: {
         });
       };
 
-      // 0. POST /omnimux-apps/api/apps/manifest (保存应用清单至用户磁盘目录，实现物理隔离)
+      // 0. GET /omnimux-apps/api/apps (官方内置应用清单；只读，不含用户已发布记录)
+      if (pathname === LIST_PATH && method === 'GET') {
+        const apps = loadBuiltinApps();
+        sendJson(200, { apps });
+        return true;
+      }
+
+      // 0b. GET /omnimux-apps/api/apps/:appId（单个 manifest：用户已发布优先，内置兜底）
+      const manifestMatch = ITEM_PATH_RE.exec(pathname);
+      if (manifestMatch && method === 'GET') {
+        const appId = decodeURIComponent(manifestMatch[1] || '');
+        if (!appId) {
+          sendJson(400, { error: 'invalid_app_id', message: 'appId is required' });
+          return true;
+        }
+        let manifest: any = null;
+        try {
+          manifest = await service.getManifest(appId);
+        } catch {
+          manifest = null;
+        }
+        if (!manifest) {
+          manifest = loadBuiltinApps().find((a) => a?.appId === appId) || null;
+        }
+        if (!manifest) {
+          sendJson(404, { error: 'app_not_found', message: `应用 ${appId} 未找到` });
+          return true;
+        }
+        sendJson(200, { app: manifest });
+        return true;
+      }
+
+      // 1. POST /omnimux-apps/api/apps/manifest (保存应用清单至用户磁盘目录，实现物理隔离)
       if (pathname === `${PREFIX}/manifest` && method === 'POST') {
         const body = await readBody();
         if (!body || typeof body !== 'object' || !body.appId) {

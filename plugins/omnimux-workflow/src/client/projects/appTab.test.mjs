@@ -100,4 +100,16 @@ describe('AppTab and AI App Workflow integration', () => {
 
     bindBetterSidebar(null)
   })
+
+  it('AppTab.jsx: 本地缓存缺失时按 appId 走只读接口解析内置应用 manifest（Issue #3876）', () => {
+    const src = readFileSync(join(here, 'AppTab.jsx'), 'utf8')
+    assert.match(src, /import \{ fetchAppManifest \} from '\.\/builtinApps\.js'/, '必须消费内置应用只读缝')
+    // 缓存命中路径不得回归：仍先读本地缓存
+    assert.match(src, /const cached = readCachedManifest\(appId\)[\s\S]*?if \(cached\)/)
+    // 缓存缺失时才走接口，且接口返回必须校验 appId 一致（不张冠李戴）
+    assert.match(src, /void fetchAppManifest\(appId\)\.then/)
+    assert.match(src, /prev\.appId === remote\.appId/, '接口回填必须核对 appId')
+    // 打开事件通道同样要能解析内置应用
+    assert.match(src, /const next = detail\?\.manifest \|\| readCachedManifest\(nextId\)[\s\S]*?fetchAppManifest\(nextId\)/)
+  })
 })

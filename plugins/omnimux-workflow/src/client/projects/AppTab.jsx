@@ -24,6 +24,7 @@ import {
   restoreBuiltinAppDefault,
   toPublishedAppEntry,
 } from './appLibrary.js'
+import { fetchAppManifest } from './builtinApps.js'
 import { fetchSessionProjectBinding, listProjects } from '../api.js'
 import { activateProjectCanvas, getBetterSidebar } from './projectCanvas.js'
 import { ForkAppProjectDialog } from './ForkAppProjectDialog.jsx'
@@ -434,7 +435,13 @@ function IconLink2({ size = 16, className = '' }) {
 }
 
 /**
- * Reads manifest from localStorage cache by appId or gets the newest manifest.
+ * Reads manifest from localStorage cache by appId, or the newest manifest when
+ * no appId is known (legacy tabs that only carry a title).
+ *
+ * 指定了 appId 却查不到时**必须**返回 null：官方内置应用从不写这份缓存，
+ * 若继续回落「最新一条」就会把用户最近发布的应用表单渲染到内置应用标签页上，
+ * 张冠李戴。调用方拿到 null 后再走只读接口按 appId 解析。
+ *
  * @param {string} [appId]
  * @returns {object|null}
  */
@@ -444,7 +451,8 @@ export function readCachedManifest(appId) {
     const raw = window.localStorage?.getItem('omnimux_apps_manifests')
     if (!raw) return null
     const map = JSON.parse(raw)
-    if (appId && map[appId]) return map[appId]
+    const wanted = typeof appId === 'string' ? appId.trim() : ''
+    if (wanted) return map[wanted] || null
     const values = Object.values(map)
     if (values.length > 0) {
       return values.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))[0]
@@ -531,7 +539,15 @@ export function AppTab(props) {
       if (tabBoundAppId && tabBoundAppId !== nextId) return
       setAppId(nextId)
       const next = detail?.manifest || readCachedManifest(nextId)
-      if (next) setManifest(next)
+      if (next) {
+        setManifest(next)
+        return
+      }
+      // 内置应用没有本地缓存，事件里也可能只带 appId（中枢 openApp 通道）：走只读接口解析。
+      void fetchAppManifest(nextId).then((remote) => {
+        if (!remote) return
+        setManifest((prev) => (prev && prev.appId === remote.appId ? prev : remote))
+      })
     }
     window.addEventListener('omnimux-app-open', onAppOpen)
     return () => {
@@ -540,6 +556,8 @@ export function AppTab(props) {
   }, [tabBoundAppId])
 
   // 应用身份变化（或显式 manifest 后到）时同步面板内容。
+  // 官方内置应用从不写 localStorage：本地缓存查不到时按 appId 走只读 HTTP 缝解析，
+  // 否则内置应用的标签页会永远停在「暂无已加载的 AI 应用」。接口失败保持既有空态。
   useEffect(() => {
     if (explicitManifest) {
       setManifest((prev) => {
@@ -554,12 +572,24 @@ export function AppTab(props) {
     }
     if (!appId) return
     const cached = readCachedManifest(appId)
-    if (!cached) return
-    setManifest((prev) => (
-      prev && prev.appId === cached.appId && prev.version === cached.version && prev.updatedAt === cached.updatedAt
-        ? prev
-        : cached
-    ))
+    if (cached) {
+      setManifest((prev) => (
+        prev && prev.appId === cached.appId && prev.version === cached.version && prev.updatedAt === cached.updatedAt
+          ? prev
+          : cached
+      ))
+      return
+    }
+    let cancelled = false
+    void fetchAppManifest(appId).then((remote) => {
+      if (cancelled || !remote) return
+      setManifest((prev) => (
+        prev && prev.appId === remote.appId && prev.version === remote.version
+          ? prev
+          : remote
+      ))
+    })
+    return () => { cancelled = true }
   }, [explicitManifest, appId])
 
   // 把 chip 标题改成应用名：宿主记录表首次铸造时不通知订阅者，不主动改名的话
