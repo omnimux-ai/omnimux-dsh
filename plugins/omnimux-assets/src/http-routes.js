@@ -818,7 +818,16 @@ export function registerAssetsRoutes(webServer, dispatcher) {
         if (result.redirect) {
           // Remote cloud media lives on a public CDN; send the browser there
           // rather than proxying the bytes through the Host.
-          res.writeHead(result.status ?? 302, { Location: result.redirect, 'Cache-Control': 'no-store' })
+          //
+          // The redirect is worth caching: a catalog row's CDN URL is stable for
+          // the life of that row, and `no-store` made every revisit re-ask the
+          // Host before it could even start the image request. An hour keeps a
+          // catalog rebuild's effect near-immediate while taking the Host out of
+          // the path for the rest of a browsing session (#3875).
+          res.writeHead(result.status ?? 302, {
+            Location: result.redirect,
+            'Cache-Control': 'private, max-age=3600',
+          })
           res.end()
           return
         }

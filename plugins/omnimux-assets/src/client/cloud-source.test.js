@@ -4,6 +4,7 @@ import {
   DEFAULT_CLOUD_ASSETS_BASE_URL,
   LOCAL_CLOUD_BASE_URL,
   LOCAL_CLOUD_ROUTE,
+  REMOTE_CLOUD_ASSETS_BASE_URL,
   cloudManifestUrl,
   cloudPageUrl,
   configuredCloudBaseUrl,
@@ -75,9 +76,20 @@ describe('cloudManifestUrl / cloudPageUrl', () => {
 })
 
 describe('configuredCloudBaseUrl', () => {
-  it('defaults to the production gateway when nothing is configured', () => {
-    assert.equal(DEFAULT_CLOUD_ASSETS_BASE_URL, 'https://omnimux.ai/cloud-assets-catalog')
+  it('defaults to the catalog shipped with this install, not a gateway', () => {
+    // The gateway answered 404 on every session start; reading the shipped copy
+    // is the product baseline and must not need a network round trip first.
+    assert.equal(DEFAULT_CLOUD_ASSETS_BASE_URL, LOCAL_CLOUD_BASE_URL)
     assert.equal(configuredCloudBaseUrl({}), DEFAULT_CLOUD_ASSETS_BASE_URL)
+    assert.equal(cloudManifestUrl(configuredCloudBaseUrl({})), `${LOCAL_CLOUD_ROUTE}/manifest.json`)
+  })
+
+  it('keeps the gateway as an explicit destination a deployment can opt into', () => {
+    assert.equal(REMOTE_CLOUD_ASSETS_BASE_URL, 'https://omnimux.ai/cloud-assets-catalog')
+    assert.equal(
+      configuredCloudBaseUrl({ __OMNIMUX_CLOUD_ASSETS_BASE_URL__: REMOTE_CLOUD_ASSETS_BASE_URL }),
+      REMOTE_CLOUD_ASSETS_BASE_URL,
+    )
   })
 
   it('lets the runtime global override the build default', () => {

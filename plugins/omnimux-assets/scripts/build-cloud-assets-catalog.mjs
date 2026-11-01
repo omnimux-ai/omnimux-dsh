@@ -612,6 +612,35 @@ function cdnUrl(key) {
   return value === '' ? '' : `${CDN_BASE}/${value}`
 }
 
+/**
+ * `thumb_url` is a *derived* locator, not a source one: it is filled in after
+ * every collector has run, from the manifest the image build produced (see
+ * `build-cover-thumbnails.mjs`). Keeping it out of `makeAsset` means a collector
+ * can never invent one, and a catalog built without a manifest simply carries no
+ * thumbnails — which the client reads as "use the original cover".
+ *
+ * A manifest row is trusted only when the catalog actually holds that id and the
+ * key is a relative bucket path: the CDN base is this module's single exit, so a
+ * manifest can never redirect a card to some other host.
+ * @param {CatalogAsset[]} rows
+ * @param {{ rows?: { id: string, key: string }[] } | null} manifest
+ * @returns {Map<string, string>} row id -> CDN thumbnail URL
+ */
+export function thumbnailUrlsOf(rows, manifest) {
+  const byId = new Map()
+  const listed = Array.isArray(manifest?.rows) ? manifest.rows : []
+  if (listed.length === 0) return byId
+  const known = new Set((Array.isArray(rows) ? rows : []).map((row) => row?.id))
+  for (const entry of listed) {
+    const id = text(entry?.id)
+    const key = text(entry?.key)
+    if (id === '' || key === '' || !known.has(id)) continue
+    if (key.includes('..') || key.startsWith('/') || /^[a-z]+:\/\//i.test(key)) continue
+    byId.set(id, cdnUrl(key))
+  }
+  return byId
+}
+
 /** 本地绝对路径 → 文件名。 @param {string} abs */
 function fileNameOf(abs) {
   const value = String(abs ?? '')
@@ -657,6 +686,8 @@ function makeAsset(ctx, spec) {
     name: clamp(spec.name, 80) || '未命名',
     description: clamp(spec.description, MAX_DESCRIPTION),
     cover_url: remoteCover,
+    // Filled in later from the thumbnail manifest; a collector never sets it.
+    thumb_url: '',
     media_url: remoteMedia,
     media_type: bucketOf(extOf(localMedia || remoteMedia)),
     tags: uniqTags(spec.tags ?? []),
@@ -2501,6 +2532,9 @@ function indexEntryOf(row) {
     cover_url: row.cover_url,
     tags: row.tags,
   }
+  // Emitted only when a thumbnail exists: an always-present empty string would
+  // change every page file in the catalog for rows that will never have one.
+  if (typeof row.thumb_url === 'string' && row.thumb_url !== '') entry.thumb_url = row.thumb_url
   if (Object.keys(meta).length > 0) entry.meta = meta
   return entry
 }
@@ -2789,6 +2823,14 @@ async function main() {
   const generatedAt = typeof args['generated-at'] === 'string' ? args['generated-at'] : new Date().toISOString()
   const dryRun = args['dry-run'] === true
 
+  /**
+   * Optional: the manifest `build-cover-thumbnails.mjs` produced. Absent means
+   * this catalog carries no thumbnails at all, which is a legal build — the
+   * client then falls back to each row's original cover.
+   */
+  const thumbManifestPath = typeof args['thumb-manifest'] === 'string' && args['thumb-manifest'] !== ''
+    ? resolve(args['thumb-manifest'])
+    : ''
   if (voicesOnly) {
     // 明示输入：离线音色切片刷新必须声明它消费哪份快照；包内默认路径只服务
     // 全量构建，避免一条不带来源的 refresh 悄悄吃错文件。
@@ -2891,6 +2933,20 @@ async function main() {
   log(`[cloud-catalog] voice snap  : ${voiceSnapshot.voices.length} voice(s) · fp ${voiceSnapshot.preview_fingerprint || '(none)'}`)
   log(`[cloud-catalog] output      : ${outDir}${dryRun ? ' (dry run)' : ''}`)
 
+  // Thumbnails are attached only after every collector has run, and only from an
+  // explicitly supplied manifest: a build without one produces a catalog with no
+  // `thumb_url` at all, which the client reads as "use the original cover". A
+  // manifest that cannot be read is a hard error — silently continuing would
+  // ship a catalog whose cards fall back to multi-megabyte originals while the
+  // operator believes the thumbnails went out.
+  const thumbManifest = thumbManifestPath === '' ? null : readJsonSafe(thumbManifestPath)
+  if (thumbManifestPath !== '' && thumbManifest === null) {
+    throw new Error(`--thumb-manifest is unreadable: ${thumbManifestPath}`)
+  }
+  if (thumbManifest !== null) {
+    log(`[cloud-catalog] thumbs      : ${Array.isArray(thumbManifest.rows) ? thumbManifest.rows.length : 0} row(s) from ${thumbManifestPath}`)
+  }
+
   const ctx = { assetsRoot, voices: voiceSnapshot.voices }
   /** @type {CatalogAsset[]} */
   const all = []
@@ -2977,6 +3033,21 @@ async function main() {
     categories: categoryMeta,
   }
 
+  // Thumbnails are attached here, once, after every collector has run: the
+  // manifest is the only source of `thumb_url`, so no collector can invent one
+  // and a catalog built without a manifest carries none at all.
+  if (thumbManifest !== null) {
+    const thumbUrls = thumbnailUrlsOf(all, thumbManifest)
+    let attached = 0
+    for (const row of all) {
+      const url = thumbUrls.get(row.id)
+      if (url === undefined) continue
+      row.thumb_url = url
+      attached += 1
+    }
+    log(`[cloud-catalog] thumbs      : attached ${attached}/${thumbUrls.size} row(s)`)
+  }
+
   // Server lookup table, keyed by id: the Host resolves media and save-to-local
   // from this without reading a page file. `description` is included because
   // catalog search matches on it; `meta` carries only the portable remote
@@ -3054,7 +3125,11 @@ async function main() {
   log(`[cloud-catalog] done in ${outDir}`)
 }
 
-main().catch((error) => {
-  process.stderr.write(`[cloud-catalog] FAILED: ${error instanceof Error ? error.message : String(error)}\n`)
-  process.exitCode = 1
-})
+// Only run when invoked as a script. Importing this module (the contract tests do,
+// to reach `thumbnailUrlsOf` and `shelfListOf`) must not start a build or exit.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    process.stderr.write(`[cloud-catalog] FAILED: ${error instanceof Error ? error.message : String(error)}\n`)
+    process.exitCode = 1
+  })
+}

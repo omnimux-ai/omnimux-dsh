@@ -322,7 +322,11 @@ describe('Cloud video tile keeps its own frame and plays on hover', () => {
   })
 
   it('falls back to the type icon only when nothing is left to draw', () => {
-    assert.match(viewJsx, /if \(asset\.mediaType !== 'image' && hasClip\) setCoverFailed\(true\)\n    else onBroken\(\)/)
+    // 取图是一条阶梯（缩略图 → 原图 → Host 路由，见 #3875）：失败先逐级降档，
+    // 只有走到尽头才交给片段或类型图标兜底。
+    assert.match(viewJsx, /if \(srcStep < coverLadder\.length - 1\)/)
+    assert.match(viewJsx, /setSrcStep\(srcStep \+ 1\)/)
+    assert.match(viewJsx, /if \(asset\.mediaType !== 'image' && hasClip\) setSrcStep\(coverLadder\.length\)\n    else onBroken\(\)/)
     assert.match(viewJsx, /if \(bareClip\) onBroken\(\)/)
   })
 })

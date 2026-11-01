@@ -112,7 +112,13 @@ async function loadParts() {
   }
   const view = await build('CloudAssetsView.jsx')
   const feed = await build('use-cloud-assets-feed.js')
-  return { CloudAssetCard: view.CloudAssetCard, useCloudAudition: feed.useCloudAudition }
+  // 悬停起播的停留门槛由视图导出，测试据此等待，而不是猜一个魔法数（#3875）。
+  assert.equal(typeof view.HOVER_AUDITION_DELAY_MS, 'number', 'view must export its hover delay')
+  return {
+    CloudAssetCard: view.CloudAssetCard,
+    useCloudAudition: feed.useCloudAudition,
+    HOVER_AUDITION_DELAY_MS: view.HOVER_AUDITION_DELAY_MS,
+  }
 }
 
 /** 官方音色 preview DTO 行（锁定 schema 的最小形态）。 */
@@ -138,7 +144,8 @@ test('CloudAssetCard + useCloudAudition：悬停自动播放被拒后同一悬�
   const instances = installDenyingAudioStub()
   const React = pluginRequire('react')
   const { createRoot } = pluginRequire('react-dom/client')
-  const { CloudAssetCard, useCloudAudition } = await loadParts()
+  const { CloudAssetCard, useCloudAudition, HOVER_AUDITION_DELAY_MS } = await loadParts()
+  assert.equal(typeof HOVER_AUDITION_DELAY_MS, 'number', '视图必须导出悬停停留门槛')
   const { act } = React
 
   let audition = null
@@ -161,6 +168,16 @@ test('CloudAssetCard + useCloudAudition：悬停自动播放被拒后同一悬�
     node.dispatchEvent(new window.MouseEvent(type, { bubbles: true, cancelable: true }))
   })
   const flush = async () => { await act(async () => { await Promise.resolve() }) }
+  /**
+   * 等过悬停起播的停留门槛（#3875）：指针进入后要停留 HOVER_AUDITION_DELAY_MS
+   * 才自动试听，立即 flush 读到的是「还没到点」，不是「不会发生」。
+   */
+  const settleHover = async () => {
+    await act(async () => {
+      await new Promise((resolve) => { setTimeout(resolve, HOVER_AUDITION_DELAY_MS + 30) })
+    })
+    await flush()
+  }
 
   await render()
   const card = container.querySelector('.omnimux-assets-cloud-card')
@@ -170,7 +187,7 @@ test('CloudAssetCard + useCloudAudition：悬停自动播放被拒后同一悬�
 
   // 1) 指针进入 → hover 副作用自动试听 → play() 被 NotAllowedError 拒绝。
   await fire(card, 'mouseover')
-  await flush()
+  await settleHover()
   assert.equal(instances.length, 1, '悬停发起一次自动试听')
   assert.equal(instances[0].playCalls[0], 'https://cdn.example.com/primary.mp3')
   assert.equal(instances[0].src, '',

@@ -518,8 +518,9 @@ test('F4：悬停自动试听后点击/键盘打开详情，stop 生效不自动
   const body = container.querySelector('.omnimux-assets-card-body')
   assert.ok(card && body, 'card 与 title body 已渲染')
 
-  // 1) 指针进入 → hover 自动试听开始。
+  // 1) 指针进入 → 停留门槛后 hover 自动试听开始（#3875）。
   await fire(card, 'mouseover')
+  await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 260) }) })
   await flush()
   assert.equal(instances.length, 1, '悬停自动发起一次试听')
   assert.equal(audition.playingId, 'audio-voiceover-linxiao')
@@ -539,9 +540,10 @@ test('F4：悬停自动试听后点击/键盘打开详情，stop 生效不自动
     '详情打开后同一悬停不得自动重启试听（键盘入口）')
   assert.equal(toggleCalls.length, 1, 'hover 副作用在详情存续期不再补发 toggle')
 
-  // 3) 关闭详情、指针移出再移入：新一次悬停恢复正常自动试听。
+  // 3) 关闭详情、指针移出再移入：新一次悬停经停留门槛后恢复正常自动试听。
   await fire(card, 'mouseout')
   await fire(card, 'mouseover')
+  await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 260) }) })
   await flush()
   assert.equal(instances.length, 2, '新悬停恢复自动试听')
   assert.equal(audition.playingId, 'audio-voiceover-linxiao')

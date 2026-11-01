@@ -99,9 +99,15 @@ test('E2E: 卡片封面提前解码，滚动来回不闪白', async () => {
   // 预取有上限，且同一张图不重复预取。
   assert.match(mediaJs, /const requested = new LruCache\(400\)/)
   assert.match(mediaJs, /if \(url === '' \|\| requested\.has\(url\)\) continue/)
-  // 视图在拿到新一批资产时真的触发预取。
-  assert.match(viewJsx, /import \{ preloadMedia \} from '\.\/media-cache\.js'/)
-  assert.match(viewJsx, /preloadMedia\(covers\)/)
+  // Issue #3875：视图不再对尾部整批封面做无条件预取——那与 loading="lazy" 的
+  // 视口策略互相抵消，首屏还没画完就把末尾十几张几兆大图挤进网络管道。
+  // 预取工具本身仍保留（有上限、可去重），供其它调用方安全使用。
+  assert.equal(
+    /import \{ preloadMedia \} from '\.\/media-cache\.js'/.test(viewJsx),
+    false,
+    '视图不得再引入预取工具',
+  )
+  assert.equal(/preloadMedia\(covers\)/.test(viewJsx), false, '视图不得再整批预取封面')
   // Node 环境下预取是无副作用的空操作，单测可安全调用。
   const { preloadMedia } = await import('../../plugins/omnimux-assets/src/client/media-cache.js')
   assert.doesNotThrow(() => preloadMedia(['/x.png']))
