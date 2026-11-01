@@ -268,6 +268,13 @@
         backgroundMode: one-shot
         maxDepth: provider-managed
 
+    # rc.3 keeps the workflow engine per preset: this group isolates
+    # `workflowEngine`, so the provider has to be mounted here too.
+    - id: workflow-ptc
+      name: '@deepseek-ai/dsh-workflow-ptc'
+      config:
+        provider: spawn
+
     - id: tool-workflow
       name: '@deepseek-ai/dsh-tool-workflow'
 
