@@ -27,6 +27,10 @@
     ],
     "storageDomains": ["$DSH_HOME/omnimux/"]
   },
+  "skills": [
+    "skills/cordis-plugin-development/SKILL.md",
+    "skills/editing-cordis-compositions/SKILL.md"
+  ],
   "dependencies": {
     "requiredPlugins": [],
     "systemBinaries": []

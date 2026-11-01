@@ -140,8 +140,9 @@ test('omni-agent agent.cordis.yml is structurally valid and mounts all 10 expert
   ok(!text.includes("name: '@deepseek-ai/dsh-tool-s    #"), 'mangled fork line')
   ok(text.includes(FORK_END), 'complete tool-subagent-fork block')
   deepEqual(toolNames(text), ALL)
-  ok(existsSync(join(root, 'presets/omni-agent/skills/tiktok-growth/SKILL.md')))
-  ok(existsSync(join(root, 'presets/omni-agent/skills/sopilot-social-agents/SKILL.md')))
+  // Skills ship from the plugin that owns them; rc.3 only installs `preset/skills`.
+  ok(existsSync(join(root, 'plugins/omnimux-market/skills/tiktok-growth/SKILL.md')))
+  ok(existsSync(join(root, 'plugins/omnimux-market/skills/sopilot-social-agents/SKILL.md')))
   const rows = parseWithPython(rel)
   ok(rows >= 8, `omni-agent parsed ${rows} top-level rows`)
 })
@@ -227,8 +228,8 @@ test('cordis preset exists and includes native cordis capabilities and skills', 
   ok(existsSync(join(root, rel)), rel)
   const rows = parseWithPython(rel)
   ok(rows >= 8, `cordis parsed ${rows} top-level rows`)
-  ok(existsSync(join(root, 'presets/cordis/skills/cordis-plugin-development/SKILL.md')))
-  ok(existsSync(join(root, 'presets/cordis/skills/editing-cordis-compositions/SKILL.md')))
+  ok(existsSync(join(root, 'plugins/omnimux/skills/cordis-plugin-development/SKILL.md')))
+  ok(existsSync(join(root, 'plugins/omnimux/skills/editing-cordis-compositions/SKILL.md')))
 })
 
 test('preset.yml metadata matches requirements for shipped presets', () => {
