@@ -57,9 +57,12 @@ const isFile = (path) => {
  * 读不到就返回 false，让上层响亮报 `RUNTIME_MISSING`，而不是给一个「可用但下游全空」的布局。
  */
 function probeArchive(io, archive) {
-  const readdir = io.readdirSync ?? readdirSync;
+  // 与 statSync 一致：探测能力缺失是调用方错误，不能悄悄换成真实 fs 去读。
+  if (typeof io.readdirSync !== 'function') {
+    throw new TypeError('resolveHostRuntimeLayout: io.readdirSync is required to probe an asar layout');
+  }
   try {
-    return readdir(join(archive, 'preset', 'agent-presets')).length > 0;
+    return io.readdirSync(join(archive, 'preset', 'agent-presets')).length > 0;
   } catch {
     return false;
   }
@@ -75,7 +78,7 @@ export function resolveHostRuntimeLayout(options = {}) {
   const resources = join(bundle, 'Contents/Resources');
   const candidates = WRAPPER_CANDIDATES.map((relative) => join(bundle, relative));
   // 调用方可以注入 fs（测试用 stub）：验收脚本本身走真实 fs，测试不依赖本机装没装 App。
-  const io = options.io ?? { statSync };
+  const io = options.io ?? { statSync, readdirSync };
   const probe = (path) => {
     // 探测能力缺失是调用方错误，不是「布局可用」的证据：显式报错，别静默当成存在。
     if (typeof io.statSync !== 'function') {
@@ -240,19 +243,42 @@ export function pruneRejectedFields(plugins) {
 export function pruneUnresolvable(plugins, resolvable) {
   const dropped = [];
   const kept = [];
-  for (const row of Array.isArray(plugins) ? plugins : []) {
-    const name = row && typeof row === 'object' ? row.name : undefined;
-    // 壳只对 `@` 作用域包名做解析判定：`cordis:` 是 Loader 内建别名，本地裸名
-    // （例如插件自定义别名）也不该被当成「解析不到的 npm 包」丢掉。
+  for (const row of pruneRows(Array.isArray(plugins) ? plugins : [], resolvable, dropped)) kept.push(row);
+  return { plugins: kept, dropped };
+}
+
+/** 递归遍历行数组：`cordis:group` 的 config 里还挂着同构行，壳也是递归处理的。 */
+function pruneRows(rows, resolvable, dropped) {
+  return rows.map((row) => {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+    const name = row.name;
     const needsResolution = typeof name === 'string' && name.startsWith('@');
     if (needsResolution && typeof resolvable === 'function' && !resolvable(name)) {
       dropped.push(name);
-      continue;
+      return PRUNE_DROP;
     }
-    kept.push(row);
-  }
-  return { plugins: kept, dropped };
+    const config = row.config;
+    if (Array.isArray(config)) {
+      const pruned = pruneRows(config, resolvable, dropped);
+      if (pruned !== config) return { ...row, config: pruned };
+    } else if (config && typeof config === 'object') {
+      let changed = false;
+      const nested = { ...config };
+      for (const [key, value] of Object.entries(config)) {
+        if (!Array.isArray(value)) continue;
+        const pruned = pruneRows(value, resolvable, dropped);
+        if (pruned !== value) { nested[key] = pruned; changed = true; }
+      }
+      if (changed) return { ...row, config: nested };
+    }
+    return row;
+  }).filter((row) => row !== PRUNE_DROP);
 }
+
+/** 哨兵：被丢弃的行（filter 阶段剔除）。 */
+const PRUNE_DROP = Symbol('prune-drop');
+
+
 
 /** 上游 bundle 已经声明过的 preset id：重复声明会让 Loader 直接拒绝启动。 */
 export function upstreamPresetIds(appRoot, options = {}) {

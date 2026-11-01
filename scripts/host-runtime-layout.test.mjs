@@ -272,3 +272,23 @@ test('单个 preset 解析失败进入诊断字段，不静默消失', (t) => {
   assert.deepEqual(composition.unreadablePresetIds, ['broken'])
   assert.match(composition.unreadablePresetReasons[0], /broken/)
 })
+
+test('pruneUnresolvable 递归进 cordis:group 的 config 数组（与壳一致）', () => {
+  const rows = [{
+    id: 'delegation', name: 'cordis:group',
+    config: [
+      { name: '@deepseek-ai/dsh-missing' },
+      { name: 'omnimux' },
+      { id: 'nested', name: 'cordis:group', config: [{ name: '@other-harness/absent' }] },
+    ],
+  }]
+  const { plugins, dropped } = pruneUnresolvable(rows, () => false)
+  assert.deepEqual(dropped.sort(), ['@deepseek-ai/dsh-missing', '@other-harness/absent'])
+  assert.deepEqual(plugins[0].config.map((row) => row.name), ['omnimux', 'cordis:group'])
+  assert.deepEqual(plugins[0].config[1].config, [])
+})
+
+test('probeArchive 在 io 缺 readdirSync 时显式报错，不悄悄读真实 fs', () => {
+  assert.throws(() => resolveHostRuntimeLayout({ io: { statSync: () => ({ isFile: () => false }) } }),
+    { name: 'TypeError', message: /io\.readdirSync is required/ })
+})

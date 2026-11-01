@@ -632,10 +632,9 @@ async function runTaskPreparation({ options, io, deps }) {
  * @returns {string} 追加到 cordis.patch.yml 的 YAML 片段（无预设可声明时为空串）
  */
 function agentPresetPatchText(layout) {
-  // 旧 App（app.asar 布局）里预设清单在归档内部，普通 Node 读不到；
-  // 那种布局下「读不到」是预期事实，显式跳过而不是静默写空。
-  if (layout.layout === 'app.asar') return '';
-  // 新布局下预设清单是真实目录：读不到就是环境坏了，必须响亮失败，
+  // 布局判据已保证「能列出 preset/agent-presets」；这里再按实际可读性判定，
+  // 不按布局名一刀切——归档可读时同样要声明，读不到才响亮失败。
+  // 读不到就是环境坏了，必须响亮失败，
   // 否则隔离 profile 拿不到任何声明，宿主照常启动、只在建会话时才报
   // agent-preset/not-found（评审指出的静默降级）。
   if (!hasShippedPresetRoot(layout.appRoot)) {
@@ -1034,6 +1033,9 @@ export function createTestEnvironmentStarter(deps = {}) {
       let evidenceLevel = 'core-only';
       let taskPluginsCount = 0;
       let seededDataDomains = [];
+      // preset 声明的合成/校验在 catch 之外求值：它失败必须冒泡，
+      // 不能被下面的「Dev profile 挂载失败可降级」catch 吞掉（评审阻断）。
+      let patchPathForPresets = null;
 
       try {
         if (io.existsSync(devProfile) && io.existsSync(join(devProfile, 'package.json')) && io.existsSync(join(devProfile, 'node_modules'))) {
@@ -1120,9 +1122,10 @@ export function createTestEnvironmentStarter(deps = {}) {
               ].join('\n');
               io.writeFileSync(
                 join(omnimuxProfileDir, 'cordis.patch.yml'),
-                base.replace(/\n*$/, '\n') + override + agentPresetPatchText(layout),
+                base.replace(/\n*$/, '\n') + override,
                 { mode: 0o600 },
               );
+              patchPathForPresets = join(omnimuxProfileDir, 'cordis.patch.yml');
             }
           }
 
@@ -1321,6 +1324,17 @@ export function createTestEnvironmentStarter(deps = {}) {
           } catch {}
         }
       } catch {}
+
+      // preset 声明是「缺了就会让新建会话失败」的硬依赖：在降级 catch 之外求值，
+      // 失败直接冒泡（PRESET_ROOT_MISSING / PRESET_COMPOSE_FAILED / PRESET_ROWS_EMPTY），
+      // 不允许退回「宿主照常启动、建会话才报 agent-preset/not-found」的静默降级。
+      if (patchPathForPresets) {
+        const agentPresetPatch = agentPresetPatchText(layout);
+        if (agentPresetPatch) {
+          const current = io.readFileSync(patchPathForPresets, 'utf8');
+          io.writeFileSync(patchPathForPresets, current.replace(/\n*$/, '\n') + agentPresetPatch, { mode: 0o600 });
+        }
+      }
 
       signals.on('SIGINT', onSignal); signals.on('SIGTERM', onSignal);
       const url = await new Promise((yes, no) => {
