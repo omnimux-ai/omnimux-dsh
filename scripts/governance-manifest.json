@@ -308,6 +308,7 @@
     "simulate-multi-agent-lifecycle.test.mjs",
     "skill-chip-interaction-qa.mjs",
     "studio-live-qa.test.mjs",
+    "sync-kit-artifact-restore.test.mjs",
     "sync-main.sh",
     "sync-refresh-scope.test.mjs",
     "sync-release-policy.test.mjs",
