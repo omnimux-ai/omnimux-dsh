@@ -62,7 +62,14 @@ body[data-ds-dark-theme] {
   margin:0!important;
   box-sizing:border-box!important;
 }
-[data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
+/* 工作区行必须与输入框卡片同宽 680 并居中。这里刻意把 [data-phase] 与
+   [data-omnimux-starter-host] 写成复合条件（同一元素上二者同时存在，由
+   SessionGuide 的 closest('[data-phase]') 设置）：通用 Hero 行规则在
+   composer-compact.js 里用 [data-phase='hero'] [class*="heroWorkspaceRow"]，
+   同权重 !important 下谁后注入谁赢，而两份样式来自不同插件的 <style>，
+   注入顺序不保证（Issue 3868 实测通用规则赢，行宽变成原生 920、左移 120）。
+   多一个属性选择器让本规则在两种注入顺序下都稳定胜出。 */
+[data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
   width:100%!important;
   max-width:min(680px, calc(100% - 24px))!important;
   margin-inline:auto!important;
@@ -113,20 +120,20 @@ html[data-omnimux-split-compact] [data-omnimux-starter-host] [data-composer-card
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [data-composer-card],
 .dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [data-composer-card],
 [class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [data-composer-card],
-html[data-omnimux-split-compact] [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
-html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
+html[data-omnimux-split-compact] [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
   width:100%!important;
   /* 宽度铁律：工作区选择行与输入框同宽 680px（Issue 2830，提交 0b917e92e），
      顶部未吸底态与滚动吸底态严格一致。原 952px 原生 token 封顶已废。 */
   max-width:min(680px, calc(100% - 24px))!important;
   margin-inline:auto!important;
 }
-html[data-omnimux-split-compact] [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
-html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
+html[data-omnimux-split-compact] [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
   padding-left:var(--dsh-composer-side-clearance, 12px)!important;
   padding-right:var(--dsh-composer-side-clearance, 12px)!important;
   box-sizing:border-box!important;
