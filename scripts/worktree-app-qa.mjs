@@ -1105,7 +1105,7 @@ export function validateTaskRuntimeBinding({ root, taskId, runId, taskPlugins, c
   }
   return { installation: { taskId, runId, sourceRoot: root, privateRoot: installation.privateRoot, profile: installation.profile,
     base: installation.base, head: installation.head, candidateDigest: installation.candidateDigest, inputsDigest: installation.inputsDigest,
-    pid: installation.pid, origin, runtimeExecutable: installation.runtimeExecutable, appAnchor: installation.appAnchor,
+    pid: installation.pid, origin, runtimeExecutable: installation.runtimeExecutable, appAnchor: installation.appAnchor, appLayout: installation.appLayout,
     dependencyCount: installation.packages.length - plugins.length,
     peerCount: installation.hostPeerExpectations.length,
     packages: plugins.map(({ name, version, installedRoot, payload, serverEntry, clientBundle }) => ({ name, version, installedRoot,

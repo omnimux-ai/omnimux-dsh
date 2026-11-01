@@ -18,7 +18,7 @@ function shippingAppRoot(appAnchor) {
 }
 
 /** 锚点是否与该可执行文件**实际使用**的安装布局一致（布局取自安装记录，精确比对）。 */
-function shippingAnchorBelongs(appAnchor, runtimeExecutable, appLayout) {
+export function shippingAnchorBelongs(appAnchor, runtimeExecutable, appLayout) {
   if (appLayout !== 'app' && appLayout !== 'app.asar') return false
   const resources = resolve(dirname(runtimeExecutable), '..', 'Resources')
   return appAnchor === join(resources, `${appLayout}/node_modules/@deepseek-ai/dsh/package.json`)

@@ -486,7 +486,7 @@ export async function installTaskRuntime({ root, repository, privateRoot, ownerI
   });
   const before = preparation.candidateBefore;
   const installation = { taskId: evidenceContext.taskId, runId: evidenceContext.runId, sourceRoot: root, privateRoot, profile,
-    ownerIdentity, hostPeerExpectations, supportPeerExemption, runtimeExecutable: executable, runtimeExecutableSha256: hashFile(executable), appAnchor: appAnchorFor(wrapper), appLayout: resolveHostRuntimeLayout().layout,
+    ownerIdentity, hostPeerExpectations, supportPeerExemption, runtimeExecutable: executable, runtimeExecutableSha256: hashFile(executable), appAnchor: appAnchorFor(wrapper), appLayout: wrapper.includes('/app.asar/') ? 'app.asar' : 'app',
     base: before.base.resolvedSha, head: before.head.resolvedSha, candidateDigest: before.candidate.contentDigest, inputsDigest: before.inputs.contentDigest, packages };
   const assertInstalledIntegrity = () => {
     const identity = fs.statSync(privateRoot, { bigint: true });

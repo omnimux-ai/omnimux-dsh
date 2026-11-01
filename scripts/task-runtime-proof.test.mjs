@@ -3,10 +3,11 @@ import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, test } from 'node:test'
 import { assertTaskProofStable, captureTaskClientProof, createTaskPeerProbeSource, validateTaskPeerResolution, verifyTaskServerLoading } from './task-runtime-proof.mjs'
+import { shippingAnchorBelongs } from './task-runtime-proof.mjs'
 
 const roots = []
 afterEach(() => roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })))
@@ -409,4 +410,15 @@ test('same-PID peer proof rejects a real ancestor package outside the declared p
     .map(pkg => `import ${JSON.stringify(pathToFileURL(join(pkg.installedRoot, pkg.serverEntry.path)).href)};`).join('\n'))
   try { await assert.rejects(verifyTaskServerLoading({ ...child, installation }), /outside its declared private graph/) }
   finally { await child.cleanup() }
+})
+
+test('shippingAnchorBelongs 按安装记录布局精确匹配，跨布局一律拒绝', () => {
+  const executable = '/Applications/OmniMux Dev.app/Contents/MacOS/OmniMux'
+  const anchorFor = (layout) => resolve(dirname(executable), `../Resources/${layout}/node_modules/@deepseek-ai/dsh/package.json`)
+  assert.equal(shippingAnchorBelongs(anchorFor('app'), executable, 'app'), true)
+  assert.equal(shippingAnchorBelongs(anchorFor('app.asar'), executable, 'app.asar'), true)
+  assert.equal(shippingAnchorBelongs(anchorFor('app.asar'), executable, 'app'), false)
+  assert.equal(shippingAnchorBelongs(anchorFor('app'), executable, 'app.asar'), false)
+  assert.equal(shippingAnchorBelongs(anchorFor('app'), executable, undefined), false)
+  assert.equal(shippingAnchorBelongs(anchorFor('app'), executable, 'asar'), false)
 })

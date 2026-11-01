@@ -140,6 +140,21 @@ test('ordinary dependency instances may share a name without merging their actua
   assert.equal(validateTaskRuntimeBinding(value).installation.dependencyCount, 2);
 });
 
+test('锚点布局与安装记录不一致时拒绝（app 布局报 app.asar 锚点）', () => {
+  const value = bindingFixture();
+  const mismatched = value.installation.appLayout === 'app' ? 'app.asar' : 'app';
+  value.installation.appAnchor = resolve(dirname(value.installation.runtimeExecutable), `../Resources/${mismatched}/node_modules/@deepseek-ai/dsh/package.json`);
+  assert.throws(() => validateTaskRuntimeBinding(value), { code: 'TEST_APP_QA_TASK_BINDING' });
+});
+
+test('安装记录缺 appLayout 或值非法时拒绝', () => {
+  for (const layout of [undefined, null, 'asar', 'App']) {
+    const value = bindingFixture();
+    value.installation.appLayout = layout;
+    assert.throws(() => validateTaskRuntimeBinding(value), { code: 'TEST_APP_QA_TASK_BINDING' });
+  }
+});
+
 test('consumer requires actual peer receipts that bind declared dependency versions and installed bytes', () => {
   const value = bindingFixture();
   const installedRoot = join(value.installation.privateRoot, 'packages/helper');
