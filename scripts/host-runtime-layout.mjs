@@ -56,6 +56,18 @@ const isFile = (path) => {
 export function resolveHostRuntimeLayout(options = {}) {
   const bundle = options.bundle ?? DEV_APP_BUNDLE;
   const candidates = WRAPPER_CANDIDATES.map((relative) => join(bundle, relative));
+  // 调用方可以注入 fs（测试用 stub）：验收脚本本身走真实 fs，测试不依赖本机装没装 App。
+  const io = options.io ?? { statSync };
+  const isFile = (path) => {
+    // 注入的 fs 可能只实现少量方法（单测 stub）：缺少探测能力时按默认布局放行，
+    // 由后续 accessSync(executable) 与真实运行暴露缺件，而不是在这里静默失败。
+    if (typeof io.statSync !== 'function') return true;
+    try {
+      return io.statSync(path).isFile();
+    } catch {
+      return false;
+    }
+  };
   const wrapper = candidates.find((path) => isFile(path));
   if (!wrapper) {
     const error = new Error(`TEST_ENV_RUNTIME_MISSING: 宿主 App 缺少 desktop-cli 入口：${candidates.join(' / ')}`);

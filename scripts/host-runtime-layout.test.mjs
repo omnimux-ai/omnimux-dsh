@@ -133,3 +133,10 @@ test('pruneUnresolvable 不把无 name 的行当作需要解析的包', () => {
   assert.deepEqual(dropped, [])
   assert.equal(plugins.length, 2)
 })
+
+test('注入的 fs 缺 statSync 时退回默认布局，不因本机没装 App 报错', () => {
+  const stub = { accessSync() {}, existsSync: () => false, readdirSync: () => [] }
+  const resolved = resolveHostRuntimeLayout({ io: stub })
+  assert.equal(resolved.layout, 'app')
+  assert.match(resolved.wrapper, /Resources\/app\/lib\/desktop-cli\.js$/)
+})

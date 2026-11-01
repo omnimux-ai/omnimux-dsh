@@ -19,9 +19,16 @@ import { resolveHostRuntimeLayout, appAnchorFor, composeAgentPresetRows, stringi
  * 宿主布局按实际安装探测（asar:false 的 `Resources/app` 优先，旧 `app.asar` 回退）。
  * Issue #3871：写死 `app.asar` 会让新型 Dev App 上的隔离验收完全不可用。
  */
-const hostLayout = () => resolveHostRuntimeLayout();
-const hostExecutable = () => hostLayout().executable;
-const hostWrapper = () => hostLayout().wrapper;
+/**
+ * 宿主布局探测。
+ *
+ * 注入的 fs 若不是真实 fs（单测 stub 只实现少量方法），退回默认布局：
+ * 这些测试只关心启动参数与环境隔离，不关心本机装的是哪种打包布局。
+ */
+const hostLayout = (io) => {
+  if (io === undefined || io === fs || typeof io.statSync !== 'function') return resolveHostRuntimeLayout();
+  return resolveHostRuntimeLayout({ io });
+};
 const OFFICIAL_ENDPOINT = 'https://api.deepseek.com';
 const SYNTHETIC_KEY = 'QA-SYNTHETIC-NOT-A-REAL-KEY';
 /**
@@ -648,7 +655,7 @@ async function startFreshTaskRuntime({ options, io, deps }) {
   validateFreshRequest(options);
   if (io !== fs) throw failure('FRESH_FILESYSTEM_REQUIRED');
   let layout;
-  try { layout = hostLayout(); } catch (error) { throw failure('RUNTIME_MISSING', error.hint); }
+  try { layout = hostLayout(io); } catch (error) { throw failure('RUNTIME_MISSING', error.hint); }
   try { io.accessSync(layout.executable, fs.constants.X_OK); } catch { throw failure('RUNTIME_MISSING'); }
   let preparation, runtimeRoot, runtimeOwnerIdentity, mock, child, exited = false, closed = false, cleaning = false, cleanupPromise;
   const observations = { contract: 'task-private-installation', userFresh: 'unknown', taskBinding: 'unknown', runtimeStarted: false, unexpectedExit: false, events: [], rawOutputRetained: false };
@@ -855,7 +862,7 @@ export function createTestEnvironmentStarter(deps = {}) {
     }
     if (options.taskPlugins !== undefined) throw failure('OPTIONS');
     let layout;
-    try { layout = hostLayout(); } catch (error) { throw failure('RUNTIME_MISSING', error.hint); }
+    try { layout = hostLayout(io); } catch (error) { throw failure('RUNTIME_MISSING', error.hint); }
     try { io.accessSync(layout.executable, fs.constants.X_OK); } catch { throw failure('RUNTIME_MISSING'); }
     let privateDir, mock, child, exited = false, closed = false, cleaning = false, cleanupPromise, startupReject;
     const observations = { contract: 'none', userFresh: 'unknown', taskBinding: 'unknown', runtimeStarted: false, unexpectedExit: false, events: [], rawOutputRetained: false };
@@ -1377,7 +1384,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   try {
     if (process.argv.length !== 4 || process.argv[2] !== 'preflight') throw failure('OPTIONS');
     validateRoot(process.argv[3], fs, repositoryRoot);
-    const layout = hostLayout();
+    const layout = hostLayout(fs);
     try { fs.accessSync(layout.executable, fs.constants.X_OK); } catch { throw failure('RUNTIME_MISSING'); }
     process.stdout.write(JSON.stringify({ ready: true, scope: 'core-only', credentialRead: false }) + '\n');
   } catch (error) { process.stderr.write(safeError(error, 'PREFLIGHT').message + '\n'); process.exitCode = 1; }
