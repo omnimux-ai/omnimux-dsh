@@ -44,6 +44,10 @@ subsystem: "omnimux"
 
 ## 工作树测试配置准备
 
+宿主入口按安装布局探测（Issue #3871）：`scripts/host-runtime-layout.mjs` 优先取 `Contents/Resources/app/lib/desktop-cli.js`（`asar: false` 打包），回退 `Contents/Resources/app.asar/lib/desktop-cli.js`；两者都缺时报 `TEST_ENV_RUNTIME_MISSING` 并列出候选路径，不回退到别的 Host。宿主包锚点（`appAnchor`）同样按实际布局推导为 `<Resources>/<app|app.asar>/node_modules/@deepseek-ai/dsh/package.json`，验收与 peer 证明不得写死 `app.asar`。
+
+rc.3 起 agent preset 由壳启动时向 profile 注入 `@deepseek-ai/dsh-agent-preset` 声明行；隔离启动走 `desktop-cli.js` 绕过壳，因此准备器按壳的同一套规则（跳过上游已声明 id、丢弃宿主解析不到的包行但放过 `cordis:` 内建别名、裁掉 rc.3 拒绝的 subagent 字段）在一次性隔离 profile 里自行声明，只写该私有 profile，不触碰共享 Dev profile。
+
 现有 `scripts/test-env-bootstrap.mjs` 的 `startTestEnvironment({ root, mode })` 是兼容准备路径，`root` 必须是本仓 `.worktrees/` 内真实双向登记的直接任务工作树；创建源码工作树本身不读取或复制凭据。调用者负责在 `finally` 中等待 `cleanup()`，只将脱敏 `summary` 写入证据。启动就绪不等于业务验收通过，现有完整装配也不等于新用户安装。
 
 | 模式 | 兼容路径的实际配置来源与行为 | 证据边界 |

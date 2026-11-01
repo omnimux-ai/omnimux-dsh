@@ -11,6 +11,19 @@ const HASH = /^[a-f0-9]{64}$/
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex')
 const inside = (root, path) => path !== root && path.startsWith(root + sep)
 
+/** 从宿主锚点取出 `<Resources>/<app|app.asar>` 根目录（两种打包布局都支持）。 */
+function shippingAppRoot(appAnchor) {
+  const marker = appAnchor.includes('/app.asar/node_modules/') ? '/app.asar/node_modules/' : '/app/node_modules/'
+  return appAnchor.split(marker)[0] + (marker.startsWith('/app.asar') ? '/app.asar' : '/app')
+}
+
+/** 锚点是否属于该可执行文件的实际安装布局。 */
+function shippingAnchorBelongs(appAnchor, runtimeExecutable) {
+  const resources = resolve(dirname(runtimeExecutable), '..', 'Resources')
+  return appAnchor === join(resources, 'app/node_modules/@deepseek-ai/dsh/package.json')
+    || appAnchor === join(resources, 'app.asar/node_modules/@deepseek-ai/dsh/package.json')
+}
+
 function localOrigin(value) {
   const url = new URL(value)
   assert.ok(url.protocol === 'http:' && ['127.0.0.1', '[::1]'].includes(url.hostname)
@@ -202,8 +215,8 @@ export function validateTaskPeerResolution(installation, peers) {
       assert.equal(peer.anchorResolution, null, 'Private peer unexpectedly claims a shipping anchor')
     } else {
       assert.equal(peer.scope, 'shipping-app', 'Task host peer did not resolve from the shipping app')
-      assert.ok(typeof installation.appAnchor === 'string' && /\/Contents\/Resources\/app\.asar\/node_modules\/@deepseek-ai\/dsh\/package\.json$/.test(installation.appAnchor), 'Task shipping app anchor is invalid')
-      const appRoot = installation.appAnchor.split('/app.asar/')[0] + '/app.asar'
+      assert.ok(typeof installation.appAnchor === 'string' && /\/Contents\/Resources\/app(?:\.asar)?\/node_modules\/@deepseek-ai\/dsh\/package\.json$/.test(installation.appAnchor), 'Task shipping app anchor is invalid')
+      const appRoot = shippingAppRoot(installation.appAnchor)
       assert.ok(inside(appRoot, peer.packageRoot), 'Task host peer resolved outside the shipping app')
       assert.deepEqual(peer.anchorResolution, { packageRoot: peer.packageRoot, version: peer.version,
         manifestPath: peer.manifestPath, manifestSha256: peer.manifestSha256,
@@ -454,7 +467,7 @@ export async function verifyTaskServerLoading({ inspectorUrl, pid, installation 
     }
     const { peers, peerObserver } = await captureTaskPeerProof(connection, installation)
     if (peers.some(peer => peer.scope === 'shipping-app')) {
-      assert.equal(installation.appAnchor, resolve(dirname(runtimeExecutable), '../Resources/app.asar/node_modules/@deepseek-ai/dsh/package.json'),
+      assert.ok(shippingAnchorBelongs(installation.appAnchor, runtimeExecutable),
         'Task shipping anchor does not belong to the actual server executable')
     }
     assert.equal(installationBinding(installation, installationIdentity(installation)), binding, 'Task installation identity changed during server proof')

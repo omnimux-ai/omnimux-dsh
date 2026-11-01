@@ -10,6 +10,7 @@ import { privatePnpmEnvironment } from './materialize-cache.mjs';
 import { runPnpm } from './managed-tarball.mjs';
 import semver from 'semver';
 import { createRequire } from 'node:module';
+import { appAnchorFor } from './host-runtime-layout.mjs';
 
 const fail = code => { throw Object.assign(new Error(`TEST_ENV_${code}`), { code: `TEST_ENV_${code}` }); };
 const failDetail = (code, detail) => { throw Object.assign(new Error(`TEST_ENV_${code}: ${detail}`), { code: `TEST_ENV_${code}`, detail }); };
@@ -485,7 +486,7 @@ export async function installTaskRuntime({ root, repository, privateRoot, ownerI
   });
   const before = preparation.candidateBefore;
   const installation = { taskId: evidenceContext.taskId, runId: evidenceContext.runId, sourceRoot: root, privateRoot, profile,
-    ownerIdentity, hostPeerExpectations, supportPeerExemption, runtimeExecutable: executable, runtimeExecutableSha256: hashFile(executable), appAnchor: resolve(dirname(wrapper), '../node_modules/@deepseek-ai/dsh/package.json'),
+    ownerIdentity, hostPeerExpectations, supportPeerExemption, runtimeExecutable: executable, runtimeExecutableSha256: hashFile(executable), appAnchor: appAnchorFor(wrapper),
     base: before.base.resolvedSha, head: before.head.resolvedSha, candidateDigest: before.candidate.contentDigest, inputsDigest: before.inputs.contentDigest, packages };
   const assertInstalledIntegrity = () => {
     const identity = fs.statSync(privateRoot, { bigint: true });

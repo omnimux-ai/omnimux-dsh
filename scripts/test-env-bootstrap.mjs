@@ -4,6 +4,7 @@ import { createServer } from 'node:http';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
+import { createRequire } from 'node:module';
 import { parseDocument } from 'yaml';
 import { readDevDeepSeekCredential, readDevCredentialsBundle } from './test-env-credentials.mjs';
 import { stopOwnedChild } from './lib/child-lifecycle.mjs';
@@ -12,9 +13,15 @@ import { runPnpm } from './managed-tarball.mjs';
 import { privatePnpmEnvironment } from './materialize-cache.mjs';
 import { prepareFiles, payloadManifest, hashFile, readJson, stable } from './materialize-graph.mjs';
 import { createTaskPnpmTool, installTaskRuntime } from './task-runtime-install.mjs';
+import { resolveHostRuntimeLayout, appAnchorFor, composeAgentPresetRows, stringifyStructuredFile } from './host-runtime-layout.mjs';
 
-const EXECUTABLE = '/Applications/OmniMux Dev.app/Contents/MacOS/OmniMux';
-const WRAPPER = '/Applications/OmniMux Dev.app/Contents/Resources/app.asar/lib/desktop-cli.js';
+/**
+ * 宿主布局按实际安装探测（asar:false 的 `Resources/app` 优先，旧 `app.asar` 回退）。
+ * Issue #3871：写死 `app.asar` 会让新型 Dev App 上的隔离验收完全不可用。
+ */
+const hostLayout = () => resolveHostRuntimeLayout();
+const hostExecutable = () => hostLayout().executable;
+const hostWrapper = () => hostLayout().wrapper;
 const OFFICIAL_ENDPOINT = 'https://api.deepseek.com';
 const SYNTHETIC_KEY = 'QA-SYNTHETIC-NOT-A-REAL-KEY';
 /**
@@ -604,6 +611,31 @@ async function runTaskPreparation({ options, io, deps }) {
   }
 }
 
+/**
+ * 隔离 profile 需要自己声明 agent preset（Issue #3871 的第二个后果）。
+ *
+ * rc.3 起预设不再由文件系统发现：壳在启动时向 profile 注入 `@deepseek-ai/dsh-agent-preset`
+ * Loader 行，而隔离启动走 `desktop-cli.js` 绕过了壳，于是新建会话报
+ * `agent-preset/not-found`。这里按壳的同一套规则合成声明，只写一次性隔离 profile。
+ *
+ * @param {{ appRoot: string }} layout 宿主布局
+ * @returns {string} 追加到 cordis.patch.yml 的 YAML 片段（无预设可声明时为空串）
+ */
+function agentPresetPatchText(layout) {
+  let composition;
+  try {
+    const resolver = createRequire(join(layout.appRoot, 'lib', 'desktop-cli.js'));
+    const resolvable = (name) => { try { resolver.resolve(name); return true; } catch { return false; } };
+    composition = composeAgentPresetRows({ appRoot: layout.appRoot, resolvable });
+  } catch {
+    // 解析器不可用时不阻断验收：旧 App 本来就没有这份预设清单。
+    return '';
+  }
+  if (!composition.rows.length) return '';
+  const text = stringifyStructuredFile([{ insert: composition.rows }]);
+  return `\n# QA 隔离环境：按壳的规则声明出厂 agent preset（绕过壳启动时壳不会注入这些行）。\n${text}`;
+}
+
 function validateFreshRequest(options) {
   if (options.mode !== 'ui') throw failure('FRESH_MODE_UNSUPPORTED');
   const candidate = options.candidate;
@@ -615,7 +647,9 @@ function validateFreshRequest(options) {
 async function startFreshTaskRuntime({ options, io, deps }) {
   validateFreshRequest(options);
   if (io !== fs) throw failure('FRESH_FILESYSTEM_REQUIRED');
-  try { io.accessSync(EXECUTABLE, fs.constants.X_OK); } catch { throw failure('RUNTIME_MISSING'); }
+  let layout;
+  try { layout = hostLayout(); } catch (error) { throw failure('RUNTIME_MISSING', error.hint); }
+  try { io.accessSync(layout.executable, fs.constants.X_OK); } catch { throw failure('RUNTIME_MISSING'); }
   let preparation, runtimeRoot, runtimeOwnerIdentity, mock, child, exited = false, closed = false, cleaning = false, cleanupPromise;
   const observations = { contract: 'task-private-installation', userFresh: 'unknown', taskBinding: 'unknown', runtimeStarted: false, unexpectedExit: false, events: [], rawOutputRetained: false };
   const signals = deps.signals ?? process;
@@ -677,7 +711,7 @@ async function startFreshTaskRuntime({ options, io, deps }) {
       'agent-default-model': { provider: 'deepseek-official', model: 'deepseek-flash' },
       'ui-onboarding': { welcomeNoticeVersion: '2026-09-28.1' },
     }) + '\n', { flag: 'wx', mode: 0o600 });
-    const installed = await installTaskRuntime({ root: options.root, repository: deps.repositoryRoot ?? repositoryRoot, privateRoot, ownerIdentity: runtimeOwnerIdentity, preparation, evidenceContext: options.evidenceContext, candidate: options.candidate, executable: EXECUTABLE, wrapper: WRAPPER, env });
+    const installed = await installTaskRuntime({ root: options.root, repository: deps.repositoryRoot ?? repositoryRoot, privateRoot, ownerIdentity: runtimeOwnerIdentity, preparation, evidenceContext: options.evidenceContext, candidate: options.candidate, executable: layout.executable, wrapper: layout.wrapper, env });
     const { createTaskPeerProbeSource } = await import('./task-runtime-proof.mjs');
     if (installed.installation.hostPeerExpectations.length) {
       const probePath = join(installed.installation.profile, 'task-peer-probe.mjs');
@@ -724,7 +758,7 @@ async function startFreshTaskRuntime({ options, io, deps }) {
       let stdout = '', stderr = '', loginUrl, settled = false;
       const finish = () => { if (loginUrl && inspectorUrl && !settled) { settled = true; clearTimeout(timer); yes(loginUrl); } };
       const timer = setTimeout(() => no(failure('START_TIMEOUT')), deps.startupTimeoutMs ?? 60000);
-      child = (deps.spawn ?? spawn)(EXECUTABLE, ['--inspect=127.0.0.1:0', '--expose-internals', WRAPPER, '--profile', 'web', '--port', '0', '--host', '127.0.0.1', '--no-open'], { cwd: env.HOME, env, stdio: ['ignore', 'pipe', 'pipe'] });
+      child = (deps.spawn ?? spawn)(layout.executable, ['--inspect=127.0.0.1:0', '--expose-internals', layout.wrapper, '--profile', 'web', '--port', '0', '--host', '127.0.0.1', '--no-open'], { cwd: env.HOME, env, stdio: ['ignore', 'pipe', 'pipe'] });
       observations.runtimeStarted = true;
       observations.events.push({ event: 'spawn', pid: child.pid ?? null, parentPid: process.pid });
       child.once('exit', (code, signal) => { exited = true; observations.events.push({ event: 'exit', code: code ?? null, signal: signal ?? null }); if (!cleaning) observations.unexpectedExit = true; clearTimeout(timer); no(failure('RUNTIME_EXIT')); });
@@ -820,7 +854,9 @@ export function createTestEnvironmentStarter(deps = {}) {
       throw error;
     }
     if (options.taskPlugins !== undefined) throw failure('OPTIONS');
-    try { io.accessSync(EXECUTABLE, fs.constants.X_OK); } catch { throw failure('RUNTIME_MISSING'); }
+    let layout;
+    try { layout = hostLayout(); } catch (error) { throw failure('RUNTIME_MISSING', error.hint); }
+    try { io.accessSync(layout.executable, fs.constants.X_OK); } catch { throw failure('RUNTIME_MISSING'); }
     let privateDir, mock, child, exited = false, closed = false, cleaning = false, cleanupPromise, startupReject;
     const observations = { contract: 'none', userFresh: 'unknown', taskBinding: 'unknown', runtimeStarted: false, unexpectedExit: false, events: [], rawOutputRetained: false };
     let releaseOutput = () => {};
@@ -1064,7 +1100,7 @@ export function createTestEnvironmentStarter(deps = {}) {
               ].join('\n');
               io.writeFileSync(
                 join(omnimuxProfileDir, 'cordis.patch.yml'),
-                base.replace(/\n*$/, '\n') + override,
+                base.replace(/\n*$/, '\n') + override + agentPresetPatchText(layout),
                 { mode: 0o600 },
               );
             }
@@ -1272,7 +1308,7 @@ export function createTestEnvironmentStarter(deps = {}) {
         let buffer = '';
         const timer = setTimeout(() => no(failure('START_TIMEOUT')), deps.startupTimeoutMs ?? 60000);
         try {
-          child = (deps.spawn ?? spawn)(EXECUTABLE, ['--expose-internals', WRAPPER, '--profile', profileName, '--port', '0', '--host', '127.0.0.1', '--no-open'], { cwd: env.HOME, env, stdio: ['ignore', 'pipe', 'pipe'] });
+          child = (deps.spawn ?? spawn)(layout.executable, ['--expose-internals', layout.wrapper, '--profile', profileName, '--port', '0', '--host', '127.0.0.1', '--no-open'], { cwd: env.HOME, env, stdio: ['ignore', 'pipe', 'pipe'] });
           observations.runtimeStarted = true;
           observations.events.push({ event: 'spawn', pid: child.pid ?? null, parentPid: process.pid });
           child.once('exit', (code, signal) => {
@@ -1341,7 +1377,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   try {
     if (process.argv.length !== 4 || process.argv[2] !== 'preflight') throw failure('OPTIONS');
     validateRoot(process.argv[3], fs, repositoryRoot);
-    try { fs.accessSync(EXECUTABLE, fs.constants.X_OK); } catch { throw failure('RUNTIME_MISSING'); }
+    const layout = hostLayout();
+    try { fs.accessSync(layout.executable, fs.constants.X_OK); } catch { throw failure('RUNTIME_MISSING'); }
     process.stdout.write(JSON.stringify({ ready: true, scope: 'core-only', credentialRead: false }) + '\n');
   } catch (error) { process.stderr.write(safeError(error, 'PREFLIGHT').message + '\n'); process.exitCode = 1; }
 }
