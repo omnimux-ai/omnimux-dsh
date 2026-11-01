@@ -169,3 +169,32 @@
 **作用域变化**：技能从「预设专属」变为「全局可见」（`seedPresetSkills` 装到 `~/.omnimux-dev/skills`，所有 agent 可检索）。若日后需要专属，再走 `customSkillDirs` 方案。
 
 **验收**：`node --test scripts/verify-agent-presets.test.mjs` 18/18；`node scripts/build-agent-presets.mjs` 幂等；从本树 stage 后 `preset/skills/` 出现 4 个技能且都带 `omnimux-skill.json` origin 标记，`preset/agent-presets/*/skills` 为空。
+
+## W3 实施记录：sync 脚本改为只校验（不写盘）
+
+**发现比 spec 初稿更严重**：`scripts/sync-agent-presets.sh` 不只写 rc.3 已死的目录，它还会：
+- 直接修改已安装 App 的 `app.asar` 头（`patch_asar_preset_header`）——会破坏 ad-hoc/正式签名；
+- 往 `~/.dsh/profiles/*` 与 `~/.omnimux-dev/profiles/*/node_modules/@deepseek-ai/dsh/config/agent-presets` 物化（rc.3 不读）；
+- 往 profile `cordis.patch.yml` 追加已不存在的 `agent-presets` 行。
+
+**为什么不直接删**：`scripts/sync-to-app.sh` 仍调用它（live sync 链），且 `presets/README.md` 的「永久退役墓碑契约」要求在脚本的 `LEGACY_ALIASES` 里登记历史别名。直接删脚本会让契约失去登记点，也会牵动 `sync-plugin-scope.test.mjs` 的 `presets:` 事件断言。
+
+**做法**：保留脚本名、`--target` 兼容入参与 `KEEP` / `LEGACY_ALIASES` 常量，改为**只校验不写盘**：
+1. 校验 `presets/` 里 KEEP + LEGACY_ALIASES 目录齐全（缺则非零退出）；
+2. 打印 rc.3 下的正确路径（预设由打包期 `preset/agent-presets` + 壳侧声明承担）；
+3. 不再触碰 App 包/asar、不再写任何 profile 或 home 目录。
+
+**删除**：`scripts/sync-agent-presets-targets.test.mjs`（它断言的「写入目标目录」行为已不存在）。
+
+**验收**：`bash scripts/sync-agent-presets.sh` 退出 0 且不产生任何文件变更；`node --test scripts/verify-agent-presets.test.mjs` 18/18（KEEP/LEGACY 断言仍满足）；`scripts/sync-plugin-scope.test.mjs` 的 `presets:` 事件断言不受影响（调用链保留）。
+
+## 旧标准变更
+
+- `scripts/sync-agent-presets-targets.test.mjs` :: `sync-agent-presets preserves a case-sensitive custom ~/ target`
+  原断言：脚本把预设物化到目标 home 的 `<profile>/node_modules/@deepseek-ai/dsh/config/agent-presets`（并验证 `--target=~/…` 路径不被拆分）。
+  必须改的理由：W3 已把脚本降级为只校验——rc.3 起预设随签名包分发、由 profile 组合期声明，物化写入行为被移除，该用例断言的输出不再存在。
+  新期望证据：`bash scripts/sync-agent-presets.sh`（含 `--target=~/…`、`--prod --dsh` 调用）退出 0 且不产生任何文件变更；`node --test scripts/verify-agent-presets.test.mjs` 18/18，KEEP/LEGACY_ALIASES 逐字断言仍满足。
+- `scripts/sync-agent-presets-targets.test.mjs` :: `sync-agent-presets keeps preset directories it does not own`
+  原断言：物化时保留目标目录中非本脚本拥有的预设目录，且不误删。
+  必须改的理由：同上，物化已移除；「保留非自有目录」不再是一个存在的行为，保留该用例只会断言一个不存在的写入器。
+  新期望证据：治理注册表与 `.github/workflows/quality-gate.yml`、`scripts/verify-ci-gates.test.mjs` 三处登记已同步移除；`node --test scripts/verify-governance-registry.test.mjs` 4/4。

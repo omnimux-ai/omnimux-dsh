@@ -174,7 +174,7 @@ test('static CI and post-merge Dev handoff regressions pass', () => {
 })
 
 test('sync source identity, profile resolution and named-plugin scope regressions pass', () => {
-  const res = spawnSync('node', ['--test', ...['sync-bypass.test.mjs', 'resolve-omnimux-profile.test.mjs', 'sync-plugin-scope.test.mjs', 'sync-agent-presets-targets.test.mjs'].map(name => resolve(here, name))], {
+  const res = spawnSync('node', ['--test', ...['sync-bypass.test.mjs', 'resolve-omnimux-profile.test.mjs', 'sync-plugin-scope.test.mjs'].map(name => resolve(here, name))], {
     cwd: repoRoot,
     encoding: 'utf8',
     env: nestedTestEnv,

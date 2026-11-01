@@ -1,20 +1,19 @@
 #!/usr/bin/env bash
-# sync-agent-presets.sh — 把 OmniMux 出厂四项 Agent Preset 物化进运行时
+# sync-agent-presets.sh — validate the shipped agent-preset roster (no writes).
 #
-# 默认（无参数 / yarn sync:presets / sync-to-app 不带 target）：
-#   只改 OmniMux Dev.app + ~/.omnimux-dev
-# 可选（显式加参，默认不是 --all）：
-#   --prod     → 再改 OmniMux.app + ~/.omnimux
-#   --dsh      → 只碰 ~/.dsh/profiles/omnimux*（不写 DSH Desktop.app，不清用户预设）
-#   --all      → Dev + Prod + ~/.dsh/omnimux*（仍不写 DSH Desktop.app，仍不清用户预设）
+# Since dsh 0.2.1-rc.3 every preset is a Loader declaration carried by the
+# profile, and the shipped roster reaches the app through the packaged preset
+# (`preset/agent-presets`) that `stage-preset-profile.ts` writes. Nothing reads
+# the directories this script used to fill, and the asar header patch it used to
+# apply invalidated the installed app's signature — so the materialization is
+# gone and only the roster check remains.
 #
-# 硬边界：
-# - 永不写入 /Applications/DSH Desktop.app
-# - 永不改写 ~/.dsh/.agent-presets（用户花名册：dsh-plugin-team / software-company 等）
-# - 写入 ~/.dsh/profiles 时只碰 omnimux*，跳过 desktop / web
+# `KEEP` / `LEGACY_ALIASES` stay here on purpose: `presets/README.md` makes this
+# list the registration point of the permanent-legacy-tombstone contract, and
+# `scripts/verify-agent-presets.test.mjs` asserts both lists verbatim.
 set -euo pipefail
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-source "$ROOT/scripts/resolve-omnimux-profile.sh"
 SRC="$ROOT/presets"
 KEEP=(cordis omni-agent tiktok-agent instagram-agent x-agent youtube-agent viral-video-agent ad-creative-agent)
 LEGACY_ALIASES=(media-creator marketing-agent daily-work standard marketing-growth-team drama-agent)
@@ -25,305 +24,37 @@ if [ ! -d "$SRC/omni-agent" ] && [ ! -d "$SRC/tiktok-agent" ]; then
   exit 1
 fi
 
-TARGET_SELECTION=()
-if [ -n "${OMNIMUX_SYNC_TARGETS:-}" ]; then
-  IFS=',' read -ra ENV_TARGETS <<< "$OMNIMUX_SYNC_TARGETS"
-  for t in "${ENV_TARGETS[@]}"; do
-    t=$(normalize_omnimux_sync_target "$t")
-    [ -n "$t" ] && TARGET_SELECTION+=("$t")
-  done
-fi
-
-parse_target_value() {
-  local val="$1"
-  IFS=',' read -ra PARTS <<< "$val"
-  for p in "${PARTS[@]}"; do
-    p=$(normalize_omnimux_sync_target "$p")
-    [ -n "$p" ] && TARGET_SELECTION+=("$p")
-  done
-}
-
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --dev|--omnimux-dev)
-      TARGET_SELECTION+=("dev")
-      shift ;;
-    --prod|--omnimux)
-      TARGET_SELECTION+=("prod")
-      shift ;;
-    --dsh)
-      TARGET_SELECTION+=("dsh")
-      shift ;;
-    --all|--broadcast|--all-profiles)
-      TARGET_SELECTION+=("all")
-      shift ;;
-    --target=*|--profile=*)
-      val="${1#*=}"
-      parse_target_value "$val"
-      shift ;;
-    --target|--profile)
-      if [ $# -ge 2 ]; then
-        parse_target_value "$2"
-        shift 2
-      else
-        shift
-      fi ;;
+# `--target` / OMNIMUX_SYNC_TARGETS are accepted for callers (sync-to-app.sh
+# still forwards them) and deliberately ignored: the profile needs no patch.
+TARGET_FLAGS=()
+for argument in "$@"; do
+  case "$argument" in
+    --target=*|--target)
+      TARGET_FLAGS+=("$argument")
+      ;;
+    --prod|--all|--dsh|--skip-build)
+      # Accepted from sync-to-app.sh; this script no longer writes anywhere.
+      ;;
     *)
-      shift ;;
+      echo "· 忽略未知参数: $argument" >&2
+      ;;
   esac
 done
 
-TARGET_HOMES=()
-add_target_home() {
-  local h="$1"
-  if [ "${#TARGET_HOMES[@]}" -gt 0 ]; then
-    for existing in "${TARGET_HOMES[@]}"; do
-      [ "$existing" = "$h" ] && return 0
-    done
+missing=()
+for preset in "${ALL_PRESETS[@]}"; do
+  if [ ! -f "$SRC/$preset/preset.yml" ] || [ ! -f "$SRC/$preset/agent.cordis.yml" ]; then
+    missing+=("$preset")
   fi
-  TARGET_HOMES+=("$h")
-}
-
-HAS_DEV=0
-HAS_PROD=0
-HAS_DSH=0
-
-if [ ${#TARGET_SELECTION[@]} -eq 0 ]; then
-  add_target_home "$HOME/.omnimux-dev"
-  HAS_DEV=1
-else
-  for item in "${TARGET_SELECTION[@]}"; do
-    case "$item" in
-      all|broadcast)
-        add_target_home "$HOME/.omnimux-dev"
-        add_target_home "$HOME/.omnimux"
-        add_target_home "$HOME/.dsh"
-        HAS_DEV=1
-        HAS_PROD=1
-        HAS_DSH=1
-        ;;
-      dev|omnimux-dev)
-        add_target_home "$HOME/.omnimux-dev"
-        HAS_DEV=1
-        ;;
-      prod|omnimux|omnimux-prod)
-        add_target_home "$HOME/.omnimux"
-        HAS_PROD=1
-        ;;
-      dsh|dsh-desktop)
-        # 只允许碰 ~/.dsh 下的 omnimux* profile；绝不写 DSH Desktop.app / 用户预设根
-        add_target_home "$HOME/.dsh"
-        HAS_DSH=1
-        ;;
-      /*|"~"|"~/"*)
-        expanded_path=$(expand_omnimux_sync_target_home "$item") || exit 1
-        add_target_home "$expanded_path"
-        ;;
-    esac
-  done
-fi
-
-is_omnimux_profile() {
-  local home="$1"
-  local base
-  base=$(basename "$home")
-  case "$base" in
-    omnimux|omnimux-*) return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
-# ~/.dsh 是共享 Host 家：其中 desktop/web 是 DSH 开发工具 profile，禁止物化社媒两项覆盖。
-should_materialize_profile() {
-  local profile_home="$1"
-  local base
-  base=$(basename "$profile_home")
-  if [ "$base" = "node_modules" ] || [[ "$base" == .* ]]; then
-    return 1
-  fi
-  local home_dir
-  home_dir=$(dirname "$(dirname "$profile_home")")
-  if [ "$home_dir" = "$HOME/.dsh" ]; then
-    is_omnimux_profile "$profile_home"
-    return $?
-  fi
-  return 0
-}
-
-materialize_into() {
-  local dest="$1"
-  if [ ! -d "$dest" ]; then
-    echo "· skip missing $dest"
-    return 0
-  fi
-  echo "==> 物化 Agent Presets → $dest"
-  # 只管理 ALL_PRESETS (出厂8大预设 + 历史向后兼容别名) 名单内的条目。目标目录里可能还有本脚本不拥有的预设——上游内置的
-  # minimal / ptc 就孵在同名的包目录下——删掉它们会让 asar 头列表跟着丢内置预设。
-  for child in "$dest"/*; do
-    [ -e "$child" ] || continue
-    base=$(basename "$child")
-    keep=0
-    for k in "${ALL_PRESETS[@]}"; do
-      if [ "$base" = "$k" ]; then keep=1; break; fi
-    done
-    if [ "$keep" -eq 0 ]; then
-      echo "  · kept $base"
-    fi
-  done
-  for k in "${ALL_PRESETS[@]}"; do
-    rm -rf "$dest/$k"
-    mkdir -p "$dest/$k"
-    if [ -d "$SRC/$k" ]; then
-      cp -R "$SRC/$k/." "$dest/$k/"
-      echo "  + synced $k"
-    fi
-  done
-}
-
-# 预设自带技能落盘：把 presets/<id>/skills/<skill> 复制到 <home>/skills/<skill>。
-#
-# 打包后的预设目录位于 app.asar 内部；DSH fs 服务读取目录时走 stat({bigint:true})
-# 再做 `mode & 0o777n`，而 Electron 的 asar stat 忽略 bigint 返回 Number，直接抛
-# "Cannot mix BigInt and other types" —— 预设自带的那条 skill-filesystem 行会被
-# skill-registry 整条跳过，技能永不入库（#3130）。技能因此改由真实目录（Harness
-# Home 的技能根）被发现。同名技能已存在时跳过，绝不覆盖用户或既有技能库的内容。
-stage_preset_skills() {
-  local home="$1"
-  [ -d "$home" ] || return 0
-  local skills_root="$home/skills"
-  local staged=0 skipped=0
-  local k skill_dir name
-  for k in "${ALL_PRESETS[@]}"; do
-    [ -d "$SRC/$k/skills" ] || continue
-    for skill_dir in "$SRC/$k/skills"/*; do
-      [ -d "$skill_dir" ] || continue
-      name=$(basename "$skill_dir")
-      if [ -e "$skills_root/$name" ]; then
-        skipped=$((skipped + 1))
-        continue
-      fi
-      mkdir -p "$skills_root/$name"
-      cp -R "$skill_dir/." "$skills_root/$name/"
-      staged=$((staged + 1))
-      echo "  + skill $k/$name"
-    done
-  done
-  if [ "$staged" -gt 0 ] || [ "$skipped" -gt 0 ]; then
-    echo "==> 预设自带技能 → $skills_root (新增 $staged · 跳过同名 $skipped)"
-  fi
-}
-
-# 1) profiles under target homes that vendor @deepseek-ai/dsh
-shopt -s nullglob
-for home_dir in "${TARGET_HOMES[@]}"; do
-  if [ -d "$home_dir" ] && [ "$home_dir" != "$HOME/.dsh" ]; then
-    mkdir -p "$home_dir/agent-presets-shipped"
-    materialize_into "$home_dir/agent-presets-shipped"
-    for alias_id in "${ALL_PRESETS[@]}"; do
-      mkdir -p "$home_dir/.agent-presets/$alias_id"
-      if [ -d "$SRC/$alias_id" ]; then
-        cp -R "$SRC/$alias_id/." "$home_dir/.agent-presets/$alias_id/"
-      fi
-    done
-    stage_preset_skills "$home_dir"
-  fi
-
-  for profile_home in "$home_dir/profiles"/*; do
-    [ -d "$profile_home" ] || continue
-    if ! should_materialize_profile "$profile_home"; then
-      echo "· skip non-omnimux profile under ~/.dsh: $profile_home"
-      continue
-    fi
-    dest="$profile_home/node_modules/@deepseek-ai/dsh/config/agent-presets"
-    materialize_into "$dest"
-    mkdir -p "$profile_home/agent-presets-shipped"
-    materialize_into "$profile_home/agent-presets-shipped"
-    stage_preset_skills "$profile_home"
-  done
 done
-
-# 2) OmniMux App unpacked preset folders + asar headers + Plist integrity sync — never DSH Desktop.app
-patch_asar_preset_header() {
-  local asar="$1"
-  local unpacked="$2"
-  [ -f "$asar" ] && [ -d "$unpacked" ] || return 0
-  echo "==> 同步 Asar Header 与 Info.plist 完整性哈希: $asar"
-  ELECTRON_NO_ASAR=1 node "$ROOT/scripts/patch-asar-agent-presets.mjs" "$asar" "$unpacked" || echo "· asar header patch failed for $asar"
-}
-
-if [ "$HAS_DEV" -eq 1 ]; then
-  materialize_into "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/preset/agent-presets"
-  materialize_into "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
-  materialize_into "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
-  if [ -d "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/preset/agent-presets" ]; then
-    patch_asar_preset_header "/Applications/OmniMux Dev.app/Contents/Resources/app.asar" "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/preset/agent-presets"
-  elif [ -d "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets" ]; then
-    patch_asar_preset_header "/Applications/OmniMux Dev.app/Contents/Resources/app.asar" "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
-  elif [ -d "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets" ]; then
-    patch_asar_preset_header "/Applications/OmniMux Dev.app/Contents/Resources/app.asar" "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
-  fi
+if [ "${#missing[@]}" -gt 0 ]; then
+  echo "❌ presets/ 缺少预定义文件: ${missing[*]}" >&2
+  exit 1
 fi
 
-if [ "$HAS_PROD" -eq 1 ]; then
-  materialize_into "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/preset/agent-presets"
-  materialize_into "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
-  materialize_into "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
-  if [ -d "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/preset/agent-presets" ]; then
-    patch_asar_preset_header "/Applications/OmniMux.app/Contents/Resources/app.asar" "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/preset/agent-presets"
-  elif [ -d "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets" ]; then
-    patch_asar_preset_header "/Applications/OmniMux.app/Contents/Resources/app.asar" "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
-  elif [ -d "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets" ]; then
-    patch_asar_preset_header "/Applications/OmniMux.app/Contents/Resources/app.asar" "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
-  fi
+if [ "${#TARGET_FLAGS[@]}" -gt 0 ]; then
+  echo "· --target 已废弃并被忽略：预设随安装包分发，不再写入目标 home" >&2
 fi
 
-if [ "$HAS_DSH" -eq 1 ]; then
-  echo "· --dsh：只物化 ~/.dsh/profiles/omnimux*；跳过 DSH Desktop.app 与 ~/.dsh/.agent-presets"
-fi
-
-# 3) OmniMux profile patch only — never rewrite desktop/web includeUserRoot
-patch_profile() {
-  local patch="$1"
-  [ -f "$patch" ] || return 0
-  if grep -q "id: agent-presets" "$patch" 2>/dev/null; then
-    echo "· $patch 已含 agent-presets，跳过自动改写"
-    return 0
-  fi
-  if grep -qE '^\[\]\s*$' "$patch"; then
-    cat > "$patch" <<'YAML'
-# Product defaults for the OmniMux desktop profile. Edit freely.
-# Applied after every bundle layer. Do not put API keys here.
-
-# OmniMux 出厂会话预设：cordis (创建Agent) + 7个社媒运营专属矩阵 (omni-agent, tiktok-agent, instagram-agent, x-agent, youtube-agent, viral-video-agent, ad-creative-agent)
-- id: agent-presets
-  config:
-    default: omni-agent
-    includeUserRoot: false
-YAML
-    echo "  ✓ wrote agent-presets patch → $patch"
-  else
-    cat >> "$patch" <<'YAML'
-
-# OmniMux 出厂会话预设：cordis (创建Agent) + 7个社媒运营专属矩阵 (omni-agent, tiktok-agent, instagram-agent, x-agent, youtube-agent, viral-video-agent, ad-creative-agent)
-- id: agent-presets
-  config:
-    default: omni-agent
-    includeUserRoot: false
-YAML
-    echo "  ✓ appended agent-presets patch → $patch"
-  fi
-}
-
-for home_dir in "${TARGET_HOMES[@]}"; do
-  for patch in "$home_dir/profiles"/*/cordis.patch.yml; do
-    [ -f "$patch" ] || continue
-    profile_home=$(dirname "$patch")
-    if ! should_materialize_profile "$profile_home"; then
-      echo "· skip patch for non-omnimux profile: $patch"
-      continue
-    fi
-    patch_profile "$patch"
-  done
-done
-
-echo "✅ OmniMux Agent Presets 物化完成。请重启对应 OmniMux Host（不要指望本脚本改 DSH Desktop 用户预设）。"
+echo "✅ 出厂预设清单校验通过：${#KEEP[@]} 项主力 + ${#LEGACY_ALIASES[@]} 项历史兼容别名。"
+echo "ℹ️ rc.3 起预设由打包期 preset/agent-presets 与壳侧声明承担；本脚本不再写盘。"

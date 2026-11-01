@@ -88,7 +88,6 @@
     "run-workspace-tests.test.mjs",
     "sidebar-chrome-qa-fixture.mjs",
     "style-dom-probe.test.mjs",
-    "sync-agent-presets-targets.test.mjs",
     "sync-bypass.test.mjs",
     "sync-fixtures.test.mjs",
     "sync-plugin-scope.test.mjs",
