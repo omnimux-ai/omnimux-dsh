@@ -90,8 +90,10 @@ function bindingFixture() {
     clientBundle: { path: 'lib/client.js', sha256: clientHash, bytes: 20 } };
   });
   const runtimeExecutable = '/Applications/OmniMux QA.app/Contents/MacOS/OmniMux';
+  // 布局由安装记录提供，锚点按该布局推导（不再写死 app.asar，也不读本机文件系统）。
+  const appLayout = 'app.asar';
   const installation = { ...shared, sourceRoot: root, privateRoot, profile: join(privateRoot, 'dsh/profiles/web'), packages, hostPeerExpectations: [],
-    runtimeExecutable, appAnchor: resolve(dirname(runtimeExecutable), '../Resources/app.asar/node_modules/@deepseek-ai/dsh/package.json') };
+    runtimeExecutable, appLayout, appAnchor: resolve(dirname(runtimeExecutable), `../Resources/${appLayout}/node_modules/@deepseek-ai/dsh/package.json`) };
   const serverLoading = { ...shared, kind: 'task-server-loading', runtimeExecutable, peers: [], peerObserver: null, modules: packages.map(pkg => ({ name: pkg.name,
     path: pkg.serverEntry.path, sha256: pkg.serverEntry.sha256, loadedScriptSha256: pkg.serverEntry.sha256,
     loadedScriptUrl: pathToFileURL(join(pkg.installedRoot, pkg.serverEntry.path)).href, matchingScriptCount: 1 })) };

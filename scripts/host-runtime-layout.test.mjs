@@ -153,11 +153,9 @@ test('pruneUnresolvable 不把无 name 的行当作需要解析的包', () => {
   assert.equal(plugins.length, 2)
 })
 
-test('注入的 fs 缺 statSync 时退回默认布局，不因本机没装 App 报错', () => {
+test('注入的 fs 缺 statSync 时显式报错，不再静默当成布局存在', () => {
   const stub = { accessSync() {}, existsSync: () => false, readdirSync: () => [] }
-  const resolved = resolveHostRuntimeLayout({ io: stub })
-  assert.equal(resolved.layout, 'app')
-  assert.match(resolved.wrapper, /Resources\/app\/lib\/desktop-cli\.js$/)
+  assert.throws(() => resolveHostRuntimeLayout({ io: stub }), { name: 'TypeError', message: /io\.statSync is required/ })
 })
 
 test('defaultHostLayout 不探测文件系统（CI 上没有 App 也能给出默认布局）', () => {

@@ -60,9 +60,10 @@ export function resolveHostRuntimeLayout(options = {}) {
   // 调用方可以注入 fs（测试用 stub）：验收脚本本身走真实 fs，测试不依赖本机装没装 App。
   const io = options.io ?? { statSync };
   const probe = (path) => {
-    // 注入的 fs 可能只实现少量方法（单测 stub）：缺少探测能力时按默认布局放行，
-    // 由后续 accessSync(executable) 与真实运行暴露缺件，而不是在这里静默失败。
-    if (typeof io.statSync !== 'function') return true;
+    // 探测能力缺失是调用方错误，不是「布局可用」的证据：显式报错，别静默当成存在。
+    if (typeof io.statSync !== 'function') {
+      throw new TypeError('resolveHostRuntimeLayout: io.statSync is required to probe the host layout');
+    }
     try {
       return io.statSync(path).isFile();
     } catch {
