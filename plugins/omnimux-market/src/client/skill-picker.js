@@ -638,7 +638,8 @@
         close();
         const wb = typeof window !== "undefined" ? window.__omnimuxWorkbench : undefined;
         if (wb && typeof wb.open === "function") {
-          wb.open({ tabId: "omnimux-market:plaza", title: tr("plaza.title") });
+          // 会话内入口：显式分栏激活右侧边栏，保留中间会话栏（Tab 默认 gui 会顶掉会话）。
+          wb.open(SkillShelf.buildPlazaWorkbenchOpenOptions(tr("plaza.title")));
         }
       }, [tr, close]);
 

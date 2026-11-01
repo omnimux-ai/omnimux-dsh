@@ -577,6 +577,22 @@ export function buildPlazaSearchPayload(submitted, category, page = 1, pageSize 
         channels: q ? [...PLAZA_QUERY_CHANNELS] : [...PLAZA_DEFAULT_CHANNELS],
     };
 }
+/**
+ * 技能/专家工作台 Tab id（与 plaza Tab 的注册值一致）。
+ *
+ * 说明：本模块只声明「会话内入口打开参数」用到的 Tab 值；plaza-shell.js 与
+ * session-create.js 里既有的同值字面量不在本任务重构范围内，避免扩大改动面。
+ */
+export const PLAZA_WORKBENCH_TAB_ID = 'omnimux-market:plaza';
+/**
+ * 会话内入口（输入框技能面板「探索更多」）打开技能/专家工作台的参数。
+ *
+ * 工作台 Tab 的默认 focus 是 `gui`：右栏吃满视口、中间会话栏被压掉。会话内的
+ * 入口必须显式 `split`，在当前页面状态下激活右侧边栏、把会话栏留在原地。
+ */
+export function buildPlazaWorkbenchOpenOptions(title) {
+    return { tabId: PLAZA_WORKBENCH_TAB_ID, title, focus: 'split' };
+}
 export function installPayload(item) {
     if (!item || item.installed === true)
         return null;
