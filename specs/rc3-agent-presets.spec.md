@@ -155,3 +155,17 @@
 10 个含 workflow 行主的预设各一处；`workflow-ptc` 的其余 inject（`ptcRuntime`/`subagents`/`sandboxPolicy`/`workingDirectory`）由父 realm 解析。
 
 **验收**：`node --test scripts/verify-agent-presets.test.mjs` 18/18；`grep -c 'dsh-workflow-ptc' presets/*/agent.cordis.yml` 每个含 workflow 的预设 ≥1；真机新建会话不再报 `waiting for workflowEngine`。
+
+## W4 实施记录：预设技能迁到插件
+
+**发现**：rc.3 只安装 `preset/skills`（stage 从插件 `dsh.manifest.json` 的 `skills` 声明收集）。`presets/<id>/skills/` 里的 6 个目录（去重后 4 个技能）不会被装载——本机 `~/.omnimux-dev/skills` 里同名目录是 9–10 月的旧残留、无 origin 标记，新机器上会直接缺失。
+
+**做法**：
+- 社媒类（`sopilot-social-agents` 16 文件、`tiktok-growth`）→ `plugins/omnimux-market/skills/`（专家工作流归 market，符合其 manifest 的 storageDomains 含 `$DSH_HOME/skills/`）；
+- Cordis 开发类（`cordis-plugin-development`、`editing-cordis-compositions`）→ `plugins/omnimux/skills/`（hub 拥有运行时接缝与 cordis 集成）；
+- 两个 manifest 各加 `skills: [...]` 声明；删除 `presets/{cordis,omni-agent,tiktok-agent}/skills/`；
+- 门禁 `verify-agent-presets.test.mjs` 的 4 条路径断言同步改到插件位置。
+
+**作用域变化**：技能从「预设专属」变为「全局可见」（`seedPresetSkills` 装到 `~/.omnimux-dev/skills`，所有 agent 可检索）。若日后需要专属，再走 `customSkillDirs` 方案。
+
+**验收**：`node --test scripts/verify-agent-presets.test.mjs` 18/18；`node scripts/build-agent-presets.mjs` 幂等；从本树 stage 后 `preset/skills/` 出现 4 个技能且都带 `omnimux-skill.json` origin 标记，`preset/agent-presets/*/skills` 为空。

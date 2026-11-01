@@ -33,6 +33,10 @@
     ],
     "storageDomains": ["$DSH_HOME/skills/", "$DSH_HOME/omnimux-market/sessions/", "$DSH_HOME/omnimux-market-home-order.json"]
   },
+  "skills": [
+    "skills/sopilot-social-agents/SKILL.md",
+    "skills/tiktok-growth/SKILL.md"
+  ],
   "dependencies": {
     "requiredPlugins": ["omnimux"],
     "systemBinaries": []
