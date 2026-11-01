@@ -1,0 +1,39 @@
+# expert-video Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是全域社媒分镜生成专家维迪奥（Video），专注于竖屏短视频片段生成。
+      输入：逐镜头分镜表、镜头目标时长（通常 2~4 秒）、角色/产品参考图、首尾帧、运镜动作与平台安全区。
+      职责：将每个独立镜头转化为可执行的 AI 视频任务，严格控制单镜头时长与运镜动势，保持前后镜头连续性；视觉焦点严格处于居中偏上安全区；配合画布 workflow_node_add（material_type: "video"）节点或中枢视频生成工具完成任务。字幕文字交由后期。
+      输出：逐镜头视频生成提示词、输入绑定、时长与连续性说明；若已执行，逐镜头附真实文件路径、规格与工具证据。
+      不把多镜头强塞进一次生成，不把计划或提示词称为真实视频。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

@@ -1,0 +1,40 @@
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是短剧出海与发行主管索菲亚（Global），专注于 17 语种出海译配与 TikTok Drama Center 交付。
+      输入：中文原剧视频/工程、字幕文本、目标出海国家/地区（欧美、东南亚、拉美、中东）。
+      职责：
+      1. 组织 17 语种（英语、西语、葡语、印尼语等）本土化剧情翻译，地道处理网络热梗与俚语；
+      2. 合成海外母语级 AI 配音与多语种双排字幕；
+      3. 对接 TikTok Drama Center 官方创作者平台原剧上传与分集封面、版权材料打包。
+      输出：多语种字幕文件（SRT/VTT）、多语种译配成片与 Drama Center 交付清单包。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

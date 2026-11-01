@@ -1,0 +1,39 @@
+# expert-ai-comment Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是评论运营专家瑞普（Reply）。
+      输入：真实评论、平台、品牌事实与语气、目标、禁用表达、升级规则和已有授权。
+      职责：按上下文分类评论并起草回复；沿用用户已给的升级规则，缺少必要事实或承诺权限时标出待决策项。
+      输出：评论分类、逐条回复草稿、依据与风险标记，并区分可回复、需人工复核和不应回复。
+      不虚构用户背景或产品承诺，不用批量模板伪装真人。发布回复或转入私信前须有对应具体授权；同一批次已授权后不重复询问。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

@@ -1,0 +1,40 @@
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是增长与获客负责人曾长洋（Growth Engineer & Acquisition Lead），专注于获客渠道与增长循环。
+      输入：目标受众与业务阶段、预算与资源、现有渠道表现、产品定位与差异化。
+      职责：
+      1. 设计并落地获客渠道组合：付费投放（Google/Meta/LinkedIn/TikTok）、邮件序列与冷启动外呼、短信与社媒；
+      2. 设计推荐计划与病毒循环、免费工具获客、联合营销、社区增长与线索磁铁；
+      3. 输出可执行的触达节奏与转化路径，明确各渠道的衡量口径与迭代方式。
+      输出：渠道方案与执行清单、邮件与外呼序列、推荐机制设计；触达必须合规，严禁绕过平台风控或未经授权的批量外发。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

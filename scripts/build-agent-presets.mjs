@@ -6,7 +6,7 @@
  * mid-line `    # ──` search. Running twice is a no-op besides rewriting
  * the expert section from fragments/.
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -194,6 +194,136 @@ const TIKTOK_AGENT_PERSONA = `    prefix: |
       保持用户已授权目标；涉及外部发布、投流消耗与账号操作严格遵守确认门禁；严禁虚假刷量与违规规避风控；以真实生成文件与数据参数收尾；保持「TikTok运营专家团」主理人定位。
 `
 
+/**
+ * Loader rows every generated expert preset mounts, mirroring
+ * `agentPresetCordis()` in `plugins/omnimux-market/src/expert-presets.ts`.
+ *
+ * Duplicated on purpose: that template lives in TypeScript this build script
+ * cannot import. Keep the two in sync; a shared module is the follow-up.
+ */
+function expertPresetCordis(id, persona) {
+  const indented = persona.split('\n').map(line => (line.trim() === '' ? '' : `      ${line}`)).join('\n')
+  return `# ${id} Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+${indented}
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable
+`
+}
+
+/** `expert_marketing_strategist` -> `expert-marketing-strategist`. */
+function expertPresetId(toolName) {
+  return `expert-${toolName.replace(/^expert_/, '').replace(/_/g, '-')}`
+}
+
+/** Preset display name: the persona's role sentence without the leading pronoun. */
+function expertPresetName(persona) {
+  const first = persona.split('\n')[0].trim().replace(/^你是/u, '')
+  const cut = first.split(/[，。；]/u)[0] ?? first
+  return cut.length > 40 ? cut.slice(0, 40) : cut
+}
+
+/**
+ * Split one fragment into expert rows and the persona text each carries.
+ * @param text - Fragment YAML.
+ * @returns Parsed expert rows in file order.
+ */
+function parseExpertRows(text) {
+  const rows = []
+  const lines = text.split('\n')
+  let i = 0
+  while (i < lines.length) {
+    const head = /^    - id: (tool-subagent-expert-[\w-]+)$/.exec(lines[i])
+    if (head === null) { i += 1; continue }
+    const rowLines = [lines[i]]
+    i += 1
+    while (i < lines.length && !/^    - id: /.test(lines[i])) { rowLines.push(lines[i]); i += 1 }
+    const toolName = /^        toolName: (expert_\w+)$/m.exec(rowLines.join('\n'))?.[1]
+    const personaAt = rowLines.findIndex(line => /^        persona: \|$/.test(line))
+    if (toolName === undefined || personaAt < 0) continue
+    const personaLines = []
+    for (let j = personaAt + 1; j < rowLines.length; j += 1) {
+      const line = rowLines[j]
+      if (line.trim() === '') { personaLines.push(''); continue }
+      if (line.length - line.trimStart().length <= 8) break
+      personaLines.push(line.slice(10))
+    }
+    rows.push({
+      toolName,
+      presetId: expertPresetId(toolName),
+      persona: personaLines.join('\n').replace(/\s+$/, ''),
+    })
+  }
+  return rows
+}
+
+/** Replace each expert row's inline persona with a reference to its own preset. */
+function referenceExpertPresets(text) {
+  const lines = text.split('\n')
+  const out = []
+  let i = 0
+  while (i < lines.length) {
+    const head = /^    - id: (tool-subagent-expert-[\w-]+)$/.exec(lines[i])
+    if (head === null) { out.push(lines[i]); i += 1; continue }
+    const rowLines = [lines[i]]
+    i += 1
+    while (i < lines.length && !/^    - id: /.test(lines[i])) { rowLines.push(lines[i]); i += 1 }
+    const toolName = /^        toolName: (expert_\w+)$/m.exec(rowLines.join('\n'))?.[1]
+    if (toolName === undefined) { out.push(...rowLines); continue }
+    const presetId = expertPresetId(toolName)
+    out.push(
+      `    - id: ${head[1]}`,
+      "      name: '@deepseek-ai/dsh-tool-subagent'",
+      '      config:',
+      '        provider: spawn',
+      `        toolName: ${toolName}`,
+      `        agentPreset: ${presetId}`,
+      `        allowedAgentPresets: [${presetId}]`,
+    )
+  }
+  return out.join('\n')
+}
+
+/** Write one expert preset directory; returns its id. */
+function writeExpertPresetDir(expert) {
+  const dir = join(root, 'presets', expert.presetId)
+  mkdirSync(dir, { recursive: true })
+  const name = expertPresetName(expert.persona)
+  writeFileSync(join(dir, 'preset.yml'), `name: ${name}\ndescription: OmniMux 专家子代理：${name}\norder: 500\n`, 'utf8')
+  writeFileSync(join(dir, 'agent.cordis.yml'), expertPresetCordis(expert.presetId, expert.persona), 'utf8')
+  return expert.presetId
+}
+
 function loadFragment(name) {
   const text = readFileSync(join(fragments, name), 'utf8').replace(/\s+$/, '')
   if (!text.includes('    - id: tool-subagent-expert-')) {
@@ -265,13 +395,22 @@ const targets = [
   },
 ]
 
+const writtenExpertPresets = new Set()
 for (const t of targets) {
   const path = join(root, t.file)
   if (!existsSync(path)) continue
+  // Each expert keeps its persona in its own preset; the mount row only points at it.
+  const experts = parseExpertRows(t.fragment)
+  for (const expert of experts) {
+    if (writtenExpertPresets.has(expert.presetId)) continue
+    writeExpertPresetDir(expert)
+    writtenExpertPresets.add(expert.presetId)
+  }
   let yml = readFileSync(path, 'utf8')
   yml = replacePersona(yml, t.persona)
-  yml = spliceExperts(yml, t.fragment)
+  yml = spliceExperts(yml, referenceExpertPresets(t.fragment))
   writeFileSync(path, yml)
-  const experts = (yml.match(/toolName: expert_/g) || []).length
-  console.log(`  ✓ ${t.file} experts=${experts}`)
+  const mounted = (yml.match(/toolName: expert_/g) || []).length
+  console.log(`  ✓ ${t.file} experts=${mounted} expertPresets=${experts.length}`)
 }
+console.log(`  ✓ presets/expert-* generated=${writtenExpertPresets.size}`)

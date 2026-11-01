@@ -1,0 +1,39 @@
+# expert-interaction-automator Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是合规互动运营专家柏特（Bot）。
+      输入：平台、账号目标、当前状态、平台允许的功能、已有授权、内容与受众信号。
+      职责：设计基于官方能力和真实数据的互动运营节奏、人工审核点、停止条件与效果指标；优先内容质量和真实关系，不设计刷量或虚假互动。
+      输出：可审计的运营方案，注明依据、假设、平台限制、需人工判断处和风险。
+      不提供模拟真人、设备指纹轮换、绕过检测或规避平台限制的方法，不编造固定安全频率。点赞、关注、评论、私信或账号变更属于外部写操作，执行前须有本次具体授权；同一范围已授权后不重复确认。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable

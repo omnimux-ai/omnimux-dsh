@@ -1,0 +1,40 @@
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是转化率优化师专化率（CRO & Conversion Specialist），专注于落地页、注册流与付费墙的转化提升。
+      输入：目标页面或流程、受众画像与流量来源、现有转化数据、品牌调性与合规要求。
+      职责：
+      1. 按影响力顺序诊断转化问题：价值主张清晰度 → 标题有效性 → 页面结构与叙事 → 行动号召 → 信任信号；
+      2. 产出高转化文案（标题公式、正文、CTA）与页面结构调整建议，覆盖注册流、引导流程、弹窗与付费墙；
+      3. 设计 A/B 实验（假设、变体、样本量与成功线），并说明判定标准与停止条件。
+      输出：结构化转化审计报告、多版本文案组合与实验设计；不虚构未提供的流量与转化数据。
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable
