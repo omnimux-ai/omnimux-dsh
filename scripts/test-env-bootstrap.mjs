@@ -13,7 +13,7 @@ import { runPnpm } from './managed-tarball.mjs';
 import { privatePnpmEnvironment } from './materialize-cache.mjs';
 import { prepareFiles, payloadManifest, hashFile, readJson, stable } from './materialize-graph.mjs';
 import { createTaskPnpmTool, installTaskRuntime } from './task-runtime-install.mjs';
-import { resolveHostRuntimeLayout, defaultHostLayout, composeAgentPresetRows, stringifyStructuredFile } from './host-runtime-layout.mjs';
+import { resolveHostRuntimeLayout, defaultHostLayout, composeAgentPresetRows, hasShippedPresetRoot, stringifyStructuredFile } from './host-runtime-layout.mjs';
 
 /**
  * 宿主布局按实际安装探测（asar:false 的 `Resources/app` 优先，旧 `app.asar` 回退）。
@@ -632,16 +632,26 @@ async function runTaskPreparation({ options, io, deps }) {
  * @returns {string} 追加到 cordis.patch.yml 的 YAML 片段（无预设可声明时为空串）
  */
 function agentPresetPatchText(layout) {
+  // 旧 App（app.asar 布局）里预设清单在归档内部，普通 Node 读不到；
+  // 那种布局下「读不到」是预期事实，显式跳过而不是静默写空。
+  if (layout.layout === 'app.asar') return '';
+  // 新布局下预设清单是真实目录：读不到就是环境坏了，必须响亮失败，
+  // 否则隔离 profile 拿不到任何声明，宿主照常启动、只在建会话时才报
+  // agent-preset/not-found（评审指出的静默降级）。
+  if (!hasShippedPresetRoot(layout.appRoot)) {
+    throw failure('PRESET_ROOT_MISSING', `宿主缺少 preset/agent-presets 目录：${layout.appRoot}`);
+  }
   let composition;
   try {
     const resolver = createRequire(join(layout.appRoot, 'lib', 'desktop-cli.js'));
     const resolvable = (name) => { try { resolver.resolve(name); return true; } catch { return false; } };
     composition = composeAgentPresetRows({ appRoot: layout.appRoot, resolvable });
-  } catch {
-    // 解析器不可用时不阻断验收：旧 App 本来就没有这份预设清单。
-    return '';
+  } catch (error) {
+    throw failure('PRESET_COMPOSE_FAILED', `合成 agent preset 声明失败：${error?.message ?? error}`);
   }
-  if (!composition.rows.length) return '';
+  if (!composition.rows.length) {
+    throw failure('PRESET_ROWS_EMPTY', `预设目录存在但没合成出任何声明：${layout.appRoot}`);
+  }
   const text = stringifyStructuredFile([{ insert: composition.rows }]);
   return `\n# QA 隔离环境：按壳的规则声明出厂 agent preset（绕过壳启动时壳不会注入这些行）。\n${text}`;
 }

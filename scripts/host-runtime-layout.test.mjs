@@ -8,6 +8,7 @@ import {
   appPackageRootFor,
   composeAgentPresetRows,
   defaultHostLayout,
+  hasShippedPresetRoot,
   readStructuredFile,
   stringifyStructuredFile,
   pruneRejectedFields,
@@ -205,4 +206,17 @@ test('没有嵌套拒绝字段时 reduced 为 false，且返回同一引用', ()
   const { plugins: pruned, reduced } = pruneRejectedFields(plugins)
   assert.equal(reduced, false)
   assert.equal(pruned, plugins)
+})
+
+test('新布局缺 preset 目录时 hasShippedPresetRoot 为 false（调用方据此响亮失败）', (t) => {
+  const { appRoot } = fakeBundle(t, 'app')
+  assert.equal(hasShippedPresetRoot(appRoot), false)
+  writePreset(appRoot, 'demo', { manifest: { name: 'demo' }, plugins: [{ name: 'x' }] })
+  assert.equal(hasShippedPresetRoot(appRoot), true)
+})
+
+test('旧 asar 布局读不到归档内 preset：合成结果为 0 行（调用方按布局跳过，不静默写空）', (t) => {
+  const { appRoot } = fakeBundle(t, 'app.asar')
+  assert.equal(hasShippedPresetRoot(appRoot), false)
+  assert.deepEqual(composeAgentPresetRows({ appRoot }).rows, [])
 })
