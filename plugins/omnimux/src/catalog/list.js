@@ -198,7 +198,7 @@ export function buildModelCatalog(opts = {}) {
     audio: media.providers?.omnimux?.models?.audio || DEFAULT_MEDIA.providers.omnimux.models.audio,
   }
 
-  /** @type {{ text: string, image: string, video: string, audio: string }} */
+  /** @type {{ text: string, image: string, video: string, audio: string, analysis?: string }} */
   const defaults = {
     text: '',
     image: '',
@@ -234,6 +234,19 @@ export function buildModelCatalog(opts = {}) {
       ids: new Set(lists[kind].map((row) => row.id)),
       models: dto.models,
     })
+  }
+
+  // Multimodal-understanding default: the analysis scenario rides catalog.text
+  // rows but only accepts a model that can take non-text input, so the picker
+  // offers it separately from the plain-text default rather than letting the
+  // text default silently drive video/audio/document calls.
+  const savedAnalysis = trimId(settingsDefaults.defaultAnalysisModel)
+  if (savedAnalysis) {
+    const resolvedAnalysis = resolveModelId(index, savedAnalysis)
+    const compatible = resolvedAnalysis && lists.text.find((row) => row.id === resolvedAnalysis && (row.input ?? []).some((modality) => modality !== 'text'))
+    defaults.analysis = compatible ? resolvedAnalysis : ''
+  } else {
+    defaults.analysis = (lists.text.find((row) => row.id === defaults.text && (row.input ?? []).some((modality) => modality !== 'text')) ?? lists.text.find((row) => (row.input ?? []).some((modality) => modality !== 'text')))?.id ?? ''
   }
 
   return {

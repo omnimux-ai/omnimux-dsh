@@ -16,6 +16,12 @@ export const DEFAULT_OPERATION_AUTO = 'auto'
 
 export const SETTINGS_DEFAULTS = Object.freeze({
   defaultTextModel: 'gemini-3.8-flash',
+  /**
+   * Multimodal analysis tasks (素材理解 / 图片理解 / 视频理解). Empty means
+   * "follow the hub's compatible default" — the hub picks a catalog.text row
+   * whose `input` covers the reference asset types at resolve time.
+   */
+  defaultAnalysisModel: '',
   defaultImageModel: 'gpt-image-2.5',
   defaultVideoModel: 'seedance-2-5',
   defaultAudioModel: 'suno',
@@ -71,7 +77,8 @@ export const SETTINGS_DEFAULTS = Object.freeze({
 })
 
 const FIELD_META = Object.freeze({
-  defaultTextModel: '文本节点默认模型',
+  defaultTextModel: '文本任务默认模型',
+  defaultAnalysisModel: '多模态理解任务默认模型（素材/图片/视频理解）',
   defaultImageModel: '图片节点默认模型',
   defaultVideoModel: '视频节点默认模型',
   defaultAudioModel: '音频节点默认模型',
@@ -238,6 +245,7 @@ function SettingsConfig(value) {
 SettingsConfig.type = 'object'
 SettingsConfig.dict = {
   defaultTextModel: stringNode('defaultTextModel'),
+  defaultAnalysisModel: stringNode('defaultAnalysisModel'),
   defaultImageModel: stringNode('defaultImageModel'),
   defaultVideoModel: stringNode('defaultVideoModel'),
   defaultAudioModel: stringNode('defaultAudioModel'),
@@ -251,6 +259,7 @@ SettingsConfig.toJSON = function toJSON() {
     type: 'object',
     properties: {
       defaultTextModel: stringNode('defaultTextModel'),
+      defaultAnalysisModel: stringNode('defaultAnalysisModel'),
       defaultImageModel: stringNode('defaultImageModel'),
       defaultVideoModel: stringNode('defaultVideoModel'),
       defaultAudioModel: stringNode('defaultAudioModel'),

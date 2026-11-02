@@ -6,7 +6,7 @@ test('parseVideoConfig defaults', () => {
   const expected = {
     video: { ffmpegPath: '', maxConcurrent: 2, pythonPath: '', modelsDir: '', depthMode: 'fast' },
     understand: {
-      defaultModel: 'gemini-3.8-flash',
+      defaultModel: '',
       maxTokens: 8000,
       maxVideoBytes: 20 * 1024 * 1024,
       analyzePromptPath: '',

@@ -291,13 +291,28 @@ export async function executeOmnimuxText(input) {
   // The official route — its whitelist, channel plan and submit guard — only
   // applies when the request actually rides it. A BYOK endpoint knows its own
   // model names, so none of that machinery may run for it.
+  //
+  // Task-model split: pure text rides `defaultTextModel`; multimodal
+  // understanding (references.length > 0 → analysis scenario) rides
+  // `defaultAnalysisModel`. Both must still be a catalog row whose `input`
+  // covers every reference asset type — a saved id that the hub no longer
+  // serves or that cannot take the asset simply falls back to the catalog
+  // recommendation rather than silently submitting an incompatible call.
   let officialText = text
-  if (isOfficialRequest && !input.model && runtimeSettings.defaultTextModel) {
+  if (isOfficialRequest && !input.model) {
     const catalog = buildModelCatalog({ text, gate, env: input.env || {}, settingsDefaults: runtimeSettings })
-    const savedDefault = catalog.defaults.text
-    const compatible = catalog.text.find((row) => row.id === savedDefault)
-    if (compatible && references.every((asset) => compatible.input?.includes(asset.type))) officialText = { ...text, defaultModel: savedDefault }
-    else if (references.length === 0 && savedDefault) officialText = { ...text, defaultModel: savedDefault }
+    // `defaults.text` is the plain-text pick; `defaults.analysis` is already a
+    // compatibility-filtered multimodal pick (catalog/list.js), so a saved id
+    // that can't take the references degrades to it instead of an invalid call.
+    const candidate = references.length
+      ? catalog.defaults.analysis || catalog.defaults.text
+      : catalog.defaults.text
+    const compatible = catalog.text.find((row) => row.id === candidate)
+    if (compatible && references.every((asset) => (compatible.input ?? ['text']).includes(asset.type))) {
+      officialText = { ...text, defaultModel: candidate }
+    } else if (references.length === 0 && candidate) {
+      officialText = { ...text, defaultModel: candidate }
+    }
   }
   const route = useByok
     ? null
