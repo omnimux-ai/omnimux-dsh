@@ -288,7 +288,7 @@ export function AccountsSidebar({ t }) {
 
             <div className="omnimux-publish-accounts-search">
               <SearchField
-                className="omnimux-publish-accounts-search-input"
+                stretch
                 placeholder={t('acct.searchPlaceholder')}
                 aria-label={t('acct.searchPlaceholder')}
                 clearLabel={t('search.clear')}
