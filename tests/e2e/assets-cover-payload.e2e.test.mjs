@@ -22,6 +22,7 @@ import {
   buildManifest,
   needsThumbnail,
   planThumbs,
+  readIdList,
   thumbObjectKey,
 } from '../../plugins/omnimux-assets/scripts/build-cover-thumbnails.mjs'
 import {
@@ -270,4 +271,72 @@ test('E2E 契约十四：构建脚本不把空串 thumb_url 写进任何产物 (
   assert.match(builderSrc, /if \(url === undefined\) continue/)
   // index 侧仍然只发射非空值。
   assert.match(builderSrc, /if \(typeof row\.thumb_url === 'string' && row\.thumb_url !== ''\) entry\.thumb_url = row\.thumb_url/)
+})
+
+test('E2E 契约十五：--ids 精确点名行，压过格式过滤且不影响既有选择 (AC-3, AC-4)', async () => {
+  const { mkdtempSync, writeFileSync, rmSync } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+
+  // 一个 JPEG 行 + 一个 PNG 行 + 一个 file: 行。
+  const rows = [
+    { id: 'scene-a', cover_url: 'https://cdn/a.jpg' },
+    { id: 'char-b', cover_url: 'https://cdn/b.png' },
+    { id: 'local-c', cover_url: 'file:素材库/c.png' },
+  ]
+
+  // 默认只认 PNG。
+  assert.deepEqual(planThumbs(rows).map((row) => row.id), ['char-b'])
+  // --all 认所有可远程取图的行。
+  assert.deepEqual(planThumbs(rows, { all: true }).map((row) => row.id), ['char-b', 'scene-a'])
+
+  // --ids 点名的 JPEG 行会被选中——这正是修超高分辨率封面所需的能力。
+  const named = planThumbs(rows, { ids: new Set(['scene-a']) })
+  assert.deepEqual(named.map((row) => row.id), ['scene-a'])
+
+  // 点名一个 file: 行仍然拒绝：没有远程对象可配对。
+  assert.deepEqual(planThumbs(rows, { ids: new Set(['local-c']) }), [])
+
+  // ids 优先级高于格式过滤：同时给 ids 与 all 时只认 ids。
+  assert.deepEqual(
+    planThumbs(rows, { all: true, ids: new Set(['scene-a']) }).map((row) => row.id),
+    ['scene-a'],
+  )
+
+  // ids 文件：每行一个 id，空行与 # 注释忽略。
+  const dir = mkdtempSync(join(tmpdir(), 'thumbs-ids-'))
+  try {
+    const file = join(dir, 'ids.txt')
+    writeFileSync(file, '# 注释\n\nscene-a\nchar-b\n\n')
+    assert.deepEqual([...readIdList(file)].sort(), ['char-b', 'scene-a'])
+    // 文件不可读时抛错，而不是静默返回空集——空集会看起来像一次成功的 no-op。
+    assert.throws(() => readIdList(join(dir, 'missing.txt')), /--ids file is unreadable/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('E2E 契约十六：场景 3 张超高分辨率封面已带缩略图 (AC-1, AC-2, AC-4)', () => {
+  const fixed = [
+    'scene-city-001be78b97c4',
+    'scene-city-0466597a641d',
+    'scene-city-047aa1e5ce26',
+  ]
+  for (const id of fixed) {
+    const row = catalogIndex.find((entry) => entry.id === id)
+    assert.ok(row, `${id} 应仍在目录里`)
+    assert.match(
+      String(row.thumb_url ?? ''),
+      new RegExp(`^https://assets\\.omnimux\\.ai/thumbs/${id}\\.webp$`),
+      `${id} 必须有缩略图`,
+    )
+  }
+  // 场景分类共 6 行带缩略图：本次修的 3 张 JPEG + #3882 已处理的 3 张 PNG。
+  // 断言写成全集而不是「只有这 3 行」，否则会误伤前一次任务的结果。
+  const sceneWithThumb = catalogIndex
+    .filter((row) => row.category === 'scene' && Object.hasOwn(row, 'thumb_url'))
+    .map((row) => row.id)
+    .sort()
+  assert.equal(sceneWithThumb.length, 6, '场景分类应有 6 行带缩略图')
+  for (const id of fixed) assert.ok(sceneWithThumb.includes(id), `${id} 必须在其中`)
 })

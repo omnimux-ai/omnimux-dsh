@@ -41,6 +41,11 @@
  *   node scripts/build-cover-thumbnails.mjs --out=/tmp/thumbs
  *   node scripts/build-cover-thumbnails.mjs --out=/tmp/thumbs --all
  *   node scripts/build-cover-thumbnails.mjs --out=/tmp/thumbs --limit=5 --dry-run
+ *   node scripts/build-cover-thumbnails.mjs --out=/tmp/thumbs --ids=ids.txt
+ *
+ * `--ids=<file>` names rows explicitly (one id per line, `#` comments allowed) and
+ * outranks the format filter, so a few oversized JPEG covers can be fixed without
+ * re-encoding the rest of the catalog.
  */
 import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
@@ -93,13 +98,20 @@ export function thumbObjectKey(rowId) {
  * A row with no cover has nothing to shrink. A row whose cover is a legacy
  * `file:` locator has no remote object at all, so there is nothing to pair a
  * thumbnail with.
+ *
+ * `ids` names rows explicitly, so it outranks the format filter: a caller who
+ * lists a JPEG row wants that JPEG row handled, even though JPEG is not in the
+ * default extension set. Naming rows is how a handful of oversized covers get
+ * fixed without re-encoding the other four thousand.
  * @param {any} row
- * @param {{ exts?: Set<string>, all?: boolean }} [options]
+ * @param {{ exts?: Set<string>, all?: boolean, ids?: Set<string> }} [options]
  */
 export function needsThumbnail(row, options = {}) {
   const exts = options.exts ?? DEFAULT_REENCODE_EXTS
   const cover = String(row?.cover_url ?? '')
   if (cover === '' || cover.startsWith('file:')) return false
+  const ids = options.ids
+  if (ids instanceof Set && ids.size > 0) return ids.has(String(row?.id ?? ''))
   if (options.all === true) return true
   return exts.has(extname(cover).toLowerCase())
 }
@@ -110,7 +122,7 @@ export function needsThumbnail(row, options = {}) {
  * Pure: it reads the catalog rows it is given and nothing else, so the selection
  * rule can be asserted without a filesystem or a network.
  * @param {any[]} rows
- * @param {{ exts?: Set<string>, all?: boolean, limit?: number }} [options]
+ * @param {{ exts?: Set<string>, all?: boolean, ids?: Set<string>, limit?: number }} [options]
  * @returns {{ id: string, coverUrl: string, key: string }[]}
  */
 export function planThumbs(rows, options = {}) {
@@ -222,6 +234,32 @@ function readJsonFile(file) {
   }
 }
 
+/**
+ * Read a row-id list: one id per line, blank lines and `#` comments ignored.
+ *
+ * The file is how a caller names a handful of rows without `--all`, which would
+ * re-encode every cover in the catalog. A missing file throws rather than
+ * silently selecting nothing: an empty selection would look like a successful
+ * no-op run and hide the typo.
+ * @param {string} file
+ * @returns {Set<string>}
+ */
+export function readIdList(file) {
+  let text
+  try {
+    text = readFileSync(file, 'utf8')
+  } catch {
+    throw new Error(`--ids file is unreadable: ${file}`)
+  }
+  const ids = new Set()
+  for (const line of text.split('\n')) {
+    const value = line.trim()
+    if (value === '' || value.startsWith('#')) continue
+    ids.add(value)
+  }
+  return ids
+}
+
 /** @param {string} file @param {Buffer} data */
 function writeFileAtomic(file, data) {
   mkdirSync(dirname(file), { recursive: true })
@@ -270,8 +308,11 @@ export async function buildThumbnails(options) {
     throw new Error(`catalog index is missing or unreadable: ${join(catalogDir, 'index.json')}`)
   }
 
-  const plan = planThumbs(index, { all: options.all === true, limit: options.limit })
-  log(`[thumbs] ${plan.length} row(s) selected (${options.all === true ? 'all covers' : 'png covers'})`)
+  const plan = planThumbs(index, { all: options.all === true, ids: options.ids, limit: options.limit })
+  const scope = options.ids instanceof Set && options.ids.size > 0
+    ? `${options.ids.size} named row(s)`
+    : options.all === true ? 'all covers' : 'png covers'
+  log(`[thumbs] ${plan.length} row(s) selected (${scope})`)
 
   if (options.dryRun === true) {
     for (const row of plan) log(`[thumbs] would encode ${row.id} <- ${row.coverUrl}`)
@@ -343,6 +384,7 @@ async function main(argv) {
     catalogDir: typeof args.catalog === 'string' ? resolve(args.catalog) : DEFAULT_CATALOG_DIR,
     outDir: args.out,
     all: args.all === true,
+    ids: typeof args.ids === 'string' ? readIdList(resolve(args.ids)) : undefined,
     limit: typeof args.limit === 'string' ? Number(args.limit) : undefined,
     dryRun: args['dry-run'] === true,
     generatedAt: typeof args['generated-at'] === 'string' ? args['generated-at'] : undefined,
