@@ -191,3 +191,7 @@
   - 原断言：`voice_clone` 在缺少参考样本或脚本时拒绝提交。
   - 必须改的理由：`indextts-2` 恢复在架后，该断言仍应成立。
   - 新期望证据：`voice_clone` 在缺少参考样本或脚本时仍拒绝提交，无论 `indextts-2` 上架状态。
+- `plugins/omnimux/src/settings/omitted-model-defaults.test.js` :: `3312: saved defaults pointing at delisted models resolve only to the fixed real published catalog`
+  - 原断言：`catalog.video` 列表为 `['seedance-2-0', 'seedance-2-5']`；`catalog.audio` 列表为 `['suno']`。
+  - 必须改的理由：新增 `minimax-h3-video` 到在架 video 目录后，`catalog.video` 列表扩大为 `['minimax-h3-video', 'seedance-2-0', 'seedance-2-5']`；`indextts-2` 恢复在架后，`catalog.audio` 列表扩大为 `['indextts-2', 'suno']`。
+  - 新期望证据：`minimax-h3-video` 在 `catalog.video` 首位；`indextts-2` 在 `catalog.audio` 首位；`seedance-2-0`/`seedance-2-5`/`suno` 仍在列；`catalog.defaults.video` 仍为 `seedance-2-5`（默认值不变）。
