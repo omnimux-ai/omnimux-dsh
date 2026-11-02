@@ -4,7 +4,7 @@ import { dirname, join, resolve, sep } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createTestEnvironmentStarter } from './test-env-bootstrap.mjs';
-import { resolveHostRuntimeLayout, appPackageRootFor } from './host-runtime-layout.mjs';
+import { resolveHostRuntimeLayout, appPackageRootFor, readAsarTree, asarEntry } from './host-runtime-layout.mjs';
 
 export const taskRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const workspaceTitle = 'Composer inline QA';
@@ -90,8 +90,29 @@ export function privateStarterFs(io = fs, home = process.env.HOME || '') {
  * @param {{ executable: string, cli: string }} runtime
  * @param {{ accessSync?: Function, constants?: object }} [io]
  */
-export function assertComposerRuntimeReadable(runtime, io = fs) {
+export function assertComposerRuntimeReadable(runtime, io = fs, deps = {}) {
+  const readTree = deps.readAsarTree ?? readAsarTree;
+  const lookup = deps.asarEntry ?? asarEntry;
+  const archiveLayout = runtime.layout?.layout === 'app.asar';
   for (const [path, mode] of [[runtime.executable, io.constants.X_OK], [runtime.cli, io.constants.R_OK]]) {
+    // 归档布局下 CLI 在 asar 内部，普通 Node 的 accessSync 必 ENOTDIR；
+    // 改为查归档目录表，语义等价于「这个文件在不在」。
+    if (archiveLayout && path === runtime.cli) {
+      let present = false;
+      try {
+        const relative = path.slice(runtime.layout.appRoot.length + 1);
+        present = Boolean(lookup(readTree(runtime.layout.appRoot), relative));
+      } catch {
+        present = false;
+      }
+      if (!present) {
+        throw Object.assign(new Error(`Composer QA requires installed macOS packaged runtime: ${path}`), {
+          code: 'COMPOSER_RUNTIME_MISSING',
+          detail: { path, via: 'asar-index' },
+        });
+      }
+      continue;
+    }
     try { io.accessSync(path, mode); } catch {
       throw Object.assign(new Error(`Composer QA requires installed macOS packaged runtime: ${path}`), {
         code: 'COMPOSER_RUNTIME_MISSING',

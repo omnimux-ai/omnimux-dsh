@@ -1,4 +1,5 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { readAsarHeader } from './lib/asar-integrity-engine.mjs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { parseAllDocuments, stringify } from 'yaml';
 
@@ -49,23 +50,63 @@ const isFile = (path) => {
 };
 
 /**
+ * 读 asar 归档的目录表（header 里的 JSON 文件树）。
+ *
+ * `app.asar` 是单个归档文件：普通 Node 对它 `readdirSync` 必 `ENOTDIR`，
+ * Electron 里才被当作目录。判据因此不能靠目录 API，只能读归档目录表。
+ * @param {string} archivePath
+ * @returns {object} 归档文件树（`files` 嵌套结构）
+ */
+export function readAsarTree(archivePath) {
+  const header = readAsarHeader(archivePath);
+  let tree;
+  try {
+    tree = JSON.parse(header.toString('utf8'));
+  } catch (error) {
+    throw Object.assign(new Error(`asar 目录表不是合法 JSON：${archivePath}`), { code: 'ASAR_HEADER_INVALID', cause: error });
+  }
+  if (!tree || typeof tree !== 'object' || !tree.files || typeof tree.files !== 'object') {
+    throw Object.assign(new Error(`asar 目录表缺少 files 根节点：${archivePath}`), { code: 'ASAR_HEADER_INVALID' });
+  }
+  return tree;
+}
+
+/**
+ * 在归档文件树里按路径查节点。
+ * @param {object} tree `readAsarTree` 的返回值
+ * @param {string} relativePath 例如 `preset/agent-presets`
+ * @returns {object|null}
+ */
+export function asarEntry(tree, relativePath) {
+  let node = tree;
+  for (const part of relativePath.split('/')) {
+    const files = node && typeof node === 'object' ? node.files : undefined;
+    if (!files || typeof files !== 'object' || !Object.hasOwn(files, part)) return null;
+    node = files[part];
+  }
+  return node ?? null;
+}
+
+/**
  * 归档布局是否真的可用。
  *
- * 只看 `app.asar` 是否存在不够：普通 Node 读不了归档，Electron 里它又被当成目录，
- * 两种上下文里「存在」都不等于「能读到里面的 preset / 宿主包」。判据必须是
- * **能在该布局下列出 `preset/agent-presets`**——这正是隔离 profile 需要的唯一东西。
- * 读不到就返回 false，让上层响亮报 `RUNTIME_MISSING`，而不是给一个「可用但下游全空」的布局。
+ * 判据是「归档目录表里有非空的 `preset/agent-presets`」——这正是隔离 profile
+ * 需要的唯一东西。归档缺失/损坏/没有该目录都返回 false，让上层响亮报
+ * `RUNTIME_MISSING`，而不是给一个「可用但下游全空」的布局。
  */
 function probeArchive(io, archive) {
-  // 与 statSync 一致：探测能力缺失是调用方错误，不能悄悄换成真实 fs 去读。
-  if (typeof io.readdirSync !== 'function') {
-    throw new TypeError('resolveHostRuntimeLayout: io.readdirSync is required to probe an asar layout');
+  if (typeof io.existsSync !== 'function') {
+    throw new TypeError('resolveHostRuntimeLayout: io.existsSync is required to probe an asar layout');
   }
+  if (!io.existsSync(archive)) return false;
+  let tree;
   try {
-    return io.readdirSync(join(archive, 'preset', 'agent-presets')).length > 0;
+    tree = (io.readAsarTree ?? readAsarTree)(archive);
   } catch {
     return false;
   }
+  const presets = asarEntry(tree, 'preset/agent-presets');
+  return Boolean(presets && presets.files && Object.keys(presets.files).length > 0);
 }
 
 /**
@@ -78,7 +119,7 @@ export function resolveHostRuntimeLayout(options = {}) {
   const resources = join(bundle, 'Contents/Resources');
   const candidates = WRAPPER_CANDIDATES.map((relative) => join(bundle, relative));
   // 调用方可以注入 fs（测试用 stub）：验收脚本本身走真实 fs，测试不依赖本机装没装 App。
-  const io = options.io ?? { statSync, readdirSync };
+  const io = options.io ?? { statSync, readdirSync, existsSync, readAsarTree };
   const probe = (path) => {
     // 探测能力缺失是调用方错误，不是「布局可用」的证据：显式报错，别静默当成存在。
     if (typeof io.statSync !== 'function') {

@@ -6,7 +6,9 @@ import { join } from 'node:path'
 import {
   appAnchorFor,
   appPackageRootFor,
+  asarEntry,
   composeAgentPresetRows,
+  readAsarTree,
   defaultHostLayout,
   hasShippedPresetRoot,
   readStructuredFile,
@@ -32,10 +34,13 @@ function fakeBundle(t, layout) {
   mkdirSync(resources, { recursive: true })
   const appRoot = join(resources, layout)
   if (layout === 'app.asar') {
-    // 归档布局的判据是「能列出 preset/agent-presets」：这里用目录模拟一个可读归档
-    // （真实 Electron 下 asar 也表现为可读目录）。不可读归档由单独用例覆盖。
-    mkdirSync(join(appRoot, 'preset', 'agent-presets', 'legacy-preset'), { recursive: true })
-    writeFileSync(join(appRoot, 'preset', 'agent-presets', 'legacy-preset', 'agent.cordis.yml'), '[]\n')
+    // 真实语义：app.asar 是单个归档文件，判据读它的目录表（普通 Node 读不进归档）。
+    writeAsarArchive(t, resources, {
+      files: {
+        preset: { files: { 'agent-presets': { files: { 'legacy-preset': { files: { 'agent.cordis.yml': { size: 3 } } } } } } },
+        node_modules: { files: { '@deepseek-ai': { files: { dsh: { files: { lib: { files: { 'bin.js': { size: 10 } } } } } } } } },
+      },
+    })
   } else {
     mkdirSync(join(appRoot, 'lib'), { recursive: true })
     writeFileSync(join(appRoot, 'lib', 'desktop-cli.js'), '// wrapper\n')
@@ -288,7 +293,60 @@ test('pruneUnresolvable 递归进 cordis:group 的 config 数组（与壳一致�
   assert.deepEqual(plugins[0].config[1].config, [])
 })
 
-test('probeArchive 在 io 缺 readdirSync 时显式报错，不悄悄读真实 fs', () => {
+test('probeArchive 在注入 io 缺 existsSync 时显式报错，不悄悄读真实 fs', () => {
   assert.throws(() => resolveHostRuntimeLayout({ io: { statSync: () => ({ isFile: () => false }) } }),
-    { name: 'TypeError', message: /io\.readdirSync is required/ })
+    { name: 'TypeError', message: /io\.existsSync is required/ })
+})
+
+/**
+ * 造一个**真实语义**的 asar 文件：[16 字节 pickle 头][JSON 目录表][内容]。
+ * 普通 Node 对它 readdirSync/accessSync 都会 ENOTDIR，只能靠目录表读。
+ */
+function writeAsarArchive(t, directory, tree) {
+  const json = Buffer.from(JSON.stringify(tree), 'utf8');
+  const header = Buffer.alloc(16);
+  header.writeUInt32LE(4, 0);
+  header.writeUInt32LE(json.length + 4, 4);
+  header.writeUInt32LE(json.length + 4, 8);
+  header.writeUInt32LE(json.length, 12);
+  const archive = join(directory, 'app.asar');
+  writeFileSync(archive, Buffer.concat([header, json, Buffer.from('payload')]));
+  return archive;
+}
+
+test('真实语义 asar：目录表里有 preset 即判为可用布局', (t) => {
+  const bundle = mkdtempSync(join(tmpdir(), 'omnimux-asar-real-'))
+  t.after(() => rmSync(bundle, { recursive: true, force: true }))
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  writeAsarArchive(t, resources, {
+    files: {
+      preset: { files: { 'agent-presets': { files: { 'omni-agent': { files: { 'preset.yml': { size: 10 } } } } } } },
+      node_modules: { files: { '@deepseek-ai': { files: { dsh: { files: { lib: { files: { 'bin.js': { size: 9303 } } } } } } } } },
+    },
+  })
+  const layout = resolveHostRuntimeLayout({ bundle })
+  assert.equal(layout.layout, 'app.asar')
+  const tree = readAsarTree(layout.appRoot)
+  assert.equal(Object.keys(asarEntry(tree, 'preset/agent-presets').files).length, 1)
+  assert.ok(asarEntry(tree, 'node_modules/@deepseek-ai/dsh/lib/bin.js'))
+  assert.equal(asarEntry(tree, 'preset/missing'), null)
+})
+
+test('真实语义 asar：目录表里没有 preset 时判为不可用并报 RUNTIME_MISSING', (t) => {
+  const bundle = mkdtempSync(join(tmpdir(), 'omnimux-asar-nopreset-'))
+  t.after(() => rmSync(bundle, { recursive: true, force: true }))
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  writeAsarArchive(t, resources, { files: { lib: { files: { 'desktop-cli.js': { size: 10 } } } } })
+  assert.throws(() => resolveHostRuntimeLayout({ bundle }), { code: 'TEST_ENV_RUNTIME_MISSING' })
+})
+
+test('归档头部损坏时判为不可用并报可读错误', (t) => {
+  const bundle = mkdtempSync(join(tmpdir(), 'omnimux-asar-broken-'))
+  t.after(() => rmSync(bundle, { recursive: true, force: true }))
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  writeFileSync(join(resources, 'app.asar'), 'not-an-asar')
+  assert.throws(() => resolveHostRuntimeLayout({ bundle }), { code: 'TEST_ENV_RUNTIME_MISSING' })
 })
