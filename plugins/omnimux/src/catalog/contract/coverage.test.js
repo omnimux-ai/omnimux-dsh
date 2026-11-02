@@ -12,7 +12,7 @@ import { loadDispositions } from './dispositions.js';
 test('collectRuntimeModelIds returns the universe (contracts + wire aliases)', () => {
   resetContractCache();
   const ids = collectRuntimeModelIds();
-  assert.equal(ids.length, 70, `expected 70 runtime ids, got ${ids.length}`); // #3209 google-vids-omni 下线 −1 → 70
+  assert.equal(ids.length, 71, `expected 71 runtime ids, got ${ids.length}`); // #3209 google-vids-omni 下线 −1 + minimax-h3-video → 71
   assert.equal(ids.length, new Set(ids).size);
   assert.deepEqual(ids, [...ids].sort((a, b) => a.localeCompare(b)));
   assert.ok(ids.includes('whisper-1'));
@@ -99,7 +99,7 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
     'wan-3.0-ref',
     'wan3.0-video',
   ]);
-  assert.equal(cov.contractIds.length, 44); // #3209 google-vids-omni 契约行删除 45→44
+  assert.equal(cov.contractIds.length, 45); // #3209 google-vids-omni 契约行删除 45→44 + minimax-h3-video → 45
   assert.ok(cov.contractIds.includes('indextts-2'));
   assert.ok(cov.contractIds.includes('whisper-1'));
   assert.ok(cov.contractIds.includes('gpt-image-2.5-flare'));
@@ -110,7 +110,7 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
   // kling-avatar was removed upstream on 2026-09-14 (#1751) — it is no longer a contract.
   assert.equal(cov.contractIds.includes('kling-avatar'), false);
   // 2026-10-21 网关对账 #3516：上架面收敛为 9 个模型 / 24 个 operation。
-  assert.equal(cov.listedOperationCount, 24, 'H2 lists evidence-backed ops');
+  assert.equal(cov.listedOperationCount, 29, 'H2 lists evidence-backed ops');
   // #3209: the retired local channel leaves no listed operation behind.
   assert.equal(cov.listedOperations.some((key) => key.startsWith('google-vids-omni#')), false);
   assert.ok(cov.listedOperations.includes('seedance-2-5#text_to_video'));
@@ -132,7 +132,6 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
     'doubao-asr-bigmodel',
     'seed-audio-1.0',
     'gemini-3.8-flash-tts',
-    'indextts-2',
     'claude-sonnet-4-6',
     'gpt-image-2.5-flare',
     'gpt-image-2.5-sunburst',
@@ -181,10 +180,10 @@ test('verifyContracts: audit ok; strict ok once 67 dispositions resolve', () => 
   assert.equal(strict.ok, true, JSON.stringify(strict.issues.filter((i) => i.level === 'error'), null, 2));
   assert.equal(strict.exitCode, 0);
   assert.equal(strict.admission.errorCount, 0, 'strict must not invent admission errors');
-  assert.equal(strict.dispositions.total, 67); // P1b：13 条 unavailable + 3 条 draft 行删除 → 67
+  assert.equal(strict.dispositions.total, 68); // P1b + minimax-h3-video → 68
   assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
   assert.deepEqual(strict.coverage.extraInYaml, []);
-  assert.equal(strict.listedOperations.length, 24); // 2026-10-21 网关对账 #3516：上架面收敛为 24
+  assert.equal(strict.listedOperations.length, 29); // 2026-10-21 网关对账 #3516 + minimax-h3-video 上架 → 29
   // forbidden-listed models never expose listed operations
   assert.equal(strict.dispositions.forbiddenListed.length, 0); // P1b：墓碑行全部删除，禁止 listed 集合为空
   for (const id of strict.dispositions.forbiddenListed) {
@@ -215,6 +214,6 @@ test('whisper-1 is listed in real specs; the removed kling-avatar has left the c
       .all()
       .filter((m) => (m.operations ?? []).some((o) => o.id === 'digital_human'))
       .map((m) => m.id),
-    ['minimax-h3'],
+    ['minimax-h3', 'minimax-h3-video'],
   );
 });

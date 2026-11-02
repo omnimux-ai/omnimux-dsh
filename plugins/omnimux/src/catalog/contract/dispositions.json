@@ -307,6 +307,12 @@
       ]
     },
     {
+      "id": "minimax-h3-video",
+      "disposition": "canonical",
+      "reason": "2026-11-02：AutoDL ComfyUI 任务泳道（渠道 70/71/72，上游 minimax_h3_image_audio_to_video）在架可售；对口型/首尾帧/多参考槽经 metadata 透传，POST /v1/tasks/autodl 提交",
+      "notes": "与 APIMart minimax-h3 为同族独立泳道；网关侧对口型任务已真实跑通（8fed5047-9d01-4147-9dcf-bf001e964a55，¥0.04）"
+    },
+    {
       "id": "seed-audio-1.0",
       "disposition": "canonical",
       "reason": "火山引擎 HTTP v3 语音合成接口已在网关验证",

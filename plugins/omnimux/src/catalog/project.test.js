@@ -126,7 +126,7 @@ test('nanobanana: legacy spellings normalize to the hyphen canonical — never d
 test('withdrawn models leave models[]; unlisted canonical/draft rows stay authoritative but out of the four lists', () => {
   const index = freshIndex();
   const dto = projectCatalog(index, loadDispositions(), loadCatalogDefaults());
-  assert.equal(dto.models.length, 44); // #3209 google-vids-omni 下线（墓碑行无契约）→ 44
+  assert.equal(dto.models.length, 45); // #3209 google-vids-omni 下线 + minimax-h3-video → 45
   // #1751: withdrawn (disposition=unavailable) rows have no YAML block, so they vanish
   // from the authoritative list and from every derived bucket; #3209 adds the
   // google-vids-omni tombstone (local Google Vids channel retired).
@@ -152,7 +152,7 @@ test('withdrawn models leave models[]; unlisted canonical/draft rows stay author
       'kling-o3', 'kling-v2-6', 'kling-v3', 'kling-v3-motion-control', 'grok-imagine-image-2-0',
       // #3516: 上游渠道停用 → 仅登记不上架，四个产出桶都不得出现。
       'claude-sonnet-4-6', 'minimax-h3', 'doubao-asr-bigmodel', 'seedasr-auc',
-      'seed-audio-1.0', 'gemini-3.8-flash-tts', 'indextts-2',
+      'seed-audio-1.0', 'gemini-3.8-flash-tts',
     ]) {
       assert.equal(dto[kind].some((r) => r.id === unlisted), false, `${kind}:${unlisted}`);
     }
@@ -171,13 +171,14 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
   ]);
   // #3516: minimax-h3 上游渠道停用 → 视频桶只剩 seedance 系列。
   assert.deepEqual(dto.video.map((r) => r.id), [
+    'minimax-h3-video',
     'seedance-2-0',
     'seedance-2-0-fast',
     'seedance-2-0-mini',
     'seedance-2-5',
   ]);
   // #3516: 音频桶收敛为在架 suno；TTS 与声音克隆转为仅登记不上架。
-  assert.deepEqual(dto.audio.map((row) => row.id), ['suno']);
+  assert.deepEqual(dto.audio.map((row) => row.id), ['indextts-2', 'suno']);
   // Text bucket includes implementation-ready models without requiring live history.
   // #3516: claude-sonnet-4-6 / seedasr-auc / doubao-asr-bigmodel 渠道停用，
   // 只剩 gemini-3.8-flash，加上新上架的 whisper-1（speech_to_text 产出 text）。
@@ -252,7 +253,7 @@ test('projectChatRows: only listed text models with a text output enter the chat
 test('projectDirectoryRows: media groups project every contracted model (listed or not)', () => {
   const index = freshIndex();
   assert.equal(projectDirectoryRows(index, 'image').length, 11);
-  assert.equal(projectDirectoryRows(index, 'video').length, 11); // #3209 google-vids-omni 下线 → 11
+  assert.equal(projectDirectoryRows(index, 'video').length, 12); // #3209 google-vids-omni 下线 + minimax-h3-video → 12
   // #1789: seedasr-auc joins the audio management group as its own contracted model.
   assert.equal(projectDirectoryRows(index, 'audio').length, 8); // #2804 gemini-3.8-flash-tts + #2256 index-tts → 8
   // whisper-1 stays in the audio management directory but its output is text
@@ -302,5 +303,5 @@ test('visibleOps only surfaces listed ops', () => {
     visibleOps(seedance).map((op) => op.id),
     ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref'],
   );
-  assert.equal(projectKindRows(index, 'video').length, 4); // #3516 minimax-h3 停用 → 4
+  assert.equal(projectKindRows(index, 'video').length, 5); // #3516 minimax-h3 停用 + minimax-h3-video → 5
 });

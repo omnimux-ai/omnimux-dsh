@@ -54,3 +54,87 @@ for (const status of ['succeeded', 'failure']) {
     assert.equal(calls, 1)
   })
 }
+
+// ---- minimax-h3-video (AutoDL ComfyUI lane) contract assertions ----
+// 2026-11-02: every media slot travels through top-level `metadata` slots
+// (ref_image_N / ref_audio_N / first_frame / last_frame / audio_duration);
+// the legacy image_with_roles / image_urls / video_urls / file_url / link_url
+// family is forbidden on this model. Tests use requireListed:false because the
+// contract itself must hold even while listing is governed by the snapshot.
+
+const H3_VIDEO_MODEL = 'minimax-h3-video'
+
+test('minimax-h3-video text_to_video emits operation + metadata (no slots)', () => {
+  const plan = guardSubmit(
+    { model: H3_VIDEO_MODEL, operation: 'text_to_video', prompt: 'a talking head', duration: 5 },
+    { seam: 'videoGenerate', requireListed: false },
+  )
+  assert.equal(plan.ok, true, JSON.stringify(plan))
+  assert.equal(plan.vendorPayload.operation, 'text_to_video')
+  assert.equal(plan.vendorPayload.metadata, undefined)
+  for (const forbidden of ['image_with_roles', 'image_urls', 'video_urls', 'file_url', 'link_url']) {
+    assert.equal(forbidden in plan.vendorPayload, false, `${forbidden} must not leak`)
+  }
+})
+
+test('minimax-h3-video first_last_frame maps frames into metadata', () => {
+  const bindings = [
+    { type: 'image', role: 'first_frame', slot: 'first_frame', pathOrUrl: 'https://example.invalid/first.png', mime: 'image/png' },
+    { type: 'image', role: 'last_frame', slot: 'last_frame', pathOrUrl: 'https://example.invalid/last.png', mime: 'image/png' },
+  ]
+  const plan = guardSubmit(
+    { model: H3_VIDEO_MODEL, operation: 'first_last_frame', prompt: 'transition', duration: 5, references: bindings },
+    { seam: 'videoGenerate', requireListed: false },
+  )
+  assert.equal(plan.ok, true, JSON.stringify(plan))
+  assert.equal(plan.vendorPayload.operation, 'first_last_frame')
+  assert.equal(plan.vendorPayload.metadata.first_frame, 'https://example.invalid/first.png')
+  assert.equal(plan.vendorPayload.metadata.last_frame, 'https://example.invalid/last.png')
+  assert.equal('image_with_roles' in plan.vendorPayload, false)
+})
+
+test('minimax-h3-video video_multi_ref packs references into metadata.ref_image_N', () => {
+  const references = [0, 1, 2].map((i) => ({
+    type: 'image', role: 'reference', slot: 'references',
+    pathOrUrl: `https://example.invalid/ref-${i}.png`, mime: 'image/png',
+  }))
+  const plan = guardSubmit(
+    { model: H3_VIDEO_MODEL, operation: 'video_multi_ref', prompt: 'multi-ref', duration: 5, references },
+    { seam: 'videoGenerate', requireListed: false },
+  )
+  assert.equal(plan.ok, true, JSON.stringify(plan))
+  assert.deepEqual(
+    Object.keys(plan.vendorPayload.metadata).sort(),
+    ['ref_image_0', 'ref_image_1', 'ref_image_2'],
+  )
+  for (const forbidden of ['image_urls', 'video_urls', 'audio_urls']) {
+    assert.equal(forbidden in plan.vendorPayload, false, `${forbidden} must not leak`)
+  }
+})
+
+test('minimax-h3-video digital_human emits audio_urls require + metadata audio slot', () => {
+  const bindings = [
+    { type: 'image', role: 'first_frame', slot: 'character', pathOrUrl: 'https://example.invalid/avatar.png', mime: 'image/png' },
+    { type: 'audio', role: 'audio_track', slot: 'driving_audio', pathOrUrl: 'https://example.invalid/voice.mp3', mime: 'audio/mpeg' },
+  ]
+  const plan = guardSubmit(
+    { model: H3_VIDEO_MODEL, operation: 'digital_human', prompt: 'lipsync', duration: 10, references: bindings },
+    { seam: 'videoGenerate', requireListed: false },
+  )
+  assert.equal(plan.ok, true, JSON.stringify(plan))
+  // require-level audio_urls is the only top-level reference field emitted;
+  // actual slots ride inside metadata per AutoDL collectSlots.
+  assert.deepEqual(plan.vendorPayload.audio_urls, ['https://example.invalid/voice.mp3'])
+  assert.equal(plan.vendorPayload.metadata.ref_image_0, 'https://example.invalid/avatar.png')
+  assert.equal(plan.vendorPayload.metadata.ref_audio_0, 'https://example.invalid/voice.mp3')
+  assert.equal(plan.vendorPayload.metadata.audio_duration, 10)
+  for (const forbidden of ['image_with_roles', 'image_urls', 'video_urls', 'file_url', 'link_url']) {
+    assert.equal(forbidden in plan.vendorPayload, false, `${forbidden} must not leak`)
+  }
+})
+
+test('minimax-h3-video routes to autodl submit + poll paths', async () => {
+  const { taskPathFor, taskPollPathFor } = await import('../../../media/vendors/omnimux.js')
+  assert.equal(taskPathFor('video', H3_VIDEO_MODEL), 'tasks/autodl')
+  assert.equal(taskPollPathFor('video', H3_VIDEO_MODEL), 'tasks')
+})
