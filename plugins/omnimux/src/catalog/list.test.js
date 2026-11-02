@@ -42,7 +42,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.contractFingerprint.length, 16)
 
     // Authoritative flat list includes contracted models under disposition governance.
-    assert.equal(catalog.models.length, 44) // #3209 google-vids-omni 下线（墓碑行无契约）→ 44
+    assert.equal(catalog.models.length, 45) // #3209 google-vids-omni 下线 + minimax-h3-video → 45
     // 2026-10-21 网关对账 #3516：whisper-1 处置 draft → canonical 并上架 speech_to_text。
     assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'canonical')
     assert.equal(catalog.models.find((m) => m.id === 'grok-imagine-image-quality')?.disposition, 'draft')
@@ -80,9 +80,9 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     ])
     assert.equal(catalog.image.some((row) => row.id === 'grok-imagine-image-2-0'), false)
     // #3516: minimax-h3 上游渠道停用；P1b：seedance-2-0-fast / -mini 契约仍在但网关不售。
-    assert.deepEqual(catalog.video.map((row) => row.id), ['seedance-2-0', 'seedance-2-5'])
+    assert.deepEqual(catalog.video.map((row) => row.id), ['minimax-h3-video', 'seedance-2-0', 'seedance-2-5'])
     // #3516: 音频桶收敛为在架 suno；TTS 三行转为仅登记不上架。
-    assert.deepEqual(catalog.audio.map((row) => row.id), ['suno'])
+    assert.deepEqual(catalog.audio.map((row) => row.id), ['indextts-2', 'suno'])
     // Text bucket includes implementation-ready models without requiring live history.
     // #3516: claude-sonnet-4-6 上游渠道停用，文本桶只剩 gemini-3.8-flash。
     assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash'])
@@ -94,7 +94,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
         'jina-reader-v1', 'kling-o3', 'kling-v2-6', 'kling-v3', 'kling-v3-motion-control',
         // #3516: 这些型号渠道停用、仅登记不上架，四个产出桶都不得再出现。
         'claude-sonnet-4-6', 'minimax-h3', 'doubao-asr-bigmodel', 'seedasr-auc',
-        'seed-audio-1.0', 'gemini-3.8-flash-tts', 'indextts-2',
+        'seed-audio-1.0', 'gemini-3.8-flash-tts',
       ]) {
         assert.equal(catalog[kind].some((row) => row.id === forbidden), false, `${kind}:${forbidden}`)
       }
@@ -279,7 +279,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
 describe('media facade tables (derived from contracts)', () => {
   it('facade SPECS are the full contracted directory (listed or not)', () => {
     assert.equal(IMAGE_MODEL_SPECS.length, 11)
-    assert.equal(VIDEO_MODEL_SPECS.length, 11) // #3209 google-vids-omni 下线 → 11
+    assert.equal(VIDEO_MODEL_SPECS.length, 12) // #3209 google-vids-omni 下线 → 11
     // #1789: seedasr-auc joins the audio directory as a contracted model (ASR, text output).
     // #2256: index-tts joins the audio directory (voice clone).
     // #2801: gemini-3.8-flash-tts joins the audio directory (TTS).

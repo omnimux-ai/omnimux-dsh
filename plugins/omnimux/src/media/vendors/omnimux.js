@@ -23,6 +23,18 @@ export const AUDIO_VIDEO_TASK_MODEL_IDS = Object.freeze(['index-tts', 'suno', 's
  * poll endpoint does not, so submit and poll paths are recorded separately.
  */
 export const AUDIO_AUTODL_TASK_MODEL_IDS = Object.freeze(['indextts-2'])
+
+/**
+ * Video-capability models served by the channel's AutoDL task lane
+ * (`/v1/tasks/*`). They submit to `tasks/autodl` and poll `tasks/{id}` just like
+ * the audio AutoDL lane; the lane id differs only in the capability namespace
+ * the caller asks for. `minimax-h3-video` is the first video entry — its media
+ * slots travel through the top-level `metadata` block, not the legacy
+ * image/image_tail/reference_images fields, which the AutoDL wire shape does not
+ * accept.
+ */
+export const AUTODL_VIDEO_TASK_MODEL_IDS = Object.freeze(['minimax-h3-video'])
+
 export const AUTODL_SUBMIT_PATH = 'tasks/autodl'
 export const AUTODL_POLL_PATH = 'tasks'
 
@@ -33,7 +45,7 @@ export const AUTODL_POLL_PATH = 'tasks'
  * @returns {string | undefined}
  */
 export function taskPathFor(capability, modelId) {
-  if (modelId && AUDIO_AUTODL_TASK_MODEL_IDS.includes(String(modelId))) return AUTODL_SUBMIT_PATH
+  if (modelId && (AUDIO_AUTODL_TASK_MODEL_IDS.includes(String(modelId)) || AUTODL_VIDEO_TASK_MODEL_IDS.includes(String(modelId)))) return AUTODL_SUBMIT_PATH
   if (modelId && AUDIO_VIDEO_TASK_MODEL_IDS.includes(String(modelId))) return TASK_PATH.video
   return TASK_PATH[capability]
 }
@@ -47,7 +59,7 @@ export function taskPathFor(capability, modelId) {
  * @returns {string | undefined}
  */
 export function taskPollPathFor(capability, modelId) {
-  if (modelId && AUDIO_AUTODL_TASK_MODEL_IDS.includes(String(modelId))) return AUTODL_POLL_PATH
+  if (modelId && (AUDIO_AUTODL_TASK_MODEL_IDS.includes(String(modelId)) || AUTODL_VIDEO_TASK_MODEL_IDS.includes(String(modelId)))) return AUTODL_POLL_PATH
   return taskPathFor(capability, modelId)
 }
 

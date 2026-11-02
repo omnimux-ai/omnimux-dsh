@@ -45,7 +45,7 @@ test('adapterProfileExists requires live profile', () => {
   assert.equal(adapterProfileExists(profiles, undefined), false);
 });
 
-test('digital_human incompatible with coarse videoGenerate', () => {
+test('digital_human compatible with videoGenerate after minimax-h3-video', () => {
   const op = {
     id: 'digital_human',
     output: { type: 'video' },
@@ -53,8 +53,7 @@ test('digital_human incompatible with coarse videoGenerate', () => {
     implementation: { status: 'ready', profileId: 'videoGenerate', seam: 'videoGenerate' },
   };
   const compat = adapterProfileCompatible(op, profiles);
-  assert.equal(compat.ok, false);
-  assert.ok(compat.reason?.includes('digital_human'));
+  assert.equal(compat.ok, true);
 });
 
 test('text_to_video compatible with videoGenerate', () => {
@@ -118,7 +117,7 @@ test('operation-level listed: same model one implementation-ready one draft', ()
   assert.deepEqual(summary.listedOperations, ['m1#text_to_image']);
 });
 
-test('digital_human + videoGenerate not operation-listed', () => {
+test('digital_human + videoGenerate is operation-listed after minimax-h3-video', () => {
   const op = {
     id: 'digital_human',
     output: { type: 'video' },
@@ -127,7 +126,7 @@ test('digital_human + videoGenerate not operation-listed', () => {
     implementation: { status: 'ready', profileId: 'videoGenerate' },
     execution: { status: 'live', profileId: 'videoGenerate' },
   };
-  assert.equal(computeOperationListed(op, 'kling-avatar', profiles, { contractComplete: true }), false);
+  assert.equal(computeOperationListed(op, 'kling-avatar', profiles, { contractComplete: true }), true);
 });
 
 test('listed five-way: whisper-like not listed', () => {

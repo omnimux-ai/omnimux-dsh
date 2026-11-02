@@ -27,7 +27,7 @@
       "id": "videoGenerate",
       "seam": "videoGenerate",
       "status": "live",
-      "operations": ["text_to_video", "first_frame", "first_last_frame", "end_frame", "video_multi_ref", "video_edit", "video_extend", "document_to_video", "webpage_to_video"],
+      "operations": ["text_to_video", "first_frame", "first_last_frame", "end_frame", "video_multi_ref", "video_edit", "video_extend", "document_to_video", "webpage_to_video", "digital_human"],
       "outputTypes": ["video"],
       "logicalFields": ["prompt", "references", "duration", "aspectRatio", "resolution", "sound", "seed", "watermark", "outputFormat", "referenceTaskType", "generationType", "returnLastFrame", "webSearch", "nsfwCheck", "fileUrl", "linkUrl"],
       "vendorFields": ["operation", "prompt", "image_with_roles", "image_urls", "video_urls", "audio_urls", "file_url", "link_url", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "omni_reference_task_type", "generation_type", "return_last_frame", "tools", "nsfw_check", "metadata"],
@@ -67,9 +67,13 @@
         "webpage_to_video": {
           "allow": ["operation", "prompt", "link_url", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "generation_type", "nsfw_check"],
           "require": ["link_url"]
+        },
+        "digital_human": {
+          "allow": ["operation", "prompt", "audio_urls", "metadata", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "tools", "nsfw_check"],
+          "require": ["audio_urls"]
         }
       },
-      "notes": "APIMart 文档字段；帧输入使用 image_with_roles，参考输入按 image/video/audio_urls 分组；文档与网页互斥。"
+      "notes": "APIMart 文档字段；帧输入使用 image_with_roles，参考输入按 image/video/audio_urls 分组；文档与网页互斥。digital_human 仅供 minimax-h3-video AutoDL 泳道：素材槽统一经 metadata 透传，顶层 audio_urls 仅满足 require（网关 RESERVED）。"
     },
     {
       "id": "audioGenerate",

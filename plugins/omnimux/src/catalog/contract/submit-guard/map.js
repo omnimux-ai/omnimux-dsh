@@ -127,7 +127,37 @@ export function mapValidatedPlanToVendor(args) {
     // Cloud adapters consume the canonical operation, not upstream providers.
     vendor.operation = opId
     logical.operation = opId
-    if (opId === 'first_frame' || opId === 'first_last_frame' || opId === 'end_frame') {
+    // AutoDL ComfyUI lane (`minimax-h3-video`): the upstream contract collects
+    // every media slot from the top-level `metadata` block via
+    // `ref_image_<N>` / `ref_audio_<N>` / `first_frame` / `last_frame` /
+    // `audio_duration` (see gateway collectSlots + detectShape). The legacy
+    // `image_with_roles` / `image_urls` / `video_urls` / `file_url` / `link_url`
+    // field family is not part of that wire shape and is forbidden here; the
+    // lone `audio_urls` top-level emitted for digital_human only satisfies the
+    // local shape `require` — the gateway marks it RESERVED and the real slot
+    // still travels through `metadata`.
+    if (args.modelId === 'minimax-h3-video') {
+      const metadata = {}
+      firstFrames.forEach((url, i) => { metadata[`ref_image_${i}`] = url })
+      references.forEach((url, i) => { metadata[`ref_image_${firstFrames.length + i}`] = url })
+      audioTracks.forEach((url, i) => { metadata[`ref_audio_${i}`] = url })
+      if (opId === 'first_last_frame') {
+        if (firstFrames[0]) metadata.first_frame = firstFrames[0]
+        if (lastFrames[0]) metadata.last_frame = lastFrames[0]
+      } else if (opId === 'first_frame' || opId === 'end_frame') {
+        if (firstFrames[0]) metadata.first_frame = firstFrames[0]
+        if (lastFrames[0]) metadata.last_frame = lastFrames[0]
+      } else if (opId === 'digital_human' && firstFrames[0]) {
+        metadata.ref_image_0 = firstFrames[0]
+      }
+      // audio_duration only makes sense when a driving audio exists (lip-sync /
+      // digital_human); a plain text_to_video must not leak it.
+      if (opId === 'digital_human' && typeof extras.duration === 'number' && extras.duration > 0) {
+        metadata.audio_duration = extras.duration
+      }
+      if (Object.keys(metadata).length) vendor.metadata = metadata
+      if (opId === 'digital_human' && audioTracks[0]) vendor.audio_urls = [audioTracks[0]]
+    } else if (opId === 'first_frame' || opId === 'first_last_frame' || opId === 'end_frame') {
       const rows = []
       if (opId !== 'end_frame' && firstFrames[0]) rows.push({ url: firstFrames[0], role: 'first_frame' })
       if ((opId === 'end_frame' || opId === 'first_last_frame') && lastFrames[0]) {
@@ -440,7 +470,23 @@ export function mapValidatedPlanToVendor(args) {
       }
     }
   }
-  const checked = assertVendorBodyAllowed(vendor, profile, opId)
+  // minimax-h3-video (AutoDL ComfyUI lane): the wire shape carries every media
+  // slot inside `metadata`, so the frame-family `image_with_roles` require on
+  // first_frame / first_last_frame / end_frame must not fire for this model.
+  // Build a per-call profile view that relaxes those shape requires while the
+  // emitted fields still pass the allow list (metadata / audio_urls stay).
+  let effectiveProfile = profile
+  if (args.modelId === 'minimax-h3-video' && profile?.operationVendorShapes) {
+    const shapes = {}
+    for (const [shapeOpId, shape] of Object.entries(profile.operationVendorShapes)) {
+      if (!shape) { shapes[shapeOpId] = shape; continue }
+      const allow = Array.isArray(shape.allow) ? shape.allow.filter((f) => f !== 'image_with_roles') : shape.allow
+      const require = Array.isArray(shape.require) ? shape.require.filter((f) => f !== 'image_with_roles') : shape.require
+      shapes[shapeOpId] = { ...shape, allow, require }
+    }
+    effectiveProfile = { ...profile, operationVendorShapes: shapes }
+  }
+  const checked = assertVendorBodyAllowed(vendor, effectiveProfile, opId)
   if (!checked.ok) return checked
   vendor = checked.body
 

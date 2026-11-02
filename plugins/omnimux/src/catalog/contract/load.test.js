@@ -35,7 +35,7 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   // 2026-09-18 #2256: index-tts (voice clone) registered → 42.
   // 2026-09-29 #2804: gemini-3.8-flash-tts registered → 43.
   // 2026-10-06 #3209: google-vids-omni retired with the local Google Vids channel → 44.
-  assert.equal(index.all().length, 44, `expected 44 models, got ${index.all().length}`);
+  assert.equal(index.all().length, 45, `expected 45 models, got ${index.all().length}`);
   assert.ok(index.get('whisper-1'));
   assert.ok(index.get('nano-banana-2'));
   assert.ok(index.get('mj-v7'));
@@ -43,13 +43,13 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.equal(index.get('kling-avatar'), undefined);
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 24); // 2026-10-21 网关对账 #3516：上架面收敛为 24
+  assert.equal(index.listedOperations.length, 29); // 2026-10-21 网关对账 #3516 + minimax-h3-video 上架 → 29
   // #3516: whisper-1 由 draft 翻 canonical，成为唯一在架 speech_to_text 入口。
   assert.ok(index.listedOperations.includes('whisper-1#speech_to_text'));
   // #3516: doubao-asr-bigmodel / seedasr-auc / indextts-2 / minimax-h3 上游渠道停用，
   // 仅登记不上架 —— 契约行还在，但不再有 listed operation。
   assert.equal(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'), false);
-  assert.equal(index.listedOperations.includes('indextts-2#voice_clone'), false);
+  assert.equal(index.listedOperations.includes('indextts-2#voice_clone'), true); // AutoDL channel 73 live
   // #1789: the ASR pair are two independent models; neither declares the other as an alias.
   assert.ok(index.get('seedasr-auc'));
   assert.equal(index.listedOperations.includes('seedasr-auc#speech_to_text'), false);

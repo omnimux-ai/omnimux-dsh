@@ -2298,3 +2298,234 @@ models:
       profileId: videoGenerate
       seam: videoGenerate
       notes: 仅离线替身/历史 stub，不是渠道真实生成
+
+  # AutoDL ComfyUI 直发泳道（渠道 70/71/72，上游 minimax_h3_image_audio_to_video）：
+  # 与上方 APIMart `minimax-h3` 是同族两条独立上架线路——APIMart 条目上游全停保持
+  # 登记，本条是网关在架可售泳道。提交 POST /v1/tasks/autodl，全部素材槽经顶层
+  # `metadata.ref_image_N / ref_audio_N / first_frame / last_frame / audio_duration`
+  # 透传，网关 collectSlots 从 metadata 收槽并 detectShape；禁走
+  # image_with_roles / image_urls / video_urls / file_url / link_url 字段族。
+  # prompt 走 prompt 字段——写 prompt_text 会被 detectShape 误判为 text-to-speech。
+  - id: minimax-h3-video
+    label: MiniMax H3 视频（AutoDL）
+    family: minimax
+    badge: H3
+    subtitle: AutoDL · 对口型/首尾帧/多参考 · $0.025/s
+    routing:
+      channel: autodl
+      wireModel: minimax_h3_image_audio_to_video
+      endpoint: /v1/tasks/autodl
+      automaticFallback: false
+    operations:
+      - id: text_to_video
+        label: 文生视频
+        output:
+          type: video
+          allowedMimes:
+            - video/mp4
+            - video/quicktime
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 1
+            max: 1
+        research:
+          status: verified
+          docUrl: https://autodl.art/docs/comfyui_api/
+          verifiedAt: 2026-11-02
+          notes: AutoDL ComfyUI 任务合同；prompt 走 prompt（禁 prompt_text，会触发 text-to-speech 形状）
+        implementation:
+          status: "ready"
+          profileId: videoGenerate
+          seam: videoGenerate
+          verifiedAt: 2026-11-02
+          notes: 素材槽全部经 metadata 透传；detectShape 归类 text-to-video
+        execution:
+          status: stub
+          profileId: videoGenerate
+          seam: videoGenerate
+          notes: 离线合同验证；真实执行证据待画布验收
+      - id: first_last_frame
+        label: 首尾帧
+        output:
+          type: video
+          allowedMimes:
+            - video/mp4
+            - video/quicktime
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 1
+            max: 1
+          - slot: first_frame
+            type: image
+            role: first_frame
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - image/jpeg
+              - image/png
+              - image/webp
+          - slot: last_frame
+            type: image
+            role: last_frame
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - image/jpeg
+              - image/png
+              - image/webp
+        research:
+          status: verified
+          docUrl: https://autodl.art/docs/comfyui_api/
+          verifiedAt: 2026-11-02
+          notes: 槽经 metadata.first_frame/last_frame；detectShape first-last-frame
+        implementation:
+          status: "ready"
+          profileId: videoGenerate
+          seam: videoGenerate
+          verifiedAt: 2026-11-02
+          notes: 首尾帧槽经 metadata 透传
+        execution:
+          status: stub
+          profileId: videoGenerate
+          seam: videoGenerate
+          notes: 离线合同验证；真实执行证据待画布验收
+      - id: video_multi_ref
+        label: 多参考图
+        output:
+          type: video
+          allowedMimes:
+            - video/mp4
+            - video/quicktime
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 1
+            max: 1
+          - slot: references
+            type: image
+            role: reference
+            source: upstream_edge
+            min: 1
+            max: 9
+            allowedMimes:
+              - image/jpeg
+              - image/png
+              - image/webp
+        research:
+          status: verified
+          docUrl: https://autodl.art/docs/comfyui_api/
+          verifiedAt: 2026-11-02
+          notes: 多图参考经 metadata.ref_image_0..8；detectShape image-reference
+        implementation:
+          status: "ready"
+          profileId: videoGenerate
+          seam: videoGenerate
+          verifiedAt: 2026-11-02
+          notes: 参考图槽经 metadata.ref_image_N 透传
+        execution:
+          status: stub
+          profileId: videoGenerate
+          seam: videoGenerate
+          notes: 离线合同验证；真实执行证据待画布验收
+      - id: digital_human
+        label: 数字人/对口型
+        output:
+          type: video
+          allowedMimes:
+            - video/mp4
+            - video/quicktime
+        inputs:
+          - slot: character
+            type: image
+            role: first_frame
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - image/jpeg
+              - image/png
+              - image/webp
+          - slot: driving_audio
+            type: audio
+            role: audio_track
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - audio/wav
+              - audio/mp3
+              - audio/mpeg
+        parameters:
+          duration:
+            range:
+              min: 1
+              max: 60
+              step: 1
+            defaultValue: 5
+            unit: s
+        research:
+          status: verified
+          docUrl: https://autodl.art/docs/comfyui_api/
+          verifiedAt: 2026-11-02
+          notes: 对口型经 metadata.ref_image_0 + ref_audio_0 + audio_duration；detectShape lip-sync；真实 E2E 已通（任务 8fed5047-9d01-4147-9dcf-bf001e964a55，¥0.04）
+        implementation:
+          status: "ready"
+          profileId: videoGenerate
+          seam: videoGenerate
+          verifiedAt: 2026-11-02
+          notes: 复用 videoGenerate 档案 + digital_human 形状；audio_urls 顶层仅满足合同 require（网关 RESERVED），实际槽在 metadata
+        execution:
+          status: stub
+          profileId: videoGenerate
+          seam: videoGenerate
+          notes: 网关侧已真实跑通对口型任务；本仓画布验收待补
+    parameters:
+      prompt:
+        minLength: 1
+        maxLength: 7000
+      duration:
+        range:
+          min: 1
+          max: 60
+          step: 1
+        defaultValue: 5
+        unit: s
+      resolution:
+        options:
+          - value: 480p
+            label: 480p
+          - value: 736p
+            label: 736p
+          - value: 768p
+            label: 768p
+          - value: 1088p
+            label: 1088p
+          - value: 1440p
+            label: 1440p
+        defaultValue: 768p
+    research:
+      status: verified
+      docUrl: https://autodl.art/docs/comfyui_api/
+      verifiedAt: 2026-11-02
+      notes: AutoDL ComfyUI 任务泳道，按秒计费 $0.025/s；OFFERED_RESOLUTIONS 无 1080p
+    implementation:
+      status: "ready"
+      profileId: videoGenerate
+      seam: videoGenerate
+      verifiedAt: 2026-11-02
+      notes: AutoDL 泳道映射合同完成；素材槽统一经 metadata 透传
+    execution:
+      status: stub
+      profileId: videoGenerate
+      seam: videoGenerate
+      notes: 对口型已真实跑通；其余操作离线合同验证

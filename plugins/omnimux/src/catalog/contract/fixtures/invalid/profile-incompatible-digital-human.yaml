@@ -5,8 +5,8 @@ models:
     label: "Fixture Avatar Bad Profile"
     family: "fixture"
     operations:
-      - id: "digital_human"
-        label: "数字人"
+      - id: "avatar_clone"
+        label: "头像克隆"
         output:
           type: "video"
         inputs:

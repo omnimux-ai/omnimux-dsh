@@ -43,7 +43,7 @@ test('dispositions.json: every row unique, all kinds valid, reasons present', ()
   assert.equal(validateDispositionsShape(doc).length, 0);
   const rows = doc.dispositions;
   // P1b：删除 13 条 unavailable 与 3 条 draft 行后，处置表只剩 canonical/alias。
-  assert.equal(rows.length, 67, `expected 67 disposition rows, got ${rows.length}`);
+  assert.equal(rows.length, 68, `expected 68 disposition rows, got ${rows.length}`);
   const ids = new Set(rows.map((r) => r.id));
   assert.equal(ids.size, rows.length);
   for (const row of rows) {
@@ -56,7 +56,7 @@ test('disposition rows mirror the runtime universe exactly (no missing, no ghost
   const index = freshIndex();
   const doc = loadDispositions();
   const runtimeIds = runtimeIdsOf(index);
-  assert.equal(runtimeIds.length, 70); // #3209 google-vids-omni 下线 −1 → 70
+  assert.equal(runtimeIds.length, 71); // #3209 google-vids-omni 下线 −1 + minimax-h3-video → 71
   const issues = validateDispositions(doc, { index, runtimeIds, strict: true });
   assert.deepEqual(issues, [], JSON.stringify(issues, null, 2));
 });
