@@ -4,7 +4,7 @@ import { dirname, join, resolve, sep } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createTestEnvironmentStarter } from './test-env-bootstrap.mjs';
-import { resolveHostRuntimeLayout, appPackageRootFor } from './host-runtime-layout.mjs';
+import { resolveHostRuntimeLayout, appPackageRootFor, readAsarTree, asarEntry } from './host-runtime-layout.mjs';
 
 export const taskRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const workspaceTitle = 'Composer inline QA';
@@ -87,11 +87,39 @@ export function privateStarterFs(io = fs, home = process.env.HOME || '') {
  * 抽成独立函数以便单测覆盖——先前这段内联在 startComposerInlineEnvironment 里，
  * 改回旧写法测试也不会红（评审建议 1）。
  *
- * @param {{ executable: string, cli: string }} runtime
+ * 归档布局（`runtime.layout.layout === 'app.asar'`）下 CLI 在 asar 内部，
+ * 普通 Node 的 `accessSync` 必 `ENOTDIR`，因此该分支改为查归档目录表；
+ * 调用方必须传完整的 `runtime`（含 `layout`），否则会退回 `accessSync` 并误报缺失。
+ *
+ * @param {{ executable: string, cli: string, layout?: { layout: string, appRoot: string } }} runtime
  * @param {{ accessSync?: Function, constants?: object }} [io]
+ * @param {{ readAsarTree?: Function, asarEntry?: Function }} [deps]
  */
-export function assertComposerRuntimeReadable(runtime, io = fs) {
+export function assertComposerRuntimeReadable(runtime, io = fs, deps = {}) {
+  // 注入 io/deps 时不得回落到模块内实现（那会读真实 fs，绕过注入方）：
+  // 与 probeArchive 同一条原则（评审建议 1）。
+  const readTree = deps.readAsarTree ?? (io === fs ? readAsarTree : undefined);
+  const lookup = deps.asarEntry ?? (io === fs ? asarEntry : undefined);
+  const archiveLayout = runtime.layout?.layout === 'app.asar';
   for (const [path, mode] of [[runtime.executable, io.constants.X_OK], [runtime.cli, io.constants.R_OK]]) {
+    // 归档布局下 CLI 在 asar 内部，普通 Node 的 accessSync 必 ENOTDIR；
+    // 改为查归档目录表，语义等价于「这个文件在不在」。
+    if (archiveLayout && path === runtime.cli) {
+      let present = false;
+      try {
+        const relative = path.slice(runtime.layout.appRoot.length + 1);
+        present = Boolean(lookup(readTree(runtime.layout.appRoot), relative));
+      } catch {
+        present = false;
+      }
+      if (!present) {
+        throw Object.assign(new Error(`Composer QA requires installed macOS packaged runtime: ${path}`), {
+          code: 'COMPOSER_RUNTIME_MISSING',
+          detail: { path, via: 'asar-index' },
+        });
+      }
+      continue;
+    }
     try { io.accessSync(path, mode); } catch {
       throw Object.assign(new Error(`Composer QA requires installed macOS packaged runtime: ${path}`), {
         code: 'COMPOSER_RUNTIME_MISSING',

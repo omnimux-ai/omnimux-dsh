@@ -13,7 +13,7 @@ import { runPnpm } from './managed-tarball.mjs';
 import { privatePnpmEnvironment } from './materialize-cache.mjs';
 import { prepareFiles, payloadManifest, hashFile, readJson, stable } from './materialize-graph.mjs';
 import { createTaskPnpmTool, installTaskRuntime } from './task-runtime-install.mjs';
-import { resolveHostRuntimeLayout, defaultHostLayout, composeAgentPresetRows, hasShippedPresetRoot, stringifyStructuredFile } from './host-runtime-layout.mjs';
+import { resolveHostRuntimeLayout, defaultHostLayout, composeAgentPresetRows, hasShippedPresetRoot, stringifyStructuredFile, readAsarTree, archiveResolvable } from './host-runtime-layout.mjs';
 
 /**
  * 宿主布局按实际安装探测（asar:false 的 `Resources/app` 优先，旧 `app.asar` 回退）。
@@ -647,13 +647,44 @@ export function agentPresetPatchText(layout, deps = {}) {
   let composition;
   try {
     const resolver = makeRequire(join(layout.appRoot, 'lib', 'desktop-cli.js'));
-    const resolvable = (name) => { try { resolver.resolve(name); return true; } catch { return false; } };
+    const nodeResolvable = (name) => { try { resolver.resolve(name); return true; } catch { return false; } };
+    // 归档布局：Node resolver 读不到归档内的包，必须改用归档目录表判定，
+    // 否则 25 个 @deepseek-ai/* 行会被当成「解析不到」整片丢掉（评审阻断）。
+    // 读不到目录表时**响亮失败**：回落到 nodeResolvable 会把同一批行再丢一次，
+    // 正是这条修复要消灭的静默降级（第三轮评审阻断）。
+    let resolvable = nodeResolvable;
+    if (layout.layout === 'app.asar') {
+      let tree;
+      try {
+        tree = (deps.readAsarTree ?? readAsarTree)(layout.appRoot);
+      } catch (error) {
+        const wrapped = failure('PRESET_COMPOSE_FAILED',
+          `归档布局无法读取 asar 目录表，不能判定插件行是否可解析：${error?.message ?? error}`);
+        // 保留内层原因：否则调用方只能看到「合成失败」，分不清是归档坏了还是解析不了。
+        wrapped.cause = error;
+        wrapped.detail = { reason: error?.code ?? null, message: error?.message ?? String(error) };
+        throw wrapped;
+      }
+      resolvable = archiveResolvable(tree, nodeResolvable);
+    }
     composition = compose({ appRoot: layout.appRoot, resolvable });
   } catch (error) {
-    throw failure('PRESET_COMPOSE_FAILED', `合成 agent preset 声明失败：${error?.message ?? error}`);
+    // 已经是本模块的分类错误就原样上抛，别再用一个更模糊的 code 覆盖掉具体原因。
+    if (typeof error?.code === 'string' && error.code.startsWith('TEST_ENV_')) throw error;
+    const wrapped = failure('PRESET_COMPOSE_FAILED', `合成 agent preset 声明失败：${error?.message ?? error}`);
+    wrapped.cause = error;
+    wrapped.detail = { reason: error?.code ?? null, message: error?.message ?? String(error) };
+    throw wrapped;
   }
   if (!composition.rows.length) {
     throw failure('PRESET_ROWS_EMPTY', `预设目录存在但没合成出任何声明：${layout.appRoot}`);
+  }
+  // 声明行存在但插件行全空 = 空壳 patch：宿主能启动、建会话才报 agent-preset/invalid。
+  // 这类退化不能当成功（评审建议 3）。
+  const pluginRows = composition.rows.reduce((total, row) => total + ((row.config?.plugins ?? []).length), 0);
+  if (pluginRows === 0) {
+    throw failure('PRESET_PLUGINS_EMPTY',
+      `合成的 ${composition.rows.length} 条 preset 声明里没有任何插件行，拒绝写空壳 patch：${layout.appRoot}`);
   }
   const text = stringify([{ insert: composition.rows }]);
   return `\n# QA 隔离环境：按壳的规则声明出厂 agent preset（绕过壳启动时壳不会注入这些行）。\n${text}`;

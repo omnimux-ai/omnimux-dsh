@@ -1,4 +1,5 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { readAsarHeader } from './lib/asar-integrity-engine.mjs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { parseAllDocuments, stringify } from 'yaml';
 
@@ -49,23 +50,85 @@ const isFile = (path) => {
 };
 
 /**
+ * 读 asar 归档的目录表（header 里的 JSON 文件树）。
+ *
+ * `app.asar` 是单个归档文件：普通 Node 对它 `readdirSync` 必 `ENOTDIR`，
+ * Electron 里才被当作目录。判据因此不能靠目录 API，只能读归档目录表。
+ * @param {string} archivePath
+ * @returns {object} 归档文件树（`files` 嵌套结构）
+ */
+export function readAsarTree(archivePath) {
+  const header = readAsarHeader(archivePath);
+  let tree;
+  try {
+    tree = JSON.parse(header.toString('utf8'));
+  } catch (error) {
+    throw Object.assign(new Error(`asar 目录表不是合法 JSON：${archivePath}`), { code: 'ASAR_HEADER_INVALID', cause: error });
+  }
+  if (!tree || typeof tree !== 'object' || !tree.files || typeof tree.files !== 'object') {
+    throw Object.assign(new Error(`asar 目录表缺少 files 根节点：${archivePath}`), { code: 'ASAR_HEADER_INVALID' });
+  }
+  return tree;
+}
+
+/**
+ * 在归档文件树里按路径查节点。
+ * @param {object} tree `readAsarTree` 的返回值
+ * @param {string} relativePath 例如 `preset/agent-presets`
+ * @returns {object|null}
+ */
+export function asarEntry(tree, relativePath) {
+  let node = tree;
+  for (const part of relativePath.split('/')) {
+    const files = node && typeof node === 'object' ? node.files : undefined;
+    if (!files || typeof files !== 'object' || !Object.hasOwn(files, part)) return null;
+    node = files[part];
+  }
+  return node ?? null;
+}
+
+/**
  * 归档布局是否真的可用。
  *
- * 只看 `app.asar` 是否存在不够：普通 Node 读不了归档，Electron 里它又被当成目录，
- * 两种上下文里「存在」都不等于「能读到里面的 preset / 宿主包」。判据必须是
- * **能在该布局下列出 `preset/agent-presets`**——这正是隔离 profile 需要的唯一东西。
- * 读不到就返回 false，让上层响亮报 `RUNTIME_MISSING`，而不是给一个「可用但下游全空」的布局。
+ * 判据是「归档目录表里有非空的 `preset/agent-presets`」——这正是隔离 profile
+ * 需要的唯一东西。归档缺失/损坏/没有该目录都返回 false，让上层响亮报
+ * `RUNTIME_MISSING`，而不是给一个「可用但下游全空」的布局。
  */
 function probeArchive(io, archive) {
-  // 与 statSync 一致：探测能力缺失是调用方错误，不能悄悄换成真实 fs 去读。
-  if (typeof io.readdirSync !== 'function') {
-    throw new TypeError('resolveHostRuntimeLayout: io.readdirSync is required to probe an asar layout');
+  if (typeof io.existsSync !== 'function') {
+    throw new TypeError('resolveHostRuntimeLayout: io.existsSync is required to probe an asar layout');
   }
+  if (!io.existsSync(archive)) return { available: false, reason: 'archive-missing' };
+  // 注入 io 必须自带解析能力：回落模块内实现等于绕过注入方，读的是真实 fs。
+  const readTree = io.readAsarTree;
+  if (typeof readTree !== 'function') {
+    throw new TypeError('resolveHostRuntimeLayout: io.readAsarTree is required to probe an asar layout');
+  }
+  let tree;
   try {
-    return io.readdirSync(join(archive, 'preset', 'agent-presets')).length > 0;
-  } catch {
-    return false;
+    tree = readTree(archive);
+  } catch (error) {
+    // 带原因返回：上层能区分「没装」与「归档坏了」。
+    return { available: false, reason: error?.code ?? 'asar-unreadable', message: error?.message ?? String(error) };
   }
+  const presets = asarEntry(tree, 'preset/agent-presets');
+  if (!presets || !presets.files || Object.keys(presets.files).length === 0) {
+    return { available: false, reason: 'preset-root-missing' };
+  }
+  // 「可用」还要求脚本入口真的在归档里：只有 preset 而没有 desktop-cli 的归档
+  // 判为可用会让下游在启动阶段才失败。
+  if (!asarEntry(tree, 'lib/desktop-cli.js')) {
+    return { available: false, reason: 'wrapper-missing-in-archive' };
+  }
+  // 与 resolvePresetRoot 同口径：归档内 preset 内容普通 Node 读不到，实际要靠
+  // 旁边的 app.asar.unpacked。没有 unpacked 就判不可用，别把错误推迟到下游。
+  // 判据同样走注入 io，不直接读真实 fs（与上面的约定一致）。
+  const unpackedPresetRoot = join(dirname(archive), `${basename(archive)}.unpacked`, PRESET_ROOT);
+  const unpackedProbe = io.isDirectory ?? isDirectory;
+  if (unpackedProbe(unpackedPresetRoot) !== true) {
+    return { available: false, reason: 'preset-content-not-unpacked' };
+  }
+  return { available: true, reason: null };
 }
 
 /**
@@ -78,7 +141,7 @@ export function resolveHostRuntimeLayout(options = {}) {
   const resources = join(bundle, 'Contents/Resources');
   const candidates = WRAPPER_CANDIDATES.map((relative) => join(bundle, relative));
   // 调用方可以注入 fs（测试用 stub）：验收脚本本身走真实 fs，测试不依赖本机装没装 App。
-  const io = options.io ?? { statSync, readdirSync };
+  const io = options.io ?? { statSync, readdirSync, existsSync, readAsarTree };
   const probe = (path) => {
     // 探测能力缺失是调用方错误，不是「布局可用」的证据：显式报错，别静默当成存在。
     if (typeof io.statSync !== 'function') {
@@ -99,13 +162,18 @@ export function resolveHostRuntimeLayout(options = {}) {
   const modernWrapper = join(resources, 'app', 'lib', 'desktop-cli.js');
   const legacyArchive = join(resources, 'app.asar');
   let wrapper;
+  let archiveProbe = null;
   if (probe(modernWrapper)) wrapper = modernWrapper;
-  else if (probeArchive(io, legacyArchive)) wrapper = join(legacyArchive, 'lib', 'desktop-cli.js');
+  else {
+    archiveProbe = probeArchive(io, legacyArchive);
+    if (archiveProbe.available) wrapper = join(legacyArchive, 'lib', 'desktop-cli.js');
+  }
   if (!wrapper) {
     const error = new Error(`TEST_ENV_RUNTIME_MISSING: 宿主 App 缺少 desktop-cli 入口：${candidates.join(' / ')}`);
     error.code = 'TEST_ENV_RUNTIME_MISSING';
-    error.hint = `候选入口都不存在：${candidates.join(' / ')}`;
-    error.detail = { candidates, legacyArchive };
+    error.hint = `候选入口都不存在：${candidates.join(' / ')}`
+      + (archiveProbe ? `；归档探测原因 ${archiveProbe.reason}${archiveProbe.message ? `（${archiveProbe.message}）` : ''}` : '');
+    error.detail = { candidates, legacyArchive, archiveProbe };
     throw error;
   }
   const appRoot = dirname(dirname(wrapper));
@@ -282,9 +350,9 @@ const PRUNE_DROP = Symbol('prune-drop');
 
 /** 上游 bundle 已经声明过的 preset id：重复声明会让 Loader 直接拒绝启动。 */
 export function upstreamPresetIds(appRoot, options = {}) {
-  const directory = options.directory ?? join(appRoot, UPSTREAM_PRESET_DIR);
+  const directory = options.directory ?? resolveUnpackedPath(appRoot, UPSTREAM_PRESET_DIR);
   const ids = new Set();
-  if (!isDirectory(directory)) return ids;
+  if (!directory || !isDirectory(directory)) return ids;
   for (const entry of readdirSync(directory)) {
     if (!entry.endsWith('.patch.yml') && !entry.endsWith('.patch.yaml')) continue;
     let document;
@@ -309,12 +377,52 @@ export function upstreamPresetIds(appRoot, options = {}) {
 }
 
 /**
+ * 归档布局下判断某个包能否解析。
+ *
+ * 普通 Node 的 `createRequire('<app.asar>/lib/desktop-cli.js')` 读不到归档里的包，
+ * 直接用它做 `resolvable` 会把 25 个 `@deepseek-ai/*` 行全当「解析不到」丢掉，
+ * 合成出只剩空壳的 preset（评审阻断）。归档目录表里这些包是存在的，
+ * 因此改为查目录表：`node_modules/<name>/package.json` 在即视为可解析。
+ *
+ * @param {object} tree `readAsarTree` 的返回值
+ * @param {(name: string) => boolean} [fallback] 非 `@` 名字或目录表缺项时的兜底
+ * @returns {(name: string) => boolean}
+ */
+export function archiveResolvable(tree, fallback) {
+  return (name) => {
+    if (typeof name !== 'string' || name.length === 0) return false;
+    // 先按整名查（普通包名）。
+    if (asarEntry(tree, `node_modules/${name}/package.json`)) return true;
+    // 再按「包 + exports 子路径」查：`@scope/pkg/sub/path` 这类行在 app 布局下由
+    // Node 的 exports 解析，归档目录表里没有对应 package.json。这里要求**子路径在
+    // 归档里真的有对应文件**（exports 目标或同名路径），否则 `pkg/typo` 会被一律放行，
+    // 比 app 布局的 Node resolver 更宽松（评审建议 4）。
+    const parts = name.split('/');
+    const packageName = name.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0];
+    if (packageName !== name) {
+      // 子路径行（`@scope/pkg/sub`）：归档目录表里没有对应 package.json，
+      // 但包目录存在时，允许在包内按「最后一段」找同名文件（exports 目标通常
+      // 是 `lib/**/<last>.js`）。找不到就交给 fallback，避免把拼错的子路径放行。
+      const pkgDir = `node_modules/${packageName}`;
+      if (asarEntry(tree, `${pkgDir}/package.json`)) {
+        const subpath = name.slice(packageName.length + 1);
+        if (asarEntry(tree, `${pkgDir}/${subpath}`)) return true;
+        const leaf = subpath.split('/').pop();
+        if (leaf && asarEntry(tree, `${pkgDir}/lib/types/${leaf}.js`)) return true;
+        if (leaf && asarEntry(tree, `${pkgDir}/lib/${leaf}.js`)) return true;
+      }
+    }
+    return typeof fallback === 'function' ? fallback(name) : false;
+  };
+}
+
+/**
  * 合成与壳等价的 preset 声明行。
  * @param {{ appRoot: string, resolvable?: (name: string) => boolean, presetRoot?: string, upstreamDirectory?: string }} options
  */
 export function composeAgentPresetRows(options) {
-  const presetRoot = options.presetRoot ?? join(options.appRoot, PRESET_ROOT);
-  if (!isDirectory(presetRoot)) {
+  const presetRoot = resolvePresetRoot(options.appRoot, options.presetRoot);
+  if (presetRoot === null) {
     return { rows: [], skippedPresetIds: [], droppedPackages: [], reducedPresetIds: [], unreadablePresetIds: [], unreadablePresetReasons: [] };
   }
   const upstream = upstreamPresetIds(options.appRoot, { directory: options.upstreamDirectory });
@@ -375,7 +483,35 @@ export function composeAgentPresetRows(options) {
   };
 }
 
-/** 是否存在需要声明的预设根目录（旧 App 没有这个目录）。 */
+/**
+ * 解析预设根的实际可读位置。
+ *
+ * - `app` 布局：`<appRoot>/preset/agent-presets` 就是真实目录；
+ * - `app.asar` 布局：归档内路径普通 Node 读不了，但 Electron 打包时把 preset 标成
+ *   unpacked 的，内容就在 `<Resources>/app.asar.unpacked/preset/agent-presets`，可直接读。
+ *
+ * @param {string} appRoot
+ * @param {string} [presetRoot]
+ * @returns {string|null} 可读的预设根目录；读不到返回 null
+ */
+export function resolvePresetRoot(appRoot, presetRoot) {
+  if (presetRoot !== undefined) return isDirectory(presetRoot) ? presetRoot : null;
+  const direct = join(appRoot, PRESET_ROOT);
+  if (isDirectory(direct)) return direct;
+  // 归档布局：同名内容通常以 unpacked 形式落在归档旁边。
+  const unpacked = join(appRoot, '..', `${basename(appRoot)}.unpacked`, PRESET_ROOT);
+  return isDirectory(unpacked) ? unpacked : null;
+}
+
+/** 归档布局下把归档内路径映射到 unpacked 目录（存在才返回）。 */
+export function resolveUnpackedPath(appRoot, relativePath) {
+  const direct = join(appRoot, relativePath);
+  if (isDirectory(direct)) return direct;
+  const unpacked = join(appRoot, '..', `${basename(appRoot)}.unpacked`, relativePath);
+  return isDirectory(unpacked) ? unpacked : null;
+}
+
+/** 是否存在可读的预设根目录（旧 App 没有这个目录时返回 false）。 */
 export function hasShippedPresetRoot(appRoot, presetRoot) {
-  return isDirectory(presetRoot ?? join(appRoot, PRESET_ROOT));
+  return resolvePresetRoot(appRoot, presetRoot) !== null;
 }

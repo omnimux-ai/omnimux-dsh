@@ -5,8 +5,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   appAnchorFor,
+  archiveResolvable,
   appPackageRootFor,
+  asarEntry,
   composeAgentPresetRows,
+  readAsarTree,
+  resolvePresetRoot,
   defaultHostLayout,
   hasShippedPresetRoot,
   readStructuredFile,
@@ -32,10 +36,18 @@ function fakeBundle(t, layout) {
   mkdirSync(resources, { recursive: true })
   const appRoot = join(resources, layout)
   if (layout === 'app.asar') {
-    // 归档布局的判据是「能列出 preset/agent-presets」：这里用目录模拟一个可读归档
-    // （真实 Electron 下 asar 也表现为可读目录）。不可读归档由单独用例覆盖。
-    mkdirSync(join(appRoot, 'preset', 'agent-presets', 'legacy-preset'), { recursive: true })
-    writeFileSync(join(appRoot, 'preset', 'agent-presets', 'legacy-preset', 'agent.cordis.yml'), '[]\n')
+    // 真实语义：app.asar 是单个归档文件，判据读它的目录表（普通 Node 读不进归档）。
+    writeAsarArchive(t, resources, {
+      files: {
+        lib: { files: { 'desktop-cli.js': { size: 4962 } } },
+        preset: { files: { 'agent-presets': { files: { 'legacy-preset': { files: { 'agent.cordis.yml': { size: 3 } } } } } } },
+        node_modules: { files: { '@deepseek-ai': { files: { dsh: { files: { 'package.json': { size: 60 }, lib: { files: { 'bin.js': { size: 10 } } } } } } } } },
+      },
+    })
+    // 归档内容按 Electron 语义标成 unpacked 落在旁边（探测与预设根都依赖它）。
+    const unpackedPreset = join(resources, 'app.asar.unpacked', 'preset', 'agent-presets', 'legacy-preset')
+    mkdirSync(unpackedPreset, { recursive: true })
+    writeFileSync(join(unpackedPreset, 'agent.cordis.yml'), '[]\n')
   } else {
     mkdirSync(join(appRoot, 'lib'), { recursive: true })
     writeFileSync(join(appRoot, 'lib', 'desktop-cli.js'), '// wrapper\n')
@@ -288,7 +300,205 @@ test('pruneUnresolvable 递归进 cordis:group 的 config 数组（与壳一致�
   assert.deepEqual(plugins[0].config[1].config, [])
 })
 
-test('probeArchive 在 io 缺 readdirSync 时显式报错，不悄悄读真实 fs', () => {
+test('probeArchive 在注入 io 缺 existsSync 时显式报错，不悄悄读真实 fs', () => {
   assert.throws(() => resolveHostRuntimeLayout({ io: { statSync: () => ({ isFile: () => false }) } }),
-    { name: 'TypeError', message: /io\.readdirSync is required/ })
+    { name: 'TypeError', message: /io\.existsSync is required/ })
+})
+
+/**
+ * 造一个**真实语义**的 asar 文件：[16 字节 pickle 头][JSON 目录表][内容]。
+ * 普通 Node 对它 readdirSync/accessSync 都会 ENOTDIR，只能靠目录表读。
+ */
+function writeAsarArchive(t, directory, tree) {
+  const json = Buffer.from(JSON.stringify(tree), 'utf8');
+  const header = Buffer.alloc(16);
+  // 真实 Electron asar 的 pickle 几何（老包实测 headerSize-strLen=11、strSize-strLen=7）。
+  header.writeUInt32LE(4, 0);
+  header.writeUInt32LE(json.length + 11, 4);
+  header.writeUInt32LE(json.length + 7, 8);
+  header.writeUInt32LE(json.length, 12);
+  const archive = join(directory, 'app.asar');
+  writeFileSync(archive, Buffer.concat([header, json, Buffer.from('payload')]));
+  return archive;
+}
+
+test('真实语义 asar：目录表里有 preset 即判为可用布局', (t) => {
+  const bundle = mkdtempSync(join(tmpdir(), 'omnimux-asar-real-'))
+  t.after(() => rmSync(bundle, { recursive: true, force: true }))
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  writeAsarArchive(t, resources, {
+    files: {
+      lib: { files: { 'desktop-cli.js': { size: 4962 } } },
+      preset: { files: { 'agent-presets': { files: { 'omni-agent': { files: { 'preset.yml': { size: 10 } } } } } } },
+      node_modules: { files: { '@deepseek-ai': { files: { dsh: { files: { lib: { files: { 'bin.js': { size: 9303 } } } } } } } } },
+    },
+  })
+  const unpackedPreset = join(resources, 'app.asar.unpacked', 'preset', 'agent-presets', 'omni-agent')
+  mkdirSync(unpackedPreset, { recursive: true })
+  writeFileSync(join(unpackedPreset, 'preset.yml'), 'name: demo\n')
+  const layout = resolveHostRuntimeLayout({ bundle })
+  assert.equal(layout.layout, 'app.asar')
+  const tree = readAsarTree(layout.appRoot)
+  assert.equal(Object.keys(asarEntry(tree, 'preset/agent-presets').files).length, 1)
+  assert.ok(asarEntry(tree, 'node_modules/@deepseek-ai/dsh/lib/bin.js'))
+  assert.equal(asarEntry(tree, 'preset/missing'), null)
+})
+
+test('真实语义 asar：目录表里没有 preset 时判为不可用并报 RUNTIME_MISSING', (t) => {
+  const bundle = mkdtempSync(join(tmpdir(), 'omnimux-asar-nopreset-'))
+  t.after(() => rmSync(bundle, { recursive: true, force: true }))
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  writeAsarArchive(t, resources, { files: { lib: { files: { 'desktop-cli.js': { size: 10 } } } } })
+  assert.throws(() => resolveHostRuntimeLayout({ bundle }), { code: 'TEST_ENV_RUNTIME_MISSING' })
+})
+
+test('归档头部损坏时判为不可用并报可读错误', (t) => {
+  const bundle = mkdtempSync(join(tmpdir(), 'omnimux-asar-broken-'))
+  t.after(() => rmSync(bundle, { recursive: true, force: true }))
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  writeFileSync(join(resources, 'app.asar'), 'not-an-asar')
+  assert.throws(() => resolveHostRuntimeLayout({ bundle }), { code: 'TEST_ENV_RUNTIME_MISSING' })
+})
+
+test('归档布局下预设根走 app.asar.unpacked（普通 Node 可读），不是归档内路径', (t) => {
+  const bundle = mkdtempSync(join(tmpdir(), 'omnimux-asar-unpacked-'))
+  t.after(() => rmSync(bundle, { recursive: true, force: true }))
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  // 归档本身带 preset 目录表（判据用），内容标成 unpacked 落在归档旁边。
+  writeAsarArchive(t, resources, {
+    files: {
+      lib: { files: { 'desktop-cli.js': { size: 4962 } } },
+      preset: { files: { 'agent-presets': { files: { 'omni-agent': { files: { 'preset.yml': { size: 10 } } } } } } },
+    },
+  })
+  const unpacked = join(resources, 'app.asar.unpacked', 'preset', 'agent-presets', 'omni-agent')
+  mkdirSync(unpacked, { recursive: true })
+  writeFileSync(join(unpacked, 'preset.yml'), 'name: demo\n')
+  writeFileSync(join(unpacked, 'agent.cordis.yml'), JSON.stringify([{ name: 'omnimux' }]))
+
+  const layout = resolveHostRuntimeLayout({ bundle })
+  assert.equal(layout.layout, 'app.asar')
+  assert.equal(resolvePresetRoot(layout.appRoot), join(resources, 'app.asar.unpacked', 'preset', 'agent-presets'))
+  const composition = composeAgentPresetRows({ appRoot: layout.appRoot })
+  assert.deepEqual(composition.rows.map((row) => row.config.id), ['omni-agent'])
+  assert.equal(composition.rows[0].config.name, 'demo')
+})
+
+test('归档布局下没有 unpacked 内容时预设根为 null（调用方据此响亮失败）', (t) => {
+  const bundle = mkdtempSync(join(tmpdir(), 'omnimux-asar-nounpacked-'))
+  t.after(() => rmSync(bundle, { recursive: true, force: true }))
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  writeAsarArchive(t, resources, {
+    files: {
+      lib: { files: { 'desktop-cli.js': { size: 4962 } } },
+      preset: { files: { 'agent-presets': { files: { 'x': { files: { 'preset.yml': { size: 1 } } } } } } },
+    },
+  })
+  // 没有 unpacked 时探测阶段就判不可用（口径与 resolvePresetRoot 一致）。
+  assert.throws(() => resolveHostRuntimeLayout({ bundle }), (error) => {
+    assert.equal(error.detail.archiveProbe.reason, 'preset-content-not-unpacked')
+    return true
+  })
+  assert.equal(resolvePresetRoot(join(resources, 'app.asar')), null)
+})
+
+test('归档里只有 preset 没有 desktop-cli 时判为不可用（reason 指明 wrapper 缺失）', (t) => {
+  const bundle = mkdtempSync(join(tmpdir(), 'omnimux-asar-nowrapper-'))
+  t.after(() => rmSync(bundle, { recursive: true, force: true }))
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  writeAsarArchive(t, resources, {
+    files: { preset: { files: { 'agent-presets': { files: { x: { files: { 'preset.yml': { size: 1 } } } } } } } },
+  })
+  assert.throws(() => resolveHostRuntimeLayout({ bundle }), (error) => {
+    assert.equal(error.code, 'TEST_ENV_RUNTIME_MISSING')
+    assert.equal(error.detail.archiveProbe.reason, 'wrapper-missing-in-archive')
+    return true;
+  })
+})
+
+test('注入 io 缺 readAsarTree 时显式报错，不静默读真实 fs', () => {
+  assert.throws(() => resolveHostRuntimeLayout({
+    io: { statSync: () => ({ isFile: () => false }), existsSync: () => true },
+    bundle: '/nonexistent/OmniMux Dev.app',
+  }), { name: 'TypeError', message: /io\.readAsarTree is required/ })
+})
+
+test('archiveResolvable 支持 exports 子路径（按包目录判定，不误丢合法行）', (t) => {
+  const { appRoot } = fakeBundle(t, 'app.asar')
+  const tree = readAsarTree(appRoot)
+  const resolvable = archiveResolvable(tree, () => false)
+  // fakeBundle 的归档里有 @deepseek-ai/dsh
+  assert.equal(resolvable('@deepseek-ai/dsh'), true)
+  assert.equal(resolvable('@deepseek-ai/dsh/lib/bin.js'), true)
+  assert.equal(resolvable('@deepseek-ai/dsh-tool-subagent-control/list-agents'), false)
+  assert.equal(resolvable('omnimux'), false)
+})
+
+test('归档探测的五种失败原因逐条可断言', (t) => {
+  const reasons = []
+  const probe = (bundle) => {
+    try { resolveHostRuntimeLayout({ bundle }) } catch (error) { reasons.push(error.detail.archiveProbe.reason) }
+  }
+  const mk = (prefix) => {
+    const bundle = mkdtempSync(join(tmpdir(), prefix))
+    t.after(() => rmSync(bundle, { recursive: true, force: true }))
+    const resources = join(bundle, 'Contents', 'Resources')
+    mkdirSync(resources, { recursive: true })
+    return { bundle, resources }
+  }
+  probe(mk('omnimux-r1-').bundle)
+  const broken = mk('omnimux-r2-')
+  writeFileSync(join(broken.resources, 'app.asar'), 'not-an-asar')
+  probe(broken.bundle)
+  const noPreset = mk('omnimux-r3-')
+  writeAsarArchive(t, noPreset.resources, { files: { lib: { files: { 'desktop-cli.js': { size: 1 } } } } })
+  probe(noPreset.bundle)
+  const noWrapper = mk('omnimux-r4-')
+  writeAsarArchive(t, noWrapper.resources, {
+    files: { preset: { files: { 'agent-presets': { files: { x: { files: { 'preset.yml': { size: 1 } } } } } } } },
+  })
+  probe(noWrapper.bundle)
+  const noUnpacked = mk('omnimux-r5-')
+  writeAsarArchive(t, noUnpacked.resources, {
+    files: {
+      lib: { files: { 'desktop-cli.js': { size: 1 } } },
+      preset: { files: { 'agent-presets': { files: { x: { files: { 'preset.yml': { size: 1 } } } } } } },
+    },
+  })
+  probe(noUnpacked.bundle)
+  assert.deepEqual(reasons, [
+    'archive-missing', 'asar-unreadable', 'preset-root-missing',
+    'wrapper-missing-in-archive', 'preset-content-not-unpacked',
+  ])
+})
+
+test('归档布局下 upstreamPresetIds 走 unpacked（改回归档内路径会红）', (t) => {
+  const bundle = mkdtempSync(join(tmpdir(), 'omnimux-up-'))
+  t.after(() => rmSync(bundle, { recursive: true, force: true }))
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  writeAsarArchive(t, resources, {
+    files: {
+      lib: { files: { 'desktop-cli.js': { size: 1 } } },
+      preset: { files: { 'agent-presets': { files: { x: { files: { 'preset.yml': { size: 1 } } } } } } },
+    },
+  })
+  const unpackedPreset = join(resources, 'app.asar.unpacked', 'preset', 'agent-presets', 'x')
+  mkdirSync(unpackedPreset, { recursive: true })
+  writeFileSync(join(unpackedPreset, 'preset.yml'), 'name: x\n')
+  writeFileSync(join(unpackedPreset, 'agent.cordis.yml'), JSON.stringify([{ name: 'omnimux' }]))
+  const upstream = join(resources, 'app.asar.unpacked', 'node_modules', '@deepseek-ai', 'dsh-web-app', 'presets')
+  mkdirSync(upstream, { recursive: true })
+  writeFileSync(join(upstream, 'standard.patch.yml'), JSON.stringify([
+    { insert: [{ name: '@deepseek-ai/dsh-agent-preset', config: { id: 'x' } }] },
+  ]))
+  const layout = resolveHostRuntimeLayout({ bundle })
+  assert.deepEqual([...upstreamPresetIds(layout.appRoot)], ['x'])
+  assert.deepEqual(composeAgentPresetRows({ appRoot: layout.appRoot }).skippedPresetIds, ['x'])
 })
