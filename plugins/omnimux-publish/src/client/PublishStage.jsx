@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button, Divider, PageHeader } from 'dsh-ui-kit'
 import { injectPublishStyles } from './styles.js'
+import { handleTabKey } from './tab-keyboard.js'
 import { usePublishFeed } from './usePublishFeed.js'
 import { AccountsSidebar } from './AccountsSidebar.jsx'
 import { PublishActionRow } from './views/PublishActionRow.jsx'
@@ -13,7 +14,7 @@ export const STAGE_VIEWS = ['publish', 'accounts']
 
 export function StageViewSwitch({ t, stageView, onChange }) {
   return (
-    <div className="omnimux-publish-stage-switch" role="tablist" aria-label={t('title')}>
+    <div className="omnimux-publish-stage-switch" role="tablist" aria-label={t('title')} onKeyDown={handleTabKey}>
       {STAGE_VIEWS.map((name) => (
         <Button
           key={name}
@@ -139,6 +140,7 @@ export function PublishStage(props) {
   const batchActions = createBatchActions(feed)
   const itemActions = createItemActions(feed, setView)
   const handleManageAccounts = () => {
+    feed.setIsBatchMode?.(false)
     setView({ name: 'list' })
     setStageView('accounts')
   }

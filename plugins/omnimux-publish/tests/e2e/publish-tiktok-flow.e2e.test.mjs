@@ -7,10 +7,12 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { zh, en } from '../../src/client/locales.js'
+import { handleTabKey } from '../../src/client/tab-keyboard.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const clientDir = join(here, '../../src/client')
 const stageSrc = readFileSync(join(clientDir, 'PublishStage.jsx'), 'utf8')
+const accountsSidebarSrc = readFileSync(join(clientDir, 'AccountsSidebar.jsx'), 'utf8')
 const controlBarSrc = readFileSync(join(clientDir, 'views/PublishControlBar.jsx'), 'utf8')
 const viewportSrc = readFileSync(join(clientDir, 'views/PublishViewport.jsx'), 'utf8')
 const accountPanelSrc = readFileSync(join(clientDir, 'AccountPanel.jsx'), 'utf8')
@@ -41,5 +43,24 @@ describe('TikTok publish minimal loop E2E contracts (Issue #3898)', () => {
     assert.doesNotMatch(controlBarSrc, /view\.calendar/)
     assert.doesNotMatch(controlBarSrc, /IconCalendarOutline16/)
     assert.doesNotMatch(viewportSrc, /CalendarView/)
+  })
+
+  it('upgrades AccountsSidebar search control to SearchField and binds handleTabKey on StageViewSwitch', () => {
+    assert.match(accountsSidebarSrc, /SearchField/)
+    assert.doesNotMatch(accountsSidebarSrc, /<input\s+type="search"/)
+    assert.match(stageSrc, /onKeyDown=\{handleTabKey\}/)
+
+    const publishTab = { focused: 0, clicked: 0, focus() { publishTab.focused += 1 }, click() { publishTab.clicked += 1 } }
+    const accountsTab = { focused: 0, clicked: 0, focus() { accountsTab.focused += 1 }, click() { accountsTab.clicked += 1 } }
+    let prevented = false
+    handleTabKey({
+      key: 'ArrowRight',
+      target: publishTab,
+      currentTarget: { querySelectorAll: () => [publishTab, accountsTab] },
+      preventDefault() { prevented = true },
+    })
+    assert.equal(prevented, true)
+    assert.equal(accountsTab.focused, 1)
+    assert.equal(accountsTab.clicked, 1)
   })
 })

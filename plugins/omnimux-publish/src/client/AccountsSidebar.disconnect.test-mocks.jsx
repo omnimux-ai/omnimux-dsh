@@ -40,3 +40,15 @@ export function IconEllipsisOutline16() { return <svg aria-hidden="true" /> }
 export function IconPlusOutline16() { return <svg aria-hidden="true" /> }
 export function IconChevronLeftOutline14() { return <svg aria-hidden="true" /> }
 export function IconRefreshOutline16() { return <svg aria-hidden="true" /> }
+export function SearchField({ value, onValueChange, placeholder, clearLabel, className, ...props }) {
+  return (
+    <input
+      type="search"
+      className={className}
+      placeholder={placeholder}
+      value={value}
+      onChange={(event) => { onValueChange?.(event.currentTarget.value) }}
+      {...props}
+    />
+  )
+}

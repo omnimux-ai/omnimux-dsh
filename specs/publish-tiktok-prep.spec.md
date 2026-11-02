@@ -19,7 +19,7 @@ Issue: #3898 · 分支 `agent/publish-tiktok-prep-issue-3898` · 风险等级 **
    - 从 `PublishControlBar.jsx` 的 `PublishControlTools` 中移除 `modeFilter` 下拉框；从 `PublishViewSwitcher` 中移除 `calendar` 视图切换按钮（仅保留 `grid` 与 `table`）。
    - 保留 `feed-helpers.js` / `usePublishFeed.js` 中底层 `filterRecord` 纯函数的 `modeFilter` 参数兼容，确保纯函数历史契约不被破坏。
 3. **增补《网关 TikTok Direct 联调对账单》**：
-   - 更新 `plugins/omnimux-publish/docs/hub-tool-contracts.md`，明确列出网关 `/api/social/v1/*` 四个端点（含 `media/presign` 自有存储切换兼容性）的入参、响应信封与状态映射对账表。
+   - 更新 `plugins/omnimux-publish/docs/hub-tool-contracts.md`，明确列出网关 `/api/social/v1/*` 六个联调环节（含 `media/presign` 自有存储切换兼容性、`posts` 可选入参及响应字段兼容别名）的入参、响应信封与状态映射对账表。
 
 ## 假设
 
@@ -42,4 +42,4 @@ Issue: #3898 · 分支 `agent/publish-tiktok-prep-issue-3898` · 风险等级 **
 
 ## 文档影响
 
-更新本插件自有契约说明 `plugins/omnimux-publish/docs/hub-tool-contracts.md`，增补网关 TikTok Direct 4 个接口的联调对账单；不涉及根 `docs/contracts/` 契约变更。
+更新本插件自有契约说明 `plugins/omnimux-publish/docs/hub-tool-contracts.md`，增补网关 TikTok Direct 6 个联调环节的接口对账单；不涉及根 `docs/contracts/` 契约变更。
