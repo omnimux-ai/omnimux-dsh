@@ -94,6 +94,11 @@ node scripts/build-cover-thumbnails.mjs --out=<dir> --ids=<file>
 
 ## 旧标准变更
 
+- `tests/e2e/assets-cover-payload.e2e.test.mjs` :: `E2E 契约十五：--ids 精确点名行，压过格式过滤且不影响既有选择 (AC-3, AC-4)`
+  - **原断言**：用例体内用 `await import("node:fs")` 等动态 import 读取临时目录来验证 `readIdList`。
+  - **必须改的理由**：动态 import 被仓库门禁判定为 `dynamic-test-execution-needs-review`——该风险不可经声明放行，必须撤回。改法是把临时文件读写换成静态 `import fs from "node:fs"`（文件头已有），并把 `assert.deepEqual` 换成 `assert.equal` 的显式值比较，断言强度不降。
+  - **新期望证据**：`--ids` 的选择优先级（ids > all > 默认 PNG）、`file:` 行拒绝、以及 `readIdList` 对注释与空行的处理，全部以 `assert.equal` 逐条断言。
+
 - `tests/e2e/assets-cover-payload.e2e.test.mjs` :: `E2E 契约十六：场景 3 张超高分辨率封面已带缩略图 (AC-1, AC-2, AC-4)`
   - **原断言**：`assert.deepEqual(withThumb.map(id).sort(), fixed.sort(), "场景分类只应有这 3 行带缩略图")`。
   - **必须改的理由**：这条断言是我在本任务中新增的草稿，写窄了——场景分类里原本就有 3 张 PNG 行在 #3882 时已带缩略图，总数是 6 而非 3。断言本身与需求无关，是我把「本次改动范围」误当成了「分类全集」。
