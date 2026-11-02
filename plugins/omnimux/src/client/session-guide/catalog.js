@@ -242,7 +242,7 @@ export const guideZh = {
   "guide.popular.url-to-video.title": "视频网址",
   "guide.popular.recreate-viral-ads.title": "复刻爆款视频",
   "guide.popular.bulk-create-ads.title": "批量创建广告",
-  "guide.popular.creative-presets.title": "批量创建广告",
+  "guide.popular.creative-presets.title": "创意营销预设",
   "guide.popular.placeholder-notice": "该功能正在接入中，敬请期待！",
 
   // 营销洞察模态框文案
@@ -747,7 +747,7 @@ export const guideEn = {
   "guide.popular.url-to-video.title": "URL to Video",
   "guide.popular.recreate-viral-ads.title": "Recreate Viral Ads",
   "guide.popular.bulk-create-ads.title": "Bulk Create Ads",
-  "guide.popular.creative-presets.title": "Bulk Create Ads",
+  "guide.popular.creative-presets.title": "Creative Presets",
   "guide.popular.placeholder-notice": "This feature is coming soon!",
 
   // Marketing insight modal
