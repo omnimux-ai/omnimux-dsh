@@ -28,9 +28,9 @@ test('manifest registers all whitelist IDs without claiming online supply', () =
     assert.ok(!manifest.models.some((row) => row.productId === removed), `${removed} must be deregistered`)
     assert.ok(!report.issues.some((issue) => issue.modelId === removed), `${removed} must not be reported`)
   }
-  // 2026-10-21 网关对账 #3516：24 行登记。
+  // 2026-10-21 网关对账 #3516：24 行登记 → 2026-11-02 minimax-h3-video 上架后 25 行。
   // P1b：本门禁不再统计「必需」数量——在售与否由运行时网关快照决定。
-  assert.equal(report.registeredCount, 24)
+  assert.equal(report.registeredCount, 25)
   assert.equal(report.requiredCount, undefined)
   assert.equal(report.onlineVerified, false)
 })

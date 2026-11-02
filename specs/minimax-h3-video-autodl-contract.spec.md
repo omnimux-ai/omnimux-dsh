@@ -195,3 +195,7 @@
   - 原断言：`catalog.video` 列表为 `['seedance-2-0', 'seedance-2-5']`；`catalog.audio` 列表为 `['suno']`。
   - 必须改的理由：新增 `minimax-h3-video` 到在架 video 目录后，`catalog.video` 列表扩大为 `['minimax-h3-video', 'seedance-2-0', 'seedance-2-5']`；`indextts-2` 恢复在架后，`catalog.audio` 列表扩大为 `['indextts-2', 'suno']`。
   - 新期望证据：`minimax-h3-video` 在 `catalog.video` 首位；`indextts-2` 在 `catalog.audio` 首位；`seedance-2-0`/`seedance-2-5`/`suno` 仍在列；`catalog.defaults.video` 仍为 `seedance-2-5`（默认值不变）。
+- `scripts/verify-auto-serving.test.mjs` :: `manifest registers all whitelist IDs without claiming online supply`
+  - 原断言：`report.registeredCount === 24`。
+  - 必须改的理由：`minimax-h3-video` 注册为 canonical 在架 video 模型后，manifest 登记行数从 24 变为 25。
+  - 新期望证据：`report.registeredCount === 25`，登记仍不声明在线供给（`onlineVerified === false`）。
