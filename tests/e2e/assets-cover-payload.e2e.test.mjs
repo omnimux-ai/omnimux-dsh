@@ -71,18 +71,30 @@ test('E2E 契约一：随包目录是云端的唯一事实来源，缩略图字�
 
 test('E2E 契约二：PNG 行的缩略图计划覆盖完整，清单可现场生成 (AC-8)', () => {
   const pngRows = catalogIndex.filter((row) => String(row.cover_url ?? '').endsWith('.png'))
-  assert.equal(pngRows.length, 111, 'PNG 行数应为 111')
+  // 6 张损坏立绘已从目录移除（#3892），PNG 行由 111 降为 105。
+  assert.equal(pngRows.length, 105, 'PNG 行数应为 105')
 
   const plan = planThumbs(catalogIndex)
-  // 6 张源文件在 CDN 上本身已截断（整数字节截断、IDAT 不完整），编码阶段才暴露；
-  // 计划阶段仍应包含全部 111 张，脚本对失败行如实 SKIP 而不是静默缩小计划。
-  assert.equal(plan.length, 111, '计划阶段应包含全部 111 张 PNG')
+  // 计划阶段必须覆盖目录里全部 PNG 行，脚本对失败行如实 SKIP 而不是静默缩小计划。
+  assert.equal(plan.length, 105, '计划阶段应包含全部 105 张 PNG')
+
+  // 被移除的 6 个损坏角色不得再出现在目录或计划里，防止误加回来。
+  const removedIds = [
+    'character-digital-human-2894d810df1f',
+    'character-digital-human-4735a1b47285',
+    'character-digital-human-7046fdf8cc44',
+    'character-digital-human-a75f2fc74e2d',
+    'character-digital-human-b9deac16eeaf',
+    'character-digital-human-c69f04ccae0f',
+  ]
+  const present = new Set([...catalogIndex.map((row) => row.id), ...plan.map((row) => row.id)])
+  assert.deepEqual(removedIds.filter((id) => present.has(id)), [], '损坏角色不得回到目录')
 
   const manifest = buildManifest({
     rows: plan.map((row) => ({ id: row.id, key: row.key, bytes: 70 * 1024, width: THUMB_WIDTH })),
     generatedAt: '2026-01-01T00:00:00.000Z',
   })
-  assert.equal(manifest.total, 111, '清单按传入行数记账')
+  assert.equal(manifest.total, 105, '清单按传入行数记账')
   assert.equal(manifest.width, THUMB_WIDTH)
   assert.equal(manifest.quality, THUMB_QUALITY)
   assert.equal(manifest.schema, THUMB_MANIFEST_SCHEMA)
