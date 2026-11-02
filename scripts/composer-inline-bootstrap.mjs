@@ -96,8 +96,10 @@ export function privateStarterFs(io = fs, home = process.env.HOME || '') {
  * @param {{ readAsarTree?: Function, asarEntry?: Function }} [deps]
  */
 export function assertComposerRuntimeReadable(runtime, io = fs, deps = {}) {
-  const readTree = deps.readAsarTree ?? readAsarTree;
-  const lookup = deps.asarEntry ?? asarEntry;
+  // 注入 io/deps 时不得回落到模块内实现（那会读真实 fs，绕过注入方）：
+  // 与 probeArchive 同一条原则（评审建议 1）。
+  const readTree = deps.readAsarTree ?? (io === fs ? readAsarTree : undefined);
+  const lookup = deps.asarEntry ?? (io === fs ? asarEntry : undefined);
   const archiveLayout = runtime.layout?.layout === 'app.asar';
   for (const [path, mode] of [[runtime.executable, io.constants.X_OK], [runtime.cli, io.constants.R_OK]]) {
     // 归档布局下 CLI 在 asar 内部，普通 Node 的 accessSync 必 ENOTDIR；

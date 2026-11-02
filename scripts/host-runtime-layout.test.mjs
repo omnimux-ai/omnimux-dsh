@@ -43,6 +43,10 @@ function fakeBundle(t, layout) {
         node_modules: { files: { '@deepseek-ai': { files: { dsh: { files: { lib: { files: { 'bin.js': { size: 10 } } } } } } } } },
       },
     })
+    // 归档内容按 Electron 语义标成 unpacked 落在旁边（探测与预设根都依赖它）。
+    const unpackedPreset = join(resources, 'app.asar.unpacked', 'preset', 'agent-presets', 'legacy-preset')
+    mkdirSync(unpackedPreset, { recursive: true })
+    writeFileSync(join(unpackedPreset, 'agent.cordis.yml'), '[]\n')
   } else {
     mkdirSync(join(appRoot, 'lib'), { recursive: true })
     writeFileSync(join(appRoot, 'lib', 'desktop-cli.js'), '// wrapper\n')
@@ -329,6 +333,9 @@ test('真实语义 asar：目录表里有 preset 即判为可用布局', (t) => 
       node_modules: { files: { '@deepseek-ai': { files: { dsh: { files: { lib: { files: { 'bin.js': { size: 9303 } } } } } } } } },
     },
   })
+  const unpackedPreset = join(resources, 'app.asar.unpacked', 'preset', 'agent-presets', 'omni-agent')
+  mkdirSync(unpackedPreset, { recursive: true })
+  writeFileSync(join(unpackedPreset, 'preset.yml'), 'name: demo\n')
   const layout = resolveHostRuntimeLayout({ bundle })
   assert.equal(layout.layout, 'app.asar')
   const tree = readAsarTree(layout.appRoot)
@@ -391,9 +398,12 @@ test('归档布局下没有 unpacked 内容时预设根为 null（调用方据�
       preset: { files: { 'agent-presets': { files: { 'x': { files: { 'preset.yml': { size: 1 } } } } } } },
     },
   })
-  const layout = resolveHostRuntimeLayout({ bundle })
-  assert.equal(resolvePresetRoot(layout.appRoot), null)
-  assert.equal(hasShippedPresetRoot(layout.appRoot), false)
+  // 没有 unpacked 时探测阶段就判不可用（口径与 resolvePresetRoot 一致）。
+  assert.throws(() => resolveHostRuntimeLayout({ bundle }), (error) => {
+    assert.equal(error.detail.archiveProbe.reason, 'preset-content-not-unpacked')
+    return true
+  })
+  assert.equal(resolvePresetRoot(join(resources, 'app.asar')), null)
 })
 
 test('归档里只有 preset 没有 desktop-cli 时判为不可用（reason 指明 wrapper 缺失）', (t) => {

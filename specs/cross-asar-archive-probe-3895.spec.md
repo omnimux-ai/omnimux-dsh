@@ -98,3 +98,15 @@
 | 细节 7：只看 preset 不看 wrapper 是否在归档里 | ✅ 新增 `wrapper-missing-in-archive` 判定并补用例 |
 | 细节 8：import 链把 `ELECTRON_NO_ASAR=1` 带进每个进程 | ✅ 删除 `asar-integrity-engine.mjs` 顶层副作用，改为显式 `disableElectronAsarInterception()`；import 后 `process.env` 不再被改写 |
 | 细节 9：spec 验收项未勾选 | ✅ 已勾选并记录证据 |
+
+## 第二轮评审整改（head 649867fbc 之后）
+
+| 评审项 | 处置 |
+|---|---|
+| **阻断 1**：归档布局下 `createRequire('<app.asar>/…')` 读不到归档内包，25 个 `@deepseek-ai/*` 行被 `pruneUnresolvable` 全丢，插件行 167 → 30、4 个 preset 变空数组 | ✅ 新增 `archiveResolvable(tree, fallback)`：归档布局下按归档目录表判定包是否存在（归档内 `node_modules/@deepseek-ai` 有 245 项）；`agentPresetPatchText` 在 `app.asar` 布局改用它。实测老包：插件名 25 个全保留、空 preset 0、patch 9407 → 127347 字节 |
+| **阻断 2**：`probeArchive` 判「可用」不看 `app.asar.unpacked`，与下游 `resolvePresetRoot` 口径不一致 | ✅ `probeArchive` 增加 `preset-content-not-unpacked` 判据；自造「有 preset 无 unpacked」布局实测在探测期即报 `TEST_ENV_RUNTIME_MISSING` |
+| 建议 1：composer `deps` 注入时仍回落真实 fs | ✅ 改为仅当 `io === fs` 才用模块内实现，否则必须显式传入 |
+| 建议 2：三个 probe reason 零断言 | ✅ 新增用例逐条断言五种 reason（`archive-missing` / `asar-unreadable` / `preset-root-missing` / `wrapper-missing-in-archive` / `preset-content-not-unpacked`） |
+| 建议 3：`upstreamPresetIds` 的 unpacked 回退零覆盖 | ✅ 新增用例：上游 preset 只在 unpacked 里时仍能读到并跳过 |
+| 细节 1：证据数字口径不一致 | ✅ 证据写明完整命令与文件集 |
+| 细节 2：「8415 bytes」实为字符数 | ✅ 改为同时报 chars 与 `Buffer.byteLength` |

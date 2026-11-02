@@ -121,6 +121,11 @@ function probeArchive(io, archive) {
   if (!asarEntry(tree, 'lib/desktop-cli.js')) {
     return { available: false, reason: 'wrapper-missing-in-archive' };
   }
+  // 与 resolvePresetRoot 同口径：归档内 preset 内容普通 Node 读不到，实际要靠
+  // 旁边的 app.asar.unpacked。没有 unpacked 就判不可用，别把错误推迟到下游。
+  if (resolvePresetRoot(archive) === null) {
+    return { available: false, reason: 'preset-content-not-unpacked' };
+  }
   return { available: true, reason: null };
 }
 
@@ -367,6 +372,27 @@ export function upstreamPresetIds(appRoot, options = {}) {
     }
   }
   return ids;
+}
+
+/**
+ * 归档布局下判断某个包能否解析。
+ *
+ * 普通 Node 的 `createRequire('<app.asar>/lib/desktop-cli.js')` 读不到归档里的包，
+ * 直接用它做 `resolvable` 会把 25 个 `@deepseek-ai/*` 行全当「解析不到」丢掉，
+ * 合成出只剩空壳的 preset（评审阻断）。归档目录表里这些包是存在的，
+ * 因此改为查目录表：`node_modules/<name>/package.json` 在即视为可解析。
+ *
+ * @param {object} tree `readAsarTree` 的返回值
+ * @param {(name: string) => boolean} [fallback] 非 `@` 名字或目录表缺项时的兜底
+ * @returns {(name: string) => boolean}
+ */
+export function archiveResolvable(tree, fallback) {
+  return (name) => {
+    if (typeof name !== 'string' || name.length === 0) return false;
+    const entry = asarEntry(tree, `node_modules/${name}/package.json`);
+    if (entry) return true;
+    return typeof fallback === 'function' ? fallback(name) : false;
+  };
 }
 
 /**

@@ -13,7 +13,7 @@ import { runPnpm } from './managed-tarball.mjs';
 import { privatePnpmEnvironment } from './materialize-cache.mjs';
 import { prepareFiles, payloadManifest, hashFile, readJson, stable } from './materialize-graph.mjs';
 import { createTaskPnpmTool, installTaskRuntime } from './task-runtime-install.mjs';
-import { resolveHostRuntimeLayout, defaultHostLayout, composeAgentPresetRows, hasShippedPresetRoot, stringifyStructuredFile } from './host-runtime-layout.mjs';
+import { resolveHostRuntimeLayout, defaultHostLayout, composeAgentPresetRows, hasShippedPresetRoot, stringifyStructuredFile, readAsarTree, archiveResolvable } from './host-runtime-layout.mjs';
 
 /**
  * 宿主布局按实际安装探测（asar:false 的 `Resources/app` 优先，旧 `app.asar` 回退）。
@@ -647,7 +647,17 @@ export function agentPresetPatchText(layout, deps = {}) {
   let composition;
   try {
     const resolver = makeRequire(join(layout.appRoot, 'lib', 'desktop-cli.js'));
-    const resolvable = (name) => { try { resolver.resolve(name); return true; } catch { return false; } };
+    const nodeResolvable = (name) => { try { resolver.resolve(name); return true; } catch { return false; } };
+    // 归档布局：Node resolver 读不到归档内的包，必须改用归档目录表判定，
+    // 否则 25 个 @deepseek-ai/* 行会被当成「解析不到」整片丢掉（评审阻断）。
+    let resolvable = nodeResolvable;
+    if (layout.layout === 'app.asar') {
+      try {
+        resolvable = archiveResolvable((deps.readAsarTree ?? readAsarTree)(layout.appRoot), nodeResolvable);
+      } catch {
+        resolvable = nodeResolvable;
+      }
+    }
     composition = compose({ appRoot: layout.appRoot, resolvable });
   } catch (error) {
     throw failure('PRESET_COMPOSE_FAILED', `合成 agent preset 声明失败：${error?.message ?? error}`);
