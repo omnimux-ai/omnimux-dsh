@@ -8,7 +8,6 @@ import { resolveHostRuntimeLayout, appPackageRootFor } from './host-runtime-layo
 
 export const taskRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const workspaceTitle = 'Composer inline QA';
-const executable = '/Applications/OmniMux Dev.app/Contents/MacOS/OmniMux';
 
 /**
  * CLI 入口按实际安装布局推导（Issue #3891）。
@@ -82,6 +81,26 @@ export function privateStarterFs(io = fs, home = process.env.HOME || '') {
 }
 
 /** Formal private installation using the existing macOS packaged runtime contract. */
+/**
+ * 前置检查：可执行文件可执行、CLI 入口可读。
+ *
+ * 抽成独立函数以便单测覆盖——先前这段内联在 startComposerInlineEnvironment 里，
+ * 改回旧写法测试也不会红（评审建议 1）。
+ *
+ * @param {{ executable: string, cli: string }} runtime
+ * @param {{ accessSync?: Function, constants?: object }} [io]
+ */
+export function assertComposerRuntimeReadable(runtime, io = fs) {
+  for (const [path, mode] of [[runtime.executable, io.constants.X_OK], [runtime.cli, io.constants.R_OK]]) {
+    try { io.accessSync(path, mode); } catch {
+      throw Object.assign(new Error(`Composer QA requires installed macOS packaged runtime: ${path}`), {
+        code: 'COMPOSER_RUNTIME_MISSING',
+        detail: { path },
+      });
+    }
+  }
+}
+
 export async function startComposerInlineEnvironment({ evidence }) {
   fs.mkdirSync(evidence, { recursive: true });
   // 前置检查按实际布局：可执行文件 X_OK、CLI 入口 R_OK（不再把归档当目录）。
@@ -89,11 +108,15 @@ export async function startComposerInlineEnvironment({ evidence }) {
   try {
     runtime = composerRuntimePaths();
   } catch (error) {
-    throw new Error(`Composer QA requires installed macOS packaged runtime: ${error?.message ?? error}`);
+    // 保留 code/hint/detail：调用方按 code 分类，契约也要求统一报 TEST_ENV_RUNTIME_MISSING。
+    throw Object.assign(new Error(`Composer QA requires installed macOS packaged runtime: ${error?.message ?? error}`), {
+      code: error?.code ?? 'COMPOSER_RUNTIME_UNAVAILABLE',
+      hint: error?.hint,
+      detail: error?.detail,
+      cause: error,
+    });
   }
-  for (const [path, mode] of [[runtime.executable, fs.constants.X_OK], [runtime.cli, fs.constants.R_OK]]) {
-    try { fs.accessSync(path, mode); } catch { throw new Error(`Composer QA requires installed macOS packaged runtime: ${path}`); }
-  }
+  assertComposerRuntimeReadable(runtime);
   const plans = ['omnimux', 'omnimux-market'].map(name => {
     const source = join(taskRoot, 'plugins', name);
     const bundle = join(source, 'lib/client.js');

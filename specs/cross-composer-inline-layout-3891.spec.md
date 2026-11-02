@@ -42,10 +42,10 @@
 
 ## 5. 验收标准（可观察）
 
-- [ ] 在 asar:false 布局（本机 2.0.21）上，`startComposerInlineEnvironment` 的前置检查通过，能继续走 `dsh plugin add`。
-- [ ] 旧 `app.asar` 布局仍能解析出 CLI 入口（单测覆盖两种布局）。
-- [ ] 布局不可用 / CLI 入口缺失时报可读错误并含候选路径，不抛裸 ENOENT。
-- [ ] 相关单测通过；`git diff --check` 通过。
+- [x] 在 asar:false 布局（本机 2.0.21）上，前置检查通过（可执行 X_OK、CLI 入口 R_OK），`--version` 实跑 `0.2.1-rc.3`。
+- [x] 旧 `app.asar` 布局的 CLI 路径推导有单测覆盖；真实归档在普通 Node 下不可读属 #3871 继承判据（另开条目跟踪）。
+- [x] 布局不可用时报 `TEST_ENV_RUNTIME_MISSING`（保留 code/hint/detail.candidates）；CLI 入口缺失时报 `COMPOSER_RUNTIME_MISSING` 并带路径。
+- [x] 相关单测 7/7 通过；`git diff --check` 通过。
 
 ## 6. 新用户基线
 
@@ -70,3 +70,8 @@
 ## 10. 文档影响
 
 无合同改动：`docs/contracts/plugin-qa.md` 已描述「宿主入口按安装布局探测」，本条只是让另一条通道也遵守同一规则，不改契约语义。
+
+## 评审后续（head fbb3ca030 之后）
+
+- 已修：前置检查抽成 `assertComposerRuntimeReadable` 并补 2 例（含权限位断言、CLI 缺失路径）；`catch` 包装保留 `code/hint/detail/cause`；删除死代码 `const executable`。
+- 未修（继承自 #3871 的判据边界，另开条目）：真实 `app.asar` 归档在普通 Node 下无法列出内部 preset，因此旧布局探测会报 `TEST_ENV_RUNTIME_MISSING`；且对归档内路径 `accessSync` 会 `ENOTDIR`。要让旧布局真正可用，需要 Electron 上下文读取归档，属跨任务改动。
