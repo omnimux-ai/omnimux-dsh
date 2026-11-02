@@ -39,12 +39,12 @@
 
 ## 5. 验收标准（可观察）
 
-- [ ] 真实 asar 归档（本机 Prod 老包）上，`resolveHostRuntimeLayout` 判定为 `app.asar` 布局且可用。
-- [ ] 归档里没有 `preset/agent-presets` 时判为不可用并报 `TEST_ENV_RUNTIME_MISSING`（带原因）。
-- [ ] 归档头部损坏时判为不可用并报可读错误，不抛裸异常。
-- [ ] asar:false 布局行为不变（现有测试全绿）。
-- [ ] 归档布局下前置检查用目录表判断 `lib/bin.js`，不再 `accessSync` 归档内路径。
-- [ ] 相关单测通过；`git diff --check` 通过。
+- [x] 真实 asar 归档（本机 Prod 老包）上，`resolveHostRuntimeLayout` 判定为 `app.asar` 布局且可用；预设根解析到 `app.asar.unpacked`，合成 14 条 preset。
+- [x] 归档里没有 `preset/agent-presets` 时判为不可用并报 `TEST_ENV_RUNTIME_MISSING`。
+- [x] 归档头部损坏时判为不可用并报可读错误，不抛裸异常。
+- [x] asar:false 布局行为不变（现有测试全绿）。
+- [x] 归档布局下前置检查用目录表判断 `lib/bin.js`，不再 `accessSync` 归档内路径。
+- [x] 相关单测 121/121 通过；`git diff --check` 通过。
 
 ## 6. 新用户基线
 
@@ -79,3 +79,9 @@
 必须改的理由：归档布局判据已从 `readdirSync` 改为读归档目录表（`readAsarTree`），探测不再需要 `readdirSync`；新的必需能力是 `existsSync`（判断归档是否存在）。原用例的守卫对象已不存在，继续保留会固化为错误契约。
 
 新期望证据：同一场景改为断言缺 `existsSync` 时抛 `TypeError`（`io.existsSync is required`）；`probeArchive` 实现里对该能力做了显式检查。归档目录表判据本身由新增三例（真实语义 asar 有 preset / 无 preset / 头部损坏）覆盖。
+
+## 评审阻断整改（head 80ce7b3f2 之后）
+
+评审实测：探测层修好后，下游 `hasShippedPresetRoot` / `composeAgentPresetRows` 仍用 `readdirSync` 读归档内路径，普通 Node 必 `ENOTDIR`，于是 `agentPresetPatchText` 直接抛 `TEST_ENV_PRESET_ROOT_MISSING`——旧布局只是换了错误码，仍不可用（正是本 spec「证伪 B」命中的情形）。
+
+修法：新增 `resolvePresetRoot(appRoot)` / `resolveUnpackedPath(appRoot, rel)`。归档布局下预设内容通常以 unpacked 形式落在 `<Resources>/app.asar.unpacked/`（本机老包实测可直接读），因此预设根与上游 preset 目录都按「目录优先、unpacked 兜底」解析。实测老包：`resolvePresetRoot` 指向 unpacked、`composeAgentPresetRows` 合成 14 条、`agentPresetPatchText` 产出 8415 字节且含 `@deepseek-ai/dsh-agent-preset`。

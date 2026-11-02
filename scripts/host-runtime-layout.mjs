@@ -323,9 +323,9 @@ const PRUNE_DROP = Symbol('prune-drop');
 
 /** 上游 bundle 已经声明过的 preset id：重复声明会让 Loader 直接拒绝启动。 */
 export function upstreamPresetIds(appRoot, options = {}) {
-  const directory = options.directory ?? join(appRoot, UPSTREAM_PRESET_DIR);
+  const directory = options.directory ?? resolveUnpackedPath(appRoot, UPSTREAM_PRESET_DIR);
   const ids = new Set();
-  if (!isDirectory(directory)) return ids;
+  if (!directory || !isDirectory(directory)) return ids;
   for (const entry of readdirSync(directory)) {
     if (!entry.endsWith('.patch.yml') && !entry.endsWith('.patch.yaml')) continue;
     let document;
@@ -354,8 +354,8 @@ export function upstreamPresetIds(appRoot, options = {}) {
  * @param {{ appRoot: string, resolvable?: (name: string) => boolean, presetRoot?: string, upstreamDirectory?: string }} options
  */
 export function composeAgentPresetRows(options) {
-  const presetRoot = options.presetRoot ?? join(options.appRoot, PRESET_ROOT);
-  if (!isDirectory(presetRoot)) {
+  const presetRoot = resolvePresetRoot(options.appRoot, options.presetRoot);
+  if (presetRoot === null) {
     return { rows: [], skippedPresetIds: [], droppedPackages: [], reducedPresetIds: [], unreadablePresetIds: [], unreadablePresetReasons: [] };
   }
   const upstream = upstreamPresetIds(options.appRoot, { directory: options.upstreamDirectory });
@@ -416,7 +416,35 @@ export function composeAgentPresetRows(options) {
   };
 }
 
-/** 是否存在需要声明的预设根目录（旧 App 没有这个目录）。 */
+/**
+ * 解析预设根的实际可读位置。
+ *
+ * - `app` 布局：`<appRoot>/preset/agent-presets` 就是真实目录；
+ * - `app.asar` 布局：归档内路径普通 Node 读不了，但 Electron 打包时把 preset 标成
+ *   unpacked 的，内容就在 `<Resources>/app.asar.unpacked/preset/agent-presets`，可直接读。
+ *
+ * @param {string} appRoot
+ * @param {string} [presetRoot]
+ * @returns {string|null} 可读的预设根目录；读不到返回 null
+ */
+export function resolvePresetRoot(appRoot, presetRoot) {
+  if (presetRoot !== undefined) return isDirectory(presetRoot) ? presetRoot : null;
+  const direct = join(appRoot, PRESET_ROOT);
+  if (isDirectory(direct)) return direct;
+  // 归档布局：同名内容通常以 unpacked 形式落在归档旁边。
+  const unpacked = join(appRoot, '..', `${basename(appRoot)}.unpacked`, PRESET_ROOT);
+  return isDirectory(unpacked) ? unpacked : null;
+}
+
+/** 归档布局下把归档内路径映射到 unpacked 目录（存在才返回）。 */
+export function resolveUnpackedPath(appRoot, relativePath) {
+  const direct = join(appRoot, relativePath);
+  if (isDirectory(direct)) return direct;
+  const unpacked = join(appRoot, '..', `${basename(appRoot)}.unpacked`, relativePath);
+  return isDirectory(unpacked) ? unpacked : null;
+}
+
+/** 是否存在可读的预设根目录（旧 App 没有这个目录时返回 false）。 */
 export function hasShippedPresetRoot(appRoot, presetRoot) {
-  return isDirectory(presetRoot ?? join(appRoot, PRESET_ROOT));
+  return resolvePresetRoot(appRoot, presetRoot) !== null;
 }

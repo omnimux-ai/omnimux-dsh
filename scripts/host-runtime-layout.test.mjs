@@ -9,6 +9,7 @@ import {
   asarEntry,
   composeAgentPresetRows,
   readAsarTree,
+  resolvePresetRoot,
   defaultHostLayout,
   hasShippedPresetRoot,
   readStructuredFile,
@@ -349,4 +350,39 @@ test('归档头部损坏时判为不可用并报可读错误', (t) => {
   mkdirSync(resources, { recursive: true })
   writeFileSync(join(resources, 'app.asar'), 'not-an-asar')
   assert.throws(() => resolveHostRuntimeLayout({ bundle }), { code: 'TEST_ENV_RUNTIME_MISSING' })
+})
+
+test('归档布局下预设根走 app.asar.unpacked（普通 Node 可读），不是归档内路径', (t) => {
+  const bundle = mkdtempSync(join(tmpdir(), 'omnimux-asar-unpacked-'))
+  t.after(() => rmSync(bundle, { recursive: true, force: true }))
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  // 归档本身带 preset 目录表（判据用），内容标成 unpacked 落在归档旁边。
+  writeAsarArchive(t, resources, {
+    files: { preset: { files: { 'agent-presets': { files: { 'omni-agent': { files: { 'preset.yml': { size: 10 } } } } } } } },
+  })
+  const unpacked = join(resources, 'app.asar.unpacked', 'preset', 'agent-presets', 'omni-agent')
+  mkdirSync(unpacked, { recursive: true })
+  writeFileSync(join(unpacked, 'preset.yml'), 'name: demo\n')
+  writeFileSync(join(unpacked, 'agent.cordis.yml'), JSON.stringify([{ name: 'omnimux' }]))
+
+  const layout = resolveHostRuntimeLayout({ bundle })
+  assert.equal(layout.layout, 'app.asar')
+  assert.equal(resolvePresetRoot(layout.appRoot), join(resources, 'app.asar.unpacked', 'preset', 'agent-presets'))
+  const composition = composeAgentPresetRows({ appRoot: layout.appRoot })
+  assert.deepEqual(composition.rows.map((row) => row.config.id), ['omni-agent'])
+  assert.equal(composition.rows[0].config.name, 'demo')
+})
+
+test('归档布局下没有 unpacked 内容时预设根为 null（调用方据此响亮失败）', (t) => {
+  const bundle = mkdtempSync(join(tmpdir(), 'omnimux-asar-nounpacked-'))
+  t.after(() => rmSync(bundle, { recursive: true, force: true }))
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  writeAsarArchive(t, resources, {
+    files: { preset: { files: { 'agent-presets': { files: { 'x': { files: { 'preset.yml': { size: 1 } } } } } } } },
+  })
+  const layout = resolveHostRuntimeLayout({ bundle })
+  assert.equal(resolvePresetRoot(layout.appRoot), null)
+  assert.equal(hasShippedPresetRoot(layout.appRoot), false)
 })
