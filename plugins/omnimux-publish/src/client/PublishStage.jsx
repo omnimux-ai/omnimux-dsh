@@ -1,13 +1,37 @@
 import { useEffect, useState } from 'react'
-import { Divider, PageHeader } from 'dsh-ui-kit'
+import { Button, Divider, PageHeader } from 'dsh-ui-kit'
 import { injectPublishStyles } from './styles.js'
+import { handleTabKey } from './tab-keyboard.js'
 import { usePublishFeed } from './usePublishFeed.js'
+import { AccountsSidebar } from './AccountsSidebar.jsx'
 import { PublishActionRow } from './views/PublishActionRow.jsx'
 import { PublishControlBar } from './views/PublishControlBar.jsx'
 import { PublishViewport } from './views/PublishViewport.jsx'
 import { PublishOverlays, PublishDeleteConfirmModal } from './views/PublishOverlays.jsx'
 
 const TAB_ID = 'omnimux-publish:library'
+export const STAGE_VIEWS = ['publish', 'accounts']
+
+export function StageViewSwitch({ t, stageView, onChange }) {
+  return (
+    <div className="omnimux-publish-stage-switch" role="tablist" aria-label={t('title')} onKeyDown={handleTabKey}>
+      {STAGE_VIEWS.map((name) => (
+        <Button
+          key={name}
+          type="button"
+          role="tab"
+          size="sm"
+          variant={stageView === name ? 'secondary' : 'ghost'}
+          aria-selected={stageView === name}
+          className={`omnimux-publish-stage-switch-btn${stageView === name ? ' active' : ''}`}
+          onClick={() => { onChange(name) }}
+        >
+          {t(`stage.view.${name}`)}
+        </Button>
+      ))}
+    </div>
+  )
+}
 
 function createBatchActions(feed) {
   return {
@@ -50,8 +74,6 @@ export function PublishStageContent(props) {
         onSortChange={feed.setSortOption}
         typeFilter={feed.typeFilter}
         onTypeChange={feed.setTypeFilter}
-        modeFilter={feed.modeFilter}
-        onModeChange={feed.setModeFilter}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />
@@ -60,13 +82,14 @@ export function PublishStageContent(props) {
 }
 
 export function PublishStageModals(props) {
-  const { t, feed, view, setView } = props
+  const { t, feed, view, setView, onManageAccounts } = props
   return (
     <>
       <PublishOverlays
         t={t}
         view={view}
         onBack={() => setView({ name: 'list' })}
+        onManageAccounts={onManageAccounts}
         onSubmitted={(recordId) => {
           setView({ name: 'detail', recordId })
           feed.startTracking()
@@ -112,9 +135,15 @@ export function PublishStage(props) {
 
   const [viewMode, setViewMode] = useState('grid')
   const [view, setView] = useState({ name: 'list' })
+  const [stageView, setStageView] = useState('publish')
   const feed = usePublishFeed({ open: visible, view, t })
   const batchActions = createBatchActions(feed)
   const itemActions = createItemActions(feed, setView)
+  const handleManageAccounts = () => {
+    feed.setIsBatchMode?.(false)
+    setView({ name: 'list' })
+    setStageView('accounts')
+  }
 
   const handleClose = () => {
     const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
@@ -145,21 +174,28 @@ export function PublishStage(props) {
         title={t('title')}
         subtitle={t('subtitle')}
       />
-      {/* 吸附栈：三 Tab 账本切换行，随整页滚动到顶后固定（骨架契约 §二·补，Issue 1977） */}
+      {/* 吸附栈：顶层视图切换与账本切换行，随整页滚动到顶后固定（骨架契约 §二·补，Issue 1977） */}
       <div className="omx-stage-sticky">
-      <PublishStageContent t={t} feed={feed} viewMode={viewMode} setViewMode={setViewMode} setView={setView} />
+        <StageViewSwitch t={t} stageView={stageView} onChange={setStageView} />
+        {stageView === 'publish' ? (
+          <PublishStageContent t={t} feed={feed} viewMode={viewMode} setViewMode={setViewMode} setView={setView} />
+        ) : null}
       </div>
-      <PublishViewport
-        t={t}
-        viewMode={viewMode}
-        filteredRecords={feed.filteredRecords}
-        selectedIds={feed.selectedIds}
-        isBatchMode={feed.isBatchMode}
-        toastMsg={feed.toastMsg}
-        batchActions={batchActions}
-        itemActions={itemActions}
-      />
-      <PublishStageModals t={t} feed={feed} view={view} setView={setView} />
+      {stageView === 'accounts' ? (
+        <AccountsSidebar t={t} />
+      ) : (
+        <PublishViewport
+          t={t}
+          viewMode={viewMode}
+          filteredRecords={feed.filteredRecords}
+          selectedIds={feed.selectedIds}
+          isBatchMode={feed.isBatchMode}
+          toastMsg={feed.toastMsg}
+          batchActions={batchActions}
+          itemActions={itemActions}
+        />
+      )}
+      <PublishStageModals t={t} feed={feed} view={view} setView={setView} onManageAccounts={handleManageAccounts} />
     </div>
   )
 }

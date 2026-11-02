@@ -59,7 +59,7 @@ test('adapter profiles declare operations/outputTypes; digital_human not in vide
   const vg = profiles.profiles.find((p) => p.id === 'videoGenerate');
   assert.ok(vg);
   assert.ok(Array.isArray(vg.operations));
-  assert.ok(!vg.operations.includes('digital_human'));
+  assert.ok(vg.operations.includes('digital_human')); // #minimax-h3-video
   assert.ok(vg.operations.includes('end_frame'), 'videoGenerate must declare end_frame (#567)');
   assert.deepEqual(vg.outputTypes, ['video']);
   const dh = profiles.profiles.find((p) => p.id === 'videoDigitalHuman');

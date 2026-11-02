@@ -40,7 +40,7 @@ describe('SubmitGuard listed profile coverage (#468)', () => {
     const report = verifyContracts({ strict: true })
     assert.equal(report.ok, true)
     // 2026-10-21 网关对账 #3516：上架面收敛为 9 模型 / 24 operation。
-    assert.equal(report.listedOperations.length, 24)
+    assert.equal(report.listedOperations.length, 29)
     const profileById = new Map((profiles.profiles ?? []).map((p) => [p.id, p]))
     // P1b: membership is the gateway snapshot's call, so a listed operation can still
     // belong to a model the gateway does not sell. The profile-coverage loop below

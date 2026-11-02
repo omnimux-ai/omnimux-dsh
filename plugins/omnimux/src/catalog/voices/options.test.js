@@ -32,7 +32,7 @@ test('catalog DTO and contract expose the same 509 rich options with one canonic
   // #3516：音频产出桶只剩在架 suno；seed-audio-1.0 仅登记不上架。
   assert.equal(catalog.defaults.audio, 'suno');
   assert.equal('text_to_speech' in catalog.defaultsByOperation, false);
-  assert.deepEqual(catalog.audio.map((model) => model.id), ['suno']);
+  assert.deepEqual(catalog.audio.map((model) => model.id), ['indextts-2', 'suno']);
   // 509 个音色选项仍由契约提供：DTO 的 models[]（权威目录）与契约同源且是独立副本。
   assert.deepEqual(catalog.models.find((model) => model.id === 'seed-audio-1.0').parameters.voice, voice);
   assert.notEqual(catalog.models.find((model) => model.id === 'seed-audio-1.0').parameters.voice.options, voice.options);

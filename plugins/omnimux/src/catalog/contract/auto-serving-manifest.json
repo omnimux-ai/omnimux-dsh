@@ -172,6 +172,17 @@
       "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。"
     },
     {
+      "productId": "minimax-h3-video",
+      "kind": "video",
+      "priority": "P0",
+      "gatewayIds": [
+        "minimax-h3-video"
+      ],
+      "upstreamWireId": "minimax_h3_image_audio_to_video",
+      "canvasExcluded": true,
+      "note": "2026-11-02：AutoDL ComfyUI 任务泳道（渠道 70/71/72）在架可售；与 APIMart minimax-h3 同族独立，对口型/首尾帧/多参考经 metadata 透传。任务提交走 tasks/autodl 泳道，不进画布白名单（canvasExcluded）。"
+    },
+    {
       "productId": "grok-imagine-video-1-5",
       "kind": "video",
       "priority": "P0",
@@ -203,8 +214,8 @@
       "gatewayIds": [
         "indextts-2"
       ],
-      "note": "2026-10-21 网关对账 #3516：上游渠道全部停用（status=0，无启用 abilities），仅登记不开放。",
-      "canvasExcluded": true
+      "canvasExcluded": true,
+      "note": "2026-11-02：AutoDL ComfyUI 任务泳道（渠道 73）在架可售；voice_clone 走 tasks/autodl 泳道，音频不进画布白名单（canvasExcluded）。2026-10-21 的「渠道全部停用」记录已被 AutoDL 泳道推翻。"
     },
     {
       "productId": "gemini-3.8-flash-tts",

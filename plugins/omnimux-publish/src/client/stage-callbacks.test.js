@@ -11,17 +11,18 @@ const bundle = new URL('./.stage-callbacks-test.mjs', import.meta.url)
 const stubs = {
   'dsh-ui-kit': `export function PageHeader() { return null }
     export function Divider() { return null }
+    export function Button({children, ...props}) { return <button {...props}>{children}</button> }
     export function ConfirmModal({open, confirmLoading, onConfirm, onClose}) {
       return open ? <><button disabled={confirmLoading} onClick={onConfirm}>delete</button><button disabled={confirmLoading} onClick={onClose}>cancel</button></> : null
     }`,
   './styles.js': 'export function injectPublishStyles() {}',
-  './usePublishFeed.js': 'export function usePublishFeed() {}',
-  './AccountsSidebar.jsx': 'export function AccountsSidebar() { return null }',
-  './views/PublishActionRow.jsx': 'export function PublishActionRow() { return null }',
-  './views/PublishControlBar.jsx': 'export function PublishControlBar() { return null }',
-  './views/PublishViewport.jsx': 'export function PublishViewport() { return null }',
-  '../Composer/index.jsx': `export function Composer({draftId, onBack, onSaved, onSubmitted}) {
-    return <><span>{draftId}</span><button onClick={onBack}>back</button><button onClick={onSaved}>save</button><button onClick={() => onSubmitted('submitted-id')}>submit</button></>
+  './usePublishFeed.js': 'export function usePublishFeed() { return { tab: "all", counts: {}, searchQuery: "", sortOption: "recent", typeFilter: "", filteredRecords: [], selectedIds: new Set(), isBatchMode: false, toastMsg: "", detailTick: 0, pendingDelete: null, busyDelete: false, loadList() {}, startTracking() {}, setIsBatchMode() {}, setTab() {}, setSearchQuery() {}, setSortOption() {}, setTypeFilter() {}, setPendingDelete() {}, confirmDelete() {}, handleToggleAll() {}, handleBatchRetry() {}, handleBatchDeleteDrafts() {}, handleExport() {}, handleToggleSelect() {}, handleSingleRetry() {} } }',
+  './AccountsSidebar.jsx': 'export function AccountsSidebar() { return <div data-testid="accounts-sidebar">accounts-sidebar-view</div> }',
+  './views/PublishActionRow.jsx': 'export function PublishActionRow({onNew}) { return <button onClick={onNew}>new-post</button> }',
+  './views/PublishControlBar.jsx': 'export function PublishControlBar(props) { return <div data-testid="control-bar" data-has-mode={String("modeFilter" in props)} /> }',
+  './views/PublishViewport.jsx': 'export function PublishViewport() { return <div data-testid="publish-viewport">publish-viewport</div> }',
+  '../Composer/index.jsx': `export function Composer({draftId, onBack, onManageAccounts, onSaved, onSubmitted}) {
+    return <><span>{draftId}</span><button onClick={onBack}>back</button><button onClick={onManageAccounts}>manage-accounts</button><button onClick={onSaved}>save</button><button onClick={() => onSubmitted('submitted-id')}>submit</button></>
   }`,
   '../RecordDetail.jsx': `import {useState} from 'react'; export function RecordDetail({recordId, onBack, onChanged}) {
     const [changed, setChanged] = useState(false)
@@ -37,7 +38,7 @@ await build({
     ctx.onLoad({ filter: /.*/, namespace: 'stub' }, ({ path }) => ({ contents: stubs[path], loader: 'jsx' }))
   } }], logLevel: 'silent',
 })
-const { PublishStageModals } = await import(bundle.href)
+const { PublishStage, PublishStageModals } = await import(bundle.href)
 await rm(fileURLToPath(bundle))
 
 async function render(view, inspect) {
@@ -108,4 +109,47 @@ test('delete confirmation receives the real handler and busy state', async () =>
     await click('cancel')
     assert.deepEqual(calls, [['pending', null]])
   })
+})
+
+test('PublishStage switches between publish and accounts views and jumps from composer to accounts', async () => {
+  const dom = new JSDOM('<div id="root"></div>')
+  const savedWindow = globalThis.window
+  const savedDocument = globalThis.document
+  const savedNode = globalThis.Node
+  const savedHTMLElement = globalThis.HTMLElement
+  const savedAct = globalThis.IS_REACT_ACT_ENVIRONMENT
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.Node = dom.window.Node
+  globalThis.HTMLElement = dom.window.HTMLElement
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  const root = createRoot(dom.window.document.getElementById('root'))
+  const clickText = async (text) => {
+    const button = [...dom.window.document.querySelectorAll('button')].find((node) => node.textContent === text)
+    assert.ok(button, `missing ${text}`)
+    await act(async () => button.click())
+  }
+  try {
+    await act(async () => root.render(React.createElement(PublishStage, { t: (key) => key })))
+    assert.equal(dom.window.document.querySelector('[data-testid="publish-viewport"]').textContent, 'publish-viewport')
+    assert.equal(dom.window.document.querySelector('[data-testid="control-bar"]').getAttribute('data-has-mode'), 'false')
+    assert.equal(dom.window.document.querySelector('[data-testid="accounts-sidebar"]'), null)
+
+    await clickText('stage.view.accounts')
+    assert.equal(dom.window.document.querySelector('[data-testid="accounts-sidebar"]').textContent, 'accounts-sidebar-view')
+    assert.equal(dom.window.document.querySelector('[data-testid="publish-viewport"]'), null)
+
+    await clickText('stage.view.publish')
+    await clickText('new-post')
+    await clickText('manage-accounts')
+    assert.equal(dom.window.document.querySelector('[data-testid="accounts-sidebar"]').textContent, 'accounts-sidebar-view')
+  } finally {
+    await act(async () => root.unmount())
+    globalThis.window = savedWindow
+    globalThis.document = savedDocument
+    globalThis.Node = savedNode
+    globalThis.HTMLElement = savedHTMLElement
+    globalThis.IS_REACT_ACT_ENVIRONMENT = savedAct
+    dom.window.close()
+  }
 })

@@ -75,6 +75,21 @@ test('account load failure is not rendered as an empty official account list', a
   }, 503)
 })
 
+test('empty official account list renders acct.add button when onManageAccounts is provided', async () => {
+  let managed = 0
+  await render('AccountPanel', { accounts: [] }, {
+    selectedIds: [],
+    onManageAccounts: () => { managed += 1 },
+    onChange() {},
+  }, async (container) => {
+    assert.ok(container.textContent.includes('accounts.empty'))
+    const addBtn = [...container.querySelectorAll('button')].find((button) => button.textContent === 'acct.add')
+    assert.ok(addBtn, 'missing acct.add button in empty AccountPanel')
+    await act(async () => addBtn.click())
+    assert.equal(managed, 1)
+  })
+})
+
 test('historical nonofficial tasks remain viewable without retry or upstream refresh', async () => {
   await render('RecordDetail', { record: { title: 'Saved history', subtasks: [
     { id: 'z', account_id: '1', provider: 'zernio', platform: 'tiktok', status: 'failed', post_id: 'post-z' },

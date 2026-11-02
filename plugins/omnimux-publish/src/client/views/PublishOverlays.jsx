@@ -6,6 +6,7 @@ export function PublishOverlays({
   t,
   view,
   onBack,
+  onManageAccounts,
   onSubmitted,
   onSaved,
   onChanged,
@@ -18,6 +19,7 @@ export function PublishOverlays({
           t={t}
           draftId={view.draftId}
           onBack={onBack}
+          onManageAccounts={onManageAccounts}
           onSubmitted={onSubmitted}
           onSaved={onSaved}
         />

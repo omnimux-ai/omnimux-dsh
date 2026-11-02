@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, ConfirmModal, IconButton, IconEllipsisOutline16, IconPlusOutline16 } from 'dsh-ui-kit'
+import { Button, ConfirmModal, IconButton, IconEllipsisOutline16, IconPlusOutline16, SearchField } from 'dsh-ui-kit'
 import { Menu } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
   disconnectHubAccount,
@@ -18,7 +18,6 @@ import {
 import { AuthorizeModal, authorizeBaseline } from './AuthorizeModal.jsx'
 import { createDisconnectController } from './disconnect-controller.js'
 import {
-  IconSearchOutline16,
   IconUserOutline16,
 } from './icons/accounts.js'
 
@@ -288,13 +287,13 @@ export function AccountsSidebar({ t }) {
             </Button>
 
             <div className="omnimux-publish-accounts-search">
-              <span className="omnimux-publish-accounts-search-icon"><IconSearchOutline16 /></span>
-              <input
-                type="search"
-                className="omnimux-publish-accounts-search-input"
+              <SearchField
+                stretch
                 placeholder={t('acct.searchPlaceholder')}
+                aria-label={t('acct.searchPlaceholder')}
+                clearLabel={t('search.clear')}
                 value={query}
-                onChange={(event) => { setQuery(event.currentTarget.value) }}
+                onValueChange={setQuery}
               />
             </div>
 

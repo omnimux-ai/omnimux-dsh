@@ -28,7 +28,7 @@ test('MCC 契约门禁: 视频模型能力声明文件完备性（contract loade
   assert.ok(videoModels.length >= 6, '必须至少声明主流视频模型');
   // #1751：数字人 kling-avatar 整款撤架后，video 目录收敛为 11 款合约型号
   // #3209：google-vids-omni（本机 vids2api 通道）下线、契约行删除 → 11
-  assert.equal(videoModels.length, 11);
+  assert.equal(videoModels.length, 12); // + minimax-h3-video
 
   for (const [modelId, expected] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     const model = index.get(modelId);
@@ -43,7 +43,7 @@ test('H2: 处置表 67 行 + implementation-ready 集合与处置一致', () => 
   assert.equal(index.schemaVersion, '1.1');
 
   const doc = loadDispositions();
-  assert.equal(doc.dispositions.length, 67); // P1b：13 条 unavailable + 3 条 draft 行删除 → 67
+  assert.equal(doc.dispositions.length, 68); // P1b + minimax-h3-video → 68
   const byId = new Map(doc.dispositions.map((r) => [r.id, r]));
   const forbidden = forbiddenListedIds(doc);
   // P1b：13 条墓碑行与 3 条 draft 行已删除，禁止 listed 集合为空。
@@ -72,7 +72,7 @@ test('H2: 处置表 67 行 + implementation-ready 集合与处置一致', () => 
   }
 
   // 2026-10-21 网关对账 #3516：上架面收敛为 9 模型 / 24 operation。
-  assert.equal(index.listedOperations.length, 24);
+  assert.equal(index.listedOperations.length, 29); // + minimax-h3-video ops
   assert.equal(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'), false);
   // #3516：minimax-h3 上游渠道停用，全部 operation 仅登记不上架；seedance 系列保持上架。
   for (const [modelId, operations] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
@@ -105,7 +105,7 @@ test('H2: 处置表 67 行 + implementation-ready 集合与处置一致', () => 
   assert.equal(report.schemaVersion, '1.1');
   assert.equal(Object.prototype.hasOwnProperty.call(report, 'version'), false);
   assert.ok(report.listedOperations.length > 0);
-  assert.equal(report.dispositions.total, 67); // P1b：13 条 unavailable + 3 条 draft 行删除 → 67
+  assert.equal(report.dispositions.total, 68); // P1b + minimax-h3-video → 68
   assert.deepEqual(report.dispositions.unresolvedDispositions, []);
 });
 

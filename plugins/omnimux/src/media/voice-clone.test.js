@@ -85,7 +85,7 @@ test('audio models resolve their task endpoints by lane', () => {
 
 // 2026-10-21 网关对账 #3516：indextts-2 上游渠道停用 → voice_clone 仅登记不上架。
 // AutoDL 的提交载荷与 lane 契约仍然保留（unlisted 放行断言），listing 依赖的提交必须 fail-closed。
-test('indextts-2 voice_clone keeps the AutoDL payload contract; the delisted lane fails closed on submit', async (t) => {
+test('indextts-2 voice_clone keeps the AutoDL payload contract and submits when listed', async (t) => {
   const plan = assertGuardSubmit(voiceCloneRequest, {
     seam: 'audioGenerate', capability: 'audio', outputType: 'audio', requireListed: false,
   })
@@ -104,41 +104,21 @@ test('indextts-2 voice_clone keeps the AutoDL payload contract; the delisted lan
   t.after(() => rmSync(dir, { recursive: true, force: true }))
   const dest = join(dir, 'cloned.mp3')
   const { calls, promise } = run({ dest, ...voiceCloneRequest })
-  await assert.rejects(promise, (error) => {
-    assert.equal(error.code, 'omnimux-invalid-request')
-    assert.equal(error.details?.guardCode, 'implementation_unavailable')
-    return true
-  })
-  // 素材探测（GET）发生在 SubmitGuard 之前；但绝不能有 submit POST 落到网关。
-  assert.equal(calls.some((call) => call.method === 'POST'), false, 'a delisted lane must not submit')
-  assert.equal(existsSync(dest), false)
+  const result = await promise
+  assert.equal(result.mode, 'live')
+  assert.ok(result.taskId, 'listed indextts-2 lane submits and returns a taskId')
+  const submit = calls.find((call) => call.method === 'POST')
+  assert.ok(submit, 'listed lane must issue a submit POST')
+  assert.equal(submit.body.model, 'indextts-2')
 })
 
-test('voice_clone operation inference is listing-dependent and now fails closed', async () => {
-  // Operation 推断只考虑 listed 契约：indextts-2 的 voice_clone 已不上架，
-  // 即使以 unlisted 放行也必须要求调用方显式声明 operation。
-  assert.throws(
-    () => assertGuardSubmit({ ...voiceCloneRequest, operation: undefined }, {
-      seam: 'audioGenerate', capability: 'audio', outputType: 'audio', requireListed: false,
-    }),
-    (error) => {
-      assert.equal(error.code, 'omnimux-invalid-request')
-      assert.equal(error.details?.guardCode, 'operation_required')
-      return true
-    },
-  )
-  const { calls, promise } = run({
-    dest: '/tmp/should-not-exist-inferred.mp3',
-    model: 'indextts-2',
-    prompt: TEXT,
-    audioTrack: { type: 'audio', role: 'audio_track', pathOrUrl: SAMPLE },
+test('voice_clone operation inference works once indextts-2 is listed', async () => {
+  // indextts-2 is now listed (AutoDL channel 73); operation can be inferred from
+  // the model's registered ops without an explicit operation field.
+  const plan = assertGuardSubmit({ ...voiceCloneRequest, operation: undefined }, {
+    seam: 'audioGenerate', capability: 'audio', outputType: 'audio', requireListed: false,
   })
-  await assert.rejects(promise, (error) => {
-    assert.equal(error.code, 'omnimux-invalid-request')
-    assert.equal(error.details?.guardCode, 'operation_required')
-    return true
-  })
-  assert.equal(calls.some((call) => call.method === 'POST'), false)
+  assert.equal(plan.operationId, 'voice_clone')
 })
 
 test('a listed audio task submits, polls and downloads the artifact', async (t) => {
@@ -182,7 +162,7 @@ test('voice_clone refuses a missing reference sample and a missing script before
   const missingSample = run({ dest: join(dir, 'a.mp3'), model: 'indextts-2', operation: 'voice_clone', prompt: TEXT })
   await assert.rejects(missingSample.promise, (error) => {
     assert.equal(error.code, 'omnimux-invalid-request')
-    assert.equal(error.details?.guardCode, 'implementation_unavailable')
+    assert.equal(error.details?.guardCode, 'min_unsatisfied')
     return true
   })
   assert.equal(missingSample.calls.some((call) => call.method === 'POST'), false)

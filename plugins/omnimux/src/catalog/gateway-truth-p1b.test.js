@@ -74,7 +74,7 @@ test('② every listed line and price equals the snapshot item by item', () => {
         lines += 1
         assert.equal(model.enableGroups.includes(group.wireGroup), true, `${row.id}@${group.wireGroup} must be an enabled gateway group`)
         assert.equal(group.enabled, true)
-        assert.equal(group.pricing.groupRatio, ratios[group.wireGroup], `${row.id}@${group.wireGroup} ratio`)
+        assert.equal(group.pricing.groupRatio ?? null, ratios[group.wireGroup] ?? null, `${row.id}@${group.wireGroup} ratio`)
         assert.equal(group.pricing.unitPriceUsd, model.billing.modelPrice, `${row.id} unit price`)
         assert.equal(
           group.pricing.pointsEstimate ?? null,

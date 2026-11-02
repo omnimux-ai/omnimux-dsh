@@ -315,8 +315,9 @@ models:
       verifiedAt: "2026-10-04"
       notes: "渠道官方文档 zh/api-reference/audio-series/models/index-tts.mdx（OmniMux-docs 仓，2026-10-04 离线复核）：canonical 型号 indextts-2；POST /v1/tasks/autodl；必填 prompt_text（文稿）、prompt_simple（参考音 URL，不得 data: URI）、emo_control_method（推荐「与音色参考音频相同」）；可选 emo_happy/emo_sad/emo_angry ∈ [0,1]；轮询 GET /v1/tasks/{id}，产物 GET /v1/tasks/{id}/artifacts 取 WAV。旧型号 index-tts 已下线，保留 alias 兼容存量画布/账本。参考素材限制差异登记：上游合同 4b4e2aff3500ec80 的 reference_audios 为 {max:2, formats:[wav,mp3]}，本仓 voice_sample 声明 max=1 且不声明 maxSizeMb/maxDurationSec——max=1 因 AutoDL 契约只有单值 prompt_simple（参考音公网 URL），多值无落点；上游未公布 max_bytes_each 与 max_seconds_each，故不声明体积与时长上限；formats 转写为 MIME 并双写 audio/mp3 与 audio/mpeg，覆盖画布探测（audio/mpeg）与中枢探针归一（audio/mp3）两条通路。"
     implementation:
-      # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
-      status: "none"
+      # 2026-10-21 网关对账 #3516 曾判「上游渠道全部停用」；2026-11-02 复核渠道 70/71/72
+      # 在架（AutoDL 任务通道），经 indextts-2 真实任务跑通声音克隆，误标已纠。
+      status: "ready"
       profileId: "audioGenerate"
       seam: "audioGenerate"
     execution:

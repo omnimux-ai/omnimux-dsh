@@ -11,10 +11,11 @@ import { groupAccountsByPlatform } from './capabilities.js'
  * @param {{
  *   t: (key: string, vars?: Record<string, unknown>) => string,
  *   selectedIds: string[],
+ *   onManageAccounts?: () => void,
  *   onChange: (accountIds: string[], selectedRows: Array<Record<string, unknown>>) => void,
  * }} props
  */
-export function AccountPanel({ t, selectedIds, onChange }) {
+export function AccountPanel({ t, selectedIds, onManageAccounts, onChange }) {
   const [phase, setPhase] = useState('loading')
   const [rows, setRows] = useState([])
   const [error, setError] = useState('')
@@ -117,6 +118,11 @@ export function AccountPanel({ t, selectedIds, onChange }) {
         <div className="omnimux-publish-accounts-stack">
           <div>{t('accounts.empty')}</div>
           <div className="omnimux-publish-accounts-muted">{t('accounts.empty.hint')}</div>
+          {typeof onManageAccounts === 'function' ? (
+            <Button variant="primary" size="sm" onClick={onManageAccounts}>
+              {t('acct.add')}
+            </Button>
+          ) : null}
         </div>
       ) : (
         <div className="omnimux-publish-accounts-groups">

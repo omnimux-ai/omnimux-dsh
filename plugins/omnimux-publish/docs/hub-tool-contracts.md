@@ -45,3 +45,24 @@
 上传 PUT 不携带网关凭据。本次不改计费、席位、官方撤销和 Zernio 402 政策。
 真实授权、发布、状态回收、解绑，以及预签名 URL 有效期与复用能力均需独立证据。
 fixture 和本地测试不证明官方发布全链路成功。
+
+## 网关 TikTok Direct 联调对账单（Issue #3898）
+
+当云端网关（`omnimux.ai/api/social/v1/*`）完成 TikTok 官方接口与自有对象存储接入时，按以下契约与本插件零代码改动咬合：
+
+| 环节 | HTTP 入口 | 插件/中枢请求体或查询参数 | 网关成功响应（支持直返或 `{success:true, data}` 信封） |
+| --- | --- | --- | --- |
+| 1. 列出账号 | `GET /api/social/v1/accounts?provider=tiktok_direct` | Query: `provider=tiktok_direct` | `{ accounts: [{ id, platform: "tiktok", provider: "tiktok_direct", display_name, username, avatar_url, status: "active" \| "expiring" \| "expired", expires_at }] }`（注：`computeStatus` 仅认 `active/expiring/expired`，空值按 `expires_at` 推导为 `active`，切勿返回 `connected`） |
+| 2. 发起授权 | `POST /api/social/v1/connect` | Body: `{ provider: "tiktok_direct", platform: "tiktok", redirect_url? }` | `{ auth_url: "https://www.tiktok.com/v2/auth/authorize?..." }`（仅接受 `https://`） |
+| 3. 解绑账号 | `DELETE /api/social/v1/accounts/{id}?provider=tiktok_direct` | Query: `provider=tiktok_direct` | `{ success: true }` |
+| 4. 媒体预签名 | `POST /api/social/v1/media/presign` | Body: `{ filename, content_type? }` | `{ upload_url: "https://...", public_url: "https://..." }`（插件以无鉴权头 `PUT` 字节至 `upload_url`） |
+| 5. 创建帖子 | `POST /api/social/v1/posts` | Body: `{ provider: "tiktok_direct", account_ids: [id], content, media_items: [{ url: public_url }] }` | `{ id: "<post_id>", provider: "tiktok_direct", status?: "submitted" }`（ID 字段兼容 `id / post_id / taskId / task_id`） |
+| 6. 查询状态 | `GET /api/social/v1/posts/{id}?provider=tiktok_direct` | Query: `provider=tiktok_direct` | `{ id: "<post_id>", provider: "tiktok_direct", status: "<raw_status>" }`（状态字段兼容 `status / platform_status / raw_status`） |
+
+### 状态映射（`BUILTIN_STATUS_MAP`）
+
+- **发布中（`submitted`）**：`scheduled`、`pending`、`queued`、`processing`、`in_progress`、`publishing`、`submitted`
+- **审核中（`reviewing`）**：`review`、`reviewing`、`pending_review`、`under_review`、`in_review`、`audit`、`auditing`
+- **已发布（`published`）**：`published`、`success`、`done`、`completed`（TikTok 沙盒未过审应用发出的私密帖 `SELF_ONLY` 完成后同样返回此组状态）
+- **失败（`failed`）**：`failed`、`error`、`rejected`、`reject`、`blocked`、`removed`、`deleted`
+- 未在表内的未知状态字符串：保留在子任务 `raw_status` 展示，不臆测为成功或失败。
