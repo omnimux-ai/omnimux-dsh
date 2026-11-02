@@ -69,3 +69,13 @@
 ## 10. 文档影响
 
 `docs/contracts/plugin-qa.md` 的布局判据表述需从「能列出归档内 preset」改为「归档目录表里有 preset」，语义等价但实现路径不同，同步一句。
+
+## 旧标准变更
+
+- `scripts/host-runtime-layout.test.mjs` :: `probeArchive 在 io 缺 readdirSync 时显式报错，不悄悄读真实 fs`
+
+原断言：注入 io 缺 `readdirSync` 时 `resolveHostRuntimeLayout` 抛 `TypeError`（`io.readdirSync is required`）。
+
+必须改的理由：归档布局判据已从 `readdirSync` 改为读归档目录表（`readAsarTree`），探测不再需要 `readdirSync`；新的必需能力是 `existsSync`（判断归档是否存在）。原用例的守卫对象已不存在，继续保留会固化为错误契约。
+
+新期望证据：同一场景改为断言缺 `existsSync` 时抛 `TypeError`（`io.existsSync is required`）；`probeArchive` 实现里对该能力做了显式检查。归档目录表判据本身由新增三例（真实语义 asar 有 preset / 无 preset / 头部损坏）覆盖。
