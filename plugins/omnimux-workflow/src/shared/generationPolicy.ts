@@ -157,7 +157,7 @@ export function projectCanvasCatalog(catalog: CapabilityCatalog): CapabilityCata
     allowedModelIds: lists[kind].map((row) => row.id),
     defaultModelId: defaults[kind] ?? '',
     modeSelection: policy[kind].modeSelection,
-  }])) as Readonly<Record<MaterialType, GenerationPolicy>>;
+  }])) as unknown as Readonly<Record<MaterialType, GenerationPolicy>>;
   return {
     ...catalog,
     ...lists,
