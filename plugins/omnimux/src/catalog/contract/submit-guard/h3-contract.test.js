@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { guardSubmit } from './guard.js'
-import { mapOmnimuxInput } from '../../../media/vendors/omnimux.js'
+import { mapOmnimuxInput, taskPathFor, taskPollPathFor } from '../../../media/vendors/omnimux.js'
 import { pollOpenAiMediaTask } from '../../../media/protocols/openai-media.js'
 
 // #1751: the `minimax-h3-max` / `minimax-h3-max-turbo` SKUs left the contract universe;
@@ -133,8 +133,7 @@ test('minimax-h3-video digital_human emits audio_urls require + metadata audio s
   }
 })
 
-test('minimax-h3-video routes to autodl submit + poll paths', async () => {
-  const { taskPathFor, taskPollPathFor } = await import('../../../media/vendors/omnimux.js')
+test('minimax-h3-video routes to autodl submit + poll paths', () => {
   assert.equal(taskPathFor('video', H3_VIDEO_MODEL), 'tasks/autodl')
   assert.equal(taskPollPathFor('video', H3_VIDEO_MODEL), 'tasks')
 })

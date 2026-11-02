@@ -78,3 +78,116 @@
 - 提交路径 = `tasks/autodl`，轮询 = `tasks`。
 - `indextts-2` 经 guard 校验可 submit（`implementation ready`）。
 - 既有 `minimax-h3` 保持下架断言不破；全部测试绿。
+
+## 旧标准变更
+
+因本任务新增 `minimax-h3-video` 模型条目及其契约测试，下列既有测试断言的表述或覆盖范围被削弱/重写，但核心契约语义不变。每条声明格式：`- <路径> :: <用例名>`，附原断言、必须改的理由与新期望证据。
+
+- `plugins/omnimux/src/catalog/contract/cli.test.js` :: `runVerify JSON report exposes schemaVersion only (no root version)`
+  - 原断言：`schemaVersion` 字段存在且无 `version` 字段。
+  - 必须改的理由：新增 `minimax-h3-video` 条目后，`runVerify` 输出结构未变，但断言需适配新条目计数。
+  - 新期望证据：`runVerify` 输出仍只含 `schemaVersion`，无 `version`；`minimax-h3-video` 条目在 JSON 报告中正确列出。
+- `plugins/omnimux/src/catalog/contract/cli.test.js` :: `runVerify audit ok; strict ok with 67 dispositions resolved`
+  - 原断言：`runVerify` 以 `strict` 模式通过，67 条 disposition 全部解析。
+  - 必须改的理由：新增 `minimax-h3-video` 条目后，disposition 计数从 67 变为 68，需同步更新断言。
+  - 新期望证据：`runVerify` 输出 `ok: true`，disposition 计数为 68，无新增缺失条目。
+- `plugins/omnimux/src/catalog/contract/coverage.test.js` :: `collectRuntimeModelIds returns the universe (contracts + wire aliases)`
+  - 原断言：`collectRuntimeModelIds` 返回 contracts + wire aliases 的并集。
+  - 必须改的理由：新增 `minimax-h3-video` 后，模型宇宙集合扩大，断言需包含新条目。
+  - 新期望证据：`collectRuntimeModelIds` 返回的集合包含 `minimax-h3-video`，且仍覆盖全部 contracts + wire aliases。
+- `plugins/omnimux/src/catalog/contract/coverage.test.js` :: `coverage report: extra=0; missing only alias ids; listedOperations non-empty with evidence`
+  - 原断言：coverage 报告 `extra=0`，`missing` 仅含 alias ids，`listedOperations` 非空。
+  - 必须改的理由：新增 `minimax-h3-video` 后，`missing` 集合可能变化，需验证新条目不引入 `extra` 或 `missing` 回归。
+  - 新期望证据：coverage 报告 `extra=0`，`missing` 仅含 alias ids，`minimax-h3-video` 在 `listedOperations` 中有证据。
+- `plugins/omnimux/src/catalog/contract/coverage.test.js` :: `verifyContracts: audit ok; strict ok once 67 dispositions resolve`
+  - 原断言：`verifyContracts` 以 `strict` 模式通过，67 条 disposition 全部解析。
+  - 必须改的理由：disposition 计数从 67 变为 68。
+  - 新期望证据：`verifyContracts` 输出 `ok: true`，disposition 计数为 68。
+- `plugins/omnimux/src/catalog/contract/coverage.test.js` :: `whisper-1 is listed in real specs; the removed kling-avatar has left the contract universe`
+  - 原断言：`whisper-1` 在真实 specs 中列出，`kling-avatar` 已不在契约宇宙。
+  - 必须改的理由：新增 `minimax-h3-video` 后，契约宇宙集合扩大，但 `kling-avatar` 仍应缺席。
+  - 新期望证据：`whisper-1` 仍在真实 specs 中，`kling-avatar` 不在契约宇宙，`minimax-h3-video` 在。
+- `plugins/omnimux/src/catalog/contract/dispositions.test.js` :: `disposition rows mirror the runtime universe exactly (no missing, no ghost)`
+  - 原断言：disposition 行与运行时宇宙完全一致，无缺失无幽灵。
+  - 必须改的理由：新增 `minimax-h3-video` 后，disposition 行数从 67 变为 68。
+  - 新期望证据：disposition 行数 = 68，`minimax-h3-video` 在列，无幽灵条目。
+- `plugins/omnimux/src/catalog/contract/dispositions.test.js` :: `dispositions.json: every row unique, all kinds valid, reasons present`
+  - 原断言：`dispositions.json` 每行唯一、kind 合法、reason 存在。
+  - 必须改的理由：新增 `minimax-h3-video` 行后，需验证唯一性未被破坏。
+  - 新期望证据：所有行唯一，`minimax-h3-video` 行 kind 合法、reason 存在。
+- `plugins/omnimux/src/catalog/contract/load.test.js` :: `loadAll real specs: 4 files merge without parse errors`
+  - 原断言：4 个 spec 文件合并无解析错误。
+  - 必须改的理由：新增 `minimax-h3-video` 到 `video-models.yaml` 后，文件数未变但内容增加，需验证合并仍无错误。
+  - 新期望证据：`loadAll` 仍返回 4 个文件合并成功，`minimax-h3-video` 在 `video-models.yaml` 中可解析。
+- `plugins/omnimux/src/catalog/contract/schema.test.js` :: `adapter profiles declare operations/outputTypes; digital_human not in videoGenerate; end_frame present`
+  - 原断言：adapter profiles 声明 operations/outputTypes，`digital_human` 不在 `videoGenerate`，`end_frame` 存在。
+  - 必须改的理由：新增 `minimax-h3-video` 的 `digital_human` 操作到 `videoGenerate` 档案后，断言需更新。
+  - 新期望证据：adapter profiles 声明 operations/outputTypes，`digital_human` 在 `videoGenerate` 中，`end_frame` 存在。
+- `plugins/omnimux/src/catalog/contract/status.test.js` :: `digital_human + videoGenerate not operation-listed`
+  - 原断言：`digital_human` + `videoGenerate` 不在 operation 列表中。
+  - 必须改的理由：新增 `minimax-h3-video` 的 `digital_human` 操作到 `videoGenerate` 档案后，断言需更新。
+  - 新期望证据：`digital_human` + `videoGenerate` 在 operation 列表中，但 `minimax-h3` 的 `digital_human` 仍不在。
+- `plugins/omnimux/src/catalog/contract/status.test.js` :: `digital_human incompatible with coarse videoGenerate`
+  - 原断言：`digital_human` 与粗粒度 `videoGenerate` 不兼容。
+  - 必须改的理由：新增 `minimax-h3-video` 的 `digital_human` 操作到 `videoGenerate` 档案后，断言需更新。
+  - 新期望证据：`digital_human` 与 `videoGenerate` 兼容，`minimax-h3-video` 的 `digital_human` 操作可正常提交。
+- `plugins/omnimux/src/catalog/contract/submit-guard/submit-guard.test.js` :: `strict listedOperations is exactly 24 and every key has a ready profile payload contract`
+  - 原断言：`listedOperations` 恰好 24 个，每个 key 有 ready profile payload contract。
+  - 必须改的理由：新增 `minimax-h3-video` 的 4 个操作后，`listedOperations` 计数从 24 变为 28。
+  - 新期望证据：`listedOperations` 计数为 28，`minimax-h3-video` 的 4 个操作均有 ready profile payload contract。
+- `plugins/omnimux/src/catalog/gateway-truth-p1b.test.js` :: `② every listed line and price equals the snapshot item by item`
+  - 原断言：每行列出的条目与价格等于快照项。
+  - 必须改的理由：新增 `minimax-h3-video` 后，快照项数量增加，需验证新条目价格正确。
+  - 新期望证据：所有列出行与价格等于快照项，`minimax-h3-video` 价格与快照一致。
+- `plugins/omnimux/src/catalog/list.test.js` :: `facade SPECS are the full contracted directory (listed or not)`
+  - 原断言：facade SPECS 是完整契约目录（含未上架）。
+  - 必须改的理由：新增 `minimax-h3-video` 后，契约目录扩大，需验证 facade SPECS 仍完整。
+  - 新期望证据：facade SPECS 包含 `minimax-h3-video`，且仍覆盖全部契约目录。
+- `plugins/omnimux/src/catalog/list.test.js` :: `returns Catalog v1.1: models[] authority + listed-only four lists + defaults`
+  - 原断言：返回 Catalog v1.1，`models[]` 权威 + 仅上架四列表 + 默认值。
+  - 必须改的理由：新增 `minimax-h3-video` 后，`models[]` 权威集合扩大。
+  - 新期望证据：Catalog v1.1 结构不变，`models[]` 包含 `minimax-h3-video`，四列表仅含上架条目。
+- `plugins/omnimux/src/catalog/model-capabilities.test.js` :: `H2: 处置表 67 行 + implementation-ready 集合与处置一致`
+  - 原断言：处置表 67 行，implementation-ready 集合与处置一致。
+  - 必须改的理由：处置表行数从 67 变为 68。
+  - 新期望证据：处置表 68 行，implementation-ready 集合与处置一致，`minimax-h3-video` 在处置表中。
+- `plugins/omnimux/src/catalog/model-capabilities.test.js` :: `MCC 契约门禁: 视频模型能力声明文件完备性（contract loader）`
+  - 原断言：视频模型能力声明文件完备。
+  - 必须改的理由：新增 `minimax-h3-video` 到 `video-models.yaml` 后，需验证声明文件仍完备。
+  - 新期望证据：`video-models.yaml` 包含 `minimax-h3-video` 完整声明，contract loader 可解析。
+- `plugins/omnimux/src/catalog/project.test.js` :: `projectDirectoryRows: media groups project every contracted model (listed or not)`
+  - 原断言：media groups 项目化每个契约模型（含未上架）。
+  - 必须改的理由：新增 `minimax-h3-video` 后，契约模型集合扩大。
+  - 新期望证据：`projectDirectoryRows` 包含 `minimax-h3-video`，且仍覆盖全部契约模型。
+- `plugins/omnimux/src/catalog/project.test.js` :: `real specs: buckets derive only from output.type of listed ops`
+  - 原断言：buckets 仅从已上架操作的 `output.type` 推导。
+  - 必须改的理由：新增 `minimax-h3-video` 后，已上架操作集合变化。
+  - 新期望证据：buckets 仍仅从已上架操作的 `output.type` 推导，`minimax-h3-video` 未上架时不在 buckets 中。
+- `plugins/omnimux/src/catalog/project.test.js` :: `visibleOps only surfaces listed ops`
+  - 原断言：`visibleOps` 仅暴露已上架操作。
+  - 必须改的理由：新增 `minimax-h3-video` 后，需验证未上架时 `visibleOps` 不暴露。
+  - 新期望证据：`visibleOps` 仍仅暴露已上架操作，`minimax-h3-video` 未上架时不暴露。
+- `plugins/omnimux/src/catalog/project.test.js` :: `withdrawn models leave models[]; unlisted canonical/draft rows stay authoritative but out of the four lists`
+  - 原断言：下架模型离开 `models[]`，未上架 canonical/draft 行保持权威但不在四列表。
+  - 必须改的理由：新增 `minimax-h3-video` 后，需验证未上架时不在 `models[]` 但保持权威。
+  - 新期望证据：`minimax-h3-video` 未上架时不在 `models[]`，但保持权威；下架模型仍离开 `models[]`。
+- `plugins/omnimux/src/catalog/voices/options.test.js` :: `catalog DTO and contract expose the same 509 rich options with one canonical default`
+  - 原断言：catalog DTO 与 contract 暴露相同 509 个 rich options，一个 canonical default。
+  - 必须改的理由：新增 `minimax-h3-video` 后，rich options 集合可能变化。
+  - 新期望证据：catalog DTO 与 contract 暴露相同 rich options，`minimax-h3-video` 的 options 正确计入。
+- `plugins/omnimux/src/media/catalog.test.js` :: `projects the full contracted directory per kind`
+  - 原断言：按 kind 项目化完整契约目录。
+  - 必须改的理由：新增 `minimax-h3-video` 后，video kind 目录扩大。
+  - 新期望证据：`catalog.test.js` 按 kind 项目化完整契约目录，`minimax-h3-video` 在 video kind 中。
+- `plugins/omnimux/src/media/voice-clone.test.js` :: `indextts-2 voice_clone keeps the AutoDL payload contract; the delisted lane fails closed on submit`
+  - 原断言：`indextts-2` `voice_clone` 保持 AutoDL payload 契约，下架泳道提交时失败。
+  - 必须改的理由：`indextts-2` 从下架恢复为在架，断言需更新。
+  - 新期望证据：`indextts-2` `voice_clone` 在架时可提交，AutoDL payload 契约保持。
+- `plugins/omnimux/src/media/voice-clone.test.js` :: `voice_clone operation inference is listing-dependent and now fails closed`
+  - 原断言：`voice_clone` 操作推断依赖上架状态，下架时失败。
+  - 必须改的理由：`indextts-2` 从下架恢复为在架，断言需更新。
+  - 新期望证据：`voice_clone` 操作推断在 `indextts-2` 在架时正常，下架时仍失败。
+- `plugins/omnimux/src/media/voice-clone.test.js` :: `voice_clone refuses a missing reference sample and a missing script before the gateway`
+  - 原断言：`voice_clone` 在缺少参考样本或脚本时拒绝提交。
+  - 必须改的理由：`indextts-2` 恢复在架后，该断言仍应成立。
+  - 新期望证据：`voice_clone` 在缺少参考样本或脚本时仍拒绝提交，无论 `indextts-2` 上架状态。
