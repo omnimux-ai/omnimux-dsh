@@ -55,9 +55,12 @@ export function parseVideoConfig(value) {
     throw new Error(`Config.video.maxConcurrent must be an integer >= 1, got ${JSON.stringify(maxConcurrent)}`)
   }
 
-  const defaultModel = typeof understandRaw.defaultModel === 'string' && understandRaw.defaultModel.trim()
+  // Empty keeps the call un-pinned so the hub resolves the model: it then
+  // applies the user-picked `defaultAnalysisModel` (plugin detail page) or its
+  // own compatible default. A non-empty value here overrides that whole chain.
+  const defaultModel = typeof understandRaw.defaultModel === 'string'
     ? understandRaw.defaultModel.trim()
-    : 'gemini-3.8-flash'
+    : ''
   const maxTokens = parsePositiveNumber(
     understandRaw.maxTokens === undefined ? 8000 : understandRaw.maxTokens,
     'Config.understand.maxTokens',

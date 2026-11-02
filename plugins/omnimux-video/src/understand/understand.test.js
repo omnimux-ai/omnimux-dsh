@@ -15,7 +15,7 @@ import {
   resolveIdentityMode,
 } from './reverse.js'
 
-const UNDERSTAND = parseVideoConfig(undefined).understand
+const UNDERSTAND = { ...parseVideoConfig(undefined).understand, defaultModel: 'gemini-3.8-flash' }
 
 function tinyMp4(dir) {
   const dest = join(dir, 'clip.mp4')

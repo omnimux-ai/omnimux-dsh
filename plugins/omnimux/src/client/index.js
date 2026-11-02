@@ -5,6 +5,7 @@ import { NS } from './locales.js'
 import { ProfileSection } from './ProfileSection.jsx'
 import { DshPluginsSection } from './DshPluginsSection.jsx'
 import { ReferenceStorageSection } from './ReferenceStorageSection.jsx'
+import { TaskModelsSection } from './TaskModelsSection.jsx'
 import { LoginGate } from './LoginGate.jsx'
 import { setRuntimeChoiceReader } from './auth-gate.js'
 import { installSettingsValueReader } from './settings-value-reader.js'
@@ -111,23 +112,34 @@ export function apply(ctx) {
     locale: NS,
     inject: () => ({ t }),
   }, DshPluginsSection))
+  const omnimuxSubject = (subject) => subject?.kind === 'bundle' && subject.pkg?.name === 'omnimux'
+    || subject?.kind === 'row' && subject.pkg?.name === 'omnimux' && subject.row?.rowId === 'omnimux'
+    || subject?.kind === 'item' && subject.id === 'omnimux'
   ctx.slots.inject('plugins.detail.section', () => ctx.slots.register({
     name: 'plugins.detail.section',
     id: 'omnimux-reference-storage',
     order: 100,
     locale: NS,
     inject: () => ({ t }),
-  }, ({ t: translate, subject }) => {
-    const matches = subject?.kind === 'bundle' && subject.pkg?.name === 'omnimux'
-      || subject?.kind === 'row' && subject.pkg?.name === 'omnimux' && subject.row?.rowId === 'omnimux'
-      || subject?.kind === 'item' && subject.id === 'omnimux'
-    return matches ? createElement(ReferenceStorageSection, { t: translate }) : null
-  }))
+  }, ({ t: translate, subject }) => omnimuxSubject(subject) ? createElement(ReferenceStorageSection, { t: translate }) : null))
+  // Task-model pickers and reference storage both need the `omnimux` config
+  // scope, which only exists inside `ctx.inject(['configForms'], …)` — so both
+  // their plugins.item card and their plugins.detail.section contribution are
+  // registered there, never on the scope-less outer inject.
   if (typeof ctx.inject === 'function') ctx.inject(['configForms'], (formCtx) => {
     formCtx.effect(() => formCtx.configForms.whileServed(['omnimux'], () => formCtx.slots.inject('plugins.item', () => formCtx.slots.register({
       name: 'plugins.item', id: 'omnimux-reference-storage', order: 100,
       label: () => t('referenceStorage.title'), locale: NS, inject: () => ({ t }),
     }, ({ t: translate, view }) => view === 'summary' ? translate('referenceStorage.description') : createElement(ReferenceStorageSection, { t: translate })))), 'omnimux: reference storage configuration')
+    formCtx.effect(() => formCtx.configForms.whileServed(['omnimux'], () => formCtx.slots.inject('plugins.item', () => formCtx.slots.register({
+      name: 'plugins.item', id: 'omnimux-task-models', order: 90,
+      label: () => t('taskModels.title'), locale: NS,
+      inject: () => ({ t, scope: formCtx.configForms.get('omnimux') }),
+    }, ({ t: translate, scope, view }) => view === 'summary' ? translate('taskModels.summary') : createElement(TaskModelsSection, { t: translate, scope })))), 'omnimux: task model pickers')
+    formCtx.effect(() => formCtx.configForms.whileServed(['omnimux'], () => formCtx.slots.inject('plugins.detail.section', () => formCtx.slots.register({
+      name: 'plugins.detail.section', id: 'omnimux-task-models', order: 90, locale: NS,
+      inject: () => ({ t, scope: formCtx.configForms.get('omnimux') }),
+    }, ({ t: translate, scope, subject }) => omnimuxSubject(subject) ? createElement(TaskModelsSection, { t: translate, scope }) : null))), 'omnimux: task model pickers detail')
   })
   // Read existing choices for login compatibility without exposing another
   // model configuration surface. Account/API setup remains on the Host page.

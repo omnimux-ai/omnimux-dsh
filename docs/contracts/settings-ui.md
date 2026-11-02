@@ -21,6 +21,7 @@ Normative seat for OmniMux plugin UI in the official Web Settings panel. Live sl
 | Product page that is not plugin config (login, profile, chrome) | `settings.section` | Settings sidebar, first-level nav | The page is OmniMux identity or product chrome, not a plugin's knobs |
 | Whole plugin management / inventory page | `settings.plugins.tab` | Settings → 插件, one tab | Install, uninstall, list, or a multi-control page owned by one plugin |
 | One plugin's compact controls | `settings.plugin.item` | Settings → 插件 → 可配置 tab, one card | A few fields that belong to one Host plugin (bash, agent-loop, web-search) |
+| One plugin's task-model pickers (current Hosts) | `plugins.item` (inside `ctx.configForms.whileServed('<entryId>')`) | Global Plugins page, per-plugin card | A scope-backed config field bound via `ctx.configForms.get('<entryId>')`; pair with `plugins.detail.section` for the detail page |
 | One preference with no page of its own | `settings.general.item` | Settings → 通用, one row | A single toggle or picker |
 | A first-level app, library, catalog, or plaza page | Workbench Tab (`ctx.betterSidebar.registerTab`) | Workbench beside the conversation, opened with `window.__omnimuxWorkbench.open({ tabId })` | The page is the plugin itself, not plugin config; follow [workbench-split.md](workbench-split.md), never `claimProductStage` or fall back to overlay |
 | Existing overlay-only surface | `shell.overlay` | Hub login gate or Clip canvas-node portal | Only the boundaries in [workbench-split.md](workbench-split.md) apply; the unmounted Apps shelf is dormant and is not the default for new pages; Clip portal MUST NOT claim a product stage |
@@ -31,6 +32,8 @@ MUST NOT register plugin config, plugin install, or social-account management as
 ## Reference media storage on current configuration forms
 
 Current official Hosts expose plugin Config volatile fields through `configForms`, not the legacy `settingsScope` / `settings.plugin.item` seat. OmniMux reference media storage uses one `referenceStorage` volatile field and the existing global Plugins page: `plugins.item`, id `omnimux-reference-storage`, registered only while the `omnimux` form is served. Summary renders explanation only; page renders the configuration. Bundle/row detail contributions target OmniMux explicitly and never another plugin.
+
+Task-model pickers ride the same seat and the same form scope: `plugins.item` id `omnimux-task-models` binds `defaultTextModel` (plain text tasks) and `defaultAnalysisModel` (multimodal understanding) through `ctx.configForms.get('omnimux')`, with a matching `plugins.detail.section` on the plugin detail page. Options come from `/omnimux/model-catalog` `catalog.text` — the analysis picker lists only rows whose `input` advertises a non-text modality — never a local model list, so an on-sale change the hub stops serving cannot be re-picked here. A stored id the hub no longer serves stays visible with a "needs confirmation" suffix.
 
 Non-secret configuration persists through official SettingsForms / ConfigEditor with the entry revision. Access identifier and secret are separate official credential references; reads report presence and writability, never their values. Every generation prepares from the current operation snapshot. See [reference media storage](../guides/reference-media-storage.md) for scope and privacy boundaries.
 
@@ -43,6 +46,9 @@ The legacy seats below remain descriptions of older composition surfaces; their 
 | `settings.section` | `omnimux-profile` | `omnimux` | Device login and public profile |
 | `settings.plugins.tab` | `omnimux-dsh-plugins` | `omnimux` | Install / uninstall into the `omnimux` profile |
 | `settings.plugin.item` | `web-search` | official `ui-settings-plugins` | DeepSeek search key via credentials |
+| `plugins.item` | `omnimux-reference-storage` | `omnimux` | Reference media storage fields on the `omnimux` form scope |
+| `plugins.item` | `omnimux-task-models` | `omnimux` | Text / analysis task-model pickers on the `omnimux` form scope |
+| `plugins.detail.section` | `omnimux-task-models` | `omnimux` | Same task-model pickers on the plugin detail page |
 | Workbench Tab | `omnimux-accounts:library` | `omnimux-accounts` | Accounts page registered with `ctx.betterSidebar.registerTab`, not a Settings seat or Apps shelf |
 | Workbench Tab | `omnimux-inspiration:library` | `omnimux-inspiration` | 灵感社区 page registered with `ctx.betterSidebar.registerTab`; Host `/omnimux/inspiration` |
 
