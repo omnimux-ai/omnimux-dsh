@@ -44,3 +44,14 @@ status: active
 - `pnpm verify:model-contracts`
 - `node --test scripts/verify-agents-md.test.mjs`
 - 组件级测试复用 `provider-config-state.test.js` 假 scope 模式
+
+## 旧标准变更
+
+- `plugins/omnimux/src/settings/omitted-model-defaults.test.js` :: `3312: saved defaults pointing at delisted models resolve only to the fixed real published catalog`
+  - 原断言：`catalog.defaults` 深比较 `{ text, image, video, audio }` 四键，无 `analysis`。
+  - 必须改的理由：`catalog/list.js` 新增 `defaults.analysis` 解析键，对象形状扩展；测试不更新就永远 deepEqual 失败。
+  - 新期望证据：`defaults` 增加 `analysis` 键，值等于 `defaults.text`（无 analysis 保存值时回退链）。
+- `plugins/omnimux/src/settings/omitted-model-defaults.test.js` :: `3312: invalid saved defaults fall back to legal fixed catalog models and all four public executors remain usable`
+  - 原断言：同上，`catalog.defaults` 深比较四键无 `analysis`。
+  - 必须改的理由：同上。
+  - 新期望证据：同上。
