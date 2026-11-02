@@ -216,6 +216,25 @@ export function ModelsSettingsCard({ t, scope }) {
   /** Ids the user keeps out of the composer list; a hub-unlisted id can never be added back. */
   const hiddenModels = Array.isArray(value.composerHiddenModels) ? value.composerHiddenModels : []
 
+  /** Per-kind hub-listed model rows — the membership authority for the canvas pickers. */
+  const canvasModels = {
+    text: Array.isArray(catalog?.text) ? catalog.text : [],
+    image: Array.isArray(catalog?.image) ? catalog.image : [],
+    video: Array.isArray(catalog?.video) ? catalog.video : [],
+    audio: Array.isArray(catalog?.audio) ? catalog.audio : [],
+  }
+  /** Per-kind ids the user keeps off the canvas; a hub-unlisted id can never be added back. */
+  const canvasHiddenModels = (() => {
+    const stored = value.canvasHiddenModels
+    const out = { text: [], image: [], video: [], audio: [] }
+    if (!stored || typeof stored !== 'object') return out
+    for (const kind of Object.keys(out)) {
+      const list = stored[kind]
+      out[kind] = Array.isArray(list) ? list.filter((entry) => typeof entry === 'string' && entry) : []
+    }
+    return out
+  })()
+
   /**
    * Flip one model's visibility in the composer list.
    *
@@ -249,6 +268,46 @@ export function ModelsSettingsCard({ t, scope }) {
       setBusy(false)
     }
   }, [scope, writable, busy, value, composerModels, t])
+
+  /**
+   * Flip one model's visibility in the canvas pickers.
+   *
+   * The hub's listed set stays the membership authority, exactly like the
+   * composer list — the canvas adds per-kind granularity, and a kind may be
+   * fully hidden (canvas nodes then fall back through the not_listed path).
+   */
+  const onToggleCanvasModel = useCallback(async (kind, id, visible, label) => {
+    if (!scope || typeof scope.set !== 'function' || !writable || busy) return
+    const stored = value.canvasHiddenModels
+    const current = (stored && typeof stored === 'object' && Array.isArray(stored[kind]))
+      ? stored[kind].filter((entry) => typeof entry === 'string' && entry)
+      : []
+    const next = visible
+      ? current.filter((entry) => entry !== id)
+      : [...new Set([...current, id])]
+    const nextHidden = {
+      ...(stored && typeof stored === 'object' ? stored : {}),
+      [kind]: next,
+    }
+    setBusy(true)
+    setError('')
+    try {
+      await scope.set('canvasHiddenModels', nextHidden)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('omnimux:model-catalog-updated'))
+      }
+      if (!visible && catalog?.defaults?.[kind] === id) {
+        setError(t('error.hiddenDefault', {
+          label: label || id,
+          group: t(`models.group${cap(kind)}`),
+        }))
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught))
+    } finally {
+      setBusy(false)
+    }
+  }, [scope, writable, busy, value, catalog, t])
 
   if (!available) return null
 
@@ -331,6 +390,37 @@ export function ModelsSettingsCard({ t, scope }) {
               </div>
             </div>
           ) : null}
+          {(['text', 'image', 'video', 'audio']).map((kind) => {
+            const models = canvasModels[kind]
+            if (!models || models.length === 0) return null
+            const defaultId = catalog?.defaults?.[kind]
+            return (
+              <div key={`canvas-${kind}`} className="omnimux-models-card__group">
+                <p className="omnimux-models-card__group-title">
+                  {t('models.canvasGroupTitle', { group: t(`models.group${cap(kind)}`) })}
+                </p>
+                <p className="omnimux-models-card__desc">{t('models.canvasHint')}</p>
+                <div className="omnimux-models-card__group-card">
+                  <div className="omnimux-models-card__tile-stack">
+                    {models.map((model) => (
+                      <SelectableTile
+                        key={model.id}
+                        id={`omnimux-canvas-${kind}-${model.id}`}
+                        selectionType="checkbox"
+                        selected={!canvasHiddenModels[kind].includes(model.id)}
+                        title={model.label || model.id}
+                        badge={model.id === defaultId ? (
+                          <span className="omnimux-models-card__default-badge">{t('models.defaultBadge')}</span>
+                        ) : undefined}
+                        disabled={!writable || busy}
+                        onChange={(next) => { void onToggleCanvasModel(kind, model.id, next, model.label || model.id) }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
         {error ? <p className="omnimux-models-card__error" role="status">{error}</p> : null}
       </div>

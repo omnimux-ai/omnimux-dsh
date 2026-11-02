@@ -368,6 +368,17 @@ export interface CapabilityModelItem {
 export interface CapabilityCatalog {
   /** Canvas product curation, separate from model input capabilities. */
   generationPolicy?: Readonly<Record<import('./canvasTypes.ts').MaterialType, import('./generationPolicy.ts').GenerationPolicy>>;
+  /**
+   * Per-kind model ids the user hides from the canvas pickers (hub settings
+   * projection). Subtract-only: the catalog rows remain the membership
+   * authority; absent/empty means nothing hidden.
+   */
+  canvasHiddenModels?: {
+    text?: string[];
+    image?: string[];
+    video?: string[];
+    audio?: string[];
+  };
   source: 'static-stub' | 'omnimux';
   /** Contract schema version ('1.1' when the hub projects contract v1.1). */
   schemaVersion?: string;

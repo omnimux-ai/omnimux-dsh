@@ -47,6 +47,12 @@ export const SETTINGS_DEFAULTS = Object.freeze({
    */
   composerHiddenModels: Object.freeze([]),
   /**
+   * Per-kind model ids the user keeps out of the canvas pickers. Same subtract-
+   * only rule as composerHiddenModels: the hub's listed set is the membership
+   * authority, so an id the hub drops stays gone whatever this map says.
+   */
+  canvasHiddenModels: Object.freeze({ text: [], image: [], video: [], audio: [] }),
+  /**
    * Which way this install runs models: 'official' | 'agent' | 'key'.
    * Empty means the user has not chosen yet, which stays on the official route
    * so an existing install is never blocked.
@@ -87,6 +93,7 @@ const FIELD_META = Object.freeze({
   allowAgentSwitchTab: '允许 Agent 控制右侧工作台切换选项卡',
   allowAutoSurfaceFollow: '自动跟随 Agent 处理的工作面切换右侧工作台',
   composerHiddenModels: '输入框模型列表中隐藏的模型',
+  canvasHiddenModels: '画布生成中隐藏的模型',
   runtimeMode: '运行方式（官方、本机助手、媒体生成提供商）',
   runtimeAgentId: '本机助手',
   runtimeAgentModel: '本机助手模型',
@@ -202,6 +209,26 @@ function sanitizeByokProvider(item) {
   return sanitized
 }
 
+const CANVAS_HIDDEN_KINDS = ['text', 'image', 'video', 'audio']
+
+/**
+ * Per-kind hidden-id map for the canvas pickers. Each kind keeps only usable
+ * string ids; a missing or malformed kind falls back to its default (empty).
+ * A malformed top-level value falls back to the whole default map.
+ */
+function parseCanvasHiddenModels(raw, fallback) {
+  const input = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
+  const out = {}
+  for (const kind of CANVAS_HIDDEN_KINDS) {
+    const ids = input[kind]
+    const base = Array.isArray(fallback?.[kind]) ? fallback[kind] : []
+    out[kind] = Array.isArray(ids)
+      ? ids.filter((entry) => typeof entry === 'string' && entry.trim()).map((entry) => entry.trim())
+      : [...base]
+  }
+  return out
+}
+
 function parseSettingsSection(value) {
   const input = value && typeof value === 'object' && !Array.isArray(value)
     ? /** @type {Record<string, unknown>} */ (value)
@@ -215,6 +242,8 @@ function parseSettingsSection(value) {
       out.referenceStorage = parseReferenceStorageConfig(raw)
     } else if (key === 'scenarioBindings') {
       out.scenarioBindings = resolveScenarioBindings(input)
+    } else if (key === 'canvasHiddenModels') {
+      out.canvasHiddenModels = parseCanvasHiddenModels(raw, fallback)
     } else if (key === 'byokProviders') {
       out.byokProviders = Array.isArray(raw)
         ? raw.map(sanitizeByokProvider).filter(Boolean)
@@ -236,7 +265,7 @@ function parseSettingsSection(value) {
 
 /**
  * @param {unknown} value
- * @returns {{ defaultTextModel: string, defaultImageModel: string, defaultVideoModel: string, defaultAudioModel: string, defaultImageOperation: string, defaultVideoOperation: string, defaultTextReasoning: string, allowAgentSwitchTab: boolean, allowAutoSurfaceFollow: boolean, composerHiddenModels: string[] }}
+ * @returns {{ defaultTextModel: string, defaultImageModel: string, defaultVideoModel: string, defaultAudioModel: string, defaultImageOperation: string, defaultVideoOperation: string, defaultTextReasoning: string, allowAgentSwitchTab: boolean, allowAutoSurfaceFollow: boolean, composerHiddenModels: string[], canvasHiddenModels: { text: string[], image: string[], video: string[], audio: string[] } }}
  */
 function SettingsConfig(value) {
   return parseSettingsSection(value)

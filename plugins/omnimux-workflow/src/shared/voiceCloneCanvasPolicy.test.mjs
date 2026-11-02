@@ -36,30 +36,32 @@ const withSample = () => buildUpstreamFingerprint({
   assets: [{ sourceNodeId: 'sample', type: 'audio', role: 'audio_track' }],
 });
 
-test('canvas audio policy admits only listed suno and drops the delisted clone/speech models (#3516)', () => {
+test('canvas audio policy admits every listed model; the configured catalog default wins', () => {
   const view = projectCanvasCatalog(catalog());
-  assert.deepEqual(view.audio.map((model) => model.id), ['suno']);
-  assert.equal(view.defaults.audio, 'suno', 'the surviving audio default is the admitted Suno model');
-  // 已下线模型即便仍在 hub 目录里登记，也不得借音频白名单回到画布。
-  assert.equal(view.models.some((model) => model.id === 'indextts-2'), false,
-    'the delisted clone model must not reach the canvas');
-  assert.equal(view.models.some((model) => model.id === 'seed-audio-1.0'), false,
-    'the delisted speech model must not reach the canvas');
+  // 默认全开：三个已上架音频模型全部进画布，目录序即展示序。
+  assert.deepEqual(view.audio.map((model) => model.id), ['seed-audio-1.0', 'indextts-2', 'suno']);
+  // catalog.defaults.audio='seed-audio-1.0' 已上架 → 默认是它，覆盖策略种子 suno。
+  assert.equal(view.defaults.audio, 'seed-audio-1.0');
+  assert.equal(view.models.some((model) => model.id === 'indextts-2'), true,
+    'the listed clone model reaches the canvas by default');
+  assert.equal(view.models.some((model) => model.id === 'seed-audio-1.0'), true,
+    'the listed speech model reaches the canvas by default');
   const row = view.models.find((model) => model.id === 'suno');
   assert.deepEqual(row.operations.map((op) => op.id), ['text_to_music']);
-  assert.equal(view.defaultsByOperation.voice_clone, undefined, 'no operation default is invented for the dropped clone');
-  assert.equal(view.defaultsByOperation.text_to_speech, undefined, 'text_to_speech is no longer a canvas default operation');
+  // 隐藏集相减：藏掉 clone/speech 即从画布移除。
+  const hidden = projectCanvasCatalog({ ...catalog(), canvasHiddenModels: { audio: ['indextts-2', 'seed-audio-1.0'] } });
+  assert.deepEqual(hidden.audio.map((model) => model.id), ['suno']);
 });
 
-test('the delisted clone model reaches no node and the voice-clone tool fails closed (#3516)', () => {
+test('capability-filtered tools expose only the models compatible with their inputs', () => {
   const view = projectCanvasCatalog(catalog());
+  // voice-clone 不是声明的 capability 工具 → 候选 = 全部兼容音频模型。
+  // 有上游音频样本时，只有 indextts-2 的 voice_clone op 消费它。
   const cloneNode = buildFilteredModelOptions({ catalog: view, fingerprint: withSample(), outputType: 'audio', tool: 'voice-clone' });
-  assert.deepEqual(cloneNode.options.map((option) => option.id), []);
-  assert.equal(isZeroCandidateEmptyState(cloneNode), true);
+  assert.deepEqual(cloneNode.options.map((option) => option.id), ['indextts-2']);
+  assert.equal(isZeroCandidateEmptyState(cloneNode), false);
 
-  // 只有 Suno 能进入音频节点的模型选择；脚本节点同样看不到已下线模型。
+  // 纯脚本（无上游音频）时，全部已上架音频模型都是候选。
   const speechNode = buildFilteredModelOptions({ catalog: view, fingerprint: withScript(), outputType: 'audio', tool: 'text-to-audio' });
-  assert.deepEqual(speechNode.options.map((option) => option.id), ['suno']);
-  assert.ok(!speechNode.options.some((option) => option.id === 'indextts-2'));
-  assert.ok(!speechNode.options.some((option) => option.id === 'seed-audio-1.0'));
+  assert.deepEqual(speechNode.options.map((option) => option.id), ['seed-audio-1.0', 'indextts-2', 'suno']);
 });

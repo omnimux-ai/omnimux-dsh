@@ -277,9 +277,35 @@ export function buildModelCatalog(opts = {}) {
     image: lists.image,
     video: lists.video,
     audio: lists.audio,
+    /**
+     * Canvas-only visibility: per-kind model ids the user hid in settings.
+     * Subtract-only — the lists above stay the membership authority; the
+     * canvas projection removes these from the pickers. Never enters the
+     * catalog fingerprint (the canvas `:canvas:` policy suffix owns that).
+     */
+    canvasHiddenModels: sanitizeCanvasHiddenModels(settingsDefaults.canvasHiddenModels),
     /** Gateway truth this catalog was built against (P1b). */
     gateway,
   }
+}
+
+const CANVAS_HIDDEN_KINDS = ['text', 'image', 'video', 'audio']
+
+/**
+ * Keep only usable per-kind string-id arrays; anything malformed degrades to
+ * "nothing hidden" rather than failing the whole catalog.
+ * @param {unknown} raw
+ */
+function sanitizeCanvasHiddenModels(raw) {
+  const input = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
+  const out = {}
+  for (const kind of CANVAS_HIDDEN_KINDS) {
+    const ids = input[kind]
+    out[kind] = Array.isArray(ids)
+      ? [...new Set(ids.filter((entry) => typeof entry === 'string' && entry.trim()).map((entry) => entry.trim()))]
+      : []
+  }
+  return out
 }
 
 /**

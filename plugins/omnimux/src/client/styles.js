@@ -1631,6 +1631,21 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
   font-size: 12px;
   color: var(--dsw-alias-label-error);
 }
+/* Canvas visibility groups: vertical stack of SelectableTile rows inside the shared group card. */
+.omnimux-models-card__tile-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+.omnimux-models-card__default-badge {
+  font-size: 11px;
+  line-height: 16px;
+  padding: 0 6px;
+  border-radius: 4px;
+  color: var(--dsw-alias-brand-primary);
+  border: 1px solid var(--dsw-alias-brand-primary);
+}
 .omnimux-chat-toggle-btn {
   display: inline-flex;
   align-items: center;
