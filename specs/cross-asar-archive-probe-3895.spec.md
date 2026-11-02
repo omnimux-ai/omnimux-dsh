@@ -110,3 +110,14 @@
 | 建议 3：`upstreamPresetIds` 的 unpacked 回退零覆盖 | ✅ 新增用例：上游 preset 只在 unpacked 里时仍能读到并跳过 |
 | 细节 1：证据数字口径不一致 | ✅ 证据写明完整命令与文件集 |
 | 细节 2：「8415 bytes」实为字符数 | ✅ 改为同时报 chars 与 `Buffer.byteLength` |
+
+## 第三轮评审整改（head 234bf70ff 之后）
+
+| 评审项 | 处置 |
+|---|---|
+| **阻断**：`agentPresetPatchText` 里 `catch { resolvable = nodeResolvable }` 是静默降级，`readAsarTree` 失败时原样复现「插件行被剪空」（9407 字节 / 1 个插件名 / 4 个空 preset） | ✅ 删除回落：归档布局读不到目录表时直接抛 `TEST_ENV_PRESET_COMPOSE_FAILED`；补用例（注入抛错的 `readAsarTree` 必须抛错，且断言正常路径下 `resolvable` 用目录表判定 `@` 包） |
+| 建议 1：`archiveResolvable` 按字面 `node_modules/<name>/package.json` 判定，误丢 exports 子路径行（`dsh-tool-subagent-control/list-agents`） | ✅ 增加「包 + 子路径」解析：按 `@scope/pkg` 前缀回查包目录。实测老包插件名 25 → 26（找回 `list-agents`），patch 127347 → 128557 字节 |
+| 建议 2：三项覆盖不存在（`archiveResolvable` 零命中、`upstreamPresetIds` unpacked 回退、五种 reason 只断言两种） | ✅ 全部补齐，并逐一做变异验证：改坏 reason → 红；`upstreamPresetIds` 改回归档内路径 → 红；删除目录表判定 → 红 |
+| 细节 1：证据里含不存在的测试文件 | ✅ 证据命令改为实际存在的 8 个文件 |
+| 细节 2：`disableElectronAsarInterception` 零调用 | ✅ 保留为显式 API（不再有顶层副作用），并在证据里说明「import 后 env 不被改写」已实测 |
+| 细节 3：`probeArchive` 注释重复 | ✅ 合并为一行 |

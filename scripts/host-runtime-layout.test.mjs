@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   appAnchorFor,
+  archiveResolvable,
   appPackageRootFor,
   asarEntry,
   composeAgentPresetRows,
@@ -40,7 +41,7 @@ function fakeBundle(t, layout) {
       files: {
         lib: { files: { 'desktop-cli.js': { size: 4962 } } },
         preset: { files: { 'agent-presets': { files: { 'legacy-preset': { files: { 'agent.cordis.yml': { size: 3 } } } } } } },
-        node_modules: { files: { '@deepseek-ai': { files: { dsh: { files: { lib: { files: { 'bin.js': { size: 10 } } } } } } } } },
+        node_modules: { files: { '@deepseek-ai': { files: { dsh: { files: { 'package.json': { size: 60 }, lib: { files: { 'bin.js': { size: 10 } } } } } } } } },
       },
     })
     // 归档内容按 Electron 语义标成 unpacked 落在旁边（探测与预设根都依赖它）。
@@ -426,4 +427,78 @@ test('注入 io 缺 readAsarTree 时显式报错，不静默读真实 fs', () =>
     io: { statSync: () => ({ isFile: () => false }), existsSync: () => true },
     bundle: '/nonexistent/OmniMux Dev.app',
   }), { name: 'TypeError', message: /io\.readAsarTree is required/ })
+})
+
+test('archiveResolvable 支持 exports 子路径（按包目录判定，不误丢合法行）', (t) => {
+  const { appRoot } = fakeBundle(t, 'app.asar')
+  const tree = readAsarTree(appRoot)
+  const resolvable = archiveResolvable(tree, () => false)
+  // fakeBundle 的归档里有 @deepseek-ai/dsh
+  assert.equal(resolvable('@deepseek-ai/dsh'), true)
+  assert.equal(resolvable('@deepseek-ai/dsh/lib/bin.js'), true)
+  assert.equal(resolvable('@deepseek-ai/dsh-tool-subagent-control/list-agents'), false)
+  assert.equal(resolvable('omnimux'), false)
+})
+
+test('归档探测的五种失败原因逐条可断言', (t) => {
+  const reasons = []
+  const probe = (bundle) => {
+    try { resolveHostRuntimeLayout({ bundle }) } catch (error) { reasons.push(error.detail.archiveProbe.reason) }
+  }
+  const mk = (prefix) => {
+    const bundle = mkdtempSync(join(tmpdir(), prefix))
+    t.after(() => rmSync(bundle, { recursive: true, force: true }))
+    const resources = join(bundle, 'Contents', 'Resources')
+    mkdirSync(resources, { recursive: true })
+    return { bundle, resources }
+  }
+  probe(mk('omnimux-r1-').bundle)
+  const broken = mk('omnimux-r2-')
+  writeFileSync(join(broken.resources, 'app.asar'), 'not-an-asar')
+  probe(broken.bundle)
+  const noPreset = mk('omnimux-r3-')
+  writeAsarArchive(t, noPreset.resources, { files: { lib: { files: { 'desktop-cli.js': { size: 1 } } } } })
+  probe(noPreset.bundle)
+  const noWrapper = mk('omnimux-r4-')
+  writeAsarArchive(t, noWrapper.resources, {
+    files: { preset: { files: { 'agent-presets': { files: { x: { files: { 'preset.yml': { size: 1 } } } } } } } },
+  })
+  probe(noWrapper.bundle)
+  const noUnpacked = mk('omnimux-r5-')
+  writeAsarArchive(t, noUnpacked.resources, {
+    files: {
+      lib: { files: { 'desktop-cli.js': { size: 1 } } },
+      preset: { files: { 'agent-presets': { files: { x: { files: { 'preset.yml': { size: 1 } } } } } } },
+    },
+  })
+  probe(noUnpacked.bundle)
+  assert.deepEqual(reasons, [
+    'archive-missing', 'asar-unreadable', 'preset-root-missing',
+    'wrapper-missing-in-archive', 'preset-content-not-unpacked',
+  ])
+})
+
+test('归档布局下 upstreamPresetIds 走 unpacked（改回归档内路径会红）', (t) => {
+  const bundle = mkdtempSync(join(tmpdir(), 'omnimux-up-'))
+  t.after(() => rmSync(bundle, { recursive: true, force: true }))
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  writeAsarArchive(t, resources, {
+    files: {
+      lib: { files: { 'desktop-cli.js': { size: 1 } } },
+      preset: { files: { 'agent-presets': { files: { x: { files: { 'preset.yml': { size: 1 } } } } } } },
+    },
+  })
+  const unpackedPreset = join(resources, 'app.asar.unpacked', 'preset', 'agent-presets', 'x')
+  mkdirSync(unpackedPreset, { recursive: true })
+  writeFileSync(join(unpackedPreset, 'preset.yml'), 'name: x\n')
+  writeFileSync(join(unpackedPreset, 'agent.cordis.yml'), JSON.stringify([{ name: 'omnimux' }]))
+  const upstream = join(resources, 'app.asar.unpacked', 'node_modules', '@deepseek-ai', 'dsh-web-app', 'presets')
+  mkdirSync(upstream, { recursive: true })
+  writeFileSync(join(upstream, 'standard.patch.yml'), JSON.stringify([
+    { insert: [{ name: '@deepseek-ai/dsh-agent-preset', config: { id: 'x' } }] },
+  ]))
+  const layout = resolveHostRuntimeLayout({ bundle })
+  assert.deepEqual([...upstreamPresetIds(layout.appRoot)], ['x'])
+  assert.deepEqual(composeAgentPresetRows({ appRoot: layout.appRoot }).skippedPresetIds, ['x'])
 })

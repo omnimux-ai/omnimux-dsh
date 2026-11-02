@@ -650,13 +650,18 @@ export function agentPresetPatchText(layout, deps = {}) {
     const nodeResolvable = (name) => { try { resolver.resolve(name); return true; } catch { return false; } };
     // 归档布局：Node resolver 读不到归档内的包，必须改用归档目录表判定，
     // 否则 25 个 @deepseek-ai/* 行会被当成「解析不到」整片丢掉（评审阻断）。
+    // 读不到目录表时**响亮失败**：回落到 nodeResolvable 会把同一批行再丢一次，
+    // 正是这条修复要消灭的静默降级（第三轮评审阻断）。
     let resolvable = nodeResolvable;
     if (layout.layout === 'app.asar') {
+      let tree;
       try {
-        resolvable = archiveResolvable((deps.readAsarTree ?? readAsarTree)(layout.appRoot), nodeResolvable);
-      } catch {
-        resolvable = nodeResolvable;
+        tree = (deps.readAsarTree ?? readAsarTree)(layout.appRoot);
+      } catch (error) {
+        throw failure('PRESET_COMPOSE_FAILED',
+          `归档布局无法读取 asar 目录表，不能判定插件行是否可解析：${error?.message ?? error}`);
       }
+      resolvable = archiveResolvable(tree, nodeResolvable);
     }
     composition = compose({ appRoot: layout.appRoot, resolvable });
   } catch (error) {

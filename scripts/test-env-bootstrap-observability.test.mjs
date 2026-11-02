@@ -113,3 +113,30 @@ test('preset 声明失败必须响亮抛出，不能退化成空串（静默降�
   });
   assert.match(text, /dsh-agent-preset|insert/);
 })
+
+test('归档布局下读不到 asar 目录表时响亮失败，不回落到 Node resolver', () => {
+  const layout = { layout: 'app.asar', appRoot: '/App/Contents/Resources/app.asar' };
+  assert.throws(() => agentPresetPatchText(layout, {
+    hasShippedPresetRoot: () => true,
+    readAsarTree: () => { throw new Error('bad header'); },
+    createRequire: () => ({ resolve: () => { throw new Error('nope'); } }),
+    composeAgentPresetRows: () => ({ rows: [{ id: 'x', name: '@deepseek-ai/dsh-agent-preset', config: { id: 'x' } }] }),
+    stringifyStructuredFile: () => '- insert: []\n',
+  }), { code: 'TEST_ENV_PRESET_COMPOSE_FAILED' });
+})
+
+test('归档布局下用目录表判定插件行，不把 @ 包行剪空', () => {
+  const layout = { layout: 'app.asar', appRoot: '/App/Contents/Resources/app.asar' };
+  const seen = [];
+  agentPresetPatchText(layout, {
+    hasShippedPresetRoot: () => true,
+    readAsarTree: () => ({ files: { node_modules: { files: { '@deepseek-ai': { files: { dsh: { files: { 'package.json': { size: 1 } } } } } } } } }),
+    createRequire: () => ({ resolve: () => { throw new Error('Node resolver 读不到归档内包'); } }),
+    composeAgentPresetRows: ({ resolvable }) => {
+      seen.push(resolvable('@deepseek-ai/dsh'), resolvable('@deepseek-ai/nope'));
+      return { rows: [{ id: 'x', name: '@deepseek-ai/dsh-agent-preset', config: { id: 'x' } }] };
+    },
+    stringifyStructuredFile: () => '- insert: []\n',
+  });
+  assert.deepEqual(seen, [true, false]);
+})

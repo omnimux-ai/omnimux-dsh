@@ -389,8 +389,14 @@ export function upstreamPresetIds(appRoot, options = {}) {
 export function archiveResolvable(tree, fallback) {
   return (name) => {
     if (typeof name !== 'string' || name.length === 0) return false;
-    const entry = asarEntry(tree, `node_modules/${name}/package.json`);
-    if (entry) return true;
+    // 先按整名查（普通包名）。
+    if (asarEntry(tree, `node_modules/${name}/package.json`)) return true;
+    // 再按「包 + exports 子路径」查：`@scope/pkg/sub/path` 这类行在 app 布局下
+    // 由 Node 的 exports 解析，归档目录表里没有对应 package.json，
+    // 只能按包目录存在判定，否则会误丢合法行（评审建议 1）。
+    const parts = name.split('/');
+    const packageName = name.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0];
+    if (packageName !== name && asarEntry(tree, `node_modules/${packageName}/package.json`)) return true;
     return typeof fallback === 'function' ? fallback(name) : false;
   };
 }
