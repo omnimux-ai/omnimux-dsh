@@ -99,8 +99,7 @@ function probeArchive(io, archive) {
     throw new TypeError('resolveHostRuntimeLayout: io.existsSync is required to probe an asar layout');
   }
   if (!io.existsSync(archive)) return { available: false, reason: 'archive-missing' };
-  // 与 existsSync 同口径：注入 io 必须自带解析能力，不能悄悄回落到真实 fs。
-  // 注入 io 时必须自带解析能力：回落到模块内实现等于绕过注入方，读的是真实 fs。
+  // 注入 io 必须自带解析能力：回落模块内实现等于绕过注入方，读的是真实 fs。
   const readTree = io.readAsarTree;
   if (typeof readTree !== 'function') {
     throw new TypeError('resolveHostRuntimeLayout: io.readAsarTree is required to probe an asar layout');
@@ -123,7 +122,10 @@ function probeArchive(io, archive) {
   }
   // 与 resolvePresetRoot 同口径：归档内 preset 内容普通 Node 读不到，实际要靠
   // 旁边的 app.asar.unpacked。没有 unpacked 就判不可用，别把错误推迟到下游。
-  if (resolvePresetRoot(archive) === null) {
+  // 判据同样走注入 io，不直接读真实 fs（与上面的约定一致）。
+  const unpackedPresetRoot = join(dirname(archive), `${basename(archive)}.unpacked`, PRESET_ROOT);
+  const unpackedProbe = io.isDirectory ?? isDirectory;
+  if (unpackedProbe(unpackedPresetRoot) !== true) {
     return { available: false, reason: 'preset-content-not-unpacked' };
   }
   return { available: true, reason: null };
@@ -391,12 +393,25 @@ export function archiveResolvable(tree, fallback) {
     if (typeof name !== 'string' || name.length === 0) return false;
     // 先按整名查（普通包名）。
     if (asarEntry(tree, `node_modules/${name}/package.json`)) return true;
-    // 再按「包 + exports 子路径」查：`@scope/pkg/sub/path` 这类行在 app 布局下
-    // 由 Node 的 exports 解析，归档目录表里没有对应 package.json，
-    // 只能按包目录存在判定，否则会误丢合法行（评审建议 1）。
+    // 再按「包 + exports 子路径」查：`@scope/pkg/sub/path` 这类行在 app 布局下由
+    // Node 的 exports 解析，归档目录表里没有对应 package.json。这里要求**子路径在
+    // 归档里真的有对应文件**（exports 目标或同名路径），否则 `pkg/typo` 会被一律放行，
+    // 比 app 布局的 Node resolver 更宽松（评审建议 4）。
     const parts = name.split('/');
     const packageName = name.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0];
-    if (packageName !== name && asarEntry(tree, `node_modules/${packageName}/package.json`)) return true;
+    if (packageName !== name) {
+      // 子路径行（`@scope/pkg/sub`）：归档目录表里没有对应 package.json，
+      // 但包目录存在时，允许在包内按「最后一段」找同名文件（exports 目标通常
+      // 是 `lib/**/<last>.js`）。找不到就交给 fallback，避免把拼错的子路径放行。
+      const pkgDir = `node_modules/${packageName}`;
+      if (asarEntry(tree, `${pkgDir}/package.json`)) {
+        const subpath = name.slice(packageName.length + 1);
+        if (asarEntry(tree, `${pkgDir}/${subpath}`)) return true;
+        const leaf = subpath.split('/').pop();
+        if (leaf && asarEntry(tree, `${pkgDir}/lib/types/${leaf}.js`)) return true;
+        if (leaf && asarEntry(tree, `${pkgDir}/lib/${leaf}.js`)) return true;
+      }
+    }
     return typeof fallback === 'function' ? fallback(name) : false;
   };
 }

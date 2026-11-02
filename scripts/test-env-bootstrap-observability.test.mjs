@@ -108,7 +108,7 @@ test('preset 声明失败必须响亮抛出，不能退化成空串（静默降�
   const text = agentPresetPatchText(layout, {
     hasShippedPresetRoot: () => true,
     createRequire: () => ({ resolve: () => '/x' }),
-    composeAgentPresetRows: () => ({ rows: [{ id: 'omnimux-preset-x', name: '@deepseek-ai/dsh-agent-preset', config: { id: 'x' } }] }),
+    composeAgentPresetRows: () => ({ rows: [{ id: 'omnimux-preset-x', name: '@deepseek-ai/dsh-agent-preset', config: { id: 'x', plugins: [{ name: 'omnimux' }] } }] }),
     stringifyStructuredFile: () => '- insert: []\n',
   });
   assert.match(text, /dsh-agent-preset|insert/);
@@ -120,7 +120,7 @@ test('归档布局下读不到 asar 目录表时响亮失败，不回落到 Node
     hasShippedPresetRoot: () => true,
     readAsarTree: () => { throw new Error('bad header'); },
     createRequire: () => ({ resolve: () => { throw new Error('nope'); } }),
-    composeAgentPresetRows: () => ({ rows: [{ id: 'x', name: '@deepseek-ai/dsh-agent-preset', config: { id: 'x' } }] }),
+    composeAgentPresetRows: () => ({ rows: [{ id: 'x', name: '@deepseek-ai/dsh-agent-preset', config: { id: 'x', plugins: [{ name: 'omnimux' }] } }] }),
     stringifyStructuredFile: () => '- insert: []\n',
   }), { code: 'TEST_ENV_PRESET_COMPOSE_FAILED' });
 })
@@ -134,7 +134,7 @@ test('归档布局下用目录表判定插件行，不把 @ 包行剪空', () =>
     createRequire: () => ({ resolve: () => { throw new Error('Node resolver 读不到归档内包'); } }),
     composeAgentPresetRows: ({ resolvable }) => {
       seen.push(resolvable('@deepseek-ai/dsh'), resolvable('@deepseek-ai/nope'));
-      return { rows: [{ id: 'x', name: '@deepseek-ai/dsh-agent-preset', config: { id: 'x' } }] };
+      return { rows: [{ id: 'x', name: '@deepseek-ai/dsh-agent-preset', config: { id: 'x', plugins: [{ name: 'omnimux' }] } }] };
     },
     stringifyStructuredFile: () => '- insert: []\n',
   });

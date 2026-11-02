@@ -44,7 +44,7 @@
 - [x] 归档头部损坏时判为不可用并报可读错误，不抛裸异常。
 - [x] asar:false 布局行为不变（现有测试全绿）。
 - [x] 归档布局下前置检查用目录表判断 `lib/bin.js`，不再 `accessSync` 归档内路径。
-- [x] 相关单测 121/121 通过；`git diff --check` 通过。
+- [x] 相关单测 130/130 通过（8 个测试文件）；`git diff --check` 通过。
 
 ## 6. 新用户基线
 
@@ -121,3 +121,15 @@
 | 细节 1：证据里含不存在的测试文件 | ✅ 证据命令改为实际存在的 8 个文件 |
 | 细节 2：`disableElectronAsarInterception` 零调用 | ✅ 保留为显式 API（不再有顶层副作用），并在证据里说明「import 后 env 不被改写」已实测 |
 | 细节 3：`probeArchive` 注释重复 | ✅ 合并为一行 |
+
+## 第四轮评审整改（head 8e9d4fa7b 之后，评审已判通过）
+
+| 评审项 | 处置 |
+|---|---|
+| 建议 1：`probeArchive` 的 unpacked 判据绕过注入 io、直接读真实 fs | ✅ 改为 `io.isDirectory ?? isDirectory`，与「注入即不回落」一致 |
+| 建议 2：内层 `throw` 被外层 catch 覆盖，原因丢失 | ✅ 本模块分类错误原样上抛；其它错误包一层但保留 `cause` 与 `detail.reason`（实测 `ASAR_HEADER_INVALID` 可见） |
+| 建议 3：目录表可解析但缺 `node_modules` 时仍产出空壳 patch | ✅ 新增 `TEST_ENV_PRESET_PLUGINS_EMPTY`：声明行存在但插件行合计为 0 即拒绝写 patch |
+| 建议 4：`archiveResolvable` 对任意 exports 子路径一律放行 | ✅ 改为「包目录存在 + 子路径或 `lib/<leaf>.js` / `lib/types/<leaf>.js` 命中」；实测 `list-agents` 仍通过、`dsh/nope` 与 `dsh-tool-bash/nonexistent` 被拒 |
+| 细节 5：composer「归档读不了」用例断言空转 | ✅ 补 `via=asar-index` 断言，并覆盖「返回空树不抛错」的情形 |
+| 细节 6：spec 写 121/121 与证据 130 不符 | ✅ 改为 130/130 并写明 8 个测试文件 |
+| 细节 7：`probeArchive` 注释重复 | ✅ 合并为一行 |

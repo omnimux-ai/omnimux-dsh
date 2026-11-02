@@ -658,17 +658,33 @@ export function agentPresetPatchText(layout, deps = {}) {
       try {
         tree = (deps.readAsarTree ?? readAsarTree)(layout.appRoot);
       } catch (error) {
-        throw failure('PRESET_COMPOSE_FAILED',
+        const wrapped = failure('PRESET_COMPOSE_FAILED',
           `归档布局无法读取 asar 目录表，不能判定插件行是否可解析：${error?.message ?? error}`);
+        // 保留内层原因：否则调用方只能看到「合成失败」，分不清是归档坏了还是解析不了。
+        wrapped.cause = error;
+        wrapped.detail = { reason: error?.code ?? null, message: error?.message ?? String(error) };
+        throw wrapped;
       }
       resolvable = archiveResolvable(tree, nodeResolvable);
     }
     composition = compose({ appRoot: layout.appRoot, resolvable });
   } catch (error) {
-    throw failure('PRESET_COMPOSE_FAILED', `合成 agent preset 声明失败：${error?.message ?? error}`);
+    // 已经是本模块的分类错误就原样上抛，别再用一个更模糊的 code 覆盖掉具体原因。
+    if (typeof error?.code === 'string' && error.code.startsWith('TEST_ENV_')) throw error;
+    const wrapped = failure('PRESET_COMPOSE_FAILED', `合成 agent preset 声明失败：${error?.message ?? error}`);
+    wrapped.cause = error;
+    wrapped.detail = { reason: error?.code ?? null, message: error?.message ?? String(error) };
+    throw wrapped;
   }
   if (!composition.rows.length) {
     throw failure('PRESET_ROWS_EMPTY', `预设目录存在但没合成出任何声明：${layout.appRoot}`);
+  }
+  // 声明行存在但插件行全空 = 空壳 patch：宿主能启动、建会话才报 agent-preset/invalid。
+  // 这类退化不能当成功（评审建议 3）。
+  const pluginRows = composition.rows.reduce((total, row) => total + ((row.config?.plugins ?? []).length), 0);
+  if (pluginRows === 0) {
+    throw failure('PRESET_PLUGINS_EMPTY',
+      `合成的 ${composition.rows.length} 条 preset 声明里没有任何插件行，拒绝写空壳 patch：${layout.appRoot}`);
   }
   const text = stringify([{ insert: composition.rows }]);
   return `\n# QA 隔离环境：按壳的规则声明出厂 agent preset（绕过壳启动时壳不会注入这些行）。\n${text}`;

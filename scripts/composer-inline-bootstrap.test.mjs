@@ -141,10 +141,23 @@ test('归档布局下前置检查走目录表，不用 accessSync 读归档内�
     return true;
   });
 
-  // 归档读不了 -> 同样响亮失败，不静默放过
+  // 归档读不了 -> 同样响亮失败，不静默放过；且必须标 via=asar-index（区分于 accessSync 失败）
   assert.throws(() => assertComposerRuntimeReadable(runtime, io, {
     readAsarTree: () => { throw new Error('bad header'); },
-  }), { code: 'COMPOSER_RUNTIME_MISSING' });
+  }), (error) => {
+    assert.equal(error.code, 'COMPOSER_RUNTIME_MISSING');
+    assert.equal(error.detail.via, 'asar-index');
+    return true;
+  });
+  // 目录表返回空树（不抛错）也必须判缺失，不能因「没抛错」而放过
+  assert.throws(() => assertComposerRuntimeReadable(runtime, io, {
+    readAsarTree: () => ({ files: {} }),
+    asarEntry: () => null,
+  }), (error) => {
+    assert.equal(error.code, 'COMPOSER_RUNTIME_MISSING');
+    assert.equal(error.detail.via, 'asar-index');
+    return true;
+  });
 })
 
 test('非归档布局仍用 accessSync 校验 CLI', () => {
