@@ -1,7 +1,6 @@
 import {
   IconGridOutline16,
   IconListOutline16,
-  IconCalendarOutline16,
 } from '../icons/stage.js'
 import { Badge, Button, IconButton, SearchField, DropdownSelect, Tabs } from 'dsh-ui-kit'
 
@@ -72,15 +71,6 @@ export function PublishViewSwitcher({ t, viewMode, onViewModeChange }) {
       >
         <IconListOutline16 />
       </IconButton>
-      <IconButton
-        variant={viewMode === 'calendar' ? 'secondary' : 'ghost'}
-        aria-pressed={viewMode === 'calendar'}
-        aria-label={t('view.calendar')}
-        title={t('view.calendar')}
-        onClick={() => onViewModeChange('calendar')}
-      >
-        <IconCalendarOutline16 />
-      </IconButton>
     </div>
   )
 }
@@ -97,17 +87,12 @@ function buildDropdownOptions(t) {
     { value: 'image', label: t('filter.type.image') },
     { value: 'video', label: t('filter.type.video') },
   ]
-  const modeOptions = [
-    { value: '', label: t('filter.mode.all') },
-    { value: 'scheduled', label: t('filter.mode.scheduled') },
-    { value: 'instant', label: t('filter.mode.instant') },
-  ]
-  return { sortOptions, typeOptions, modeOptions }
+  return { sortOptions, typeOptions }
 }
 
 export function PublishControlTools(props) {
-  const { t, searchQuery, onSearchChange, sortOption, onSortChange, typeFilter, onTypeChange, modeFilter, onModeChange, viewMode, onViewModeChange } = props
-  const { sortOptions, typeOptions, modeOptions } = buildDropdownOptions(t)
+  const { t, searchQuery, onSearchChange, sortOption, onSortChange, typeFilter, onTypeChange, viewMode, onViewModeChange } = props
+  const { sortOptions, typeOptions } = buildDropdownOptions(t)
 
   return [
     <SearchField
@@ -133,14 +118,6 @@ export function PublishControlTools(props) {
       aria-label={t('filter.type')}
       onChange={onTypeChange}
       options={typeOptions}
-    />,
-    <DropdownSelect
-      key="mode"
-      value={modeFilter || undefined}
-      placeholder={t('filter.mode')}
-      aria-label={t('filter.mode')}
-      onChange={onModeChange}
-      options={modeOptions}
     />,
     <PublishViewSwitcher
       key="view-switcher"

@@ -21,7 +21,7 @@
   "scripts": {
     "build": "node scripts/build-client.mjs",
     "prepare": "npm run build",
-    "test": "node --test src/*.test.js src/shared/*.test.js src/client/*.test.js",
+    "test": "node --test src/*.test.js src/shared/*.test.js src/client/*.test.js tests/e2e/*.e2e.test.mjs",
     "typecheck:contracts": "tsc -p tsconfig.json --noEmit",
     "prepublishOnly": "node ../../scripts/verify-publish-source.mjs ."
   },

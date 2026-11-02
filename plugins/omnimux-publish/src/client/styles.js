@@ -984,36 +984,8 @@ th[style*="--pub-min-w"] { min-width: var(--pub-min-w); }
 .omnimux-publish-accounts-add { width: 100%; }
 
 .omnimux-publish-accounts-search {
-  position: relative;
   display: flex;
   align-items: center;
-}
-.omnimux-publish-accounts-search-icon {
-  position: absolute;
-  left: 10px;
-  display: inline-flex;
-  color: var(--dsw-alias-label-tertiary, #94a3b8);
-  pointer-events: none;
-}
-.omnimux-publish-accounts-search-input {
-  width: 100%;
-  height: 32px;
-  padding: 0 10px 0 32px;
-  box-sizing: border-box;
-  border-radius: 8px;
-  border: 1px solid var(--dsw-alias-border-l1, #e2e8f0);
-  background: var(--dsw-alias-bg-base, #ffffff);
-  color: var(--dsw-alias-label-primary, #0f172a);
-  font: inherit;
-  font-size: 13px;
-}
-.omnimux-publish-accounts-search-input::placeholder {
-  color: var(--dsw-alias-label-tertiary, #94a3b8);
-}
-.omnimux-publish-accounts-search-input:focus {
-  outline: none;
-  border-color: var(--dsw-alias-brand-primary, #2563eb);
-  box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary, rgba(37, 99, 235, 0.18));
 }
 
 .omnimux-publish-accounts-items {

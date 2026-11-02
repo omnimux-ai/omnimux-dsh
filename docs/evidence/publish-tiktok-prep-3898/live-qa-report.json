@@ -1,0 +1,19 @@
+{
+  "task": "issue-3898-publish-tiktok-prep",
+  "spaceId": 61,
+  "spaceName": "publish-tiktok-prep-3898",
+  "initialCheck": {
+    "tabs": [
+      "发布",
+      "账号"
+    ],
+    "hasCalendarBtn": false,
+    "hasModeFilter": false
+  },
+  "openedUrls": [
+    "https://www.tiktok.com/v2/auth/authorize?client_key=sb_test&scope=user.info.basic,video.publish"
+  ],
+  "hasPublishedTask": true,
+  "pass": true,
+  "timestamp": "2026-11-02T03:56:38.150Z"
+}

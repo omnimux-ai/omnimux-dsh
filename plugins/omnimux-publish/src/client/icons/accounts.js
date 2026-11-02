@@ -1,31 +1,6 @@
 import React from 'react'
 
 /**
- * 16px 搜索放大镜大纲图标 (Search Outline)
- * @param {{ size?: number, className?: string }} props
- */
-export function IconSearchOutline16({ size = 16, className, ...props } = {}) {
-  return React.createElement(
-    'svg',
-    {
-      width: size,
-      height: size,
-      viewBox: '0 0 16 16',
-      fill: 'none',
-      stroke: 'currentColor',
-      strokeWidth: 1.3,
-      strokeLinecap: 'round',
-      strokeLinejoin: 'round',
-      'aria-hidden': 'true',
-      className,
-      ...props,
-    },
-    React.createElement('circle', { cx: 7, cy: 7, r: 4.75 }),
-    React.createElement('path', { d: 'm10.5 10.5 3.25 3.25' })
-  )
-}
-
-/**
  * 16px 警示三角大纲图标 (Warning Triangle Outline)
  * @param {{ size?: number, className?: string }} props
  */

@@ -1,7 +1,6 @@
 import { Button } from 'dsh-ui-kit'
 import { RecordsTable } from './RecordsTable.jsx'
 import { GridView } from './GridView.jsx'
-import { CalendarView } from './CalendarView.jsx'
 
 export function PublishBatchBar(props) {
   const { t, selectedCount, totalFiltered, onToggleAll, onBatchRetry, onBatchDeleteDrafts, onExitBatch } = props
@@ -67,11 +66,7 @@ function renderGrid(props) {
 export function PublishViewContent(props) {
   const { viewMode } = props
   if (viewMode === 'table') return renderTable(props)
-  if (viewMode === 'grid') return renderGrid(props)
-  if (viewMode === 'calendar') {
-    return <CalendarView t={props.t} records={props.filteredRecords} onOpen={props.itemActions.onView} />
-  }
-  return null
+  return renderGrid(props)
 }
 
 export function PublishViewport(props) {
