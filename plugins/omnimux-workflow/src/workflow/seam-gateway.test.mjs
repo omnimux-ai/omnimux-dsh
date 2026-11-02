@@ -705,86 +705,80 @@ test('取消：AbortSignal 贯通到 seam 轮询，执行转为 cancelled', asyn
   }
 });
 
-test('capabilities：hub 目录按画布白名单投影，不继承画布外默认项', async () => {
-  const hub = createFakeSeamHub({
-    catalogList() {
-      return {
-        source: 'omnimux',
-        fingerprint: 'fake-catalog-env',
-        schemaVersion: '1.1',
-        models: [
-          { id: 'gemini-3.8-flash', operations: [operation('chat', 'text')] },
-          { id: 'gpt-image-2.5', operations: [operation('text_to_image', 'image')] },
-          { id: 'nanobanana-2', operations: [operation('text_to_image', 'image')] },
-          { id: 'kling-o3', operations: [operation('text_to_video', 'video')] },
-          { id: 'seedance-2-5', operations: [operation('text_to_video', 'video')] },
-          // 2026-10-21 网关对账 #3516：音频只剩 Suno 在售；旧语音合成模型登记但不再上架。
-          { id: 'seed-audio-1.0', operations: [operation('text_to_speech', 'audio')] },
-          { id: 'gpt-4o-mini-tts', operations: [
-            { id: 'text_to_speech', listed: false, output: { type: 'audio' }, inputs: [] },
-          ] },
-          { id: 'suno', operations: [operation('text_to_music', 'audio')] },
-        ],
-        defaults: {
-          text: 'gemini-3.8-flash',
-          image: 'gpt-image-2.5',
-          video: 'kling-o3',
-          audio: 'suno',
-        },
-        text: [
-          { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
-        ],
-        image: [
-          { id: 'gpt-image-2.5', label: 'GPT Image 2.5' },
-          { id: 'nanobanana-2', label: 'NanoBanana 2' },
-        ],
-        video: [
-          { id: 'kling-o3', label: 'Kling O3' },
-          { id: 'seedance-2-5', label: 'Seedance 2.5' },
-        ],
-        audio: [
-          { id: 'gpt-4o-mini-tts', label: 'GPT 4o Mini TTS' },
-          { id: 'suno', label: 'Suno' },
-          { id: 'seed-audio-1.0', label: 'Seed Audio 1.0' },
-        ],
-      };
+test('capabilities：hub 目录按画布可见集投影，隐藏集逐类相减', async () => {
+  const catalogBody = () => ({
+    source: 'omnimux',
+    fingerprint: 'fake-catalog-env',
+    schemaVersion: '1.1',
+    models: [
+      { id: 'gemini-3.8-flash', operations: [operation('chat', 'text')] },
+      { id: 'gpt-image-2.5', operations: [operation('text_to_image', 'image')] },
+      { id: 'nanobanana-2', operations: [operation('text_to_image', 'image')] },
+      { id: 'kling-o3', operations: [operation('text_to_video', 'video')] },
+      { id: 'seedance-2-5', operations: [operation('text_to_video', 'video')] },
+      // gpt-4o-mini-tts 登记但没有任何已上架 op：唯一仍被裁掉的行。
+      { id: 'seed-audio-1.0', operations: [operation('text_to_speech', 'audio')] },
+      { id: 'gpt-4o-mini-tts', operations: [
+        { id: 'text_to_speech', listed: false, output: { type: 'audio' }, inputs: [] },
+      ] },
+      { id: 'suno', operations: [operation('text_to_music', 'audio')] },
+    ],
+    defaults: {
+      text: 'gemini-3.8-flash',
+      image: 'gpt-image-2.5',
+      video: 'kling-o3',
+      audio: 'suno',
     },
+    text: [
+      { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
+    ],
+    image: [
+      { id: 'gpt-image-2.5', label: 'GPT Image 2.5' },
+      { id: 'nanobanana-2', label: 'NanoBanana 2' },
+    ],
+    video: [
+      { id: 'kling-o3', label: 'Kling O3' },
+      { id: 'seedance-2-5', label: 'Seedance 2.5' },
+    ],
+    audio: [
+      { id: 'gpt-4o-mini-tts', label: 'GPT 4o Mini TTS' },
+      { id: 'suno', label: 'Suno' },
+      { id: 'seed-audio-1.0', label: 'Seed Audio 1.0' },
+    ],
   });
-  const h = makeHarness({
-    seamHub: hub,
-    env: { OMNIMUX_VIDEO_MODEL: 'kling-o3' },
-  });
+  const hub = createFakeSeamHub({ catalogList: () => catalogBody() });
+  const h = makeHarness({ seamHub: hub, env: { OMNIMUX_VIDEO_MODEL: 'seedance-2-5' } });
   try {
     const caps = await h.call({ url: '/omnimux-workflow/api/capabilities' });
     assert.equal(caps.body.source, 'omnimux');
     assert.match(caps.body.fingerprint, /^fake-catalog-env:canvas:/);
-    assert.equal(caps.body.defaults.video, 'seedance-2-5');
-    assert.ok(caps.body.video.some((row) => row.id === 'seedance-2-5'));
-    assert.equal(caps.body.video.some((row) => row.id === 'kling-o3'), false);
-    assert.ok(caps.body.image.some((row) => row.id === 'gpt-image-2.5'));
-    assert.equal(caps.body.image.some((row) => row.id === 'nanobanana-2'), false);
-    assert.equal(caps.body.text.length, 1);
-    assert.deepEqual(caps.body.text.map((r) => r.id), [
-      'gemini-3.8-flash',
-    ]);
-    assert.deepEqual(caps.body.audio.map((row) => row.id), ['suno']);
-    assert.equal(caps.body.defaults.audio, 'suno');
-    // 白名单外的旧语音合成/克隆模型不得因 bucket 或默认项存在而被启用。
-    assert.equal(caps.body.audio.some((row) => row.id === 'seed-audio-1.0'), false);
+    // 默认全开：所有持 listed op 的 bucket 行都可见，目录默认生效（kling-o3 在列表里）。
+    assert.deepEqual(caps.body.video.map((row) => row.id), ['kling-o3', 'seedance-2-5']);
+    assert.equal(caps.body.defaults.video, 'kling-o3');
+    assert.deepEqual(caps.body.image.map((row) => row.id), ['gpt-image-2.5', 'nanobanana-2']);
+    assert.deepEqual(caps.body.text.map((r) => r.id), ['gemini-3.8-flash']);
+    // audio：seed-audio-1.0 与 suno 都有 listed op → 都可见；gpt-4o-mini-tts 无 listed op 仍被裁。
+    assert.deepEqual(caps.body.audio.map((row) => row.id), ['suno', 'seed-audio-1.0']);
     assert.equal(caps.body.audio.some((row) => row.id === 'gpt-4o-mini-tts'), false);
+    assert.equal(caps.body.defaults.audio, 'suno');
   } finally {
     h.dispose();
     rmSync(h.root, { recursive: true, force: true });
   }
 
-  // Canvas policy applies with or without a hub environment overlay.
-  const hDefault = makeHarness({ seamHub: hub });
+  // 隐藏集经 hub DTO 的 canvasHiddenModels 端到端生效：隐藏目录默认后回落策略种子。
+  const hiddenHub = createFakeSeamHub({
+    catalogList: () => ({ ...catalogBody(), canvasHiddenModels: { video: ['kling-o3'], image: ['nanobanana-2'] } }),
+  });
+  const hDefault = makeHarness({ seamHub: hiddenHub });
   try {
     const caps = await hDefault.call({ url: '/omnimux-workflow/api/capabilities' });
     assert.equal(caps.body.source, 'omnimux');
-    assert.equal(caps.body.video.some((row) => row.id === 'kling-o3'), false);
-    assert.ok(caps.body.video.some((row) => row.id === 'seedance-2-5'));
+    assert.deepEqual(caps.body.video.map((row) => row.id), ['seedance-2-5']);
     assert.equal(caps.body.defaults.video, 'seedance-2-5');
+    assert.deepEqual(caps.body.image.map((row) => row.id), ['gpt-image-2.5']);
+    assert.ok(caps.body.generationPolicy.video.allowedModelIds.includes('seedance-2-5'));
+    assert.equal(caps.body.generationPolicy.video.allowedModelIds.includes('kling-o3'), false);
   } finally {
     hDefault.dispose();
     rmSync(hDefault.root, { recursive: true, force: true });

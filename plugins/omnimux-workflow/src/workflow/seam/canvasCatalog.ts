@@ -77,6 +77,12 @@ export function readCanvasCatalog(getSeam: Getter): CapabilityCatalog {
   const defaultsByOperation = body.defaultsByOperation && typeof body.defaultsByOperation === 'object'
     ? Object.fromEntries(Object.entries(body.defaultsByOperation).filter(([, value]) => typeof value === 'string' && value))
     : undefined;
+  // Per-kind hidden ids from hub settings; malformed kinds degrade to none.
+  const hidden = body.canvasHiddenModels && typeof body.canvasHiddenModels === 'object'
+    ? body.canvasHiddenModels as Record<string, unknown>
+    : {};
+  const hiddenIds = (kind: 'text' | 'image' | 'video' | 'audio') =>
+    Array.isArray(hidden[kind]) ? hidden[kind].filter((id): id is string => typeof id === 'string' && !!id.trim()).map((id) => id.trim()) : [];
   return projectCanvasCatalog({
     source: body.source === 'omnimux' || body.source === 'static-stub' ? body.source : source,
     schemaVersion: typeof body.schemaVersion === 'string' ? body.schemaVersion : undefined,
@@ -84,5 +90,8 @@ export function readCanvasCatalog(getSeam: Getter): CapabilityCatalog {
     preview_fingerprint: typeof body.preview_fingerprint === 'string' ? body.preview_fingerprint : undefined,
     defaults: body.defaults, models, defaultsByOperation, defaultOperations: body.defaultOperations,
     text: rows(body.text), image: rows(body.image), video: rows(body.video), audio: rows(body.audio),
+    canvasHiddenModels: {
+      text: hiddenIds('text'), image: hiddenIds('image'), video: hiddenIds('video'), audio: hiddenIds('audio'),
+    },
   });
 }

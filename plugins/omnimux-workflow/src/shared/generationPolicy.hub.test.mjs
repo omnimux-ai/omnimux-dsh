@@ -93,9 +93,9 @@ test('readCanvasCatalog tolerates catalogs without preview_fingerprint (old hub 
   assert.equal(weird.preview_fingerprint, undefined);
 });
 
-test('real Hub catalog exposes the curated text models and selects Gemini 3.8 for video', () => {
+test('real Hub catalog exposes the listed text models and selects Gemini 3.8 for video', () => {
   const catalog = projectCanvasCatalog(buildModelCatalog({ env: {} }));
-  // 2026-10-21 网关对账 #3516：Claude 全部渠道停用，文本侧只剩 Gemini 3.8 Flash。
+  // 默认全开下 text 桶 = 全部已上架 text 模型；真实 hub 里在售 text 模型只有 Gemini 3.8 Flash。
   assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash']);
   assert.equal(catalog.defaults.text, 'gemini-3.8-flash');
   const select = (assets = [], currentModelId) => planAutoAdaptation({ catalog, outputType: 'text', currentModelId,
@@ -119,7 +119,9 @@ test('real Hub catalog: the listed whisper-1 ASR contract is selectable in the a
     assert.deepEqual(row.operations.map((op) => op.id), ['speech_to_text']);
     assert.deepEqual(row.listedOperations, [`${id}#speech_to_text`]);
   }
-  // ...and never through a generative bucket: the chat whitelist stays chat-only.
+  // ...and never through a generative bucket: whisper-1's only op binds the
+  // speechToText capability seam, so it never lands in the chat list even though
+  // it outputs text. The chat bucket stays generative-only.
   assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash']);
 
   const withAudio = buildUpstreamFingerprint({
@@ -180,7 +182,9 @@ test('invalid defaults fall back to a real admitted policy model for all four ou
 });
 
 test('missing policy models fall back only to real remaining rows for all four outputs (#3312)', () => {
-  // text/audio have a single admitted model, so "another real remaining row" only exists for image/video.
+  // Only video has a second admissible row whose configured default differs from
+  // the policy seed fallback (selected=seedance-2-0, fallback=seedance-2-5), so
+  // "another real remaining row" is exercised only by video here.
   for (const row of ALTERNATIVE_CASES) {
     const hub = configuredHub();
     hub.defaults = { text: 'missing-model', image: 'missing-model', video: 'missing-model', audio: 'missing-model' };

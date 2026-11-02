@@ -14,6 +14,8 @@ after(() => rmSync(bundleRoot, { recursive: true, force: true }));
 const catalog = {
   text: [{ id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' }, { id: 'excluded', label: 'Excluded' }],
   image: [], video: [], audio: [], defaults: { text: 'excluded' },
+  // 画布可见集现默认全开；'excluded' 通过隐藏集退出可见集，仍是提交守门要拒绝的模型。
+  canvasHiddenModels: { text: ['excluded'] },
   models: ['gemini-3.8-flash', 'excluded'].map((id) => ({ id, operations: [
     { id: 'vision_chat', listed: true, output: { type: 'text' }, inputs: ['image', 'video', 'audio'].map((type) => ({
       slot: `reference_${type}s`, role: 'reference', type, source: 'upstream_edge', min: 0, max: 4,

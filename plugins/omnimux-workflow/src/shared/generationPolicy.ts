@@ -8,37 +8,44 @@ export interface GenerationPolicy {
   modeSelection: 'automatic' | 'model';
 }
 
+/**
+ * Seed defaults and mode-selection for the canvas curation. The allowed set is
+ * NO LONGER read from this constant — `projectCanvasCatalog` derives it from
+ * the hub catalog rows minus the user's per-kind hidden set (settings-driven
+ * visibility, spec canvas-model-visibility). These ids only seed `defaultModelId`
+ * fallbacks when the catalog itself offers no better candidate.
+ */
 export const CANVAS_GENERATION_POLICY: Readonly<Record<MaterialType, GenerationPolicy>> = {
   text: {
-    // 2026-10-21 网关对账 #3516：Claude 全部渠道停用；仅开放现役 Gemini 3.8 Flash。
     allowedModelIds: ['gemini-3.8-flash'],
     defaultModelId: 'gemini-3.8-flash',
     modeSelection: 'model',
   },
   image: {
-    // 2026-10-25 网关快照（#3734）：Seedream 5.0 Pro 已无可用线路，图像侧只剩 GPT Image 2.5。
-    // 名单以中枢目录为准，此处只是画布侧的策略副本；P0 会把可选集合改为从目录推导。
     allowedModelIds: ['gpt-image-2.5'],
     defaultModelId: 'gpt-image-2.5',
     modeSelection: 'model',
   },
   video: {
-    // 2026-10-25 网关快照（#3734）：2.0 Fast / 2.0 Mini 已无可用线路；视频侧只剩 Seedance 2.5 / 2.0。
     allowedModelIds: ['seedance-2-5', 'seedance-2-0'],
     defaultModelId: 'seedance-2-5',
     modeSelection: 'model',
   },
   audio: {
-    // 2026-10-21 网关对账 #3516：火山配音/克隆渠道 43/70 停用；
-    // 仅保留现役 Suno 音乐生成（渠道 32 default）。语音识别经 speechToText 能力 seam 进入画布。
     allowedModelIds: ['suno'],
     defaultModelId: 'suno',
     modeSelection: 'model',
   },
 };
 
-export function isCanvasModelAllowed(kind: MaterialType, modelId: string): boolean {
-  return CANVAS_GENERATION_POLICY[kind].allowedModelIds.includes(modelId);
+/**
+ * Effective membership check for one kind: the model must survive the canvas
+ * projection — i.e. be a hub-listed row for that kind, prove a listed output op,
+ * and not be in the user's hidden set. Reads the projected `generationPolicy`,
+ * so callers pass the canvas catalog (not the raw hub DTO).
+ */
+export function isCanvasModelAllowed(catalog: CapabilityCatalog, kind: MaterialType, modelId: string): boolean {
+  return Boolean(catalog?.generationPolicy?.[kind]?.allowedModelIds?.includes(modelId));
 }
 
 /**
@@ -87,21 +94,30 @@ export function isCanvasCapabilityModel(catalog: CapabilityCatalog, modelId: str
     && (model.operations ?? []).some((op) => op.listed === true && seams.has(operationSeam(op))));
 }
 
-/** Project both catalog representations so no picker, planner or agent can bypass curation. */
+/**
+ * Project both catalog representations so no picker, planner or agent can bypass curation.
+ *
+ * Membership is now settings-driven (spec canvas-model-visibility): every hub-listed
+ * row for a kind is a candidate, the user's `canvasHiddenModels[kind]` ids are
+ * subtracted, and each survivor must still prove a listed output op in the
+ * authoritative catalog. `CANVAS_GENERATION_POLICY` only seeds default fallbacks
+ * and `modeSelection`; the emitted `generationPolicy[kind].allowedModelIds` is the
+ * post-filter set — it is what capability-only checks (ASR exclusion) read.
+ */
 export function projectCanvasCatalog(catalog: CapabilityCatalog): CapabilityCatalog {
   const policy = CANVAS_GENERATION_POLICY;
   const kinds = Object.keys(policy) as MaterialType[];
+  const hidden = catalog.canvasHiddenModels ?? {};
   const lists = {} as Record<MaterialType, CapabilityModelItem[]>;
   const defaults: NonNullable<CapabilityCatalog['defaults']> = {};
   for (const kind of kinds) {
-    const rows = catalog[kind] ?? [];
-    lists[kind] = policy[kind].allowedModelIds.flatMap((id) => {
-      const row = rows.find((candidate) => candidate.id === id);
-      if (!row) return [];
+    const hiddenIds = new Set(hidden[kind] ?? []);
+    // Catalog row order is the display order; subtract-only filtering preserves it.
+    lists[kind] = (catalog[kind] ?? []).filter((row) => {
+      if (!row?.id || hiddenIds.has(row.id)) return false;
       // Every candidate must prove a real listed output in the authoritative catalog.
-      if (!catalog.models?.some((model) => model.id === id
-        && model.operations?.some((op) => op.listed === true && op.output?.type === kind))) return [];
-      return [row];
+      return Boolean(catalog.models?.some((model) => model.id === row.id
+        && model.operations?.some((op) => op.listed === true && op.output?.type === kind)));
     });
     defaults[kind] = [catalog.defaults?.[kind], policy[kind].defaultModelId]
       .find((id) => lists[kind].some((row) => row.id === id))
@@ -135,6 +151,13 @@ export function projectCanvasCatalog(catalog: CapabilityCatalog): CapabilityCata
   const defaultOperations = Object.fromEntries(Object.entries(catalog.defaultOperations ?? {})
     .filter(([kind, recommendation]) => models?.some((model) => model.id === recommendation?.modelId
       && model.operations?.some((op) => op.id === recommendation.operationId && op.output?.type === kind))));
+  // Effective policy: the post-filter set, not the seed constant. This is the
+  // shape consumers (compatKernel, isCanvasCapabilityModel) read.
+  const effectivePolicy = Object.fromEntries(kinds.map((kind) => [kind, {
+    allowedModelIds: lists[kind].map((row) => row.id),
+    defaultModelId: defaults[kind] ?? '',
+    modeSelection: policy[kind].modeSelection,
+  }])) as unknown as Readonly<Record<MaterialType, GenerationPolicy>>;
   return {
     ...catalog,
     ...lists,
@@ -142,9 +165,9 @@ export function projectCanvasCatalog(catalog: CapabilityCatalog): CapabilityCata
     defaults,
     defaultsByOperation,
     defaultOperations,
-    generationPolicy: policy,
+    generationPolicy: effectivePolicy,
     fingerprint: catalog.fingerprint
-      ? `${catalog.fingerprint}:canvas:${JSON.stringify(policy)}`
+      ? `${catalog.fingerprint}:canvas:${JSON.stringify(effectivePolicy)}`
       : undefined,
   };
 }
