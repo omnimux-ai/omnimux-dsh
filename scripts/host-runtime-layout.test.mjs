@@ -38,6 +38,7 @@ function fakeBundle(t, layout) {
     // 真实语义：app.asar 是单个归档文件，判据读它的目录表（普通 Node 读不进归档）。
     writeAsarArchive(t, resources, {
       files: {
+        lib: { files: { 'desktop-cli.js': { size: 4962 } } },
         preset: { files: { 'agent-presets': { files: { 'legacy-preset': { files: { 'agent.cordis.yml': { size: 3 } } } } } } },
         node_modules: { files: { '@deepseek-ai': { files: { dsh: { files: { lib: { files: { 'bin.js': { size: 10 } } } } } } } } },
       },
@@ -306,9 +307,10 @@ test('probeArchive 在注入 io 缺 existsSync 时显式报错，不悄悄读真
 function writeAsarArchive(t, directory, tree) {
   const json = Buffer.from(JSON.stringify(tree), 'utf8');
   const header = Buffer.alloc(16);
+  // 真实 Electron asar 的 pickle 几何（老包实测 headerSize-strLen=11、strSize-strLen=7）。
   header.writeUInt32LE(4, 0);
-  header.writeUInt32LE(json.length + 4, 4);
-  header.writeUInt32LE(json.length + 4, 8);
+  header.writeUInt32LE(json.length + 11, 4);
+  header.writeUInt32LE(json.length + 7, 8);
   header.writeUInt32LE(json.length, 12);
   const archive = join(directory, 'app.asar');
   writeFileSync(archive, Buffer.concat([header, json, Buffer.from('payload')]));
@@ -322,6 +324,7 @@ test('真实语义 asar：目录表里有 preset 即判为可用布局', (t) => 
   mkdirSync(resources, { recursive: true })
   writeAsarArchive(t, resources, {
     files: {
+      lib: { files: { 'desktop-cli.js': { size: 4962 } } },
       preset: { files: { 'agent-presets': { files: { 'omni-agent': { files: { 'preset.yml': { size: 10 } } } } } } },
       node_modules: { files: { '@deepseek-ai': { files: { dsh: { files: { lib: { files: { 'bin.js': { size: 9303 } } } } } } } } },
     },
@@ -359,7 +362,10 @@ test('归档布局下预设根走 app.asar.unpacked（普通 Node 可读），�
   mkdirSync(resources, { recursive: true })
   // 归档本身带 preset 目录表（判据用），内容标成 unpacked 落在归档旁边。
   writeAsarArchive(t, resources, {
-    files: { preset: { files: { 'agent-presets': { files: { 'omni-agent': { files: { 'preset.yml': { size: 10 } } } } } } } },
+    files: {
+      lib: { files: { 'desktop-cli.js': { size: 4962 } } },
+      preset: { files: { 'agent-presets': { files: { 'omni-agent': { files: { 'preset.yml': { size: 10 } } } } } } },
+    },
   })
   const unpacked = join(resources, 'app.asar.unpacked', 'preset', 'agent-presets', 'omni-agent')
   mkdirSync(unpacked, { recursive: true })
@@ -380,9 +386,34 @@ test('归档布局下没有 unpacked 内容时预设根为 null（调用方据�
   const resources = join(bundle, 'Contents', 'Resources')
   mkdirSync(resources, { recursive: true })
   writeAsarArchive(t, resources, {
-    files: { preset: { files: { 'agent-presets': { files: { 'x': { files: { 'preset.yml': { size: 1 } } } } } } } },
+    files: {
+      lib: { files: { 'desktop-cli.js': { size: 4962 } } },
+      preset: { files: { 'agent-presets': { files: { 'x': { files: { 'preset.yml': { size: 1 } } } } } } },
+    },
   })
   const layout = resolveHostRuntimeLayout({ bundle })
   assert.equal(resolvePresetRoot(layout.appRoot), null)
   assert.equal(hasShippedPresetRoot(layout.appRoot), false)
+})
+
+test('归档里只有 preset 没有 desktop-cli 时判为不可用（reason 指明 wrapper 缺失）', (t) => {
+  const bundle = mkdtempSync(join(tmpdir(), 'omnimux-asar-nowrapper-'))
+  t.after(() => rmSync(bundle, { recursive: true, force: true }))
+  const resources = join(bundle, 'Contents', 'Resources')
+  mkdirSync(resources, { recursive: true })
+  writeAsarArchive(t, resources, {
+    files: { preset: { files: { 'agent-presets': { files: { x: { files: { 'preset.yml': { size: 1 } } } } } } } },
+  })
+  assert.throws(() => resolveHostRuntimeLayout({ bundle }), (error) => {
+    assert.equal(error.code, 'TEST_ENV_RUNTIME_MISSING')
+    assert.equal(error.detail.archiveProbe.reason, 'wrapper-missing-in-archive')
+    return true;
+  })
+})
+
+test('注入 io 缺 readAsarTree 时显式报错，不静默读真实 fs', () => {
+  assert.throws(() => resolveHostRuntimeLayout({
+    io: { statSync: () => ({ isFile: () => false }), existsSync: () => true },
+    bundle: '/nonexistent/OmniMux Dev.app',
+  }), { name: 'TypeError', message: /io\.readAsarTree is required/ })
 })

@@ -85,3 +85,16 @@
 评审实测：探测层修好后，下游 `hasShippedPresetRoot` / `composeAgentPresetRows` 仍用 `readdirSync` 读归档内路径，普通 Node 必 `ENOTDIR`，于是 `agentPresetPatchText` 直接抛 `TEST_ENV_PRESET_ROOT_MISSING`——旧布局只是换了错误码，仍不可用（正是本 spec「证伪 B」命中的情形）。
 
 修法：新增 `resolvePresetRoot(appRoot)` / `resolveUnpackedPath(appRoot, rel)`。归档布局下预设内容通常以 unpacked 形式落在 `<Resources>/app.asar.unpacked/`（本机老包实测可直接读），因此预设根与上游 preset 目录都按「目录优先、unpacked 兜底」解析。实测老包：`resolvePresetRoot` 指向 unpacked、`composeAgentPresetRows` 合成 14 条、`agentPresetPatchText` 产出 8415 字节且含 `@deepseek-ai/dsh-agent-preset`。
+
+## 评审建议整改（head eb2920bab 之后）
+
+| 评审项 | 处置 |
+|---|---|
+| 建议 2：composer 归档分支零覆盖 | ✅ 补 2 例（归档走目录表 / 非归档走 accessSync），并做变异验证：把 `archiveLayout` 改回 `false` 该用例立即红 |
+| 建议 3：归档损坏/缺 preset 的 detail 不带原因 | ✅ `probeArchive` 返回 `{available, reason, message}`，错误 hint 与 `detail.archiveProbe` 都带原因（`archive-missing` / `asar-unreadable` / `preset-root-missing` / `wrapper-missing-in-archive`） |
+| 建议 4：注入 io 缺 `readAsarTree` 时静默回落真实 fs | ✅ 注入 io 时不再回落；缺失显式 `TypeError`，并补用例 |
+| 细节 5：`assertComposerRuntimeReadable` 的 JSDoc 未写 `layout` 依赖 | ✅ 补进 JSDoc，并写明不传会退回 accessSync 误报 |
+| 细节 6：fixture pickle 头几何与真实 asar 不一致 | ✅ 改为老包实测几何（`headerSize-strLen=11`、`strSize-strLen=7`） |
+| 细节 7：只看 preset 不看 wrapper 是否在归档里 | ✅ 新增 `wrapper-missing-in-archive` 判定并补用例 |
+| 细节 8：import 链把 `ELECTRON_NO_ASAR=1` 带进每个进程 | ✅ 删除 `asar-integrity-engine.mjs` 顶层副作用，改为显式 `disableElectronAsarInterception()`；import 后 `process.env` 不再被改写 |
+| 细节 9：spec 验收项未勾选 | ✅ 已勾选并记录证据 |

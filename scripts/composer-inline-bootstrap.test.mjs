@@ -112,3 +112,46 @@ test('布局探测失败时保留 TEST_ENV_RUNTIME_MISSING 的 code', () => {
   }
   assert.fail('expected layout probe to throw');
 })
+
+test('归档布局下前置检查走目录表，不用 accessSync 读归档内路径', () => {
+  const constants = { X_OK: 1, R_OK: 4 };
+  const appRoot = '/App/Contents/Resources/app.asar';
+  const runtime = {
+    executable: '/App/Contents/MacOS/OmniMux',
+    cli: `${appRoot}/node_modules/@deepseek-ai/dsh/lib/bin.js`,
+    layout: { layout: 'app.asar', appRoot },
+  };
+  const accessCalls = [];
+  const io = { constants, accessSync: (path) => { accessCalls.push(path); } };
+
+  // 目录表命中 -> 通过，且 accessSync 只用于可执行文件
+  assert.doesNotThrow(() => assertComposerRuntimeReadable(runtime, io, {
+    readAsarTree: () => ({ files: { node_modules: { files: { '@deepseek-ai': { files: { dsh: { files: { lib: { files: { 'bin.js': { size: 1 } } } } } } } } } } }),
+    asarEntry: (tree, relative) => relative === 'node_modules/@deepseek-ai/dsh/lib/bin.js' ? { size: 1 } : null,
+  }));
+  assert.deepEqual(accessCalls, [runtime.executable]);
+
+  // 目录表里没有 -> COMPOSER_RUNTIME_MISSING，via 标记为 asar-index
+  assert.throws(() => assertComposerRuntimeReadable(runtime, io, {
+    readAsarTree: () => ({ files: {} }),
+    asarEntry: () => null,
+  }), (error) => {
+    assert.equal(error.code, 'COMPOSER_RUNTIME_MISSING');
+    assert.equal(error.detail.via, 'asar-index');
+    return true;
+  });
+
+  // 归档读不了 -> 同样响亮失败，不静默放过
+  assert.throws(() => assertComposerRuntimeReadable(runtime, io, {
+    readAsarTree: () => { throw new Error('bad header'); },
+  }), { code: 'COMPOSER_RUNTIME_MISSING' });
+})
+
+test('非归档布局仍用 accessSync 校验 CLI', () => {
+  const constants = { X_OK: 1, R_OK: 4 };
+  const runtime = { executable: '/App/Contents/MacOS/OmniMux', cli: '/App/Contents/Resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js',
+    layout: { layout: 'app', appRoot: '/App/Contents/Resources/app' } };
+  const modes = [];
+  assertComposerRuntimeReadable(runtime, { constants, accessSync: (path, mode) => { modes.push(mode); } });
+  assert.deepEqual(modes, [constants.X_OK, constants.R_OK]);
+})

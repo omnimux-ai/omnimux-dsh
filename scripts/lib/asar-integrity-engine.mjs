@@ -5,8 +5,17 @@
  * ElectronAsarIntegrity dictionary synchronization.
  */
 
-// Ensure Electron does not intercept raw .asar file read/write operations
-process.env.ELECTRON_NO_ASAR = '1'
+/**
+ * 让 Electron 不拦截原始 .asar 读写。
+ *
+ * 顶层副作用会污染任何 import 本模块的进程（Issue #3895 评审细节 8）：
+ * 一旦有人用 `env: process.env` 起子进程，asar 支持就被静默关掉。
+ * 改为显式调用，只在真正需要绕过拦截的写入路径前调用。
+ */
+export function disableElectronAsarInterception(env = process.env) {
+  env.ELECTRON_NO_ASAR = '1'
+  return env
+}
 
 import { createHash } from 'node:crypto'
 import {

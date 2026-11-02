@@ -98,15 +98,30 @@ function probeArchive(io, archive) {
   if (typeof io.existsSync !== 'function') {
     throw new TypeError('resolveHostRuntimeLayout: io.existsSync is required to probe an asar layout');
   }
-  if (!io.existsSync(archive)) return false;
+  if (!io.existsSync(archive)) return { available: false, reason: 'archive-missing' };
+  // 与 existsSync 同口径：注入 io 必须自带解析能力，不能悄悄回落到真实 fs。
+  // 注入 io 时必须自带解析能力：回落到模块内实现等于绕过注入方，读的是真实 fs。
+  const readTree = io.readAsarTree;
+  if (typeof readTree !== 'function') {
+    throw new TypeError('resolveHostRuntimeLayout: io.readAsarTree is required to probe an asar layout');
+  }
   let tree;
   try {
-    tree = (io.readAsarTree ?? readAsarTree)(archive);
-  } catch {
-    return false;
+    tree = readTree(archive);
+  } catch (error) {
+    // 带原因返回：上层能区分「没装」与「归档坏了」。
+    return { available: false, reason: error?.code ?? 'asar-unreadable', message: error?.message ?? String(error) };
   }
   const presets = asarEntry(tree, 'preset/agent-presets');
-  return Boolean(presets && presets.files && Object.keys(presets.files).length > 0);
+  if (!presets || !presets.files || Object.keys(presets.files).length === 0) {
+    return { available: false, reason: 'preset-root-missing' };
+  }
+  // 「可用」还要求脚本入口真的在归档里：只有 preset 而没有 desktop-cli 的归档
+  // 判为可用会让下游在启动阶段才失败。
+  if (!asarEntry(tree, 'lib/desktop-cli.js')) {
+    return { available: false, reason: 'wrapper-missing-in-archive' };
+  }
+  return { available: true, reason: null };
 }
 
 /**
@@ -140,13 +155,18 @@ export function resolveHostRuntimeLayout(options = {}) {
   const modernWrapper = join(resources, 'app', 'lib', 'desktop-cli.js');
   const legacyArchive = join(resources, 'app.asar');
   let wrapper;
+  let archiveProbe = null;
   if (probe(modernWrapper)) wrapper = modernWrapper;
-  else if (probeArchive(io, legacyArchive)) wrapper = join(legacyArchive, 'lib', 'desktop-cli.js');
+  else {
+    archiveProbe = probeArchive(io, legacyArchive);
+    if (archiveProbe.available) wrapper = join(legacyArchive, 'lib', 'desktop-cli.js');
+  }
   if (!wrapper) {
     const error = new Error(`TEST_ENV_RUNTIME_MISSING: 宿主 App 缺少 desktop-cli 入口：${candidates.join(' / ')}`);
     error.code = 'TEST_ENV_RUNTIME_MISSING';
-    error.hint = `候选入口都不存在：${candidates.join(' / ')}`;
-    error.detail = { candidates, legacyArchive };
+    error.hint = `候选入口都不存在：${candidates.join(' / ')}`
+      + (archiveProbe ? `；归档探测原因 ${archiveProbe.reason}${archiveProbe.message ? `（${archiveProbe.message}）` : ''}` : '');
+    error.detail = { candidates, legacyArchive, archiveProbe };
     throw error;
   }
   const appRoot = dirname(dirname(wrapper));

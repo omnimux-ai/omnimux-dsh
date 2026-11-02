@@ -87,8 +87,13 @@ export function privateStarterFs(io = fs, home = process.env.HOME || '') {
  * 抽成独立函数以便单测覆盖——先前这段内联在 startComposerInlineEnvironment 里，
  * 改回旧写法测试也不会红（评审建议 1）。
  *
- * @param {{ executable: string, cli: string }} runtime
+ * 归档布局（`runtime.layout.layout === 'app.asar'`）下 CLI 在 asar 内部，
+ * 普通 Node 的 `accessSync` 必 `ENOTDIR`，因此该分支改为查归档目录表；
+ * 调用方必须传完整的 `runtime`（含 `layout`），否则会退回 `accessSync` 并误报缺失。
+ *
+ * @param {{ executable: string, cli: string, layout?: { layout: string, appRoot: string } }} runtime
  * @param {{ accessSync?: Function, constants?: object }} [io]
+ * @param {{ readAsarTree?: Function, asarEntry?: Function }} [deps]
  */
 export function assertComposerRuntimeReadable(runtime, io = fs, deps = {}) {
   const readTree = deps.readAsarTree ?? readAsarTree;
