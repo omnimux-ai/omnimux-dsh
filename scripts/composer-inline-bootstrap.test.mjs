@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { privateStarterFs, redact, taskRoot } from './composer-inline-bootstrap.mjs';
+import { assertComposerRuntimeReadable, composerRuntimePaths, privateStarterFs, redact, resolveComposerCli, taskRoot } from './composer-inline-bootstrap.mjs';
 
 test('private starter rejects forbidden paths before reading metadata', () => {
   const calls = [];
@@ -55,3 +55,60 @@ test('diagnostics remove synthetic credential forms and preserve hashes', () => 
   const childRedact = Function(`return (${redact.toString()})`)();
   assert.equal(childRedact('Bearer SENTINEL'), 'Bearer REDACTED');
 });
+
+test('CLI 入口按宿主布局推导：app 与 app.asar 两种布局都指向归档/目录内的 bin.js', () => {
+  const modern = { bundle: '/Applications/OmniMux Dev.app', executable: '/Applications/OmniMux Dev.app/Contents/MacOS/OmniMux',
+    wrapper: '/Applications/OmniMux Dev.app/Contents/Resources/app/lib/desktop-cli.js',
+    appRoot: '/Applications/OmniMux Dev.app/Contents/Resources/app', layout: 'app', candidates: [] };
+  const legacy = { ...modern, wrapper: '/Applications/OmniMux Dev.app/Contents/Resources/app.asar/lib/desktop-cli.js',
+    appRoot: '/Applications/OmniMux Dev.app/Contents/Resources/app.asar', layout: 'app.asar' };
+  assert.equal(resolveComposerCli(modern),
+    '/Applications/OmniMux Dev.app/Contents/Resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js');
+  assert.equal(resolveComposerCli(legacy),
+    '/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh/lib/bin.js');
+  const runtime = composerRuntimePaths({ layout: modern });
+  assert.equal(runtime.cli, resolveComposerCli(modern));
+  assert.equal(runtime.executable, modern.executable);
+  assert.equal(runtime.appPackageRoot,
+    '/Applications/OmniMux Dev.app/Contents/Resources/app/node_modules/@deepseek-ai/dsh');
+})
+
+test('布局探测失败时 composerRuntimePaths 抛可读错误（不返回半可用状态）', () => {
+  assert.throws(() => composerRuntimePaths({ layoutOptions: { bundle: '/nonexistent/OmniMux Dev.app' } }),
+    { code: 'TEST_ENV_RUNTIME_MISSING' });
+})
+
+test('前置检查：可执行与 CLI 都需可访问，缺任一即抛 COMPOSER_RUNTIME_MISSING', () => {
+  const constants = { X_OK: 1, R_OK: 4 };
+  const runtime = { executable: '/App/Contents/MacOS/OmniMux', cli: '/App/Contents/Resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js' };
+  const ok = { constants, accessSync: () => {} };
+  assert.doesNotThrow(() => assertComposerRuntimeReadable(runtime, ok));
+
+  // CLI 入口缺失（旧实现在这里检查归档目录，永远发现不了）
+  const missingCli = { constants, accessSync: (path) => { if (path === runtime.cli) { const error = new Error('ENOENT'); error.code = 'ENOENT'; throw error; } } };
+  assert.throws(() => assertComposerRuntimeReadable(runtime, missingCli), (error) => {
+    assert.equal(error.code, 'COMPOSER_RUNTIME_MISSING');
+    assert.equal(error.detail.path, runtime.cli);
+    return true;
+  });
+
+  // 可执行文件不可执行
+  const missingExe = { constants, accessSync: (path) => { if (path === runtime.executable) throw new Error('EACCES'); } };
+  assert.throws(() => assertComposerRuntimeReadable(runtime, missingExe), { code: 'COMPOSER_RUNTIME_MISSING' });
+
+  // 权限位必须按 X_OK / R_OK 传
+  const modes = [];
+  assertComposerRuntimeReadable(runtime, { constants, accessSync: (path, mode) => { modes.push(mode); } });
+  assert.deepEqual(modes, [constants.X_OK, constants.R_OK]);
+})
+
+test('布局探测失败时保留 TEST_ENV_RUNTIME_MISSING 的 code', () => {
+  try {
+    composerRuntimePaths({ layoutOptions: { bundle: '/nonexistent/OmniMux Dev.app' } });
+  } catch (caught) {
+    assert.equal(caught.code, 'TEST_ENV_RUNTIME_MISSING');
+    assert.ok(Array.isArray(caught.detail.candidates));
+    return;
+  }
+  assert.fail('expected layout probe to throw');
+})
