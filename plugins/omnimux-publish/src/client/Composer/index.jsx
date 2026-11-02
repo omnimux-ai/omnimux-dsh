@@ -20,11 +20,12 @@ import { AccountPanel } from '../AccountPanel.jsx'
  *   t: (key: string, vars?: Record<string, unknown>) => string,
  *   draftId?: string,
  *   onBack: () => void,
+ *   onManageAccounts?: () => void,
  *   onSubmitted: (recordId: string) => void,
  *   onSaved: () => void,
  * }} props
  */
-export function Composer({ t, draftId, onBack, onSubmitted, onSaved }) {
+export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, onSaved }) {
   const [editingId, setEditingId] = useState(draftId || '')
   const [type, setType] = useState('')
   const [title, setTitle] = useState('')
@@ -206,6 +207,7 @@ export function Composer({ t, draftId, onBack, onSubmitted, onSaved }) {
       <AccountPanel
         t={t}
         selectedIds={accountIds}
+        onManageAccounts={onManageAccounts}
         onChange={(ids, rows) => { setAccountIds(ids); setAccountRows(rows) }}
       />
 
