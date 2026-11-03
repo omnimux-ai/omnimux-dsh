@@ -166,7 +166,20 @@ const INLINE_STYLES = `
  * 统一带纯矢量 SVG 图标，严禁 Emoji，零冗余徽章、零副标题、零同义重复。
  * 产品库已并入资产库（specs/products-into-assets.spec.md），不再单独占一项。
  */
-export const EXPLORE_MENU_ITEMS = []
+export const EXPLORE_MENU_ITEMS = [
+  {
+    id: 'apps',
+    label: '应用',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>',
+    entryId: 'omnimux-apps-entry',
+  },
+  {
+    id: 'clip',
+    label: '视频剪辑',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="1" y="3" width="10" height="10" rx="1.5"/><polygon points="11 5 15 3 15 13 11 11" fill="currentColor"/></svg>',
+    entryId: 'omnimux-clip-entry',
+  },
+]
 
 /**
  * 运行时注册的菜单项（第三方 / 个人插件经 `registerExploreItem` 注册），

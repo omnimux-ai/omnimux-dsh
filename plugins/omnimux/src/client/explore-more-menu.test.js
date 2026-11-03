@@ -252,7 +252,7 @@ describe('官方「更多」菜单注册形状', () => {
 })
 
 describe('官方「更多」菜单内容', () => {
-  it('8 行文案与顺序逐字等于真源清单', async () => {
+  it('文案与顺序逐字等于真源清单', async () => {
     const menu = await renderMoreMenu({ onDismiss: () => {} })
     try {
       assert.equal(TRUTH.length, EXPLORE_MENU_ITEMS.length, '真源清单与内置白名单一致')
@@ -269,7 +269,7 @@ describe('官方「更多」菜单内容', () => {
     try {
       assert.deepEqual(menu.rows.map((row) => row.separatorBefore === true), EXPECTED_SEPARATORS)
       assert.deepEqual(SEPARATOR_OWNERS, TRUTH.filter((item, index) => index > 0 && TRUTH.at(index - 1).dividerAfter === true).map((item) => item.label), 'dividerAfter 决定 separatorBefore')
-      assert.equal(menu.rows.at(0).separatorBefore, false, '首行不画线')
+      assert.equal(menu.rows.at(0)?.separatorBefore, false, '首行不画线')
     } finally {
       menu.cleanup()
     }
@@ -391,7 +391,7 @@ describe('官方「更多」菜单运行时注册接缝', () => {
       const menu = createMenuRenderer(dom, api, { onDismiss: () => {} })
 
       await menu.render()
-      assert.equal(menu.rows.length, 8, '未注册时 8 行')
+      assert.equal(menu.rows.length, TRUTH.length, '未注册时与内置项一致')
 
       const unregister = registry.registerExploreItem({
         id: 'fast-news-workbench',

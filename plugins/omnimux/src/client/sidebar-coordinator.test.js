@@ -452,10 +452,9 @@ test('常驻行按 rank 挂载在侧栏，探索行不再出现在最下方', as
     const root = document.querySelector('[data-pane="sidebar"]')
     assert.equal(root.querySelector('[data-omnimux-explore-entry]'), null, '探索行已退役，不得再占位')
     // PINNED_ENTRY_PREFIXES 为空：所有 omnimux-* 均收敛，不挂入 DOM
-    assert.equal(workflowBtn.parentElement, null, 'workflow 收敛')
-    assert.equal(marketBtn.parentElement, null, 'market 收敛')
-    assert.equal(assetsBtn.parentElement, null, 'assets 收敛')
-    assert.equal(inspirationBtn.parentElement, null, 'inspiration 收敛')
+    for (const btn of [workflowBtn, marketBtn, assetsBtn, inspirationBtn]) {
+      assert.equal(btn.parentElement, null, `${btn.id} 收敛，不挂入侧栏 DOM`)
+    }
   } finally {
     disposeWorkflow()
     disposeMarket()
@@ -596,7 +595,7 @@ test('activateExploreItem 中 item.action 返回非 false 时阻止后续 regist
   }
 })
 
-test('运行时注册接缝：未注册与内置 8 项完全一致，注册后追加末尾、注销即消失', async () => {
+test('运行时注册接缝：未注册与内置项完全一致，注册后追加末尾、注销即消失', async () => {
   setup()
   installSidebarGlobal()
   const api = SIDEBAR_GLOBAL()
