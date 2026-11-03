@@ -508,6 +508,43 @@ export const WORKFLOW_CSS = `
   font-size: 13px;
   color: var(--dsw-alias-label-secondary);
 }
+/* 加载态：单一细弧 + 一行说明。不得加底环、光晕或第二段动效。 */
+.omnimux-workflow-canvas-loading {
+  gap: 12px;
+  animation: omnimux-workflow-canvas-loading-fade 280ms ease-out both;
+}
+.omnimux-workflow-canvas-loading-spinner {
+  display: block;
+  width: 32px;
+  height: 32px;
+  transform-origin: center;
+  animation: omnimux-workflow-canvas-loading-spin 1.35s linear infinite;
+}
+.omnimux-workflow-canvas-loading-arc {
+  fill: none;
+  stroke: var(--dsw-alias-brand-purple, #cfc7ff);
+}
+.omnimux-workflow-canvas-loading-label {
+  font-size: 12.5px;
+  line-height: 1.4;
+  letter-spacing: .05em;
+  color: var(--dsw-alias-label-tertiary, #9aa0ae);
+}
+@keyframes omnimux-workflow-canvas-loading-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes omnimux-workflow-canvas-loading-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .omnimux-workflow-canvas-loading {
+    animation: none;
+  }
+  .omnimux-workflow-canvas-loading-spinner {
+    animation: none;
+  }
+}
 .omnimux-workflow-canvas-body {
   flex: 1;
   min-height: 0;

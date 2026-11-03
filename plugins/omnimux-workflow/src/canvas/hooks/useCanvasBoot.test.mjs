@@ -21,17 +21,36 @@ test('源码契约：无 workspaceId 不得 fallback list()[0]', () => {
   assert.match(bootSrc, /if \(!targetWorkspaceId\) return/);
 });
 
+test('源码契约：useCanvasBoot 并行加载偏好与工作区，probe 不阻塞 ready', () => {
+  const bootSrc = readFileSync(join(here, 'useCanvasBoot.ts'), 'utf8');
+  assert.match(bootSrc, /probeLocalFiles/);
+  assert.match(bootSrc, /applyLocalMediaProbe/);
+
+  // 偏好与工作区快照互不依赖：必须同批 Promise.all 发起，不得串行 await。
+  const parallelIdx = bootSrc.indexOf('await Promise.all([');
+  assert.ok(parallelIdx >= 0, '必须用 Promise.all 并行发起偏好与工作区加载');
+  const parallelEnd = bootSrc.indexOf(']);', parallelIdx);
+  assert.ok(parallelEnd > parallelIdx, 'Promise.all 调用需闭合');
+  const parallelBlock = bootSrc.slice(parallelIdx, parallelEnd);
+  assert.match(parallelBlock, /loadGenerationPreferences\(\)/);
+  assert.match(parallelBlock, /getWorkspace\(targetWorkspaceId\)/);
+  assert.doesNotMatch(bootSrc, /await loadGenerationPreferences\(\)/);
+  assert.doesNotMatch(bootSrc, /await getWorkspace\(targetWorkspaceId\)/);
+
+  // probe 是 ready 之后的补丁：hydrate → ready → 异步 probe，不得 await。
+  const hydrateIdx = bootSrc.indexOf('hydrateGraph(loaded.body.workspace.nodes');
+  const readyIdx = bootSrc.indexOf("setBoot({ phase: 'ready'");
+  assert.ok(hydrateIdx >= 0, 'missing hydrate');
+  assert.ok(readyIdx > hydrateIdx, 'hydrate 后才 setBoot ready');
+  const probeCallIdx = bootSrc.indexOf('probeAndPatchImportedMedia()', readyIdx);
+  assert.ok(probeCallIdx > readyIdx, 'ready 之后才发起本地文件探测');
+  assert.doesNotMatch(bootSrc, /await probeAndPatchImportedMedia\(\)/, 'probe 不得阻塞 ready');
+});
+
 test('源码契约：useCanvasBoot cleanup 里 beforeReset 在 resetStore() 之前', () => {
   const bootSrc = readFileSync(join(here, 'useCanvasBoot.ts'), 'utf8');
   assert.match(bootSrc, /beforeReset\?:/);
   assert.match(bootSrc, /return \{ boot, setBoot, catalog, nodeCount \}/);
-  assert.match(bootSrc, /probeLocalFiles/);
-  assert.match(bootSrc, /applyLocalMediaProbe/);
-  const hydrateIdx = bootSrc.indexOf("hydrateGraph(loaded.body.workspace.nodes");
-  const probeIdx = bootSrc.indexOf('await probeAndPatchImportedMedia()');
-  const readyIdx = bootSrc.indexOf("setBoot({ phase: 'ready'");
-  assert.ok(hydrateIdx >= 0 && probeIdx > hydrateIdx, 'hydrate 后才 probe');
-  assert.ok(readyIdx > probeIdx, 'probe 完成前不得 setBoot ready');
 
   const cleanupStart = bootSrc.indexOf('return () => {');
   assert.ok(cleanupStart >= 0, 'missing effect cleanup');

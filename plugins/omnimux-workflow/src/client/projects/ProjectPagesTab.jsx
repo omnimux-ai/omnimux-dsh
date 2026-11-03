@@ -1,8 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Button, IconButton, IconEditOutline16, IconTrashOutline16 } from 'dsh-ui-kit'
+import { Button, IconButton, IconEditOutline16, IconLoadingOutline16, IconTrashOutline16 } from 'dsh-ui-kit'
 import { ProjectCover } from './ProjectCover.jsx'
 
-function ProjectPageCard({ page, active, onOpenPage, onRenamePage, onDeletePage, t }) {
+/** 「打开中」遮罩：卡片打开期间盖住整张卡并吸收点击，阻止重复触发。 */
+const OPENING_MASK_STYLE = {
+  position: 'absolute',
+  inset: 0,
+  zIndex: 2,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '6px',
+  borderRadius: 'inherit',
+  background: 'var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.45))',
+  color: 'var(--dsw-alias-label-primary, #ffffff)',
+  fontSize: '13px',
+  fontWeight: 600,
+  cursor: 'progress',
+}
+
+function ProjectPageCard({ page, active, busy = false, onOpenPage, onRenamePage, onDeletePage, t }) {
   const [menu, setMenu] = useState(false)
   const root = useRef(null)
 
@@ -20,6 +37,11 @@ function ProjectPageCard({ page, active, onOpenPage, onRenamePage, onDeletePage,
         .replace(/\//g, '.')
     : '2026.9.10'
 
+  const requestOpen = () => {
+    if (busy) return
+    onOpenPage(page)
+  }
+
   const closeMenu = () => {
     setMenu(false)
     root.current?.querySelector('[aria-haspopup="menu"]')?.focus()
@@ -28,9 +50,10 @@ function ProjectPageCard({ page, active, onOpenPage, onRenamePage, onDeletePage,
   return (
     <div
       ref={root}
-      className={`omnimux-page-card omnimux-workflow-card ${active ? 'omnimux-page-card--active' : ''}`}
-      onClick={() => onOpenPage(page)}
-      title={`点击打开创作页：${page.title}`}
+      className={`omnimux-page-card omnimux-workflow-card ${active ? 'omnimux-page-card--active' : ''}${busy ? ' omnimux-page-card--opening' : ''}`}
+      onClick={requestOpen}
+      aria-busy={busy ? 'true' : undefined}
+      title={busy ? undefined : `点击打开创作页：${page.title}`}
     >
       {/* 卡片封面：首选真实缩略图/封面，无则展示优美占位图 */}
       <div className="omnimux-page-card-cover">
@@ -38,9 +61,10 @@ function ProjectPageCard({ page, active, onOpenPage, onRenamePage, onDeletePage,
           variant="ghost"
           className="omnimux-page-open"
           aria-label={`${t?.('projects.open') || '打开'} ${page.title}`}
+          disabled={busy}
           onClick={(event) => {
             event.stopPropagation()
-            onOpenPage(page)
+            requestOpen()
           }}
         >
           <ProjectCover cover={page.cover} />
@@ -56,6 +80,19 @@ function ProjectPageCard({ page, active, onOpenPage, onRenamePage, onDeletePage,
           <span className="omnimux-page-card-date">{dateStr}</span>
         </div>
       </div>
+
+      {/* 打开中遮罩：点击落到遮罩上即被吸收，避免重复发起打开 */}
+      {busy ? (
+        <div
+          className="omnimux-page-card-opening"
+          role="status"
+          style={OPENING_MASK_STYLE}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <IconLoadingOutline16 size={16} />
+          <span>{t?.('projects.opening') || '打开中'}</span>
+        </div>
+      ) : null}
 
       {/* 规范卡片更多操作入口（悬停露出，三点圆形按钮） */}
       <div
@@ -131,6 +168,7 @@ function ProjectPageCard({ page, active, onOpenPage, onRenamePage, onDeletePage,
 export function ProjectPagesTab({
   pages = [],
   activePageId,
+  openingPageId = null,
   onOpenPage,
   onRenamePage,
   onDeletePage,
@@ -149,6 +187,7 @@ export function ProjectPagesTab({
             key={page.id}
             page={page}
             active={page.id === activePageId}
+            busy={openingPageId !== null && page.id === openingPageId}
             onOpenPage={onOpenPage}
             onRenamePage={onRenamePage}
             onDeletePage={onDeletePage}

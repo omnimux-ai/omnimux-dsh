@@ -343,7 +343,7 @@ const en: Record<DictKey, string> = {
   'tool.video-to-audio': 'Video to Audio',
   'tool.voice-clone': 'Voice Clone',
   'tool.audio-extract': 'Audio Extract',
-  'app.loading': 'Loading workspace...',
+  'app.loading': 'Opening creation page',
   'app.retry': 'Retry',
   'app.nodes': 'nodes',
   'app.saveNow': 'Save now',

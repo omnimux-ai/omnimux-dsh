@@ -7,7 +7,7 @@
  *    - 创作页 Tab (N)：展示该工作区下的全部创作页卡片，支持直接打开画布、新建创作页、重命名与删除；
  *    - 项目资产 Tab (M)：工作区文件管理器，展示全部物理素材文件，支持新建文件夹与批量上传。
  */
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, ConfirmModal, Divider, FilterBar, IconPlusOutline16, ModalDialog, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { Info } from 'lucide-react'
 import {
@@ -134,6 +134,10 @@ export function ProjectLibraryPage(props) {
   const [query, setQuery] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  // 「打开创作页」的即时反馈：卡片「打开中」遮罩 + 重复点击拦截。
+  // ref 与 state 双轨：ref 在本次事件里同步生效（连点不会穿透），state 驱动渲染。
+  const [openingPageId, setOpeningPageId] = useState(null)
+  const openingRef = useRef(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [pendingDeletePage, setPendingDeletePage] = useState(null)
@@ -263,44 +267,54 @@ export function ProjectLibraryPage(props) {
   // 4. 打开某个具体的创作页并呼出画布
   const handleOpenPage = async (page) => {
     if (!selectedProject) return
-    dismissProductStage()
+    // 打开期间（含会话创建、画布 tab 打开）重复点击直接忽略，避免并发打开。
+    if (openingRef.current) return
+    openingRef.current = true
+    setOpeningPageId(page?.id ?? null)
+    try {
+      dismissProductStage()
 
-    const canvasWorkspaceId = page?.canvasWorkspaceId
-    let sessionId = selectedProject.sessionId
-    // 将选中的创作页设置为当前活跃页
-    if (canvasWorkspaceId && typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem('omnimux:latest-active-canvas', canvasWorkspaceId)
-      } catch {}
-    }
-    void updateProjectPage(selectedProject.id, page.id, { active: true }).catch(() => {})
+      const canvasWorkspaceId = page?.canvasWorkspaceId
+      let sessionId = selectedProject.sessionId
+      // 将选中的创作页设置为当前活跃页
+      if (canvasWorkspaceId && typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('omnimux:latest-active-canvas', canvasWorkspaceId)
+        } catch {}
+      }
+      void updateProjectPage(selectedProject.id, page.id, { active: true }).catch(() => {})
 
-    if (!sessionId && sessions && typeof sessions.create === 'function') {
-      try {
-        const created = await createProjectSession(sessions, workspaces, selectedProject.path || selectedProject.title)
-        sessionId = created?.id
-        if (sessionId) {
-          void bindProjectSession(selectedProject.id, sessionId)
+      if (!sessionId && sessions && typeof sessions.create === 'function') {
+        try {
+          const created = await createProjectSession(sessions, workspaces, selectedProject.path || selectedProject.title)
+          sessionId = created?.id
+          if (sessionId) {
+            void bindProjectSession(selectedProject.id, sessionId)
+          }
+        } catch (e) {
+          console.error('[omnimux-workflow] failed to create project session', e)
         }
-      } catch (e) {
-        console.error('[omnimux-workflow] failed to create project session', e)
       }
-    }
-    if (sessionId && sessions && typeof sessions.open === 'function') {
-      try { sessions.open(sessionId) } catch {}
-    }
+      if (sessionId && sessions && typeof sessions.open === 'function') {
+        try { sessions.open(sessionId) } catch {}
+      }
 
-    await activateProjectCanvas(
-      { layout, betterSidebar, t },
-      {
-        sessionId,
-        projectId: selectedProject.id,
-        cwd: selectedProject.path,
-        title: page.title || selectedProject.title,
-        pageId: page.id,
-        canvasWorkspaceId,
-      }
-    )
+      await activateProjectCanvas(
+        { layout, betterSidebar, t },
+        {
+          sessionId,
+          projectId: selectedProject.id,
+          cwd: selectedProject.path,
+          title: page.title || selectedProject.title,
+          pageId: page.id,
+          canvasWorkspaceId,
+        }
+      )
+    } finally {
+      // 打开结束或失败都要复位，避免卡片停在「打开中」。
+      openingRef.current = false
+      setOpeningPageId(null)
+    }
   }
 
   // 4b. 点击 AI 应用卡片 → 右侧栏应用标签页。宿主在原生 surface 下通过 meta.appId 传递应用身份。
@@ -663,6 +677,7 @@ export function ProjectLibraryPage(props) {
             <ProjectPagesTab
               pages={currentProjectPages}
               activePageId={projectDetail?.activePageId}
+              openingPageId={openingPageId}
               onOpenPage={handleOpenPage}
               onCreatePage={handleCreatePageInProject}
               onRenamePage={handleRenamePage}

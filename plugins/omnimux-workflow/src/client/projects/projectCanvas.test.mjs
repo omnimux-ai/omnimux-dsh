@@ -767,6 +767,125 @@ describe('projectCanvas isolation', () => {
       bindBetterSidebar(null)
     }
   })
+
+  it('activateProjectCanvas 先 openTab，会话未对齐时不阻塞且不把 meta 写到当前会话', async () => {
+    const previous = globalThis.window
+    const previousCustomEvent = globalThis.CustomEvent
+    const opened = []
+    const updated = []
+    const events = []
+    class MockCustomEvent {
+      constructor(name, init) {
+        this.name = name
+        this.type = name
+        this.detail = init?.detail
+      }
+    }
+    globalThis.CustomEvent = MockCustomEvent
+    globalThis.window = {
+      CustomEvent: MockCustomEvent,
+      dispatchEvent(event) { events.push(event); return true },
+    }
+    try {
+      const service = {
+        getTab(id) { return id === CANVAS_TAB_ID ? { id } : undefined },
+        getSnapshot() {
+          return { sessionId: 'sess-foreground', state: { splits: { kind: 'leaf', tabs: [] } } }
+        },
+        openTab(seed, scope) { opened.push({ seed, scope }) },
+        updateTab(tabId, data) { updated.push({ tabId, data }) },
+      }
+      const started = Date.now()
+      const ok = await activateProjectCanvas({
+        betterSidebar: service,
+        t: (key) => key,
+      }, {
+        sessionId: 'sess-target',
+        cwd: '/tmp/ws',
+        canvasWorkspaceId: 'ws_target',
+        timeoutMs: 0,
+        alignmentTimeoutMs: 0,
+      })
+
+      assert.equal(ok, true)
+      assert.ok(Date.now() - started < 200, 'openTab 之前不得有合计超过 200ms 的串行等待')
+      assert.equal(opened.length, 1, 'openTab 必须发生在会话对齐之前')
+      assert.equal(opened[0].scope.sessionId, 'sess-target', 'tab 必须带目标会话 scope，不得降级到当前会话')
+      assert.equal(opened[0].seed.meta.canvasSessionId, 'sess-target')
+      assert.equal(updated.length, 0, '会话未对齐时不得把 meta 写进当前会话')
+      assert.equal(events.length, 0, '会话未对齐时不得广播')
+
+      // 对齐超时后同样保持：tab 仍绑定目标会话，不重开、不写别的会话。
+      await new Promise((resolve) => { setTimeout(resolve, 20) })
+      assert.equal(opened.length, 1)
+      assert.equal(updated.length, 0)
+      assert.equal(events.length, 0)
+    } finally {
+      globalThis.CustomEvent = previousCustomEvent
+      if (previous === undefined) delete globalThis.window
+      else globalThis.window = previous
+    }
+  })
+
+  it('activateProjectCanvas 在 openTab 之后异步对齐会话，对齐成功才补 meta 与广播', async () => {
+    const previous = globalThis.window
+    const previousCustomEvent = globalThis.CustomEvent
+    const order = []
+    const opened = []
+    const updated = []
+    const events = []
+    class MockCustomEvent {
+      constructor(name, init) {
+        this.name = name
+        this.type = name
+        this.detail = init?.detail
+      }
+    }
+    globalThis.CustomEvent = MockCustomEvent
+    globalThis.window = {
+      CustomEvent: MockCustomEvent,
+      dispatchEvent(event) { events.push(event); return true },
+    }
+    let currentSessionId = 'sess-background'
+    const service = {
+      getTab(id) { return id === CANVAS_TAB_ID ? { id } : undefined },
+      getSnapshot() { return { sessionId: currentSessionId, state: { splits: { kind: 'leaf', tabs: [] } } } },
+      openTab(seed, scope) { order.push('openTab'); opened.push({ seed, scope }) },
+      updateTab(tabId, data) { order.push('updateTab'); updated.push({ tabId, data }) },
+    }
+    const flip = setTimeout(() => { currentSessionId = 'sess-target' }, 30)
+    try {
+      const ok = await activateProjectCanvas({
+        betterSidebar: service,
+        t: (key) => key,
+      }, {
+        sessionId: 'sess-target',
+        cwd: '/tmp/ws',
+        canvasWorkspaceId: 'ws_target',
+        alignmentTimeoutMs: 1000,
+      })
+
+      assert.equal(ok, true)
+      assert.deepEqual(order, ['openTab'], '返回时不得被会话对齐阻塞')
+      assert.equal(events.length, 0)
+
+      await new Promise((resolve) => { setTimeout(resolve, 500) })
+      assert.deepEqual(order, ['openTab', 'openTab', 'updateTab'], '对齐后补一次带 scope 的 openTab，再写 meta')
+      assert.equal(opened.length, 2)
+      assert.equal(opened[1].scope.sessionId, 'sess-target')
+      assert.equal(updated.length, 1)
+      assert.equal(updated[0].data.meta.canvasWorkspaceId, 'ws_target')
+      assert.equal(updated[0].data.meta.canvasSessionId, 'sess-target')
+      assert.equal(events.length, 1)
+      assert.equal(events[0].detail.workspaceId, 'ws_target')
+      assert.equal(events[0].detail.sessionId, 'sess-target')
+    } finally {
+      clearTimeout(flip)
+      globalThis.CustomEvent = previousCustomEvent
+      if (previous === undefined) delete globalThis.window
+      else globalThis.window = previous
+    }
+  })
 })
 
 describe('空会话打开应用自动全屏', () => {

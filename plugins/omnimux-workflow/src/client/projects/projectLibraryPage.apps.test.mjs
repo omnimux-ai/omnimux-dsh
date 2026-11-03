@@ -44,7 +44,9 @@ exports.pickLocalFiles = async () => ({ ok: false, body: { paths: [] } })
 `
 
 const NEW_PROJECT_STUB = `
-exports.createProjectSession = async () => ({ id: 'sess-1' })
+exports.createProjectSession = (...args) => globalThis.__testCreateProjectSession
+  ? globalThis.__testCreateProjectSession(...args)
+  : Promise.resolve({ id: 'sess-1' })
 exports.dismissProductStage = () => {}
 exports.runNewProject = async () => ({ ok: true })
 `
@@ -95,7 +97,7 @@ const appRow = (appId, name, createdAt, binding = {}) => ({
   workflowBinding: { workspaceId: `ws_${appId}`, nodes: [], edges: [], ...binding },
 })
 
-async function mountPage({ sidebar = null, t = (key) => zh[key] || key } = {}) {
+async function mountPage({ sidebar = null, t = (key) => zh[key] || key, projects = [] } = {}) {
   const { JSDOM } = require('jsdom')
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', { pretendToBeVisual: true, url: 'http://localhost/' })
   const defineGlobal = (name, value) => Object.defineProperty(globalThis, name, { value, writable: true, configurable: true })
@@ -110,7 +112,7 @@ async function mountPage({ sidebar = null, t = (key) => zh[key] || key } = {}) {
   defineGlobal('KeyboardEvent', dom.window.KeyboardEvent)
   defineGlobal('PointerEvent', dom.window.PointerEvent || dom.window.MouseEvent)
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
-  globalThis.__testProjects = []
+  globalThis.__testProjects = projects
   if (sidebar) dom.window.__omnimuxBetterSidebar = sidebar
 
   const { ProjectLibraryPage } = await loadPage()
@@ -562,6 +564,81 @@ test('内置清单非 2xx 也是错误：不渲染任何内置卡片', async () 
     assert.match(page.container.textContent, /还没有 AI 应用/, '两边都空时仍给真空态')
   } finally {
     fetchStub.restore()
+    await page.teardown()
+  }
+})
+
+// ── 创作页打开链路：点击即时反馈 + 重复点击拦截 ─────────────────────────────
+
+test('点创作页卡片：打开期间显示「打开中」并忽略重复点击，结束后复位可再次打开', async () => {
+  const projects = [{
+    id: 'proj_open',
+    title: '项目一',
+    path: '/tmp/proj_open',
+    canvasWorkspaceIds: ['ws_page_open'],
+    pages: [{ id: 'page_open', title: '创作页 1', canvasWorkspaceId: 'ws_page_open', createdAt: '2026-09-10T00:00:00.000Z' }],
+  }]
+  const pendingSessions = []
+  globalThis.__testCreateProjectSession = () => new Promise((resolve) => { pendingSessions.push(resolve) })
+  const previousIntersectionObserver = globalThis.IntersectionObserver
+  globalThis.IntersectionObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  const opened = []
+  const sidebar = {
+    getTab: (id) => ({ id }),
+    getSnapshot: () => ({
+      sessionId: 'sess_open',
+      state: { splits: { kind: 'leaf', tabs: [] }, bottomSplits: { kind: 'leaf', tabs: [] } },
+    }),
+    openTab: (seed, scope) => opened.push({ seed, scope }),
+    updateTab() {},
+    closeTab() {},
+  }
+  const page = await mountPage({ sidebar, t: () => undefined, projects })
+  try {
+    const folderOpen = page.container.querySelector('.omnimux-folder-open')
+    assert.ok(folderOpen, '项目文件夹卡片必须可打开')
+    await page.act(async () => { folderOpen.click() })
+    await page.act(async () => { await new Promise((resolve) => { setTimeout(resolve, 0) }) })
+    assert.ok(page.container.querySelector('.omnimux-page-card'), '项目详情必须展示创作页卡片')
+
+    // 会话创建卡住期间：打开中遮罩出现，且同一帧的第二次点击被同步闸门拦下
+    await page.act(async () => {
+      const card = page.container.querySelector('.omnimux-page-card')
+      card.click()
+      card.click()
+    })
+    assert.equal(pendingSessions.length, 1, '重复点击不得发起第二次打开')
+    const mask = page.container.querySelector('.omnimux-page-card-opening')
+    assert.ok(mask, '打开期间必须显示「打开中」遮罩')
+    assert.match(mask.textContent, /打开中/)
+    assert.equal(opened.length, 0, '会话未就绪前不得先开画布 tab')
+
+    // 会话就绪 → 画布 tab 打开且遮罩复位
+    await page.act(async () => {
+      pendingSessions[0]({ id: 'sess_open' })
+      await new Promise((resolve) => { setTimeout(resolve, 0) })
+    })
+    assert.equal(page.container.querySelector('.omnimux-page-card-opening'), null, '打开结束必须复位「打开中」')
+    assert.equal(opened.length, 1)
+    assert.equal(opened[0].seed.id, 'omnimux-workflow:canvas')
+    assert.equal(opened[0].scope.sessionId, 'sess_open')
+
+    // 复位后可以再次打开
+    await page.act(async () => { page.container.querySelector('.omnimux-page-card').click() })
+    assert.equal(pendingSessions.length, 2, '复位后必须能再次打开')
+    await page.act(async () => {
+      pendingSessions[1]({ id: 'sess_open' })
+      await new Promise((resolve) => { setTimeout(resolve, 0) })
+    })
+    assert.equal(opened.length, 2)
+  } finally {
+    delete globalThis.__testCreateProjectSession
+    if (previousIntersectionObserver === undefined) delete globalThis.IntersectionObserver
+    else globalThis.IntersectionObserver = previousIntersectionObserver
     await page.teardown()
   }
 })

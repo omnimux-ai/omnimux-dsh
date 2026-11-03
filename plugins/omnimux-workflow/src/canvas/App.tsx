@@ -103,10 +103,31 @@ const App: React.FC<CanvasAppProps> = ({ locale, workspaceId: propWorkspaceId, f
   });
 
   if (boot.phase === 'loading') {
+    // 与宿主 CanvasBridge 加载态同构：一道 1.6px 细弧 + 一行说明，单一动效。
+    // 两棵 React 树只共享视觉契约（DOM 结构 + CSS），不共享组件。
     return (
       <div className="wf-canvas-root">
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--wb-text-muted)' }}>
-          {t('app.loading')}
+        <div className="wf-canvas-boot-status" role="status" aria-live="polite">
+          <svg
+            className="wf-canvas-boot-spinner"
+            viewBox="0 0 32 32"
+            width="32"
+            height="32"
+            fill="none"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <circle
+              className="wf-canvas-boot-spinner__arc"
+              cx="16"
+              cy="16"
+              r="14"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeDasharray="24 64"
+            />
+          </svg>
+          <span className="wf-canvas-boot-status__label">{t('app.loading')}</span>
         </div>
       </div>
     );

@@ -1299,6 +1299,25 @@ export function AppTab(props) {
     }
   }, [manifest, isRestoring, showTemporaryNotice])
 
+  // 「编辑」「创建副本」的落点是应用所属会话的画布。不先切会话，better-sidebar
+  // 会把 openTab 排队到非前台会话：当前会话毫无变化，调用方却弹成功提示（P1-2）。
+  // 返回 false = 缺会话切换能力或切换抛错，由调用方走失败降级，绝不静默成功。
+  // 目标没有 sessionId 时无需切换，直接放行（画布落在当前会话）。
+  const focusAppSession = useCallback((sessionId) => {
+    if (!sessionId) return true
+    let sessions = props?.sessions
+    if (!sessions) {
+      try { sessions = props?.ctx?.sessions } catch { sessions = null }
+    }
+    if (typeof sessions?.open !== 'function') return false
+    try {
+      sessions.open(sessionId)
+      return true
+    } catch {
+      return false
+    }
+  }, [props?.sessions, props?.ctx])
+
   // 点击「编辑应用」：根据应用归属自适应分诊
   // 同一个用户的应用直接打开所属项目画布定位工作流组；不同用户/官方预设应用则弹出「创建副本」确认窗
   const handleEditApp = useCallback(async () => {
@@ -1324,6 +1343,12 @@ export function AppTab(props) {
         const project = resolveOwningProject(projects, target)
         const canvasWorkspaceId = target.workspaceId || project?.canvasWorkspaceIds?.[0]
 
+        // 先把会话切到前台，再激活画布；切换失败直接降级，不弹「已进入画布」。
+        if (!focusAppSession(project?.sessionId)) {
+          showTemporaryNotice({ type: 'error', text: '无法切换到应用所属会话，请重试。' })
+          return
+        }
+
         if (canvasWorkspaceId && typeof localStorage !== 'undefined') {
           localStorage.setItem('omnimux:latest-active-canvas', canvasWorkspaceId)
         }
@@ -1335,7 +1360,7 @@ export function AppTab(props) {
 
         const opened = await activateProjectCanvas(
           { betterSidebar: getBetterSidebar(props?.ctx) },
-    { sessionId: project?.sessionId, focusGroupId: target.groupId },
+          { sessionId: project?.sessionId, focusGroupId: target.groupId },
         )
         if (opened) {
           showTemporaryNotice({ type: 'success', text: '已进入应用源画布，可直接编辑与调试。' })
@@ -1370,7 +1395,7 @@ export function AppTab(props) {
     } finally {
       setIsEditing(false)
     }
-  }, [manifest, isEditing, props?.ctx, showTemporaryNotice])
+  }, [manifest, isEditing, props?.ctx, showTemporaryNotice, focusAppSession])
 
   // 处理弹窗提交创建副本
   const handleForkSubmit = useCallback(async ({ mode, title, projectRoot }) => {
@@ -1385,19 +1410,24 @@ export function AppTab(props) {
         projectRoot,
       })
 
-      if (workspaceId && typeof localStorage !== 'undefined') {
+      // 副本已落库，但画布只在所属会话可见：先切会话，失败就明确降级，不弹成功提示。
+      const sessionReady = focusAppSession(project?.sessionId)
+
+      if (sessionReady && workspaceId && typeof localStorage !== 'undefined') {
         localStorage.setItem('omnimux:latest-active-canvas', workspaceId)
       }
-      if (workspaceId && typeof window !== 'undefined') {
+      if (sessionReady && workspaceId && typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
           detail: { workspaceId },
         }))
       }
 
-      const opened = await activateProjectCanvas(
-        { betterSidebar: getBetterSidebar(props?.ctx) },
-    { sessionId: project?.sessionId, focusGroupId: groupId },
-      )
+      const opened = sessionReady
+        ? await activateProjectCanvas(
+          { betterSidebar: getBetterSidebar(props?.ctx) },
+          { sessionId: project?.sessionId, focusGroupId: groupId },
+        )
+        : false
       setForkDialogOpen(false)
       if (opened) {
         showTemporaryNotice({
@@ -1406,15 +1436,17 @@ export function AppTab(props) {
             ? `已在当前项目新建创作页「${title}」。`
             : `已为你创建「${title}」工程副本，编辑后可随时重新打包发布。`,
         })
-      } else {
+      } else if (sessionReady) {
         showTemporaryNotice({ type: 'error', text: '副本已创建，打开画布失败，请在项目库查看。' })
+      } else {
+        showTemporaryNotice({ type: 'error', text: '副本已创建，但无法切换到所属会话，请到项目库查看。' })
       }
     } catch (err) {
       setForkError(friendlyForkError(err?.message, '创建副本失败，请重试。'))
     } finally {
       setForkBusy(false)
     }
-  }, [manifest, forkContext, props?.ctx, showTemporaryNotice])
+  }, [manifest, forkContext, props?.ctx, showTemporaryNotice, focusAppSession])
 
   if (!manifest) {
     return (

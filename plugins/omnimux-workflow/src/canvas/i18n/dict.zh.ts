@@ -362,7 +362,7 @@ const zh = {
   'tool.voice-clone': '声音克隆',
   'tool.audio-extract': '音频提取',
   // 应用壳（app.*：加载/头部/自动保存/冲突条）
-  'app.loading': '正在加载工作区…',
+  'app.loading': '正在打开创作页',
   'app.retry': '重试',
   'app.nodes': '节点',
   'app.saveNow': '立即保存',
