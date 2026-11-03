@@ -15,7 +15,7 @@ import type { BridgeState } from '../background/bridge.ts'
 import type { AffinityTab, TabAffinityDecision, TabAffinityState } from '../background/tab-affinity.ts'
 import { connectPanel, PanelRpcError, type PanelApi, type PanelSettings } from './api.ts'
 import { renderMarkdown } from './markdown.ts'
-import whaleUrl from '../../assets/icons/deepseek-256.png'
+import omnimuxUrl from '../../assets/icons/omnimux-256.png'
 import type { PageSceneInfo } from './components/SceneBadge.tsx'
 import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSnifferBar.tsx'
 import { PresetChips } from './components/PresetChips.tsx'
@@ -3928,7 +3928,7 @@ export function App(): React.JSX.Element {
         )}
         {rows.map((row) => (
           <div key={row.seq} className={`row ${row.kind}${landedSeq === row.seq ? ' landed-flash' : ''}`} {...(row.turn === undefined ? {} : { 'data-turn': row.turn })}>
-            {row.kind === 'assistant' && <span className="assistant-avatar"><img src={whaleUrl} alt={copy.app.assistant} /></span>}
+            {row.kind === 'assistant' && <span className="assistant-avatar"><img src={omnimuxUrl} alt={copy.app.assistant} /></span>}
             {row.kind === 'tool'
               ? <ToolActivity row={row} copy={copy} />
               : <MessageBody row={row} sessionId={sessionRef.current ?? ''} api={api} copy={copy} locale={locale} onFillDraft={handleFillDraft} />}
@@ -3936,13 +3936,13 @@ export function App(): React.JSX.Element {
         ))}
         {streamRow !== null && (
           <div className="row assistant" aria-live="polite">
-            <span className="assistant-avatar"><img src={whaleUrl} alt={copy.app.assistant} /></span>
+            <span className="assistant-avatar"><img src={omnimuxUrl} alt={copy.app.assistant} /></span>
             <MessageBody row={streamRow} sessionId={sessionRef.current ?? ''} api={api} copy={copy} locale={locale} onFillDraft={handleFillDraft} />
           </div>
         )}
         {working && streamRow === null && question === null && rows[rows.length - 1]?.status !== 'running' && (
           <div className="ai-progress" role="status" aria-label={copy.app.assistantWorking}>
-            <span className="assistant-avatar"><img src={whaleUrl} alt="" /></span>
+            <span className="assistant-avatar"><img src={omnimuxUrl} alt="" /></span>
             <span className="progress-dots" aria-hidden="true"><i /><i /><i /></span>
             <span>{rows[rows.length - 1]?.kind === 'tool' ? copy.app.organizingResults : copy.app.thinking}</span>
           </div>
