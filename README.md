@@ -1,8 +1,8 @@
 # OmniMux
 
 <p align="center">
-  <strong>角色生成与视频复刻</strong><br>
-  <sub>用文字或照片建立角色，结合参考视频制作角色视频</sub>
+  <strong>属于你的内容电商团队</strong><br>
+  <sub>一套内容电商系统，让商品卖点贯穿每一次出片。用你熟悉的 Agent，一站式搞定广告、电商与种草视频</sub>
 </p>
 
 <p align="center">
@@ -24,11 +24,11 @@
 
 ## 简介
 
-**OmniMux 聚焦角色生成与视频复刻。** 从文字描述或有权使用的照片建立角色，结合参考视频制作角色视频，核心创作能力为生图与生视频。现行定位与表述边界见[产品定位](docs/contracts/product-positioning.md)。
+**OmniMux 是属于你的内容电商团队——一套面向内容电商与跨境卖家的 AI 内容电商系统，让商品卖点贯穿每一次出片。** 本仓是基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的桌面端核心插件工程。现行定位与表述边界见[产品定位](docs/contracts/product-positioning.md)。
 
-本仓是基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的桌面插件工程，不是官网工作台源码。官网的角色创建旅程不等于本仓已经逐项完成；实际能力须核对[能力记录](docs/capabilities.md)、当前代码及对应版本证据。
+围绕「对标 → 拆解 → 制作 → 发布 → 复盘」内容电商链路，本仓提供执行中枢（`omnimux`，统一身份、模型路由与多模态生图/生视频/文本理解/语音执行），以及商品库（`omnimux-products`，管理商品卖点、受众与素材）、资产库（`omnimux-assets`，含可复用 AI 角色、多角度设定图、场景、风格与道具）、灵感库（`omnimux-inspiration`，爆款收藏与结构拆解）、无限画布（`omnimux-workflow`，可视化节点编排）、剪辑工坊（`omnimux-clip`，基于 OpenReel 的时间轴剪辑）、账号与发布中心（`omnimux-accounts` / `omnimux-publish`，海外平台排期与发布跟踪）、数据复盘（`omnimux-analytics`）与技能市场（`omnimux-market`）等工作台插件。角色生成与参考视频复刻是其中的核心创作能力主线之一，与商品带货视频生产、画布编排和排期发布协同构成完整工作流。
 
-灵感、素材、画布与必要剪辑服务于角色视频成片。多账号矩阵、自动排期和独立运营分析不是默认产品主线；不承诺固定降本比例、零抽成或素材始终只留本地。
+官网展示的工作台旅程不等于所有功能均已全量完成；实际可用性须核对[能力记录](docs/capabilities.md)、[插件生命周期清单](plugins/omnimux/src/plugin-lifecycle.json)与当前版本证据。不承诺保证爆款、保证销量、防封号、零抽成、永久 100% 角色一致，或尚未实现的国内平台（抖音/小红书/视频号/快手/B站）自动分发、实时趋势抓取、独立封面生成与发布前自动预检。
 
 ## AI 应用：历史目标与审计边界
 
@@ -50,7 +50,7 @@
 
 | 需要了解什么 | 入口 |
 | --- | --- |
-| 当前产品方向与宣传边界 | [产品定位](docs/contracts/product-positioning.md) |
+| 当前产品方向与宣传边界 | [产品定位：属于你的内容电商团队](docs/contracts/product-positioning.md) |
 | 角色视频制作的目标与验收 | [角色生成与视频复刻指南](docs/guides/ecommerce-video-replication.md) |
 | 开发文档与适用合同 | [文档导航](docs/README.md)、[智能体约束](AGENTS.md) |
 | 灵感库合集整理与能力状态 | [灵感插件说明](plugins/omnimux-inspiration/README.md#本地灵感合集)、[能力记录](docs/capabilities.md) |
@@ -71,7 +71,7 @@ OmniMux 自行编写的插件代码采用 **[AGPL-3.0](LICENSE)**，另附 [NOTI
 
 从上游 fork 或引入的代码保留原许可（多为 MIT），见 [CONTRIBUTING.md](CONTRIBUTING.md) 第 4 节与 [ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md)。2026-10-28 之前发布的版本按其发布时的许可证授权。许可不等于生成免费，详见 [COMMERCIAL.md](COMMERCIAL.md)。
 
-统一源码公开仓：[omnimux-ai/omnimux-ai](https://github.com/omnimux-ai/omnimux-ai)（`plugins/` 将收录本仓源码）。
+三端公开源码仓（AGPL-3.0）：插件仓 [omnimux-ai/omnimux-dsh](https://github.com/omnimux-ai/omnimux-dsh)（本仓）、桌面端 [omnimux-ai/omnimux-desktop](https://github.com/omnimux-ai/omnimux-desktop)、网关 [omnimux-ai/omnimux-gateway](https://github.com/omnimux-ai/omnimux-gateway)，以及统一源码汇总仓 [omnimux-ai/omnimux-ai](https://github.com/omnimux-ai/omnimux-ai)。
 
 ## 🚀 快速启动 (Quickstart)
 
