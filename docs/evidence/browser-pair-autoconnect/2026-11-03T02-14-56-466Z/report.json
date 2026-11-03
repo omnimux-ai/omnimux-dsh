@@ -1,0 +1,102 @@
+{
+  "pass": true,
+  "runId": "2026-11-03T02-14-56-466Z",
+  "checks": {
+    "bridgeHelloAt": "2026-11-03T02:14:58.927Z",
+    "initialConnected": true,
+    "evictedShowsPairCard": {
+      "pairCardVisible": true,
+      "pairDisabled": false,
+      "pairMessage": null,
+      "bodyText": "新会话\n连接本机 OmniMux\n自动"
+    },
+    "pairCardAfterClick": {
+      "pairCardVisible": true,
+      "pairDisabled": true,
+      "pairMessage": "等待授权… 授权码 0220DZ",
+      "bodyText": "新会话\n连接本机 OmniMux\n等待授权… 授权码 0220DZ\n自动"
+    },
+    "approvalUrl": "http://127.0.0.1:63684/ext/pair?request=req-mw0220dz",
+    "connectedAfterApproval": true,
+    "storedSettings": {
+      "approvalNotifications": true,
+      "autoResumeSession": true,
+      "bridgeUrl": "ws://127.0.0.1:63684/ext/bridge",
+      "sharePageContent": "auto",
+      "textEffort": "",
+      "textModel": "",
+      "textProvider": "",
+      "token": "pair-live-evidence-token-0123456789",
+      "trustedActionOrigins": [],
+      "unrestrictedBrowserAccess": false
+    },
+    "settingsForm": [
+      {
+        "type": "text",
+        "value": "ws://127.0.0.1:63684/ext/bridge"
+      },
+      {
+        "type": "password",
+        "value": "pair-live-evidence-token-0123456789"
+      },
+      {
+        "type": "checkbox",
+        "value": "on"
+      },
+      {
+        "type": "checkbox",
+        "value": "on"
+      },
+      {
+        "type": "checkbox",
+        "value": "on"
+      },
+      {
+        "type": "text",
+        "value": ""
+      },
+      {
+        "type": "checkbox",
+        "value": "on"
+      },
+      {
+        "type": "checkbox",
+        "value": "on"
+      },
+      {
+        "type": "checkbox",
+        "value": "on"
+      },
+      {
+        "type": "checkbox",
+        "value": "on"
+      },
+      {
+        "type": "text",
+        "value": ""
+      }
+    ],
+    "settingsBackfilled": {
+      "addressFilled": true,
+      "tokenFilled": true
+    },
+    "pairCardAfterReload": {
+      "pairCardVisible": true,
+      "pairDisabled": false,
+      "pairMessage": null,
+      "bodyText": "新会话\nWeb\n配对浏览器插件\n保存到灵感库\n核心要点提炼\n观点驳论与盲点\n精炼中英双语对照\n连接本机 OmniMux\n自动"
+    }
+  },
+  "shots": [
+    "01-connected-before-eviction.png",
+    "02-evicted-pair-card.png",
+    "03-waiting-for-approval.png",
+    "04-approval-page.png",
+    "05-connected-after-approval.png",
+    "06-settings-backfilled.png",
+    "07-pair-card-recoverable.png"
+  ],
+  "errors": [],
+  "port": 63684,
+  "extensionId": "fnphcnohhmdjbmmhogoibbgiifljalfp"
+}
