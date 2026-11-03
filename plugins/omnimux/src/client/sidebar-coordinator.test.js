@@ -353,7 +353,7 @@ test('Alpha entries are excluded from sidebar placement while retaining source r
   for (const { dispose } of rows) dispose()
 })
 
-test('desktop 外壳包住内层 pane 时仍把 extra row 插在新对话下方', async () => {
+test('desktop 外壳包住内层 pane 时 assets 收敛不挂 DOM', async () => {
   setup(`<!doctype html><html><body>
     <div class="dshDesktopSidebarSurface">
       <div class="dshDesktopUpstreamSidebar">
@@ -375,10 +375,8 @@ test('desktop 外壳包住内层 pane 时仍把 extra row 插在新对话下方'
   const dispose = api.register({ id: 'omnimux-assets-entry', rank: 6, create: () => belowBtn })
   try {
     const pane = document.querySelector('[data-pane="sidebar"]')
-    const sessionBtn = pane.querySelector('.newSession')
-    assert.equal(belowBtn.parentElement, pane, 'assets 必须插在 inner pane')
-    assert.equal(belowBtn.previousElementSibling, sessionBtn, 'rank 6 assets 行排在新会话后')
-    assert.equal(belowBtn.nextElementSibling?.className, 'workspace', 'assets 行落在工作区之前')
+    // PINNED_ENTRY_PREFIXES 为空：assets 收敛，不挂入侧栏 DOM
+    assert.equal(belowBtn.parentElement, null, 'assets 收敛，不挂入侧栏 DOM')
     assert.equal(pane.querySelector('[data-omnimux-explore-entry]'), null, '探索行已退役')
   } finally {
     dispose()
@@ -515,13 +513,13 @@ test('激活委托：命中已注册收敛元素时优先其 click，未注册�
   try {
     api.place()
     // PINNED_ENTRY_PREFIXES 为空：所有 omnimux-* 均收敛，clip 收敛后点击走 element.click
-    const clipItem = { id: 'clip', entryId: 'omnimux-clip-entry', label: '视频剪辑', iconSvg: '' }
+    const clipItem = { id: 'clip', entryId: 'omnimux-clip-entry', label: '视频剪辑', iconSvg: '', tabId: 'omnimux-clip:studio' }
     activateExploreItem(clipItem)
     assert.equal(clipClicks, 1, '优先触发已注册收敛元素的 click 处理器')
     assert.equal(wbOpenedTab, null, '命中已注册条目时不得回落到 window.__omnimuxWorkbench.open')
 
     // 未注册实际元素的项：fallback 到 window.__omnimuxWorkbench.open
-    const analyticsItem = { id: 'analytics', entryId: 'omnimux-analytics-entry', label: '数据分析', iconSvg: '' }
+    const analyticsItem = { id: 'analytics', entryId: 'omnimux-analytics-entry', label: '数据分析', iconSvg: '', tabId: 'omnimux-analytics:library' }
     activateExploreItem(analyticsItem)
     assert.equal(wbOpenedTab?.tabId, 'omnimux-analytics:library')
     assert.equal(wbOpenedTab?.title, '数据分析')

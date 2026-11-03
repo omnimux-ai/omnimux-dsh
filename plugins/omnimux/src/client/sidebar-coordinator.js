@@ -169,15 +169,30 @@ const INLINE_STYLES = `
 export const EXPLORE_MENU_ITEMS = [
   {
     id: 'apps',
-    label: '应用',
-    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>',
+    pluginId: 'omnimux-apps',
     entryId: 'omnimux-apps-entry',
+    label: '应用',
+    tabId: 'omnimux:apps',
+    action: (converged) => {
+      const el = converged.get('omnimux-apps-entry')?.element
+      if (el && typeof el.click === 'function') {
+        el.click()
+        return true
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('omnimux-app-open', { detail: { id: 'apps' } }))
+      }
+      return true
+    },
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="1.5" y="1.5" width="5" height="5" rx="1"/><rect x="9.5" y="1.5" width="5" height="5" rx="1"/><rect x="1.5" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/></svg>',
   },
   {
     id: 'clip',
-    label: '视频剪辑',
-    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="1" y="3" width="10" height="10" rx="1.5"/><polygon points="11 5 15 3 15 13 11 11" fill="currentColor"/></svg>',
+    pluginId: 'omnimux-clip',
     entryId: 'omnimux-clip-entry',
+    label: '视频剪辑',
+    tabId: 'omnimux-clip:studio',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="1.75" y="3.25" width="12.5" height="9.5" rx="1.75"/><path d="M6.4 5.6v4.8L10.6 8 6.4 5.6Z" fill="currentColor" stroke="none"/></svg>',
   },
 ]
 

@@ -402,17 +402,17 @@ describe('官方「更多」菜单运行时注册接缝', () => {
       assert.equal(typeof unregister, 'function', '注册返回注销函数')
 
       await menu.render()
-      assert.equal(menu.rows.length, 9, '注册后 9 行')
+      assert.equal(menu.rows.length, TRUTH.length + 1, '注册后追加一行')
       const labels = Array.from(menu.rows, (row) => row.children)
       assert.equal(labels.at(-1), '快讯中枢', '注册项追加在菜单末尾')
-      assert.equal(labels.at(0), '应用', '内置首项不变')
+      assert.equal(labels.at(0), TRUTH.at(0)?.label, '内置首项不变')
       menu.unmount()
     } finally {
       closeMenuBundle(dom, api)
     }
   })
 
-  it('注销后注册项从菜单消失，回到 8 行', async () => {
+  it('注销后注册项从菜单消失，回到初始行数', async () => {
     const { dom, api } = loadMenuBundle()
     try {
       const registry = installRuntimeRegistry(dom, api)
