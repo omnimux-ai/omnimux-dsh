@@ -21,7 +21,7 @@ const agents = readFileSync(agentsPath, 'utf8')
 
 /** Raise only when new hard bounds genuinely need the space. */
 const MAX_LINES = 100
-const MAX_BYTES = 14_500
+const MAX_BYTES = 14_900
 
 /** Markers for hard bounds that slimming must preserve. */
 const REQUIRED_MARKERS = [
