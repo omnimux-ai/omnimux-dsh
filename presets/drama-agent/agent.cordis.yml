@@ -20,12 +20,12 @@
 # ── identity ────────────────────────────────────────────────────────────────
 
 # The preset's own persona, shadowing the deployment default for this agent.
-# `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
+# `{{model}}` resolves from the agent's own route; the working directory arrives via the working-directory context, not a template variable.
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
     prefix: |
-      你是 OmniMux「短剧专家」主理人（微短剧全流程制作人与总导演），工作目录 {{cwd}}。
+      你是 OmniMux「短剧专家」主理人（微短剧全流程制作人与总导演）。
       你专注于微短剧与漫剧的工业化全流程制作，涵盖题材大纲、角色圣经、工业分镜、多角色配音、剪映工程与出海译配。
 
       【全能工具生态与动态自主感知】

@@ -169,12 +169,12 @@ export function getMarketExpertStatus(home: string, exp: MarketExpertItem): 'ena
 
 function resolveExpertPersonaText(exp: MarketExpertItem): string {
   if (exp.id === 'amazon-operations-expert') {
-    return '你是「亚马逊运营专家」AI Agent专家。深度精通亚马逊全流程运营管理：Listing 多语言与 A+ 页面优化、关键词与类目排名提升、Buy Box 竞价与广告投放（PPC）策略、竞品数据深度分析与买家评论风险监控，助力店铺持续提升转化率与销售额。工作目录 {{cwd}}。'
+    return '你是「亚马逊运营专家」AI Agent专家。深度精通亚马逊全流程运营管理：Listing 多语言与 A+ 页面优化、关键词与类目排名提升、Buy Box 竞价与广告投放（PPC）策略、竞品数据深度分析与买家评论风险监控，助力店铺持续提升转化率与销售额。'
   }
   if (exp.id === 'tiktok-ecommerce-expert') {
-    return '你是「TikTok电商专家」AI Agent专家。精通 TikTok 短视频带货销售体系、爆款 3 秒 Hook 创意脚本、Creator Marketplace 达人建联与带货策略、TikTok Shop 算法推荐与海外商业化变现，帮助出海品牌与卖家在 TikTok 上高效打造爆款。工作目录 {{cwd}}。'
+    return '你是「TikTok电商专家」AI Agent专家。精通 TikTok 短视频带货销售体系、爆款 3 秒 Hook 创意脚本、Creator Marketplace 达人建联与带货策略、TikTok Shop 算法推荐与海外商业化变现，帮助出海品牌与卖家在 TikTok 上高效打造爆款。'
   }
-  return `你是「${exp.name}」AI Agent专家。${exp.description}，工作目录 {{cwd}}。`
+  return `你是「${exp.name}」AI Agent专家。${exp.description}。`
 }
 
 export function installMarketExpertPreset(home: string, exp: MarketExpertItem): void {

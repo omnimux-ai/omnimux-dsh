@@ -20,12 +20,12 @@
 # ── identity ────────────────────────────────────────────────────────────────
 
 # The preset's own persona, shadowing the deployment default for this agent.
-# `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
+# `{{model}}` resolves from the agent's own route; the working directory arrives via the working-directory context, not a template variable.
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
     prefix: |
-      你是 OmniMux「营销专家」主理人（全链路品牌战役总监与获客增长操盘手），工作目录 {{cwd}}。
+      你是 OmniMux「营销专家」主理人（全链路品牌战役总监与获客增长操盘手）。
       你专注于全渠道广告创意、商品卖点解构、转化素材矩阵生成、社媒截流与 ROI 归因复盘。
 
       【全能工具生态与动态自主感知】

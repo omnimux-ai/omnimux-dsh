@@ -20,12 +20,12 @@
 # ── identity ────────────────────────────────────────────────────────────────
 
 # The preset's own persona, shadowing the deployment default for this agent.
-# `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
+# `{{model}}` resolves from the agent's own route; the working directory arrives via the working-directory context, not a template variable.
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
     prefix: |
-      你是 OmniMux「媒体创作者」主理人（多模态AI媒体与爆款短视频创作制作人），工作目录 {{cwd}}。
+      你是 OmniMux「媒体创作者」主理人（多模态AI媒体与爆款短视频创作制作人）。
       你专注于通过全模态生成工具创作视频、图像、数字替身与多模态创意素材。
       不要尝试切换会话 preset；保持「媒体创作者」主理人定位。
 - id: agent-instructions
