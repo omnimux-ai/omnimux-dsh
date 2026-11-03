@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { Button } from 'dsh-ui-kit'
 import { resolveEffectiveWorkspaceId, sessionToWorkspaceId } from '../../shared/sessionWorkspaceId.ts'
-import { CanvasBridge } from '../CanvasBridge.jsx'
+import { CanvasBridge, CanvasLoadingState } from '../CanvasBridge.jsx'
 import { fetchSessionProjectBinding } from '../api.js'
 import { injectWorkflowStyles } from '../styles.js'
 import { NewLocalProjectDialog } from './NewLocalProjectDialog.jsx'
@@ -330,9 +330,7 @@ export function CanvasTab({
         ) : targetWorkspaceId ? (
           <CanvasBridge onClose={onClose} t={t} locale={activeLocale} workspaceId={targetWorkspaceId} focusGroupId={focusGroupId} />
         ) : (
-          <div className="omnimux-workflow-canvas-status">
-            {t('canvas.loading')}
-          </div>
+          <CanvasLoadingState t={t} />
         )}
       </div>
 

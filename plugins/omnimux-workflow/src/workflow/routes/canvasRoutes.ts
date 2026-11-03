@@ -36,7 +36,7 @@
 import { createGenerationPreferencesRoutes } from './generationPreferencesRoutes';
 import { createHash } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { serveFile } from './serveFile';
+import { serveFile, serveIslandBundle } from './serveFile';
 import {
   LEGACY_WORKFLOW_ROUTE_PREFIX,
   WORKFLOW_ROUTE_PREFIX,
@@ -246,6 +246,17 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
     return path;
   }
 
+  /**
+   * Strong ETag for an island bundle request whose `?v=` equals the current
+   * build hash. The URL is then content-addressed, so immutable caching is
+   * safe; absent or stale versions keep the unchanged no-cache path.
+   */
+  function bundleEtag(path: string, requestedVersion: string | null): string | null {
+    if (!requestedVersion) return null;
+    const version = staticRoutes.bundleVersion(path);
+    return version === requestedVersion ? `"${version}"` : null;
+  }
+
   async function dispatch(req: WorkflowDispatchRequest): Promise<DispatchResult> {
     try {
       const url = new URL(req.url, 'http://127.0.0.1');
@@ -360,7 +371,7 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
     const refreshed = directorSession(request);
     return refreshed?.epoch === session.epoch && deps.directorSessionFactory.isCurrent(session);
   };
-  return { dispatch, authorizeDirectorRequest, directorSession, directorSessionCurrent, handleAudioRequest: audioRoutes.handle, handleDirectorRequest: directorBytes.handle };
+  return { dispatch, bundleEtag, authorizeDirectorRequest, directorSession, directorSessionCurrent, handleAudioRequest: audioRoutes.handle, handleDirectorRequest: directorBytes.handle };
 }
 
 /**
@@ -376,7 +387,8 @@ export function registerWorkflowRoutes(
     return async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
       try {
         let authenticatedDirectorSession: import('../director/directorSession.ts').DirectorSessionContext | undefined;
-        const requestPath = decodeURIComponent(new URL(req.url || '/', 'http://127.0.0.1').pathname);
+        const requestUrl = new URL(req.url || '/', 'http://127.0.0.1');
+        const requestPath = decodeURIComponent(requestUrl.pathname);
         if (/^\/(?:omnimux-workflow|dsh-workflow)\/api\/workspaces\/[^/]+\/director(?:-operations)?\//.test(requestPath) || /^\/(?:omnimux-workflow|dsh-workflow)\/api\/workspaces\/[^/]+\/director-operations$/.test(requestPath) || /^\/(?:omnimux-workflow|dsh-workflow)\/api\/workspaces\/[^/]+\/director\/[^/]+$/.test(requestPath)) {
           const rejection = dispatcher.authorizeDirectorRequest(req);
           if (rejection !== undefined) { sendJson(res, rejection, { error: rejection === 503 ? 'auth-unavailable' : 'unauthorized' }); return; }
@@ -413,7 +425,17 @@ export function registerWorkflowRoutes(
           } : undefined,
         });
         if ('file' in result) {
-          serveFile(res, result.file, 'application/octet-stream', header(req, 'range'));
+          const etag = dispatcher.bundleEtag(requestPath, requestUrl.searchParams.get('v'));
+          if (etag) {
+            serveIslandBundle(res, result.file, {
+              etag,
+              range: header(req, 'range'),
+              acceptEncoding: header(req, 'accept-encoding'),
+              ifNoneMatch: header(req, 'if-none-match'),
+            });
+          } else {
+            serveFile(res, result.file, 'application/octet-stream', header(req, 'range'));
+          }
           return;
         }
         if ('sse' in result) {

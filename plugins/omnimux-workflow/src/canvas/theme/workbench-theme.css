@@ -15,6 +15,8 @@
   --wb-accent-soft: color-mix(in srgb, var(--wb-accent) 12%, transparent);
   /* 品牌色只做品牌强调，不做状态色（DESIGN 2.0 极光紫替换旧荧光绿） */
   --wb-brand-indigo: #6757e7; /* OmniMux indigo */
+  /* boot 加载态细弧：与宿主 CanvasBridge 同一视觉契约 */
+  --wb-loader-arc: var(--dsw-alias-brand-purple, #cfc7ff);
   /* 语义状态色：AA 达标（白底 ≥ 4.5:1） */
   --wb-success: #2e9e5b;
   --wb-success-soft: color-mix(in srgb, var(--wb-success) 12%, transparent);
@@ -124,6 +126,56 @@
   background: var(--wb-bg);
   color: var(--wb-text-primary);
   font-family: var(--wb-font-family);
+}
+
+/* boot 加载态：单一细弧 + 一行说明（与宿主 CanvasBridge 同构）。
+   不得加底环、光晕、分步指示或第二段动效。 */
+.wf-canvas-boot-status {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  animation: wf-canvas-boot-fade 280ms ease-out both;
+}
+
+.wf-canvas-boot-spinner {
+  display: block;
+  width: 32px;
+  height: 32px;
+  transform-origin: center;
+  animation: wf-canvas-boot-spin 1.35s linear infinite;
+}
+
+.wf-canvas-boot-spinner__arc {
+  fill: none;
+  stroke: var(--wb-loader-arc, #cfc7ff);
+}
+
+.wf-canvas-boot-status__label {
+  font-size: 12.5px;
+  line-height: 1.4;
+  letter-spacing: .05em;
+  color: var(--wb-text-muted);
+}
+
+@keyframes wf-canvas-boot-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes wf-canvas-boot-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-canvas-boot-status {
+    animation: none;
+  }
+  .wf-canvas-boot-spinner {
+    animation: none;
+  }
 }
 
 /* Dark-theme following: --dsw-alias-* tokens already flip with

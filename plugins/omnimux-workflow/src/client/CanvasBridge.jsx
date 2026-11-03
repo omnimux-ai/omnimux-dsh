@@ -174,6 +174,47 @@ async function ensureCanvasScript(hash) {
 }
 
 /**
+ * 画布加载态：一道 1.6px 细弧 + 一行说明。
+ *
+ * 单一动效（1.35s linear 无限旋转），无底环、无光晕、不分步；宿主侧
+ * （CanvasBridge / CanvasTab）共用这一个组件。岛内 boot loading 由
+ * canvas/App.tsx 用同一套 DOM 结构 + workbench-theme.css 实现——两棵
+ * React 树不得交换组件或元素，只共享视觉契约。
+ *
+ * @param {{ t: (key: string) => string }} props
+ */
+export function CanvasLoadingState({ t }) {
+  return (
+    <div
+      className="omnimux-workflow-canvas-status omnimux-workflow-canvas-loading"
+      role="status"
+      aria-live="polite"
+    >
+      <svg
+        className="omnimux-workflow-canvas-loading-spinner"
+        viewBox="0 0 32 32"
+        width="32"
+        height="32"
+        fill="none"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <circle
+          className="omnimux-workflow-canvas-loading-arc"
+          cx="16"
+          cy="16"
+          r="14"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeDasharray="24 64"
+        />
+      </svg>
+      <span className="omnimux-workflow-canvas-loading-label">{t('canvas.loading')}</span>
+    </div>
+  )
+}
+
+/**
  * @param {{
  *   onClose: () => void,
  *   t: (key: string) => string,
@@ -256,11 +297,7 @@ export function CanvasBridge({ onClose, t, locale, workspaceId, focusGroupId }) 
   return (
     <div className="omnimux-workflow-canvas-host">
       <div ref={containerRef} className="omnimux-workflow-canvas-root" />
-      {status === 'loading' ? (
-        <div className="omnimux-workflow-canvas-status">
-          {t('canvas.loading')}
-        </div>
-      ) : null}
+      {status === 'loading' ? <CanvasLoadingState t={t} /> : null}
       {status === 'error' ? (
         <div className="omnimux-workflow-canvas-status">
           <span>{t('canvas.loadFailed')}</span>

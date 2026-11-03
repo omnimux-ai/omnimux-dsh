@@ -539,23 +539,32 @@ export async function waitForCanvasTab(service, timeoutMs = 4000) {
 }
 
 /**
- * 项目会话占用右侧栏：关官方 details → 关空 Files 种子 → 打开画布。
+ * 项目会话占用右侧栏：关官方 details → 关空 Files 种子 → 打开画布 → 异步对齐会话。
+ *
+ * 时序契约（AC-4）：`openTab` 之前只做同步就绪判定，不再等待右侧栏服务、画布 tab
+ * 注册或会话切前台（原先是三次最长 4s 的串行等待，tab 出现前界面毫无变化）。
+ * 画布先按目标 `scope` + `meta` 打开；会话对齐（等 `sessions.open` 生效，再补
+ * `updateTab` / 广播 `omnimux:active-canvas-changed` / 布局）是 openTab 之后的
+ * 异步步骤。对齐超时或失败时 tab 仍绑定目标会话，绝不降级成「不带 scope 打开
+ * 到当前会话」；`meta.canvasSessionId` 的跨会话校验语义保持不变。
+ *
  * @param {{ betterSidebar?: object, layout?: { closeDetails?: Function }, t?: Function }} ctx
- * @param {{ sessionId?: string, cwd?: string, focusGroupId?: string, canvasWorkspaceId?: string, projectId?: string, pageId?: string, title?: string }} [opts]
+ * @param {{ sessionId?: string, cwd?: string, focusGroupId?: string, canvasWorkspaceId?: string, projectId?: string, pageId?: string, title?: string, timeoutMs?: number, alignmentTimeoutMs?: number }} [opts]
  *   `focusGroupId`：「项目」页「AI应用」卡片「编辑」的目标工作流组，
  *   写入画布 tab 的 `meta`（契约字段，随布局持久化），由 CanvasTab 读出并透传。
  *   `canvasWorkspaceId`：具体创作页绑定的画布工作区 ID。
- * @returns {Promise<boolean>}
+ *   `alignmentTimeoutMs`：会话对齐的最长等待，默认沿用 `timeoutMs`（4000ms）。
+ * @returns {Promise<boolean>} 画布 tab 是否已在本次调用内打开
  */
 export async function activateProjectCanvas(ctx, opts = {}) {
   if (typeof ctx?.layout?.closeDetails === 'function') {
     ctx.layout.closeDetails()
   }
-  const timeoutMs = opts.timeoutMs ?? 4000
-  const service = await waitForBetterSidebar(ctx, timeoutMs)
+  const service = getBetterSidebar(ctx)
   if (!service || typeof service.openTab !== 'function') return false
-  const registered = await waitForCanvasTab(service, timeoutMs)
-  if (!registered) return false
+  // 画布 tab 类型还没注册时宿主渲染不出画布：同步判定失败、交给用户重试，
+  // 不再为「等注册」阻塞 openTab。
+  if (typeof service.getTab === 'function' && !service.getTab(CANVAS_TAB_ID)) return false
 
   const sessionId = opts.sessionId
   const cwd = opts.cwd
@@ -565,65 +574,87 @@ export async function activateProjectCanvas(ctx, opts = {}) {
     ? { sessionId, ...(cwd ? { cwd } : {}), ...(scopedCanvasWorkspaceId ? { canvasWorkspaceId: scopedCanvasWorkspaceId } : {}) }
     : (canvasWorkspaceId ? { canvasWorkspaceId, ...(cwd ? { cwd } : {}) } : undefined)
 
-  const ready = sessionId ? await waitForSidebarSession(service, sessionId, timeoutMs) : true
-  // 会话已在前台时带着 scope 打开会自动展开面板；仍在后台则不带 scope，
-  // 避免 targeted open 不撑开（better-sidebar 对非当前会话禁止 auto-expand）。
-  const openScope = ready ? scope : undefined
+  const title = opts.title || (typeof ctx?.t === 'function' ? ctx.t('details.canvasTab') : '创作画布')
+  const canvasSessionId = scope?.sessionId ?? sessionId ?? null
+  const meta = {
+    ...(scopedCanvasWorkspaceId ? { canvasWorkspaceId: scopedCanvasWorkspaceId, canvasSessionId } : {}),
+  }
+  const tabSeed = {
+    type: CANVAS_TAB_ID,
+    id: CANVAS_TAB_ID,
+    title,
+    path: CANVAS_SENTINEL_PATH,
+    meta,
+  }
 
   const state = service.getSnapshot?.()?.state
   if (state) {
     const tabs = collectTabs(state.splits).concat(collectTabs(state.bottomSplits))
     for (const tab of tabs) {
       if (isSeedFilesTab(tab) && tab.id && tab.id !== CANVAS_TAB_ID) {
-        service.closeTab(tab.id, openScope)
+        service.closeTab(tab.id, scope)
       }
     }
   }
 
-  const title = opts.title || (typeof ctx?.t === 'function' ? ctx.t('details.canvasTab') : '创作画布')
-  const canvasSessionId = scope?.sessionId ?? sessionId ?? null
-  const meta = {
-    ...(scopedCanvasWorkspaceId ? { canvasWorkspaceId: scopedCanvasWorkspaceId, canvasSessionId } : {}),
-  }
-  service.openTab({
-    type: CANVAS_TAB_ID,
-    id: CANVAS_TAB_ID,
-    title,
-    path: CANVAS_SENTINEL_PATH,
-    meta,
-  }, openScope)
+  // ① 先让画布出现：上面全是同步调用，openTab 落在本次点击的同一执行栈里。
+  service.openTab(tabSeed, scope)
 
-  // 穿透单例：画布 tab 是 single:true，已打开时重复 openTab 只聚焦、
-  // 不会写入新的 meta，必须用 updateTab 显式覆盖（meta 随布局持久化）。
   const focusGroupId = typeof opts.focusGroupId === 'string' ? opts.focusGroupId.trim() : ''
-  const nextMeta = {}
-  if (focusGroupId) nextMeta.focusGroupId = focusGroupId
-  if (scopedCanvasWorkspaceId) nextMeta.canvasWorkspaceId = scopedCanvasWorkspaceId
-  if (scopedCanvasWorkspaceId && canvasSessionId) nextMeta.canvasSessionId = canvasSessionId
-  if (Object.keys(nextMeta).length > 0 && typeof service.updateTab === 'function') {
-    service.updateTab(CANVAS_TAB_ID, { meta: nextMeta })
+  // ② 会话已在目标会话前台时的收尾（会话未对齐时由下面的异步步骤补上）。
+  const commit = () => {
+    // 穿透单例：画布 tab 是 single:true，已打开时重复 openTab 只聚焦、
+    // 不会写入新的 meta，必须用 updateTab 显式覆盖（meta 随布局持久化）。
+    const nextMeta = {}
+    if (focusGroupId) nextMeta.focusGroupId = focusGroupId
+    if (scopedCanvasWorkspaceId) nextMeta.canvasWorkspaceId = scopedCanvasWorkspaceId
+    if (scopedCanvasWorkspaceId && canvasSessionId) nextMeta.canvasSessionId = canvasSessionId
+    if (Object.keys(nextMeta).length > 0 && typeof service.updateTab === 'function') {
+      service.updateTab(CANVAS_TAB_ID, { meta: nextMeta })
+    }
+
+    // 广播活跃画布变更事件（保证 CanvasTab 即使在单例不重开状态下也能即时收到新工作区 ID）
+    if (scopedCanvasWorkspaceId && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
+        detail: { workspaceId: scopedCanvasWorkspaceId, sessionId },
+      }))
+    }
+
+    // Enter-Conversation Intent：从一级库（gui + conversationCollapsed）新建/打开项目时，
+    // 必须显式解除中间会话栏折叠并切到 split，否则 conversation-collapse.css 会把
+    // centerCol 藏成黑屏占位，且 applyProjectCanvasRatio 因 getFocus()==='gui' 直接跳过。
+    // 与 omnimux-inspiration #552 revealConversationColumn 对齐。
+    const workbench = typeof globalThis.window !== 'undefined' ? globalThis.window.__omnimuxWorkbench : undefined
+    if (workbench) {
+      try { workbench.setConversationCollapsed?.(false, { sessionId }) } catch { /* ignore */ }
+      try { workbench.setFocus?.('split') } catch { /* ignore */ }
+    }
+
+    // force：新建项目会话尚无人手拖拽记录，必须写入 15:85；此前 focus 已切 split，
+    // 不会再被 gui/chat 守卫挡回。
+    applyProjectCanvasRatio(service, sessionId, null, {}, true)
   }
 
-  // 广播活跃画布变更事件（保证 CanvasTab 即使在单例不重开状态下也能即时收到新工作区 ID）
-  if (scopedCanvasWorkspaceId && typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
-      detail: { workspaceId: scopedCanvasWorkspaceId, sessionId },
-    }))
+  const foregroundSessionId = typeof service.getSnapshot === 'function' ? service.getSnapshot()?.sessionId : undefined
+  if (!sessionId || foregroundSessionId === sessionId) {
+    commit()
+    return true
   }
 
-  // Enter-Conversation Intent：从一级库（gui + conversationCollapsed）新建/打开项目时，
-  // 必须显式解除中间会话栏折叠并切到 split，否则 conversation-collapse.css 会把
-  // centerCol 藏成黑屏占位，且 applyProjectCanvasRatio 因 getFocus()==='gui' 直接跳过。
-  // 与 omnimux-inspiration #552 revealConversationColumn 对齐。
-  const workbench = typeof globalThis.window !== 'undefined' ? globalThis.window.__omnimuxWorkbench : undefined
-  if (workbench) {
-    try { workbench.setConversationCollapsed?.(false, { sessionId }) } catch { /* ignore */ }
-    try { workbench.setFocus?.('split') } catch { /* ignore */ }
-  }
-
-  // force：新建项目会话尚无人手拖拽记录，必须写入 15:85；此前 focus 已切 split，
-  // 不会再被 gui/chat 守卫挡回。
-  applyProjectCanvasRatio(service, sessionId, null, {}, true)
+  // ③ sessions.open 还没生效：保留已打开的目标会话 tab，后台等会话切到前台，
+  // 再补一次带 scope 的 openTab（让右栏按 targeted open 自动展开）+ meta/广播/布局。
+  // 超时或失败就停在这里：tab 已带 scope 与 meta.canvasSessionId 绑定目标会话，
+  // 不向当前会话写 meta，也不重开到别的会话。
+  const alignmentTimeoutMs = opts.alignmentTimeoutMs ?? opts.timeoutMs ?? 4000
+  void waitForSidebarSession(service, sessionId, alignmentTimeoutMs)
+    .then((aligned) => {
+      if (!aligned) return
+      service.openTab(tabSeed, scope)
+      commit()
+    })
+    .catch((error) => {
+      console.warn('[omnimux-workflow] canvas tab session alignment failed', error)
+    })
   return true
 }
 

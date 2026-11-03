@@ -125,15 +125,19 @@ export function useCanvasBoot(opts: UseCanvasBootOptions = {}) {
         // list()[0]（会打开别人的最新图，cleanup flush 再和自己 409）。
         if (!targetWorkspaceId) return;
 
-        await loadGenerationPreferences();
-        if (cancelled) return;
-        const loaded = await getWorkspace(targetWorkspaceId);
+        // 偏好与工作区快照互不依赖：并行发起，缩短首屏阻塞。
+        // 任一失败仍由外层 catch 走 error 分支，不吞加载错误。
+        const [, loaded] = await Promise.all([
+          loadGenerationPreferences(),
+          getWorkspace(targetWorkspaceId),
+        ]);
         if (cancelled) return;
         if (loaded.ok && loaded.body.workspace) {
           hydrateGraph(loaded.body.workspace.nodes, loaded.body.workspace.edges);
-          await probeAndPatchImportedMedia();
-          if (cancelled) return;
           setBoot({ phase: 'ready', workspace: loaded.body.workspace });
+          // 本地文件探测只是导入媒体的路径补丁：ready 之后再补，
+          // 不阻塞首屏；失败也不回退已就绪的画布。
+          void probeAndPatchImportedMedia().catch(() => undefined);
           return;
         }
         // 专属工作区尚不存在，创建属于该 ID 的纯净新工作区
