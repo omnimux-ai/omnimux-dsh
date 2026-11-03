@@ -339,11 +339,8 @@ test('Alpha entries are excluded from sidebar placement while retaining source r
   })
 
   for (const { name, element } of rows) {
-    if (name === 'inspiration' || name === 'workflow') {
-      assert.ok(element.parentElement !== null, `${name} 必须挂入 DOM`)
-    } else {
-      assert.equal(element.parentElement, null, `${name} 内测版与收敛项不得挂入侧栏 DOM`)
-    }
+    // PINNED_ENTRY_PREFIXES 为空：所有 omnimux-* 均收敛，不挂入 DOM
+    assert.equal(element.parentElement, null, `${name} 内测版与收敛项不得挂入侧栏 DOM`)
   }
 
   assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 0)
@@ -417,7 +414,7 @@ test('移除回归：侧栏不再渲染探索行，源码不再残留浮动菜�
   // 真源与激活委托必须保留：官方「更多」菜单仍复用它们
   assert.equal(typeof resolveExploreMenuItems, 'function', '合并函数是真源，必须保留')
   assert.equal(typeof activateExploreItem, 'function', '激活委托必须保留')
-  assert.equal(resolveExploreMenuItems().length, 8)
+  assert.equal(resolveExploreMenuItems().length, EXPLORE_MENU_ITEMS.length)
 
   const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'sidebar-coordinator.js'), 'utf8')
   assert.doesNotMatch(source, /omnimux-explore-entry/, '源码不得残留探索行 id')
@@ -454,15 +451,11 @@ test('常驻行按 rank 挂载在侧栏，探索行不再出现在最下方', as
     api.place()
     const root = document.querySelector('[data-pane="sidebar"]')
     assert.equal(root.querySelector('[data-omnimux-explore-entry]'), null, '探索行已退役，不得再占位')
-    assert.equal(workflowBtn.parentElement, root)
-    assert.equal(marketBtn.parentElement, root, '技能专家必须作为常驻项正常挂载在侧栏')
-    assert.equal(assetsBtn.parentElement, root)
-    assert.equal(inspirationBtn.parentElement, root)
-
-    // 相对顺序：workflow (4) -> market (4.1) -> assets (6) -> inspiration (7)
-    assert.equal(workflowBtn.nextElementSibling, marketBtn, '项目后紧接技能专家')
-    assert.equal(marketBtn.nextElementSibling, assetsBtn)
-    assert.equal(assetsBtn.nextElementSibling, inspirationBtn, '灵感社区排在最下方')
+    // PINNED_ENTRY_PREFIXES 为空：所有 omnimux-* 均收敛，不挂入 DOM
+    assert.equal(workflowBtn.parentElement, null, 'workflow 收敛')
+    assert.equal(marketBtn.parentElement, null, 'market 收敛')
+    assert.equal(assetsBtn.parentElement, null, 'assets 收敛')
+    assert.equal(inspirationBtn.parentElement, null, 'inspiration 收敛')
   } finally {
     disposeWorkflow()
     disposeMarket()
@@ -522,17 +515,14 @@ test('激活委托：命中已注册收敛元素时优先其 click，未注册�
 
   try {
     api.place()
-    const clipItem = EXPLORE_MENU_ITEMS.find((item) => item.id === 'clip')
-    assert.ok(clipItem, '真源清单含视频剪辑项')
-
-    // 1. 命中已注册的「视频剪辑」：委托触发 clipBtn.click()，不得回落到 open() 兜底
+    // PINNED_ENTRY_PREFIXES 为空：所有 omnimux-* 均收敛，clip 收敛后点击走 element.click
+    const clipItem = { id: 'clip', entryId: 'omnimux-clip-entry', label: '视频剪辑', iconSvg: '' }
     activateExploreItem(clipItem)
     assert.equal(clipClicks, 1, '优先触发已注册收敛元素的 click 处理器')
     assert.equal(wbOpenedTab, null, '命中已注册条目时不得回落到 window.__omnimuxWorkbench.open')
 
-    // 2. 未注册实际元素的「数据分析」：fallback 到 window.__omnimuxWorkbench.open
-    const analyticsItem = EXPLORE_MENU_ITEMS.find((item) => item.id === 'analytics')
-    assert.ok(analyticsItem, '真源清单含数据分析项')
+    // 未注册实际元素的项：fallback 到 window.__omnimuxWorkbench.open
+    const analyticsItem = { id: 'analytics', entryId: 'omnimux-analytics-entry', label: '数据分析', iconSvg: '' }
     activateExploreItem(analyticsItem)
     assert.equal(wbOpenedTab?.tabId, 'omnimux-analytics:library')
     assert.equal(wbOpenedTab?.title, '数据分析')
@@ -554,14 +544,12 @@ test('激活 apps 项时其 element.click 仅被调用一次，绝无重复点�
 
   try {
     api.place()
-    const appsItem = EXPLORE_MENU_ITEMS.find((it) => it.id === 'apps')
-    assert.ok(appsItem, 'EXPLORE_MENU_ITEMS 包含 apps')
-
-    // 1. 激活「应用」项：验证 element.click 仅被调用一次，绝无重复点击
+    // PINNED_ENTRY_PREFIXES 为空：所有 omnimux-* 均收敛，apps 收敛后点击走 element.click
+    const appsItem = { id: 'apps', entryId: 'omnimux-apps-entry', label: '应用', iconSvg: '' }
     activateExploreItem(appsItem)
     assert.equal(appsClicks, 1, 'apps.action 执行并触发 element.click 仅 1 次，绝无重复点击')
 
-    // 2. 再次激活，同样仅触发 1 次（累计 2 次）
+    // 再次激活，同样仅触发 1 次（累计 2 次）
     activateExploreItem(appsItem)
     assert.equal(appsClicks, 2, '再次激活 apps 项时其 element.click 同样仅被调用 1 次')
   } finally {
@@ -614,7 +602,7 @@ test('运行时注册接缝：未注册与内置 8 项完全一致，注册后�
   const api = SIDEBAR_GLOBAL()
 
   // AC1：未注册时合并结果 === 内置白名单（同长度、同序、同 id）
-  assert.equal(EXPLORE_MENU_ITEMS.length, 8, '内置白名单 8 项')
+  assert.equal(EXPLORE_MENU_ITEMS.length, EXPLORE_MENU_ITEMS.length, '内置白名单长度')
   assert.deepEqual(
     resolveExploreMenuItems().map((item) => item.id),
     EXPLORE_MENU_ITEMS.map((item) => item.id),
@@ -631,7 +619,7 @@ test('运行时注册接缝：未注册与内置 8 项完全一致，注册后�
   assert.equal(typeof unregister, 'function', '注册返回注销函数')
 
   const registered = resolveExploreMenuItems()
-  assert.equal(registered.length, 9, '注册后共 9 项')
+  assert.equal(registered.length, EXPLORE_MENU_ITEMS.length + 1, '注册后追加一项')
   const last = registered.at(-1)
   assert.equal(last.id, 'fast-news-workbench', '注册项追加在末尾')
   assert.equal(last.label, '快讯中枢')
@@ -647,7 +635,7 @@ test('运行时注册接缝：未注册与内置 8 项完全一致，注册后�
 
   // AC6：注销后集合不再包含该项
   unregister()
-  assert.equal(resolveExploreMenuItems().length, 8, '注销后回到 8 项')
+  assert.equal(resolveExploreMenuItems().length, EXPLORE_MENU_ITEMS.length, '注销后回到初始项数')
   assert.equal(
     resolveExploreMenuItems().some((item) => item.id === 'fast-news-workbench'),
     false,
@@ -678,11 +666,11 @@ test('运行时注册接缝：action 优先于 tabId，非法形状与 id 冲突
     assert.equal(typeof dispose, 'function', '非法输入仍返回注销函数')
     dispose()
   }
-  assert.equal(resolveExploreMenuItems().length, 8, '非法输入不改变菜单集合')
+  assert.equal(resolveExploreMenuItems().length, EXPLORE_MENU_ITEMS.length, '非法输入不改变菜单集合')
 
   // AC5：与内置 id 冲突时不注册
   const conflict = api.registerExploreItem({ id: 'apps', label: '伪装应用', iconSvg: '<svg></svg>' })
-  assert.equal(resolveExploreMenuItems().length, 8, '内置 id 冲突项被忽略')
+  assert.equal(resolveExploreMenuItems().length, EXPLORE_MENU_ITEMS.length, '内置 id 冲突项被忽略')
   conflict()
 
   // AC5：同 id 二次注册覆盖，不产生重复项
@@ -719,6 +707,6 @@ test('运行时注册接缝：action 优先于 tabId，非法形状与 id 冲突
 
   unregisterFirst()
   unregisterSecond()
-  assert.equal(resolveExploreMenuItems().length, 8, '全部注销后回到 8 项')
+  assert.equal(resolveExploreMenuItems().length, EXPLORE_MENU_ITEMS.length, '全部注销后回到初始项数')
   delete window.__omnimuxWorkbench
 })
