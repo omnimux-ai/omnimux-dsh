@@ -27,10 +27,24 @@ export const SIDEBAR_LAYOUT_STORAGE_PREFIX = 'dsh-sidebar:v1'
 /** 跟 better-sidebar 设置项对齐：新会话默认宽是视口的 35%，上限 60。 */
 export const SIDEBAR_FACTORY_WIDTH_PERCENT = 35
 const APPLIED_RATIO_SESSIONS = new Set()
+/** 会话对齐超时后的补位监听：一次点击只认最新目标（sessionId → watcher）。 */
+const PENDING_ALIGNMENTS = new Map()
 
 /** 测试用：清掉「本会话已写过默认画布比例」记忆。 */
 export function resetProjectCanvasRatioMemory() {
   APPLIED_RATIO_SESSIONS.clear()
+}
+
+/** 解绑某个会话的补位监听（已被更近一次点击取代、或插件卸载时调用）。 */
+function releaseAlignment(sessionId) {
+  const watcher = sessionId ? PENDING_ALIGNMENTS.get(sessionId) : undefined
+  if (!watcher) return
+  PENDING_ALIGNMENTS.delete(sessionId)
+  try { watcher.dispose() } catch { /* ignore */ }
+}
+
+function releaseAllAlignments() {
+  for (const sessionId of [...PENDING_ALIGNMENTS.keys()]) releaseAlignment(sessionId)
 }
 
 let boundService = null
@@ -38,6 +52,8 @@ let bindingOwner = null
 
 /** Bind a provider for this injection lifetime; return its identity-owned disposer. */
 export function bindBetterSidebar(service) {
+  // 换绑/卸载：旧服务上的补位监听已无法再等到目标会话，先全部解绑。
+  releaseAllAlignments()
   const owner = {}
   bindingOwner = owner
   const installedService = service || null
@@ -57,6 +73,7 @@ export function bindBetterSidebar(service) {
     if (bindingOwner !== owner) return
     bindingOwner = null
     boundService = null
+    releaseAllAlignments()
     if (win?.__omnimuxBetterSidebar === installedService) delete win.__omnimuxBetterSidebar
     if (win?.__omnimuxOpenAppTab === openAppTab) delete win.__omnimuxOpenAppTab
   }
@@ -525,6 +542,72 @@ export async function waitForSidebarSession(service, sessionId, timeoutMs = 4000
   return service.getSnapshot()?.sessionId === sessionId
 }
 
+/**
+ * 会话对齐超时/失败后的最终一致补位（P1-1）。
+ *
+ * 只订阅 better-sidebar 的快照变化（`subscribeState`；旧服务没有时回落
+ * `subscribe`），每次变化都读 `getSnapshot().sessionId`：只有目标会话真正成为
+ * 右侧栏前台才补 `openTab` + commit。超时窗口内不写任何 meta，也不向当前会话
+ * 降级。目标达成、同一会话被更近一次 activate 取代、或插件换绑/卸载侧栏服务时
+ * 解绑。没有订阅能力的假服务（测试）直接放弃，不引入轮询。
+ *
+ * @param {object | null} service
+ * @param {string | undefined} sessionId
+ * @param {() => void} onAligned
+ * @returns {boolean} 是否挂上了监听
+ */
+export function watchCanvasForegroundAlignment(service, sessionId, onAligned) {
+  if (!service || !sessionId) return false
+  const subscribe = typeof service.subscribeState === 'function'
+    ? (listener) => service.subscribeState(listener)
+    : (typeof service.subscribe === 'function'
+      ? (listener) => service.subscribe(listener)
+      : null)
+  if (!subscribe) return false
+
+  const watcher = { dispose: () => {} }
+  let stopped = false
+  let unsubscribe = null
+  watcher.dispose = () => {
+    if (stopped) return
+    stopped = true
+    try { unsubscribe?.() } catch { /* ignore */ }
+    if (PENDING_ALIGNMENTS.get(sessionId) === watcher) PENDING_ALIGNMENTS.delete(sessionId)
+  }
+  const fireIfForeground = () => {
+    if (stopped) return
+    let foreground
+    try {
+      foreground = service.getSnapshot?.()?.sessionId
+    } catch {
+      return
+    }
+    if (foreground !== sessionId) return
+    watcher.dispose()
+    try {
+      onAligned()
+    } catch (error) {
+      console.warn('[omnimux-workflow] canvas tab foreground alignment failed', error)
+    }
+  }
+
+  releaseAlignment(sessionId)
+  try {
+    unsubscribe = subscribe(fireIfForeground)
+  } catch {
+    return false
+  }
+  // 订阅回调可能在 subscribe 返回前就同步触发；此时 disposer 还没拿到，补一次解绑。
+  if (stopped) {
+    try { unsubscribe?.() } catch { /* ignore */ }
+    return false
+  }
+  PENDING_ALIGNMENTS.set(sessionId, watcher)
+  // 订阅前的窗口里可能已经切到目标会话：立即复核一次，避免永远等不到下一次变化。
+  fireIfForeground()
+  return !stopped
+}
+
 /** 等到画布 tab 已 register（workflow 与 better-sidebar 加载顺序不确定）。 */
 export async function waitForCanvasTab(service, timeoutMs = 4000) {
   if (!service || typeof service.getTab !== 'function') return false
@@ -546,7 +629,9 @@ export async function waitForCanvasTab(service, timeoutMs = 4000) {
  * 画布先按目标 `scope` + `meta` 打开；会话对齐（等 `sessions.open` 生效，再补
  * `updateTab` / 广播 `omnimux:active-canvas-changed` / 布局）是 openTab 之后的
  * 异步步骤。对齐超时或失败时 tab 仍绑定目标会话，绝不降级成「不带 scope 打开
- * 到当前会话」；`meta.canvasSessionId` 的跨会话校验语义保持不变。
+ * 到当前会话」；此时改为挂一次快照监听，等目标会话真正成为前台再补
+ * `openTab(tabSeed, scope)` + commit（最终一致），监听随成功/换绑/卸载解绑；
+ * `meta.canvasSessionId` 的跨会话校验语义保持不变。
  *
  * @param {{ betterSidebar?: object, layout?: { closeDetails?: Function }, t?: Function }} ctx
  * @param {{ sessionId?: string, cwd?: string, focusGroupId?: string, canvasWorkspaceId?: string, projectId?: string, pageId?: string, title?: string, timeoutMs?: number, alignmentTimeoutMs?: number }} [opts]
@@ -567,6 +652,8 @@ export async function activateProjectCanvas(ctx, opts = {}) {
   if (typeof service.getTab === 'function' && !service.getTab(CANVAS_TAB_ID)) return false
 
   const sessionId = opts.sessionId
+  // 本次点击接管该会话的画布目标：作废上一次还没等到前台的补位监听。
+  releaseAlignment(sessionId)
   const cwd = opts.cwd
   const canvasWorkspaceId = typeof opts.canvasWorkspaceId === 'string' ? opts.canvasWorkspaceId.trim() : ''
   const scopedCanvasWorkspaceId = sessionId ? canvasWorkspaceId : ''
@@ -643,17 +730,25 @@ export async function activateProjectCanvas(ctx, opts = {}) {
 
   // ③ sessions.open 还没生效：保留已打开的目标会话 tab，后台等会话切到前台，
   // 再补一次带 scope 的 openTab（让右栏按 targeted open 自动展开）+ meta/广播/布局。
-  // 超时或失败就停在这里：tab 已带 scope 与 meta.canvasSessionId 绑定目标会话，
-  // 不向当前会话写 meta，也不重开到别的会话。
+  // 超时或失败时 tab 已带 scope 与 meta.canvasSessionId 绑定目标会话，不向当前会话
+  // 写 meta，也不重开到别的会话；改为挂一次快照监听，等目标会话真正成为前台再补
+  // openTab + commit，保证「点了 B，画布最终一定是 B」。
   const alignmentTimeoutMs = opts.alignmentTimeoutMs ?? opts.timeoutMs ?? 4000
+  const commitAfterAlignment = () => {
+    service.openTab(tabSeed, scope)
+    commit()
+  }
   void waitForSidebarSession(service, sessionId, alignmentTimeoutMs)
     .then((aligned) => {
-      if (!aligned) return
-      service.openTab(tabSeed, scope)
-      commit()
+      if (aligned) {
+        commitAfterAlignment()
+        return
+      }
+      watchCanvasForegroundAlignment(service, sessionId, commitAfterAlignment)
     })
     .catch((error) => {
       console.warn('[omnimux-workflow] canvas tab session alignment failed', error)
+      watchCanvasForegroundAlignment(service, sessionId, commitAfterAlignment)
     })
   return true
 }

@@ -80,5 +80,5 @@ Issue: 待建 · 模块: omnimux-workflow · 风险等级: R2
 
 - 若偏好加载实际影响工作区 hydrate（例如偏好写入要先于工作区快照），`Promise.all` 并行会导致状态错乱，`bootOwnership` / `useCanvasBoot` 契约测试会失败。
 - 若加载态仍出现双环、光晕、多个动效，或 `.omnimux-workflow-canvas-status` 仍是纯文字，则 AC-2 不成立。
-- 静态资源侧任一可观测结果即证伪：1) `curl -sI '.../canvas.js?v=<hash>'` 看不到 `Cache-Control: public, max-age=31536000, immutable` 或强 ETag；2) 带匹配 `If-None-Match` 的请求返回 200 或带回 body；3) 带 `Accept-Encoding: gzip`/`br` 的响应体积未显著小于 2.6MB；4) 未带 `?v=` 的请求或媒体文件（图片/视频）缓存头不再是 `no-cache`，或 Range 请求不再是 206。
+- 静态资源侧任一可观测结果即证伪：1) 用 GET 请求 `curl -s -D - -o /dev/null '.../canvas.js?v=<hash>'`（HEAD 会被 bundle 路由回 404，不能用来验缓存头）看不到 `Cache-Control: public, max-age=31536000, immutable` 或强 ETag；2) 带匹配 `If-None-Match` 的请求返回 200 或带回 body；3) 带 `Accept-Encoding: gzip`/`br` 的响应体积未显著小于 2.6MB；4) 未带 `?v=` 的请求或媒体文件（图片/视频）缓存头不再是 `no-cache`，或 Range 请求不再是 206。
 - 验证命令：`pnpm --filter omnimux-workflow test` 与 `pnpm --filter omnimux-workflow typecheck`；加载态契约测试断言单一 circle、r=14、1.35s 旋转与 280ms 淡入。

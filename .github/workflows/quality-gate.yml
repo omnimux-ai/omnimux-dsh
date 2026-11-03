@@ -432,12 +432,16 @@ jobs:
       - name: Verify model contracts (admission + dispositions strict + modality matrix)
         run: corepack pnpm verify:model-contracts
 
-      - name: Rebuild omnimux-workflow host + canvas bundles from src
+      # build-all.mjs 对带 build-client.mjs 的插件只跑 build-client，director 包
+      # 必须显式构建；bundleCache.test.mjs 断言 lib/director.js 存在（缓存语义）。
+      - name: Rebuild omnimux-workflow host + canvas + director bundles from src
         run: |
           node plugins/omnimux-workflow/scripts/build-host.mjs
           node plugins/omnimux-workflow/scripts/build-canvas.mjs
+          node plugins/omnimux-workflow/scripts/build-director.mjs
           test -s plugins/omnimux-workflow/dist/index.js
           test -s plugins/omnimux-workflow/lib/canvas.js
+          test -s plugins/omnimux-workflow/lib/director.js
 
       # 第 5 层上下文预算棘轮：依赖上一步的 workflow 产物与 apps host 产物；规则见 dsh-plugin-engineering-practices §九
       - name: Agent tool context budget ratchet
@@ -518,10 +522,14 @@ jobs:
       - name: Build all plugin bundles
         run: node scripts/build-all.mjs
 
-      - name: Rebuild omnimux-workflow host + canvas bundles from src
+      # 同 QA job：build-all 只跑 build-client，director.js 需显式构建，
+      # 否则 workflow 单测里的 bundleCache.test.mjs 会因缺产物而红。
+      - name: Rebuild omnimux-workflow host + canvas + director bundles from src
         run: |
           node plugins/omnimux-workflow/scripts/build-host.mjs
           node plugins/omnimux-workflow/scripts/build-canvas.mjs
+          node plugins/omnimux-workflow/scripts/build-director.mjs
+          test -s plugins/omnimux-workflow/lib/director.js
 
       - name: Plugin unit suites
         env:
