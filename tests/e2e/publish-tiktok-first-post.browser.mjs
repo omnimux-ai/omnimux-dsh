@@ -258,20 +258,23 @@ const ego = [
   '  await page.waitForSelector(\'text="分渠道发布结果"\', { state: \'visible\', timeout: 10000 });',
   "  const beforeRefresh = await page.evaluate(() => document.body.innerText);",
   "  await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((n) => n.textContent.trim() === '同步平台状态'); if (b && !b.disabled) b.click(); });",
-  '  await page.waitForSelector(\'text="已发布"\', { state: \'visible\', timeout: 10000 });',
+  "  await page.waitForSelector('.omnimux-publish-task-status[data-status=\"published\"]', { state: 'visible', timeout: 15000 });",
   "  const notice = await page.evaluate(() => document.body.innerText.includes('TikTok 应用审核通过前'));",
   '  const bodyText = await page.evaluate(() => document.body.innerText);',
   '  await page.screenshot({ path: ' + JSON.stringify(join(evidenceDir, '01-detail-published-private-notice.png')) + ' });',
   '  fs.writeFileSync(' + JSON.stringify(reportPath) + ', JSON.stringify({',
   "    task: 'issue-3913-publish-tiktok-first-post',",
   '    spaceId: task.spaceId,',
+  '    headSha: ' + JSON.stringify(process.env.HEAD_SHA || 'unknown') + ',',
+  '    origin: ' + JSON.stringify(origin) + ',',
   '    negativeControl: ' + JSON.stringify(negativeControl) + ',',
   '    hubWidened: ' + JSON.stringify(hubWidened) + ',',
   "    beforeRefresh: beforeRefresh.slice(0, 600),",
   '    privateNoticeShown: notice,',
   "    hasUpstreamPostId: bodyText.includes('tt_publish_7001'),",
   "    subtaskSubmitted: bodyText.includes('已提交'),",
-  '    pass: ' + JSON.stringify(hubWidened) + ' && notice && bodyText.includes(\'tt_publish_7001\'),',
+  "    publishedStatusPainted: bodyText.includes('已发布'),",
+  "    pass: " + JSON.stringify(hubWidened) + " && notice && bodyText.includes('tt_publish_7001') && bodyText.includes('已发布'),",
   '    timestamp: new Date().toISOString(),',
   '  }, null, 2));',
   '} finally { await task.finish({ keep: [] }); const spaces = await listTaskSpaces(); console.log("remaining spaces:", spaces); }',
@@ -286,6 +289,8 @@ try {
   const code = await new Promise((res) => child.on('close', res))
   if (code !== 0) throw new Error('ego-browser exit ' + code + ': ' + err)
   const decoded = PNG.sync.read(readFileSync(join(evidenceDir, '01-detail-published-private-notice.png')))
+  const report = JSON.parse(readFileSync(reportPath, 'utf8'))
+  if (report.pass !== true) throw new Error('verification failed: ' + JSON.stringify(report))
   console.log('screenshot ok ' + decoded.width + 'x' + decoded.height)
   console.log(readFileSync(reportPath, 'utf8'))
 } finally {

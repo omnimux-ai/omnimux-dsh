@@ -24,7 +24,12 @@ export function presignMedia(client, args) {
  * @returns {string | number}
  */
 function wireAccountId(id) {
-  return /^\d+$/.test(id) ? Number(id) : id
+  if (!/^\d+$/.test(id)) return id
+  const widened = Number(id)
+  if (!Number.isSafeInteger(widened)) {
+    throw new OmnimuxError('invalid-account-ids', `account id ${id} exceeds the safe integer range`, { status: 400 })
+  }
+  return widened
 }
 
 /**

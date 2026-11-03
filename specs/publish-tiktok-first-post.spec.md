@@ -16,7 +16,7 @@ Issue: #3913 · 分支 `agent/publish-tiktok-first-post-issue-3913` · 风险等
    - 在发出请求前做一次 `account_ids.map`：纯数字字符串 → `Number`；非数字字符串原样保留（保持既有 Zernio 夹具与历史测试行为，不引入新的拒绝路径）。
    - 只改 `createPost` 的请求体，不改工具 schema（`account_ids` 仍声明为 string 数组），因此桌面端与 Agent 侧无破坏性变更。
 2. **发布详情页说明当前仅私密可见**（`plugins/omnimux-publish/src/client/RecordDetail.jsx` + `locales.js`）：
-   - 当记录存在 `platform=tiktok && provider=tiktok_direct` 的子任务，且其状态处于 `submitted / reviewing / published` 时，在详情页显示 `omnimux-publish-alert banner` 提示（复用既有 token 样式，不新增色值）。
+   - 当记录存在 `platform=tiktok && provider=tiktok_direct`、已拿到上游 `post_id` 且状态处于 `submitted / reviewing / published` 的子任务时，在详情页显示 `omnimux-publish-alert banner` 提示（复用既有 token 样式，不新增色值）。
    - 中英双语文案：中文「TikTok 应用审核通过前，新发布的视频在 TikTok 内为「仅自己可见」。请到 TikTok App 确认，必要时改为公开。」；英文对应。
    - 历史非官方任务、草稿、失败任务不显示该提示（避免误导）。
 
@@ -25,6 +25,7 @@ Issue: #3913 · 分支 `agent/publish-tiktok-first-post-issue-3913` · 风险等
 - 网关账号 ID 即本地 `model.SocialAccount.ID`（正整数 int64），因此「纯数字字符串转 Number」对所有真实账号成立；非数字 ID 只可能出现在历史夹具或已下线的第三方来源中，原样透传不会制造新的失败面。
 - 桌面端只通过 hub 工具 `omnimux_publish_create` 发帖，不存在第二条绕过 `createPost` 的请求路径，因此单点转换即可覆盖发布与重试。
 - 审核通过前网关不会接受 `PUBLIC_TO_EVERYONE`，所以本轮只做「说清楚」，不做隐私等级选择器；等审核通过再单独加选择入口，避免上线一个必然失败的控件。
+- 本仓当前没有 TikTok 应用审核状态的权威数据源（网关 `/api/social/v1/status` 也不暴露 review 状态），因此该提示是静态的：审核通过后需要随「隐私选择器」一起改文案或下线，不在本轮伪造一个本机开关。
 
 ## 证伪方式
 

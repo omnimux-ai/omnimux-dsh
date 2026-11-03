@@ -56,3 +56,22 @@ describe('createPost wire account ids', () => {
     assert.equal(client.calls.filter((call) => call.path === '/api/social/v1/posts').length, 0)
   })
 })
+
+describe('createPost wire account ids — bounds and provider scope', () => {
+  it('rejects ids beyond the safe integer range instead of rounding', async () => {
+    const huge = '9007199254740993'
+    const client = clientWith([{ id: huge, platform: 'tiktok', provider: 'tiktok_direct', status: 'active' }])
+    await assert.rejects(
+      createPost(client, { provider: 'tiktok_direct', account_ids: [huge], content: 'x' }, STORE),
+      (error) => error.code === 'invalid-account-ids',
+    )
+    assert.equal(client.calls.filter((call) => call.path === '/api/social/v1/posts').length, 0)
+  })
+
+  it('applies the same widening on the zernio path', async () => {
+    const client = clientWith([{ id: 9, platform: 'tiktok', provider: 'zernio', status: 'active' }])
+    await createPost(client, { provider: 'zernio', account_ids: ['9'], content: 'x' }, STORE)
+    const post = client.calls.find((call) => call.path === '/api/social/v1/posts')
+    assert.deepEqual(post.opts.body.account_ids, [9])
+  })
+})
