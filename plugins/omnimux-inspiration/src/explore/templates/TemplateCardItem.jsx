@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react'
 import { TemplateVideo } from './TemplateVideo.jsx'
 import { resolveTemplateVideoUrl } from './template-media.js'
-import { resolveSkillAuroraStyle } from '../../../../omnimux/src/client/session-guide/skills/auroraGradients.js'
+import { SkillCard } from '../../../../omnimux/src/client/session-guide/skills/SkillCard.jsx'
+import { ensureGuideStyles } from '../../../../omnimux/src/client/session-guide/styles.js'
 import { resolveTemplateCopy } from '../../../../omnimux/src/client/session-guide/templates/template-locale.js'
 import { useTemplateLocale } from './use-template-locale.js'
 
@@ -78,6 +79,13 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail, locale, t }
     return () => observer.disconnect()
   }, [template?.id])
 
+  const isSkillTemplate = template && (template.type === 'skill' || template.categorySlug === 'skills')
+  useEffect(() => {
+    if (isSkillTemplate) {
+      ensureGuideStyles()
+    }
+  }, [isSkillTemplate])
+
   if (!template) return null
 
   const handleCardClick = () => {
@@ -108,22 +116,17 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail, locale, t }
   const metricViews = isEn ? 'Views' : '播放量'
   const coverUrl = template.thumbnailUrl || template.cover || template.img || ''
 
-  // 技能卡片：极简极光流光样式（移除左上角水滴/胶囊、右上角星标、使用量与文字遮挡，居中大标题与认证对勾）
+  // 技能卡片：完整复刻 Creatify（badge + 星标 + hover-drawer），直接复用 SkillCard 组件
   if (isSkill) {
-    const aurora = resolveSkillAuroraStyle(template)
-
     return (
       <div
-        className="omnimux-tpl-card is-skill-card omnimux-creatify-card omnimux-skill-card"
-        onClick={handleCardClick}
+        className="omnimux-tpl-card is-skill-card"
         data-template-id={template.id}
         data-template-type="skill"
-        data-skill-id={template.id}
         data-is-app="false"
         role="button"
         tabIndex={0}
         aria-label={title}
-        style={{ background: aurora.bg }} /* exempt-ui02: 极光算法动态流光背景 */
         onKeyDown={(e) => {
           if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault()
@@ -131,42 +134,13 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail, locale, t }
           }
         }}
       >
-        {/* 1. 动态极光流光背景层 */}
-        <div
-          className="omnimux-creatify-card-bg-img omnimux-skill-card-cover-img"
-          style={{
-            background: aurora.bg, /* exempt-ui02: 极光算法动态流光背景 */
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-          }}
-          aria-hidden="true"
+        <SkillCard
+          skill={template}
+          t={typeof t === 'function' ? t : (key, fallback) => fallback || key}
+          active={false}
+          onSelect={onSelect}
+          index={template.skillIndex ?? 0}
         />
-
-        {/* 2. 点阵纹理 Overlay (Dot Matrix) */}
-        <div className="omnimux-creatify-dot-overlay" aria-hidden="true" />
-
-        {/* 3. 居中白色加粗大标题 */}
-        <div className="omnimux-creatify-card-center">
-          <h3 className="omnimux-creatify-center-title omnimux-skill-card-title omnimux-tpl-title" title={title}>
-            <span>{title}</span>
-          </h3>
-        </div>
-
-        {/* 4. 悬停浮层：仅升起清爽的「使用」按钮，不遮挡居中大标题 */}
-        <div className="omnimux-tpl-hover-action">
-          <button /* exempt-ui01: session-guide card recreate button */
-            type="button"
-            className="omnimux-trending-recreate-btn omnimux-skill-card-btn"
-            onClick={handleRecreateClick}
-            aria-label={`${actionText}：${title}`}
-          >
-            <span className="omnimux-trending-recreate-icon" aria-hidden="true">
-              {actionIcon}
-            </span>
-            <span>{actionText}</span>
-          </button>
-        </div>
       </div>
     )
   }

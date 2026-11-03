@@ -20,7 +20,7 @@ describe('library-flow / masonry-layout 算法与分列模型单测', () => {
     assert.equal(cardRatioOf({ lane: 'assets' }), 3 / 4)
     assert.equal(cardRatioOf({ lane: 'products' }), 3 / 4)
     assert.equal(cardRatioOf({ lane: 'featured' }), 16 / 10)
-    assert.equal(cardRatioOf({ lane: 'skills' }), 1 / 1)
+    assert.equal(cardRatioOf({ lane: 'skills' }), 3 / 2)
 
     // 显式宽高
     assert.equal(cardRatioOf({ raw: { coverWidth: 1920, coverHeight: 1080 } }), 1920 / 1080)

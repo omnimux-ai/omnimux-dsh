@@ -3,6 +3,8 @@ import { AssetPickerCard, ensureAssetCardStyles } from '../asset-picker/AssetPic
 import { ProductPickerCard, ensureProductCardStyles } from '../product-picker/ProductPickerCard.jsx'
 import { InspirationPickerCard, ensureInspirationCardStyles } from '../inspiration-picker/InspirationPickerCard.jsx'
 import { TrendingVideoCard } from '../../session-guide/trending/TrendingVideoCard.jsx'
+import { SkillCard, CATEGORY_NAMES } from '../../session-guide/skills/SkillCard.jsx'
+import { ensureGuideStyles } from '../../session-guide/styles.js'
 
 /**
  * 通用卡片分发器 (UniversalLibraryCard)
@@ -12,6 +14,7 @@ import { TrendingVideoCard } from '../../session-guide/trending/TrendingVideoCar
  * - lane === 'inspiration' -> InspirationPickerCard (灵感素材)
  * - lane === 'assets'      -> AssetPickerCard (资产中心)
  * - lane === 'products'    -> ProductPickerCard (商品库)
+ * - lane === 'skills'      -> SkillCard (Creatify 渐变技能卡)
  * - 兜底回落 -> InspirationPickerCard
  */
 export function UniversalLibraryCard({
@@ -25,6 +28,7 @@ export function UniversalLibraryCard({
     ensureAssetCardStyles()
     ensureProductCardStyles()
     ensureInspirationCardStyles()
+    ensureGuideStyles()
   }, [])
 
   if (!card) return null
@@ -66,7 +70,23 @@ export function UniversalLibraryCard({
     )
   }
 
-  // 3. 爆款趋势短视频卡片
+  // 3. 技能卡 (Creatify 渐变)
+  if (lane === 'skills') {
+    const skill = card.raw || card
+    const categoryTitle = CATEGORY_NAMES[skill.category] || ''
+    return (
+      <SkillCard
+        skill={skill}
+        t={t}
+        active={isSelected}
+        onSelect={handleAction}
+        categoryTitle={categoryTitle}
+        index={card.index ?? 0}
+      />
+    )
+  }
+
+  // 4. 爆款趋势短视频卡片
   if (lane === 'trending' || card.trending) {
     const trendingItem = card.trending || card.raw || card
     return (

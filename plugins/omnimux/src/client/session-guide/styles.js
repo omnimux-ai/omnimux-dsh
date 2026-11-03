@@ -4145,3 +4145,16 @@ export function installGuideStyles(doc) {
   doc.head.appendChild(style)
   return () => style.remove()
 }
+
+/**
+ * 幂等确保 creatify/session-guide 样式在指定文档存在（跨宿主兜底用）。
+ * 素材工作台等独立宿主不保证 omnimux-inspiration 已 mount，
+ * 调用方在渲染技能卡前调用一次即可；已注入时直接返回。
+ */
+export function ensureGuideStyles(doc = (typeof document !== 'undefined' ? document : null)) {
+  if (!doc || doc.getElementById(GUIDE_STYLE_ID)) return
+  const style = doc.createElement('style')
+  style.id = GUIDE_STYLE_ID
+  style.textContent = GUIDE_CSS
+  doc.head?.appendChild(style)
+}
