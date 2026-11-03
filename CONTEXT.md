@@ -2,7 +2,7 @@
 
 This repo lands OmniMux on official dsh. `omnimux` is the execution hub, not a gateway. Platform and domain plugins send requests into hub seams and manage their respective stores. I/O: `docs/contracts/hub.md`.
 
-License and publication: OmniMux-authored code here is AGPL-3.0 ([NOTICE](NOTICE)). Public source repositories are published at [omnimux-ai/omnimux-dsh](https://github.com/omnimux-ai/omnimux-dsh) (plugins, this repo), [omnimux-ai/omnimux-desktop](https://github.com/omnimux-ai/omnimux-desktop) (desktop shell), and [omnimux-ai/omnimux-gateway](https://github.com/omnimux-ai/omnimux-gateway) (gateway), along with the aggregated snapshot repository [omnimux-ai/omnimux-ai](https://github.com/omnimux-ai/omnimux-ai).
+License and publication: OmniMux-authored code here is AGPL-3.0 ([NOTICE](NOTICE)). Shipped source is published into the aggregate snapshot repository [omnimux-ai/omnimux-ai](https://github.com/omnimux-ai/omnimux-ai) under `plugins/`, with a `SOURCE.json` naming the shipped commit. This repository ([omnimux-ai/omnimux-dsh](https://github.com/omnimux-ai/omnimux-dsh)) remains the public development repository for plugin source; the standalone [omnimux-ai/omnimux-gateway](https://github.com/omnimux-ai/omnimux-gateway) and [omnimux-ai/omnimux-desktop](https://github.com/omnimux-ai/omnimux-desktop) repositories are no longer source publication targets.
 
 ## Product language
 

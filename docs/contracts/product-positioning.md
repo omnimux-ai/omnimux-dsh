@@ -52,7 +52,7 @@ related:
 
 ## 桌面端首页与表面收敛（omnimux.ai）
 
-2026-10-27 起，桌面端落地页已正式成为 `omnimux.ai` 主站首页，原角色落地页保留在 `/ai-influencer-studio`，`d.omnimux.ai` 已退役并 301 跳转至 `omnimux.ai`。三端公开源码仓已按 AGPL-3.0 独立发布：插件仓 `omnimux-ai/omnimux-dsh`、桌面端 `omnimux-ai/omnimux-desktop`、云端路由与计费服务仓 `omnimux-ai/omnimux-gateway`（以及汇总快照仓 `omnimux-ai/omnimux-ai`）。
+2026-10-27 起，桌面端落地页已正式成为 `omnimux.ai` 主站首页，原角色落地页保留在 `/ai-influencer-studio`，`d.omnimux.ai` 已退役并 301 跳转至 `omnimux.ai`。三端公开源码（AGPL-3.0）统一发布到聚合快照仓 `omnimux-ai/omnimux-ai`（`gateway/`、`desktop/`、`plugins/` 三个目录，各带 `SOURCE.json`）；插件源码的公开开发仓为 `omnimux-ai/omnimux-dsh`，独立公开仓 `omnimux-ai/omnimux-gateway`、`omnimux-ai/omnimux-desktop` 不再是源码发布目标。
 
 对外描述桌面端与插件能力时必须遵守：
 
