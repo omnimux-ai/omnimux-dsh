@@ -71,7 +71,7 @@ OmniMux 自行编写的插件代码采用 **[AGPL-3.0](LICENSE)**，另附 [NOTI
 
 从上游 fork 或引入的代码保留原许可（多为 MIT），见 [CONTRIBUTING.md](CONTRIBUTING.md) 第 4 节与 [ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md)。2026-10-28 之前发布的版本按其发布时的许可证授权。许可不等于生成免费，详见 [COMMERCIAL.md](COMMERCIAL.md)。
 
-三端公开源码仓（AGPL-3.0）：插件仓 [omnimux-ai/omnimux-dsh](https://github.com/omnimux-ai/omnimux-dsh)（本仓）、桌面端 [omnimux-ai/omnimux-desktop](https://github.com/omnimux-ai/omnimux-desktop)、网关 [omnimux-ai/omnimux-gateway](https://github.com/omnimux-ai/omnimux-gateway)，以及统一源码汇总仓 [omnimux-ai/omnimux-ai](https://github.com/omnimux-ai/omnimux-ai)。
+公开源码（AGPL-3.0）统一发布到聚合快照仓 [omnimux-ai/omnimux-ai](https://github.com/omnimux-ai/omnimux-ai)：`gateway/`、`desktop/`、`plugins/` 三个目录，各带说明发布版本的 `SOURCE.json`。本仓 [omnimux-ai/omnimux-dsh](https://github.com/omnimux-ai/omnimux-dsh) 仍是插件源码的公开开发仓；独立公开仓 [omnimux-ai/omnimux-gateway](https://github.com/omnimux-ai/omnimux-gateway)、[omnimux-ai/omnimux-desktop](https://github.com/omnimux-ai/omnimux-desktop) 不再是源码发布目标。
 
 ## 🚀 快速启动 (Quickstart)
 
