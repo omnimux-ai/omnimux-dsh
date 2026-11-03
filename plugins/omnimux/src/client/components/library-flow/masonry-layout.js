@@ -67,9 +67,9 @@ export function cardRatioOf(card) {
     return 16 / 10
   }
 
-  // 8. 技能卡片 (skills)：1:1
+  // 8. 技能卡片 (skills)：3:2（与 SkillCard 的 aspect-ratio: 3/2 一致）
   if (lane === 'skills') {
-    return 1 / 1
+    return 3 / 2
   }
 
   return DEFAULT_ASPECT_RATIO

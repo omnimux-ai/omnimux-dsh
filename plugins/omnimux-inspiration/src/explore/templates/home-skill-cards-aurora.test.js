@@ -53,21 +53,20 @@ test('首页 Skills 技能库货架卡片：100% 对齐图 2 技能插件高颜�
   assert.ok(html.includes('omnimux-creatify-dot-overlay'), '技能卡片必须渲染点阵覆盖层');
   assert.ok(html.includes('radial-gradient'), '技能卡片必须携带 radial-gradient 极光流光背景');
 
-  // 3. 验证彻底移除冗余装饰元素（水滴/分类胶囊/收藏星标/使用量抽屉）
-  assert.ok(!html.includes('omnimux-creatify-card-top-left'), '技能卡片严禁渲染左上角水滴与分类胶囊');
-  assert.ok(!html.includes('omnimux-creatify-star-btn'), '技能卡片严禁渲染右上角收藏星标');
-  assert.ok(!html.includes('omnimux-creatify-card-hover-drawer'), '技能卡片严禁渲染遮挡标题的简介文字抽屉');
-  assert.ok(!html.includes('omnimux-creatify-drawer-uses'), '技能卡片严禁展示使用量统计');
+  // 3. 验证完整复刻 Creatify（左上徽章/分类胶囊、收藏星标、悬停抽屉、使用量）
+  assert.ok(html.includes('omnimux-creatify-card-top-left'), '技能卡片必须渲染左上角徽章与分类胶囊');
+  assert.ok(html.includes('omnimux-creatify-star-btn'), '技能卡片必须渲染右上角收藏星标');
+  assert.ok(html.includes('omnimux-creatify-card-hover-drawer'), '技能卡片必须渲染悬停简介抽屉');
+  assert.ok(html.includes('omnimux-creatify-drawer-uses'), '技能卡片必须展示使用量统计');
 
-  // 4. 验证居中大标题（极简核心资产，认证对勾徽标已按用户要求移除）
+  // 4. 验证居中大标题（SkillCard 标准实现）
   assert.ok(html.includes('omnimux-creatify-center-title'), '必须包含居中加粗大标题');
-  assert.ok(!html.includes('creatify-card-verified-svg'), '居中标题严禁携带认证打勾徽标');
   assert.ok(html.includes('UGC 告白'), '必须正确渲染前置核心技能 UGC 告白');
   assert.ok(html.includes('电影级'), '必须正确渲染核心技能 电影级');
 
-  // 5. 验证悬停只升起清爽小巧的「使用」按钮
-  assert.ok(html.includes('omnimux-trending-recreate-btn'), '必须具备毛玻璃悬停按键');
-  assert.ok(html.includes('使用'), '悬停按键文案必须为「使用」');
+  // 5. 验证悬停抽屉内 SkillCard 的「使用 Skill」CTA
+  assert.ok(html.includes('omnimux-skill-card-btn'), '必须具备 SkillCard 使用按键');
+  assert.ok(/使用/.test(html), '悬停按键必须带「使用」文案');
 
   // 6. 验证彻底消除单调灰黑占位符
   assert.ok(!html.includes('omnimux-tpl-placeholder"><span class="omnimux-tpl-ph-icon'), '技能卡片严禁降级为黑灰占位符');
