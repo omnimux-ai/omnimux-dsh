@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { zh, en } from '../../src/client/locales.js'
 import { handleTabKey } from '../../src/client/tab-keyboard.js'
+import { showsPrivateNotice } from '../../src/client/detail-notice.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const clientDir = join(here, '../../src/client')
@@ -65,7 +66,6 @@ describe('TikTok publish minimal loop E2E contracts (Issue #3898)', () => {
   })
 
   it('shows the pre-review private-visibility notice for a live TikTok direct subtask', async () => {
-    const { showsPrivateNotice } = await import('../../src/client/detail-notice.js')
     const recordDetailSrc = readFileSync(join(clientDir, 'RecordDetail.jsx'), 'utf8')
     assert.match(recordDetailSrc, /showsPrivateNotice\(tasks\)/)
     assert.match(recordDetailSrc, /t\('detail\.privateNotice'\)/)
