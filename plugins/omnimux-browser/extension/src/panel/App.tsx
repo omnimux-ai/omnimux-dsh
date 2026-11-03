@@ -163,6 +163,15 @@ interface RelayProfileDraft {
 const RELAY_ROUTE_PREFIX = 'relay-'
 
 /**
+ * How long the pairing card waits for an approval before it re-enables.
+ *
+ * Slightly longer than the background's own 120s poll so that expiry stays the
+ * authority; this timer only covers a poll that never reports back, such as one
+ * dropped by a restarted service worker.
+ */
+const PAIR_APPROVAL_TIMEOUT_MS = 130_000
+
+/**
  * Display names are free-form (CJK included); the route key needs the
  * ASCII shape the wire and credential refs expect, so CJK-heavy names
  * collapse to a stable name hash instead of being rejected.
@@ -1129,6 +1138,21 @@ export function App(): React.JSX.Element {
   /** Pairing card state: the in-flight approval and its last outcome. */
   const [pairBusy, setPairBusy] = useState(false)
   const [pairMessage, setPairMessage] = useState<string | null>(null)
+  const pairTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  /**
+   * Bring the pairing card back to a usable state with its outcome, or with
+   * `null` once the bridge is connected. The first outcome wins: a late
+   * approval must not overwrite a card that already reported a timeout.
+   */
+  function settlePairing(message: string | null): void {
+    if (pairTimeoutRef.current !== null) {
+      clearTimeout(pairTimeoutRef.current)
+      pairTimeoutRef.current = null
+    }
+    setPairBusy(false)
+    setPairMessage(message)
+  }
   const [attachedMediaIds, setAttachedMediaIds] = useState<Set<string>>(() => new Set())
   /** Draft images delivered by the page-media hover capsule, by media id. */
   const [litMediaIds, setLitMediaIds] = useState<Set<string>>(() => new Set())
@@ -1901,9 +1925,15 @@ export function App(): React.JSX.Element {
   const [sessionEpoch, setSessionEpoch] = useState(0)
   const lastStateRef = useRef<BridgeState | null>(null)
   useEffect(() => {
-    const offStatus = api.onStatus((next, nextCaps) => {
+    const offStatus = api.onStatus((next, nextCaps, boundSettings) => {
       setState(next)
       setCaps(nextCaps)
+      // A completed pairing travels with the status that switches the view:
+      // fill the form with the approved pair and end the card's busy state.
+      if (boundSettings !== undefined) {
+        setSettings((current) => ({ ...current, bridgeUrl: boundSettings.bridgeUrl, token: boundSettings.token }))
+      }
+      if (next === 'connected') settlePairing(null)
       const previous = lastStateRef.current
       lastStateRef.current = next
       if (next === 'connected') {
@@ -1986,6 +2016,10 @@ export function App(): React.JSX.Element {
     return () => {
       offStatus(); offEvent(); offApproval(); offApprovalResolved()
       offTabAffinity(); offSelection(); offResumeHint()
+      if (pairTimeoutRef.current !== null) {
+        clearTimeout(pairTimeoutRef.current)
+        pairTimeoutRef.current = null
+      }
     }
   }, [api])
 
@@ -3974,6 +4008,15 @@ export function App(): React.JSX.Element {
               if (pairBusy) return
               setPairBusy(true)
               setPairMessage(locale === 'en' ? 'Waiting for approval…' : '等待授权…')
+              // The background stops polling after 120s, and a restarted worker
+              // reports nothing at all: this bound always gives the card a way out.
+              if (pairTimeoutRef.current !== null) clearTimeout(pairTimeoutRef.current)
+              pairTimeoutRef.current = setTimeout(() => {
+                pairTimeoutRef.current = null
+                settlePairing(locale === 'en'
+                  ? 'Connection timed out: make sure the app is running, then retry'
+                  : '连接超时，请确认应用已启动后重试')
+              }, PAIR_APPROVAL_TIMEOUT_MS)
               void chrome.runtime?.sendMessage?.({ type: 'PAIR_START' })
                 .then((res: { ok?: boolean; message?: string; code?: string } | undefined) => {
                   if (res?.ok === true) {
@@ -3982,12 +4025,10 @@ export function App(): React.JSX.Element {
                       : `等待授权… 授权码 ${res.code ?? ''}`)
                     return
                   }
-                  setPairBusy(false)
-                  setPairMessage(res?.message ?? (locale === 'en' ? 'Pairing failed' : '配对失败'))
+                  settlePairing(res?.message ?? (locale === 'en' ? 'Pairing failed' : '配对失败'))
                 })
                 .catch(() => {
-                  setPairBusy(false)
-                  setPairMessage(locale === 'en' ? 'Pairing failed' : '配对失败')
+                  settlePairing(locale === 'en' ? 'Pairing failed' : '配对失败')
                 })
             }}
           >{locale === 'en' ? 'Connect to local OmniMux' : '连接本机 OmniMux'}</button>

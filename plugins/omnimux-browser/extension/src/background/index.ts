@@ -494,8 +494,22 @@ function disarmBridgeKeepalive(): void {
   void Promise.resolve(chrome.alarms.clear(BRIDGE_KEEPALIVE_ALARM)).catch(() => {})
 }
 
-function broadcastStatus(): void {
-  const payload = { type: 'status', state: bridge?.state ?? ('stopped' as BridgeState), caps }
+/**
+ * Tell every open panel the connection state, and optionally the settings a
+ * pairing just bound.
+ *
+ * A panel reads its form from storage once when it mounts, so one that was
+ * already open when the approval landed would keep showing an empty address
+ * and token. Pairing passes the bound pair here instead of waiting for a
+ * reopen.
+ */
+function broadcastStatus(boundSettings?: { bridgeUrl: string; token: string }): void {
+  const payload = {
+    type: 'status',
+    state: bridge?.state ?? ('stopped' as BridgeState),
+    caps,
+    ...(boundSettings === undefined ? {} : { settings: boundSettings }),
+  }
   for (const port of panelPorts) {
     try { port.postMessage(payload) } catch { /* port already closed */ }
   }
@@ -1526,6 +1540,20 @@ function cancelAllToolCalls(): void {
   activeToolCalls.clear()
 }
 
+/**
+ * Drop a bridge this client lost to another browser (close 4000).
+ *
+ * `startBridge()` refuses to run while the client is evicted; only an explicit
+ * user re-bind (pairing, settings save, instance switch) may clear that flag,
+ * and every such path must clear it before starting or the attempt is a no-op.
+ */
+function resetEvictedBridge(): void {
+  if (bridge === null || bridge.evicted !== true) return
+  bridge.stop()
+  bridge = null
+  rpc = null
+}
+
 /** (Re)start the bridge with the current settings. 零配置：地址留空时自动探测；回环连接无需 token。 */
 async function startBridge(): Promise<void> {
   const revision = ++bridgeStartRevision
@@ -1752,11 +1780,7 @@ async function ensureBridgeForGeneration(timeoutMs = 5000): Promise<void> {
       ? '未连接 dsh：还没有配对令牌，请在插件设置里粘贴本机应用的配对令牌'
       : 'dsh is not connected: no pairing token yet — paste it in the extension settings')
   }
-  if (bridge !== null && bridge.evicted === true) {
-    bridge.stop()
-    bridge = null
-    rpc = null
-  }
+  resetEvictedBridge()
   if (bridge === null || bridge.state === 'stopped' || bridge.state === 'reconnecting') {
     armBridgeKeepalive()
     await startBridge()
@@ -1905,7 +1929,13 @@ async function startPairing(): Promise<{ ok: true; approveUrl: string; code: str
           // token that later reconnects may drift to another discovered host.
           const approvedBridgeUrl = `ws://127.0.0.1:${port}/ext/bridge`
           await persistSettings({ bridgeUrl: approvedBridgeUrl, token }).catch(() => {})
-          startBridge()
+          // Approving the page is the user re-binding this browser on purpose:
+          // a client another browser evicted earlier (close 4000) must have
+          // that flag cleared, or startBridge() returns without connecting and
+          // the panel stays on "not connected" forever.
+          resetEvictedBridge()
+          await startBridge()
+          broadcastStatus({ bridgeUrl: approvedBridgeUrl, token })
           // Go back first, then close the detour.
           if (originTabId !== null) await chrome.tabs.update(originTabId, { active: true }).catch(() => {})
           if (attempt.tabId !== null) await chrome.tabs.remove(attempt.tabId).catch(() => {})
