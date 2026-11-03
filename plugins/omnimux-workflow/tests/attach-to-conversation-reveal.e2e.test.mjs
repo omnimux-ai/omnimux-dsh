@@ -339,7 +339,7 @@ test('A2/A3/N3/N4：会话栏自动展开 → 附件落库 → 成功提示 → 
     assert.equal(scene.collapsed(), true, '前置：会话列处于折叠态');
     assert.equal(scene.cards().length, 2, '前置：附件区渲染既有 2 张卡片');
 
-    const result = scene.hook.deliverToConversation(CANVAS_PAYLOAD, scene.window);
+    const result = await act(async () => scene.hook.deliverToConversation(CANVAS_PAYLOAD, scene.window));
 
     // 真实 store 的同步回执 + 真落库
     assert.equal(result.receipt?.ok, true, '中枢 store 给出 ok 回执');
@@ -397,7 +397,7 @@ test('B1：会话栏已展开时不写任何布局，附件照常落库、提示
     scene.seedAttachment({ entityId: 'node-table-1', kind: 'table', title: '分镜表.htable', relativePath: '.hilo/tables/node-table-1.htable' });
     await scene.flush();
 
-    const result = scene.hook.deliverToConversation(CANVAS_PAYLOAD, scene.window);
+    const result = await act(async () => scene.hook.deliverToConversation(CANVAS_PAYLOAD, scene.window));
     assert.equal(result.revealed, 'skipped');
     assert.deepEqual(scene.layout.calls, [], '已展开时不调用 setConversationCollapsed / setFocus');
     assert.equal(scene.collapsed(), false);
@@ -427,7 +427,7 @@ test('C1：附件已达 8 个上限时给可执行的警告，不报成功也不
     await scene.flush();
     assert.equal(scene.cards().length, 8, '前置：附件区已满 8 张');
 
-    const result = scene.hook.deliverToConversation(CANVAS_PAYLOAD, scene.window);
+    const result = await act(async () => scene.hook.deliverToConversation(CANVAS_PAYLOAD, scene.window));
     assert.equal(result.receipt?.reason, 'quota-exceeded');
     assert.equal(result.attached, false);
     assert.equal(scene.store.getSnapshot(SESSION_ID).length, 8, '达上限时不写入');
@@ -449,7 +449,7 @@ test('C2：同一文件重复添加（指纹命中）视为成功，不重复追
     assert.equal(first.ok, true);
     await scene.flush();
 
-    const result = scene.hook.deliverToConversation(CANVAS_PAYLOAD, scene.window);
+    const result = await act(async () => scene.hook.deliverToConversation(CANVAS_PAYLOAD, scene.window));
     assert.equal(result.receipt?.reason, 'duplicate');
     assert.equal(result.attached, true, '指纹重复按已添加成功处理');
     assert.equal(scene.store.getSnapshot(SESSION_ID).length, 1, '附件区不重复追加');
@@ -466,10 +466,10 @@ test('C2：同一文件重复添加（指纹命中）视为成功，不重复追
 test('C3：中枢回执为 invalid-payload 时给通用警告，不假装成功', async () => {
   const scene = await createScene({ collapsed: true });
   try {
-    const result = scene.hook.deliverToConversation(
+    const result = await act(async () => scene.hook.deliverToConversation(
       { kind: 'video', entityId: 'node-video-1', title: '', relativePath: '' },
       scene.window,
-    );
+    ));
     assert.equal(result.receipt?.reason, 'invalid-payload');
     assert.equal(result.attached, false);
     assert.equal(scene.store.getSnapshot(SESSION_ID).length, 0);
@@ -490,7 +490,7 @@ test('C4/N2：中枢 store 全局缺失时回退到事件通道，真实全局�
     const eventStore = scene.store;
     delete scene.window.__omnimuxAttachments;
 
-    const result = scene.hook.deliverToConversation(CANVAS_PAYLOAD, scene.window);
+    const result = await act(async () => scene.hook.deliverToConversation(CANVAS_PAYLOAD, scene.window));
     assert.equal(result.receipt, null, '拿不到 store 时没有同步回执');
     assert.equal(result.attached, true, '回退分支保持既有的成功语义');
     assert.equal(scene.addEvents.length, 1, '派发一次 omnimux:add-to-conversation');
@@ -533,7 +533,7 @@ test('N1：三个全局 API 全部缺失时静默跳过，不抛错也不阻断�
     delete scene.window.__omnimuxWorkbench;
     delete scene.window.__omnimuxComposerActions;
 
-    const result = scene.hook.deliverToConversation(CANVAS_PAYLOAD, scene.window);
+    const result = await act(async () => scene.hook.deliverToConversation(CANVAS_PAYLOAD, scene.window));
     assert.equal(result.revealed, 'unavailable');
     assert.equal(result.receipt, null);
     assert.equal(result.attached, true, '缺 API 不阻断添加');

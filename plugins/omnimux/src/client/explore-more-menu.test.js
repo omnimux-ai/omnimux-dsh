@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 import { build } from 'esbuild'
 import { JSDOM } from 'jsdom'
-import { resolveExploreMenuItems } from './sidebar-coordinator.js'
+import { resolveExploreMenuItems, EXPLORE_MENU_ITEMS } from './sidebar-coordinator.js'
 import { ALPHA_DESCRIPTION, isAlphaEntry } from './sidebar-coordinator.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -252,13 +252,13 @@ describe('官方「更多」菜单注册形状', () => {
 })
 
 describe('官方「更多」菜单内容', () => {
-  it('8 行文案与顺序逐字等于真源清单', async () => {
+  it('文案与顺序逐字等于真源清单', async () => {
     const menu = await renderMoreMenu({ onDismiss: () => {} })
     try {
-      assert.equal(TRUTH.length, 8, '真源清单为 8 项（产品库已并入资产库；自动化已退役）')
-      assert.equal(menu.rows.length, 8, '每项渲染一行')
+      assert.equal(TRUTH.length, EXPLORE_MENU_ITEMS.length, '真源清单与内置白名单一致')
+      assert.equal(menu.rows.length, TRUTH.length, '每项渲染一行')
       assert.deepEqual(menu.rows.map((row) => labelTextOf(row.children)), EXPECTED_LABELS)
-      assert.equal(menu.container.querySelectorAll('[data-stub-row]').length, 8)
+      assert.equal(menu.container.querySelectorAll('[data-stub-row]').length, TRUTH.length)
     } finally {
       menu.cleanup()
     }
@@ -268,8 +268,8 @@ describe('官方「更多」菜单内容', () => {
     const menu = await renderMoreMenu({ onDismiss: () => {} })
     try {
       assert.deepEqual(menu.rows.map((row) => row.separatorBefore === true), EXPECTED_SEPARATORS)
-      assert.deepEqual(SEPARATOR_OWNERS, ['发布', '数据分析'], '视频剪辑后、手机管理后各一条分隔线')
-      assert.equal(menu.rows.at(0).separatorBefore, false, '首行不画线')
+      assert.deepEqual(SEPARATOR_OWNERS, TRUTH.filter((item, index) => index > 0 && TRUTH.at(index - 1).dividerAfter === true).map((item) => item.label), 'dividerAfter 决定 separatorBefore')
+      assert.equal(menu.rows.at(0)?.separatorBefore, false, '首行不画线')
     } finally {
       menu.cleanup()
     }
@@ -310,9 +310,9 @@ describe('官方「更多」菜单内容', () => {
           assert.equal(typeof row.children, 'string', '非 Alpha 行内容仍是纯字符串（零变化）')
         }
       })
-      assert.deepEqual(alphaLabels, ['发布', '账号', '数据分析', '任务表单'], 'Alpha 项按菜单顺序命中 4 项（自动化已退役）')
-      assert.deepEqual(plainLabels, ['应用', '视频剪辑', '手机管理', '社交采收'], '其余 4 项不带标识')
-      assert.equal(menu.container.querySelectorAll('.omnimux-explore-more-alpha').length, 4)
+      assert.deepEqual(alphaLabels, TRUTH.filter((item) => isAlphaEntry(item.entryId)).map((item) => item.label), 'Alpha 项按菜单顺序命中')
+      assert.deepEqual(plainLabels, TRUTH.filter((item) => !isAlphaEntry(item.entryId)).map((item) => item.label), '其余项不带标识')
+      assert.equal(menu.container.querySelectorAll('.omnimux-explore-more-alpha').length, alphaLabels.length)
     } finally {
       menu.cleanup()
     }
@@ -391,7 +391,7 @@ describe('官方「更多」菜单运行时注册接缝', () => {
       const menu = createMenuRenderer(dom, api, { onDismiss: () => {} })
 
       await menu.render()
-      assert.equal(menu.rows.length, 8, '未注册时 8 行')
+      assert.equal(menu.rows.length, TRUTH.length, '未注册时与内置项一致')
 
       const unregister = registry.registerExploreItem({
         id: 'fast-news-workbench',
@@ -402,17 +402,17 @@ describe('官方「更多」菜单运行时注册接缝', () => {
       assert.equal(typeof unregister, 'function', '注册返回注销函数')
 
       await menu.render()
-      assert.equal(menu.rows.length, 9, '注册后 9 行')
+      assert.equal(menu.rows.length, TRUTH.length + 1, '注册后追加一行')
       const labels = Array.from(menu.rows, (row) => row.children)
       assert.equal(labels.at(-1), '快讯中枢', '注册项追加在菜单末尾')
-      assert.equal(labels.at(0), '应用', '内置首项不变')
+      assert.equal(labels.at(0), TRUTH.at(0)?.label, '内置首项不变')
       menu.unmount()
     } finally {
       closeMenuBundle(dom, api)
     }
   })
 
-  it('注销后注册项从菜单消失，回到 8 行', async () => {
+  it('注销后注册项从菜单消失，回到初始行数', async () => {
     const { dom, api } = loadMenuBundle()
     try {
       const registry = installRuntimeRegistry(dom, api)
@@ -424,11 +424,11 @@ describe('官方「更多」菜单运行时注册接缝', () => {
         tabId: 'fast-news-workbench',
       })
       await menu.render()
-      assert.equal(menu.rows.length, 9, '注册后 9 行')
+      assert.equal(menu.rows.length, TRUTH.length + 1, '注册后追加一行')
 
       unregister()
       await menu.render()
-      assert.equal(menu.rows.length, 8, '注销后回到 8 行')
+      assert.equal(menu.rows.length, TRUTH.length, '注销后回到初始行数')
       const labels = Array.from(menu.rows, (row) => row.children)
       assert.equal(labels.includes('快讯中枢'), false, '注销项不再渲染')
       menu.unmount()
@@ -446,9 +446,9 @@ describe('官方「更多」菜单运行时注册接缝', () => {
       assert.equal(typeof conflict, 'function', '冲突注册仍返回注销函数')
 
       await menu.render()
-      assert.equal(menu.rows.length, 8, '冲突注册不新增行')
+      assert.equal(menu.rows.length, TRUTH.length, '冲突注册不新增行')
       const labels = Array.from(menu.rows, (row) => row.children)
-      assert.equal(labels.at(0), '应用', '内置首项文案仍为「应用」')
+      assert.equal(labels.at(0), TRUTH.at(0)?.label, '内置首项文案仍为真源首项')
       assert.equal(labels.includes('伪装应用'), false, '冒充项不出现')
       menu.unmount()
     } finally {
