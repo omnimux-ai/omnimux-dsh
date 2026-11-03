@@ -1,0 +1,17 @@
+hub suite: node scripts/run-tests.mjs (cwd plugins/omnimux) head=c8eacc9b969efc892ae050d3cf4215921fffbd86
+✖ scanLocalAgents (7.701625ms)
+✖ materialized Hub pnpm pack works without workspace sources or installed dependencies (999.508708ms)
+ℹ tests 3704
+ℹ pass 3701
+ℹ fail 3
+✖ failing tests:
+✖ marks only the binaries that answer --version as installed (6.203792ms)
+✖ probeAgentModels returns dynamic models from local cache/config (0.73025ms)
+✖ materialized Hub pnpm pack works without workspace sources or installed dependencies (999.508708ms)
+ℹ tests 89
+ℹ pass 89
+ℹ fail 0
+
+已知环境性失败（与本 diff 无关）：
+- agents/local.test.js: marks only the binaries that answer --version as installed / probeAgentModels returns dynamic models from local cache/config —— 在 main 检出（1bd1d4c2d）同样失败
+- generation-core-package.test.js: materialized Hub pnpm pack works without workspace sources or installed dependencies —— 仅工作树 pnpm 安装态失败，main 检出通过

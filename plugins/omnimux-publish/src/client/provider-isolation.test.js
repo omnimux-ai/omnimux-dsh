@@ -104,3 +104,19 @@ test('historical nonofficial tasks remain viewable without retry or upstream ref
     assert.equal(calls.length, 1)
   })
 })
+
+test('record detail renders the pre-review private notice only for live official subtasks', async () => {
+  await render('RecordDetail', { record: { title: 'Live post', subtasks: [
+    { id: 't1', account_id: '41', platform: 'tiktok', provider: 'tiktok_direct', status: 'published', post_id: 'tt_publish_7001' },
+  ] } }, { recordId: 'record', onBack() {}, onChanged() {} }, (container) => {
+    assert.ok(container.textContent.includes('detail.privateNotice'))
+  })
+  await render('RecordDetail', { record: { title: 'Draft', subtasks: [] } }, { recordId: 'record', onBack() {}, onChanged() {} }, (container) => {
+    assert.ok(!container.textContent.includes('detail.privateNotice'))
+  })
+  await render('RecordDetail', { record: { title: 'Legacy', subtasks: [
+    { id: 'z', account_id: '1', platform: 'tiktok', provider: 'zernio', status: 'published', post_id: 'post-z' },
+  ] } }, { recordId: 'record', onBack() {}, onChanged() {} }, (container) => {
+    assert.ok(!container.textContent.includes('detail.privateNotice'))
+  })
+})

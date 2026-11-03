@@ -146,6 +146,7 @@ export const zh = {
   'detail.refresh': '同步平台状态',
   'detail.refreshing': '正在同步…',
   'detail.syncError': '部分渠道状态同步失败：{reason}',
+  'detail.privateNotice': 'TikTok 应用审核通过前，新发布的内容在 TikTok 内为「仅自己可见」。请到 TikTok App 确认，必要时改为公开。',
   // 平台名
   'platform.xiaohongshu': '小红书',
   'platform.douyin': '抖音',
@@ -334,6 +335,7 @@ export const en = {
   'detail.refresh': 'Sync Status',
   'detail.refreshing': 'Syncing…',
   'detail.syncError': 'Channel sync error: {reason}',
+  'detail.privateNotice': 'Until the TikTok app review completes, new posts stay "Only you" inside TikTok. Open TikTok to confirm or make them public.',
   'platform.xiaohongshu': 'Xiaohongshu',
   'platform.douyin': 'Douyin',
   'platform.kuaishou': 'Kuaishou',

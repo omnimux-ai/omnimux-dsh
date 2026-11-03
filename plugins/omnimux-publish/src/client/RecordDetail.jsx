@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, IconChevronLeftOutline14, IconRefreshOutline16 } from 'dsh-ui-kit'
 import { recordDetail, refreshRecord, retryTask } from './api.js'
 import { isPublishingAccount, isRetryablePublishingTask } from '../account-policy.js'
+import { showsPrivateNotice } from './detail-notice.js'
 
 /**
  * A6/M8 记录详情：per-account 子任务状态展开 + 手动刷新（POST /records/refresh）
@@ -115,6 +116,9 @@ export function RecordDetail({ t, recordId, onBack, onChanged }) {
       {error ? <div role="alert" className="omnimux-publish-alert warn">{error}</div> : null}
       {record.error ? (
         <div role="alert" className="omnimux-publish-alert banner">{String(record.error)}</div>
+      ) : null}
+      {showsPrivateNotice(tasks) ? (
+        <div className="omnimux-publish-alert banner">{t('detail.privateNotice')}</div>
       ) : null}
 
       <div className="omnimux-publish-section">{t('detail.subtasks')}</div>

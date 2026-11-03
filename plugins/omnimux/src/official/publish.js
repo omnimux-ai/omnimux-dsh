@@ -16,6 +16,23 @@ export function presignMedia(client, args) {
 }
 
 /**
+ * Gateway binds `account_ids` as int64 (local account ids). Local views keep
+ * ids as strings, so numeric strings are widened here right before the wire
+ * call; non-numeric ids pass through unchanged so historical fixtures and
+ * third-party-sourced rows keep their existing behavior.
+ * @param {string} id
+ * @returns {string | number}
+ */
+function wireAccountId(id) {
+  if (!/^\d+$/.test(id)) return id
+  const widened = Number(id)
+  if (!Number.isSafeInteger(widened)) {
+    throw new OmnimuxError('invalid-account-ids', `account id ${id} exceeds the safe integer range`, { status: 400 })
+  }
+  return widened
+}
+
+/**
  * @param {{ withPat: Function }} client
  * @param {Record<string, unknown>} args
  * @param {{ readForAuthorization: () => Record<string, Record<string, unknown>> }} accountMetaStore
@@ -43,7 +60,7 @@ export async function createPost(client, args, accountMetaStore) {
   assertPermission()
   return assertSocialSuccess(await client.withPat('/api/social/v1/posts', {
     method: 'POST',
-    body: { ...args, provider, account_ids: accountIds },
+    body: { ...args, provider, account_ids: accountIds.map(wireAccountId) },
   }, assertPermission))
 }
 

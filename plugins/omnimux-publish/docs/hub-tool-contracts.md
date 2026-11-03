@@ -18,6 +18,7 @@
 | `omnimux_publish_presign` | `filename`，可选 `content_type` | POST `/api/social/v1/media/presign` |
 
 创建正文使用 `content`，不是 `text`；媒体 URL 放在 `media_items`。
+`account_ids` 在网关侧绑定为 int64 本地账号 id，而本仓视图（中枢 `pickAccount`、发布插件账本、Agent 工具 schema）统一使用字符串；中枢 `createPost` 在发出请求前把纯数字字符串扩宽为数字，非数字 id 原样透传。桌面端与 Agent 不得各自转换，避免出现第二套口径。
 创建结果的 `data.id` 是云端 post ID。重试入口传本地 `task.id`，不传 record ID。
 
 ## 账号与失败语义

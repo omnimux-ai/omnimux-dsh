@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { zh, en } from '../../src/client/locales.js'
 import { handleTabKey } from '../../src/client/tab-keyboard.js'
+import { showsPrivateNotice } from '../../src/client/detail-notice.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const clientDir = join(here, '../../src/client')
@@ -62,5 +63,16 @@ describe('TikTok publish minimal loop E2E contracts (Issue #3898)', () => {
     assert.equal(prevented, true)
     assert.equal(accountsTab.focused, 1)
     assert.equal(accountsTab.clicked, 1)
+  })
+
+  it('shows the pre-review private-visibility notice for a live TikTok direct subtask', async () => {
+    const recordDetailSrc = readFileSync(join(clientDir, 'RecordDetail.jsx'), 'utf8')
+    assert.match(recordDetailSrc, /showsPrivateNotice\(tasks\)/)
+    assert.match(recordDetailSrc, /t\('detail\.privateNotice'\)/)
+    assert.equal(showsPrivateNotice([{ platform: 'tiktok', provider: 'tiktok_direct', status: 'submitted', post_id: 'p1' }]), true)
+    assert.equal(showsPrivateNotice([{ platform: 'tiktok', provider: 'tiktok_direct', status: 'failed', post_id: 'p1' }]), false)
+    assert.equal(showsPrivateNotice([{ platform: 'tiktok', provider: 'tiktok_direct', status: 'submitted' }]), false)
+    assert.equal(zh['detail.privateNotice'].includes('仅自己可见'), true)
+    assert.equal(en['detail.privateNotice'].includes('Only you'), true)
   })
 })
