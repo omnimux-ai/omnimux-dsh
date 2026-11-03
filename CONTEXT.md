@@ -2,15 +2,17 @@
 
 This repo lands OmniMux on official dsh. `omnimux` is the execution hub, not a gateway. Platform and domain plugins send requests into hub seams and manage their respective stores. I/O: `docs/contracts/hub.md`.
 
-License and publication: OmniMux-authored code here is AGPL-3.0 ([NOTICE](NOTICE)). The public source repository for gateway, desktop and plugins is [omnimux-ai/omnimux-ai](https://github.com/omnimux-ai/omnimux-ai); this repo will be published there under `plugins/` (no source there yet). It is a publication target, not a development remote.
+License and publication: OmniMux-authored code here is AGPL-3.0 ([NOTICE](NOTICE)). Public source repositories are published at [omnimux-ai/omnimux-dsh](https://github.com/omnimux-ai/omnimux-dsh) (plugins, this repo), [omnimux-ai/omnimux-desktop](https://github.com/omnimux-ai/omnimux-desktop) (desktop shell), and [omnimux-ai/omnimux-gateway](https://github.com/omnimux-ai/omnimux-gateway) (gateway), along with the aggregated snapshot repository [omnimux-ai/omnimux-ai](https://github.com/omnimux-ai/omnimux-ai).
 
 ## Product language
 
+**Content commerce system（内容电商系统 / 属于你的内容电商团队）**: A desktop Agent-coordinated workbench centering on product selling points, reference video deconstruction, character and product asset generation, canvas orchestration, timeline editing, and scheduled overseas social publishing.
+
 **Character generation（角色生成）**: Establishing a character from a description or an authorized photo, then producing reusable character images.
 
-**Character video replication（角色视频复刻）**: Producing a video with the chosen character and a reference video's intended motion or expression. It does not promise exact reproduction or automated social publishing.
+**Character video replication（角色视频复刻）**: Producing a video with the chosen character and a reference video's intended motion or expression. It is a core creative capability within the content commerce workflow and does not promise exact reproduction or unverified automated publishing.
 
-Current product scope and public wording: [product positioning](docs/contracts/product-positioning.md). The component map below names existing responsibilities, not shipped capabilities or permission to expand that scope.
+Current product scope and public wording: [product positioning](docs/contracts/product-positioning.md). The component map below names existing responsibilities, not shipped capabilities or permission to expand that scope without verification.
 
 ## Architecture & Responsibilities
 
