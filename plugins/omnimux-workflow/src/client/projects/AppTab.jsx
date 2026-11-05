@@ -26,7 +26,7 @@ import {
 } from './appLibrary.js'
 import { fetchAppManifest } from './builtinApps.js'
 import { fetchSessionProjectBinding, listProjects } from '../api.js'
-import { activateProjectCanvas, getBetterSidebar } from './projectCanvas.js'
+import { activateProjectCanvas, focusSessionForCanvas, getBetterSidebar } from './projectCanvas.js'
 import { ForkAppProjectDialog } from './ForkAppProjectDialog.jsx'
 import {
   resolveOptions,
@@ -1303,20 +1303,13 @@ export function AppTab(props) {
   // 会把 openTab 排队到非前台会话：当前会话毫无变化，调用方却弹成功提示（P1-2）。
   // 返回 false = 缺会话切换能力或切换抛错，由调用方走失败降级，绝不静默成功。
   // 目标没有 sessionId 时无需切换，直接放行（画布落在当前会话）。
-  const focusAppSession = useCallback((sessionId) => {
-    if (!sessionId) return true
-    let sessions = props?.sessions
-    if (!sessions) {
-      try { sessions = props?.ctx?.sessions } catch { sessions = null }
-    }
-    if (typeof sessions?.open !== 'function') return false
-    try {
-      sessions.open(sessionId)
-      return true
-    } catch {
-      return false
-    }
-  }, [props?.sessions, props?.ctx])
+  // 现行 DSH 壳没有 sessions.open（0.1.7 起移除），统一走 focusSessionForCanvas：
+  // 优先 uiWorkspace.openSession，旧宿主才回退 sessions.open。
+  const focusAppSession = useCallback((sessionId) => focusSessionForCanvas({
+    sessions: props?.sessions,
+    cordis: props?.ctx,
+    getSessionNavigation: props?.getSessionNavigation,
+  }, sessionId), [props?.sessions, props?.ctx, props?.getSessionNavigation])
 
   // 点击「编辑应用」：根据应用归属自适应分诊
   // 同一个用户的应用直接打开所属项目画布定位工作流组；不同用户/官方预设应用则弹出「创建副本」确认窗
@@ -1359,7 +1352,12 @@ export function AppTab(props) {
         }
 
         const opened = await activateProjectCanvas(
-          { betterSidebar: getBetterSidebar(props?.ctx) },
+          {
+            betterSidebar: getBetterSidebar(props?.ctx),
+            cordis: props?.ctx,
+            sessions: props?.sessions,
+            getSessionNavigation: props?.getSessionNavigation,
+          },
           { sessionId: project?.sessionId, focusGroupId: target.groupId },
         )
         if (opened) {
@@ -1424,7 +1422,12 @@ export function AppTab(props) {
 
       const opened = sessionReady
         ? await activateProjectCanvas(
-          { betterSidebar: getBetterSidebar(props?.ctx) },
+          {
+            betterSidebar: getBetterSidebar(props?.ctx),
+            cordis: props?.ctx,
+            sessions: props?.sessions,
+            getSessionNavigation: props?.getSessionNavigation,
+          },
           { sessionId: project?.sessionId, focusGroupId: groupId },
         )
         : false

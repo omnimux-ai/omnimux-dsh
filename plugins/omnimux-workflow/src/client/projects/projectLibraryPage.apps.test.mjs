@@ -46,9 +46,11 @@ exports.pickLocalFiles = async () => ({ ok: false, body: { paths: [] } })
 const NEW_PROJECT_STUB = `
 exports.createProjectSession = (...args) => globalThis.__testCreateProjectSession
   ? globalThis.__testCreateProjectSession(...args)
-  : Promise.resolve({ id: 'sess-1' })
+  : Promise.resolve({ ok: true, sessionId: 'sess-1' })
 exports.dismissProductStage = () => {}
-exports.runNewProject = async () => ({ ok: true })
+exports.runNewProject = (...args) => globalThis.__testRunNewProject
+  ? globalThis.__testRunNewProject(...args)
+  : { ok: true, canvasOpened: true }
 `
 
 async function loadPage() {
@@ -619,7 +621,7 @@ test('点创作页卡片：打开期间显示「打开中」并忽略重复点�
 
     // 会话就绪 → 画布 tab 打开且遮罩复位
     await page.act(async () => {
-      pendingSessions[0]({ id: 'sess_open' })
+      pendingSessions[0]({ ok: true, sessionId: 'sess_open' })
       await new Promise((resolve) => { setTimeout(resolve, 0) })
     })
     assert.equal(page.container.querySelector('.omnimux-page-card-opening'), null, '打开结束必须复位「打开中」')
@@ -631,12 +633,94 @@ test('点创作页卡片：打开期间显示「打开中」并忽略重复点�
     await page.act(async () => { page.container.querySelector('.omnimux-page-card').click() })
     assert.equal(pendingSessions.length, 2, '复位后必须能再次打开')
     await page.act(async () => {
-      pendingSessions[1]({ id: 'sess_open' })
+      pendingSessions[1]({ ok: true, sessionId: 'sess_open' })
       await new Promise((resolve) => { setTimeout(resolve, 0) })
     })
     assert.equal(opened.length, 2)
   } finally {
     delete globalThis.__testCreateProjectSession
+    if (previousIntersectionObserver === undefined) delete globalThis.IntersectionObserver
+    else globalThis.IntersectionObserver = previousIntersectionObserver
+    await page.teardown()
+  }
+})
+
+test('点创作页卡片：画布被宿主拒绝时页面给出可见错误（Issue #3928）', async () => {
+  const projects = [{
+    id: 'proj_deny',
+    title: '项目拒绝',
+    path: '/tmp/proj_deny',
+    sessionId: 'sess_deny',
+    pages: [{ id: 'page_deny', title: '创作页 1', canvasWorkspaceId: 'ws_deny', createdAt: '2026-09-10T00:00:00.000Z' }],
+  }]
+  const previousIntersectionObserver = globalThis.IntersectionObserver
+  globalThis.IntersectionObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  const sidebar = {
+    getTab: (id) => ({ id }),
+    getSnapshot: () => ({
+      sessionId: 'sess_deny',
+      state: { splits: { kind: 'leaf', tabs: [] }, bottomSplits: { kind: 'leaf', tabs: [] } },
+    }),
+    openTab: () => { throw new Error('sidebarRight: no session surface is mounted') },
+    updateTab() {},
+    closeTab() {},
+  }
+  const page = await mountPage({ sidebar, t: () => undefined, projects })
+  try {
+    const folderOpen = page.container.querySelector('.omnimux-folder-open')
+    await page.act(async () => { folderOpen.click() })
+    await page.act(async () => { await new Promise((resolve) => { setTimeout(resolve, 0) }) })
+    await page.act(async () => { page.container.querySelector('.omnimux-page-card').click() })
+    await page.act(async () => { await new Promise((resolve) => { setTimeout(resolve, 0) }) })
+
+    const banner = page.container.querySelector('.omnimux-workflow-library-error')
+    assert.ok(banner, '画布没打开必须出现页面错误横幅')
+    assert.match(banner.textContent, /无法打开创作画布/)
+  } finally {
+    if (previousIntersectionObserver === undefined) delete globalThis.IntersectionObserver
+    else globalThis.IntersectionObserver = previousIntersectionObserver
+    await page.teardown()
+  }
+})
+
+test('新建项目成功但画布未打开时，项目库页给出可见错误（Issue #3928）', async () => {
+  const previousIntersectionObserver = globalThis.IntersectionObserver
+  globalThis.IntersectionObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  globalThis.__testRunNewProject = async () => ({ ok: true, canvasOpened: false })
+  const page = await mountPage({ sidebar: null, t: () => undefined, projects: [] })
+  try {
+    const newButton = [...page.container.querySelectorAll('button')]
+      .find((node) => node.textContent.includes('新建项目'))
+    assert.ok(newButton, '空态必须有新建项目入口')
+    await page.act(async () => { newButton.click() })
+    await page.act(async () => { await new Promise((resolve) => { setTimeout(resolve, 0) }) })
+
+    const input = document.querySelector('#omnimux-new-local-project-name')
+    assert.ok(input, '创建项目弹窗必须出现名称输入框')
+    await page.act(async () => {
+      // React 会在实例上接管 value 的 tracker：先写值，再把 tracker 回落，change 事件才会被 onChange 接收。
+      input.value = '画布未开验收'
+      input._valueTracker?.setValue?.('')
+      input.dispatchEvent(new page.dom.window.Event('change', { bubbles: true }))
+    })
+    const submit = document.querySelector('.omnimux-workflow-dialog-footer button:last-child')
+    assert.ok(submit, '创建项目弹窗必须提交按钮')
+    await page.act(async () => { submit.click() })
+    await page.act(async () => { await new Promise((resolve) => { setTimeout(resolve, 0) }) })
+
+    const banner = page.container.querySelector('.omnimux-workflow-library-error')
+    assert.ok(banner, '项目建成但画布没开时必须出现可见错误: ' + document.body.textContent.slice(0, 400))
+    assert.match(banner.textContent, /创作画布未能打开/)
+  } finally {
+    delete globalThis.__testRunNewProject
     if (previousIntersectionObserver === undefined) delete globalThis.IntersectionObserver
     else globalThis.IntersectionObserver = previousIntersectionObserver
     await page.teardown()

@@ -11,6 +11,42 @@
       "rule": "SC2",
       "line": 560,
       "reason": "同上：window.__omnimuxWorkbench 的 setFocus 也是可选接缝，老宿主没有时保持原状是刻意行为。该行在 origin/main 上已存在，本任务未修改此文件，属合并期间基线偏老导致的误判。"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/client/index.js",
+      "rule": "SC2",
+      "line": 40,
+      "reason": "可选宿主接缝：ctx.get('uiWorkspace') 在旧宿主不存在是预期状态，resolveSessionNavigation 会回退 sessions.open 或由调用方给出可见失败，吞掉的是服务探测异常而非业务错误。"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/client/index.js",
+      "rule": "SC2",
+      "line": 50,
+      "reason": "可选宿主接缝：ctx.get('sidebarRight') 在旧宿主不存在是预期状态，画布仍按同步 openTab 打开；吞掉的是服务探测异常而非业务错误。"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/client/projects/projectCanvas.js",
+      "rule": "SC2",
+      "line": 779,
+      "reason": "watchCanvasForegroundAlignment 的快照读取在插件换绑/卸载瞬间可能抛错；此时监听已无意义，返回即可，业务错误仍由事件回调路径记录。"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/client/projects/projectCanvas.js",
+      "rule": "SC2",
+      "line": 807,
+      "reason": "补位监听的解绑在宿主已销毁时允许失败：解绑是收尾动作，失败不影响界面状态，也无补偿动作可做。"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/client/projects/projectCanvas.js",
+      "rule": "SC2",
+      "line": 936,
+      "reason": "可选 workbench 接缝：老宿主没有 setConversationCollapsed 时保持原布局是刻意降级，画布打开本身不受影响。"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/client/projects/projectCanvas.js",
+      "rule": "SC2",
+      "line": 937,
+      "reason": "可选 workbench 接缝：老宿主没有 setFocus 时保持原布局是刻意降级，画布打开本身不受影响。"
     }
   ]
 }

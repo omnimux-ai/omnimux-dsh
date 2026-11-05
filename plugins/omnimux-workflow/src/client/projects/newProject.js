@@ -4,7 +4,7 @@
  *      （OmniMux.app 的 directoryPicker 是 native，没有 workspaces.createDirectory）
  *   2. workspaces.create({ path: projectRoot })
  *   3. sessions.create({ workspaceId }) 禁止 cwd
- *   4. bind → 关一级页 overlay → sessions.open → activateProjectCanvas 15:85
+ *   4. bind → 关一级页 overlay → 切会话 → activateProjectCanvas 15:85
  *
  * 禁止 connectWorkspace、sessions.create({ cwd })、resolveCurrentCwd 当库作用域。
  */
@@ -16,7 +16,7 @@ import {
 } from '../api.js'
 import { normalizeWorkspacePath, resolveCurrentCwd, resolveWorkspaceForCwd } from './cwd.js'
 import { validateProjectTitle } from './folderName.js'
-import { activateProjectCanvas } from './projectCanvas.js'
+import { activateProjectCanvas, focusSessionForCanvas } from './projectCanvas.js'
 
 /**
  * 关掉任意一级页 overlay（项目库 / 资产库 / 产品库…）。
@@ -128,14 +128,14 @@ async function addBlankPage(project, title) {
 
 async function openOnSession(ctx, sessionId, cwd, extra = {}) {
   dismissProductStage(ctx.stage)
-  if (sessionId && typeof ctx.sessions?.open === 'function') {
-    ctx.sessions.open(sessionId)
-  }
+  // 会话切换由 activateProjectCanvas 统一处理（现行壳 uiWorkspace.openSession，
+  // 旧宿主回退 sessions.open）：切换失败时它返回 false，不再假装打开成功。
   revealConversationAfterOpen(sessionId)
   const opened = await activateProjectCanvas(ctx, {
     sessionId,
     cwd,
     focusGroupId: extra.focusGroupId,
+    timeoutMs: extra.timeoutMs,
   })
   if (extra.workspaceId && typeof localStorage !== 'undefined') {
     try { localStorage.setItem('omnimux:latest-active-canvas', extra.workspaceId) } catch { /* ignore */ }
@@ -165,14 +165,15 @@ function revealConversationAfterOpen(sessionId) {
 
 /**
  * @param {{
- *   sessions: { create: (opts: { workspaceId: string }) => Promise<string>, open: (id: string) => void },
+ *   sessions: { create: (opts: { workspaceId: string }) => Promise<string> },
  *   workspaces: { create: Function },
  *   layout?: { closeDetails?: () => void },
  *   betterSidebar?: object,
+ *   getSessionNavigation?: () => ({ openSession?: (id: string) => void } | undefined),
  *   t: (key: string) => string,
  *   stage?: { set?: (open: boolean) => void },
  * }} ctx
- * @param {{ title: string, projectRoot?: string }} [opts] 标题必填（弹窗在入口层收，取消则不调用本函数）；projectRoot 可选，留空则 Host 写入默认库
+ * @param {{ title: string, projectRoot?: string, timeoutMs?: number }} [opts] 标题必填（弹窗在入口层收，取消则不调用本函数）；projectRoot 可选，留空则 Host 写入默认库；timeoutMs 透传画布会话对齐超时（测试用）
  * @returns {Promise<{ ok: boolean, project?: object, error?: string }>}
  */
 export async function runNewProject(ctx, opts = {}) {
@@ -240,11 +241,12 @@ export async function runNewProject(ctx, opts = {}) {
     }
     await bindProjectSession(project.id, sessionId)
     const canvasId = activeCanvasId(project)
-    await openOnSession(ctx, sessionId, projectRoot, { workspaceId: canvasId })
+    const canvasOpened = await openOnSession(ctx, sessionId, projectRoot, { workspaceId: canvasId, timeoutMs: opts.timeoutMs })
     return {
       ok: true,
       action: stayAfterSeed && givenRoot !== '' ? 'registered' : 'created',
       project: { ...project, sessionId, path: projectRoot },
+      canvasOpened,
     }
   } catch (error) {
     return { ok: false, error: friendlyCreateError(error instanceof Error ? error.message : String(error), ctx.t) }
@@ -253,17 +255,19 @@ export async function runNewProject(ctx, opts = {}) {
 
 /**
  * 在同一个窗口中新建会话（清空上下文）：
- * 基于 DSH 原生机制调用 sessions.create({ workspaceId }) + sessions.open(newSessionId)，
+ * 基于 DSH 原生机制调用 sessions.create({ workspaceId })，再由 uiWorkspace.openSession
+ * （旧宿主 sessions.open）把新会话切到前台，
  * 0 历史 Token 消耗，不重开桌面窗口，保持当前工作区与右侧画布连接。
  *
  * @param {{
- *   sessions: { create: (opts: { workspaceId: string }) => Promise<string>, open: (id: string) => void },
+ *   sessions: { create: (opts: { workspaceId: string }) => Promise<string> },
  *   workspaces: { create: Function, list?: object },
  *   betterSidebar?: object,
  *   layout?: { closeDetails?: () => void },
+ *   getSessionNavigation?: () => ({ openSession?: (id: string) => void } | undefined),
  *   t?: (key: string) => string,
  * }} ctx
- * @param {{ workspaceId?: string, cwd?: string, pageId?: string }} opts
+ * @param {{ workspaceId?: string, cwd?: string, pageId?: string, timeoutMs?: number }} opts
  */
 export async function runResetSession(ctx, opts = {}) {
   try {
@@ -284,14 +288,18 @@ export async function runResetSession(ctx, opts = {}) {
 
     // 1. 调用 DSH 原生 API 在当前 workspace 创建全新的空白会话
     const newSessionId = await ctx.sessions.create({ workspaceId });
-    // 2. 在当前窗口无缝切换打开（无需重开窗口）
-    ctx.sessions.open(newSessionId);
+    // 2. 在当前窗口无缝切换打开（无需重开窗口）；拿不到导航能力就明确失败。
+    if (!focusSessionForCanvas(ctx, newSessionId)) {
+      return { ok: false, error: 'session-navigation-unavailable' };
+    }
     // 3. Enter-Conversation：解除中间栏折叠（与 runNewProject / inspiration #552 对齐）
     revealConversationAfterOpen(newSessionId);
     // 4. 保持右侧栏画布无缝连接并刷新比例
-    await activateProjectCanvas(ctx, { sessionId: newSessionId, cwd, pageId: opts.pageId });
+    const opened = await activateProjectCanvas(ctx, { sessionId: newSessionId, cwd, pageId: opts.pageId, timeoutMs: opts.timeoutMs });
 
-    return { ok: true, sessionId: newSessionId };
+    return opened
+      ? { ok: true, sessionId: newSessionId }
+      : { ok: false, error: 'canvas-unavailable' };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }

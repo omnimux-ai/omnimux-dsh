@@ -116,7 +116,7 @@ function errText(result, t) {
 }
 
 export function ProjectLibraryPage(props) {
-  const { t, stage, store, visible = true, sessions, workspaces, layout, betterSidebar } = props
+  const { t, stage, store, visible = true, sessions, workspaces, layout, betterSidebar, getSessionNavigation, getSidebarRight } = props
   useEffect(() => { injectWorkflowStyles() }, [])
 
   useEffect(() => {
@@ -287,20 +287,24 @@ export function ProjectLibraryPage(props) {
       if (!sessionId && sessions && typeof sessions.create === 'function') {
         try {
           const created = await createProjectSession(sessions, workspaces, selectedProject.path || selectedProject.title)
-          sessionId = created?.id
-          if (sessionId) {
-            void bindProjectSession(selectedProject.id, sessionId)
+          // createProjectSession 返回的是 sessionId 字段；缺会话时打开必须绑定新会话，
+          // 否则画布会落在当前会话、项目永远没有 sessionId（#3928 顺带修）。
+          sessionId = created?.sessionId || created?.id
+          if (created?.ok === false || !sessionId) {
+            setError(t('projects.noWorkspace') || '工作区不可用')
+            return
           }
+          void bindProjectSession(selectedProject.id, sessionId)
         } catch (e) {
+          // 建会话失败就停：没有目标会话时 openTab 只会落在当前会话，用户看不出项目没绑定。
           console.error('[omnimux-workflow] failed to create project session', e)
+          setError(t('projects.noWorkspace') || '工作区不可用')
+          return
         }
       }
-      if (sessionId && sessions && typeof sessions.open === 'function') {
-        try { sessions.open(sessionId) } catch {}
-      }
 
-      await activateProjectCanvas(
-        { layout, betterSidebar, t },
+      const opened = await activateProjectCanvas(
+        { layout, betterSidebar, t, sessions, getSessionNavigation, getSidebarRight },
         {
           sessionId,
           projectId: selectedProject.id,
@@ -310,6 +314,12 @@ export function ProjectLibraryPage(props) {
           canvasWorkspaceId,
         }
       )
+      // 画布没打开（缺会话导航能力 / 画布 tab 未注册）时必须说清楚，不能停在「什么都没发生」。
+      setError(opened ? '' : (t('projects.openCanvasFailed') || '无法打开创作画布，请重试。'))
+    } catch (e) {
+      // 宿主异常（布局/侧栏服务）同样要落到可见错误，不允许冒成未处理的 rejection。
+      console.error('[omnimux-workflow] open page failed', e)
+      setError(t('projects.openCanvasFailed') || '无法打开创作画布，请重试。')
     } finally {
       // 打开结束或失败都要复位，避免卡片停在「打开中」。
       openingRef.current = false
@@ -347,15 +357,20 @@ export function ProjectLibraryPage(props) {
     if (!sessionId && project && sessions && typeof sessions.create === 'function') {
       try {
         const created = await createProjectSession(sessions, workspaces, project.path || project.title)
-        sessionId = created?.id || created?.sessionId
-        if (sessionId) void bindProjectSession(project.id, sessionId)
+        sessionId = created?.sessionId || created?.id
+        if (created?.ok === false || !sessionId) {
+          setAppsError(t('projects.noWorkspace') || '工作区不可用')
+          return
+        }
+        void bindProjectSession(project.id, sessionId)
       } catch (e) {
         console.error('[omnimux-workflow] failed to create project session', e)
+        setAppsError(t('projects.noWorkspace') || '工作区不可用')
+        return
       }
     }
-    if (sessionId && sessions && typeof sessions.open === 'function') {
-      try { sessions.open(sessionId) } catch {}
-    }
+    // 会话切换与画布打开统一交给 activateProjectCanvas（现行壳走 uiWorkspace.openSession），
+    // 这里只负责事件广播；切换失败会在下方转成可见错误。
     // 移除非安全无 sessionId 的提前广播后，统一在会话就绪且合法时安全派发
     if (sessionId && canvasWorkspaceId && typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
@@ -372,7 +387,7 @@ export function ProjectLibraryPage(props) {
     }
 
     const opened = await activateProjectCanvas(
-      { layout, betterSidebar, t },
+      { layout, betterSidebar, t, sessions, getSessionNavigation, getSidebarRight },
       { sessionId, focusGroupId: target.groupId },
     )
     if (!opened) {
@@ -523,13 +538,19 @@ export function ProjectLibraryPage(props) {
         betterSidebar,
         stage,
         t,
+        getSessionNavigation,
+        getSidebarRight,
       }, payload)
       if (!created?.ok) {
         setError(created?.error || t('projects.genericError') || '创建失败')
         return created
       }
       setDialogOpen(false)
-      void reload()
+      // reload 成功会清空 error：等列表刷新完再写「画布没开」的可见提示。
+      await reload()
+      if (created.canvasOpened === false) {
+        setError(t('projects.canvasNotOpened') || '项目已创建，但创作画布未能打开，请重试。')
+      }
       return created
     } finally {
       setBusy(false)

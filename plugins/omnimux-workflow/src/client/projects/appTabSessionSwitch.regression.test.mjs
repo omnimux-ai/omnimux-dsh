@@ -1,9 +1,11 @@
 /**
  * P1-2 回归：「编辑」「创建副本」两个入口必须先切换会话再激活画布。
  *
- * 只把 project.sessionId 传给 activateProjectCanvas 而不调用 sessions.open，
+ * 只把 project.sessionId 传给 activateProjectCanvas 而不切会话，
  * better-sidebar 会把 openTab 排队到非前台会话：当前会话毫无变化，调用方却
  * 弹成功提示。这里锁定源码契约：先 focusAppSession，切换失败走失败文案。
+ * 现行 DSH 壳已移除 sessions.open（0.1.7 起），切换只能走
+ * focusSessionForCanvas（uiWorkspace.openSession，旧宿主回退 sessions.open）。
  */
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
@@ -30,10 +32,11 @@ function assertSessionOpenedBeforeCanvas(body, label) {
 }
 
 describe('P1-2 应用卡片入口先切会话再激活画布', () => {
-  it('统一的会话切换辅助真正调用 sessions.open(sessionId)', () => {
+  it('统一的会话切换辅助调用 focusSessionForCanvas，而不是已移除的 sessions.open', () => {
     assert.match(appTabSrc, /const focusAppSession = useCallback\(/, '必须提供统一的会话切换辅助')
-    assert.match(appTabSrc, /typeof sessions\?\.open !== 'function'/, '缺少会话切换能力时必须返回失败')
-    assert.match(appTabSrc, /sessions\.open\(sessionId\)/, '必须真正调用 sessions.open')
+    assert.match(appTabSrc, /focusSessionForCanvas\(/, '必须走现行会话导航接缝')
+    assert.match(appTabSrc, /getSessionNavigation: props\?\.getSessionNavigation/, '必须显式传入会话导航接缝')
+    assert.doesNotMatch(appTabSrc, /sessions\?\.open\(/, '不得再依赖 DSH 0.1.7 已移除的 sessions.open')
   })
 
   it('「编辑」入口：先切会话，切换失败明确降级且不弹成功提示', () => {

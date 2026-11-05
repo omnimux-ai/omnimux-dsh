@@ -241,7 +241,8 @@ describe('runNewProject', () => {
       assert.deepEqual(workspaceCreates, [{ path: '/lib/宣传片' }])
       assert.deepEqual(sessionCreates, [{ workspaceId: 'ws-ledger' }])
       assert.equal('cwd' in sessionCreates[0], false)
-      assert.deepEqual(opens, ['sess-9'])
+      // 0.1.7 起 sessions.open 已移除：会话已在前台时不再走旧 API。
+      assert.deepEqual(opens, [])
       assert.deepEqual(stageCalls, [false])
 
       const libraryGet = fetchBodies.find((row) => row.url.includes('/projects/library'))
@@ -414,7 +415,7 @@ describe('runNewProject', () => {
     }
   })
 
-  it('un-collapses conversation after sessions.open (enter-conversation intent)', async () => {
+  it('un-collapses conversation when the project canvas opens (enter-conversation intent)', async () => {
     const originalFetch = globalThis.fetch
     const order = []
     const previousWindow = globalThis.window
@@ -445,14 +446,9 @@ describe('runNewProject', () => {
       return { ok: true, json: async () => ({}) }
     }
     try {
-      const opens = []
       const result = await runNewProject({
         sessions: {
           async create() { return 'sess-enter' },
-          open(id) {
-            opens.push(id)
-            order.push(`open:${id}`)
-          },
         },
         workspaces: {
           async create(input) { return { workspaceId: 'ws-enter', path: input.path } },
@@ -471,10 +467,9 @@ describe('runNewProject', () => {
       }, { title: '进会话' })
 
       assert.equal(result.ok, true)
-      assert.deepEqual(opens, ['sess-enter'])
-      assert.ok(order.indexOf('open:sess-enter') >= 0)
-      assert.ok(order.indexOf('collapsed:false:sess-enter') > order.indexOf('open:sess-enter'))
-      assert.ok(order.indexOf('focus:split') > order.indexOf('open:sess-enter'))
+      assert.ok(order.includes('openTab'), '必须真正打开画布 tab')
+      assert.ok(order.includes('collapsed:false:sess-enter'), '必须解除会话折叠')
+      assert.ok(order.includes('focus:split'), '必须切到 split 焦点')
     } finally {
       globalThis.fetch = originalFetch
       if (previousWindow === undefined) delete globalThis.window
@@ -504,7 +499,6 @@ describe('runResetSession', () => {
             order.push(`create:${opts.workspaceId}`)
             return 'sess-reset'
           },
-          open(id) { order.push(`open:${id}`) },
         },
         workspaces: {
           async create() { return { workspaceId: 'ws-reset' } },
@@ -527,12 +521,91 @@ describe('runResetSession', () => {
 
       assert.equal(result.ok, true)
       assert.equal(result.sessionId, 'sess-reset')
-      assert.ok(order.indexOf('open:sess-reset') >= 0)
-      assert.ok(order.indexOf('collapsed:false:sess-reset') > order.indexOf('open:sess-reset'))
-      assert.ok(order.indexOf('focus:split') > order.indexOf('open:sess-reset'))
+      assert.ok(order.includes('openTab'), '必须真正打开画布 tab')
+      assert.ok(order.includes('collapsed:false:sess-reset'), '必须解除会话折叠')
+      assert.ok(order.includes('focus:split'), '必须切到 split 焦点')
     } finally {
       if (previousWindow === undefined) delete globalThis.window
       else globalThis.window = previousWindow
     }
+  })
+})
+
+describe('Issue #3928：项目打开走现行会话导航接缝', () => {
+  const baseFetch = async (url, opts = {}) => {
+    if (String(url).endsWith('/api/projects') && opts.method === 'POST') {
+      const body = JSON.parse(String(opts.body))
+      return { ok: true, json: async () => ({ project: { id: 'p-nav', title: body.title, path: `/lib/${body.title}` } }) }
+    }
+    if (String(url).includes('/api/projects/p-nav') && opts.method === 'PATCH') {
+      return { ok: true, json: async () => ({ project: { id: 'p-nav', sessionId: 'sess-nav' } }) }
+    }
+    return { ok: true, json: async () => ({}) }
+  }
+
+  function sidebarOn(sessionId) {
+    return {
+      getTab() { return { id: 'omnimux-workflow:canvas' } },
+      closeTab() {},
+      openTab() {},
+      getSnapshot() { return { sessionId, state: { splits: {}, panelSize: 700 } } },
+    }
+  }
+
+  it('runNewProject 先用 uiWorkspace 切到新会话，再把画布 tab 落在该会话', async () => {
+    const originalFetch = globalThis.fetch
+    const previousWindow = globalThis.window
+    const order = []
+    globalThis.fetch = baseFetch
+    globalThis.window = { dispatchEvent() { return true } }
+    try {
+      const result = await runNewProject({
+        sessions: { async create() { return 'sess-nav' } },
+        workspaces: { async create(input) { return { workspaceId: 'ws-nav', path: input.path } } },
+        layout: { closeDetails() {} },
+        betterSidebar: sidebarOn('sess-old'),
+        getSessionNavigation: () => ({ openSession(id) { order.push(`openSession:${id}`) } }),
+        t: (key) => key,
+        stage: { set() {} },
+      }, { title: '导航验收', timeoutMs: 0 })
+
+      assert.equal(result.ok, true)
+      assert.equal(result.canvasOpened, true, '画布必须真的打开')
+      assert.deepEqual(order, ['openSession:sess-nav'], '必须先切到项目会话，且只切一次')
+    } finally {
+      globalThis.fetch = originalFetch
+      if (previousWindow === undefined) delete globalThis.window
+      else globalThis.window = previousWindow
+    }
+  })
+
+  it('runResetSession 拿不到会话导航接缝时明确失败，不假装成功', async () => {
+    const opened = []
+    const result = await runResetSession({
+      sessions: { async create() { return 'sess-reset' } },
+      workspaces: { async create() { return { workspaceId: 'ws-reset' } }, list: { getSnapshot: () => ({ items: [] }) } },
+      betterSidebar: { getTab() { return { id: 'omnimux-workflow:canvas' } }, openTab() { opened.push(1) }, closeTab() {}, getSnapshot() { return { sessionId: 'sess-old', state: { splits: {} } } } },
+    }, { workspaceId: 'ws-reset', timeoutMs: 0 })
+
+    assert.equal(result.ok, false)
+    assert.equal(result.error, 'session-navigation-unavailable')
+    assert.equal(opened.length, 0, '切不了会话就不该把画布排进看不见的会话')
+  })
+
+  it('runResetSession 画布被宿主拒绝时返回 canvas-unavailable', async () => {
+    const result = await runResetSession({
+      sessions: { async create() { return 'sess-reset' } },
+      workspaces: { async create() { return { workspaceId: 'ws-reset' } }, list: { getSnapshot: () => ({ items: [] }) } },
+      sessionNavigation: { openSession() {} },
+      betterSidebar: {
+        getTab() { return { id: 'omnimux-workflow:canvas' } },
+        closeTab() {},
+        getSnapshot() { return { sessionId: 'sess-reset', state: { splits: {} } } },
+        openTab() { throw new Error('sidebarRight: no session surface is mounted') },
+      },
+    }, { workspaceId: 'ws-reset', timeoutMs: 0 })
+
+    assert.equal(result.ok, false)
+    assert.equal(result.error, 'canvas-unavailable')
   })
 })

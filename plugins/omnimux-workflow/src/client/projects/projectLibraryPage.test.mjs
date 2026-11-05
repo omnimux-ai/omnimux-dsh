@@ -58,10 +58,12 @@ describe('ProjectLibraryPage Architectural Hierarchy', () => {
     assert.match(assetsTabSource, /omnimux-assets-table/);
   });
 
-  it('handleOpenPage passes { layout, betterSidebar, t } as first arg and canvasWorkspaceId in second arg', () => {
-    assert.match(pageSource, /await activateProjectCanvas\(\s*\{\s*layout,\s*betterSidebar,\s*t\s*\}/);
+  it('handleOpenPage passes the session-navigation seam and canvasWorkspaceId into activateProjectCanvas', () => {
+    assert.match(pageSource, /const opened = await activateProjectCanvas\(\s*\{\s*layout,\s*betterSidebar,\s*t,\s*sessions,\s*getSessionNavigation,\s*getSidebarRight\s*\}/);
     assert.match(pageSource, /canvasWorkspaceId,\s*\}/);
     assert.match(pageSource, /window\.dispatchEvent\(new CustomEvent\('omnimux:active-canvas-changed'/);
+    // 打开失败必须落到页面错误横幅，不能停在「点了没反应」。
+    assert.match(pageSource, /projects\.openCanvasFailed/);
   });
 
   it('handleCreatePageInProject updates project pages with assigned canvasWorkspaceId', () => {
