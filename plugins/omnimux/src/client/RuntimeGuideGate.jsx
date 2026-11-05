@@ -32,6 +32,12 @@ export function RuntimeGuideGate({ t, scope }) {
       ? scope.getSnapshot()
       : { status: 'unavailable', value: undefined }),
   )
+  // Hold the overlay until the namespace snapshot is actually served; an
+  // unset status or stale value must not flash the guide at an upgrader
+  // whose saved choice simply has not loaded yet.
+  const ready = snapshot && typeof snapshot === 'object'
+    ? snapshot.status === 'ready' || (!('status' in snapshot) && snapshot.value !== undefined)
+    : false
   const value = snapshot && typeof snapshot.value === 'object' && snapshot.value ? snapshot.value : {}
   const guide = describeRuntimeGuide(value)
 
@@ -70,7 +76,7 @@ export function RuntimeGuideGate({ t, scope }) {
     void finish('official')
   }, [finish, t])
 
-  if (!guide.visible) return null
+  if (!ready || !guide.visible) return null
   if (typeof document === 'undefined' || !document.body) return null
 
   return createPortal(
@@ -107,6 +113,11 @@ export function RuntimeGuideGate({ t, scope }) {
                     {t('runtime.keyCta')}
                   </Button>
                 </div>
+                <div className="omnimux-runtime-guide-skip">
+                  <Button variant="ghost" disabled={busy} onClick={() => { void finish('official') }}>
+                    {t('runtime.skip')}
+                  </Button>
+                </div>
               </div>
             ) : null}
 
@@ -121,6 +132,7 @@ export function RuntimeGuideGate({ t, scope }) {
                 <p className="omnimux-login-gate-subdeck">{t('runtime.agentHint')}</p>
                 <AgentPanel
                   t={t}
+                  scope={scope}
                   value={value}
                   busy={busy}
                   setBusy={setBusy}
@@ -151,6 +163,7 @@ export function RuntimeGuideGate({ t, scope }) {
                   setError={setError}
                   notice={notice}
                   setNotice={setNotice}
+                  bindScenarios={['text']}
                   onVerified={() => { void finish('key') }}
                 />
               </div>

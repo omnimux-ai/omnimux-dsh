@@ -7,6 +7,7 @@ import { DshPluginsSection } from './DshPluginsSection.jsx'
 import { ReferenceStorageSection } from './ReferenceStorageSection.jsx'
 import { TaskModelsSection } from './TaskModelsSection.jsx'
 import { LoginGate } from './LoginGate.jsx'
+import { RuntimeGuideGate } from './RuntimeGuideGate.jsx'
 import { setRuntimeChoiceReader } from './auth-gate.js'
 import { installSettingsValueReader } from './settings-value-reader.js'
 import { QuotaGate } from './QuotaGate.jsx'
@@ -140,6 +141,19 @@ export function apply(ctx) {
       name: 'plugins.detail.section', id: 'omnimux-task-models', order: 90, locale: NS,
       inject: () => ({ t, scope: formCtx.configForms.get('omnimux') }),
     }, ({ t: translate, scope, subject }) => omnimuxSubject(subject) ? createElement(TaskModelsSection, { t: translate, scope }) : null))), 'omnimux: task model pickers detail')
+    // First-run model-route guide: a full-screen chooser for the text
+    // conversation channel (official / local agent / own key) shown only
+    // when nothing has been configured yet. Unlike the settings cards it
+    // must mount unconditionally — whileServed() would keep it off until
+    // someone opens Settings — so it registers on shell.overlay for the
+    // whole session and hides itself once a snapshot is ready.
+    formCtx.slots.inject('shell.overlay', () => formCtx.slots.register({
+      name: 'shell.overlay',
+      id: 'omnimux-runtime-guide',
+      order: 29,
+      locale: NS,
+      inject: () => ({ t, scope: formCtx.configForms.get('omnimux') }),
+    }, RuntimeGuideGate))
   })
   // Read existing choices for login compatibility without exposing another
   // model configuration surface. Account/API setup remains on the Host page.
