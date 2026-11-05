@@ -143,6 +143,10 @@ export function ProviderConfigPanel({ t, value, busy, setBusy, setError, setNoti
         method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload(true)),
       })
       if (value.saved !== true || !Number.isSafeInteger(value.revision)) throw new Error(t('runtime.responseUnconfirmed'))
+      // Fire the verified callback before the readback: the saved binding can
+      // make the first-run guide hide itself and unmount this panel mid-save,
+      // which would drop a callback waited on by the closing flow.
+      if (typeof onVerified === 'function') onVerified(provider)
       if (!alive.current) return
       const selectedProvider = provider
       reads.current += 1
@@ -167,7 +171,6 @@ export function ProviderConfigPanel({ t, value, busy, setBusy, setError, setNoti
       setChecked(null)
       setError('')
       setNotice(t('runtime.savedNotTested'))
-      if (typeof onVerified === 'function') onVerified(provider)
     } catch (caught) {
       if (!alive.current) return
       setError(caught instanceof Error ? caught.message : t('runtime.error'))

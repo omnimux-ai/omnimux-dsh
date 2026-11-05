@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from 'dsh-ui-kit'
 import { AgentPanel, ByokPanel } from './RuntimeModeSection.jsx'
@@ -21,6 +21,10 @@ import { injectHubStyles } from './styles.js'
  *   },
  * }} props
  */
+/** Frozen fallback: useSyncExternalStore needs a stable reference when the
+ * config scope is missing — a fresh literal here loops re-render forever. */
+const UNAVAILABLE_SNAPSHOT = Object.freeze({ status: 'unavailable', value: undefined })
+
 export function RuntimeGuideGate({ t, scope }) {
   useEffect(() => { injectHubStyles() }, [])
   const snapshot = useSyncExternalStore(
@@ -30,7 +34,7 @@ export function RuntimeGuideGate({ t, scope }) {
     },
     () => (scope && typeof scope.getSnapshot === 'function'
       ? scope.getSnapshot()
-      : { status: 'unavailable', value: undefined }),
+      : UNAVAILABLE_SNAPSHOT),
   )
   // Hold the overlay until the namespace snapshot is actually served; an
   // unset status or stale value must not flash the guide at an upgrader
@@ -43,10 +47,13 @@ export function RuntimeGuideGate({ t, scope }) {
 
   const [step, setStep] = useState('choose')
   const [busy, setBusy] = useState(false)
+  const finishing = useRef(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
   const finish = useCallback(async (mode) => {
+    if (finishing.current) return
+    finishing.current = true
     try {
       const response = await fetch('/omnimux/runtime/mode', {
         method: 'PUT',
@@ -58,6 +65,7 @@ export function RuntimeGuideGate({ t, scope }) {
         throw new Error(typeof body.error === 'string' ? body.error : `HTTP ${response.status}`)
       }
     } catch (caught) {
+      finishing.current = false
       setError(caught instanceof Error ? caught.message : String(caught))
     }
   }, [])

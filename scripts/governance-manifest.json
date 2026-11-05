@@ -300,6 +300,7 @@
     "resolve-omnimux-profile.sh",
     "rewrite-inspiration-categories.mjs",
     "rewrite-inspiration-categories.test.mjs",
+    "runtime-guide-web-qa.mjs",
     "runtime-source-observation.mjs",
     "runtime-source-observation.test.mjs",
     "scan-tiktok-items.mjs",

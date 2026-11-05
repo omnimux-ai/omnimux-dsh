@@ -12,6 +12,7 @@
  *   empty-cli  —— 点击「本机助手」→ CLI 面板（fetch 桩返回空列表 → 无可用提示）
  *   empty-key  —— 点击「自己的密钥」→ BYOK 表单字段渲染
  *   skip       —— 点击跳过 → PUT /omnimux/runtime/mode {mode:'official'}，随后引导消失
+ *   save       —— BYOK 填文字模型并保存 → PUT 携带 scenarioBindings.text → onVerified → PUT {mode:'key'} → 引导消失
  *   configured —— 已存 runtimeMode → 引导不出现（升级用户不受打扰）
  *
  * 用法：node scripts/runtime-guide-web-qa.mjs [--root <worktree>]
@@ -86,6 +87,7 @@ function buildHarnessHtml() {
   window.__qaErrors = [];
   window.__qaReady = false;
   window.__qaOverlay = [];
+  const byokState = { revision: 0, providers: [], bindings: {}, providerRevisions: {}, credentialVersions: {} };
 
   if (params.get('configured') === '1') window.__qaSettings.runtimeMode = 'official';
 
@@ -116,7 +118,63 @@ function buildHarnessHtml() {
     if (path === '/omnimux/agents') return json({ agents: [] });
     if (path === '/omnimux/agents/updates') return json({ updates: {} });
     if (path === '/omnimux/agents/select' && method === 'POST') return json({ ok: true });
-    if (path === '/omnimux/byok/config' && method === 'PUT') return json({ ok: true });
+    // BYOK stubs honour the real contract in plugins/omnimux/src/byok/http.js:
+    // PUT must answer { saved: true, revision: <int> } and the readback GET
+    // must echo the same revision/providerRevision/credentialVersion, or the
+    // panel's save-confirmation logic rejects the response.
+    if (path === '/omnimux/byok/config' && method === 'GET') {
+      return json({
+        revision: byokState.revision,
+        providers: byokState.providers,
+        bindings: byokState.bindings,
+      });
+    }
+    if (path === '/omnimux/byok/config' && method === 'PUT') {
+      const provider = String(body.provider || 'custom');
+      byokState.revision += 1;
+      byokState.providerRevisions[provider] = (byokState.providerRevisions[provider] || 0) + 1;
+      if (String(body.apiKey || '').trim()) byokState.credentialVersions[provider] = (byokState.credentialVersions[provider] || 0) + 1;
+      const record = {
+        provider,
+        endpoint: String(body.endpoint || ''),
+        models: body.models || {},
+        capabilities: body.capabilities || Object.keys(body.models || {}),
+        revision: byokState.providerRevisions[provider],
+        credentialVersion: byokState.credentialVersions[provider] || 0,
+        configured: Boolean(String(body.apiKey || '').trim()),
+        verified: false,
+      };
+      byokState.providers = [...byokState.providers.filter((item) => item.provider !== provider), record];
+      if (body.scenarioBindings && typeof body.scenarioBindings === 'object') {
+        byokState.bindings = { ...byokState.bindings, ...body.scenarioBindings };
+      }
+      window.__qaSettings.byokProviders = byokState.providers;
+      window.__qaSettings.scenarioBindings = byokState.bindings;
+      notify();
+      return json({
+        saved: true,
+        provider,
+        providerRevision: record.revision,
+        credential: record.configured ? 'confirmed' : 'unchanged',
+        revision: byokState.revision,
+        providers: byokState.providers,
+        bindings: byokState.bindings,
+      });
+    }
+    if (path === '/omnimux/byok/test' && method === 'POST') {
+      const provider = String(body.provider || 'custom');
+      const stored = byokState.providers.find((item) => item.provider === provider);
+      return json({
+        ok: true,
+        checkType: 'offline-config',
+        persisted: false,
+        verified: false,
+        revision: byokState.revision,
+        providerRevision: stored?.revision || 0,
+        credentialVersion: stored?.credentialVersion || 0,
+        checkedAt: new Date().toISOString(),
+      });
+    }
     if (path.startsWith('/omnimux/byok/')) return json({ ok: true });
     return json({});
   };
@@ -377,7 +435,40 @@ async function runRuntimeGuideWebQa(options = {}) {
     check('guide-hidden-after-skip', await waitFor(`!document.querySelector('${guideSelector}')`), '');
     await screenshot('after-skip');
 
-    // --- 场景 5：已配置 → 引导不出现 ---
+    // --- 场景 5：重新进入空设置 → BYOK 保存 → 绑定 text → onVerified → PUT key → 引导消失 ---
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    check('guide-visible-revisit', await waitFor(`Boolean(document.querySelector('${guideSelector}'))`), '');
+    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '自己的密钥');
+    await waitFor(`Boolean(document.querySelector('${guideSelector} input[placeholder*="粘贴密钥"]'))`, 5000);
+    // React 受控输入需要原生 setter 派发 input 事件，onChange 才会收到。
+    await evaluate(`
+      (() => {
+        const rows = [...document.querySelectorAll('${guideSelector} .omx-form-row')];
+        const row = rows.find((r) => (r.innerText || '').includes('文字工具'));
+        const input = row && row.querySelector('input');
+        if (!input) return false;
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+        setter.call(input, 'qa-test-model');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+      })()
+    `);
+    await clickByText(`${guideSelector} button`, '保存');
+    const byokPut = await waitFor(`
+      (window.__qaRequests || []).some((r) => r.path === '/omnimux/byok/config' && r.method === 'PUT'
+        && r.body && r.body.scenarioBindings && r.body.scenarioBindings.text
+        && r.body.scenarioBindings.text.channel === 'byok')
+    `);
+    check('save-binds-text', byokPut, JSON.stringify(await evaluate('window.__qaRequests')));
+    const keyPut = await waitFor(`
+      (window.__qaRequests || []).some((r) => r.path === '/omnimux/runtime/mode' && r.method === 'PUT' && r.body && r.body.mode === 'key')
+    `);
+    check('save-put-key', keyPut, JSON.stringify(await evaluate('window.__qaRequests')));
+    check('guide-hidden-after-save', await waitFor(`!document.querySelector('${guideSelector}')`), '');
+    await screenshot('after-save');
+
+    // --- 场景 6：已配置 → 引导不出现 ---
     await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?configured=1` });
     await waitFor('Boolean(window.__qaReady)', 10000);
     await new Promise((r) => setTimeout(r, 1200));
