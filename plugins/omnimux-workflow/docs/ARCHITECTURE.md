@@ -77,6 +77,8 @@
 
 懒加载机制：首次打开画布 → `GET /omnimux-workflow/api/manifest`（canvas.js sha256 前 16 位）→ 注入 `<script src="/omnimux-workflow/canvas.js?v=<hash>">`（hash 变化则替换旧 script，禁止复用过期 IIFE）→ 全局 `__omnimuxWorkflowCanvas` 可用 → CanvasBridge 调 `mountCanvas(el, props)`。Host 对该 JS 响应 `Cache-Control: no-cache`。Dev App 仍见旧胶囊时先硬刷新。
 
+打开画布的会话导航：官方 DSH `0.1.7` 起 `sessions.open` 已移除，主区会话切换归 `uiWorkspace.openSession(id)`（旧宿主才回退 `sessions.open`）。画布 tab 只能落在右栏已挂载的会话上：`sidebarRight: no session surface is mounted` 是宿主拒绝、不是排队，所以 `activateProjectCanvas` 先切会话，再等 `sidebarRight.mounted` 变成目标会话后 openTab（失败时不静默，调用方给可见错误）。接缝实现见 `src/client/projects/projectCanvas.js` 的 `resolveSessionNavigation` / `focusSessionForCanvas` / `waitForMountedSession`。
+
 ## 5. Gxgen 移植溯源（M1 口径）
 
 | 模块 | 来源 | 口径 |

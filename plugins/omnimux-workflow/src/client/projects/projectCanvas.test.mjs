@@ -10,6 +10,7 @@ import {
   collectTabs,
   enterFullscreenWhenBlankConversation,
   factorySidebarWidthPx,
+  focusSessionForCanvas,
   isSeedFilesTab,
   leftoverHalfSidebarWidthPx,
   legacyProjectCanvasWidthPx,
@@ -19,6 +20,7 @@ import {
   PROJECT_CANVAS_RATIO,
   projectCanvasWidthPx,
   resetProjectCanvasRatioMemory,
+  resolveSessionNavigation,
   shouldApplyProjectCanvasRatio,
 } from './projectCanvas.js'
 
@@ -270,6 +272,106 @@ describe('projectCanvas isolation', () => {
       if (previous === undefined) delete globalThis.window
       else globalThis.window = previous
     }
+  })
+
+  it('resolveSessionNavigation prefers uiWorkspace over the removed sessions.open', () => {
+    const viaGetter = resolveSessionNavigation({ getSessionNavigation: () => ({ openSession() {} }) })
+    assert.equal(typeof viaGetter?.openSession, 'function')
+    const viaService = resolveSessionNavigation({
+      uiWorkspace: { openSession() {} },
+      sessions: { open() {} },
+    })
+    assert.equal(typeof viaService?.openSession, 'function')
+    const viaCordis = resolveSessionNavigation({ get: (name) => (name === 'uiWorkspace' ? { openSession() {} } : undefined) })
+    assert.equal(typeof viaCordis?.openSession, 'function')
+    const legacyOnly = resolveSessionNavigation({ sessions: { open() {} } })
+    assert.equal(typeof legacyOnly?.open, 'function')
+    assert.equal(resolveSessionNavigation({ sessions: {} }), null)
+    assert.equal(resolveSessionNavigation(undefined), null)
+  })
+
+  it('focusSessionForCanvas switches through uiWorkspace.openSession and skips when already foreground', () => {
+    const calls = []
+    const service = { getSnapshot: () => ({ sessionId: 'sess-old' }) }
+    const switched = focusSessionForCanvas({
+      sessionNavigation: { openSession: (id) => calls.push(id) },
+    }, 'sess-target', service)
+    assert.equal(switched, true)
+    assert.deepEqual(calls, ['sess-target'])
+
+    const foreground = focusSessionForCanvas({
+      sessionNavigation: { openSession: (id) => calls.push(`again:${id}`) },
+    }, 'sess-old', service)
+    assert.equal(foreground, true)
+    assert.deepEqual(calls, ['sess-target'], '已在前台时不得重复切换')
+  })
+
+  it('focusSessionForCanvas falls back to legacy sessions.open, and fails loudly without any seam', () => {
+    const legacyCalls = []
+    const legacy = {
+      sessions: { open: (id) => legacyCalls.push(id) },
+    }
+    assert.equal(focusSessionForCanvas(legacy, 'sess-legacy', { getSnapshot: () => ({ sessionId: 'sess-old' }) }), true)
+    assert.deepEqual(legacyCalls, ['sess-legacy'])
+
+    assert.equal(focusSessionForCanvas({}, 'sess-target', { getSnapshot: () => ({ sessionId: 'sess-old' }) }), false)
+    assert.equal(focusSessionForCanvas({}, '', { getSnapshot: () => ({ sessionId: 'sess-old' }) }), true)
+  })
+
+  it('activateProjectCanvas switches the main session before opening the canvas tab', async () => {
+    const order = []
+    const opened = []
+    const service = {
+      getTab(id) { return id === CANVAS_TAB_ID ? { id } : undefined },
+      getSnapshot() { return { sessionId: 'sess-current', state: { splits: { kind: 'leaf', tabs: [] } } } },
+      openTab(seed, scope) { order.push('openTab'); opened.push({ seed, scope }) },
+      closeTab() {},
+    }
+    const ok = await activateProjectCanvas({
+      betterSidebar: service,
+      sessionNavigation: { openSession: (id) => order.push(`openSession:${id}`) },
+      t: (key) => key,
+    }, { sessionId: 'sess-project', cwd: '/tmp/ws', timeoutMs: 0, alignmentTimeoutMs: 0 })
+
+    assert.equal(ok, true)
+    assert.deepEqual(order.slice(0, 2), ['openSession:sess-project', 'openTab'], '必须先切会话再 openTab')
+    assert.equal(opened[0].scope.sessionId, 'sess-project')
+  })
+
+  it('activateProjectCanvas refuses to open a hidden canvas when the session switch fails', async () => {
+    const opened = []
+    const service = {
+      getTab(id) { return id === CANVAS_TAB_ID ? { id } : undefined },
+      getSnapshot() { return { sessionId: 'sess-current', state: { splits: { kind: 'leaf', tabs: [] } } } },
+      openTab(seed) { opened.push(seed) },
+      closeTab() {},
+    }
+    const ok = await activateProjectCanvas({
+      betterSidebar: service,
+      sessionNavigation: {
+        openSession() { throw new Error('session-gone') },
+      },
+      t: (key) => key,
+    }, { sessionId: 'sess-project', timeoutMs: 0 })
+
+    assert.equal(ok, false, '切换失败必须返回失败，阻止调用方弹成功')
+    assert.equal(opened.length, 0, '不能把画布排进看不见的会话')
+  })
+
+  it('activateProjectCanvas refuses when no session navigation seam exists', async () => {
+    const opened = []
+    const ok = await activateProjectCanvas({
+      betterSidebar: {
+        getTab(id) { return id === CANVAS_TAB_ID ? { id } : undefined },
+        getSnapshot() { return { sessionId: 'sess-current', state: { splits: { kind: 'leaf', tabs: [] } } } },
+        openTab(seed) { opened.push(seed) },
+        closeTab() {},
+      },
+      sessions: {},
+      t: (key) => key,
+    }, { sessionId: 'sess-project', timeoutMs: 0 })
+    assert.equal(ok, false)
+    assert.equal(opened.length, 0)
   })
 
   it('activateProjectCanvas refuses when canvas tab is not registered yet', async () => {
@@ -592,7 +694,8 @@ describe('projectCanvas isolation', () => {
       layout: { closeDetails: () => { details.push('close') } },
     }, { sessionId: 'sess-1', timeoutMs: 0 })
     assert.equal(ok, false)
-    assert.deepEqual(details, ['close'])
+    // 失败前不碰宿主布局：缺右侧栏服务时关掉 details 只会让用户丢面板。
+    assert.deepEqual(details, [])
   })
 
   it('APP_TAB_ID constant is correctly defined', () => {
@@ -798,6 +901,7 @@ describe('projectCanvas isolation', () => {
       const started = Date.now()
       const ok = await activateProjectCanvas({
         betterSidebar: service,
+        sessionNavigation: { openSession() {} },
         t: (key) => key,
       }, {
         sessionId: 'sess-target',
@@ -857,6 +961,7 @@ describe('projectCanvas isolation', () => {
     try {
       const ok = await activateProjectCanvas({
         betterSidebar: service,
+        sessionNavigation: { openSession() {} },
         t: (key) => key,
       }, {
         sessionId: 'sess-target',
@@ -969,5 +1074,90 @@ describe('空会话打开应用自动全屏', () => {
       else globalThis.window = previous
       bindBetterSidebar(null)
     }
+  })
+})
+
+describe('P0 画布打开：右栏 seat 挂载后才允许 openTab（Issue #3928）', () => {
+  function createMountedStore(initial) {
+    let value = initial
+    const listeners = new Set()
+    return {
+      getSnapshot: () => value,
+      subscribe(listener) {
+        listeners.add(listener)
+        return () => listeners.delete(listener)
+      },
+      set(next) {
+        value = next
+        for (const listener of [...listeners]) listener()
+      },
+    }
+  }
+
+  function createSidebar(sessionId) {
+    const opened = []
+    const service = {
+      getTab(id) { return id === CANVAS_TAB_ID ? { id } : undefined },
+      getSnapshot() { return { sessionId, state: { splits: { kind: 'leaf', tabs: [] }, bottomSplits: { kind: 'leaf', tabs: [] } } } },
+      closeTab() {},
+      openTab(seed, scope) { opened.push({ seed, scope }) },
+    }
+    return { service, opened }
+  }
+
+  it('首次 openTab 被「右栏没有挂载会话」拒绝时，等 seat 挂载后重试并成功', async () => {
+    const mounted = createMountedStore('sess-other')
+    const { service, opened } = createSidebar('sess-target')
+    let attempts = 0
+    const flaky = {
+      ...service,
+      openTab(seed, scope) {
+        attempts += 1
+        if (attempts === 1) throw new Error('sidebarRight: no session surface is mounted')
+        opened.push({ seed, scope })
+      },
+    }
+    const ctx = {
+      betterSidebar: flaky,
+      sessionNavigation: { openSession() {} },
+      getSidebarRight: () => ({ mounted }),
+      t: (key) => key,
+    }
+    setTimeout(() => mounted.set('sess-target'), 30)
+    const ok = await activateProjectCanvas(ctx, { sessionId: 'sess-target', timeoutMs: 0, alignmentTimeoutMs: 0, seatTimeoutMs: 1000 })
+
+    assert.equal(ok, true, 'seat 挂载后重试必须成功')
+    assert.equal(attempts, 2, '必须恰好重试一次')
+    assert.equal(opened.length, 1)
+    assert.equal(opened[0].scope.sessionId, 'sess-target')
+  })
+
+  it('两次都被拒绝时返回 false，不把宿主异常抛给点击调用方', async () => {
+    const mounted = createMountedStore('sess-other')
+    const { service } = createSidebar('sess-target')
+    const throwing = {
+      ...service,
+      openTab() { throw new Error('sidebarRight: no session surface is mounted') },
+    }
+    const ctx = {
+      betterSidebar: throwing,
+      sessionNavigation: { openSession() {} },
+      getSidebarRight: () => ({ mounted }),
+      t: (key) => key,
+    }
+    const ok = await activateProjectCanvas(ctx, { sessionId: 'sess-target', timeoutMs: 0, alignmentTimeoutMs: 0, seatTimeoutMs: 200 })
+
+    assert.equal(ok, false, '画布没打开必须返回失败，由调用方给出可见错误')
+  })
+
+  it('没有 sidebarRight 服务时保持原有同步 openTab 行为', async () => {
+    const { service, opened } = createSidebar('sess-current')
+    const ok = await activateProjectCanvas({
+      betterSidebar: service,
+      t: (key) => key,
+    }, { sessionId: 'sess-current', timeoutMs: 0 })
+
+    assert.equal(ok, true)
+    assert.equal(opened.length, 1)
   })
 })

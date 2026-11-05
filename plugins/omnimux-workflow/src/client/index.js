@@ -32,6 +32,27 @@ export function apply(ctx) {
   // 侧栏：项目 row（rank 4）。官方新建会话保持单行通栏独占，新建项目统一通过项目库页创建。
   ctx.effect(() => mountSidebarEntry(null, t, ctx.locale), 'omnimux-workflow: sidebar entry')
 
+  // 会话导航接缝懒解析：DSH 0.1.7 起用 uiWorkspace.openSession 取代 sessions.open。
+  // 这里不在 apply 时取值：uiWorkspace 可能晚于本插件就绪，点击时再取。
+  const getSessionNavigation = () => {
+    try {
+      if (typeof ctx.get === 'function') return ctx.get('uiWorkspace')
+    } catch {
+      // ignore: 老壳没有该服务，由调用方回退 sessions.open 或报可见失败
+    }
+    return undefined
+  }
+
+  // 官方右侧栏控制器懒解析：等目标会话 seat 挂载后补一次画布 tab（见 projectCanvas）。
+  const getSidebarRight = () => {
+    try {
+      if (typeof ctx.get === 'function') return ctx.get('sidebarRight')
+    } catch {
+      // ignore: 缺服务时保持旧行为
+    }
+    return undefined
+  }
+
   // Cross-plugin seam: inspiration (and future callers) create a project
   // without importing this package. Disposer deletes window.__omnimuxWorkflow.
   const seamDeps = {
@@ -39,6 +60,8 @@ export function apply(ctx) {
     workspaces: ctx.workspaces,
     layout: ctx.layout,
     stage: null,
+    getSessionNavigation,
+    getSidebarRight,
     t,
   }
   ctx.effect(
@@ -76,6 +99,8 @@ export function apply(ctx) {
         workspaces: ctx.workspaces,
         layout: ctx.layout,
         betterSidebar: sidebar,
+        getSessionNavigation,
+        getSidebarRight,
       }),
     })
   }
@@ -96,6 +121,8 @@ export function apply(ctx) {
         workspaces: ctx.workspaces,
         layout: ctx.layout,
         betterSidebar: sidebar,
+        getSessionNavigation,
+        getSidebarRight,
       }),
     })
   }
@@ -116,6 +143,8 @@ export function apply(ctx) {
         workspaces: ctx.workspaces,
         layout: ctx.layout,
         betterSidebar: sidebar,
+        getSessionNavigation,
+        getSidebarRight,
       }),
     })
   }

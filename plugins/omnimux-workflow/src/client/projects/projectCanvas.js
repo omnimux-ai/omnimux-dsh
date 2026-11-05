@@ -94,6 +94,211 @@ export function getBetterSidebar(ctx) {
   return boundService || win?.__omnimuxBetterSidebar || null
 }
 
+/** 读普通对象/服务上的属性；Cordis 顶层 ctx 的 Proxy 会在未注入时 throw。 */
+function safeProp(target, name) {
+  if (!target || typeof target !== 'object') return undefined
+  try {
+    return target[name]
+  } catch {
+    return undefined
+  }
+}
+
+/** 按名字读 Cordis 服务：未注入也能取，未提供时返回 undefined（不 throw）。 */
+function serviceByName(target, name) {
+  if (!target || typeof target !== 'object') return undefined
+  const direct = safeProp(target, name)
+  if (direct !== undefined) return direct
+  const get = safeProp(target, 'get')
+  if (typeof get !== 'function') return undefined
+  try {
+    return get.call(target, name)
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * 现行会话导航接缝。
+ *
+ * DSH `0.1.7` 起 `ClientSessions.open(id)` 已移除（deepseek-harness
+ * 6830e1460d），主区会话导航归 `uiWorkspace.openSession(id)`。这里按
+ * 「显式服务 → 懒解析 getter → uiWorkspace → 旧 sessions.open」解析，
+ * 既支持走 deps 对象（工作流内部调用）也支持直接传 Cordis 根 ctx。
+ *
+ * @param {object} [ctx] deps 对象、Cordis ctx 或 { sessionNavigation } / { uiWorkspace }
+ * @returns {{ openSession: (id: string) => unknown } | { open: (id: string) => unknown } | null}
+ */
+export function resolveSessionNavigation(ctx) {
+  const isNavigator = (value) => Boolean(value) && typeof value.openSession === 'function'
+
+  const getter = safeProp(ctx, 'getSessionNavigation')
+  const lazy = typeof getter === 'function'
+    ? (() => {
+      try {
+        return getter()
+      } catch {
+        return undefined
+      }
+    })()
+    : undefined
+
+  // deps 对象可能把 Cordis 根 ctx 放在 cordis 上；两处按同一优先级找服务。
+  const sources = [ctx, safeProp(ctx, 'cordis')]
+  const explicit = safeProp(ctx, 'sessionNavigation')
+  if (isNavigator(explicit)) return explicit
+  if (isNavigator(lazy)) return lazy
+  for (const source of sources) {
+    const uiWorkspace = serviceByName(source, 'uiWorkspace')
+    if (isNavigator(uiWorkspace)) return uiWorkspace
+  }
+  for (const source of sources) {
+    const sessions = serviceByName(source, 'sessions')
+    const open = safeProp(sessions, 'open')
+    if (typeof open === 'function') return { open: (id) => open.call(sessions, id) }
+  }
+  return null
+}
+
+/**
+ * 打开画布前把目标会话切到前台。
+ *
+ * 已在前台直接放行；拿不到任何导航能力时返回 `false`——此时继续 `openTab`
+ * 只会把画布排进非前台会话的 pending 队列，界面毫无变化，必须让调用方
+ * 给出可见失败而不是假装成功。
+ *
+ * @param {object} ctx
+ * @param {string} [sessionId]
+ * @param {object | null} [service] 已解析好的 better-sidebar 服务（可选）
+ * @returns {boolean}
+ */
+export function focusSessionForCanvas(ctx, sessionId, service = getBetterSidebar(ctx)) {
+  const id = typeof sessionId === 'string' ? sessionId.trim() : ''
+  if (!id) return true
+  const snapshot = safeProp(service, 'getSnapshot')
+  if (typeof snapshot === 'function') {
+    let current
+    try {
+      current = snapshot.call(service)?.sessionId
+    } catch {
+      current = undefined
+    }
+    if (current === id) return true
+  }
+  const navigation = resolveSessionNavigation(ctx)
+  if (!navigation) return false
+  try {
+    if (typeof navigation.openSession === 'function') navigation.openSession(id)
+    else navigation.open(id)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 官方右侧栏控制器（ctx.sidebarRight）。用于等「目标会话的右栏 seat 已挂载」：
+ * seat 未挂载时 better-sidebar 的 native openTab 会被宿主直接拒绝。
+ */
+function sidebarRightOf(ctx) {
+  for (const source of [ctx, safeProp(ctx, 'cordis')]) {
+    const direct = safeProp(source, 'sidebarRight')
+    if (direct) return direct
+  }
+  const getter = safeProp(ctx, 'getSidebarRight')
+  if (typeof getter === 'function') {
+    try {
+      const lazy = getter()
+      if (lazy) return lazy
+    } catch {
+      // ignore: 缺服务时保持旧行为
+    }
+  }
+  for (const source of [ctx, safeProp(ctx, 'cordis')]) {
+    const fromCtx = serviceByName(source, 'sidebarRight')
+    if (fromCtx) return fromCtx
+  }
+  return null
+}
+
+/** 官方右侧栏当前挂载的会话（无服务/未挂载时 undefined）。 */
+function mountedSessionOf(ctx) {
+  const mounted = safeProp(sidebarRightOf(ctx), 'mounted')
+  if (!mounted || typeof mounted.getSnapshot !== 'function') return { mounted: null, sessionId: undefined }
+  try {
+    return { mounted, sessionId: mounted.getSnapshot() }
+  } catch {
+    return { mounted, sessionId: undefined }
+  }
+}
+
+/**
+ * 开画布 tab，并把「右栏没挂载该会话」这类宿主拒绝收敛成结果对象。
+ *
+ * better-sidebar 的写面在右栏没有挂载目标会话的 seat 时会直接抛
+ * `sidebarRight: no session surface is mounted`（而不是排队）。刚切会话时
+ * seat 往往晚一步挂载，所以这里不能把异常抛给点击调用方——交给调用方等
+ * seat 挂载后重试。
+ */
+function openCanvasTab(service, seed, scope) {
+  try {
+    service.openTab(seed, scope)
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, error }
+  }
+}
+
+/**
+ * 等目标会话成为右栏挂载会话（seat 挂载后才允许 openTab）。
+ *
+ * @param {object} ctx
+ * @param {string} sessionId
+ * @param {number} [timeoutMs]
+ * @returns {Promise<boolean>}
+ */
+export async function waitForMountedSession(ctx, sessionId, timeoutMs = 2500) {
+  if (!sessionId) return false
+  const { mounted, sessionId: current } = mountedSessionOf(ctx)
+  if (!mounted) return false
+  if (current === sessionId) return true
+  const started = Date.now()
+  return new Promise((resolve) => {
+    let settled = false
+    let unsubscribe
+    let poll
+    let timer
+    const finish = (value) => {
+      if (settled) return
+      settled = true
+      try { unsubscribe?.() } catch { /* ignore */ }
+      if (poll !== undefined) clearInterval(poll)
+      if (timer !== undefined) clearTimeout(timer)
+      resolve(value)
+    }
+    // 订阅可能同步触发：订阅返回后再补一次解绑，避免「先命中、后赋值」的监听残留。
+    if (typeof mounted.subscribe === 'function') {
+      try {
+        unsubscribe = mounted.subscribe(() => {
+          if (mountedSessionOf(ctx).sessionId === sessionId) finish(true)
+        })
+        if (settled) {
+          try { unsubscribe?.() } catch { /* ignore */ }
+          unsubscribe = undefined
+        }
+      } catch {
+        // ignore: 退化成轮询
+      }
+    }
+    if (settled) return
+    poll = setInterval(() => {
+      if (mountedSessionOf(ctx).sessionId === sessionId) finish(true)
+      else if (Date.now() - started >= timeoutMs) finish(false)
+    }, 50)
+    timer = setTimeout(() => finish(mountedSessionOf(ctx).sessionId === sessionId), timeoutMs)
+  })
+}
+
 /** 广播「某个应用被打开」：应用标签页据此切到被点应用（含标签页已挂载的情况）。 */
 function announceAppOpen(appId, title, manifest) {
   const win = typeof globalThis !== 'undefined' && globalThis.window
@@ -525,7 +730,7 @@ export function applyProjectCanvasRatio(service, sessionId, store = null, env = 
 }
 
 /**
- * 等到右侧栏快照切到目标会话（sessions.open 后 store 异步换会话）。
+ * 等到右侧栏快照切到目标会话（主区切会话后 store 异步换会话）。
  * @param {object} service
  * @param {string} sessionId
  * @param {number} [timeoutMs]
@@ -622,11 +827,12 @@ export async function waitForCanvasTab(service, timeoutMs = 4000) {
 }
 
 /**
- * 项目会话占用右侧栏：关官方 details → 关空 Files 种子 → 打开画布 → 异步对齐会话。
+ * 项目会话占用右侧栏：切会话 → 关官方 details → 关空 Files 种子 → 打开画布 → 异步对齐。
  *
- * 时序契约（AC-4）：`openTab` 之前只做同步就绪判定，不再等待右侧栏服务、画布 tab
- * 注册或会话切前台（原先是三次最长 4s 的串行等待，tab 出现前界面毫无变化）。
- * 画布先按目标 `scope` + `meta` 打开；会话对齐（等 `sessions.open` 生效，再补
+ * 时序契约（AC-4）：`openTab` 之前只做同步就绪判定与主区会话切换（`uiWorkspace.openSession`，
+ * 旧宿主回退 `sessions.open`），不再等待右侧栏服务、画布 tab 注册或会话切前台
+ * （原先是三次最长 4s 的串行等待，tab 出现前界面毫无变化）。
+ * 画布先按目标 `scope` + `meta` 打开；会话对齐（等主区切换生效，再补
  * `updateTab` / 广播 `omnimux:active-canvas-changed` / 布局）是 openTab 之后的
  * 异步步骤。对齐超时或失败时 tab 仍绑定目标会话，绝不降级成「不带 scope 打开
  * 到当前会话」；此时改为挂一次快照监听，等目标会话真正成为前台再补
@@ -642,9 +848,6 @@ export async function waitForCanvasTab(service, timeoutMs = 4000) {
  * @returns {Promise<boolean>} 画布 tab 是否已在本次调用内打开
  */
 export async function activateProjectCanvas(ctx, opts = {}) {
-  if (typeof ctx?.layout?.closeDetails === 'function') {
-    ctx.layout.closeDetails()
-  }
   const service = getBetterSidebar(ctx)
   if (!service || typeof service.openTab !== 'function') return false
   // 画布 tab 类型还没注册时宿主渲染不出画布：同步判定失败、交给用户重试，
@@ -652,6 +855,14 @@ export async function activateProjectCanvas(ctx, opts = {}) {
   if (typeof service.getTab === 'function' && !service.getTab(CANVAS_TAB_ID)) return false
 
   const sessionId = opts.sessionId
+  // 目标会话不在前台时，先把主区切过去；旧宿主用 sessions.open、现行壳用
+  // uiWorkspace.openSession。切换不了就失败：否则 openTab 会被 better-sidebar
+  // 排进非前台会话的 pending 队列，用户看到的是「点了没反应」。
+  if (!focusSessionForCanvas(ctx, sessionId, service)) return false
+
+  if (typeof ctx?.layout?.closeDetails === 'function') {
+    ctx.layout.closeDetails()
+  }
   // 本次点击接管该会话的画布目标：作废上一次还没等到前台的补位监听。
   releaseAlignment(sessionId)
   const cwd = opts.cwd
@@ -685,8 +896,17 @@ export async function activateProjectCanvas(ctx, opts = {}) {
   }
 
   // ① 先让画布出现：上面全是同步调用，openTab 落在本次点击的同一执行栈里。
-  service.openTab(tabSeed, scope)
-
+  // 目标会话刚切过去时右栏可能还没有它的 seat：宿主会直接拒绝（而不再排队），
+  // 所以这里等 seat 挂载后重开一次；两次都失败才算打开失败，交给调用方报错。
+  let firstOpen = openCanvasTab(service, tabSeed, scope)
+  if (!firstOpen.ok && sessionId) {
+    const seated = await waitForMountedSession(ctx, sessionId, opts.seatTimeoutMs ?? 2500)
+    if (seated) firstOpen = openCanvasTab(service, tabSeed, scope)
+  }
+  if (!firstOpen.ok) {
+    console.warn('[omnimux-workflow] canvas tab open refused', firstOpen.error)
+    return false
+  }
   const focusGroupId = typeof opts.focusGroupId === 'string' ? opts.focusGroupId.trim() : ''
   // ② 会话已在目标会话前台时的收尾（会话未对齐时由下面的异步步骤补上）。
   const commit = () => {
@@ -728,14 +948,15 @@ export async function activateProjectCanvas(ctx, opts = {}) {
     return true
   }
 
-  // ③ sessions.open 还没生效：保留已打开的目标会话 tab，后台等会话切到前台，
+  // ③ 主区切换还没落到右侧栏快照：保留已打开的目标会话 tab，后台等会话切到前台，
   // 再补一次带 scope 的 openTab（让右栏按 targeted open 自动展开）+ meta/广播/布局。
   // 超时或失败时 tab 已带 scope 与 meta.canvasSessionId 绑定目标会话，不向当前会话
   // 写 meta，也不重开到别的会话；改为挂一次快照监听，等目标会话真正成为前台再补
   // openTab + commit，保证「点了 B，画布最终一定是 B」。
   const alignmentTimeoutMs = opts.alignmentTimeoutMs ?? opts.timeoutMs ?? 4000
   const commitAfterAlignment = () => {
-    service.openTab(tabSeed, scope)
+    const retried = openCanvasTab(service, tabSeed, scope)
+    if (!retried.ok) console.warn('[omnimux-workflow] canvas tab re-open refused', retried.error)
     commit()
   }
   void waitForSidebarSession(service, sessionId, alignmentTimeoutMs)

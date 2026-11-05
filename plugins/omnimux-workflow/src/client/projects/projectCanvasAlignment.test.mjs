@@ -79,6 +79,7 @@ describe('P1-1 画布会话对齐超时后的最终一致', () => {
     try {
       const ok = await activateProjectCanvas({
         betterSidebar: sidebar.service,
+        sessionNavigation: { openSession() {} },
         t: (key) => key,
       }, {
         sessionId: 'sess-target',
@@ -124,6 +125,7 @@ describe('P1-1 画布会话对齐超时后的最终一致', () => {
     try {
       await activateProjectCanvas({
         betterSidebar: sidebar.service,
+        sessionNavigation: { openSession() {} },
         t: (key) => key,
       }, {
         sessionId: 'sess-target',
@@ -132,6 +134,7 @@ describe('P1-1 画布会话对齐超时后的最终一致', () => {
       })
       await activateProjectCanvas({
         betterSidebar: sidebar.service,
+        sessionNavigation: { openSession() {} },
         t: (key) => key,
       }, {
         sessionId: 'sess-target',
@@ -156,6 +159,7 @@ describe('P1-1 画布会话对齐超时后的最终一致', () => {
     try {
       await activateProjectCanvas({
         betterSidebar: sidebar.service,
+        sessionNavigation: { openSession() {} },
         t: (key) => key,
       }, {
         sessionId: 'sess-target',

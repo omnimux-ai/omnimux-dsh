@@ -36,6 +36,7 @@ function safeGetService(target, prop) {
  *   workspaces?: object,
  *   layout?: object,
  *   betterSidebar?: object,
+ *   getSessionNavigation?: () => ({ openSession?: (id: string) => void } | undefined),
  * }} props
  */
 export function CanvasTab({
@@ -49,6 +50,7 @@ export function CanvasTab({
   workspaces: propWorkspaces,
   layout: propLayout,
   betterSidebar: propBetterSidebar,
+  getSessionNavigation,
 }) {
   useEffect(() => { injectWorkflowStyles() }, [])
   const locale = ctx?.locale
@@ -308,6 +310,7 @@ export function CanvasTab({
       <div className="omnimux-workflow-canvas-body">
         {isUnprojected ? (
           <div className="omnimux-workflow-canvas-unprojected">
+            {createError ? <div className="omnimux-workflow-library-error">{createError}</div> : null}
             <div className="omnimux-workflow-unprojected-title">
               {(() => {
                 const val = t('canvas.unprojectedTitle');
@@ -366,6 +369,8 @@ export function CanvasTab({
                   workspaces: effectiveWorkspaces,
                   layout: effectiveLayout,
                   betterSidebar: effectiveSidebar,
+                  cordis: ctx,
+                  getSessionNavigation,
                   t,
                 },
                 payload
@@ -375,6 +380,10 @@ export function CanvasTab({
                 return res
               }
               setProjectDialogOpen(false)
+              // 项目已建但画布没打开时必须留在画布页给出可见错误，不能静默回到空画布。
+              if (res.canvasOpened === false) {
+                setCreateError(t('projects.canvasNotOpened') || '项目已创建，但创作画布未能打开，请重试。')
+              }
               if (sessionId) {
                 const updated = await fetchSessionProjectBinding(sessionId)
                 const canvasWorkspaceId = updated?.body?.project?.canvasWorkspaceId
