@@ -47,7 +47,7 @@ describe('settings placement', () => {
     assert.deepEqual(sectionIds(hub), ['omnimux-profile'])
     assert.deepEqual(pluginsTabIds(hub), ['omnimux-dsh-plugins'])
     assert.deepEqual(pluginItemKeys(hub), [])
-    assert.doesNotMatch(hub, /ModelsSettingsCard|RuntimeGuideGate|omnimux-model-settings/)
+    assert.doesNotMatch(hub, /ModelsSettingsCard|omnimux-model-settings/)
     assert.ok(!hub.includes("settings.section', () =>") || sectionIds(hub).length === 1)
   })
 
@@ -78,5 +78,13 @@ describe('settings placement', () => {
     assert.ok(source.includes("data-visible={visible ? 'true' : 'false'}"), 'hides via data-visible')
     assert.ok(section.includes('active'), 'section receives tab visibility')
     assert.ok(hook.includes('sessionCache'), 'list hook rehydrates from a session cache')
+  })
+
+  it('mounts the first-run runtime guide on the session overlay', () => {
+    const hub = readFileSync(join(here, 'index.js'), 'utf8')
+    assert.match(hub, /id:\s*'omnimux-runtime-guide'/, 'guide registration must be present')
+    assert.match(hub, /shell\.overlay[\s\S]{0,400}omnimux-runtime-guide/, 'guide mounts on shell.overlay')
+    assert.match(hub, /order:\s*29/, 'renders below the login gate (order 30)')
+    assert.doesNotMatch(hub, /whileServed\(\['omnimux'\][\s\S]{0,200}omnimux-runtime-guide/, 'guide must not wait for Settings to open')
   })
 })

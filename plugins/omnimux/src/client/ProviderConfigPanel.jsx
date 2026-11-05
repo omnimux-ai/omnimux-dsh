@@ -10,8 +10,12 @@ async function request(path, init) {
   return value
 }
 
-/** A check describes one draft; it never saves or chooses an execution service. */
-export function ProviderConfigPanel({ t, value, busy, setBusy, setError, setNotice }) {
+/** A check describes one draft; it never saves or chooses an execution service.
+ * `bindScenarios` (first-run guide) names the scenarios to bind to this
+ * provider on save — the server merges them into `scenarioBindings`.
+ * `onVerified` fires after a confirmed save so a caller can close its guide.
+ */
+export function ProviderConfigPanel({ t, value, busy, setBusy, setError, setNotice, bindScenarios, onVerified }) {
   const [provider, setProvider] = useState('custom')
   const [endpoint, setEndpoint] = useState('')
   const [apiKey, setApiKey] = useState('')
@@ -113,12 +117,21 @@ export function ProviderConfigPanel({ t, value, busy, setBusy, setError, setNoti
     setModels(saved?.models || {})
     setApiKey('')
   })
-  const payload = () => {
+  const payload = (saveIntent = false) => {
     const selected = Object.fromEntries(Object.entries(models)
       .filter(([, model]) => typeof model === 'string' && model.trim())
       .map(([scenario, model]) => [scenario, model.trim()]))
-    return { provider, endpoint, apiKey: apiKey.trim(), models: selected,
+    const body = { provider, endpoint, apiKey: apiKey.trim(), models: selected,
       capabilities: Object.keys(selected), expectedRevision: confirmed?.revision }
+    // First-run guide: bind the declared scenarios to this provider on save.
+    // The server rejects a scenario the saved provider has no model/capability
+    // for, and merges the binding into `scenarioBindings` atomically.
+    if (saveIntent && Array.isArray(bindScenarios) && bindScenarios.length) {
+      body.scenarioBindings = Object.fromEntries(bindScenarios
+        .filter((scenario) => typeof scenario === 'string' && scenario.trim() && selected[scenario])
+        .map((scenario) => [scenario, { channel: 'byok', provider }]))
+    }
+    return body
   }
   const save = async () => {
     if (busy || !confirmed) return
@@ -127,9 +140,13 @@ export function ProviderConfigPanel({ t, value, busy, setBusy, setError, setNoti
     setNotice('')
     try {
       const value = await request('/omnimux/byok/config', {
-        method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload()),
+        method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload(true)),
       })
       if (value.saved !== true || !Number.isSafeInteger(value.revision)) throw new Error(t('runtime.responseUnconfirmed'))
+      // Fire the verified callback before the readback: the saved binding can
+      // make the first-run guide hide itself and unmount this panel mid-save,
+      // which would drop a callback waited on by the closing flow.
+      if (typeof onVerified === 'function') onVerified(provider)
       if (!alive.current) return
       const selectedProvider = provider
       reads.current += 1

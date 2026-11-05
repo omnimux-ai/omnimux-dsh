@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from 'dsh-ui-kit'
 import { AgentPanel, ByokPanel } from './RuntimeModeSection.jsx'
@@ -21,6 +21,10 @@ import { injectHubStyles } from './styles.js'
  *   },
  * }} props
  */
+/** Frozen fallback: useSyncExternalStore needs a stable reference when the
+ * config scope is missing — a fresh literal here loops re-render forever. */
+const UNAVAILABLE_SNAPSHOT = Object.freeze({ status: 'unavailable', value: undefined })
+
 export function RuntimeGuideGate({ t, scope }) {
   useEffect(() => { injectHubStyles() }, [])
   const snapshot = useSyncExternalStore(
@@ -30,17 +34,26 @@ export function RuntimeGuideGate({ t, scope }) {
     },
     () => (scope && typeof scope.getSnapshot === 'function'
       ? scope.getSnapshot()
-      : { status: 'unavailable', value: undefined }),
+      : UNAVAILABLE_SNAPSHOT),
   )
+  // Hold the overlay until the namespace snapshot is actually served; an
+  // unset status or stale value must not flash the guide at an upgrader
+  // whose saved choice simply has not loaded yet.
+  const ready = snapshot && typeof snapshot === 'object'
+    ? snapshot.status === 'ready' || (!('status' in snapshot) && snapshot.value !== undefined)
+    : false
   const value = snapshot && typeof snapshot.value === 'object' && snapshot.value ? snapshot.value : {}
   const guide = describeRuntimeGuide(value)
 
   const [step, setStep] = useState('choose')
   const [busy, setBusy] = useState(false)
+  const finishing = useRef(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
   const finish = useCallback(async (mode) => {
+    if (finishing.current) return
+    finishing.current = true
     try {
       const response = await fetch('/omnimux/runtime/mode', {
         method: 'PUT',
@@ -52,6 +65,7 @@ export function RuntimeGuideGate({ t, scope }) {
         throw new Error(typeof body.error === 'string' ? body.error : `HTTP ${response.status}`)
       }
     } catch (caught) {
+      finishing.current = false
       setError(caught instanceof Error ? caught.message : String(caught))
     }
   }, [])
@@ -70,7 +84,7 @@ export function RuntimeGuideGate({ t, scope }) {
     void finish('official')
   }, [finish, t])
 
-  if (!guide.visible) return null
+  if (!ready || !guide.visible) return null
   if (typeof document === 'undefined' || !document.body) return null
 
   return createPortal(
@@ -107,6 +121,11 @@ export function RuntimeGuideGate({ t, scope }) {
                     {t('runtime.keyCta')}
                   </Button>
                 </div>
+                <div className="omnimux-runtime-guide-skip">
+                  <Button variant="ghost" disabled={busy} onClick={() => { void finish('official') }}>
+                    {t('runtime.skip')}
+                  </Button>
+                </div>
               </div>
             ) : null}
 
@@ -121,6 +140,7 @@ export function RuntimeGuideGate({ t, scope }) {
                 <p className="omnimux-login-gate-subdeck">{t('runtime.agentHint')}</p>
                 <AgentPanel
                   t={t}
+                  scope={scope}
                   value={value}
                   busy={busy}
                   setBusy={setBusy}
@@ -151,6 +171,7 @@ export function RuntimeGuideGate({ t, scope }) {
                   setError={setError}
                   notice={notice}
                   setNotice={setNotice}
+                  bindScenarios={['text']}
                   onVerified={() => { void finish('key') }}
                 />
               </div>
