@@ -71,8 +71,13 @@ export function RuntimeGuideGate({ t, scope }) {
       if (typeof auth.peekCache === 'function') {
         const peeked = auth.peekCache()
         if (peeked && peeked.body && typeof peeked.body.logged_in === 'boolean') {
-          apply(peeked.body.logged_in === true)
-          return true
+          if (peeked.body.logged_in === true) {
+            apply(true)
+            return true
+          }
+          // A negative cache is not proof a later sign-in did not happen;
+          // the forced refresh below must still run.
+          apply(false)
         }
       }
       return false
@@ -90,7 +95,9 @@ export function RuntimeGuideGate({ t, scope }) {
             return
           }
           apply(false)
-        }).catch(() => { if (alive) apply(false) })
+        }).catch(() => {
+          if (alive && !(auth && typeof auth.isLoggedIn === 'function' && auth.isLoggedIn() === true)) apply(false)
+        })
         return
       }
       if (typeof fetch !== 'function') return
@@ -100,8 +107,8 @@ export function RuntimeGuideGate({ t, scope }) {
         if (alive && body && typeof body === 'object') apply(body.logged_in === true)
       }).catch(() => { if (alive) apply(false) })
     }
-    readLocal()
-    readRemote()
+    const positiveCache = readLocal()
+    if (!positiveCache) readRemote()
     const auth = /** @type {any} */ (window).__omnimuxAuth
     const stop = auth && typeof auth.subscribe === 'function' ? auth.subscribe(() => { readLocal(); readRemote() }) : undefined
     const onFocus = () => { readRemote() }
@@ -113,7 +120,7 @@ export function RuntimeGuideGate({ t, scope }) {
     }
   }, [])
 
-  const finish = useCallback(async (mode) => {
+  const finish = useCallback(async (mode, options = {}) => {
     if (finishing.current) return
     finishing.current = true
     try {
@@ -126,7 +133,7 @@ export function RuntimeGuideGate({ t, scope }) {
         const body = await response.json().catch(() => ({}))
         throw new Error(typeof body.error === 'string' ? body.error : `HTTP ${response.status}`)
       }
-      setDismissed(true)
+      if (options.dismiss === true) setDismissed(true)
     } catch (caught) {
       finishing.current = false
       setError(caught instanceof Error ? caught.message : String(caught))
@@ -185,7 +192,7 @@ export function RuntimeGuideGate({ t, scope }) {
                   </Button>
                 </div>
                 <div className="omnimux-runtime-guide-skip">
-                  <Button variant="ghost" className="omnimux-runtime-guide-skip-button" disabled={busy} onClick={() => { void finish('official') }}>
+                  <Button variant="ghost" className="omnimux-runtime-guide-skip-button" disabled={busy} onClick={() => { void finish('official', { dismiss: true }) }}>
                     {t('runtime.skip')}
                   </Button>
                 </div>

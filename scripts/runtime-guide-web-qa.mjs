@@ -112,6 +112,13 @@ function buildHarnessHtml() {
     const body = init.body ? JSON.parse(init.body) : {};
     window.__qaRequests.push({ path, method, body });
     if (path === '/omnimux/runtime/mode' && method === 'PUT') {
+      if (window.__qaAuth.fail_mode === true) {
+        return { ok: false, status: 500, json: async () => ({ error: 'mode write failed' }) };
+      }
+      if (window.__qaAuth.delay_mode === true) {
+        window.setTimeout(() => { window.__qaSettings.runtimeMode = body.mode; notify(); }, 2000);
+        return json({ ok: true });
+      }
       window.__qaSettings.runtimeMode = body.mode;
       notify();
       return json({ ok: true });
@@ -185,6 +192,9 @@ function buildHarnessHtml() {
     cached: params.get('loggedin') === '1',
     remote_logged_in: params.get('loggedin') === '1' || params.get('remoteauth') === '1',
     negative_cache: params.get('negativecache') === '1',
+    delay_mode: params.get('delayskip') === '1',
+    fail_mode: params.get('failmode') === '1',
+    getStatusCalls: [],
   };
   const nativeFetch = window.fetch.bind(window);
   window.fetch = (input, init) => {
@@ -200,8 +210,11 @@ function buildHarnessHtml() {
     peekCache: () => (window.__qaAuth.cached === true
       ? { ok: true, status: 200, body: { logged_in: true } }
       : (window.__qaAuth.negative_cache === true ? { ok: true, status: 200, body: { logged_in: false } } : null)),
-    getStatus: () => Promise.resolve({ ok: true, status: 200, body: { logged_in: window.__qaAuth.remote_logged_in === true } }),
-    subscribe: () => () => {},
+    getStatus: (verify) => {
+      window.__qaAuth.getStatusCalls.push(verify === true);
+      return Promise.resolve({ ok: true, status: 200, body: { logged_in: window.__qaAuth.remote_logged_in === true } });
+    },
+    subscribe: (cb) => { window.__qaAuth.subscribeCb = cb; return () => { window.__qaAuth.subscribeCb = undefined } },
   };
 
   const ctx = {
@@ -460,12 +473,14 @@ async function runRuntimeGuideWebQa(options = {}) {
     await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?negativecache=1&remoteauth=1` });
     await waitFor('Boolean(window.__qaReady)', 10000);
     check('negativecache-button-label', await waitFor(pageBodyIncludes('继续（已登录）'), 3000), '');
+    await screenshot('negativecache-guide');
     // focus 时强制刷新：初始未登录，focus 前服务端变为已登录，按钮应更新。
-    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?focusauth=1` });
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?focusauth=1&negativecache=1` });
     await waitFor('Boolean(window.__qaReady)', 10000);
     check('focusauth-initial-loggedout', await waitFor(pageBodyIncludes('登录 OmniMux'), 3000), '');
     await evaluate(`(() => { window.__qaAuth.remote_logged_in = true; window.dispatchEvent(new Event('focus')); return true; })()`);
     check('focusauth-updated', await waitFor(pageBodyIncludes('继续（已登录）'), 3000), '');
+    await screenshot('focusauth-guide');
     await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
     await waitFor('Boolean(window.__qaReady)', 10000);
     await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
@@ -542,6 +557,20 @@ async function runRuntimeGuideWebQa(options = {}) {
     check('skip-put-official', putSeen, JSON.stringify(await evaluate('window.__qaRequests')));
     check('guide-hidden-after-skip', await waitFor(`!document.querySelector('${guideSelector}')`), '');
     await screenshot('after-skip');
+
+    // --- 场景 4b：慢快照 → 本地 dismissed 必须立即隐藏；失败 → 保留引导并显示错误 ---
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?delayskip=1` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
+    await clickByText(`${guideSelector} button`, '暂时跳过');
+    check('skip-local-dismiss', await waitFor(`!document.querySelector('${guideSelector}')`, 500), '');
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?failmode=1` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
+    await clickByText(`${guideSelector} button`, '暂时跳过');
+    check('skip-failure-keeps-guide', await waitFor(pageBodyIncludes('mode write failed'), 3000), '');
+    check('skip-failure-guide-visible', await evaluate(`Boolean(document.querySelector('${guideSelector}'))`), '');
+    await screenshot('skip-failure');
 
     // --- 场景 5：重新进入空设置 → BYOK 保存 → 绑定 text → onVerified → PUT key → 引导消失 ---
     await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
