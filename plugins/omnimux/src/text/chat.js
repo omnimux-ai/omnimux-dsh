@@ -178,12 +178,16 @@ function safeErrorMessage(value, key) {
 }
 
 /**
+ * Normalize an OpenAI-compatible base URL. A path that already names the
+ * protocol root (`/v1` or an `/openai` compatible suffix such as Gemini's
+ * `/v1beta/openai`) is complete; appending another `/v1` there would 404.
  * @param {string} value
  */
-function normalizeBaseUrl(value) {
+export function normalizeBaseUrl(value) {
   const trimmed = String(value || '').trim().replace(/\/+$/, '')
   if (!trimmed) return DEFAULT_CHAT_BASE
-  return /\/v1$/i.test(trimmed) ? trimmed : `${trimmed}/v1`
+  if (/\/v1$/i.test(trimmed) || /\/openai$/i.test(trimmed)) return trimmed
+  return `${trimmed}/v1`
 }
 
 /**

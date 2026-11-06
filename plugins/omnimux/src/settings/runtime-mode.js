@@ -5,6 +5,12 @@ export const RUNTIME_MODES = Object.freeze(['official', 'agent', 'key'])
 /** Supported native media generation providers */
 export const MEDIA_PROVIDERS = Object.freeze(['fal', 'openai', 'openrouter', 'siliconflow', 'custom'])
 
+/** Text-only BYOK providers offered by the first-run key step. */
+export const TEXT_KEY_PROVIDER_IDS = Object.freeze(['anthropic', 'azure', 'google', 'ollama', 'senseaudio', 'aihubmix'])
+
+/** Every provider id the BYOK config route may store a record for. */
+export const BYOK_PROVIDERS = Object.freeze([...MEDIA_PROVIDERS, ...TEXT_KEY_PROVIDER_IDS])
+
 export const DEFAULT_MEDIA_MODELS = Object.freeze({
   image: 'fal-ai/flux/dev',
   video: 'fal-ai/kling-video/v1/standard',

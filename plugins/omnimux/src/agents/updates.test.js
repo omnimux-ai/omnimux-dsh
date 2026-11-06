@@ -374,10 +374,195 @@ describe('runAgentUpdate', () => {
     })
     assert.equal(calls.length, 1)
     assert.equal(calls[0].bin, 'kimi')
-    assert.deepEqual(calls[0].args, ['upgrade'])
+    assert.deepEqual(calls[0].args, ['upgrade', '--yes'])
     assert.equal(calls[0].opts.cwd, '/home/test')
     assert.equal(result.ok, true)
     assert.equal(result.version, '0.35.0')
+  })
+
+  it('falls back to the official installer when the self-updater only prints a manual command', async () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'kimi-update-'))
+    try {
+      fs.mkdirSync(path.join(home, '.kimi-code', 'updates'), { recursive: true })
+      fs.writeFileSync(path.join(home, '.kimi-code', 'updates', 'latest.json'), JSON.stringify({ latest: '2.5.2' }))
+      const calls = []
+      const result = await runAgentUpdate('kimi', {
+        shape: 'native',
+        home,
+        platform: 'darwin',
+        run: async (bin, args, opts) => {
+          calls.push({ bin, args, opts })
+          if (bin === 'kimi') {
+            await new Promise((resolve) => setTimeout(resolve, 20))
+            return {
+              stdout: 'A newer version of @moonshot-ai/kimi-code is available (0.34.0 -> 2.5.2).\n'
+                + 'Detected install source: native (windows). Auto-update is not supported on this platform.\n'
+                + 'To update manually, run: curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash\n',
+              stderr: '',
+            }
+          }
+          return { stdout: 'installed 2.5.2', stderr: '' }
+        },
+        probeVersion: async () => ({ installed: true, version: '2.5.2' }),
+      })
+      assert.equal(calls.length, 2, 'the manual-only message must trigger one installer run')
+      assert.equal(calls[0].bin, 'kimi')
+      assert.deepEqual(calls[0].args, ['upgrade', '--yes'])
+      assert.equal(calls[1].bin, 'bash')
+      assert.deepEqual(calls[1].args.slice(0, 1), ['-c'])
+      assert.match(calls[1].args[1], /set -o pipefail/)
+      assert.match(calls[1].args[1], /code\.kimi\.com\/kimi-code\/install\.sh/)
+      assert.ok(calls[1].opts.timeout < calls[0].opts.timeout, 'fallback must consume the remaining time budget, not a fresh timeout')
+      assert.equal(result.ok, true)
+      assert.equal(result.version, '2.5.2')
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true })
+    }
+  })
+
+  it('reports update-not-applied when the installer leaves the binary behind the ledger', async () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'kimi-update-'))
+    try {
+      fs.mkdirSync(path.join(home, '.kimi-code', 'updates'), { recursive: true })
+      fs.writeFileSync(path.join(home, '.kimi-code', 'updates', 'latest.json'), JSON.stringify({ latest: '2.5.2' }))
+      const calls = []
+      const result = await runAgentUpdate('kimi', {
+        shape: 'native',
+        home,
+        platform: 'darwin',
+        run: async (bin) => {
+          calls.push(bin)
+          return bin === 'kimi'
+            ? { stdout: 'To update manually, run: curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash', stderr: '' }
+            : { stdout: 'installer ran', stderr: '' }
+        },
+        probeVersion: async () => ({ installed: true, version: '0.34.0' }),
+      })
+      assert.deepEqual(calls, ['kimi', 'bash'], 'the installer must actually run before declaring not-applied')
+      assert.equal(result.ok, false)
+      assert.equal(result.error, 'update-not-applied')
+      assert.match(result.detail, /To update manually/, 'detail must explain what the CLI said')
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true })
+    }
+  })
+
+  it('reports update-failed with a credential-free detail when the fallback installer fails', async () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'kimi-update-'))
+    try {
+      const result = await runAgentUpdate('kimi', {
+        shape: 'native',
+        home,
+        platform: 'darwin',
+        run: async (bin) => {
+          if (bin === 'kimi') return { stdout: 'Auto-update is not supported on this platform.', stderr: '' }
+          const error = new Error('installer failed')
+          error.stderr = 'curl: (22) failed with Authorization: Bearer sk-live-abcdefghijklmnopqrstuvwxyz012345'
+          throw error
+        },
+      })
+      assert.equal(result.ok, false)
+      assert.equal(result.error, 'update-failed')
+      assert.doesNotMatch(result.detail, /sk-live-abcdefghijklmnopqrstuvwxyz012345/)
+      assert.match(result.detail, /\*\*\*/)
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true })
+    }
+  })
+
+  it('reports update-not-applied when the version probe fails or returns empty', async () => {
+    for (const probeVersion of [
+      async () => ({ installed: false, version: '' }),
+      async () => { throw new Error('probe crashed') },
+    ]) {
+      const home = fs.mkdtempSync(path.join(os.tmpdir(), 'kimi-update-'))
+      try {
+        fs.mkdirSync(path.join(home, '.kimi-code', 'updates'), { recursive: true })
+        fs.writeFileSync(path.join(home, '.kimi-code', 'updates', 'latest.json'), JSON.stringify({ latest: '2.5.2' }))
+        const calls = []
+        const result = await runAgentUpdate('kimi', {
+          shape: 'native',
+          home,
+          platform: 'darwin',
+          run: async (bin) => {
+            calls.push(bin)
+            return bin === 'kimi'
+              ? { stdout: 'To update manually, run: curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash', stderr: '' }
+              : { stdout: 'installer ran', stderr: '' }
+          },
+          probeVersion,
+        })
+        assert.deepEqual(calls, ['kimi', 'bash'], 'the installer must run before probing')
+        assert.equal(result.ok, false)
+        assert.equal(result.error, 'update-not-applied')
+      } finally {
+        fs.rmSync(home, { recursive: true, force: true })
+      }
+    }
+  })
+
+  it('falls back when the self-updater exits non-zero but prints the manual command', async () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'kimi-update-'))
+    try {
+      fs.mkdirSync(path.join(home, '.kimi-code', 'updates'), { recursive: true })
+      fs.writeFileSync(path.join(home, '.kimi-code', 'updates', 'latest.json'), JSON.stringify({ latest: '2.5.2' }))
+      const calls = []
+      const result = await runAgentUpdate('kimi', {
+        shape: 'native',
+        home,
+        platform: 'darwin',
+        run: async (bin) => {
+          calls.push(bin)
+          if (bin === 'kimi') {
+            const error = new Error('command failed')
+            error.stderr = 'To update manually, run: curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash'
+            throw error
+          }
+          return { stdout: 'installed', stderr: '' }
+        },
+        probeVersion: async () => ({ installed: true, version: '2.5.2' }),
+      })
+      assert.deepEqual(calls, ['kimi', 'bash'])
+      assert.equal(result.ok, true)
+      assert.equal(result.version, '2.5.2')
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true })
+    }
+  })
+
+  it('uses the PowerShell installer on Windows and bash on Linux', async () => {
+    for (const [platform, expectedBin, expectedPattern] of [
+      ['win32', 'powershell', /install\.ps1/],
+      ['linux', 'bash', /install\.sh/],
+    ]) {
+      const calls = []
+      const result = await runAgentUpdate('kimi', {
+        shape: 'native',
+        home: '/home/test',
+        platform,
+        run: async (bin, args) => {
+          calls.push({ bin, args })
+          if (bin === 'kimi') return { stdout: 'Auto-update is not supported on this platform.', stderr: '' }
+          return { stdout: 'installed', stderr: '' }
+        },
+        probeVersion: async () => ({ installed: true, version: '2.5.2' }),
+      })
+      assert.equal(result.ok, true)
+      assert.equal(calls[1].bin, expectedBin, platform)
+      assert.match(calls[1].args.join(' '), expectedPattern, platform)
+    }
+  })
+
+  it('reports update-manual-required when the platform has no fallback installer', async () => {
+    const result = await runAgentUpdate('kimi', {
+      shape: 'native',
+      home: '/home/test',
+      platform: 'freebsd',
+      run: async () => ({ stdout: 'Auto-update is not supported on this platform.', stderr: '' }),
+    })
+    assert.equal(result.ok, false)
+    assert.equal(result.error, 'update-manual-required')
+    assert.match(result.detail, /Auto-update is not supported/)
   })
 
   it('refuses an install shape it cannot upgrade', async () => {

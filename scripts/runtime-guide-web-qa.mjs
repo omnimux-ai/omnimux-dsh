@@ -8,10 +8,8 @@
  * 临时 HTTP 服务、无头 Chrome CDP、PNG 截图证据，零桌面依赖、零公共环境污染。
  *
  * 场景：
- *   empty      —— settings 为空 → 引导可见，三选一卡片 + 跳过入口
- *   loggedin   —— 已登录 → 主按钮显示「继续（已登录）」，点击写 official 并关闭；右栏封面须带深海照片/水母图层且照片真实解码
- *   cover-offline —— 屏蔽 unsplash → 封面确定性退回深海 SVG + 水母，尺寸不塌陷
- *   narrow     —— 1024x760 窄视口 → 封面随卡片收缩且尺寸有效
+ *   empty      —— settings 为空 → 引导可见，三选一卡片 + 跳过入口，单列无右侧封面
+ *   loggedin   —— 已登录 → 主按钮显示「继续（已登录）」，点击写 official 并关闭
  *   empty-cli  —— 点击「本机助手」→ CLI 面板（fetch 桩返回空列表 → 无可用提示）
  *   empty-key  —— 点击「自己的密钥」→ BYOK 表单字段渲染
  *   skip       —— 点击跳过 → PUT /omnimux/runtime/mode {mode:'official'}，随后引导消失
@@ -22,7 +20,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import http from 'node:http';
@@ -269,10 +267,14 @@ async function runRuntimeGuideWebQa(options = {}) {
   const evidenceDir = options.evidenceDir
     || join(root, '.workbuddy/evidence/worktree-qa', `runtime-guide-${runId}`);
   mkdirSync(evidenceDir, { recursive: true });
+  const gitValue = (args) => {
+    try { return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim(); } catch { return ''; }
+  };
   const report = {
     runId, startedAt: new Date().toISOString(), completedAt: null,
     pass: false, serverPort: null, cdpPort: null,
-    assertions: [], screenshots: {}, errors: [],
+    root, head: gitValue(['rev-parse', 'HEAD']), dirty: gitValue(['status', '--porcelain']),
+    url: null, assertions: [], screenshots: {}, errors: [],
   };
   let server = null;
   let chromeProc = null;
@@ -298,6 +300,7 @@ async function runRuntimeGuideWebQa(options = {}) {
     });
     await new Promise((resolveListen) => { server.listen(0, '127.0.0.1', resolveListen); });
     report.serverPort = server.address().port;
+    report.url = `http://127.0.0.1:${report.serverPort}/`;
     check('ephemeral-server-listen', true, `port ${report.serverPort}`);
 
     mkdirSync(profileDir, { recursive: true });
@@ -350,22 +353,8 @@ async function runRuntimeGuideWebQa(options = {}) {
     await sendCdp('Page.enable');
     await sendCdp('Runtime.enable');
     await sendCdp('Log.enable');
-    const networkUrls = new Map();
-    report.networkFailures = report.networkFailures || [];
     cdpWs.addEventListener('message', (ev) => {
       const m = JSON.parse(ev.data);
-      if (m.method === 'Network.requestWillBeSent') {
-        networkUrls.set(m.params.requestId, m.params.request?.url || '');
-        return;
-      }
-      if (m.method === 'Network.loadingFailed') {
-        report.networkFailures.push({
-          url: networkUrls.get(m.params.requestId) || '',
-          error: m.params.errorText || '',
-          blocked: m.params.blockedReason || '',
-        });
-        return;
-      }
       if (m.method === 'Runtime.exceptionThrown' || (m.method === 'Log.entryAdded' && m.params?.entry?.level === 'error')) {
         const text = m.method === 'Runtime.exceptionThrown'
           ? (m.params?.exceptionDetails?.exception?.description || m.params?.exceptionDetails?.text)
@@ -400,48 +389,6 @@ async function runRuntimeGuideWebQa(options = {}) {
       report.screenshots[name] = { file, width: decoded.width, height: decoded.height };
       return file;
     };
-    // 封面照片层显式加载证明：URL 从实际背景层里提取（不另存常量），
-    // 真实解码失败即红，绝不静默退回 SVG 兜底。
-    const coverPhotoUrlExpression = `(() => {
-      const el = document.querySelector('[data-omnimux-runtime-guide] .omnimux-runtime-guide-art');
-      if (!el) return '';
-      const value = getComputedStyle(el).backgroundImage;
-      const start = value.indexOf('https://images.unsplash.com/');
-      if (start === -1) return '';
-      let end = value.indexOf('"', start);
-      if (end === -1) end = value.indexOf(')', start);
-      return value.slice(start, end === -1 ? undefined : end);
-    })()`;
-    const waitForCoverPhoto = async (timeoutMs = 15000) => {
-      const deadline = Date.now() + timeoutMs;
-      let url = '';
-      while (Date.now() < deadline) {
-        url = await evaluate(coverPhotoUrlExpression).catch(() => '');
-        if (!url) {
-          await new Promise((r) => setTimeout(r, 300));
-          continue;
-        }
-        const ok = await evaluate(`new Promise((resolve) => {
-          const img = new Image();
-          const done = (value) => resolve(value);
-          img.onload = () => (img.decode
-            ? img.decode().then(() => done(img.naturalWidth > 0)).catch(() => done(img.naturalWidth > 0))
-            : done(img.naturalWidth > 0));
-          img.onerror = () => done(false);
-          img.src = ${JSON.stringify(url)};
-          setTimeout(() => done(false), 4000);
-        })`).catch(() => false);
-        if (ok) return url;
-        await new Promise((r) => setTimeout(r, 300));
-      }
-      return '';
-    };
-    const artBoxExpression = `(() => {
-      const el = document.querySelector('[data-omnimux-runtime-guide] .omnimux-runtime-guide-art');
-      if (!el) return null;
-      const rect = el.getBoundingClientRect();
-      return { width: Math.round(rect.width), height: Math.round(rect.height) };
-    })()`;
     const pageBodyIncludes = (text) => `(document.body && document.body.innerText || '').includes(${JSON.stringify(text)})`;
     const guideSelector = '[data-omnimux-runtime-guide]';
     const clickByText = (selector, text) => evaluate(`
@@ -476,29 +423,16 @@ async function runRuntimeGuideWebQa(options = {}) {
     }
     await clickByText(`${guideSelector} button`, '登录 OmniMux');
     check('loggedout-ensure-login', await waitFor(`(window.__qaRequests || []).some((r) => r.path === '__ensureLogin__')`), JSON.stringify(await evaluate('window.__qaRequests')));
-    // 右栏封面：必须同时带登录窗同款深海 SVG 与水母图层，否则退化成灰雾占位。
-    const coverLayers = await evaluate(`(() => {
-      const el = document.querySelector('${guideSelector} .omnimux-runtime-guide-art');
-      if (!el) return null;
+    // 首跑选择步骤为单列，不再有右侧装饰封面。
+    const chooseLayout = await evaluate(`(() => {
+      const sheet = document.querySelector('${guideSelector} .omnimux-runtime-guide-sheet');
       return {
-        base: getComputedStyle(el).backgroundImage,
-        jellyfish: getComputedStyle(el, '::before').backgroundImage,
+        single: Boolean(sheet && sheet.classList.contains('omnimux-runtime-guide-sheet--single')),
+        art: Boolean(document.querySelector('${guideSelector} .omnimux-runtime-guide-art')),
       };
     })()`);
-    check(
-      'cover-poster-layers',
-      Boolean(coverLayers)
-        && /images\.unsplash\.com/.test(coverLayers.base)
-        && /data:image\/svg\+xml/.test(coverLayers.base)
-        && /data:image\/svg\+xml/.test(coverLayers.jellyfish),
-      JSON.stringify(coverLayers).slice(0, 240),
-    );
-    // 照片层必须真实解码成功；失败即红，禁止静默退回 SVG 兜底还报绿。
-    const coverPhotoUrl = await waitForCoverPhoto();
-    check('cover-photo-loaded', Boolean(coverPhotoUrl), coverPhotoUrl ? coverPhotoUrl : 'cover photo layer failed to load within timeout');
-    check('cover-photo-matches-locked-poster', /photo-1544551763-46a013bb70d5/.test(coverPhotoUrl), coverPhotoUrl);
-    const coverBoxWide = await evaluate(artBoxExpression);
-    await new Promise((r) => setTimeout(r, 400));
+    check('choose-single-column', Boolean(chooseLayout) && chooseLayout.single === true, JSON.stringify(chooseLayout));
+    check('choose-no-cover', Boolean(chooseLayout) && chooseLayout.art === false, JSON.stringify(chooseLayout));
     await screenshot('empty-guide');
 
     // --- 场景 1b：已登录 → 主按钮显示「继续（已登录）」，点击直接写 official ---
@@ -522,59 +456,6 @@ async function runRuntimeGuideWebQa(options = {}) {
     await waitFor('Boolean(window.__qaReady)', 10000);
     await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
 
-    // --- 场景 1c：断网 → 封面必须确定性退回深海 SVG + 水母，不得塌陷成空白 ---
-    await sendCdp('Network.enable', {});
-    await sendCdp('Network.setBlockedURLs', { urls: ['*images.unsplash.com*'] });
-    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
-    await waitFor('Boolean(window.__qaReady)', 10000);
-    check('cover-offline-visible', await waitFor(`Boolean(document.querySelector('${guideSelector} .omnimux-runtime-guide-art'))`), '');
-    const offlineCover = await evaluate(`(() => {
-      const el = document.querySelector('${guideSelector} .omnimux-runtime-guide-art');
-      if (!el) return null;
-      return { base: getComputedStyle(el).backgroundImage, jellyfish: getComputedStyle(el, '::before').backgroundImage };
-    })()`);
-    check(
-      'cover-offline-fallback',
-      Boolean(offlineCover)
-        && /data:image\/svg\+xml/.test(offlineCover.base)
-        && /data:image\/svg\+xml/.test(offlineCover.jellyfish),
-      JSON.stringify(offlineCover).slice(0, 240),
-    );
-    // 证明屏蔽真的生效：同一 URL 在离线场景必须加载失败。
-    const offlinePhotoBlocked = await evaluate(`new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve(false);
-      img.onerror = () => resolve(true);
-      img.src = ${JSON.stringify(coverPhotoUrl)};
-      setTimeout(() => resolve(false), 3000);
-    })`).catch(() => false);
-    check('cover-offline-photo-blocked', offlinePhotoBlocked, 'the unsplash photo must be blocked in the offline scenario');
-    const offlineBox = await evaluate(artBoxExpression);
-    check('cover-offline-box', Boolean(offlineBox) && offlineBox.width >= 300 && offlineBox.height >= 400, JSON.stringify(offlineBox));
-    await screenshot('cover-offline');
-    await sendCdp('Network.setBlockedURLs', { urls: [] });
-    const blockedRequests = (report.networkFailures || []).filter((entry) => /images\.unsplash\.com/.test(entry.url));
-    check('cover-offline-request-blocked', blockedRequests.length > 0, `network failures=${JSON.stringify(report.networkFailures || []).slice(0, 240)}`);
-
-    // --- 场景 1c：窄视口 → 封面随卡片收缩但不变形、不塌陷 ---
-    await sendCdp('Emulation.setDeviceMetricsOverride', { width: 1024, height: 760, deviceScaleFactor: 1, mobile: false });
-    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
-    await waitFor('Boolean(window.__qaReady)', 10000);
-    check('narrow-guide-visible', await waitFor(`Boolean(document.querySelector('${guideSelector} .omnimux-runtime-guide-art'))`), '');
-    const narrowBox = await evaluate(artBoxExpression);
-    check('narrow-cover-box', Boolean(narrowBox) && narrowBox.width >= 300 && narrowBox.height >= 400, JSON.stringify(narrowBox));
-    check(
-      'narrow-cover-shrinks',
-      Boolean(coverBoxWide && narrowBox) && narrowBox.width < coverBoxWide.width
-        && Math.abs(narrowBox.height - coverBoxWide.height) <= 4,
-      `wide=${JSON.stringify(coverBoxWide)} narrow=${JSON.stringify(narrowBox)}`,
-    );
-    await screenshot('narrow-guide');
-    await sendCdp('Emulation.clearDeviceMetricsOverride', {});
-    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
-    await waitFor('Boolean(window.__qaReady)', 10000);
-    await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
-
     // --- 场景 2：点击「本机助手」→ CLI 面板（空列表提示） ---
     await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '本机助手');
     check('agent-step', await waitFor(pageBodyIncludes('选择用来运行提示词的 CLI')), '');
@@ -592,8 +473,34 @@ async function runRuntimeGuideWebQa(options = {}) {
     `);
     await waitFor(pageBodyIncludes('自己的密钥'), 3000);
     await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '自己的密钥');
-    check('key-step', await waitFor(`Boolean(document.querySelector('${guideSelector} input[placeholder*="粘贴密钥"]'))`, 5000), '');
+    check('key-step', await waitFor(`Boolean(document.querySelector('${guideSelector} [data-omnimux-key-draft]'))`, 5000), '');
+    // 新文本配置界面：7 家提供商、快速填充、API Key、Base URL、模型下拉；不得出现媒体字段。
+    const keyProviderIds = await evaluate(`[...document.querySelectorAll('${guideSelector} [data-omnimux-key-draft] [data-provider]')].map((el) => el.getAttribute('data-provider'))`);
+    check('key-provider-count', Array.isArray(keyProviderIds) && keyProviderIds.length === 7, JSON.stringify(keyProviderIds));
+    check('key-quick-fill', await waitFor(`Boolean(document.querySelector('${guideSelector} [aria-label="快速填充提供方"]'))`, 3000), '');
+    check('key-api-key', await waitFor(`Boolean(document.querySelector('${guideSelector} input[aria-label="API Key"]'))`, 3000), '');
+    check('key-base-url', await waitFor(`Boolean(document.querySelector('${guideSelector} input[aria-label="Base URL"]'))`, 3000), '');
+    check('key-model-select', await waitFor(`Boolean(document.querySelector('${guideSelector} [aria-label="模型"]'))`, 3000), '');
+    check('key-no-media-fields', await evaluate(`(() => {
+      const guide = document.querySelector('${guideSelector}');
+      const text = (guide && guide.innerText) || '';
+      return !['素材理解','图片生成','视频生成','音频生成'].some((word) => text.includes(word));
+    })()`), '');
+    check('key-default-model', await waitFor(pageBodyIncludes('claude-opus-5'), 3000), '');
     check('key-no-cover', await evaluate(`!document.querySelector('${guideSelector} .omnimux-runtime-guide-art')`), '');
+    // 显示/隐藏切换：密码框必须在 text 与 password 间切换。
+    const keyType = () => evaluate(`(document.querySelector('${guideSelector} input[aria-label="API Key"]') || {}).type`);
+    check('key-key-hidden', (await keyType()) === 'password', '');
+    await clickByText(`${guideSelector} button`, '显示');
+    check('key-key-shown', await waitFor(`document.querySelector('${guideSelector} input[aria-label="API Key"]').type === 'text'`, 2000), '');
+    await clickByText(`${guideSelector} button`, '隐藏');
+    check('key-key-hidden-again', await waitFor(`document.querySelector('${guideSelector} input[aria-label="API Key"]').type === 'password'`, 2000), '');
+    // 切换提供商：Base URL 与模型下拉必须同步变更，再切回默认家。
+    await clickByText(`${guideSelector} [data-provider]`, 'Google Gemini');
+    check('key-provider-switch-endpoint', await waitFor(`document.querySelector('${guideSelector} input[aria-label="Base URL"]').value === 'https://generativelanguage.googleapis.com/v1beta/openai'`, 2000), '');
+    check('key-provider-switch-model', await waitFor(pageBodyIncludes('gemini-3.8-flash'), 2000), '');
+    await clickByText(`${guideSelector} [data-provider]`, 'Anthropic');
+    await waitFor(pageBodyIncludes('claude-opus-5'), 2000);
     await screenshot('empty-guide-key');
 
     // --- 场景 4：回退 → 点击跳过 → PUT official → 引导消失 ---
@@ -618,27 +525,35 @@ async function runRuntimeGuideWebQa(options = {}) {
     await waitFor('Boolean(window.__qaReady)', 10000);
     check('guide-visible-revisit', await waitFor(`Boolean(document.querySelector('${guideSelector}'))`), '');
     await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '自己的密钥');
-    await waitFor(`Boolean(document.querySelector('${guideSelector} input[placeholder*="粘贴密钥"]'))`, 5000);
+    await waitFor(`Boolean(document.querySelector('${guideSelector} [data-omnimux-key-draft]'))`, 5000);
+    // 空 Key 必须被拒绝且不关闭引导。
+    await clickByText(`${guideSelector} button`, '继续');
+    check('save-empty-key-rejected', await waitFor(pageBodyIncludes('请填写 API Key'), 3000), '');
+    check('save-empty-key-keeps-guide', await evaluate(`Boolean(document.querySelector('${guideSelector} [data-omnimux-key-draft]'))`), '');
     // React 受控输入需要原生 setter 派发 input 事件，onChange 才会收到。
     await evaluate(`
       (() => {
-        const rows = [...document.querySelectorAll('${guideSelector} .omx-form-row')];
-        const row = rows.find((r) => (r.innerText || '').includes('文字工具'));
-        const input = row && row.querySelector('input');
+        const input = document.querySelector('${guideSelector} input[aria-label="API Key"]');
         if (!input) return false;
         const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-        setter.call(input, 'qa-test-model');
+        setter.call(input, 'qa-test-key');
         input.dispatchEvent(new Event('input', { bubbles: true }));
         return true;
       })()
     `);
-    await clickByText(`${guideSelector} button`, '保存');
+    await clickByText(`${guideSelector} button`, '继续');
     const byokPut = await waitFor(`
       (window.__qaRequests || []).some((r) => r.path === '/omnimux/byok/config' && r.method === 'PUT'
         && r.body && r.body.scenarioBindings && r.body.scenarioBindings.text
         && r.body.scenarioBindings.text.channel === 'byok')
     `);
     check('save-binds-text', byokPut, JSON.stringify(await evaluate('window.__qaRequests')));
+    const textModelPut = await waitFor(`
+      (window.__qaRequests || []).some((r) => r.path === '/omnimux/byok/config' && r.method === 'PUT'
+        && r.body && r.body.provider === 'anthropic' && r.body.models && r.body.models.text === 'claude-opus-5'
+        && Array.isArray(r.body.capabilities) && r.body.capabilities.includes('text'))
+    `);
+    check('save-text-model', textModelPut, JSON.stringify(await evaluate('window.__qaRequests')));
     const keyPut = await waitFor(`
       (window.__qaRequests || []).some((r) => r.path === '/omnimux/runtime/mode' && r.method === 'PUT' && r.body && r.body.mode === 'key')
     `);
