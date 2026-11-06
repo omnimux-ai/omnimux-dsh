@@ -448,8 +448,8 @@ async function runRuntimeGuideWebQa(options = {}) {
 
     const checks = [
       ['choice-official', '登录 OmniMux'],
-      ['choice-agent', '本机助手'],
-      ['choice-key', '自己的密钥'],
+      ['choice-agent', '本地Agent'],
+      ['choice-key', '使用自己的 Key'],
       ['choice-skip', '暂时跳过'],
     ];
     for (const [name, text] of checks) {
@@ -534,7 +534,7 @@ async function runRuntimeGuideWebQa(options = {}) {
     await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
 
     // --- 场景 2：点击「本机助手」→ CLI 面板（空列表提示） ---
-    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '本机助手');
+    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '本地Agent');
     check('agent-step', await waitFor(pageBodyIncludes('选择用来运行提示词的 CLI')), '');
     check('agent-empty-hint', await waitFor(pageBodyIncludes('你的 CLI (0)'), 5000), '');
     check('agent-no-cover', await evaluate(`!document.querySelector('${guideSelector} .omnimux-runtime-guide-art')`), '');
@@ -548,8 +548,8 @@ async function runRuntimeGuideWebQa(options = {}) {
         if (el) el.click();
       })()
     `);
-    await waitFor(pageBodyIncludes('自己的密钥'), 3000);
-    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '自己的密钥');
+    await waitFor(pageBodyIncludes('使用自己的 Key'), 3000);
+    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '使用自己的 Key');
     check('key-step', await waitFor(`Boolean(document.querySelector('${guideSelector} input[placeholder*="粘贴密钥"]'))`, 5000), '');
     check('key-no-cover', await evaluate(`!document.querySelector('${guideSelector} .omnimux-runtime-guide-art')`), '');
     await screenshot('empty-guide-key');
@@ -575,7 +575,7 @@ async function runRuntimeGuideWebQa(options = {}) {
     await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
     await waitFor('Boolean(window.__qaReady)', 10000);
     check('guide-visible-revisit', await waitFor(`Boolean(document.querySelector('${guideSelector}'))`), '');
-    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '自己的密钥');
+    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '使用自己的 Key');
     await waitFor(`Boolean(document.querySelector('${guideSelector} input[placeholder*="粘贴密钥"]'))`, 5000);
     // React 受控输入需要原生 setter 派发 input 事件，onChange 才会收到。
     await evaluate(`
