@@ -8,7 +8,9 @@
  * 临时 HTTP 服务、无头 Chrome CDP、PNG 截图证据，零桌面依赖、零公共环境污染。
  *
  * 场景：
- *   empty      —— settings 为空 → 引导可见，三选一卡片 + 跳过入口；右栏封面须带深海照片/水母图层
+ *   empty      —— settings 为空 → 引导可见，三选一卡片 + 跳过入口；右栏封面须带深海照片/水母图层且照片真实解码
+ *   cover-offline —— 屏蔽 unsplash → 封面确定性退回深海 SVG + 水母，尺寸不塌陷
+ *   narrow     —— 1024x760 窄视口 → 封面随卡片收缩且尺寸有效
  *   empty-cli  —— 点击「本机助手」→ CLI 面板（fetch 桩返回空列表 → 无可用提示）
  *   empty-key  —— 点击「自己的密钥」→ BYOK 表单字段渲染
  *   skip       —— 点击跳过 → PUT /omnimux/runtime/mode {mode:'official'}，随后引导消失
@@ -357,16 +359,6 @@ async function runRuntimeGuideWebQa(options = {}) {
       return false;
     };
     const screenshot = async (name) => {
-      // 等封面底图（unsplash）解码完成，截图才反映真实上色后的封面。
-      await evaluate(`new Promise((resolve) => {
-        const img = new Image();
-        const done = () => resolve(true);
-        img.onload = () => (img.decode ? img.decode().then(done).catch(done) : done());
-        img.onerror = done;
-        img.src = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80';
-        setTimeout(done, 2000);
-      })`).catch(() => {});
-      await new Promise((r) => setTimeout(r, 120));
       const shot = await sendCdp('Page.captureScreenshot', { format: 'png' });
       const bytes = Buffer.from(shot.data, 'base64');
       const decoded = PNG.sync.read(bytes);
@@ -375,6 +367,32 @@ async function runRuntimeGuideWebQa(options = {}) {
       report.screenshots[name] = { file, width: decoded.width, height: decoded.height };
       return file;
     };
+    // 封面照片层显式加载证明：超时/失败必须让断言变红，而不是静默退回 SVG 兜底。
+    const COVER_PHOTO_URL = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80';
+    const waitForCoverPhoto = async (timeoutMs = 15000) => {
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        const ok = await evaluate(`new Promise((resolve) => {
+          const img = new Image();
+          const done = (value) => resolve(value);
+          img.onload = () => (img.decode
+            ? img.decode().then(() => done(img.naturalWidth > 0)).catch(() => done(img.naturalWidth > 0))
+            : done(img.naturalWidth > 0));
+          img.onerror = () => done(false);
+          img.src = ${JSON.stringify(COVER_PHOTO_URL)};
+          setTimeout(() => done(false), 4000);
+        })`).catch(() => false);
+        if (ok) return true;
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      return false;
+    };
+    const artBoxExpression = `(() => {
+      const el = document.querySelector('[data-omnimux-runtime-guide] .omnimux-runtime-guide-art');
+      if (!el) return null;
+      const rect = el.getBoundingClientRect();
+      return { width: Math.round(rect.width), height: Math.round(rect.height) };
+    })()`;
     const pageBodyIncludes = (text) => `(document.body && document.body.innerText || '').includes(${JSON.stringify(text)})`;
     const guideSelector = '[data-omnimux-runtime-guide]';
     const clickByText = (selector, text) => evaluate(`
@@ -424,7 +442,47 @@ async function runRuntimeGuideWebQa(options = {}) {
         && /data:image\/svg\+xml/.test(coverLayers.jellyfish),
       JSON.stringify(coverLayers).slice(0, 240),
     );
+    // 照片层必须真实解码成功；失败即红，禁止静默退回 SVG 兜底还报绿。
+    const photoLoaded = await waitForCoverPhoto();
+    check('cover-photo-loaded', photoLoaded, photoLoaded ? '' : 'unsplash cover photo failed to load within timeout');
+    await new Promise((r) => setTimeout(r, 400));
     await screenshot('empty-guide');
+
+    // --- 场景 1b：断网 → 封面必须确定性退回深海 SVG + 水母，不得塌陷成空白 ---
+    await sendCdp('Network.enable', {});
+    await sendCdp('Network.setBlockedURLs', { urls: ['*images.unsplash.com*'] });
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    check('cover-offline-visible', await waitFor(`Boolean(document.querySelector('${guideSelector} .omnimux-runtime-guide-art'))`), '');
+    const offlineCover = await evaluate(`(() => {
+      const el = document.querySelector('${guideSelector} .omnimux-runtime-guide-art');
+      if (!el) return null;
+      return { base: getComputedStyle(el).backgroundImage, jellyfish: getComputedStyle(el, '::before').backgroundImage };
+    })()`);
+    check(
+      'cover-offline-fallback',
+      Boolean(offlineCover)
+        && /data:image\/svg\+xml/.test(offlineCover.base)
+        && /data:image\/svg\+xml/.test(offlineCover.jellyfish),
+      JSON.stringify(offlineCover).slice(0, 240),
+    );
+    const offlineBox = await evaluate(artBoxExpression);
+    check('cover-offline-box', Boolean(offlineBox) && offlineBox.width >= 300 && offlineBox.height >= 400, JSON.stringify(offlineBox));
+    await screenshot('cover-offline');
+    await sendCdp('Network.setBlockedURLs', { urls: [] });
+
+    // --- 场景 1c：窄视口 → 封面随卡片收缩但不变形、不塌陷 ---
+    await sendCdp('Emulation.setDeviceMetricsOverride', { width: 1024, height: 760, deviceScaleFactor: 1, mobile: false });
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    check('narrow-guide-visible', await waitFor(`Boolean(document.querySelector('${guideSelector} .omnimux-runtime-guide-art'))`), '');
+    const narrowBox = await evaluate(artBoxExpression);
+    check('narrow-cover-box', Boolean(narrowBox) && narrowBox.width >= 300 && narrowBox.height >= 400, JSON.stringify(narrowBox));
+    await screenshot('narrow-guide');
+    await sendCdp('Emulation.clearDeviceMetricsOverride', {});
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
 
     // --- 场景 2：点击「本机助手」→ CLI 面板（空列表提示） ---
     await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '本机助手');
@@ -503,7 +561,8 @@ async function runRuntimeGuideWebQa(options = {}) {
     await screenshot('configured-no-guide');
 
     check('no-unexpected-page-errors', await evaluate(`${GUIDE_RELEVANT}.length === 0`), await evaluate(`${GUIDE_RELEVANT}.join(" | ")`));
-    const consoleHardErrors = (report.consoleErrors || []).filter((e) => !/WebSocket/.test(e));
+    // 场景 1b 主动屏蔽 unsplash，浏览器会记一条 ERR_BLOCKED_BY_CLIENT；属预期，放行。
+    const consoleHardErrors = (report.consoleErrors || []).filter((e) => !/WebSocket|ERR_BLOCKED_BY_CLIENT/.test(e));
     check('no-render-exceptions', consoleHardErrors.length === 0, consoleHardErrors.join(' | '));
     report.pass = report.assertions.every((a) => a.pass);
   } catch (error) {

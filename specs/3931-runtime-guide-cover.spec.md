@@ -23,10 +23,11 @@
 
 ## 验收用例
 
-- S1：选择步骤右侧渲染深海照片 + 水母封面；`getComputedStyle` 的 `background-image` 同时包含 unsplash 照片与 `data:image/svg+xml` 图层，`::before` 含水母 SVG。
+- S1：选择步骤右侧渲染深海照片 + 水母封面；照片必须真实解码成功（`cover-photo-loaded` 失败即红），`getComputedStyle` 的 `background-image` 精确包含登录窗同款 `LOGIN_GATE_SEA_URI`，`::before` 精确包含 `LOGIN_GATE_JELLY_URI`。
+- S1b：1024x760 窄视口下封面随卡片等比收缩，封面盒宽 ≥300、高 ≥400，不塌陷、不变形。
 - S2：`agent` / `key` 两步仍是单列布局，右侧不渲染封面。
 - S3：引导三选一、跳过、保存绑定、已配置不显示等既有行为全部不变。
-- S4：离线（照片不可达）时仍由深海 SVG + 水母兜底，不出现空白。
+- S4：屏蔽 `images.unsplash.com` 后仍由深海 SVG + 水母兜底，封面盒尺寸有效，不出现空白。
 
 ## 证据
 
