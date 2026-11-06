@@ -182,8 +182,25 @@ function buildHarnessHtml() {
     return json({});
   };
 
-  window.__qaAuth = { logged_in: params.get('loggedin') === '1' };
-  window.__omnimuxAuth = { ensureLogin: (opts) => { window.__qaRequests.push({ path: '__ensureLogin__', method: 'CALL', body: opts }) }, isLoggedIn: () => window.__qaAuth.logged_in === true, subscribe: () => () => {} };
+  window.__qaAuth = {
+    logged_in: params.get('loggedin') === '1',
+    cached: params.get('loggedin') === '1',
+    remote_logged_in: params.get('remoteauth') === '1',
+  };
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = (input, init) => {
+    const url = typeof input === 'string' ? input : (input && input.url) || '';
+    if (url.includes('/omnimux/auth/status')) {
+      return Promise.resolve(new Response(JSON.stringify({ logged_in: window.__qaAuth.remote_logged_in === true }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    }
+    return nativeFetch(input, init);
+  };
+  window.__omnimuxAuth = {
+    ensureLogin: (opts) => { window.__qaRequests.push({ path: '__ensureLogin__', method: 'CALL', body: opts }) },
+    isLoggedIn: () => window.__qaAuth.cached === true,
+    peekCache: () => (window.__qaAuth.cached === true ? { body: { logged_in: true } } : null),
+    subscribe: () => () => {},
+  };
 
   const ctx = {
     locale: {
@@ -457,6 +474,8 @@ async function runRuntimeGuideWebQa(options = {}) {
     for (const [name, text] of checks) {
       check(name, await evaluate(pageBodyIncludes(text)), `missing "${text}"`);
     }
+    await clickByText(`${guideSelector} button`, '登录 OmniMux');
+    check('loggedout-ensure-login', await waitFor(`(window.__qaRequests || []).some((r) => r.path === '__ensureLogin__')`), JSON.stringify(await evaluate('window.__qaRequests')));
     // 右栏封面：必须同时带登录窗同款深海 SVG 与水母图层，否则退化成灰雾占位。
     const coverLayers = await evaluate(`(() => {
       const el = document.querySelector('${guideSelector} .omnimux-runtime-guide-art');
@@ -494,6 +513,11 @@ async function runRuntimeGuideWebQa(options = {}) {
     `), JSON.stringify(await evaluate('window.__qaRequests')));
     check('loggedin-guide-hidden', await waitFor(`!document.querySelector('${guideSelector}')`), '');
     await screenshot('loggedin-continue');
+    // 缓存为空时回退 /omnimux/auth/status（remoteauth=1）。
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?remoteauth=1` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    check('remoteauth-button-label', await waitFor(pageBodyIncludes('继续（已登录）'), 3000), '');
+    await screenshot('remoteauth-guide');
     await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
     await waitFor('Boolean(window.__qaReady)', 10000);
     await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);

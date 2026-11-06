@@ -58,9 +58,20 @@ export function RuntimeGuideGate({ t, scope }) {
     const apply = (value) => { if (alive) setLoggedIn(value === true) }
     const readLocal = () => {
       const auth = /** @type {any} */ (window).__omnimuxAuth
-      if (auth && typeof auth.isLoggedIn === 'function') {
-        apply(auth.isLoggedIn())
+      if (!auth) return false
+      // A truthy cached login is authoritative. A false answer may only mean
+      // the status cache is still cold, which is indistinguishable from
+      // "logged out" — fall through to the HTTP status read in that case.
+      if (typeof auth.isLoggedIn === 'function' && auth.isLoggedIn() === true) {
+        apply(true)
         return true
+      }
+      if (typeof auth.peekCache === 'function') {
+        const peeked = auth.peekCache()
+        if (peeked && peeked.body && typeof peeked.body.logged_in === 'boolean') {
+          apply(peeked.body.logged_in === true)
+          return true
+        }
       }
       return false
     }
