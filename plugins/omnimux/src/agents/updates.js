@@ -234,6 +234,7 @@ export async function runAgentUpdate(id, options = {}) {
   const shape = options.shape || 'unknown'
   const channel = agent.update.channel
   const home = options.home || os.homedir()
+  const platform = options.platform || process.platform
   const run = typeof options.run === 'function' ? options.run : execFileAsync
   const timeout = Number.isFinite(options.timeoutMs) ? options.timeoutMs : UPDATE_TIMEOUT_MS
   let bin = ''
@@ -249,17 +250,33 @@ export async function runAgentUpdate(id, options = {}) {
   } else {
     return { ok: false, error: 'update-unsupported' }
   }
+  let output = ''
   let failure = null
   try {
     // cwd is the user's home so a committed project .npmrc cannot redirect the
     // registry the upgrade talks to.
-    await run(bin, args, { cwd: home, timeout, maxBuffer: UPDATE_MAX_BUFFER })
+    const result = await run(bin, args, { cwd: home, timeout, maxBuffer: UPDATE_MAX_BUFFER })
+    output = `${result?.stdout ?? ''}\n${result?.stderr ?? ''}`
   } catch (error) {
     failure = error
   }
   if (failure) {
     const detail = redactSecrets(failure?.stderr || failure?.message || failure)
     return { ok: false, error: 'update-failed', detail }
+  }
+  // Some self-updaters refuse to install without a TTY and still exit 0 after
+  // printing the manual command. Re-run the vendor installer instead of
+  // reporting a success that never changed the binary.
+  const manualOnly = typeof agent.update.manualOnlyPattern === 'string'
+    && new RegExp(agent.update.manualOnlyPattern, 'i').test(output)
+  if (manualOnly) {
+    const fallback = agent.update.fallbackCommand?.[platform]
+    if (!fallback) return { ok: false, error: 'update-manual-required', detail: redactSecrets(output) }
+    try {
+      await run(fallback.bin, fallback.args, { cwd: home, timeout, maxBuffer: UPDATE_MAX_BUFFER })
+    } catch (error) {
+      return { ok: false, error: 'update-failed', detail: redactSecrets(error?.stderr || error?.message || error) }
+    }
   }
   const probe = typeof options.probeVersion === 'function' ? options.probeVersion : probeAgentBin
   let version = ''
@@ -268,6 +285,14 @@ export async function runAgentUpdate(id, options = {}) {
     version = typeof probed?.version === 'string' ? probed.version : ''
   } catch {
     version = ''
+  }
+  // A self-updater must actually reach the version it advertised in its own
+  // ledger; otherwise the panel would keep saying "update available" forever.
+  if (channel === 'self') {
+    const latest = latestFromLedger(agent.update, home, fs)
+    if (latest && version && isNewerVersion(latest, version)) {
+      return { ok: false, error: 'update-not-applied', detail: redactSecrets(output) }
+    }
   }
   return { ok: true, version }
 }
