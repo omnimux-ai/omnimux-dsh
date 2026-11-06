@@ -194,6 +194,7 @@ function buildHarnessHtml() {
     negative_cache: params.get('negativecache') === '1',
     delay_mode: params.get('delayskip') === '1',
     fail_mode: params.get('failmode') === '1',
+    race_auth: params.get('raceauth') === '1',
     getStatusCalls: [],
   };
   const nativeFetch = window.fetch.bind(window);
@@ -212,6 +213,9 @@ function buildHarnessHtml() {
       : (window.__qaAuth.negative_cache === true ? { ok: true, status: 200, body: { logged_in: false } } : null)),
     getStatus: (verify) => {
       window.__qaAuth.getStatusCalls.push(verify === true);
+      if (window.__qaAuth.race_auth === true && window.__qaAuth.getStatusCalls.length === 1) {
+        return new Promise((resolve) => window.setTimeout(() => resolve({ ok: true, status: 200, body: { logged_in: false } }), 700));
+      }
       return Promise.resolve({ ok: true, status: 200, body: { logged_in: window.__qaAuth.remote_logged_in === true } });
     },
     subscribe: (cb) => { window.__qaAuth.subscribeCb = cb; return () => { window.__qaAuth.subscribeCb = undefined } },
@@ -481,6 +485,15 @@ async function runRuntimeGuideWebQa(options = {}) {
     await evaluate(`(() => { window.__qaAuth.remote_logged_in = true; window.dispatchEvent(new Event('focus')); return true; })()`);
     check('focusauth-updated', await waitFor(pageBodyIncludes('继续（已登录）'), 3000), '');
     await screenshot('focusauth-guide');
+    // 旧响应不得覆盖新响应：首个 getStatus 慢返回 false，focus 返回 true 后仍应保持已登录。
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?raceauth=1&negativecache=1` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
+    await evaluate(`(() => { window.__qaAuth.remote_logged_in = true; window.dispatchEvent(new Event('focus')); return true; })()`);
+    check('raceauth-updated', await waitFor(pageBodyIncludes('继续（已登录）'), 3000), '');
+    await new Promise((r) => setTimeout(r, 900));
+    check('raceauth-late-response-ignored', await evaluate(pageBodyIncludes('继续（已登录）')), '');
+    await screenshot('raceauth-guide');
     await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
     await waitFor('Boolean(window.__qaReady)', 10000);
     await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
@@ -545,11 +558,13 @@ async function runRuntimeGuideWebQa(options = {}) {
     await waitFor(pageBodyIncludes('暂时跳过'), 3000);
     const skipBox = await evaluate(`(() => {
       const el = document.querySelector('${guideSelector} .omnimux-runtime-guide-skip-button');
-      if (!el) return null;
+      const row = document.querySelector('${guideSelector} .omnimux-runtime-guide-skip');
+      if (!el || !row) return null;
       const rect = el.getBoundingClientRect();
-      return { width: Math.round(rect.width), height: Math.round(rect.height) };
+      const rowRect = row.getBoundingClientRect();
+      return { width: Math.round(rect.width), height: Math.round(rect.height), rowWidth: Math.round(rowRect.width) };
     })()`);
-    check('skip-button-wide', Boolean(skipBox) && skipBox.width >= 300 && skipBox.height >= 24, JSON.stringify(skipBox));
+    check('skip-button-wide', Boolean(skipBox) && skipBox.width >= 300 && skipBox.width >= skipBox.rowWidth * 0.9 && skipBox.height >= 24, JSON.stringify(skipBox));
     await clickByText(`${guideSelector} button`, '暂时跳过');
     const putSeen = await waitFor(`
       (window.__qaRequests || []).some((r) => r.path === '/omnimux/runtime/mode' && r.method === 'PUT' && r.body && r.body.mode === 'official')

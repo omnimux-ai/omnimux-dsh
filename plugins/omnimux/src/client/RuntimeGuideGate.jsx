@@ -58,6 +58,7 @@ export function RuntimeGuideGate({ t, scope }) {
     if (typeof window === 'undefined') return undefined
     let alive = true
     const apply = (value) => { if (alive) setLoggedIn(value === true) }
+    let remoteSeq = 0
     const readLocal = () => {
       const auth = /** @type {any} */ (window).__omnimuxAuth
       if (!auth) return false
@@ -83,12 +84,13 @@ export function RuntimeGuideGate({ t, scope }) {
       return false
     }
     const readRemote = () => {
+      const seq = ++remoteSeq
       const auth = /** @type {any} */ (window).__omnimuxAuth
       // Force a fresh status read: getStatus() always hits HTTP while
       // getStatusCached()/peekCache() may hold a negative entry with no TTL.
       if (auth && typeof auth.getStatus === 'function') {
         void auth.getStatus(false).then((result) => {
-          if (!alive) return
+          if (!alive || seq !== remoteSeq) return
           const body = result && result.body
           if (result && result.ok === true && body && typeof body.logged_in === 'boolean') {
             apply(body.logged_in === true)
@@ -96,16 +98,17 @@ export function RuntimeGuideGate({ t, scope }) {
           }
           apply(false)
         }).catch(() => {
-          if (alive && !(auth && typeof auth.isLoggedIn === 'function' && auth.isLoggedIn() === true)) apply(false)
+          if (alive && seq === remoteSeq && !(auth && typeof auth.isLoggedIn === 'function' && auth.isLoggedIn() === true)) apply(false)
         })
         return
       }
       if (typeof fetch !== 'function') return
       void fetch('/omnimux/auth/status').then(async (response) => {
+        if (seq !== remoteSeq) return
         if (!response.ok) { if (alive) apply(false); return }
         const body = await response.json().catch(() => null)
         if (alive && body && typeof body === 'object') apply(body.logged_in === true)
-      }).catch(() => { if (alive) apply(false) })
+      }).catch(() => { if (alive && seq === remoteSeq) apply(false) })
     }
     const positiveCache = readLocal()
     if (!positiveCache) readRemote()
