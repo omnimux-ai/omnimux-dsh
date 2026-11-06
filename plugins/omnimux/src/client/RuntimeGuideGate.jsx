@@ -47,6 +47,7 @@ export function RuntimeGuideGate({ t, scope }) {
 
   const [step, setStep] = useState('choose')
   const [busy, setBusy] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
   const finishing = useRef(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -64,6 +65,9 @@ export function RuntimeGuideGate({ t, scope }) {
         const body = await response.json().catch(() => ({}))
         throw new Error(typeof body.error === 'string' ? body.error : `HTTP ${response.status}`)
       }
+      // Hide immediately after the write is confirmed; waiting for the
+      // settings snapshot to round-trip makes a successful skip look dead.
+      setDismissed(true)
     } catch (caught) {
       finishing.current = false
       setError(caught instanceof Error ? caught.message : String(caught))
@@ -84,7 +88,7 @@ export function RuntimeGuideGate({ t, scope }) {
     void finish('official')
   }, [finish, t])
 
-  if (!ready || !guide.visible) return null
+  if (!ready || !guide.visible || dismissed) return null
   if (typeof document === 'undefined' || !document.body) return null
 
   return createPortal(
@@ -122,7 +126,7 @@ export function RuntimeGuideGate({ t, scope }) {
                   </Button>
                 </div>
                 <div className="omnimux-runtime-guide-skip">
-                  <Button variant="ghost" disabled={busy} onClick={() => { void finish('official') }}>
+                  <Button variant="ghost" className="omnimux-runtime-guide-skip-button" disabled={busy} onClick={() => { void finish('official') }}>
                     {t('runtime.skip')}
                   </Button>
                 </div>

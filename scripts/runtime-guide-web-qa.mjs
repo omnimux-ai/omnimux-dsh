@@ -563,6 +563,13 @@ async function runRuntimeGuideWebQa(options = {}) {
       })()
     `);
     await waitFor(pageBodyIncludes('暂时跳过'), 3000);
+    const skipBox = await evaluate(`(() => {
+      const el = document.querySelector('${guideSelector} .omnimux-runtime-guide-skip-button');
+      if (!el) return null;
+      const rect = el.getBoundingClientRect();
+      return { width: Math.round(rect.width), height: Math.round(rect.height) };
+    })()`);
+    check('skip-button-wide', Boolean(skipBox) && skipBox.width >= 300 && skipBox.height >= 24, JSON.stringify(skipBox));
     await clickByText(`${guideSelector} button`, '暂时跳过');
     const putSeen = await waitFor(`
       (window.__qaRequests || []).some((r) => r.path === '/omnimux/runtime/mode' && r.method === 'PUT' && r.body && r.body.mode === 'official')

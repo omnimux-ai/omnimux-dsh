@@ -408,6 +408,20 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
       rgba(15, 8, 35, 0.86) 100%); /* exempt-ui03: 海报暗角 */
   pointer-events: none;
 }
+.omnimux-runtime-guide-skip {
+  display: flex;
+  margin-top: 4px;
+}
+.omnimux-runtime-guide-skip-button {
+  justify-content: flex-start;
+  width: 100%;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+}
+.omnimux-runtime-guide-skip-button:hover {
+  color: var(--dsw-alias-label-primary);
+  text-decoration: underline;
+}
 .omnimux-runtime-guide-step {
   display: flex;
   flex-direction: column;
