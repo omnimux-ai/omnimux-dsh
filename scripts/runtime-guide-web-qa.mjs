@@ -9,6 +9,7 @@
  *
  * 场景：
  *   empty      —— settings 为空 → 引导可见，三选一卡片 + 跳过入口，单列无右侧封面
+ *   loggedin   —— 已登录 → 主按钮显示「继续（已登录）」，点击写 official 并关闭
  *   empty-cli  —— 点击「本机助手」→ CLI 面板（fetch 桩返回空列表 → 无可用提示）
  *   empty-key  —— 点击「自己的密钥」→ BYOK 表单字段渲染
  *   skip       —— 点击跳过 → PUT /omnimux/runtime/mode {mode:'official'}，随后引导消失
@@ -179,7 +180,25 @@ function buildHarnessHtml() {
     return json({});
   };
 
-  window.__omnimuxAuth = { ensureLogin: (opts) => { window.__qaRequests.push({ path: '__ensureLogin__', method: 'CALL', body: opts }) } };
+  window.__qaAuth = {
+    logged_in: params.get('loggedin') === '1',
+    cached: params.get('loggedin') === '1',
+    remote_logged_in: params.get('remoteauth') === '1',
+  };
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = (input, init) => {
+    const url = typeof input === 'string' ? input : (input && input.url) || '';
+    if (url.includes('/omnimux/auth/status')) {
+      return Promise.resolve(new Response(JSON.stringify({ logged_in: window.__qaAuth.remote_logged_in === true }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    }
+    return nativeFetch(input, init);
+  };
+  window.__omnimuxAuth = {
+    ensureLogin: (opts) => { window.__qaRequests.push({ path: '__ensureLogin__', method: 'CALL', body: opts }) },
+    isLoggedIn: () => window.__qaAuth.cached === true,
+    peekCache: () => (window.__qaAuth.cached === true ? { body: { logged_in: true } } : null),
+    subscribe: () => () => {},
+  };
 
   const ctx = {
     locale: {
@@ -402,6 +421,8 @@ async function runRuntimeGuideWebQa(options = {}) {
     for (const [name, text] of checks) {
       check(name, await evaluate(pageBodyIncludes(text)), `missing "${text}"`);
     }
+    await clickByText(`${guideSelector} button`, '登录 OmniMux');
+    check('loggedout-ensure-login', await waitFor(`(window.__qaRequests || []).some((r) => r.path === '__ensureLogin__')`), JSON.stringify(await evaluate('window.__qaRequests')));
     // 首跑选择步骤为单列，不再有右侧装饰封面。
     const chooseLayout = await evaluate(`(() => {
       const sheet = document.querySelector('${guideSelector} .omnimux-runtime-guide-sheet');
@@ -413,6 +434,27 @@ async function runRuntimeGuideWebQa(options = {}) {
     check('choose-single-column', Boolean(chooseLayout) && chooseLayout.single === true, JSON.stringify(chooseLayout));
     check('choose-no-cover', Boolean(chooseLayout) && chooseLayout.art === false, JSON.stringify(chooseLayout));
     await screenshot('empty-guide');
+
+    // --- 场景 1b：已登录 → 主按钮显示「继续（已登录）」，点击直接写 official ---
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?loggedin=1` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    check('loggedin-guide-visible', await waitFor(`Boolean(document.querySelector('${guideSelector}'))`), '');
+    check('loggedin-button-label', await waitFor(pageBodyIncludes('继续（已登录）'), 3000), '');
+    await screenshot('loggedin-guide');
+    await clickByText(`${guideSelector} button`, '继续（已登录）');
+    check('loggedin-continue-put', await waitFor(`
+      (window.__qaRequests || []).some((r) => r.path === '/omnimux/runtime/mode' && r.method === 'PUT' && r.body && r.body.mode === 'official')
+    `), JSON.stringify(await evaluate('window.__qaRequests')));
+    check('loggedin-guide-hidden', await waitFor(`!document.querySelector('${guideSelector}')`), '');
+    await screenshot('loggedin-continue');
+    // 缓存为空时回退 /omnimux/auth/status（remoteauth=1）。
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?remoteauth=1` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    check('remoteauth-button-label', await waitFor(pageBodyIncludes('继续（已登录）'), 3000), '');
+    await screenshot('remoteauth-guide');
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
 
     // --- 场景 2：点击「本机助手」→ CLI 面板（空列表提示） ---
     await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '本机助手');
