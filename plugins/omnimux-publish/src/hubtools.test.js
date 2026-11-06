@@ -130,7 +130,12 @@ describe('presign / create / get payload handling', () => {
     })
     const channel = createHubChannel({ tools })
     const result = await channel.presign({ filename: 'a.png', content_type: 'image/png' })
-    assert.deepEqual(result, { upload_url: 'https://up', public_url: 'https://pub' })
+    assert.deepEqual(result, {
+      upload_url: 'https://up',
+      public_url: 'https://pub',
+      headers: {},
+      upload_method: 'PUT',
+    })
     // 工具入参按 hub schema：filename + content_type
     assert.deepEqual(tools.calls[0].arguments, { filename: 'a.png', content_type: 'image/png' })
   })
@@ -229,5 +234,69 @@ describe('extract helpers', () => {
   it('extractRawStatus returns null when status is missing', () => {
     assert.equal(extractRawStatus({ id: 1 }), null)
     assert.equal(extractRawStatus({ status: 'review' }), 'review')
+  })
+})
+
+describe('presign ticket headers (Issue #3938)', () => {
+  it('passes through signed headers and upload_method', async () => {
+    const tools = mockTools({
+      omnimux_publish_presign: () => okEnvelope({
+        upload_url: 'https://up',
+        public_url: 'https://pub',
+        upload_method: 'put',
+        headers: { 'content-type': 'image/png', 'if-none-match': '*' },
+      }),
+    })
+    const channel = createHubChannel({ tools })
+    const ticket = await channel.presign({ filename: 'a.png', content_type: 'image/png' })
+    assert.equal(ticket.upload_method, 'PUT')
+    assert.deepEqual(ticket.headers, { 'content-type': 'image/png', 'if-none-match': '*' })
+  })
+
+  it('defaults to PUT and empty headers when the gateway omits them', async () => {
+    const tools = mockTools({ omnimux_publish_presign: () => okEnvelope({ upload_url: 'u', public_url: 'p' }) })
+    const channel = createHubChannel({ tools })
+    const ticket = await channel.presign({ filename: 'a.png' })
+    assert.equal(ticket.upload_method, 'PUT')
+    assert.deepEqual(ticket.headers, {})
+  })
+})
+
+describe('putBytes replays signed headers (Issue #3938)', () => {
+  it('sends every signed header, including if-none-match', async () => {
+    const seen = []
+    const channel = createHubChannel({
+      tools: mockTools({}),
+      fetcher: async (url, init) => { seen.push({ url, init }); return { ok: true, status: 200 } },
+    })
+    await channel.putBytes('https://signed/upload', Buffer.from('bytes'), 'image/png', {}, {
+      headers: { 'content-type': 'image/png', 'if-none-match': '*' },
+      upload_method: 'PUT',
+    })
+    assert.equal(seen[0].init.headers['if-none-match'], '*')
+    assert.equal(seen[0].init.headers['content-type'], 'image/png')
+  })
+
+  it('keeps the legacy content-type-only request when no ticket headers exist', async () => {
+    const seen = []
+    const channel = createHubChannel({
+      tools: mockTools({}),
+      fetcher: async (url, init) => { seen.push({ url, init }); return { ok: true, status: 200 } },
+    })
+    await channel.putBytes('https://u', Buffer.from('b'), 'image/png')
+    assert.deepEqual(seen[0].init.headers, { 'content-type': 'image/png' })
+  })
+
+  it('fails loudly on a non-PUT upload method instead of guessing', async () => {
+    let called = 0
+    const channel = createHubChannel({
+      tools: mockTools({}),
+      fetcher: async () => { called += 1; return { ok: true, status: 200 } },
+    })
+    await assert.rejects(
+      () => channel.putBytes('https://u', Buffer.from('b'), 'image/png', {}, { upload_method: 'POST' }),
+      (error) => error.code === 'upload-failed' && /POST/.test(error.message),
+    )
+    assert.equal(called, 0)
   })
 })
