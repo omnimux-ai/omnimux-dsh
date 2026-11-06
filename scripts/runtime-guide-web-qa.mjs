@@ -19,7 +19,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import http from 'node:http';
@@ -248,10 +248,14 @@ async function runRuntimeGuideWebQa(options = {}) {
   const evidenceDir = options.evidenceDir
     || join(root, '.workbuddy/evidence/worktree-qa', `runtime-guide-${runId}`);
   mkdirSync(evidenceDir, { recursive: true });
+  const gitValue = (args) => {
+    try { return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim(); } catch { return ''; }
+  };
   const report = {
     runId, startedAt: new Date().toISOString(), completedAt: null,
     pass: false, serverPort: null, cdpPort: null,
-    assertions: [], screenshots: {}, errors: [],
+    root, head: gitValue(['rev-parse', 'HEAD']), dirty: gitValue(['status', '--porcelain']),
+    url: null, assertions: [], screenshots: {}, errors: [],
   };
   let server = null;
   let chromeProc = null;
@@ -277,6 +281,7 @@ async function runRuntimeGuideWebQa(options = {}) {
     });
     await new Promise((resolveListen) => { server.listen(0, '127.0.0.1', resolveListen); });
     report.serverPort = server.address().port;
+    report.url = `http://127.0.0.1:${report.serverPort}/`;
     check('ephemeral-server-listen', true, `port ${report.serverPort}`);
 
     mkdirSync(profileDir, { recursive: true });
@@ -426,8 +431,34 @@ async function runRuntimeGuideWebQa(options = {}) {
     `);
     await waitFor(pageBodyIncludes('自己的密钥'), 3000);
     await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '自己的密钥');
-    check('key-step', await waitFor(`Boolean(document.querySelector('${guideSelector} input[placeholder*="粘贴密钥"]'))`, 5000), '');
+    check('key-step', await waitFor(`Boolean(document.querySelector('${guideSelector} [data-omnimux-key-draft]'))`, 5000), '');
+    // 新文本配置界面：7 家提供商、快速填充、API Key、Base URL、模型下拉；不得出现媒体字段。
+    const keyProviderIds = await evaluate(`[...document.querySelectorAll('${guideSelector} [data-omnimux-key-draft] [data-provider]')].map((el) => el.getAttribute('data-provider'))`);
+    check('key-provider-count', Array.isArray(keyProviderIds) && keyProviderIds.length === 7, JSON.stringify(keyProviderIds));
+    check('key-quick-fill', await waitFor(`Boolean(document.querySelector('${guideSelector} [aria-label="快速填充提供方"]'))`, 3000), '');
+    check('key-api-key', await waitFor(`Boolean(document.querySelector('${guideSelector} input[aria-label="API Key"]'))`, 3000), '');
+    check('key-base-url', await waitFor(`Boolean(document.querySelector('${guideSelector} input[aria-label="Base URL"]'))`, 3000), '');
+    check('key-model-select', await waitFor(`Boolean(document.querySelector('${guideSelector} [aria-label="模型"]'))`, 3000), '');
+    check('key-no-media-fields', await evaluate(`(() => {
+      const guide = document.querySelector('${guideSelector}');
+      const text = (guide && guide.innerText) || '';
+      return !['素材理解','图片生成','视频生成','音频生成'].some((word) => text.includes(word));
+    })()`), '');
+    check('key-default-model', await waitFor(pageBodyIncludes('claude-opus-5'), 3000), '');
     check('key-no-cover', await evaluate(`!document.querySelector('${guideSelector} .omnimux-runtime-guide-art')`), '');
+    // 显示/隐藏切换：密码框必须在 text 与 password 间切换。
+    const keyType = () => evaluate(`(document.querySelector('${guideSelector} input[aria-label="API Key"]') || {}).type`);
+    check('key-key-hidden', (await keyType()) === 'password', '');
+    await clickByText(`${guideSelector} button`, '显示');
+    check('key-key-shown', await waitFor(`document.querySelector('${guideSelector} input[aria-label="API Key"]').type === 'text'`, 2000), '');
+    await clickByText(`${guideSelector} button`, '隐藏');
+    check('key-key-hidden-again', await waitFor(`document.querySelector('${guideSelector} input[aria-label="API Key"]').type === 'password'`, 2000), '');
+    // 切换提供商：Base URL 与模型下拉必须同步变更，再切回默认家。
+    await clickByText(`${guideSelector} [data-provider]`, 'Google Gemini');
+    check('key-provider-switch-endpoint', await waitFor(`document.querySelector('${guideSelector} input[aria-label="Base URL"]').value === 'https://generativelanguage.googleapis.com/v1beta/openai'`, 2000), '');
+    check('key-provider-switch-model', await waitFor(pageBodyIncludes('gemini-3.8-flash'), 2000), '');
+    await clickByText(`${guideSelector} [data-provider]`, 'Anthropic');
+    await waitFor(pageBodyIncludes('claude-opus-5'), 2000);
     await screenshot('empty-guide-key');
 
     // --- 场景 4：回退 → 点击跳过 → PUT official → 引导消失 ---
@@ -452,27 +483,35 @@ async function runRuntimeGuideWebQa(options = {}) {
     await waitFor('Boolean(window.__qaReady)', 10000);
     check('guide-visible-revisit', await waitFor(`Boolean(document.querySelector('${guideSelector}'))`), '');
     await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '自己的密钥');
-    await waitFor(`Boolean(document.querySelector('${guideSelector} input[placeholder*="粘贴密钥"]'))`, 5000);
+    await waitFor(`Boolean(document.querySelector('${guideSelector} [data-omnimux-key-draft]'))`, 5000);
+    // 空 Key 必须被拒绝且不关闭引导。
+    await clickByText(`${guideSelector} button`, '继续');
+    check('save-empty-key-rejected', await waitFor(pageBodyIncludes('请填写 API Key'), 3000), '');
+    check('save-empty-key-keeps-guide', await evaluate(`Boolean(document.querySelector('${guideSelector} [data-omnimux-key-draft]'))`), '');
     // React 受控输入需要原生 setter 派发 input 事件，onChange 才会收到。
     await evaluate(`
       (() => {
-        const rows = [...document.querySelectorAll('${guideSelector} .omx-form-row')];
-        const row = rows.find((r) => (r.innerText || '').includes('文字工具'));
-        const input = row && row.querySelector('input');
+        const input = document.querySelector('${guideSelector} input[aria-label="API Key"]');
         if (!input) return false;
         const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-        setter.call(input, 'qa-test-model');
+        setter.call(input, 'qa-test-key');
         input.dispatchEvent(new Event('input', { bubbles: true }));
         return true;
       })()
     `);
-    await clickByText(`${guideSelector} button`, '保存');
+    await clickByText(`${guideSelector} button`, '继续');
     const byokPut = await waitFor(`
       (window.__qaRequests || []).some((r) => r.path === '/omnimux/byok/config' && r.method === 'PUT'
         && r.body && r.body.scenarioBindings && r.body.scenarioBindings.text
         && r.body.scenarioBindings.text.channel === 'byok')
     `);
     check('save-binds-text', byokPut, JSON.stringify(await evaluate('window.__qaRequests')));
+    const textModelPut = await waitFor(`
+      (window.__qaRequests || []).some((r) => r.path === '/omnimux/byok/config' && r.method === 'PUT'
+        && r.body && r.body.provider === 'anthropic' && r.body.models && r.body.models.text === 'claude-opus-5'
+        && Array.isArray(r.body.capabilities) && r.body.capabilities.includes('text'))
+    `);
+    check('save-text-model', textModelPut, JSON.stringify(await evaluate('window.__qaRequests')));
     const keyPut = await waitFor(`
       (window.__qaRequests || []).some((r) => r.path === '/omnimux/runtime/mode' && r.method === 'PUT' && r.body && r.body.mode === 'key')
     `);

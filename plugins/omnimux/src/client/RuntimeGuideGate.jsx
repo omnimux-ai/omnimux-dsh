@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from 'dsh-ui-kit'
-import { AgentPanel, ByokPanel } from './RuntimeModeSection.jsx'
+import { AgentPanel } from './RuntimeModeSection.jsx'
+import { TextKeyPanel } from './TextKeyPanel.jsx'
 import { describeRuntimeGuide } from './runtime-guide-view.js'
 import { injectHubStyles } from './styles.js'
 
@@ -162,12 +163,10 @@ export function RuntimeGuideGate({ t, scope }) {
                   {t('runtime.key')}
                 </h2>
                 <p className="omnimux-login-gate-subdeck">{t('runtime.keyHint')}</p>
-                <ByokPanel
+                <TextKeyPanel
                   t={t}
-                  value={value}
                   busy={busy}
                   setBusy={setBusy}
-                  error={error}
                   setError={setError}
                   notice={notice}
                   setNotice={setNotice}
