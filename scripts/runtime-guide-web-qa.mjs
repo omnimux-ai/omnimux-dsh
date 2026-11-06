@@ -536,6 +536,7 @@ async function runRuntimeGuideWebQa(options = {}) {
     // --- 场景 2：点击「本机助手」→ CLI 面板（空列表提示） ---
     await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '本地Agent');
     check('agent-step', await waitFor(pageBodyIncludes('选择用来运行提示词的 CLI')), '');
+    check('agent-step-title', await waitFor(`(document.querySelector('${guideSelector} #omnimux-runtime-guide-headline') || {}).innerText === '本地Agent'`, 2000), '');
     check('agent-empty-hint', await waitFor(pageBodyIncludes('你的 CLI (0)'), 5000), '');
     check('agent-no-cover', await evaluate(`!document.querySelector('${guideSelector} .omnimux-runtime-guide-art')`), '');
     await screenshot('empty-guide-cli');
@@ -551,6 +552,7 @@ async function runRuntimeGuideWebQa(options = {}) {
     await waitFor(pageBodyIncludes('使用自己的 Key'), 3000);
     await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '使用自己的 Key');
     check('key-step', await waitFor(`Boolean(document.querySelector('${guideSelector} input[placeholder*="粘贴密钥"]'))`, 5000), '');
+    check('key-step-title', await waitFor(`(document.querySelector('${guideSelector} #omnimux-runtime-guide-headline') || {}).innerText === '使用自己的 Key'`, 2000), '');
     check('key-no-cover', await evaluate(`!document.querySelector('${guideSelector} .omnimux-runtime-guide-art')`), '');
     await screenshot('empty-guide-key');
 

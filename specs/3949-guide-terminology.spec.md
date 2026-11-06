@@ -36,3 +36,10 @@
 
 - `scripts/runtime-guide-web-qa.mjs` 选择器更新后的全绿输出与 `empty-guide.png`。
 - `runtime-guide-view.test.js` / `settings-placement.test.js` 目标套件通过。
+
+## 旧标准变更
+
+- `plugins/omnimux/tests/e2e/runtime-guide-choice.e2e.test.mjs` :: `未选过运行方式时出现三选一`
+- `plugins/omnimux/tests/e2e/runtime-guide-choice.e2e.test.mjs` :: `选「自己的密钥」出表单，测试通过后写入运行方式并关闭`
+
+说明：这两条 e2e 使用自造的旧文案字典并断言「本机助手」「使用自己的密钥」；术语变更后同步改为「本地Agent」「使用自己的 Key」，断言结构与测试意图不变。
