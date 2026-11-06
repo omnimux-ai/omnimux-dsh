@@ -116,13 +116,16 @@ export function createHubChannel(deps = {}) {
     if (!uploadUrl || !publicUrl) {
       throw new PublishError('hub-tool-error', `presign response missing upload_url/public_url: ${JSON.stringify(data).slice(0, 300)}`)
     }
-    // The signature may bind extra headers (for example R2's If-None-Match);
-    // every SignedHeader has to be replayed verbatim or the PUT is rejected.
+    // A presigned ticket may bind extra headers (for example R2's If-None-Match).
+    // Replay them, but normalize the name to lower case and drop `host`: the HTTP
+    // stack owns Host and signs it implicitly, so echoing it breaks the signature.
     /** @type {Record<string, string>} */
     const headers = {}
     if (isObject(data.headers)) {
       for (const [key, value] of Object.entries(data.headers)) {
-        if (typeof value === 'string' && value !== '') headers[key] = value
+        const name = key.trim().toLowerCase()
+        if (name === '' || name === 'host') continue
+        if (typeof value === 'string' && value !== '') headers[name] = value
       }
     }
     const uploadMethod = typeof data.upload_method === 'string' && data.upload_method !== ''
@@ -173,7 +176,15 @@ export function createHubChannel(deps = {}) {
     if (method !== 'PUT') {
       throw new PublishError('upload-failed', `unsupported presign upload method: ${method}`)
     }
-    const headers = { 'content-type': contentType, ...(isObject(ticket.headers) ? ticket.headers : {}) }
+    /** @type {Record<string, string>} */
+    const headers = { 'content-type': contentType }
+    if (isObject(ticket.headers)) {
+      for (const [key, value] of Object.entries(ticket.headers)) {
+        const name = key.trim().toLowerCase()
+        if (name === '' || name === 'host') continue
+        if (typeof value === 'string' && value !== '') headers[name] = value
+      }
+    }
     let response
     try {
       response = await fetcher(uploadUrl, {

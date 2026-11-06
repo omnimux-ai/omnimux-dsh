@@ -300,3 +300,40 @@ describe('putBytes replays signed headers (Issue #3938)', () => {
     assert.equal(called, 0)
   })
 })
+
+describe('presign header normalization (Issue #3943)', () => {
+  it('drops host and collapses case-duplicate header names', async () => {
+    const tools = mockTools({
+      omnimux_publish_presign: () => okEnvelope({
+        upload_url: 'https://up',
+        public_url: 'https://pub',
+        headers: {
+          Host: 'bucket.r2.cloudflarestorage.com',
+          'Content-Type': 'IMAGE/PNG',
+          'content-type': 'image/png',
+          'If-None-Match': '*',
+        },
+      }),
+    })
+    const channel = createHubChannel({ tools })
+    const ticket = await channel.presign({ filename: 'a.png', content_type: 'image/png' })
+    assert.deepEqual(ticket.headers, { 'content-type': 'image/png', 'if-none-match': '*' })
+    assert.equal(Object.hasOwn(ticket.headers, 'host'), false)
+  })
+
+  it('putBytes never sends host and keeps a single content-type', async () => {
+    const seen = []
+    const channel = createHubChannel({
+      tools: mockTools({}),
+      fetcher: async (url, init) => { seen.push({ url, init }); return { ok: true, status: 200 } },
+    })
+    await channel.putBytes('https://signed/upload', Buffer.from('b'), 'image/png', {}, {
+      headers: { Host: 'x', 'Content-Type': 'image/png', 'If-None-Match': '*' },
+      upload_method: 'PUT',
+    })
+    const sent = seen[0].init.headers
+    assert.deepEqual(Object.keys(sent).sort(), ['content-type', 'if-none-match'])
+    assert.equal(sent['content-type'], 'image/png')
+    assert.equal(sent['if-none-match'], '*')
+  })
+})
