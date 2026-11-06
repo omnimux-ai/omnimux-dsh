@@ -112,6 +112,13 @@ function buildHarnessHtml() {
     const body = init.body ? JSON.parse(init.body) : {};
     window.__qaRequests.push({ path, method, body });
     if (path === '/omnimux/runtime/mode' && method === 'PUT') {
+      if (window.__qaAuth.fail_mode === true) {
+        return { ok: false, status: 500, json: async () => ({ error: 'mode write failed' }) };
+      }
+      if (window.__qaAuth.delay_mode === true) {
+        window.setTimeout(() => { window.__qaSettings.runtimeMode = body.mode; notify(); }, 2000);
+        return json({ ok: true });
+      }
       window.__qaSettings.runtimeMode = body.mode;
       notify();
       return json({ ok: true });
@@ -183,7 +190,12 @@ function buildHarnessHtml() {
   window.__qaAuth = {
     logged_in: params.get('loggedin') === '1',
     cached: params.get('loggedin') === '1',
-    remote_logged_in: params.get('remoteauth') === '1',
+    remote_logged_in: params.get('loggedin') === '1' || params.get('remoteauth') === '1',
+    negative_cache: params.get('negativecache') === '1',
+    delay_mode: params.get('delayskip') === '1',
+    fail_mode: params.get('failmode') === '1',
+    race_auth: params.get('raceauth') === '1',
+    getStatusCalls: [],
   };
   const nativeFetch = window.fetch.bind(window);
   window.fetch = (input, init) => {
@@ -196,8 +208,17 @@ function buildHarnessHtml() {
   window.__omnimuxAuth = {
     ensureLogin: (opts) => { window.__qaRequests.push({ path: '__ensureLogin__', method: 'CALL', body: opts }) },
     isLoggedIn: () => window.__qaAuth.cached === true,
-    peekCache: () => (window.__qaAuth.cached === true ? { body: { logged_in: true } } : null),
-    subscribe: () => () => {},
+    peekCache: () => (window.__qaAuth.cached === true
+      ? { ok: true, status: 200, body: { logged_in: true } }
+      : (window.__qaAuth.negative_cache === true ? { ok: true, status: 200, body: { logged_in: false } } : null)),
+    getStatus: (verify) => {
+      window.__qaAuth.getStatusCalls.push(verify === true);
+      if (window.__qaAuth.race_auth === true && window.__qaAuth.getStatusCalls.length === 1) {
+        return new Promise((resolve) => window.setTimeout(() => resolve({ ok: true, status: 200, body: { logged_in: false } }), 700));
+      }
+      return Promise.resolve({ ok: true, status: 200, body: { logged_in: window.__qaAuth.remote_logged_in === true } });
+    },
+    subscribe: (cb) => { window.__qaAuth.subscribeCb = cb; return () => { window.__qaAuth.subscribeCb = undefined } },
   };
 
   const ctx = {
@@ -414,8 +435,8 @@ async function runRuntimeGuideWebQa(options = {}) {
 
     const checks = [
       ['choice-official', '登录 OmniMux'],
-      ['choice-agent', '本机助手'],
-      ['choice-key', '自己的密钥'],
+      ['choice-agent', '本地Agent'],
+      ['choice-key', '使用自己的 Key'],
       ['choice-skip', '暂时跳过'],
     ];
     for (const [name, text] of checks) {
@@ -452,13 +473,35 @@ async function runRuntimeGuideWebQa(options = {}) {
     await waitFor('Boolean(window.__qaReady)', 10000);
     check('remoteauth-button-label', await waitFor(pageBodyIncludes('继续（已登录）'), 3000), '');
     await screenshot('remoteauth-guide');
+    // 负缓存不得阻止强制刷新：缓存明确 false 但服务端已登录时仍要显示已登录。
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?negativecache=1&remoteauth=1` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    check('negativecache-button-label', await waitFor(pageBodyIncludes('继续（已登录）'), 3000), '');
+    await screenshot('negativecache-guide');
+    // focus 时强制刷新：初始未登录，focus 前服务端变为已登录，按钮应更新。
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?focusauth=1&negativecache=1` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    check('focusauth-initial-loggedout', await waitFor(pageBodyIncludes('登录 OmniMux'), 3000), '');
+    await evaluate(`(() => { window.__qaAuth.remote_logged_in = true; window.dispatchEvent(new Event('focus')); return true; })()`);
+    check('focusauth-updated', await waitFor(pageBodyIncludes('继续（已登录）'), 3000), '');
+    await screenshot('focusauth-guide');
+    // 旧响应不得覆盖新响应：首个 getStatus 慢返回 false，focus 返回 true 后仍应保持已登录。
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?raceauth=1&negativecache=1` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
+    await evaluate(`(() => { window.__qaAuth.remote_logged_in = true; window.dispatchEvent(new Event('focus')); return true; })()`);
+    check('raceauth-updated', await waitFor(pageBodyIncludes('继续（已登录）'), 3000), '');
+    await new Promise((r) => setTimeout(r, 900));
+    check('raceauth-late-response-ignored', await evaluate(pageBodyIncludes('继续（已登录）')), '');
+    await screenshot('raceauth-guide');
     await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
     await waitFor('Boolean(window.__qaReady)', 10000);
     await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
 
     // --- 场景 2：点击「本机助手」→ CLI 面板（空列表提示） ---
-    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '本机助手');
+    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '本地Agent');
     check('agent-step', await waitFor(pageBodyIncludes('选择用来运行提示词的 CLI')), '');
+    check('agent-step-title', await waitFor(`(document.querySelector('${guideSelector} #omnimux-runtime-guide-headline') || {}).innerText === '本地Agent'`, 2000), '');
     check('agent-empty-hint', await waitFor(pageBodyIncludes('你的 CLI (0)'), 5000), '');
     check('agent-no-cover', await evaluate(`!document.querySelector('${guideSelector} .omnimux-runtime-guide-art')`), '');
     await screenshot('empty-guide-cli');
@@ -471,9 +514,10 @@ async function runRuntimeGuideWebQa(options = {}) {
         if (el) el.click();
       })()
     `);
-    await waitFor(pageBodyIncludes('自己的密钥'), 3000);
-    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '自己的密钥');
+    await waitFor(pageBodyIncludes('使用自己的 Key'), 3000);
+    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '使用自己的 Key');
     check('key-step', await waitFor(`Boolean(document.querySelector('${guideSelector} [data-omnimux-key-draft]'))`, 5000), '');
+    check('key-step-title', await waitFor(`(document.querySelector('${guideSelector} #omnimux-runtime-guide-headline') || {}).innerText === '使用自己的 Key'`, 2000), '');
     // 新文本配置界面：7 家提供商、快速填充、API Key、Base URL、模型下拉；不得出现媒体字段。
     const keyProviderIds = await evaluate(`[...document.querySelectorAll('${guideSelector} [data-omnimux-key-draft] [data-provider]')].map((el) => el.getAttribute('data-provider'))`);
     check('key-provider-count', Array.isArray(keyProviderIds) && keyProviderIds.length === 7, JSON.stringify(keyProviderIds));
@@ -512,6 +556,15 @@ async function runRuntimeGuideWebQa(options = {}) {
       })()
     `);
     await waitFor(pageBodyIncludes('暂时跳过'), 3000);
+    const skipBox = await evaluate(`(() => {
+      const el = document.querySelector('${guideSelector} .omnimux-runtime-guide-skip-button');
+      const row = document.querySelector('${guideSelector} .omnimux-runtime-guide-skip');
+      if (!el || !row) return null;
+      const rect = el.getBoundingClientRect();
+      const rowRect = row.getBoundingClientRect();
+      return { width: Math.round(rect.width), height: Math.round(rect.height), rowWidth: Math.round(rowRect.width) };
+    })()`);
+    check('skip-button-wide', Boolean(skipBox) && skipBox.width >= 300 && skipBox.width >= skipBox.rowWidth * 0.9 && skipBox.height >= 24, JSON.stringify(skipBox));
     await clickByText(`${guideSelector} button`, '暂时跳过');
     const putSeen = await waitFor(`
       (window.__qaRequests || []).some((r) => r.path === '/omnimux/runtime/mode' && r.method === 'PUT' && r.body && r.body.mode === 'official')
@@ -520,11 +573,25 @@ async function runRuntimeGuideWebQa(options = {}) {
     check('guide-hidden-after-skip', await waitFor(`!document.querySelector('${guideSelector}')`), '');
     await screenshot('after-skip');
 
+    // --- 场景 4b：慢快照 → 本地 dismissed 必须立即隐藏；失败 → 保留引导并显示错误 ---
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?delayskip=1` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
+    await clickByText(`${guideSelector} button`, '暂时跳过');
+    check('skip-local-dismiss', await waitFor(`!document.querySelector('${guideSelector}')`, 500), '');
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?failmode=1` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
+    await clickByText(`${guideSelector} button`, '暂时跳过');
+    check('skip-failure-keeps-guide', await waitFor(pageBodyIncludes('mode write failed'), 3000), '');
+    check('skip-failure-guide-visible', await evaluate(`Boolean(document.querySelector('${guideSelector}'))`), '');
+    await screenshot('skip-failure');
+
     // --- 场景 5：重新进入空设置 → BYOK 保存 → 绑定 text → onVerified → PUT key → 引导消失 ---
     await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
     await waitFor('Boolean(window.__qaReady)', 10000);
     check('guide-visible-revisit', await waitFor(`Boolean(document.querySelector('${guideSelector}'))`), '');
-    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '自己的密钥');
+    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '使用自己的 Key');
     await waitFor(`Boolean(document.querySelector('${guideSelector} [data-omnimux-key-draft]'))`, 5000);
     // 空 Key 必须被拒绝且不关闭引导。
     await clickByText(`${guideSelector} button`, '继续');
