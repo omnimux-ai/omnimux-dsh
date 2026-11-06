@@ -116,7 +116,19 @@ export function createHubChannel(deps = {}) {
     if (!uploadUrl || !publicUrl) {
       throw new PublishError('hub-tool-error', `presign response missing upload_url/public_url: ${JSON.stringify(data).slice(0, 300)}`)
     }
-    return { upload_url: uploadUrl, public_url: publicUrl }
+    // The signature may bind extra headers (for example R2's If-None-Match);
+    // every SignedHeader has to be replayed verbatim or the PUT is rejected.
+    /** @type {Record<string, string>} */
+    const headers = {}
+    if (isObject(data.headers)) {
+      for (const [key, value] of Object.entries(data.headers)) {
+        if (typeof value === 'string' && value !== '') headers[key] = value
+      }
+    }
+    const uploadMethod = typeof data.upload_method === 'string' && data.upload_method !== ''
+      ? data.upload_method.toUpperCase()
+      : 'PUT'
+    return { upload_url: uploadUrl, public_url: publicUrl, headers, upload_method: uploadMethod }
   }
 
   /**
@@ -146,18 +158,27 @@ export function createHubChannel(deps = {}) {
   }
 
   /**
-   * PUT 字节到预签名 URL（预签名自授权，不带任何 auth header）。
+   * 把字节发到预签名 URL（预签名自授权，不带任何 auth header）。
+   * `headers` 来自 presign 响应：签名绑定的头必须原样回放，否则对象存储会以 403 拒绝。
    * @param {string} uploadUrl
    * @param {Buffer} buffer
    * @param {string} contentType
    * @param {{ signal?: AbortSignal }} [opts]
+   * @param {{ headers?: Record<string, string>, upload_method?: string }} [ticket]
    */
-  async function putBytes(uploadUrl, buffer, contentType, opts = {}) {
+  async function putBytes(uploadUrl, buffer, contentType, opts = {}, ticket = {}) {
+    const method = typeof ticket.upload_method === 'string' && ticket.upload_method !== ''
+      ? ticket.upload_method.toUpperCase()
+      : 'PUT'
+    if (method !== 'PUT') {
+      throw new PublishError('upload-failed', `unsupported presign upload method: ${method}`)
+    }
+    const headers = { 'content-type': contentType, ...(isObject(ticket.headers) ? ticket.headers : {}) }
     let response
     try {
       response = await fetcher(uploadUrl, {
-        method: 'PUT',
-        headers: { 'content-type': contentType },
+        method,
+        headers,
         body: buffer,
         ...(opts.signal ? { signal: opts.signal } : {}),
       })
