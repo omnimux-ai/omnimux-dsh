@@ -47,9 +47,42 @@ export function RuntimeGuideGate({ t, scope }) {
 
   const [step, setStep] = useState('choose')
   const [busy, setBusy] = useState(false)
+  const [loggedIn, setLoggedIn] = useState(false)
   const finishing = useRef(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    let alive = true
+    const apply = (value) => { if (alive) setLoggedIn(value === true) }
+    const readLocal = () => {
+      const auth = /** @type {any} */ (window).__omnimuxAuth
+      if (auth && typeof auth.isLoggedIn === 'function') {
+        apply(auth.isLoggedIn())
+        return true
+      }
+      return false
+    }
+    const readRemote = () => {
+      if (readLocal() || typeof fetch !== 'function') return
+      void fetch('/omnimux/auth/status').then(async (response) => {
+        if (!response.ok) return
+        const body = await response.json().catch(() => null)
+        if (alive && body && typeof body === 'object') apply(body.logged_in === true)
+      }).catch(() => {})
+    }
+    readRemote()
+    const auth = /** @type {any} */ (window).__omnimuxAuth
+    const stop = auth && typeof auth.subscribe === 'function' ? auth.subscribe(() => { readLocal() }) : undefined
+    const onFocus = () => { readRemote() }
+    window.addEventListener('focus', onFocus)
+    return () => {
+      alive = false
+      if (typeof stop === 'function') stop()
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [])
 
   const finish = useCallback(async (mode) => {
     if (finishing.current) return
@@ -108,9 +141,9 @@ export function RuntimeGuideGate({ t, scope }) {
                   variant="primary"
                   className="omnimux-login-gate-cta"
                   disabled={busy}
-                  onClick={startOfficial}
+                  onClick={loggedIn ? () => { void finish('official') } : startOfficial}
                 >
-                  {t('runtime.officialCta')}
+                  {loggedIn ? t('runtime.officialContinueLogged') : t('runtime.officialCta')}
                 </Button>
                 <div className="omnimux-runtime-guide-alt">
                   <Button variant="ghost" disabled={busy} onClick={() => { setError(''); setNotice(''); setStep('agent') }}>

@@ -8,7 +8,8 @@
  * 临时 HTTP 服务、无头 Chrome CDP、PNG 截图证据，零桌面依赖、零公共环境污染。
  *
  * 场景：
- *   empty      —— settings 为空 → 引导可见，三选一卡片 + 跳过入口；右栏封面须带深海照片/水母图层且照片真实解码
+ *   empty      —— settings 为空 → 引导可见，三选一卡片 + 跳过入口
+ *   loggedin   —— 已登录 → 主按钮显示「继续（已登录）」，点击写 official 并关闭；右栏封面须带深海照片/水母图层且照片真实解码
  *   cover-offline —— 屏蔽 unsplash → 封面确定性退回深海 SVG + 水母，尺寸不塌陷
  *   narrow     —— 1024x760 窄视口 → 封面随卡片收缩且尺寸有效
  *   empty-cli  —— 点击「本机助手」→ CLI 面板（fetch 桩返回空列表 → 无可用提示）
@@ -181,7 +182,8 @@ function buildHarnessHtml() {
     return json({});
   };
 
-  window.__omnimuxAuth = { ensureLogin: (opts) => { window.__qaRequests.push({ path: '__ensureLogin__', method: 'CALL', body: opts }) } };
+  window.__qaAuth = { logged_in: params.get('loggedin') === '1' };
+  window.__omnimuxAuth = { ensureLogin: (opts) => { window.__qaRequests.push({ path: '__ensureLogin__', method: 'CALL', body: opts }) }, isLoggedIn: () => window.__qaAuth.logged_in === true, subscribe: () => () => {} };
 
   const ctx = {
     locale: {
@@ -480,7 +482,23 @@ async function runRuntimeGuideWebQa(options = {}) {
     await new Promise((r) => setTimeout(r, 400));
     await screenshot('empty-guide');
 
-    // --- 场景 1b：断网 → 封面必须确定性退回深海 SVG + 水母，不得塌陷成空白 ---
+    // --- 场景 1b：已登录 → 主按钮显示「继续（已登录）」，点击直接写 official ---
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?loggedin=1` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    check('loggedin-guide-visible', await waitFor(`Boolean(document.querySelector('${guideSelector}'))`), '');
+    check('loggedin-button-label', await waitFor(pageBodyIncludes('继续（已登录）'), 3000), '');
+    await screenshot('loggedin-guide');
+    await clickByText(`${guideSelector} button`, '继续（已登录）');
+    check('loggedin-continue-put', await waitFor(`
+      (window.__qaRequests || []).some((r) => r.path === '/omnimux/runtime/mode' && r.method === 'PUT' && r.body && r.body.mode === 'official')
+    `), JSON.stringify(await evaluate('window.__qaRequests')));
+    check('loggedin-guide-hidden', await waitFor(`!document.querySelector('${guideSelector}')`), '');
+    await screenshot('loggedin-continue');
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
+
+    // --- 场景 1c：断网 → 封面必须确定性退回深海 SVG + 水母，不得塌陷成空白 ---
     await sendCdp('Network.enable', {});
     await sendCdp('Network.setBlockedURLs', { urls: ['*images.unsplash.com*'] });
     await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
