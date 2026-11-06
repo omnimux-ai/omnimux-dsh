@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { agentPresetPatchText, archiveCommandFailure, createSkippedInputTracker, safeError } from './test-env-bootstrap.mjs'
+import { agentPresetPatchText, archiveCommandFailure, createSkippedInputTracker, isSupportedHubUiKitSpec, safeError } from './test-env-bootstrap.mjs'
 import { sanitizeFailureReport, sanitizeFailureText } from './worktree-app-qa.mjs'
 
 test('skipped input tracker keeps a bounded sample and the true total', () => {
@@ -18,6 +18,18 @@ test('skipped input tracker defaults to 20 samples and counts an untouched track
   assert.equal(snapshot.sample.length, 20)
   assert.equal(snapshot.sample[0], 'file-0.js')
   assert.equal(snapshot.sample[19], 'file-19.js')
+})
+
+test('preparation pack accepts the published dsh-ui-kit range and the legacy in-repo file spec', () => {
+  for (const spec of ['^0.1.0', '~0.1.0', '0.1.0', '^0.1.0-rc.1', 'file:../../packages/dsh-ui-kit']) {
+    assert.equal(isSupportedHubUiKitSpec(spec), true, `${spec} must stay packable from a bare directory`)
+  }
+})
+
+test('preparation pack still rejects dsh-ui-kit specs it cannot resolve without a workspace', () => {
+  for (const spec of [undefined, null, '', 'workspace:^', 'workspace:*', 'file:../elsewhere', 'catalog:default', '^0.1']) {
+    assert.equal(isSupportedHubUiKitSpec(spec), false, `${String(spec)} must not be accepted`)
+  }
 })
 
 test('archive failure carries a stable exit reason and structured detail', () => {

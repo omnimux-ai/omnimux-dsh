@@ -377,6 +377,20 @@ export function createSkippedInputTracker(limit = 20) {
   };
 }
 
+/** `dsh-ui-kit` declarations the preparation stage can package from a bare directory.
+ * The pack step copies the manifest into a scratch directory that has neither a workspace
+ * root nor `node_modules`, so `workspace:` ranges and `file:` paths leaving the package
+ * cannot be resolved there. Both forms this repo has shipped are supported unchanged:
+ * the published semver range (historically `^0.1.0`) and the legacy in-repo
+ * `file:../../packages/dsh-ui-kit`; anything else is rejected instead of yielding a
+ * silently broken artifact.
+ */
+export function isSupportedHubUiKitSpec(spec) {
+  if (typeof spec !== 'string' || spec.length === 0) return false
+  if (spec === 'file:../../packages/dsh-ui-kit') return true
+  return /^(?:[\^~]|\d)\d*\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(spec)
+}
+
 /** preparation-only: real candidate source → owned stage → fixed build → pack → archive inspect.
  * Reuses captureCandidate, prepareFiles, privatePnpmEnvironment, runPnpm, payloadManifest and archive.py inspect.
  * Never installs, never reads Dev profile or credentials, never upgrades output to installed/loaded/fresh proof.
@@ -544,7 +558,7 @@ async function runTaskPreparation({ options, io, deps }) {
       const manifestPath = join(destination, 'package.json');
       const manifest = readJsonFile(manifestPath);
       if (rel === 'plugins/omnimux') {
-        if (manifest.dependencies?.['dsh-ui-kit'] !== 'file:../../packages/dsh-ui-kit') throw failure('PREPARE_PACKAGE_MANIFEST_UNSUPPORTED');
+        if (!isSupportedHubUiKitSpec(manifest.dependencies?.['dsh-ui-kit'])) throw failure('PREPARE_PACKAGE_MANIFEST_UNSUPPORTED');
         const channelPath = join(destination, 'src/release-channel.json');
         const channel = readJsonFile(channelPath);
         if (channel.channel !== 'development') throw failure('PREPARE_RELEASE_CHANNEL_UNSUPPORTED');
