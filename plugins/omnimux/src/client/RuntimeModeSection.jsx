@@ -299,6 +299,10 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
         await refreshAgents()
         await refreshUpdates()
         setNotice(t('runtime.cliUpdateDone'))
+      } else if (res && res.error === 'update-not-applied') {
+        setError(res.detail ? `${t('runtime.cliUpdateNotApplied')}：${res.detail}` : t('runtime.cliUpdateNotApplied'))
+      } else if (res && res.error === 'update-manual-required') {
+        setError(res.detail ? `${t('runtime.cliUpdateManual')}：${res.detail}` : t('runtime.cliUpdateManual'))
       } else {
         setError(t('runtime.cliUpdateFail'))
       }

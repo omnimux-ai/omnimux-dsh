@@ -250,33 +250,38 @@ export async function runAgentUpdate(id, options = {}) {
   } else {
     return { ok: false, error: 'update-unsupported' }
   }
+  // One budget for the whole upgrade: primary command + optional fallback
+  // share the same deadline instead of each getting a fresh full timeout.
+  const deadline = Date.now() + timeout
+  const remaining = () => Math.max(1, deadline - Date.now())
   let output = ''
   let failure = null
   try {
     // cwd is the user's home so a committed project .npmrc cannot redirect the
     // registry the upgrade talks to.
-    const result = await run(bin, args, { cwd: home, timeout, maxBuffer: UPDATE_MAX_BUFFER })
+    const result = await run(bin, args, { cwd: home, timeout: remaining(), maxBuffer: UPDATE_MAX_BUFFER })
     output = `${result?.stdout ?? ''}\n${result?.stderr ?? ''}`
   } catch (error) {
     failure = error
+    // Some self-updaters put the actionable text on stderr and exit non-zero;
+    // keep it so the manual-only fallback also works on that path.
+    output = `${error?.stdout ?? ''}\n${error?.stderr ?? ''}\n${error?.message ?? ''}`
   }
-  if (failure) {
-    const detail = redactSecrets(failure?.stderr || failure?.message || failure)
-    return { ok: false, error: 'update-failed', detail }
-  }
-  // Some self-updaters refuse to install without a TTY and still exit 0 after
-  // printing the manual command. Re-run the vendor installer instead of
-  // reporting a success that never changed the binary.
+  // Some self-updaters refuse to install without a TTY and only print the
+  // manual command (exit 0 or non-zero). Re-run the vendor installer instead
+  // of reporting a success that never changed the binary.
   const manualOnly = typeof agent.update.manualOnlyPattern === 'string'
     && new RegExp(agent.update.manualOnlyPattern, 'i').test(output)
   if (manualOnly) {
     const fallback = agent.update.fallbackCommand?.[platform]
     if (!fallback) return { ok: false, error: 'update-manual-required', detail: redactSecrets(output) }
     try {
-      await run(fallback.bin, fallback.args, { cwd: home, timeout, maxBuffer: UPDATE_MAX_BUFFER })
+      await run(fallback.bin, fallback.args, { cwd: home, timeout: remaining(), maxBuffer: UPDATE_MAX_BUFFER })
     } catch (error) {
       return { ok: false, error: 'update-failed', detail: redactSecrets(error?.stderr || error?.message || error) }
     }
+  } else if (failure) {
+    return { ok: false, error: 'update-failed', detail: redactSecrets(failure?.stderr || failure?.message || failure) }
   }
   const probe = typeof options.probeVersion === 'function' ? options.probeVersion : probeAgentBin
   let version = ''
@@ -286,11 +291,14 @@ export async function runAgentUpdate(id, options = {}) {
   } catch {
     version = ''
   }
+  // An unprovable version after an upgrade is a failure, never a silent
+  // success: the panel would otherwise show "updated" while nothing changed.
+  if (!version) return { ok: false, error: 'update-not-applied', detail: redactSecrets(output) }
   // A self-updater must actually reach the version it advertised in its own
   // ledger; otherwise the panel would keep saying "update available" forever.
   if (channel === 'self') {
     const latest = latestFromLedger(agent.update, home, fs)
-    if (latest && version && isNewerVersion(latest, version)) {
+    if (latest && isNewerVersion(latest, version)) {
       return { ok: false, error: 'update-not-applied', detail: redactSecrets(output) }
     }
   }

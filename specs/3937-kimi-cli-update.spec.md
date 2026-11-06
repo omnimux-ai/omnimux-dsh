@@ -22,11 +22,11 @@
 ## 假设
 
 - Kimi 0.34 的 `kimi upgrade` 在无 TTY 时只打印手动命令并以 0 退出，`--yes` 在该版本被忽略；其 ledger 里的 `latest` 是最可信的目标版本。
-- Kimi 官方安装脚本能在 macOS/Linux 完成 native 覆盖安装，且安装目录已存在时不会破坏 `~/.kimi-code` 下的配置与凭据。
+- Kimi 官方安装脚本能在 macOS/Linux 完成 native 覆盖安装；在已存在 `~/.kimi-code` 的机器上覆盖安装时只替换二进制，不破坏配置与凭据。
 
 ## 证伪方式
 
-- 在临时目录执行 `KIMI_INSTALL_DIR=/tmp/kimi-test KIMI_NO_MODIFY_PATH=1 bash install.sh` 后，`/tmp/kimi-test/bin/kimi --version` 若不为 2.5.2，则官方安装脚本兜底假设不成立。
+- 直接执行生产同款命令 `bash -c 'set -o pipefail; curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash'`：若 `kimi --version` 不为 2.5.2，或安装前后 `~/.kimi-code/config.toml` 与凭据文件 SHA-256 发生变化，则覆盖安装假设不成立。
 - 运行 `node --test plugins/omnimux/src/agents/updates.test.js`：若「手动提示 → fallback」用例没有触发第二条安装命令，或安装后版本未变仍返回 `ok:true`，则修复假设不成立。
 
 ## 非目标
@@ -52,5 +52,5 @@
 
 ## 证据
 
-- `plugins/omnimux/src/agents/updates.test.js` 新增 4 条 fallback/失败用例并全绿。
-- 官方安装脚本在临时目录实测：`KIMI_INSTALL_DIR=/tmp/kimi-test bash install.sh` → 安装 2.5.2 成功（约 6s）。
+- `plugins/omnimux/src/agents/updates.test.js` 覆盖 fallback 成功、非零退出仍触发 fallback、版本探测为空、版本仍落后、安装失败脱敏、无兜底平台、Windows/Linux 分支。
+- 生产同款安装命令实测：`bash -c 'set -o pipefail; curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash'` → `kimi --version` 0.34.0 → 2.5.2，exit 0；`~/.kimi-code/config.toml` 与 `credentials/kimi-code.json` 的 SHA-256 前后一致。
