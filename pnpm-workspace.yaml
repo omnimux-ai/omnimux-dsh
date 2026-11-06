@@ -3,6 +3,11 @@ packages:
   - packages/*
   - plugins/omnimux-browser/extension
 
+# The hub plugin declares the shared UI kit by published semver range so
+# `pnpm pack`/`pnpm publish` ship a real range instead of a machine-local
+# `file:` path; this keeps that range resolving to the in-repo kit in dev.
+linkWorkspacePackages: true
+
 peerDependencyRules:
   allowedVersions:
     "@deepseek-ai/dsh-*": "0.2.1-rc.3"

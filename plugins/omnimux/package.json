@@ -40,7 +40,7 @@
     "@smithy/signature-v4": "5.7.4",
     "aigc-provider-runtime-kit": "^0.2.0",
     "blobatar": "^0.2.0",
-    "dsh-ui-kit": "file:../../packages/dsh-ui-kit",
+    "dsh-ui-kit": "^0.1.0",
     "exif-reader": "2.0.3",
     "image-size": "2.0.4",
     "ipaddr.js": "2.5.0",
