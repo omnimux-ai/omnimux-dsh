@@ -78,9 +78,20 @@ export const KNOWN_AGENTS = Object.freeze([
     // train, so this CLI's own release ledger is the only truthful source.
     update: Object.freeze({
       channel: 'self',
-      selfCommand: Object.freeze({ bin: 'kimi', args: Object.freeze(['upgrade']) }),
+      // `--yes` exists on newer builds; 0.34 ignores it. Without a TTY even
+      // 0.34 only prints the manual command and exits 0.
+      selfCommand: Object.freeze({ bin: 'kimi', args: Object.freeze(['upgrade', '--yes']) }),
       ledgerPath: '.kimi-code/updates/latest.json',
       ledgerVersionKey: 'latest',
+      // 0.34.0's upgrade cannot install non-interactively: it prints the text
+      // below and exits 0 without touching the binary. Re-run the official
+      // installer (the same command Kimi's own native upgrade spawns).
+      manualOnlyPattern: 'To update manually|Auto-update is not supported',
+      fallbackCommand: Object.freeze({
+        darwin: Object.freeze({ bin: 'bash', args: Object.freeze(['-c', 'set -o pipefail; curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash']) }),
+        linux: Object.freeze({ bin: 'bash', args: Object.freeze(['-c', 'set -o pipefail; curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash']) }),
+        win32: Object.freeze({ bin: 'powershell', args: Object.freeze(['-NoProfile', '-Command', 'irm https://code.kimi.com/kimi-code/install.ps1 | iex']) }),
+      }),
     }),
   },
   {
