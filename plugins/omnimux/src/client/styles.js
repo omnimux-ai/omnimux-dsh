@@ -358,6 +358,20 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
   font-size: 13px;
   flex: none;
 }
+.omnimux-runtime-guide-skip {
+  display: flex;
+  margin-top: 4px;
+}
+.omnimux-runtime-guide-skip-button {
+  justify-content: flex-start;
+  width: 100%;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+}
+.omnimux-runtime-guide-skip-button:hover {
+  color: var(--dsw-alias-label-primary);
+  text-decoration: underline;
+}
 .omnimux-runtime-guide-step {
   display: flex;
   flex-direction: column;

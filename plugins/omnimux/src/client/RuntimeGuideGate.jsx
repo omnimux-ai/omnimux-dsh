@@ -49,6 +49,7 @@ export function RuntimeGuideGate({ t, scope }) {
   const [step, setStep] = useState('choose')
   const [busy, setBusy] = useState(false)
   const [loggedIn, setLoggedIn] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
   const finishing = useRef(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -77,16 +78,32 @@ export function RuntimeGuideGate({ t, scope }) {
       return false
     }
     const readRemote = () => {
-      if (readLocal() || typeof fetch !== 'function') return
+      const auth = /** @type {any} */ (window).__omnimuxAuth
+      // Force a fresh status read: getStatus() always hits HTTP while
+      // getStatusCached()/peekCache() may hold a negative entry with no TTL.
+      if (auth && typeof auth.getStatus === 'function') {
+        void auth.getStatus(false).then((result) => {
+          if (!alive) return
+          const body = result && result.body
+          if (result && result.ok === true && body && typeof body.logged_in === 'boolean') {
+            apply(body.logged_in === true)
+            return
+          }
+          apply(false)
+        }).catch(() => { if (alive) apply(false) })
+        return
+      }
+      if (typeof fetch !== 'function') return
       void fetch('/omnimux/auth/status').then(async (response) => {
-        if (!response.ok) return
+        if (!response.ok) { if (alive) apply(false); return }
         const body = await response.json().catch(() => null)
         if (alive && body && typeof body === 'object') apply(body.logged_in === true)
-      }).catch(() => {})
+      }).catch(() => { if (alive) apply(false) })
     }
+    readLocal()
     readRemote()
     const auth = /** @type {any} */ (window).__omnimuxAuth
-    const stop = auth && typeof auth.subscribe === 'function' ? auth.subscribe(() => { readLocal() }) : undefined
+    const stop = auth && typeof auth.subscribe === 'function' ? auth.subscribe(() => { readLocal(); readRemote() }) : undefined
     const onFocus = () => { readRemote() }
     window.addEventListener('focus', onFocus)
     return () => {
@@ -109,6 +126,7 @@ export function RuntimeGuideGate({ t, scope }) {
         const body = await response.json().catch(() => ({}))
         throw new Error(typeof body.error === 'string' ? body.error : `HTTP ${response.status}`)
       }
+      setDismissed(true)
     } catch (caught) {
       finishing.current = false
       setError(caught instanceof Error ? caught.message : String(caught))
@@ -129,7 +147,7 @@ export function RuntimeGuideGate({ t, scope }) {
     void finish('official')
   }, [finish, t])
 
-  if (!ready || !guide.visible) return null
+  if (!ready || !guide.visible || dismissed) return null
   if (typeof document === 'undefined' || !document.body) return null
 
   return createPortal(
@@ -167,7 +185,7 @@ export function RuntimeGuideGate({ t, scope }) {
                   </Button>
                 </div>
                 <div className="omnimux-runtime-guide-skip">
-                  <Button variant="ghost" disabled={busy} onClick={() => { void finish('official') }}>
+                  <Button variant="ghost" className="omnimux-runtime-guide-skip-button" disabled={busy} onClick={() => { void finish('official') }}>
                     {t('runtime.skip')}
                   </Button>
                 </div>
