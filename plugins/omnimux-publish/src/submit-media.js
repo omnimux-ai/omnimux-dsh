@@ -33,11 +33,14 @@ export function createSubmitMedia({ store, media, channel }) {
     const missing = record.media_ids.filter((id) => !uploads[id])
     for (const mediaId of missing) {
       const { buffer, meta } = media.open(mediaId)
-      const { upload_url: uploadUrl, public_url: publicUrl } = await channel.presign(
+      const ticket = await channel.presign(
         { filename: String(meta.filename || 'media'), content_type: String(meta.content_type || 'application/octet-stream') }, opts,
       )
-      await channel.putBytes(uploadUrl, buffer, String(meta.content_type || 'application/octet-stream'), opts)
-      uploads[mediaId] = publicUrl
+      await channel.putBytes(ticket.upload_url, buffer, String(meta.content_type || 'application/octet-stream'), opts, {
+        headers: ticket.headers,
+        upload_method: ticket.upload_method,
+      })
+      uploads[mediaId] = ticket.public_url
     }
     if (missing.length > 0) store.setUploads(record.id, uploads)
     return uploads

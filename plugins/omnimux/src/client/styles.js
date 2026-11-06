@@ -4,11 +4,11 @@ export const STYLES_ID = 'omnimux-hub-styles'
 
 /** Deep-sea school + caustic shafts (offline SVG, 1:1 with the locked poster). */
 const LOGIN_GATE_SEA_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 348 520" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="w" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1e0b3a"/><stop offset="42%" stop-color="#4c1d95"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><radialGradient id="c" cx="50%" cy="10%" r="72%"><stop offset="0%" stop-color="#fae8ff" stop-opacity=".55"/><stop offset="38%" stop-color="#c084fc" stop-opacity=".22"/><stop offset="100%" stop-color="#1e0b3a" stop-opacity="0"/></radialGradient><linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fae8ff" stop-opacity=".32"/><stop offset="100%" stop-color="#fae8ff" stop-opacity="0"/></linearGradient><radialGradient id="j" cx="50%" cy="40%" r="55%"><stop offset="0%" stop-color="#fce7f3" stop-opacity=".85"/><stop offset="55%" stop-color="#e879f9" stop-opacity=".4"/><stop offset="100%" stop-color="#6d28d9" stop-opacity="0"/></radialGradient></defs><rect width="348" height="520" fill="url(#w)"/><rect width="348" height="520" fill="url(#c)"/><g opacity=".75"><polygon points="174,-12 208,520 142,520" fill="url(#r)"/><polygon points="88,-24 72,520 28,520" fill="url(#r)" opacity=".55"/><polygon points="268,-18 312,520 262,520" fill="url(#r)" opacity=".5"/></g><g fill="#f5d0fe" opacity=".38"><circle cx="36" cy="72" r="1.2"/><circle cx="92" cy="128" r=".9"/><circle cx="148" cy="64" r="1.1"/><circle cx="210" cy="96" r=".8"/><circle cx="268" cy="58" r="1"/><circle cx="48" cy="190" r=".7"/><circle cx="310" cy="170" r=".9"/><circle cx="180" cy="150" r=".6"/><circle cx="24" cy="260" r=".8"/><circle cx="300" cy="240" r="1"/><circle cx="120" cy="300" r=".7"/><circle cx="240" cy="280" r=".8"/></g><ellipse cx="64" cy="86" rx="30" ry="34" fill="url(#j)" opacity=".5"/><ellipse cx="292" cy="124" rx="22" ry="26" fill="url(#j)" opacity=".38"/><g fill="#e9d5ff"><g opacity=".62" transform="translate(42 188) rotate(-22)"><ellipse cx="0" cy="0" rx="8" ry="2.5"/><polygon points="7 0 13.5 -3.1 13.5 3.1"/></g><g opacity=".5" transform="translate(68 206) rotate(-16)"><ellipse cx="0" cy="0" rx="6.5" ry="2.1"/><polygon points="5.5 0 11 -2.6 11 2.6"/></g><g opacity=".55" transform="translate(54 224) rotate(-28)"><ellipse cx="0" cy="0" rx="7.2" ry="2.3"/><polygon points="6.2 0 12 -2.8 12 2.8"/></g><g opacity=".42" transform="translate(96 198) rotate(-10)"><ellipse cx="0" cy="0" rx="5.8" ry="1.9"/><polygon points="5 0 10 -2.2 10 2.2"/></g><g opacity=".48" transform="translate(84 236) rotate(-20)"><ellipse cx="0" cy="0" rx="6.2" ry="2"/><polygon points="5.4 0 10.6 -2.4 10.6 2.4"/></g><g opacity=".4" transform="translate(118 218) rotate(-8)"><ellipse cx="0" cy="0" rx="5.4" ry="1.8"/><polygon points="4.6 0 9.4 -2.1 9.4 2.1"/></g><g opacity=".46" transform="translate(246 250) rotate(18)"><ellipse cx="0" cy="0" rx="7" ry="2.2"/><polygon points="-7 0 -13.2 -2.8 -13.2 2.8"/></g><g opacity=".36" transform="translate(272 268) rotate(24)"><ellipse cx="0" cy="0" rx="5.6" ry="1.8"/><polygon points="-5 0 -10.4 -2.2 -10.4 2.2"/></g><g opacity=".4" transform="translate(228 272) rotate(12)"><ellipse cx="0" cy="0" rx="6.4" ry="2"/><polygon points="-5.6 0 -11.2 -2.5 -11.2 2.5"/></g></g></svg>'
-const LOGIN_GATE_SEA_URI = `url("data:image/svg+xml,${encodeURIComponent(LOGIN_GATE_SEA_SVG)}")`
+export const LOGIN_GATE_SEA_URI = `url("data:image/svg+xml,${encodeURIComponent(LOGIN_GATE_SEA_SVG)}")`
 
 /** Translucent glowing moon-jellyfish, matching the locked poster subject. */
 const LOGIN_GATE_JELLY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 280" preserveAspectRatio="xMidYMid meet"><defs><radialGradient id="bell" cx="50%" cy="36%" r="58%"><stop offset="0%" stop-color="#fff7fb" stop-opacity=".96"/><stop offset="22%" stop-color="#f9a8d4" stop-opacity=".82"/><stop offset="52%" stop-color="#d8b4fe" stop-opacity=".55"/><stop offset="78%" stop-color="#a855f7" stop-opacity=".22"/><stop offset="100%" stop-color="#6d28d9" stop-opacity="0"/></radialGradient><radialGradient id="core" cx="48%" cy="40%" r="28%"><stop offset="0%" stop-color="#ffffff" stop-opacity=".95"/><stop offset="100%" stop-color="#f472b6" stop-opacity="0"/></radialGradient><linearGradient id="tent" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fce7f3" stop-opacity=".9"/><stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/></linearGradient><filter id="soft" x="-25%" y="-25%" width="150%" height="170%"><feGaussianBlur stdDeviation="1.8"/></filter></defs><g fill="none" stroke="url(#tent)" stroke-linecap="round" filter="url(#soft)" opacity=".9"><path stroke-width="2.4" d="M108 128 C96 168 86 204 78 252"/><path stroke-width="2.1" d="M122 132 C112 176 116 214 108 258"/><path stroke-width="2.6" d="M140 134 C138 180 146 220 142 262"/><path stroke-width="2.2" d="M156 132 C164 176 158 216 168 258"/><path stroke-width="2.5" d="M172 128 C186 170 190 208 198 250"/><path stroke-width="1.7" d="M114 130 C104 178 98 216 94 256"/><path stroke-width="1.8" d="M166 130 C176 178 184 214 190 254"/><path stroke-width="1.5" d="M132 134 C126 186 130 222 124 260"/></g><g fill="#fbcfe8" opacity=".38" filter="url(#soft)"><ellipse cx="140" cy="152" rx="16" ry="40"/><ellipse cx="124" cy="156" rx="10" ry="32"/><ellipse cx="156" cy="156" rx="10" ry="32"/></g><ellipse cx="140" cy="108" rx="86" ry="74" fill="url(#bell)"/><ellipse cx="138" cy="98" rx="46" ry="34" fill="url(#core)"/><path d="M64 116 Q140 162 216 116" fill="none" stroke="#fce7f3" stroke-width="2.2" opacity=".55"/><path d="M78 108 Q140 96 202 108" fill="none" stroke="#ffffff" stroke-width="1.4" opacity=".4"/><ellipse cx="118" cy="92" rx="10" ry="6" fill="#ffffff" opacity=".28"/></svg>'
-const LOGIN_GATE_JELLY_URI = `url("data:image/svg+xml,${encodeURIComponent(LOGIN_GATE_JELLY_SVG)}")`
+export const LOGIN_GATE_JELLY_URI = `url("data:image/svg+xml,${encodeURIComponent(LOGIN_GATE_JELLY_SVG)}")`
 
 export const HUB_CSS = `
 .omnimux-reference-storage-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
@@ -358,14 +358,55 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
   font-size: 13px;
   flex: none;
 }
+/* First-run cover: the locked deep-sea poster from the sign-in window, rebuilt
+   purely from CSS layers so the chooser's right pane reads as artwork instead
+   of a flat placeholder. Brand tokens are monochrome here, so the poster keeps
+   its own fixed palette the same way the login gate hero does. */
 .omnimux-runtime-guide-art {
+  position: relative;
+  overflow: hidden;
+  background-color: #1e0b3a; /* exempt-ui03: 深海海报锁扣底色 */
+  background-image:
+    radial-gradient(ellipse 74% 48% at 50% 16%, rgba(250, 232, 255, 0.26), transparent 70%), /* exempt-ui03: 海报月光光斑 */
+    url('https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80'),
+    ${LOGIN_GATE_SEA_URI};
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center, center 30%, center;
+}
+.omnimux-runtime-guide-art::before {
+  content: '';
+  position: absolute;
+  top: -2%;
+  left: 50%;
+  width: min(72%, 400px);
+  aspect-ratio: 1 / 1;
+  transform: translateX(-50%);
+  background-image: ${LOGIN_GATE_JELLY_URI};
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  mask-image: radial-gradient(ellipse at 50% 54%, black 20%, transparent 68%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 54%, black 20%, transparent 68%);
+  opacity: 1;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45)) contrast(1.15) brightness(1.08); /* exempt-ui03: 果冻发光投影 */
+  pointer-events: none;
+}
+.omnimux-runtime-guide-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
   background:
-    radial-gradient(ellipse 90% 70% at 25% 18%, color-mix(in srgb, var(--dsw-alias-brand-primary, #7c3aed) 38%, transparent), transparent 70%),
-    radial-gradient(ellipse 80% 60% at 78% 68%, color-mix(in srgb, var(--dsw-alias-brand-primary, #7c3aed) 22%, transparent), transparent 75%),
     linear-gradient(160deg,
-      color-mix(in srgb, var(--dsw-alias-brand-primary, #7c3aed) 30%, var(--dsw-alias-bg-base, #0b0b0d)),
-      var(--dsw-alias-bg-elevated, #161618) 62%,
-      var(--dsw-alias-bg-base, #0b0b0d));
+      rgba(76, 29, 149, 0.55) 0%, /* exempt-ui03: 深海海报锁扣配色 */
+      rgba(109, 40, 217, 0.22) 45%, /* exempt-ui03: 深海海报锁扣配色 */
+      rgba(59, 7, 100, 0.62) 100%), /* exempt-ui03: 深海海报锁扣配色 */
+    linear-gradient(180deg,
+      rgba(15, 8, 35, 0.42) 0%, /* exempt-ui03: 海报暗角 */
+      transparent 34%,
+      rgba(15, 8, 35, 0.18) 62%, /* exempt-ui03: 海报暗角 */
+      rgba(15, 8, 35, 0.86) 100%); /* exempt-ui03: 海报暗角 */
+  pointer-events: none;
 }
 .omnimux-runtime-guide-step {
   display: flex;

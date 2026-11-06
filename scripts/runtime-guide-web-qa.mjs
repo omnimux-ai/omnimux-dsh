@@ -8,7 +8,9 @@
  * 临时 HTTP 服务、无头 Chrome CDP、PNG 截图证据，零桌面依赖、零公共环境污染。
  *
  * 场景：
- *   empty      —— settings 为空 → 引导可见，三选一卡片 + 跳过入口
+ *   empty      —— settings 为空 → 引导可见，三选一卡片 + 跳过入口；右栏封面须带深海照片/水母图层且照片真实解码
+ *   cover-offline —— 屏蔽 unsplash → 封面确定性退回深海 SVG + 水母，尺寸不塌陷
+ *   narrow     —— 1024x760 窄视口 → 封面随卡片收缩且尺寸有效
  *   empty-cli  —— 点击「本机助手」→ CLI 面板（fetch 桩返回空列表 → 无可用提示）
  *   empty-key  —— 点击「自己的密钥」→ BYOK 表单字段渲染
  *   skip       —— 点击跳过 → PUT /omnimux/runtime/mode {mode:'official'}，随后引导消失
@@ -329,8 +331,22 @@ async function runRuntimeGuideWebQa(options = {}) {
     await sendCdp('Page.enable');
     await sendCdp('Runtime.enable');
     await sendCdp('Log.enable');
+    const networkUrls = new Map();
+    report.networkFailures = report.networkFailures || [];
     cdpWs.addEventListener('message', (ev) => {
       const m = JSON.parse(ev.data);
+      if (m.method === 'Network.requestWillBeSent') {
+        networkUrls.set(m.params.requestId, m.params.request?.url || '');
+        return;
+      }
+      if (m.method === 'Network.loadingFailed') {
+        report.networkFailures.push({
+          url: networkUrls.get(m.params.requestId) || '',
+          error: m.params.errorText || '',
+          blocked: m.params.blockedReason || '',
+        });
+        return;
+      }
       if (m.method === 'Runtime.exceptionThrown' || (m.method === 'Log.entryAdded' && m.params?.entry?.level === 'error')) {
         const text = m.method === 'Runtime.exceptionThrown'
           ? (m.params?.exceptionDetails?.exception?.description || m.params?.exceptionDetails?.text)
@@ -365,6 +381,48 @@ async function runRuntimeGuideWebQa(options = {}) {
       report.screenshots[name] = { file, width: decoded.width, height: decoded.height };
       return file;
     };
+    // 封面照片层显式加载证明：URL 从实际背景层里提取（不另存常量），
+    // 真实解码失败即红，绝不静默退回 SVG 兜底。
+    const coverPhotoUrlExpression = `(() => {
+      const el = document.querySelector('[data-omnimux-runtime-guide] .omnimux-runtime-guide-art');
+      if (!el) return '';
+      const value = getComputedStyle(el).backgroundImage;
+      const start = value.indexOf('https://images.unsplash.com/');
+      if (start === -1) return '';
+      let end = value.indexOf('"', start);
+      if (end === -1) end = value.indexOf(')', start);
+      return value.slice(start, end === -1 ? undefined : end);
+    })()`;
+    const waitForCoverPhoto = async (timeoutMs = 15000) => {
+      const deadline = Date.now() + timeoutMs;
+      let url = '';
+      while (Date.now() < deadline) {
+        url = await evaluate(coverPhotoUrlExpression).catch(() => '');
+        if (!url) {
+          await new Promise((r) => setTimeout(r, 300));
+          continue;
+        }
+        const ok = await evaluate(`new Promise((resolve) => {
+          const img = new Image();
+          const done = (value) => resolve(value);
+          img.onload = () => (img.decode
+            ? img.decode().then(() => done(img.naturalWidth > 0)).catch(() => done(img.naturalWidth > 0))
+            : done(img.naturalWidth > 0));
+          img.onerror = () => done(false);
+          img.src = ${JSON.stringify(url)};
+          setTimeout(() => done(false), 4000);
+        })`).catch(() => false);
+        if (ok) return url;
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      return '';
+    };
+    const artBoxExpression = `(() => {
+      const el = document.querySelector('[data-omnimux-runtime-guide] .omnimux-runtime-guide-art');
+      if (!el) return null;
+      const rect = el.getBoundingClientRect();
+      return { width: Math.round(rect.width), height: Math.round(rect.height) };
+    })()`;
     const pageBodyIncludes = (text) => `(document.body && document.body.innerText || '').includes(${JSON.stringify(text)})`;
     const guideSelector = '[data-omnimux-runtime-guide]';
     const clickByText = (selector, text) => evaluate(`
@@ -397,12 +455,89 @@ async function runRuntimeGuideWebQa(options = {}) {
     for (const [name, text] of checks) {
       check(name, await evaluate(pageBodyIncludes(text)), `missing "${text}"`);
     }
+    // 右栏封面：必须同时带登录窗同款深海 SVG 与水母图层，否则退化成灰雾占位。
+    const coverLayers = await evaluate(`(() => {
+      const el = document.querySelector('${guideSelector} .omnimux-runtime-guide-art');
+      if (!el) return null;
+      return {
+        base: getComputedStyle(el).backgroundImage,
+        jellyfish: getComputedStyle(el, '::before').backgroundImage,
+      };
+    })()`);
+    check(
+      'cover-poster-layers',
+      Boolean(coverLayers)
+        && /images\.unsplash\.com/.test(coverLayers.base)
+        && /data:image\/svg\+xml/.test(coverLayers.base)
+        && /data:image\/svg\+xml/.test(coverLayers.jellyfish),
+      JSON.stringify(coverLayers).slice(0, 240),
+    );
+    // 照片层必须真实解码成功；失败即红，禁止静默退回 SVG 兜底还报绿。
+    const coverPhotoUrl = await waitForCoverPhoto();
+    check('cover-photo-loaded', Boolean(coverPhotoUrl), coverPhotoUrl ? coverPhotoUrl : 'cover photo layer failed to load within timeout');
+    check('cover-photo-matches-locked-poster', /photo-1544551763-46a013bb70d5/.test(coverPhotoUrl), coverPhotoUrl);
+    const coverBoxWide = await evaluate(artBoxExpression);
+    await new Promise((r) => setTimeout(r, 400));
     await screenshot('empty-guide');
+
+    // --- 场景 1b：断网 → 封面必须确定性退回深海 SVG + 水母，不得塌陷成空白 ---
+    await sendCdp('Network.enable', {});
+    await sendCdp('Network.setBlockedURLs', { urls: ['*images.unsplash.com*'] });
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    check('cover-offline-visible', await waitFor(`Boolean(document.querySelector('${guideSelector} .omnimux-runtime-guide-art'))`), '');
+    const offlineCover = await evaluate(`(() => {
+      const el = document.querySelector('${guideSelector} .omnimux-runtime-guide-art');
+      if (!el) return null;
+      return { base: getComputedStyle(el).backgroundImage, jellyfish: getComputedStyle(el, '::before').backgroundImage };
+    })()`);
+    check(
+      'cover-offline-fallback',
+      Boolean(offlineCover)
+        && /data:image\/svg\+xml/.test(offlineCover.base)
+        && /data:image\/svg\+xml/.test(offlineCover.jellyfish),
+      JSON.stringify(offlineCover).slice(0, 240),
+    );
+    // 证明屏蔽真的生效：同一 URL 在离线场景必须加载失败。
+    const offlinePhotoBlocked = await evaluate(`new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(false);
+      img.onerror = () => resolve(true);
+      img.src = ${JSON.stringify(coverPhotoUrl)};
+      setTimeout(() => resolve(false), 3000);
+    })`).catch(() => false);
+    check('cover-offline-photo-blocked', offlinePhotoBlocked, 'the unsplash photo must be blocked in the offline scenario');
+    const offlineBox = await evaluate(artBoxExpression);
+    check('cover-offline-box', Boolean(offlineBox) && offlineBox.width >= 300 && offlineBox.height >= 400, JSON.stringify(offlineBox));
+    await screenshot('cover-offline');
+    await sendCdp('Network.setBlockedURLs', { urls: [] });
+    const blockedRequests = (report.networkFailures || []).filter((entry) => /images\.unsplash\.com/.test(entry.url));
+    check('cover-offline-request-blocked', blockedRequests.length > 0, `network failures=${JSON.stringify(report.networkFailures || []).slice(0, 240)}`);
+
+    // --- 场景 1c：窄视口 → 封面随卡片收缩但不变形、不塌陷 ---
+    await sendCdp('Emulation.setDeviceMetricsOverride', { width: 1024, height: 760, deviceScaleFactor: 1, mobile: false });
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    check('narrow-guide-visible', await waitFor(`Boolean(document.querySelector('${guideSelector} .omnimux-runtime-guide-art'))`), '');
+    const narrowBox = await evaluate(artBoxExpression);
+    check('narrow-cover-box', Boolean(narrowBox) && narrowBox.width >= 300 && narrowBox.height >= 400, JSON.stringify(narrowBox));
+    check(
+      'narrow-cover-shrinks',
+      Boolean(coverBoxWide && narrowBox) && narrowBox.width < coverBoxWide.width
+        && Math.abs(narrowBox.height - coverBoxWide.height) <= 4,
+      `wide=${JSON.stringify(coverBoxWide)} narrow=${JSON.stringify(narrowBox)}`,
+    );
+    await screenshot('narrow-guide');
+    await sendCdp('Emulation.clearDeviceMetricsOverride', {});
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
 
     // --- 场景 2：点击「本机助手」→ CLI 面板（空列表提示） ---
     await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '本机助手');
     check('agent-step', await waitFor(pageBodyIncludes('选择用来运行提示词的 CLI')), '');
     check('agent-empty-hint', await waitFor(pageBodyIncludes('你的 CLI (0)'), 5000), '');
+    check('agent-no-cover', await evaluate(`!document.querySelector('${guideSelector} .omnimux-runtime-guide-art')`), '');
     await screenshot('empty-guide-cli');
 
     // --- 场景 3：回退并点击「自己的密钥」→ BYOK 表单 ---
@@ -425,6 +560,7 @@ async function runRuntimeGuideWebQa(options = {}) {
     check('key-model-select', await waitFor(`Boolean(document.querySelector('${guideSelector} [aria-label="模型"]'))`, 3000), '');
     check('key-no-media-fields', await evaluate(`!['素材理解','图片生成','视频生成','音频生成'].some((text) => (document.body.innerText || '').includes(text))`), '');
     check('key-default-model', await waitFor(pageBodyIncludes('claude-opus-5'), 3000), '');
+    check('key-no-cover', await evaluate(`!document.querySelector('${guideSelector} .omnimux-runtime-guide-art')`), '');
     await screenshot('empty-guide-key');
 
     // --- 场景 4：回退 → 点击跳过 → PUT official → 引导消失 ---
@@ -489,7 +625,7 @@ async function runRuntimeGuideWebQa(options = {}) {
     await screenshot('configured-no-guide');
 
     check('no-unexpected-page-errors', await evaluate(`${GUIDE_RELEVANT}.length === 0`), await evaluate(`${GUIDE_RELEVANT}.join(" | ")`));
-    const consoleHardErrors = (report.consoleErrors || []).filter((e) => !/WebSocket/.test(e));
+    const consoleHardErrors = (report.consoleErrors || []).filter((entry) => !/WebSocket/.test(entry));
     check('no-render-exceptions', consoleHardErrors.length === 0, consoleHardErrors.join(' | '));
     report.pass = report.assertions.every((a) => a.pass);
   } catch (error) {
