@@ -358,14 +358,55 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
   font-size: 13px;
   flex: none;
 }
+/* First-run cover: the locked deep-sea poster from the sign-in window, rebuilt
+   purely from CSS layers so the chooser's right pane reads as artwork instead
+   of a flat placeholder. Brand tokens are monochrome here, so the poster keeps
+   its own fixed palette the same way the login gate hero does. */
 .omnimux-runtime-guide-art {
+  position: relative;
+  overflow: hidden;
+  background-color: #1e0b3a; /* exempt-ui03: 深海海报锁扣底色 */
+  background-image:
+    radial-gradient(ellipse 74% 48% at 50% 16%, rgba(250, 232, 255, 0.26), transparent 70%), /* exempt-ui03: 海报月光光斑 */
+    url('https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80'),
+    ${LOGIN_GATE_SEA_URI};
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center, center 30%, center;
+}
+.omnimux-runtime-guide-art::before {
+  content: '';
+  position: absolute;
+  top: -2%;
+  left: 50%;
+  width: min(72%, 400px);
+  aspect-ratio: 1 / 1;
+  transform: translateX(-50%);
+  background-image: ${LOGIN_GATE_JELLY_URI};
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  mask-image: radial-gradient(ellipse at 50% 54%, black 20%, transparent 68%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 54%, black 20%, transparent 68%);
+  opacity: 1;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45)) contrast(1.15) brightness(1.08); /* exempt-ui03: 果冻发光投影 */
+  pointer-events: none;
+}
+.omnimux-runtime-guide-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
   background:
-    radial-gradient(ellipse 90% 70% at 25% 18%, color-mix(in srgb, var(--dsw-alias-brand-primary, #7c3aed) 38%, transparent), transparent 70%),
-    radial-gradient(ellipse 80% 60% at 78% 68%, color-mix(in srgb, var(--dsw-alias-brand-primary, #7c3aed) 22%, transparent), transparent 75%),
     linear-gradient(160deg,
-      color-mix(in srgb, var(--dsw-alias-brand-primary, #7c3aed) 30%, var(--dsw-alias-bg-base, #0b0b0d)),
-      var(--dsw-alias-bg-elevated, #161618) 62%,
-      var(--dsw-alias-bg-base, #0b0b0d));
+      rgba(76, 29, 149, 0.55) 0%, /* exempt-ui03: 深海海报锁扣配色 */
+      rgba(109, 40, 217, 0.22) 45%, /* exempt-ui03: 深海海报锁扣配色 */
+      rgba(59, 7, 100, 0.62) 100%), /* exempt-ui03: 深海海报锁扣配色 */
+    linear-gradient(180deg,
+      rgba(15, 8, 35, 0.42) 0%, /* exempt-ui03: 海报暗角 */
+      transparent 34%,
+      rgba(15, 8, 35, 0.18) 62%, /* exempt-ui03: 海报暗角 */
+      rgba(15, 8, 35, 0.86) 100%); /* exempt-ui03: 海报暗角 */
+  pointer-events: none;
 }
 .omnimux-runtime-guide-step {
   display: flex;

@@ -8,7 +8,7 @@
  * 临时 HTTP 服务、无头 Chrome CDP、PNG 截图证据，零桌面依赖、零公共环境污染。
  *
  * 场景：
- *   empty      —— settings 为空 → 引导可见，三选一卡片 + 跳过入口
+ *   empty      —— settings 为空 → 引导可见，三选一卡片 + 跳过入口；右栏封面须带深海照片/水母图层
  *   empty-cli  —— 点击「本机助手」→ CLI 面板（fetch 桩返回空列表 → 无可用提示）
  *   empty-key  —— 点击「自己的密钥」→ BYOK 表单字段渲染
  *   skip       —— 点击跳过 → PUT /omnimux/runtime/mode {mode:'official'}，随后引导消失
@@ -357,6 +357,16 @@ async function runRuntimeGuideWebQa(options = {}) {
       return false;
     };
     const screenshot = async (name) => {
+      // 等封面底图（unsplash）解码完成，截图才反映真实上色后的封面。
+      await evaluate(`new Promise((resolve) => {
+        const img = new Image();
+        const done = () => resolve(true);
+        img.onload = () => (img.decode ? img.decode().then(done).catch(done) : done());
+        img.onerror = done;
+        img.src = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80';
+        setTimeout(done, 2000);
+      })`).catch(() => {});
+      await new Promise((r) => setTimeout(r, 120));
       const shot = await sendCdp('Page.captureScreenshot', { format: 'png' });
       const bytes = Buffer.from(shot.data, 'base64');
       const decoded = PNG.sync.read(bytes);
@@ -397,6 +407,23 @@ async function runRuntimeGuideWebQa(options = {}) {
     for (const [name, text] of checks) {
       check(name, await evaluate(pageBodyIncludes(text)), `missing "${text}"`);
     }
+    // 右栏封面：必须同时带登录窗同款深海 SVG 与水母图层，否则退化成灰雾占位。
+    const coverLayers = await evaluate(`(() => {
+      const el = document.querySelector('${guideSelector} .omnimux-runtime-guide-art');
+      if (!el) return null;
+      return {
+        base: getComputedStyle(el).backgroundImage,
+        jellyfish: getComputedStyle(el, '::before').backgroundImage,
+      };
+    })()`);
+    check(
+      'cover-poster-layers',
+      Boolean(coverLayers)
+        && /images\.unsplash\.com/.test(coverLayers.base)
+        && /data:image\/svg\+xml/.test(coverLayers.base)
+        && /data:image\/svg\+xml/.test(coverLayers.jellyfish),
+      JSON.stringify(coverLayers).slice(0, 240),
+    );
     await screenshot('empty-guide');
 
     // --- 场景 2：点击「本机助手」→ CLI 面板（空列表提示） ---
