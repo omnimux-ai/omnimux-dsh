@@ -291,12 +291,12 @@ export async function runAgentUpdate(id, options = {}) {
   } catch {
     version = ''
   }
-  // An unprovable version after an upgrade is a failure, never a silent
-  // success: the panel would otherwise show "updated" while nothing changed.
-  if (!version) return { ok: false, error: 'update-not-applied', detail: redactSecrets(output) }
   // A self-updater must actually reach the version it advertised in its own
   // ledger; otherwise the panel would keep saying "update available" forever.
+  // An unprovable version is a failure for this channel, never a silent
+  // success. npm updates keep their historical return shape.
   if (channel === 'self') {
+    if (!version) return { ok: false, error: 'update-not-applied', detail: redactSecrets(output) }
     const latest = latestFromLedger(agent.update, home, fs)
     if (latest && isNewerVersion(latest, version)) {
       return { ok: false, error: 'update-not-applied', detail: redactSecrets(output) }

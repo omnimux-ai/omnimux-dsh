@@ -393,6 +393,7 @@ describe('runAgentUpdate', () => {
         run: async (bin, args, opts) => {
           calls.push({ bin, args, opts })
           if (bin === 'kimi') {
+            await new Promise((resolve) => setTimeout(resolve, 20))
             return {
               stdout: 'A newer version of @moonshot-ai/kimi-code is available (0.34.0 -> 2.5.2).\n'
                 + 'Detected install source: native (windows). Auto-update is not supported on this platform.\n'
@@ -411,7 +412,7 @@ describe('runAgentUpdate', () => {
       assert.deepEqual(calls[1].args.slice(0, 1), ['-c'])
       assert.match(calls[1].args[1], /set -o pipefail/)
       assert.match(calls[1].args[1], /code\.kimi\.com\/kimi-code\/install\.sh/)
-      assert.ok(calls[1].opts.timeout <= calls[0].opts.timeout, 'fallback shares the remaining time budget')
+      assert.ok(calls[1].opts.timeout < calls[0].opts.timeout, 'fallback must consume the remaining time budget, not a fresh timeout')
       assert.equal(result.ok, true)
       assert.equal(result.version, '2.5.2')
     } finally {
@@ -470,23 +471,33 @@ describe('runAgentUpdate', () => {
   })
 
   it('reports update-not-applied when the version probe fails or returns empty', async () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'kimi-update-'))
-    try {
-      fs.mkdirSync(path.join(home, '.kimi-code', 'updates'), { recursive: true })
-      fs.writeFileSync(path.join(home, '.kimi-code', 'updates', 'latest.json'), JSON.stringify({ latest: '2.5.2' }))
-      const result = await runAgentUpdate('kimi', {
-        shape: 'native',
-        home,
-        platform: 'darwin',
-        run: async (bin) => (bin === 'kimi'
-          ? { stdout: 'To update manually, run: curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash', stderr: '' }
-          : { stdout: 'installer ran', stderr: '' }),
-        probeVersion: async () => ({ installed: false, version: '' }),
-      })
-      assert.equal(result.ok, false)
-      assert.equal(result.error, 'update-not-applied')
-    } finally {
-      fs.rmSync(home, { recursive: true, force: true })
+    for (const probeVersion of [
+      async () => ({ installed: false, version: '' }),
+      async () => { throw new Error('probe crashed') },
+    ]) {
+      const home = fs.mkdtempSync(path.join(os.tmpdir(), 'kimi-update-'))
+      try {
+        fs.mkdirSync(path.join(home, '.kimi-code', 'updates'), { recursive: true })
+        fs.writeFileSync(path.join(home, '.kimi-code', 'updates', 'latest.json'), JSON.stringify({ latest: '2.5.2' }))
+        const calls = []
+        const result = await runAgentUpdate('kimi', {
+          shape: 'native',
+          home,
+          platform: 'darwin',
+          run: async (bin) => {
+            calls.push(bin)
+            return bin === 'kimi'
+              ? { stdout: 'To update manually, run: curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash', stderr: '' }
+              : { stdout: 'installer ran', stderr: '' }
+          },
+          probeVersion,
+        })
+        assert.deepEqual(calls, ['kimi', 'bash'], 'the installer must run before probing')
+        assert.equal(result.ok, false)
+        assert.equal(result.error, 'update-not-applied')
+      } finally {
+        fs.rmSync(home, { recursive: true, force: true })
+      }
     }
   })
 
