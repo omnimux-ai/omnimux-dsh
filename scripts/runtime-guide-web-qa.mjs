@@ -331,8 +331,22 @@ async function runRuntimeGuideWebQa(options = {}) {
     await sendCdp('Page.enable');
     await sendCdp('Runtime.enable');
     await sendCdp('Log.enable');
+    const networkUrls = new Map();
+    report.networkFailures = report.networkFailures || [];
     cdpWs.addEventListener('message', (ev) => {
       const m = JSON.parse(ev.data);
+      if (m.method === 'Network.requestWillBeSent') {
+        networkUrls.set(m.params.requestId, m.params.request?.url || '');
+        return;
+      }
+      if (m.method === 'Network.loadingFailed') {
+        report.networkFailures.push({
+          url: networkUrls.get(m.params.requestId) || '',
+          error: m.params.errorText || '',
+          blocked: m.params.blockedReason || '',
+        });
+        return;
+      }
       if (m.method === 'Runtime.exceptionThrown' || (m.method === 'Log.entryAdded' && m.params?.entry?.level === 'error')) {
         const text = m.method === 'Runtime.exceptionThrown'
           ? (m.params?.exceptionDetails?.exception?.description || m.params?.exceptionDetails?.text)
@@ -367,11 +381,27 @@ async function runRuntimeGuideWebQa(options = {}) {
       report.screenshots[name] = { file, width: decoded.width, height: decoded.height };
       return file;
     };
-    // 封面照片层显式加载证明：超时/失败必须让断言变红，而不是静默退回 SVG 兜底。
-    const COVER_PHOTO_URL = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80';
+    // 封面照片层显式加载证明：URL 从实际背景层里提取（不另存常量），
+    // 真实解码失败即红，绝不静默退回 SVG 兜底。
+    const coverPhotoUrlExpression = `(() => {
+      const el = document.querySelector('[data-omnimux-runtime-guide] .omnimux-runtime-guide-art');
+      if (!el) return '';
+      const value = getComputedStyle(el).backgroundImage;
+      const start = value.indexOf('https://images.unsplash.com/');
+      if (start === -1) return '';
+      let end = value.indexOf('"', start);
+      if (end === -1) end = value.indexOf(')', start);
+      return value.slice(start, end === -1 ? undefined : end);
+    })()`;
     const waitForCoverPhoto = async (timeoutMs = 15000) => {
       const deadline = Date.now() + timeoutMs;
+      let url = '';
       while (Date.now() < deadline) {
+        url = await evaluate(coverPhotoUrlExpression).catch(() => '');
+        if (!url) {
+          await new Promise((r) => setTimeout(r, 300));
+          continue;
+        }
         const ok = await evaluate(`new Promise((resolve) => {
           const img = new Image();
           const done = (value) => resolve(value);
@@ -379,13 +409,13 @@ async function runRuntimeGuideWebQa(options = {}) {
             ? img.decode().then(() => done(img.naturalWidth > 0)).catch(() => done(img.naturalWidth > 0))
             : done(img.naturalWidth > 0));
           img.onerror = () => done(false);
-          img.src = ${JSON.stringify(COVER_PHOTO_URL)};
+          img.src = ${JSON.stringify(url)};
           setTimeout(() => done(false), 4000);
         })`).catch(() => false);
-        if (ok) return true;
+        if (ok) return url;
         await new Promise((r) => setTimeout(r, 300));
       }
-      return false;
+      return '';
     };
     const artBoxExpression = `(() => {
       const el = document.querySelector('[data-omnimux-runtime-guide] .omnimux-runtime-guide-art');
@@ -443,8 +473,10 @@ async function runRuntimeGuideWebQa(options = {}) {
       JSON.stringify(coverLayers).slice(0, 240),
     );
     // 照片层必须真实解码成功；失败即红，禁止静默退回 SVG 兜底还报绿。
-    const photoLoaded = await waitForCoverPhoto();
-    check('cover-photo-loaded', photoLoaded, photoLoaded ? '' : 'unsplash cover photo failed to load within timeout');
+    const coverPhotoUrl = await waitForCoverPhoto();
+    check('cover-photo-loaded', Boolean(coverPhotoUrl), coverPhotoUrl ? coverPhotoUrl : 'cover photo layer failed to load within timeout');
+    check('cover-photo-matches-locked-poster', /photo-1544551763-46a013bb70d5/.test(coverPhotoUrl), coverPhotoUrl);
+    const coverBoxWide = await evaluate(artBoxExpression);
     await new Promise((r) => setTimeout(r, 400));
     await screenshot('empty-guide');
 
@@ -466,10 +498,21 @@ async function runRuntimeGuideWebQa(options = {}) {
         && /data:image\/svg\+xml/.test(offlineCover.jellyfish),
       JSON.stringify(offlineCover).slice(0, 240),
     );
+    // 证明屏蔽真的生效：同一 URL 在离线场景必须加载失败。
+    const offlinePhotoBlocked = await evaluate(`new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(false);
+      img.onerror = () => resolve(true);
+      img.src = ${JSON.stringify(coverPhotoUrl)};
+      setTimeout(() => resolve(false), 3000);
+    })`).catch(() => false);
+    check('cover-offline-photo-blocked', offlinePhotoBlocked, 'the unsplash photo must be blocked in the offline scenario');
     const offlineBox = await evaluate(artBoxExpression);
     check('cover-offline-box', Boolean(offlineBox) && offlineBox.width >= 300 && offlineBox.height >= 400, JSON.stringify(offlineBox));
     await screenshot('cover-offline');
     await sendCdp('Network.setBlockedURLs', { urls: [] });
+    const blockedRequests = (report.networkFailures || []).filter((entry) => /images\.unsplash\.com/.test(entry.url));
+    check('cover-offline-request-blocked', blockedRequests.length > 0, `network failures=${JSON.stringify(report.networkFailures || []).slice(0, 240)}`);
 
     // --- 场景 1c：窄视口 → 封面随卡片收缩但不变形、不塌陷 ---
     await sendCdp('Emulation.setDeviceMetricsOverride', { width: 1024, height: 760, deviceScaleFactor: 1, mobile: false });
@@ -478,6 +521,12 @@ async function runRuntimeGuideWebQa(options = {}) {
     check('narrow-guide-visible', await waitFor(`Boolean(document.querySelector('${guideSelector} .omnimux-runtime-guide-art'))`), '');
     const narrowBox = await evaluate(artBoxExpression);
     check('narrow-cover-box', Boolean(narrowBox) && narrowBox.width >= 300 && narrowBox.height >= 400, JSON.stringify(narrowBox));
+    check(
+      'narrow-cover-shrinks',
+      Boolean(coverBoxWide && narrowBox) && narrowBox.width < coverBoxWide.width
+        && Math.abs(narrowBox.height - coverBoxWide.height) <= 4,
+      `wide=${JSON.stringify(coverBoxWide)} narrow=${JSON.stringify(narrowBox)}`,
+    );
     await screenshot('narrow-guide');
     await sendCdp('Emulation.clearDeviceMetricsOverride', {});
     await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
@@ -488,6 +537,7 @@ async function runRuntimeGuideWebQa(options = {}) {
     await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '本机助手');
     check('agent-step', await waitFor(pageBodyIncludes('选择用来运行提示词的 CLI')), '');
     check('agent-empty-hint', await waitFor(pageBodyIncludes('你的 CLI (0)'), 5000), '');
+    check('agent-no-cover', await evaluate(`!document.querySelector('${guideSelector} .omnimux-runtime-guide-art')`), '');
     await screenshot('empty-guide-cli');
 
     // --- 场景 3：回退并点击「自己的密钥」→ BYOK 表单 ---
@@ -501,6 +551,7 @@ async function runRuntimeGuideWebQa(options = {}) {
     await waitFor(pageBodyIncludes('自己的密钥'), 3000);
     await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '自己的密钥');
     check('key-step', await waitFor(`Boolean(document.querySelector('${guideSelector} input[placeholder*="粘贴密钥"]'))`, 5000), '');
+    check('key-no-cover', await evaluate(`!document.querySelector('${guideSelector} .omnimux-runtime-guide-art')`), '');
     await screenshot('empty-guide-key');
 
     // --- 场景 4：回退 → 点击跳过 → PUT official → 引导消失 ---
@@ -561,8 +612,7 @@ async function runRuntimeGuideWebQa(options = {}) {
     await screenshot('configured-no-guide');
 
     check('no-unexpected-page-errors', await evaluate(`${GUIDE_RELEVANT}.length === 0`), await evaluate(`${GUIDE_RELEVANT}.join(" | ")`));
-    // 场景 1b 主动屏蔽 unsplash，浏览器会记一条 ERR_BLOCKED_BY_CLIENT；属预期，放行。
-    const consoleHardErrors = (report.consoleErrors || []).filter((e) => !/WebSocket|ERR_BLOCKED_BY_CLIENT/.test(e));
+    const consoleHardErrors = (report.consoleErrors || []).filter((entry) => !/WebSocket/.test(entry));
     check('no-render-exceptions', consoleHardErrors.length === 0, consoleHardErrors.join(' | '));
     report.pass = report.assertions.every((a) => a.pass);
   } catch (error) {

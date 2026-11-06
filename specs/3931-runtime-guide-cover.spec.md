@@ -15,6 +15,16 @@
 - `.omnimux-runtime-guide-art::after`：紫色海报色调 + 上下暗角，保证与左侧卡片衔接。
 - 海报使用固定锁扣配色，按既有 UI03 约定逐行标注 `exempt-ui03` 豁免理由。
 
+## 假设
+
+- 单色主题把 `--dsw-alias-brand-primary` 统一替换为文字白，才使原来的紫色渐变退化成灰雾；登录窗的水母海报图层使用固定锁扣配色，与主题无关，可直接复用。
+- 深海照片在用户网络下可加载；即使照片不可达，`LOGIN_GATE_SEA_URI` 矢量海报 + 水母兜底也能让封面成立，不会出现空白。
+
+## 证伪方式
+
+- 把 `--dsw-alias-brand-primary` 临时改回品牌紫后若右栏仍是灰雾，说明「渐变被单色主题冲淡」的根因假设不成立。
+- 运行 `node scripts/runtime-guide-web-qa.mjs`：若 `cover-photo-loaded` 在照片不可达时不红、或 `cover-offline-photo-blocked` 未观察到照片确实被阻断、或 `cover-offline-request-blocked` 在屏蔽窗口内为 0，则照片/离线兜底假设不成立。
+
 ## 非目标
 
 - 不改引导布局、文案、三选一行为与显隐判定。
