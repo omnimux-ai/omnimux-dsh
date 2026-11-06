@@ -6,9 +6,9 @@
 
 ## 目标
 
-- 仅首跑引导的「使用自己的 Key」步骤改为文本模型专用界面；设置页 `ProviderConfigPanel` 保持原多场景表单。
+- 仅首跑引导的「使用自己的 Key」步骤改为文本模型专用界面；设置页当前没有注册 BYOK 面板（见 settings-ui.md），本次不新增设置页入口，`ProviderConfigPanel` 源码保持不动。
 - 内置 7 家提供商：Anthropic、OpenAI、Azure OpenAI、Google Gemini、Ollama Cloud、SenseAudio、AIHubMix，各带默认 Base URL 与常用文本模型清单。
-- 字段：API Key（显示/隐藏）、Base URL、模型下拉；不出现素材理解/图片生成/视频生成/音频生成。
+- 字段：API Key（必填，显示/隐藏）、Base URL、模型下拉；不出现素材理解/图片生成/视频生成/音频生成。
 - 「继续」保存：PUT `/omnimux/byok/config`，写入 `models.text`、`capabilities:['text']` 与 `scenarioBindings.text`，成功后关闭引导。
 
 ## 非目标
@@ -20,13 +20,16 @@
 ## 假设
 
 - 首跑用户只需要文字对话模型；把媒体场景字段从首跑移除不会影响设置页已有的多场景配置路径。
-- 七家提供商的 OpenAI 兼容 `/v1` 协议共用同一套 BYOK 保存/绑定语义，provider id 只是记录标签与默认地址来源，不需要新的后端调用。
+- 七家提供商的 OpenAI 兼容协议共用同一套 BYOK 保存/绑定语义；Google 的 `/v1beta/openai` 根路径已是协议根，客户端不得再追加 `/v1`。
+- 文本 provider 使用独立 allowlist（`BYOK_PROVIDERS`），不并入媒体 `MEDIA_PROVIDERS`，避免改变媒体能力判定。
 
 ## 证伪方式
 
 - 若设置页打开后 BYOK 面板也不再显示素材理解/图片/视频/音频字段，说明改动越界影响了设置页，假设不成立。
 - 运行 `node scripts/runtime-guide-web-qa.mjs`：若 key 步骤出现任一媒体字段、提供商卡片数量不为 7、或 PUT 未携带 `models.text` / `scenarioBindings.text`，则实现不成立。
 - 运行 `node --test plugins/omnimux/src/byok/http.test.js`：若任一新增 provider id 被服务端拒绝，则统一协议假设不成立。
+- 运行 `node --test plugins/omnimux/src/text/chat-base-url.test.js`：若 Gemini `/v1beta/openai` 仍被追加 `/v1`，则 URL 假设不成立。
+- QA 反例：6 个 provider 时 `key-provider-count` 必红；插入媒体字段时 `key-no-media-fields` 必红；移除 `scenarioBindings` 时 `save-binds-text` 必红（见证据 falsification）。
 
 ## 验收用例
 
@@ -40,3 +43,5 @@
 - `scripts/runtime-guide-web-qa.mjs`：key 步骤 7 卡片、无媒体字段、默认模型、保存 PUT 断言与截图。
 - `plugins/omnimux/src/client/text-key-panel.test.js`：提供商目录与面板文本-only 契约。
 - `plugins/omnimux/src/byok/http.test.js`：新增 provider id 的服务端接受性。
+- `scripts/runtime-guide-web-qa.mjs`：空 Key 拒绝、显示/隐藏、provider 切换、7 卡片/无媒体字段/保存体断言与截图；报告含 head/dirty/url。
+- 守卫证伪：三条反例红 + 回退后全绿（falsification.txt）。

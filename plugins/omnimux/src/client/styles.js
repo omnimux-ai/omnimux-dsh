@@ -1839,7 +1839,7 @@ button[aria-label*="context used"] {
   gap: 8px;
 }
 .omx-key-chip {
-  height: 38px;
+  height: 32px;
   padding: 0 16px;
   border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.16)); /* exempt-ui03: chip 描边回退 */
   border-radius: 999px;
@@ -1878,7 +1878,7 @@ button[aria-label*="context used"] {
   justify-content: flex-end;
 }
 .omx-key-actions button {
-  height: 40px;
+  height: 32px;
   padding: 0 20px;
   border-radius: 10px;
   background: var(--dsw-alias-label-primary, #ffffff); /* exempt-ui03: 继续按钮底色回退 */
@@ -1889,7 +1889,7 @@ button[aria-label*="context used"] {
 .omx-key-panel input {
   box-sizing: border-box;
   width: 100%;
-  height: 40px;
+  height: 32px;
   padding: 0 12px;
   border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.16)); /* exempt-ui03: 输入框描边回退 */
   border-radius: 10px;
@@ -1901,7 +1901,7 @@ button[aria-label*="context used"] {
 #omnimux-key-model {
   box-sizing: border-box;
   width: 100%;
-  height: 40px;
+  height: 32px;
   padding: 0 12px;
   border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.16)); /* exempt-ui03: 下拉框描边回退 */
   border-radius: 10px;
@@ -1911,7 +1911,7 @@ button[aria-label*="context used"] {
 }
 @media (max-width: 720px) {
   .omx-key-card { padding: 16px; }
-  .omx-key-chip { height: 34px; padding: 0 12px; }
+  .omx-key-chip { height: 32px; padding: 0 12px; }
 }
 
 ${AGENT_PRESET_AVATAR_CSS}`

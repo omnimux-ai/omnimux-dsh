@@ -59,6 +59,10 @@ export function TextKeyPanel({ t, busy, setBusy, setError, setNotice, bindScenar
       setError(t('runtime.keyRequired'))
       return
     }
+    if (!apiKey.trim()) {
+      setError(t('runtime.apiKeyRequired'))
+      return
+    }
     setBusy(true)
     setError('')
     setNotice('')

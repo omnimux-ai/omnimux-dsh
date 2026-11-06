@@ -2,7 +2,7 @@ import { isDeepStrictEqual } from 'node:util'
 import { sendJson, readJsonBody } from '../auth/http-routes.js'
 import { assertLocalWrite, readOriginHeaders } from '../apps/origin.js'
 import { findDescriptor } from '../catalog/composer-sync.js'
-import { RUNTIME_MODES, MEDIA_PROVIDERS } from '../settings/runtime-mode.js'
+import { RUNTIME_MODES, BYOK_PROVIDERS } from '../settings/runtime-mode.js'
 import { parseSettingsSection } from '../settings/schema.js'
 import { requestRejection } from '../host/request-authorization.js'
 import { readScenarioSettings, resolveScenarioBindings, resolveScenarioChoice } from '../settings/runtime-mode.js'
@@ -63,7 +63,7 @@ function assertLocal(req, res) {
 
 function parseProvider(value) {
   const provider = str(value).toLowerCase()
-  if (!MEDIA_PROVIDERS.includes(provider)) fail(400, '供应商不能为空或未知')
+  if (!BYOK_PROVIDERS.includes(provider)) fail(400, '供应商不能为空或未知')
   return provider
 }
 
@@ -142,7 +142,7 @@ function storedMetadata(item) {
 
 function records(value) {
   return (Array.isArray(value.byokProviders) ? value.byokProviders : [])
-    .filter((item) => MEDIA_PROVIDERS.includes(str(item?.provider).toLowerCase()))
+    .filter((item) => BYOK_PROVIDERS.includes(str(item?.provider).toLowerCase()))
 }
 
 function targetRecord(value, provider) {
@@ -157,7 +157,7 @@ function bindingsView(value) {
     const binding = object(object(value.scenarioBindings)[scenario])
     if (['official', 'agent', 'byok', 'pending'].includes(binding.channel)) {
       bindings[scenario] = { channel: binding.channel }
-      if (MEDIA_PROVIDERS.includes(binding.provider)) bindings[scenario].provider = binding.provider
+      if (BYOK_PROVIDERS.includes(binding.provider)) bindings[scenario].provider = binding.provider
     }
   }
   return bindings
@@ -225,7 +225,7 @@ export function registerByokRoutes(webServer, deps) {
   const credentialVersion = (provider) => credentialGenerations.get(provider) || 0
   const stopCredentialEvents = typeof deps.onCredentialUpdated === 'function'
     ? deps.onCredentialUpdated((ref) => {
-        const provider = MEDIA_PROVIDERS.find((id) => credentialRef(id) === ref)
+        const provider = BYOK_PROVIDERS.find((id) => credentialRef(id) === ref)
         if (provider) {
           const version = credentialVersion(provider) + 1
           credentialGenerations.set(provider, version)
@@ -240,7 +240,7 @@ export function registerByokRoutes(webServer, deps) {
   }
 
   async function configView(settings, credentials) {
-    const credentialSnapshot = MEDIA_PROVIDERS.map((provider) => credentialVersion(provider))
+    const credentialSnapshot = BYOK_PROVIDERS.map((provider) => credentialVersion(provider))
     const snapshot = await readSnapshot(settings)
     const providers = []
     for (const item of records(snapshot.value)) {
@@ -249,11 +249,11 @@ export function registerByokRoutes(webServer, deps) {
     }
     const provider = str(snapshot.value.runtimeMediaProvider).toLowerCase()
     const selected = providers.find((item) => item.provider === provider)
-    const state = selected || (MEDIA_PROVIDERS.includes(provider)
+    const state = selected || (BYOK_PROVIDERS.includes(provider)
       ? await describeCredential(credentials, provider)
       : { configured: false, source: null, writable: false })
     const after = await readSnapshot(settings)
-    if (after.revision !== snapshot.revision || MEDIA_PROVIDERS.some((provider, index) => credentialVersion(provider) !== credentialSnapshot[index])) fail(409, '配置或密钥正在变化，请重新读取')
+    if (after.revision !== snapshot.revision || BYOK_PROVIDERS.some((provider, index) => credentialVersion(provider) !== credentialSnapshot[index])) fail(409, '配置或密钥正在变化，请重新读取')
     return {
       ...describeByokConfig(snapshot.value, state.configured), verified: false,
       configured: state.configured, source: state.source, writable: state.writable,
