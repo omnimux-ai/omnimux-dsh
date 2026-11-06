@@ -20,6 +20,12 @@ export const DEFAULT_PROVIDER_ENDPOINTS = Object.freeze({
   openai: 'https://api.openai.com/v1',
   openrouter: 'https://openrouter.ai/api/v1',
   siliconflow: 'https://api.siliconflow.cn/v1',
+  anthropic: 'https://api.anthropic.com',
+  azure: 'https://your-resource.openai.azure.com/openai/v1',
+  google: 'https://generativelanguage.googleapis.com/v1beta/openai',
+  ollama: 'https://ollama.com/v1',
+  senseaudio: 'https://api.senseaudio.cn/v1',
+  aihubmix: 'https://aihubmix.com/v1',
 })
 
 /** Legacy view. Provider records and confirmed state are added by the HTTP route. */

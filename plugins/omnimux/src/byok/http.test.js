@@ -162,6 +162,20 @@ describe('byok routes', () => {
     assert.equal(res.body().hasKey, true)
     assert.equal(res.body().saved, true)
   })
+  it('PUT accepts the text-model provider presets used by the first-run key step', async () => {
+    for (const provider of ['anthropic', 'azure', 'google', 'ollama', 'senseaudio', 'aihubmix']) {
+      const settings = storedSettings()
+      const credentials = fakeCredentials('')
+      const handlers = register({ settings, credentials })
+      const res = fakeRes()
+      await handlers.get('/omnimux/byok/config')(fakeReq('PUT', {
+        provider, endpoint: `https://${provider}.example/v1`, models: { text: 'claude-opus-5' }, apiKey: 'sk-new',
+        capabilities: ['text'], scenarioBindings: { text: { channel: 'byok', provider } }, expectedRevision: 1,
+      }), res)
+      assert.equal(res.status, 200, provider)
+      assert.equal(res.body().saved, true, provider)
+    }
+  })
   it('PUT without a key keeps the same-provider same-origin stored one', async () => {
     const settings = storedSettings()
     const credentials = fakeCredentials('sk-old')

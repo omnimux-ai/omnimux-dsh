@@ -1766,6 +1766,113 @@ button[aria-label*="context used"] {
   white-space: nowrap;
 }
 
+/* First-run "use your own key" panel: text conversation model only */
+.omx-key-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+.omx-key-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 22px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.14)); /* exempt-ui03: 面板描边回退 */
+  border-radius: 14px;
+  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.04)); /* exempt-ui03: 面板底色回退 */
+}
+.omx-key-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.omx-key-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+.omx-key-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.omx-key-chip {
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.16)); /* exempt-ui03: chip 描边回退 */
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.05)); /* exempt-ui03: chip 底色回退 */
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+}
+.omx-key-chip[aria-pressed='true'] {
+  border-color: var(--dsw-alias-label-primary, #ffffff); /* exempt-ui03: 选中 chip 描边回退 */
+  background: var(--dsw-alias-label-primary, #ffffff); /* exempt-ui03: 选中 chip 底色回退 */
+  color: var(--dsw-alias-bg-base, #0b0b0d); /* exempt-ui03: 选中 chip 文字回退 */
+}
+.omx-key-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.omx-key-label {
+  font-size: 13px;
+  color: var(--dsw-alias-label-secondary);
+}
+.omx-key-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.omx-key-input-row > *:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.omx-key-reveal {
+  flex: none;
+}
+.omx-key-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.omx-key-actions button {
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 10px;
+  background: var(--dsw-alias-label-primary, #ffffff); /* exempt-ui03: 继续按钮底色回退 */
+  color: var(--dsw-alias-bg-base, #0b0b0d); /* exempt-ui03: 继续按钮文字回退 */
+  font-size: 14px;
+  font-weight: 600;
+}
+.omx-key-panel input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.16)); /* exempt-ui03: 输入框描边回退 */
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.05)); /* exempt-ui03: 输入框底色回退 */
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+}
+#omnimux-key-quick-fill,
+#omnimux-key-model {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.16)); /* exempt-ui03: 下拉框描边回退 */
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.05)); /* exempt-ui03: 下拉框底色回退 */
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+}
+@media (max-width: 720px) {
+  .omx-key-card { padding: 16px; }
+  .omx-key-chip { height: 34px; padding: 0 12px; }
+}
+
 ${AGENT_PRESET_AVATAR_CSS}`
 
 export function injectHubStyles() {

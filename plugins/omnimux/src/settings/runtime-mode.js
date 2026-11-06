@@ -3,7 +3,7 @@
 export const RUNTIME_MODES = Object.freeze(['official', 'agent', 'key'])
 
 /** Supported native media generation providers */
-export const MEDIA_PROVIDERS = Object.freeze(['fal', 'openai', 'openrouter', 'siliconflow', 'custom'])
+export const MEDIA_PROVIDERS = Object.freeze(['fal', 'openai', 'openrouter', 'siliconflow', 'custom', 'anthropic', 'azure', 'google', 'ollama', 'senseaudio', 'aihubmix'])
 
 export const DEFAULT_MEDIA_MODELS = Object.freeze({
   image: 'fal-ai/flux/dev',
