@@ -91,7 +91,7 @@ export function RuntimeGuideGate({ t, scope }) {
     (
       <div className="omnimux-login-gate-backdrop" data-omnimux-runtime-guide="">
         <div
-          className={`omnimux-runtime-guide-sheet${step === 'choose' ? '' : ' omnimux-runtime-guide-sheet--single'}`}
+          className="omnimux-runtime-guide-sheet omnimux-runtime-guide-sheet--single"
           role="dialog"
           aria-modal="true"
           aria-labelledby="omnimux-runtime-guide-headline"
@@ -180,7 +180,6 @@ export function RuntimeGuideGate({ t, scope }) {
             {error ? <p className="omnimux-login-gate-error">{error}</p> : null}
             {notice ? <p className="omnimux-models-card__desc">{notice}</p> : null}
           </section>
-          {step === 'choose' ? <div className="omnimux-runtime-guide-art" aria-hidden="true" /> : null}
         </div>
       </div>
     ),
