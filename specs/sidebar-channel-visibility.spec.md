@@ -86,3 +86,8 @@
   - 原断言：源码正则要求 `RELEASE_CHANNEL === 'production' && isAlphaEntry(id)`。
   - 必须改的理由：评审要求生产渠道运行时兜底分支可被单测切换验证，守卫改用 `activeChannel()`（`channelForTests ?? RELEASE_CHANNEL`），原正则与实现漂移。
   - 新期望证据：正则匹配 `activeChannel() === 'production' && isAlphaEntry(id)`，并保留「读 release-channel.json」「复用 isAlphaEntry」断言。
+
+- `plugins/omnimux/src/client/sidebar-coordinator.test.js` :: `正式版渠道：Alpha 行注册不挂 DOM 且菜单只剩非 Alpha 项`
+  - 原断言：Alpha 行与 clip 行 `parentElement === null`、菜单 4 项。两渠道都成立，无法区分生产守卫是否生效（评审指出「删掉守卫仍绿」）。
+  - 必须改的理由：A4 要求证明 production 下 Alpha 行根本不创建；需断言 `create` 未被调用、收敛集合不含 Alpha id，并覆盖全部四个 Alpha（accounts/publish/analytics/forms）。
+  - 新期望证据：production 下 `create` 调用次数为 0，`getConvergedRowsForTests()` 不含 `omnimux-accounts/publish/analytics/forms-entry`；菜单仍为 4 项。

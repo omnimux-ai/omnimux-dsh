@@ -16,6 +16,7 @@ import {
   SIDEBAR_GLOBAL,
   activateExploreItem,
   filterExploreItemsForChannel,
+  getConvergedRowsForTests,
   installSidebarGlobal,
   resolveExploreMenuItems,
   setReleaseChannelForTests,
@@ -370,26 +371,38 @@ test('发布渠道过滤：开发版保留全部入口，正式版只过滤 Alph
   assert.equal(resolveExploreMenuItems().length, EXPLORE_MENU_ITEMS.length, '开发版默认渠道返回全部入口')
 })
 
-test('正式版渠道：Alpha 行注册不挂 DOM 且菜单只剩非 Alpha 项', async () => {
+test('正式版渠道：Alpha 行注册不创建元素、不进收敛集合，菜单只剩非 Alpha 项', async () => {
   setup()
   installSidebarGlobal()
   const api = SIDEBAR_GLOBAL()
   setReleaseChannelForTests('production')
-  const accountsBtn = document.createElement('button')
-  const publishBtn = document.createElement('button')
-  const clipBtn = document.createElement('button')
-  const disposeAccounts = api.register({ id: 'omnimux-accounts-entry', rank: 3, create: () => accountsBtn })
-  const disposePublish = api.register({ id: 'omnimux-publish-entry', rank: 4, create: () => publishBtn })
-  const disposeClip = api.register({ id: 'omnimux-clip-entry', rank: 5, create: () => clipBtn })
+  const created = []
+  const makeRow = (name) => api.register({
+    id: `omnimux-${name}-entry`,
+    rank: 3,
+    create: () => {
+      created.push(name)
+      return document.createElement('button')
+    },
+  })
+  const alphaDisposers = ['accounts', 'publish', 'analytics', 'forms'].map(makeRow)
+  let clipCreated = 0
+  const disposeClip = api.register({
+    id: 'omnimux-clip-entry',
+    rank: 5,
+    create: () => { clipCreated += 1; return document.createElement('button') },
+  })
   try {
     api.place()
-    assert.equal(accountsBtn.parentElement, null, '正式版 Alpha 账号行不得挂 DOM')
-    assert.equal(publishBtn.parentElement, null, '正式版 Alpha 发布行不得挂 DOM')
-    assert.equal(clipBtn.parentElement, null, '非 Alpha 收敛项仍不占独立行')
+    assert.deepEqual(created, [], '正式版不得为任何 Alpha 行创建元素（删掉守卫该断言会变红）')
+    const converged = getConvergedRowsForTests()
+    for (const name of ['accounts', 'publish', 'analytics', 'forms']) {
+      assert.equal(converged.has(`omnimux-${name}-entry`), false, `正式版 Alpha ${name} 不得进入收敛集合`)
+    }
+    assert.equal(clipCreated, 1, '非 Alpha 收敛项仍正常创建以进入「更多」菜单')
     assert.deepEqual(resolveExploreMenuItems().map((item) => item.label), ['应用', '视频剪辑', '手机管理', '社交采收'])
   } finally {
-    disposeAccounts()
-    disposePublish()
+    alphaDisposers.forEach((dispose) => dispose())
     disposeClip()
     setReleaseChannelForTests('development')
   }

@@ -758,7 +758,8 @@ function createApi() {
       // 正式版渠道只暴露非 Alpha 入口：Alpha 插件在发布包里通常已不加载，
       // 这里兜底不创建元素、不挂载、不进「更多」菜单（开发版照旧全开）。
       if (activeChannel() === 'production' && isAlphaEntry(id)) {
-        return () => {}
+        // 不创建元素、不挂载、不进「更多」菜单；注销时清掉 seen 以保持幂等。
+        return () => { seen.delete(id) }
       }
 
       // 收敛至探索菜单的插件：包含所有 Alpha 内测插件与垂直插件
