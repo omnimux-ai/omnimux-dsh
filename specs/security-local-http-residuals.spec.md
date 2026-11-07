@@ -41,14 +41,14 @@
 - helper 级：`assertLocalWrite` 在 `host` 存在时拒绝端口不匹配，`same-site` 与 `cross-site` 均拒绝，同源/无 Origin native 调用保留。
 - 路由级：新增 `omnimux-inspiration` 安全路由测试，经 `apply`/registered handler 验证 browser origin 的 OPTIONS 无 CORS、扩展 origin 精确 CORS、foreign/same-site GET/POST 403。
 - 官方云灵感：路由级 GET 带 foreign origin 返回 403，同源/无 Origin 本地读取保持可用。
-- apps：直接 `createAppsRoutes` 缺少 `getConnection` 时返回 503；`registerAppsApiRoutes` 同样 fail closed。
+- apps：生产挂载入口 `registerAppsApiRoutes` 缺少 `getConnection` 时 fail closed；`createAppsRoutes` 是测试内构造 seam，不作为生产挂载入口。
 - 所有相关包测试通过；不把既有 `agents/local.test.js` 环境失败或 `AppWorkspaceView.tsx` 既有类型错误算作本次回归。
 
 ## 边界
 
 - **总是做**：提交前跑相关测试；保留已有正常同源/扩展路径；错误码保持稳定。
 - **先问**：改扩展 ID/pairing token 策略、改公开 bridge-config CORS、新增依赖或改 CI。
-- **绝不做**：把已安装扩展视为任意可信白名单之外的放宽、删除既有安全断言、写生产 `~/.omnimux`。
+- **绝不做**：放宽到非扩展协议的外部网页、删除既有安全断言、写生产 `~/.omnimux`。
 
 ## 新用户基线
 
@@ -56,8 +56,8 @@
 
 ## 假设
 
-假设 1：生产宿主始终通过 `ctx.get('connection')` 提供 connection 服务；开发/单测必须显式注入允许连接的 seam，不允许缺省放行。
-假设 2：桌面 UI 与官方扩展是仅有的可信本地写调用方；普通外部网页和其他 localhost 端口不是可信来源，必须拒绝。
+假设 1：生产宿主始终通过 `ctx.get('connection')` 提供 connection 服务；`createAppsRoutes` 直接工厂只作为测试内构造 seam，生产挂载统一走 `registerAppsApiRoutes`，不能把该工厂当成第二个生产入口。
+假设 2：桌面 UI 与用户主动安装的浏览器扩展是可信本地写调用方；普通外部网页和其他 localhost 端口不是可信来源，必须拒绝。官方扩展 ID/pairing token 白名单不在本 issue，另开后续任务。
 假设 3：官方云灵感 GET 可以按本地请求来源判定；同源 UI 与无 Origin 的本地 native 调用需要保留。
 
 ## 证伪方式
