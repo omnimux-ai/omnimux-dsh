@@ -1873,7 +1873,6 @@ button[aria-label*="context used"] {
   color: var(--dsw-alias-label-primary);
   font-size: 14px;
 }
-#omnimux-key-quick-fill,
 #omnimux-key-model {
   box-sizing: border-box;
   width: 100%;
