@@ -1,0 +1,50 @@
+{
+  "task": "Issue #3985：「AI 网红工作室」官方「更多」菜单行显示 Alpha 角标",
+  "codeHead": "78cf5d1c6e54426c0079c3bd1202669c6966edd8",
+  "verifiedAt": "2026-11-07T09:11:58.137Z",
+  "environment": {
+    "mode": "ui",
+    "scope": "smoke",
+    "appPort": 49387,
+    "cdpPort": 49394
+  },
+  "result": "pass",
+  "browserJourneyAssertions": {
+    "journey:more-menu-row-found": true,
+    "journey:more-menu-opened": true,
+    "journey:avatar-item-present": true,
+    "journey:avatar-alpha-badge": true
+  },
+  "avatarMenuItem": {
+    "text": "AI网红工作室Alpha",
+    "alphaBadge": true,
+    "badgeText": "Alpha"
+  },
+  "moreMenuItems": [
+    "全域社媒操盘手",
+    "浏览更多插件",
+    "创建你的插件",
+    "自动化任务",
+    "应用",
+    "视频剪辑",
+    "发布Alpha",
+    "账号Alpha",
+    "手机管理",
+    "数据分析Alpha",
+    "任务表单Alpha",
+    "社交采收",
+    "AI网红工作室Alpha"
+  ],
+  "screenshot": "docs/evidence/avatar-alpha-badge-menu.png",
+  "unitTests": [
+    "plugins/omnimux-avatar/src/client/avatar-more-menu.test.mjs：10/10 pass",
+    "plugins/omnimux/src/client/sidebar-coordinator.test.js：22/22 pass",
+    "tests/e2e/avatar-alpha-badge.e2e.test.mjs：1/1 pass"
+  ],
+  "staticChecks": [
+    "verify-stage-contracts PASS",
+    "anti-slop 3/3"
+  ],
+  "notes": "官方「更多」菜单中「AI 网红工作室」行文案后出现 Alpha 角标；判定读中枢 window.__omnimuxSidebar.isAlphaEntry（plugin-lifecycle.json 单一真源），title 取同一 ALPHA_DESCRIPTION。",
+  "updatedAt": "2026-11-07T09:12:31.255392+00:00"
+}
