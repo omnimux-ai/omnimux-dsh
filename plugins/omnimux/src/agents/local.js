@@ -115,6 +115,29 @@ export const KNOWN_AGENTS = Object.freeze([
   },
 ])
 
+function extraBinDirs(home, fsImpl) {
+  const dirs = [
+    path.join(home, '.local', 'bin'),
+    path.join(home, '.bun', 'bin'),
+    path.join(home, '.kimi-code', 'bin'),
+    path.join(home, '.grok', 'bin'),
+    path.join(home, '.codeium', 'windsurf', 'bin'),
+    path.join(home, '.volta', 'bin'),
+    path.join(home, '.npm-global', 'bin'),
+    path.join(home, 'Library', 'pnpm'),
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+  ]
+  try {
+    const nvmRoot = path.join(home, '.nvm', 'versions', 'node')
+    const versions = fsImpl.readdirSync(nvmRoot).sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
+    for (const version of versions) dirs.push(path.join(nvmRoot, version, 'bin'))
+  } catch {
+    // No nvm install; ignore.
+  }
+  return dirs
+}
+
 /**
  * Resolve an executable name to the absolute path PATH would pick. A missing
  * name is an empty string, never a guess; an explicit path is resolved as-is.
@@ -151,7 +174,9 @@ export function resolveBinPath(bin, options = {}) {
     }
     return executable(raw) ? realpath(raw) : ''
   }
-  const dirs = String(env.PATH || '').split(platform === 'win32' ? ';' : ':').filter(Boolean)
+  const home = env.HOME || os.homedir()
+  const pathDirs = String(env.PATH || '').split(platform === 'win32' ? ';' : ':').filter(Boolean)
+  const dirs = [...new Set([...pathDirs, ...extraBinDirs(home, fsImpl)])]
   const extensions = platform === 'win32' ? ['.exe', '.cmd', '.bat', ''] : ['']
   for (const dir of dirs) {
     for (const extension of extensions) {
@@ -270,7 +295,18 @@ export async function probeAgentBin(bin, run = execFileAsync) {
  */
 export async function scanLocalAgents(run = execFileAsync, options = {}) {
   const rows = await Promise.all(KNOWN_AGENTS.map(async (agent) => {
-    const probe = await probeAgentBin(agent.bin, run)
+    const resolved = resolveBinPath(agent.bin, options)
+    const probeRun = resolved
+      ? (file, args, opts = {}) => run(file, args, {
+          ...opts,
+          env: {
+            ...process.env,
+            PATH: [path.dirname(file), ...extraBinDirs(options.env?.HOME || os.homedir(), options.fsImpl || fs), process.env.PATH]
+              .filter(Boolean).join(path.delimiter),
+          },
+        })
+      : run
+    const probe = await probeAgentBin(resolved || agent.bin, probeRun)
     const models = probeAgentModels(agent.id, options)
     return {
       id: agent.id,
