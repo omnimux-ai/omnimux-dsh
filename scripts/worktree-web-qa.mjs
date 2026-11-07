@@ -12,7 +12,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
@@ -1223,6 +1223,9 @@ export const VIEWER_CARD_SCENARIO = 'viewer-card';
 export const VIEWER_CARD_EXPECTED_PATH = '/tmp/qa-viewer-card.mp4';
 export const VIEWER_CARD_EXPECTED_KEYS = Object.freeze(['display_file', 'read_image']);
 
+/** 发布资产卡片网格场景：真实 AssetCard 组件 + 真实样式，行为断言 + 截图。 */
+export const PUBLISH_CARD_SCENARIO = 'publish-cards';
+
 /** 把验收入口编译成单文件 IIFE（React 一并打包，页面无需模块表）。 */
 export async function bundleViewerCardPage(root = REPO_ROOT) {
   const entryPath = join(root, 'scripts', 'viewer-card-qa-entry.mjs');
@@ -1424,6 +1427,172 @@ export async function runViewerCardQa(options = {}) {
   return report;
 }
 
+/** 把发布卡片验收入口编译成单文件 IIFE（React 打包；dsh-ui-kit / 原语以桩注入以保证离线可渲）。 */
+export async function bundlePublishCardPage(root = REPO_ROOT) {
+  const entryPath = join(root, 'scripts', 'publish-card-qa-entry.mjs');
+  assert.ok(existsSync(entryPath), `发布卡片验收入口不存在: ${entryPath}`);
+  const hubRequire = createRequire(join(root, 'plugins/omnimux/package.json'));
+  const { build } = hubRequire('esbuild');
+  const buildResult = await build({
+    absWorkingDir: root,
+    entryPoints: [entryPath],
+    bundle: true,
+    format: 'iife',
+    jsx: 'automatic',
+    platform: 'browser',
+    define: { 'process.env.NODE_ENV': '"production"' },
+    write: false,
+    nodePaths: [join(root, 'plugins', 'omnimux-publish', 'node_modules'), join(root, 'node_modules')],
+    loader: { '.woff': 'empty', '.woff2': 'empty', '.ttf': 'empty', '.css': 'empty', '.svg': 'text', '.png': 'empty' },
+    plugins: [{
+      name: 'publish-card-stubs',
+      setup(ctx) {
+        ctx.onResolve({ filter: /^dsh-ui-kit$/ }, () => ({ path: 'kit', namespace: 'pcs' }));
+        ctx.onResolve({ filter: /^@deepseek-ai\/dsh-client-ui-primitives$/ }, () => ({ path: 'prim', namespace: 'pcs' }));
+        ctx.onLoad({ filter: /.*/, namespace: 'pcs' }, (loadArgs) => ({
+          contents: loadArgs.path === 'prim'
+            ? 'export function Menu() { return null }'
+            : "import { createElement } from 'react';\nexport function Badge({ children, className }) { return createElement('span', { className }, children) }\nexport function IconButton({ children, ...props }) { return createElement('button', props, children) }\nexport function IconEllipsisOutline16(props) { return createElement('svg', props) }",
+          loader: 'js',
+          resolveDir: root,
+        }));
+      },
+    }],
+    outdir: 'dist',
+    logLevel: 'silent',
+  });
+  assert.ok(buildResult.outputFiles && buildResult.outputFiles.length > 0, '发布卡片验收入口编译产物为空');
+  return buildResult.outputFiles[0].text;
+}
+
+/** 发布卡片验收页：一个 760px 容器，脚本自证状态挂到 `window.__publishCardQa`。 */
+export function generatePublishCardHtml(bundledJs) {
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>OmniMux Worktree QA - 发布资产卡片</title>
+  <style>
+    :root { --dsw-alias-bg-base:#1b1b1f; --dsw-alias-bg-layer-2:#232429; --dsw-alias-border-l1:#2f3036; --dsw-alias-border-l2:#3a3b42; --dsw-alias-label-primary:#f2f3f5; --dsw-alias-label-secondary:#a8abb3; --dsw-alias-label-tertiary:#71757e; --dsw-alias-thumb-bg:#2b2c31; --dsw-alias-backdrop-bg:rgba(0,0,0,0.65); }
+    body { background: #0f1117; margin: 0; padding: 24px; font-family: -apple-system, "PingFang SC", sans-serif; }
+    #card-root { width: 760px; }
+  </style>
+</head>
+<body>
+  <div id="card-root"></div>
+  <script>${bundledJs}</script>
+</body>
+</html>`;
+}
+
+/** 运行发布卡片验收：真实内核渲染真实 AssetCard，行为断言 + 截图。 */
+export async function runPublishCardQa(options = {}) {
+  const root = options.root || REPO_ROOT;
+  const runId = randomUUID();
+  const evidenceDir = options.evidenceDir || join(root, 'docs', 'evidence');
+  mkdirSync(evidenceDir, { recursive: true });
+
+  const report = {
+    runId, scenario: PUBLISH_CARD_SCENARIO, plugin: 'omnimux-publish',
+    head: (() => { try { return spawnSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim(); } catch { return null; } })(),
+    startedAt: new Date().toISOString(), completedAt: null,
+    pass: false, serverPort: null, cdpPort: null, assertions: [], screenshot: null, errors: [],
+  };
+
+  let server = null, chromeProc = null, cdpWs = null;
+  try {
+    const bundledJs = await bundlePublishCardPage(root);
+    report.assertions.push({ name: 'bundle-publish-card-page', pass: true, size: bundledJs.length });
+
+    const mediaPng = (() => {
+      const img = new PNG({ width: 480, height: 320 });
+      for (let y = 0; y < 320; y++) for (let x = 0; x < 480; x++) {
+        const i = (480 * y + x) << 2;
+        img.data[i] = 40 + Math.round((x / 480) * 150); img.data[i + 1] = 70 + Math.round((y / 320) * 120); img.data[i + 2] = 150; img.data[i + 3] = 255;
+      }
+      return PNG.sync.write(img);
+    })();
+    const htmlContent = generatePublishCardHtml(bundledJs);
+    server = http.createServer((req, res) => {
+      if ((req.url || '').startsWith('/omnimux/publish/media/content')) {
+        if (/bad/.test(req.url || '')) { res.writeHead(404); res.end('not found'); return; }
+        res.writeHead(200, { 'Content-Type': 'image/png' }); res.end(mediaPng); return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(htmlContent);
+    });
+    await new Promise((r) => server.listen(0, '127.0.0.1', r));
+    report.serverPort = server.address().port;
+    report.assertions.push({ name: 'ephemeral-server-listen', pass: true, port: report.serverPort });
+
+    chromeProc = spawn(findChromePath(), ['--headless=new', '--remote-debugging-port=0', '--no-first-run', '--no-default-browser-check', '--disable-gpu', '--window-size=1280,900', 'about:blank']);
+    const cdpPort = await new Promise((resolvePort, rejectPort) => {
+      const timer = setTimeout(() => rejectPort(new Error('启动无头 Chrome 超时（5秒未响应）')), 5000);
+      chromeProc.stderr.on('data', (chunk) => { const m = chunk.toString().match(/DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\//); if (m) { clearTimeout(timer); resolvePort(Number(m[1])); } });
+      chromeProc.on('error', (e) => { clearTimeout(timer); rejectPort(e); });
+    });
+    report.cdpPort = cdpPort;
+    report.assertions.push({ name: 'ephemeral-cdp-listen', pass: true, port: report.cdpPort });
+
+    const targets = await (await fetch(`http://127.0.0.1:${cdpPort}/json/list`)).json();
+    const pageTarget = targets.find((t) => t.type === 'page');
+    assert.ok(pageTarget && pageTarget.webSocketDebuggerUrl, '未找到有效的 Chrome Page 调试目标');
+    cdpWs = new WebSocket(pageTarget.webSocketDebuggerUrl);
+    let msgId = 0;
+    const sendCdp = (method, params = {}) => new Promise((resolveCdp, rejectCdp) => {
+      const id = ++msgId;
+      const onMsg = (event) => { const m = JSON.parse(event.data); if (m.id === id) { cdpWs.removeEventListener('message', onMsg); if (m.error) rejectCdp(new Error(`CDP [${method}] 失败`)); else resolveCdp(m.result || m); } };
+      cdpWs.addEventListener('message', onMsg); cdpWs.send(JSON.stringify({ id, method, params }));
+    });
+    await new Promise((resolveWs, rejectWs) => { cdpWs.addEventListener('open', resolveWs); cdpWs.addEventListener('error', rejectWs); });
+    await sendCdp('Page.enable'); await sendCdp('Runtime.enable');
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
+
+    const readState = async () => {
+      const result = await sendCdp('Runtime.evaluate', { expression: 'JSON.stringify(window.__publishCardQa || {})', returnByValue: true });
+      return JSON.parse(result.result?.value || '{}');
+    };
+    let state = {};
+    for (let attempt = 0; attempt < 60; attempt += 1) { state = await readState(); if (state.done === true || state.error) break; await new Promise((r) => setTimeout(r, 100)); }
+    if (state.error) { report.errors.push(`发布卡片客户端渲染失败: ${state.error}`); }
+    report.assertions.push({ name: 'publish-client-render', pass: !state.error });
+    report.assertions.push({ name: 'card-count-4', pass: state.cardCount === 4, cardCount: state.cardCount });
+    if (state.cardCount !== 4) report.errors.push(`卡片数量应为 4，实为 ${state.cardCount}`);
+    report.assertions.push({ name: 'cards-equal-height', pass: state.equalHeights === true, heights: state.heights });
+    if (state.equalHeights !== true) report.errors.push(`卡片高度不一致: ${JSON.stringify(state.heights)}`);
+    report.assertions.push({ name: 'cover-media-src', pass: Array.isArray(state.imgSrcs) && state.imgSrcs.includes('/omnimux/publish/media/content?id=cover-1'), imgSrcs: state.imgSrcs });
+    if (!(Array.isArray(state.imgSrcs) && state.imgSrcs.includes('/omnimux/publish/media/content?id=cover-1'))) report.errors.push('封面缩略图 src 未按 cover_media_id 渲染');
+    report.assertions.push({ name: 'image-first-media-fallback', pass: Array.isArray(state.imgSrcs) && state.imgSrcs.includes('/omnimux/publish/media/content?id=first-img') });
+    if (!(Array.isArray(state.imgSrcs) && state.imgSrcs.includes('/omnimux/publish/media/content?id=first-img'))) report.errors.push('图文无封面未用 media_ids[0] 兜底');
+    report.assertions.push({ name: 'onerror-fallback-to-icon', pass: state.onErrorFellBack === true, typeIconCount: state.typeIconCount });
+    if (state.onErrorFellBack !== true) report.errors.push('坏封面未在 onError 后回退类型图标');
+    report.assertions.push({ name: 'no-exempt-text', pass: state.hasExempt === false });
+    if (state.hasExempt !== false) report.errors.push('卡片出现 exempt-ui04 乱码');
+    report.assertions.push({ name: 'no-emoji', pass: state.hasEmoji === false });
+    if (state.hasEmoji !== false) report.errors.push('卡片出现 Emoji 图标');
+    report.assertions.push({ name: 'client-self-verdict', pass: state.ok === true, text: String(state.text || '').slice(0, 160) });
+    if (state.ok !== true) report.errors.push('客户端自证未通过');
+
+    const shotRes = await sendCdp('Page.captureScreenshot', { format: 'png' });
+    const pngBuffer = Buffer.from(shotRes.data, 'base64');
+    const shotPath = join(evidenceDir, 'publish-card-qa.png');
+    writeFileSync(shotPath, pngBuffer);
+    const dims = assertPng(pngBuffer);
+    report.screenshot = { path: shotPath, width: dims.width, height: dims.height, bytes: pngBuffer.length };
+    report.assertions.push({ name: 'screenshot-png-verified', pass: true, dimensions: dims, bytes: pngBuffer.length });
+
+    report.pass = report.errors.length === 0 && report.assertions.every((a) => a.pass);
+  } catch (error) {
+    report.errors.push(String(error?.message || error));
+  } finally {
+    report.completedAt = new Date().toISOString();
+    try { if (cdpWs) cdpWs.close(); } catch { /* 关闭失败不影响结论 */ }
+    try { if (chromeProc) chromeProc.kill('SIGKILL'); } catch { /* 同上 */ }
+    try { if (server) server.close(); } catch { /* 同上 */ }
+    writeFileSync(join(evidenceDir, 'publish-card-qa-report.json'), JSON.stringify(report, null, 2) + '\n');
+  }
+  return report;
+}
+
 async function main() {
   const { positionals } = parseArgs({
     args: process.argv.slice(2),
@@ -1475,6 +1644,21 @@ async function main() {
       console.log(`✅ PASS (${elapsed}s, 端口: 服务 ${rep.serverPort} / 调试 ${rep.cdpPort})`);
       console.log(`   卡片渲染: 运行中的 display_file 调用显示路径 ${VIEWER_CARD_EXPECTED_PATH}`);
       console.log('   证据归档: docs/evidence/viewer-card-qa-report.json + viewer-card-qa.png');
+      return;
+    }
+    console.log(`❌ FAIL (${elapsed}s) -> ${[...rep.errors, ...failed].join('; ')}`);
+    process.exit(1);
+  }
+
+  if (stageArg === PUBLISH_CARD_SCENARIO) {
+    console.log('\n🚀 [Worktree Web QA] 启动发布资产卡片验收（真实内核 · 动态端口）...');
+    const started = Date.now();
+    const rep = await runPublishCardQa();
+    const elapsed = ((Date.now() - started) / 1000).toFixed(2);
+    const failed = rep.assertions.filter((a) => !a.pass).map((a) => a.name);
+    if (rep.pass) {
+      console.log(`✅ PASS (${elapsed}s, 端口: 服务 ${rep.serverPort} / 调试 ${rep.cdpPort})`);
+      console.log('   证据归档: docs/evidence/publish-card-qa-report.json + publish-card-qa.png');
       return;
     }
     console.log(`❌ FAIL (${elapsed}s) -> ${[...rep.errors, ...failed].join('; ')}`);

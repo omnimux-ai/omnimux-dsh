@@ -2,6 +2,7 @@ import React from 'react'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from 'dsh-ui-kit'
 import { TABLE_COLUMNS, formatMetric } from '../metrics-display.js'
 import { displayStatus, statusText } from '../status-display.js'
+import { IconTikTokMusic } from '../icons/cards.js'
 import { RowActionMenu } from './RowActionMenu.jsx'
 
 /**
@@ -174,7 +175,15 @@ export function RecordsTable({
                     {platforms.length > 0 ? (
                       platforms.map((p, idx) => (
                         <span key={idx} className={`omnimux-publish-plat-tag ${p}`} title={p}>
-                          {p === 'tiktok' ? '🎵' : p === 'xiaohongshu' || p === 'xhs' ? '小' : p === 'wechat_channels' || p === 'sph' ? '视' : p.slice(0, 1).toUpperCase()} // exempt-ui04: 历史存量待迁移为矢量SVG
+                          {p === 'tiktok' ? (
+                            <IconTikTokMusic size={12} />
+                          ) : p === 'xiaohongshu' || p === 'xhs' ? (
+                            '小'
+                          ) : p === 'wechat_channels' || p === 'sph' ? (
+                            '视'
+                          ) : (
+                            p.slice(0, 1).toUpperCase()
+                          )}
                         </span>
                       ))
                     ) : (

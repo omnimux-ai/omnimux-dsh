@@ -285,6 +285,7 @@
     "patch-asar-agent-presets.mjs",
     "patch-asar-agent-presets.test.mjs",
     "plugin-lifecycle.mjs",
+    "publish-card-qa-entry.mjs",
     "qa-conversation-ratio-e2e.mjs",
     "qa-independent-e2e.mjs",
     "qa-verify-preset-workflow-standards.mjs",

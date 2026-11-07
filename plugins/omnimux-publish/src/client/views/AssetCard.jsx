@@ -1,6 +1,9 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Badge } from 'dsh-ui-kit'
 import { displayStatus, statusText } from '../status-display.js'
+import { mediaContentUrl } from '../api.js'
+import { pickThumbnailId } from '../card-thumbnail.js'
+import { IconImageType, IconVideoType, IconTikTokMusic } from '../icons/cards.js'
 import { RowActionMenu } from './RowActionMenu.jsx'
 
 /**
@@ -37,6 +40,11 @@ export function AssetCard({
   const title = String(record.title || record.description || id)
   const dateStr = record.submitted_at || record.updated_at || record.created_at || '-'
 
+  // 封面缩略图：优先显式封面，图文类型用首图兜底；都没有则回退矢量类型图标。
+  const thumbId = pickThumbnailId(record)
+  const [thumbFailed, setThumbFailed] = useState(false)
+  useEffect(() => { setThumbFailed(false) }, [thumbId])
+
   const subtasks = Array.isArray(record.subtasks) ? record.subtasks : []
   const platforms = isDraft
     ? ['draft']
@@ -58,9 +66,19 @@ export function AssetCard({
     >
       {/* 112px 封面区 */}
       <div className="omnimux-publish-card-cover">
-        <div className="omnimux-publish-card-thumb-icon">
-          {isVideo ? '🎬 视频' : '🖼 图文'} // exempt-ui04: 历史存量待迁移为矢量SVG
-        </div>
+        {thumbId && !thumbFailed ? (
+          <img
+            className="omnimux-publish-card-thumb-img"
+            src={mediaContentUrl(thumbId)}
+            alt=""
+            loading="lazy"
+            onError={() => setThumbFailed(true)}
+          />
+        ) : (
+          <span className="omnimux-publish-card-thumb-icon" aria-hidden="true">
+            {isVideo ? <IconVideoType size={28} /> : <IconImageType size={28} />}
+          </span>
+        )}
         <Badge variant="neutral" size="sm" className="omnimux-publish-card-type-badge">
           {isVideo ? t('type.video') : t('type.image')}
         </Badge>
@@ -108,7 +126,15 @@ export function AssetCard({
                 const st = typeof pObj === 'string' ? 'draft' : pObj.status
                 return (
                   <span key={idx} className={`omnimux-publish-plat-tag ${p}`} title={`${p} (${st})`}>
-                    {p === 'tiktok' ? '🎵' : p === 'xiaohongshu' || p === 'xhs' ? '小' : p === 'wechat_channels' || p === 'sph' ? '视' : p.slice(0, 1).toUpperCase()} // exempt-ui04: 历史存量待迁移为矢量SVG
+                    {p === 'tiktok' ? (
+                      <IconTikTokMusic size={12} />
+                    ) : p === 'xiaohongshu' || p === 'xhs' ? (
+                      '小'
+                    ) : p === 'wechat_channels' || p === 'sph' ? (
+                      '视'
+                    ) : (
+                      p.slice(0, 1).toUpperCase()
+                    )}
                     <span className={`omnimux-publish-plat-dot ${st}`} />
                   </span>
                 )
