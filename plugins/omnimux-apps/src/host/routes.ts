@@ -289,7 +289,7 @@ export function createAppsRoutes(deps: {
 
         try {
           const modelCatalog =
-            body.modelCatalog ??
+            payload.modelCatalog ??
             (typeof getModelCatalog === 'function' ? getModelCatalog() : undefined);
           const result = await service.executeApp(manifest, inputs, headlessSeam, { modelCatalog });
           sendJson(200, result);
