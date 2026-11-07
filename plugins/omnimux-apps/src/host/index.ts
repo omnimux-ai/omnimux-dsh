@@ -137,7 +137,12 @@ export function apply(ctx: any): void {
   const mount = (webServerCtx: any) => {
     const webServer = webServerCtx?.webServer ?? ctx.webServer;
     if (!webServer) return;
-    registerAppsApiRoutes(webServer, { service, getHeadlessSeam, getModelCatalog });
+    registerAppsApiRoutes(webServer, {
+      service,
+      getHeadlessSeam,
+      getModelCatalog,
+      getConnection: () => (typeof ctx.get === 'function' ? ctx.get('connection') : ctx.connection),
+    });
   };
 
   if (typeof ctx.inject === 'function') {
