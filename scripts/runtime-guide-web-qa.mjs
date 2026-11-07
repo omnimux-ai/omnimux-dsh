@@ -520,11 +520,20 @@ async function runRuntimeGuideWebQa(options = {}) {
     await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
     await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '本地Agent');
     check('agent-grid-count', await waitFor(`document.querySelectorAll('${guideSelector} .omx-agent-card').length === 4`, 3000), '');
+    await clickByText(`${guideSelector} .omx-agent-card`, 'Claude Code');
+    check('agent-login-visible', await waitFor(`[...document.querySelectorAll('${guideSelector} button')].some((el) => (el.innerText || '').trim() === '登录')`, 3000), '');
+    const claudeContinue = await evaluate(`(() => {
+      const el = [...document.querySelectorAll('${guideSelector} button')].find((node) => (node.innerText || '').trim() === '继续');
+      return el ? Boolean(el.disabled) : null;
+    })()`);
+    check('agent-login-continue-disabled', claudeContinue === true, String(claudeContinue));
     await clickByText(`${guideSelector} .omx-agent-card`, 'Codex CLI');
     check('agent-model-label', await waitFor(pageBodyIncludes('模型 · Codex CLI'), 3000), '');
     check('agent-model-trigger', await waitFor(`Boolean(document.querySelector('${guideSelector} #omx-agent-model-codex'))`, 3000), '');
     await evaluate(`(() => { const el = document.querySelector('${guideSelector} #omx-agent-model-codex'); if (el) el.click(); return true; })()`);
     check('agent-model-options', await waitFor(pageBodyIncludes('gpt-6.1-sol'), 3000), '');
+    await clickByText('[role="menuitem"]', 'gpt-6.1-sol');
+    check('agent-model-written', await waitFor(`window.__qaSettings.runtimeAgentModel === 'gpt-6.1-sol'`, 3000), JSON.stringify(await evaluate('window.__qaSettings')));
     const continueBox = await evaluate(`(() => {
       const el = [...document.querySelectorAll('${guideSelector} button')].find((node) => (node.innerText || '').trim() === '继续');
       return el ? { disabled: Boolean(el.disabled) } : null;
