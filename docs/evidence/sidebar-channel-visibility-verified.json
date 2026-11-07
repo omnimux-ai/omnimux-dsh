@@ -1,6 +1,6 @@
 {
   "task": "Issue #3971：侧栏入口按发布渠道显隐（开发版全开，正式版过滤 Alpha）",
-  "codeHead": "501b35c2e36858ce5942ad54d80b1b4eea048df8",
+  "codeHead": "c7db3bcffea7c695088faf86c420b8c2c95ec266",
   "verifiedAt": "2026-11-07T03:41:54.124Z",
   "environment": {
     "mode": "ui",
@@ -50,5 +50,5 @@
     "node --test scripts/verify-anti-slop.test.mjs ✅"
   ],
   "notes": "开发版（development）侧栏恢复 项目/技能·专家/资产库/灵感社区 常驻行与「更多」8 项；正式版（production）只保留非 Alpha 4 项，Alpha 行注册兜底不挂载（单测覆盖）。AI 网红工作室自 #3811 起已在「更多」菜单、不占侧栏行。",
-  "updatedAt": "2026-11-07T03:42:13.862131+00:00"
+  "updatedAt": "2026-11-07T03:48:42.731923+00:00"
 }
