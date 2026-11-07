@@ -14,4 +14,15 @@ describe('assertLocalWrite strict mode', () => {
     assert.doesNotThrow(() => assertLocalWrite({ secFetchSite: 'same-origin' }, { rejectSameSite: true }))
     assert.doesNotThrow(() => assertLocalWrite({}, { rejectSameSite: true }))
   })
+
+  it('rejects a localhost origin whose port does not match the Host header', () => {
+    assert.throws(
+      () => assertLocalWrite({
+        origin: 'http://127.0.0.1:5173',
+        host: '127.0.0.1:64245',
+        secFetchSite: 'same-site',
+      }, { rejectSameSite: true }),
+      /cross-origin/,
+    )
+  })
 })
