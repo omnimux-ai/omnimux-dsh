@@ -1,0 +1,93 @@
+{
+  "runId": "57bd7f78-c39a-4bac-bbca-672138cb545d",
+  "scenario": "publish-cards",
+  "plugin": "omnimux-publish",
+  "head": "43610274a7ceacb55511bff2d5f88fb180002199",
+  "startedAt": "2026-11-07T03:16:39.617Z",
+  "completedAt": "2026-11-07T03:16:40.346Z",
+  "pass": true,
+  "serverPort": 59879,
+  "cdpPort": 59880,
+  "assertions": [
+    {
+      "name": "bundle-publish-card-page",
+      "pass": true,
+      "size": 311847
+    },
+    {
+      "name": "ephemeral-server-listen",
+      "pass": true,
+      "port": 59879
+    },
+    {
+      "name": "ephemeral-cdp-listen",
+      "pass": true,
+      "port": 59880
+    },
+    {
+      "name": "publish-client-render",
+      "pass": true
+    },
+    {
+      "name": "card-count-4",
+      "pass": true,
+      "cardCount": 4
+    },
+    {
+      "name": "cards-equal-height",
+      "pass": true,
+      "heights": [
+        231,
+        231,
+        231,
+        231
+      ]
+    },
+    {
+      "name": "cover-media-src",
+      "pass": true,
+      "imgSrcs": [
+        "/omnimux/publish/media/content?id=cover-1",
+        "/omnimux/publish/media/content?id=first-img"
+      ]
+    },
+    {
+      "name": "image-first-media-fallback",
+      "pass": true
+    },
+    {
+      "name": "onerror-fallback-to-icon",
+      "pass": true,
+      "typeIconCount": 2
+    },
+    {
+      "name": "no-exempt-text",
+      "pass": true
+    },
+    {
+      "name": "no-emoji",
+      "pass": true
+    },
+    {
+      "name": "client-self-verdict",
+      "pass": true,
+      "text": "图文 OmniMux PNG 格式验证 2026-11-07 1 渠道 发布中 图文 一条会被两行截断的比较长的标题用来验证等高与首图兜底 2026-11-07 1 渠道 发布中 视频 视频发布：三平台同步 2026-11-07 1 渠道 视 审核中 图文 坏封面应回退类型图标 2026-11-07 1 渠道 发布中"
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 813
+      },
+      "bytes": 41337
+    }
+  ],
+  "screenshot": {
+    "path": "docs/evidence/publish-card-qa.png",
+    "width": 1280,
+    "height": 813,
+    "bytes": 41337
+  },
+  "errors": []
+}
