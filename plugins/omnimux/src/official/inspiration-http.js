@@ -22,10 +22,17 @@ import {
 } from './inspiration.js'
 
 /** The official cloud inspiration catalog is public; keep its explicit cross-origin read contract. */
-const sendPublicJson = (res, status, body) => sendJson(res, status, body, '*')
-
 const PREFIX = '/omnimux/inspiration'
 const SITE_MEDIA = '/api/inspiration/v1/media/'
+
+function isLocalWrite(req) {
+  try {
+    assertLocalWrite(req, { rejectSameSite: true })
+    return true
+  } catch {
+    return false
+  }
+}
 
 function queryRecord(url) {
   /** @type {Record<string, unknown>} */
@@ -112,6 +119,9 @@ export function createInspirationDispatcher(deps = {}) {
       return { status: 404, body: { error: 'use stream' } }
     }
     const isShareRequest = method === 'POST' && path.endsWith('/share')
+    if (isShareRequest && !isLocalWrite(req)) {
+      return { status: 403, body: { error: 'not-local', message: '分享请求只接受本机同源页面' } }
+    }
     if (method !== 'GET' && !isShareRequest) {
       try {
         assertLocalWrite(req, { rejectSameSite: true })
@@ -221,21 +231,21 @@ export function createInspirationDispatcher(deps = {}) {
    */
   async function streamMedia(req, res) {
     if (!official.mount) {
-      sendPublicJson(res, 404, { error: 'not found' })
+      sendJson(res, 404, { error: 'not found' })
       return
     }
     const url = new URL(req.url || PREFIX, 'http://127.0.0.1')
     const key = mediaKeyFromHostPath(url.pathname)
     if (!key || key.includes('..')) {
-      sendPublicJson(res, 400, { error: 'invalid media key' })
+      sendJson(res, 400, { error: 'invalid media key' })
       return
     }
     if ((req.method || 'GET').toUpperCase() !== 'GET') {
-      sendPublicJson(res, 405, { error: 'method not allowed' })
+      sendJson(res, 405, { error: 'method not allowed' })
       return
     }
     if (typeof client.withPatRaw !== 'function') {
-      sendPublicJson(res, 502, { error: 'media stream unavailable' })
+      sendJson(res, 502, { error: 'media stream unavailable' })
       return
     }
     try {
@@ -268,7 +278,7 @@ export function createInspirationDispatcher(deps = {}) {
         return
       }
       const mapped = mapError(error)
-      sendPublicJson(res, mapped.status, mapped.body)
+      sendJson(res, mapped.status, mapped.body)
     }
   }
 
@@ -285,10 +295,10 @@ export function registerInspirationRoutes(webServer, dispatcher) {
     path: PREFIX,
     async handler(req, res) {
       const method = (req.method || 'GET').toUpperCase()
-      const sendResponse = method === 'GET' || method === 'HEAD' ? sendPublicJson : sendJson
+      const sendResponse = sendJson
       try {
         if (method === 'OPTIONS') {
-          sendPublicJson(res, 204, {})
+          sendJson(res, 204, {})
           return
         }
         const url = new URL(req.url || PREFIX, 'http://127.0.0.1')

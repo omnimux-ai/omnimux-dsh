@@ -20,7 +20,6 @@ describe('assertLocalWrite strict mode', () => {
       () => assertLocalWrite({
         origin: 'http://127.0.0.1:5173',
         host: '127.0.0.1:64245',
-        secFetchSite: 'same-site',
       }, { rejectSameSite: true }),
       /cross-origin/,
     )

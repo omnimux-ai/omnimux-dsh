@@ -61,6 +61,12 @@
 
 - `plugins/omnimux/src/official/http-routes.test.js` :: `rejects account and analytics reads before dispatch when connection rejects`
   原断言只比对 `error`；错误响应统一补 `message` 后仍断言 `error`，并追加 `message` 断言，拒绝语义未被削弱。
+- `plugins/omnimux/src/http/local-origin-strict.test.js` :: `rejects a localhost origin whose port does not match the Host header`
+  原用例同时带 `same-site`，会在 same-site 分支提前抛错，无法证明 Host 端口校验；去掉 `secFetchSite` 后保留同一 origin/host 不匹配输入并仍断言拒绝，专门覆盖 exact-Host 分支。
+- `plugins/omnimux/src/official/inspiration-http.test.js` :: `emits CORS headers on the gateway list response so cross-origin pages can fetch`
+  原断言要求官方云灵感 GET 响应带 `Access-Control-Allow-Origin: *`；该接口可用用户 PAT 并包含收藏等用户态字段，改为断言无 CORS（同源 UI 仍可用），证明通配数据暴露已关闭。
+- `plugins/omnimux/src/official/inspiration-http.test.js` :: `answers OPTIONS preflight with 204 and CORS headers`
+  原断言要求 OPTIONS 带通配 CORS；改为断言 204 且无 CORS，证明预检不再为外部来源开放本地响应。
 
 ## 证伪方式
 

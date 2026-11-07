@@ -417,9 +417,9 @@ describe('registerInspirationRoutes', () => {
     }, createInspirationDispatcher({ official: { mount: true }, client: clientWith(async () => ({ data: { items: [], total: 0 } })) }))
     const res = mockRes()
     await handler({ method: 'GET', url: '/omnimux/inspiration?page=1' }, res)
-    assert.equal(res.headers['Access-Control-Allow-Origin'], '*')
-    assert.equal(res.headers['Access-Control-Allow-Headers'], '*')
-    assert.match(String(res.headers['Access-Control-Allow-Methods']), /GET/)
+    assert.equal(res.headers['Access-Control-Allow-Origin'], undefined)
+    assert.equal(res.headers['Access-Control-Allow-Headers'], undefined)
+    assert.equal(res.headers['Access-Control-Allow-Methods'], undefined)
   })
 
   it('answers OPTIONS preflight with 204 and CORS headers', async () => {
@@ -433,6 +433,6 @@ describe('registerInspirationRoutes', () => {
     const res = mockRes()
     await handler({ method: 'OPTIONS', url: '/omnimux/inspiration' }, res)
     assert.equal(res.status, 204)
-    assert.equal(res.headers['Access-Control-Allow-Origin'], '*')
+    assert.equal(res.headers['Access-Control-Allow-Origin'], undefined)
   })
 })

@@ -323,7 +323,7 @@ export function apply(ctx) {
         return
       }
       const method = (req.method || 'GET').toUpperCase()
-      if (method !== 'GET' && method !== 'HEAD') {
+      if (method !== 'OPTIONS') {
         try {
           assertLocalWrite(req)
         } catch {
