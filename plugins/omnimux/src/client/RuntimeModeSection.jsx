@@ -298,18 +298,10 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
     }
   }
 
-  const handleModelChange = async (nextModel) => {
-    if (!scope || typeof scope.set !== 'function' || busy) return
-    setBusy(true)
-    setError('')
-    try {
-      const saved = await scope.set('runtimeAgentModel', nextModel)
-      if (saved === false) throw new Error(t('runtime.error'))
-      setAgentModel(nextModel)
-      setTestedId('')
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t('runtime.error'))
-    } finally { setBusy(false) }
+  const handleModelChange = (nextModel) => {
+    if (busy) return
+    setAgentModel(nextModel)
+    setTestedId('')
   }
 
   const selected = agents.find((item) => item && item.id === selectedAgent) || null

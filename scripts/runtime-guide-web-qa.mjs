@@ -533,7 +533,9 @@ async function runRuntimeGuideWebQa(options = {}) {
     await evaluate(`(() => { const el = document.querySelector('${guideSelector} #omx-agent-model-codex'); if (el) el.click(); return true; })()`);
     check('agent-model-options', await waitFor(pageBodyIncludes('gpt-6.1-sol'), 3000), '');
     await clickByText('[role="menuitem"]', 'gpt-6.1-sol');
-    check('agent-model-written', await waitFor(`window.__qaSettings.runtimeAgentModel === 'gpt-6.1-sol'`, 3000), JSON.stringify(await evaluate('window.__qaSettings')));
+    check('agent-model-selected', await waitFor(pageBodyIncludes('gpt-6.1-sol'), 3000), '');
+    check('agent-model-not-written-before-continue', await evaluate('window.__qaSettings.runtimeAgentModel === undefined'), JSON.stringify(await evaluate('window.__qaSettings')));
+    check('agent-guide-visible-after-model', await evaluate(`Boolean(document.querySelector('${guideSelector}'))`), '');
     const continueBox = await evaluate(`(() => {
       const el = [...document.querySelectorAll('${guideSelector} button')].find((node) => (node.innerText || '').trim() === '继续');
       return el ? { disabled: Boolean(el.disabled) } : null;
@@ -547,6 +549,7 @@ async function runRuntimeGuideWebQa(options = {}) {
     check('agent-continue-saved', await waitFor(`
       (window.__qaRequests || []).some((r) => r.path === '/omnimux/agents/select' && r.method === 'POST' && r.body && r.body.checkOnly !== true)
     `), JSON.stringify(await evaluate('window.__qaRequests')));
+    check('agent-model-written', await waitFor(`window.__qaSettings.runtimeAgentModel === 'gpt-6.1-sol'`, 3000), JSON.stringify(await evaluate('window.__qaSettings')));
     check('agent-continue-put', await waitFor(`
       (window.__qaRequests || []).some((r) => r.path === '/omnimux/runtime/mode' && r.method === 'PUT')
     `), '');

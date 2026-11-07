@@ -24,9 +24,10 @@ describe('RuntimeModeSection preserves user model choices at their source', () =
     assert.match(source, /value: agentModel, label: agentModel/)
   })
 
-  it('confirms explicit model writes and reports failure without a silent reset', () => {
-    assert.match(source, /await scope\.set\('runtimeAgentModel', nextModel\)/)
+  it('keeps model writes in the continue flow', () => {
+    assert.match(source, /const handleModelChange = \(nextModel\) => \{/)
     assert.match(source, /setAgentModel\(nextModel\)/)
-    assert.match(source, /setError\(caught instanceof Error/)
+    assert.match(source, /await scope\.set\('runtimeAgentModel', agentModel\)/)
+    assert.match(source, /savedModel === false/)
   })
 })
