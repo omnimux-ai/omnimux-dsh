@@ -16,7 +16,7 @@
 
 ## 用户操作旅程
 
-1. 用户启动开发版 OmniMux，左侧栏「新对话」下方依次出现：任务看板 / 项目 / 技能·专家 / 资产库 / 灵感社区 / AI 网红工作室 等常驻行；点官方「更多」行，菜单里可见 应用、视频剪辑、发布、账号、手机管理、数据分析、任务表单、社交采收；其中 Alpha 项右侧带「Alpha · 内测」标识。
+1. 用户启动开发版 OmniMux，左侧栏「新对话」下方依次出现：任务看板 / 项目 / 技能·专家 / 资产库 / 灵感社区 等常驻行（AI 网红工作室 自 #3811 起已收敛到官方「更多」菜单，不再占侧栏行）；点官方「更多」行，菜单里可见 应用、视频剪辑、发布、账号、手机管理、数据分析、任务表单、社交采收；其中 Alpha 项右侧带「Alpha · 内测」标识。
 2. 用户打开正式版 OmniMux，上述常驻行只保留非 Alpha 项；「更多」菜单不出现 账号、发布、数据分析、任务表单 四项，其余入口照常可点。
 3. 点击任意入口的行为、登录门、选中态、关闭逻辑全部保持不变（本改动只影响可见性）。
 
@@ -24,7 +24,7 @@
 
 | 编号 | 场景 | 期望 |
 | --- | --- | --- |
-| A1 | development 渠道，注册 `omnimux-workflow/assets/inspiration/market/avatar` 行 | 五行实际挂进侧栏 DOM，按 rank 排序 |
+| A1 | development 渠道，注册 `omnimux-workflow/assets/inspiration/market` 行 | 四行实际挂进侧栏 DOM，按 rank 排序（`avatar` 自 #3811 已不注册侧栏行，白名单前缀保留为无操作） |
 | A2 | development 渠道，`resolveExploreMenuItems()` | 返回 8 项：应用、视频剪辑、发布、账号、手机管理、数据分析、任务表单、社交采收 |
 | A3 | production 渠道，`resolveExploreMenuItems()` | 返回非 Alpha 的 4 项：应用、视频剪辑、手机管理、社交采收 |
 | A4 | production 渠道，注册 Alpha 行（accounts/publish/analytics/forms） | 不挂入侧栏 DOM，也不进入菜单 |
@@ -81,3 +81,8 @@
   - 原断言：`expectedLabels` 含 `产品库`、`自动化` 共 10 项。这两项已在 #3816（产品库并入资产库）与 #3842（自动化退役）后不存在，原列表已过期。
   - 必须改的理由：断言与当前真源清单（8 项）不符，任何实现都无法通过，属于陈旧标准。
   - 新期望证据：`expectedLabels` 为 8 项（应用/视频剪辑/发布/账号/手机管理/数据分析/任务表单/社交采收），文件包含全部 label 且无 Emoji。
+
+- `tests/e2e/sidebar-channel-visibility.e2e.test.mjs` :: `E2E: 渠道过滤读单一真源，正式版对 Alpha 行有兜底不挂载`
+  - 原断言：源码正则要求 `RELEASE_CHANNEL === 'production' && isAlphaEntry(id)`。
+  - 必须改的理由：评审要求生产渠道运行时兜底分支可被单测切换验证，守卫改用 `activeChannel()`（`channelForTests ?? RELEASE_CHANNEL`），原正则与实现漂移。
+  - 新期望证据：正则匹配 `activeChannel() === 'production' && isAlphaEntry(id)`，并保留「读 release-channel.json」「复用 isAlphaEntry」断言。

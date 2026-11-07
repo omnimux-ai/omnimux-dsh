@@ -53,7 +53,7 @@ test('E2E: 渠道过滤读单一真源，正式版对 Alpha 行有兜底不挂�
   assert.match(content, /import releaseChannel from '\.\.\/release-channel\.json'/, '必须读发布渠道单一真源')
   assert.match(content, /export function filterExploreItemsForChannel/, '必须提供纯过滤函数')
   assert.match(content, /isAlphaEntry\(item\?\.entryId\)/, '过滤必须复用 isAlphaEntry，不得自建名单')
-  assert.match(content, /RELEASE_CHANNEL === 'production' && isAlphaEntry\(id\)/, '正式版还须兜底不挂 Alpha 行')
+  assert.match(content, /activeChannel\(\) === 'production' && isAlphaEntry\(id\)/, '正式版还须兜底不挂 Alpha 行')
   assert.equal(content.includes('omnimux-explore-entry'), false, '自绘探索行不得回流')
 })
 

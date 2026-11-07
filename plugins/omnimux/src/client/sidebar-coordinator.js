@@ -24,7 +24,8 @@
  * 2. 排除技能专家（`omnimux-market`，在底部 footer）；
  * 3. 其余所有插件（包括所有 Alpha 插件 accounts, publish, analytics, forms, automation 以及垂直插件 video, products, device, clip, social-harvest, apps 等）全部收敛，不再作为独立行渲染在侧边栏；
  * 4. 收敛项的渲染面是官方「更多」菜单（seat `sidebar.panellist.actions`，注册点在 `explore-more-menu.jsx`）：本模块只提供清单真源与激活委托，不再自绘侧栏行或浮动菜单；
- * 5. 清单严格按照产品 Spec 白名单（9项：应用、视频剪辑、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收），带纯矢量 SVG 图标；产品库已并入资产库，不再单列。
+ * 5. 清单严格按照产品 Spec 白名单（8项：应用、视频剪辑、发布、账号、手机管理、数据分析、任务表单、社交采收），带纯矢量 SVG 图标；自动化已退役、产品库已并入资产库，均不再单列；
+ * 6. 入口可见性按发布渠道区分：开发版（development）全部保留；正式版（production）只过滤 `plugin-lifecycle.json` 标为 Alpha 的测试版入口。
  */
 
 import pluginLifecycle from '../plugin-lifecycle.json' with { type: 'json' }
@@ -81,8 +82,18 @@ function markAlphaEntry(id, element) {
  * 发布渠道单一真源：源码与开发目标为 `development`，发布入口把
  * `src/release-channel.json` 写成 `production`（客户端构建时随包内联）。
  * 与 `src/gate/guard.js` 的 Alpha 工具门控读同一份文件，不建第二套渠道判断。
+ * 未知/缺失渠道按 fail-closed 当 `production`（宁可对用户隐藏 Alpha，也不静默暴露）。
  */
-export const RELEASE_CHANNEL = releaseChannel?.channel === 'production' ? 'production' : 'development'
+export const RELEASE_CHANNEL = releaseChannel?.channel === 'development' ? 'development' : 'production'
+
+/** 测试钩子：仅用于单测切换渠道，运行时必须为 null。 */
+let channelForTests = null
+function activeChannel() {
+  return channelForTests ?? RELEASE_CHANNEL
+}
+export function setReleaseChannelForTests(channel) {
+  channelForTests = channel === 'production' || channel === 'development' ? channel : null
+}
 
 export const SIDEBAR_GLOBAL_KEY = '__omnimuxSidebar'
 export const SIDEBAR_GLOBAL = () => (typeof window !== 'undefined' ? window[SIDEBAR_GLOBAL_KEY] : undefined)
@@ -102,7 +113,7 @@ export function isPinnedSidebarEntry(id) {
 
 /**
  * 判断是否应收敛到官方「更多」菜单，不再作为独立行渲染在侧边栏。
- * 排除核心常驻项（workflow, market, assets, inspiration）和非 omnimux 夹具；
+ * 排除核心常驻项（workflow, market, assets, inspiration, avatar）和非 omnimux 夹具；
  * 其余所有 omnimux 功能插件均收敛。
  */
 export function isConvergedEntry(id) {
@@ -169,8 +180,9 @@ const INLINE_STYLES = `
 `
 
 /**
- * 探索菜单项白名单（9项，逐字锁定）：
- * 应用、视频剪辑、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收
+ * 探索菜单项白名单（8项，逐字锁定）：
+ * 应用、视频剪辑、发布、账号、手机管理、数据分析、任务表单、社交采收
+ * （自动化已退役、产品库已并入资产库，均不再单列）
  * 统一带纯矢量 SVG 图标，严禁 Emoji，零冗余徽章、零副标题、零同义重复。
  * 产品库已并入资产库（specs/products-into-assets.spec.md），不再单独占一项。
  */
@@ -284,7 +296,7 @@ function isValidExploreItem(item) {
  * @param {'development' | 'production'} [channel]
  * @returns {T[]}
  */
-export function filterExploreItemsForChannel(items, channel = RELEASE_CHANNEL) {
+export function filterExploreItemsForChannel(items, channel = activeChannel()) {
   if (channel !== 'production') return items
   return items.filter((item) => !(
     isAlphaEntry(item?.entryId) || isAlphaEntry(item?.pluginId) || isAlphaEntry(item?.id)
@@ -745,7 +757,7 @@ function createApi() {
 
       // 正式版渠道只暴露非 Alpha 入口：Alpha 插件在发布包里通常已不加载，
       // 这里兜底不创建元素、不挂载、不进「更多」菜单（开发版照旧全开）。
-      if (RELEASE_CHANNEL === 'production' && isAlphaEntry(id)) {
+      if (activeChannel() === 'production' && isAlphaEntry(id)) {
         return () => {}
       }
 
@@ -862,6 +874,7 @@ export function getConvergedRowsForTests() {
  * Not exposed on the window global.
  */
 export function resetSidebarCoordinatorForTests() {
+  channelForTests = null
   waitObserver?.disconnect()
   collapsedAttrObserver?.disconnect()
   waitObserver = undefined

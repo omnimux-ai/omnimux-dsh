@@ -18,6 +18,7 @@ import {
   filterExploreItemsForChannel,
   installSidebarGlobal,
   resolveExploreMenuItems,
+  setReleaseChannelForTests,
 } from './sidebar-coordinator.js'
 
 // install() 会 setInterval(2s) 轮询；测试里替换为 no-op，避免挂住测试进程。
@@ -367,6 +368,31 @@ test('发布渠道过滤：开发版保留全部入口，正式版只过滤 Alph
   const prod = filterExploreItemsForChannel(EXPLORE_MENU_ITEMS, 'production')
   assert.deepEqual(prod.map((item) => item.label), ['应用', '视频剪辑', '手机管理', '社交采收'])
   assert.equal(resolveExploreMenuItems().length, EXPLORE_MENU_ITEMS.length, '开发版默认渠道返回全部入口')
+})
+
+test('正式版渠道：Alpha 行注册不挂 DOM 且菜单只剩非 Alpha 项', async () => {
+  setup()
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+  setReleaseChannelForTests('production')
+  const accountsBtn = document.createElement('button')
+  const publishBtn = document.createElement('button')
+  const clipBtn = document.createElement('button')
+  const disposeAccounts = api.register({ id: 'omnimux-accounts-entry', rank: 3, create: () => accountsBtn })
+  const disposePublish = api.register({ id: 'omnimux-publish-entry', rank: 4, create: () => publishBtn })
+  const disposeClip = api.register({ id: 'omnimux-clip-entry', rank: 5, create: () => clipBtn })
+  try {
+    api.place()
+    assert.equal(accountsBtn.parentElement, null, '正式版 Alpha 账号行不得挂 DOM')
+    assert.equal(publishBtn.parentElement, null, '正式版 Alpha 发布行不得挂 DOM')
+    assert.equal(clipBtn.parentElement, null, '非 Alpha 收敛项仍不占独立行')
+    assert.deepEqual(resolveExploreMenuItems().map((item) => item.label), ['应用', '视频剪辑', '手机管理', '社交采收'])
+  } finally {
+    disposeAccounts()
+    disposePublish()
+    disposeClip()
+    setReleaseChannelForTests('development')
+  }
 })
 
 test('desktop 外壳包住内层 pane 时 assets 常驻项挂进侧栏 DOM', async () => {
