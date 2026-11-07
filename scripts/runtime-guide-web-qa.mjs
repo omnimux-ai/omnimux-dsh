@@ -89,6 +89,14 @@ function buildHarnessHtml() {
   window.__qaReady = false;
   window.__qaOverlay = [];
   const byokState = { revision: 0, providers: [], bindings: {}, providerRevisions: {}, credentialVersions: {} };
+  const demoAgents = params.get('agentauth') === '1'
+    ? [
+        { id: 'codex', name: 'Codex CLI', version: '0.167.0', installed: true, models: ['gpt-6.1-sol', 'gpt-6.1-codex'], auth: { state: 'signed-in', method: 'file', loginSupported: true } },
+        { id: 'claude', name: 'Claude Code', version: '2.1.289 (Claude Code)', installed: true, models: ['claude-opus-5', 'claude-sonnet-5'], auth: { state: 'signed-out', method: 'file', loginSupported: true } },
+        { id: 'kimi', name: 'Kimi CLI', version: '2.5.2', installed: true, models: ['kimi-k2.5'], auth: { state: 'signed-in', method: 'file', loginSupported: true } },
+        { id: 'qwen', name: 'Qwen Code', version: '0.26.9', installed: true, models: [], auth: { state: 'signed-out', method: 'none', loginSupported: false } },
+      ]
+    : [];
 
   if (params.get('configured') === '1') window.__qaSettings.runtimeMode = 'official';
 
@@ -123,7 +131,7 @@ function buildHarnessHtml() {
       notify();
       return json({ ok: true });
     }
-    if (path === '/omnimux/agents') return json({ agents: [] });
+    if (path === '/omnimux/agents') return json({ agents: demoAgents });
     if (path === '/omnimux/agents/updates') return json({ updates: {} });
     if (path === '/omnimux/agents/select' && method === 'POST') return json({ ok: true });
     // BYOK stubs honour the real contract in plugins/omnimux/src/byok/http.js:
@@ -505,6 +513,38 @@ async function runRuntimeGuideWebQa(options = {}) {
     check('agent-empty-hint', await waitFor(pageBodyIncludes('你的 CLI (0)'), 5000), '');
     check('agent-no-cover', await evaluate(`!document.querySelector('${guideSelector} .omnimux-runtime-guide-art')`), '');
     await screenshot('empty-guide-cli');
+
+    // --- 场景 2b：有 CLI 时选择 Codex → 默认模型下拉 → 继续先测试再保存 ---
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?agentauth=1` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
+    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '本地Agent');
+    check('agent-grid-count', await waitFor(`document.querySelectorAll('${guideSelector} .omx-agent-card').length === 4`, 3000), '');
+    await clickByText(`${guideSelector} .omx-agent-card`, 'Codex CLI');
+    check('agent-model-label', await waitFor(pageBodyIncludes('模型 · Codex CLI'), 3000), '');
+    check('agent-model-trigger', await waitFor(`Boolean(document.querySelector('${guideSelector} #omx-agent-model-codex'))`, 3000), '');
+    await evaluate(`(() => { const el = document.querySelector('${guideSelector} #omx-agent-model-codex'); if (el) el.click(); return true; })()`);
+    check('agent-model-options', await waitFor(pageBodyIncludes('gpt-6.1-sol'), 3000), '');
+    const continueBox = await evaluate(`(() => {
+      const el = [...document.querySelectorAll('${guideSelector} button')].find((node) => (node.innerText || '').trim() === '继续');
+      return el ? { disabled: Boolean(el.disabled) } : null;
+    })()`);
+    check('agent-continue-enabled', Boolean(continueBox) && continueBox.disabled === false, JSON.stringify(continueBox));
+    await screenshot('agent-selected-continue');
+    await clickByText(`${guideSelector} button`, '继续');
+    check('agent-continue-check-only', await waitFor(`
+      (window.__qaRequests || []).some((r) => r.path === '/omnimux/agents/select' && r.method === 'POST' && r.body && r.body.checkOnly === true)
+    `), JSON.stringify(await evaluate('window.__qaRequests')));
+    check('agent-continue-saved', await waitFor(`
+      (window.__qaRequests || []).some((r) => r.path === '/omnimux/agents/select' && r.method === 'POST' && r.body && r.body.checkOnly !== true)
+    `), JSON.stringify(await evaluate('window.__qaRequests')));
+    check('agent-continue-put', await waitFor(`
+      (window.__qaRequests || []).some((r) => r.path === '/omnimux/runtime/mode' && r.method === 'PUT')
+    `), '');
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    await waitFor(`Boolean(document.querySelector('${guideSelector}'))`, 5000);
+    await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '本地Agent');
 
     // --- 场景 3：回退并点击「自己的密钥」→ BYOK 表单 ---
     await evaluate(`

@@ -209,47 +209,35 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
     }, 3000)
   }, [stopLoginPoll])
 
-  const selectAndSaveAgent = async (agent) => {
-    if (busy || !agent.installed) return
+  const continueWithAgent = async () => {
+    const agent = agents.find((item) => item && item.id === selectedAgent)
+    if (busy || !agent || !agent.installed) return
     setBusy(true)
     setError('')
+    setNotice(t('runtime.testingConnection'))
     try {
-      const res = await api('/omnimux/agents/select', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: agent.id }),
-      })
-      if (!res.ok) {
-        throw new Error(res.error || t('runtime.agentFail'))
-      }
-      setSelectedAgent(agent.id)
-      setNotice(t('runtime.agentOk', { name: agent.name }))
-      if (typeof onVerified === 'function') onVerified(agent.id)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const testAgent = async (event, agent) => {
-    event.stopPropagation()
-    if (busy || !agent.installed) return
-    setBusy(true)
-    setError('')
-    try {
-      const res = await api('/omnimux/agents/select', {
+      const checked = await api('/omnimux/agents/select', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ id: agent.id, checkOnly: true }),
       })
-      if (res.ok) {
-        setTestedId(agent.id)
-        setNotice(t('runtime.agentChecked', { name: agent.name }))
-      } else {
-        setTestedId('')
-        setError(res.error || t('runtime.agentFail'))
+      if (!checked || checked.ok !== true) {
+        throw new Error((checked && checked.error) || t('runtime.agentFail'))
       }
+      const saved = await api('/omnimux/agents/select', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: agent.id }),
+      })
+      if (!saved || saved.ok !== true) {
+        throw new Error((saved && saved.error) || t('runtime.agentFail'))
+      }
+      if (scope && typeof scope.set === 'function' && agentModel !== (value.runtimeAgentModel || '')) {
+        await scope.set('runtimeAgentModel', agentModel)
+      }
+      setTestedId(agent.id)
+      setNotice(t('runtime.agentChecked', { name: agent.name }))
+      if (typeof onVerified === 'function') onVerified(agent.id)
     } catch (err) {
       setTestedId('')
       setError(err instanceof Error ? err.message : String(err))
@@ -322,111 +310,114 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
     } finally { setBusy(false) }
   }
 
+  const selected = agents.find((item) => item && item.id === selectedAgent) || null
+  const agent = selected
+  const selectedAuth = selected && selected.auth && typeof selected.auth === 'object' ? selected.auth : null
+  const selectedSignedOut = selectedAuth !== null && selectedAuth.state === 'signed-out'
+  const selectedLoginSupported = selectedAuth !== null && selectedAuth.loginSupported === true
+  const selectedUpdate = selected && updates[selected.id] && typeof updates[selected.id] === 'object' ? updates[selected.id] : null
+  const showSelectedUpdate = selectedUpdate !== null && selectedUpdate.state === 'available' && selectedUpdate.supported === true
+  const updateVersion = selectedUpdate && typeof selectedUpdate.latest === 'string' ? selectedUpdate.latest : ''
+  const modelOptions = (() => {
+    const agentModels = agent && Array.isArray(agent.models)
+      ? selected.models.filter((model) => typeof model === 'string' && model.trim())
+      : []
+    const raw = [
+      { value: '', label: t('runtime.cliDefaultSetting') },
+      ...agentModels.map((model) => ({ value: model, label: model })),
+      ...(agentModel && !agentModels.includes(agentModel) ? [{ value: agentModel, label: agentModel }] : []),
+    ]
+    const seen = new Set()
+    return raw.filter((option) => {
+      if (seen.has(option.value)) return false
+      seen.add(option.value)
+      return true
+    })
+  })()
+
   return (
-    <div>
-      <div className="omx-section-header">
-        <span className="omx-section-title">{t('runtime.cliHeader')}</span>
-        <div className="omx-cli-tools-row">
-          <span className="omx-cli-desc">
-            {t('runtime.cliCount', { count: String(agents.length) })}
-          </span>
-          <Button variant="ghost" disabled={busy} onClick={() => { void refreshAgents() }}>
+    <div className="omx-agent-shell">
+      <div className="omx-agent-head">
+        <div>
+          <h3 className="omx-agent-title">{t('runtime.cliPanelTitle')}</h3>
+          <p className="omx-agent-subtitle">{t('runtime.cliHeader')}</p>
+        </div>
+        <div className="omx-agent-head-actions">
+          <Button variant="secondary" disabled={busy} onClick={() => { void refreshAgents() }}>
             {t('runtime.scan')}
           </Button>
+          <span className={`omx-agent-status ${busy ? 'busy' : ''}`}>
+            {busy ? t('runtime.testingConnection') : t('runtime.cliCount', { count: String(agents.length) })}
+          </span>
         </div>
       </div>
 
-      <div className="omx-cli-list">
+      <div className="omx-agent-grid">
         {agents.map((agent) => {
           const isSelected = selectedAgent === agent.id
-          const agentAuth = agent.auth && typeof agent.auth === 'object' ? agent.auth : null
-          const isSignedOut = agentAuth !== null && agentAuth.state === 'signed-out'
-          const loginSupported = agentAuth !== null && agentAuth.loginSupported === true
-          const updateInfo = updates[agent.id] && typeof updates[agent.id] === 'object' ? updates[agent.id] : null
-          const showUpdateTag = updateInfo !== null && updateInfo.state === 'available'
-          const showUpdateButton = showUpdateTag && updateInfo.supported === true
-          const updateVersion = updateInfo && typeof updateInfo.latest === 'string' ? updateInfo.latest : ''
           return (
-            <div
+            <button
               key={agent.id}
-              className={`omx-cli-card ${isSelected ? 'selected' : ''}`}
-              onClick={() => { void selectAndSaveAgent(agent) }}
+              type="button"
+              className={`omx-agent-card ${isSelected ? 'selected' : ''} ${agent.installed ? '' : 'disabled'}`}
+              disabled={!agent.installed}
+              onClick={() => {
+                if (!agent.installed) return
+                setSelectedAgent(agent.id)
+                setTestedId('')
+                setError('')
+                setNotice('')
+              }}
             >
-              <div className="omx-cli-card-top">
-                <div className="omx-cli-info">
-                  <div className="omx-cli-icon">
-                    {agent.name ? agent.name[0] : 'C'}
-                  </div>
-                  <div className="omx-cli-sub">
-                    <div className="omx-cli-title-row">
-                      <span>{agent.name}</span>
-                      {agent.installed ? <span className="omx-cli-tag">{t('runtime.installed')}</span> : null}
-                      {isSignedOut ? <span className="omx-cli-tag">{t('runtime.cliNotLoggedIn')}</span> : null}
-                      {showUpdateTag ? <span className="omx-cli-tag">{t('runtime.cliUpdateAvailable')}</span> : null}
-                    </div>
-                    <div className="omx-cli-desc">{agent.version || '未检测到程序安装'}</div>
-                    {isSignedOut && !loginSupported ? (
-                      <div className="omx-cli-desc">{t('runtime.cliNoLoginHint')}</div>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="omx-cli-tools-row">
-                  {testedId === agent.id ? <span className="omx-status-pass">{t('runtime.programChecked')}</span> : null}
-                  <Button variant="ghost" disabled={busy || !agent.installed} onClick={(e) => { void testAgent(e, agent) }}>
-                    {t('runtime.test')}
-                  </Button>
-                  {isSignedOut && loginSupported ? (
-                    <Button variant="ghost" disabled={busy || loggingInId === agent.id} onClick={(e) => { void loginAgent(e, agent) }}>
-                      {t('runtime.cliLogin')}
-                    </Button>
-                  ) : null}
-                  {showUpdateButton ? (
-                    <Button variant="ghost" disabled={busy || updatingId === agent.id} onClick={(e) => { void updateAgent(e, agent) }}>
-                      {updatingId === agent.id
-                        ? t('runtime.cliUpdating')
-                        : (updateVersion ? t('runtime.cliUpdateTo', { version: updateVersion }) : t('runtime.cliUpdate'))}
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-
-              {isSelected ? (
-                <div className="omx-cli-extra">
-                  <div className="omx-form-row">
-                    <span className="omx-cli-desc">{t('runtime.modelLabel')}</span>
-                    {(() => {
-                       const agentModels = Array.isArray(agent.models) ? agent.models.filter((model) => typeof model === 'string' && model.trim()) : []
-                      const rawOptions = [
-                        { value: '', label: t('runtime.cliDefaultSetting') },
-                        ...agentModels.map((m) => ({ value: m, label: m })),
-                        ...(agentModel && !agentModels.includes(agentModel) ? [{ value: agentModel, label: agentModel }] : []),
-                      ]
-                      const seen = new Set()
-                      const uniqueOptions = rawOptions.filter((opt) => {
-                        if (seen.has(opt.value)) return false
-                        seen.add(opt.value)
-                        return true
-                      })
-                      return (
-                        <DropdownSelect
-                          id={`omx-agent-model-${agent.id}`}
-                          value={agentModel || ''}
-                          options={uniqueOptions}
-                          disabled={busy}
-                          onChange={(next) => { void handleModelChange(next) }}
-                        />
-                      )
-                    })()}
-                  </div>
-                </div>
-              ) : null}
-            </div>
+              <span className="omx-agent-icon" aria-hidden="true">{agent.name ? agent.name[0] : 'C'}</span>
+              <span className="omx-agent-card-copy">
+                <span className="omx-agent-name">{agent.name}</span>
+                <span className="omx-agent-version">{agent.version || t('runtime.notDetected')}</span>
+              </span>
+            </button>
           )
         })}
+      </div>
+
+      {selected ? (
+        <div className="omx-agent-model-section">
+          <div className="omx-agent-model-label">{t('runtime.modelLabel')} · {selected.name}</div>
+          <DropdownSelect
+            id={`omx-agent-model-${selected.id}`}
+            value={agentModel || ''}
+            options={modelOptions}
+            disabled={busy}
+            onChange={handleModelChange}
+          />
+          <div className="omx-agent-selected-actions">
+            {selectedSignedOut && selectedLoginSupported ? (
+              <Button variant="ghost" disabled={busy || loggingInId === selected.id} onClick={(event) => { void loginAgent(event, selected) }}>
+                {t('runtime.cliLogin')}
+              </Button>
+            ) : null}
+            {showSelectedUpdate ? (
+              <Button variant="ghost" disabled={busy || updatingId === selected.id} onClick={(event) => { void updateAgent(event, selected) }}>
+                {updatingId === selected.id ? t('runtime.cliUpdating') : (updateVersion ? t('runtime.cliUpdateTo', { version: updateVersion }) : t('runtime.cliUpdate'))}
+              </Button>
+            ) : null}
+            {testedId === selected.id ? <span className="omx-status-pass">{t('runtime.programChecked')}</span> : null}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="omx-agent-footer">
+        <Button
+          variant="primary"
+          disabled={busy || !selected || !selected.installed || (selectedSignedOut && selectedLoginSupported)}
+          onClick={() => { void continueWithAgent() }}
+        >
+          {t('runtime.continue')}
+        </Button>
       </div>
     </div>
   )
 }
+
 
 /** Existing settings export uses the single provider draft surface. */
 function ByokPanel(props) {
