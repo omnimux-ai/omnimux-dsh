@@ -24,10 +24,12 @@
  * 2. 排除技能专家（`omnimux-market`，在底部 footer）；
  * 3. 其余所有插件（包括所有 Alpha 插件 accounts, publish, analytics, forms, automation 以及垂直插件 video, products, device, clip, social-harvest, apps 等）全部收敛，不再作为独立行渲染在侧边栏；
  * 4. 收敛项的渲染面是官方「更多」菜单（seat `sidebar.panellist.actions`，注册点在 `explore-more-menu.jsx`）：本模块只提供清单真源与激活委托，不再自绘侧栏行或浮动菜单；
- * 5. 清单严格按照产品 Spec 白名单（9项：应用、视频剪辑、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收），带纯矢量 SVG 图标；产品库已并入资产库，不再单列。
+ * 5. 清单严格按照产品 Spec 白名单（8项：应用、视频剪辑、发布、账号、手机管理、数据分析、任务表单、社交采收），带纯矢量 SVG 图标；自动化已退役、产品库已并入资产库，均不再单列；
+ * 6. 入口可见性按发布渠道区分：开发版（development）全部保留；正式版（production）只过滤 `plugin-lifecycle.json` 标为 Alpha 的测试版入口。
  */
 
 import pluginLifecycle from '../plugin-lifecycle.json' with { type: 'json' }
+import releaseChannel from '../release-channel.json' with { type: 'json' }
 import { triggerClick } from './sidebar-toggle-topbar.js'
 
 /** Alpha 内测说明：侧栏行与官方「更多」菜单行共用同一份文案真源。 */
@@ -76,6 +78,23 @@ function markAlphaEntry(id, element) {
   element.append(badge)
 }
 
+/**
+ * 发布渠道单一真源：源码与开发目标为 `development`，发布入口把
+ * `src/release-channel.json` 写成 `production`（客户端构建时随包内联）。
+ * 与 `src/gate/guard.js` 的 Alpha 工具门控读同一份文件，不建第二套渠道判断。
+ * 未知/缺失渠道按 fail-closed 当 `production`（宁可对用户隐藏 Alpha，也不静默暴露）。
+ */
+export const RELEASE_CHANNEL = releaseChannel?.channel === 'development' ? 'development' : 'production'
+
+/** 测试钩子：仅用于单测切换渠道，运行时必须为 null。 */
+let channelForTests = null
+function activeChannel() {
+  return channelForTests ?? RELEASE_CHANNEL
+}
+export function setReleaseChannelForTests(channel) {
+  channelForTests = channel === 'production' || channel === 'development' ? channel : null
+}
+
 export const SIDEBAR_GLOBAL_KEY = '__omnimuxSidebar'
 export const SIDEBAR_GLOBAL = () => (typeof window !== 'undefined' ? window[SIDEBAR_GLOBAL_KEY] : undefined)
 
@@ -84,8 +103,8 @@ const INLINE_ROWS = []
 const CONVERGED_ROWS = new Map()
 const seen = new Set()
 
-/** 核心常驻侧栏项白名单（除 inline 新建项目外） — 正式版只保留 DSH 原生，全部收敛 */
-const PINNED_ENTRY_PREFIXES = []
+/** 核心常驻侧栏项白名单（除 inline 新建项目外） */
+const PINNED_ENTRY_PREFIXES = ['omnimux-workflow', 'omnimux-market', 'omnimux-assets', 'omnimux-inspiration', 'omnimux-avatar']
 
 export function isPinnedSidebarEntry(id) {
   const pluginId = id.endsWith('-entry') ? id.slice(0, -6) : id
@@ -94,7 +113,7 @@ export function isPinnedSidebarEntry(id) {
 
 /**
  * 判断是否应收敛到官方「更多」菜单，不再作为独立行渲染在侧边栏。
- * 排除核心常驻项（workflow, market, assets, inspiration）和非 omnimux 夹具；
+ * 排除核心常驻项（workflow, market, assets, inspiration, avatar）和非 omnimux 夹具；
  * 其余所有 omnimux 功能插件均收敛。
  */
 export function isConvergedEntry(id) {
@@ -161,8 +180,9 @@ const INLINE_STYLES = `
 `
 
 /**
- * 探索菜单项白名单（9项，逐字锁定）：
- * 应用、视频剪辑、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收
+ * 探索菜单项白名单（8项，逐字锁定）：
+ * 应用、视频剪辑、发布、账号、手机管理、数据分析、任务表单、社交采收
+ * （自动化已退役、产品库已并入资产库，均不再单列）
  * 统一带纯矢量 SVG 图标，严禁 Emoji，零冗余徽章、零副标题、零同义重复。
  * 产品库已并入资产库（specs/products-into-assets.spec.md），不再单独占一项。
  */
@@ -193,6 +213,56 @@ export const EXPLORE_MENU_ITEMS = [
     label: '视频剪辑',
     tabId: 'omnimux-clip:studio',
     iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="1.75" y="3.25" width="12.5" height="9.5" rx="1.75"/><path d="M6.4 5.6v4.8L10.6 8 6.4 5.6Z" fill="currentColor" stroke="none"/></svg>',
+    dividerAfter: true,
+  },
+  {
+    id: 'publish',
+    pluginId: 'omnimux-publish',
+    entryId: 'omnimux-publish-entry',
+    label: '发布',
+    tabId: 'omnimux-publish:library',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 1.5 7 9M14.5 1.5 10 14.5l-3-4.5-4.5-3 12-5.5z"/></svg>',
+  },
+  {
+    id: 'accounts',
+    pluginId: 'omnimux-accounts',
+    entryId: 'omnimux-accounts-entry',
+    label: '账号',
+    tabId: 'omnimux-accounts:library',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="5" r="3"/><path d="M2.5 14a5.5 5.5 0 0 1 11 0"/></svg>',
+  },
+  {
+    id: 'device',
+    pluginId: 'omnimux-device',
+    entryId: 'omnimux-device-entry',
+    label: '手机管理',
+    tabId: 'omnimux-device:library',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="1.5" width="8" height="13" rx="2"/><circle cx="8" cy="11.5" r="0.75" fill="currentColor" stroke="none"/></svg>',
+    dividerAfter: true,
+  },
+  {
+    id: 'analytics',
+    pluginId: 'omnimux-analytics',
+    entryId: 'omnimux-analytics-entry',
+    label: '数据分析',
+    tabId: 'omnimux-analytics:library',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 14h12"/><path d="M4 11l3-4 3 2 4-5"/></svg>',
+  },
+  {
+    id: 'forms',
+    pluginId: 'omnimux-forms',
+    entryId: 'omnimux-forms-entry',
+    label: '任务表单',
+    tabId: 'omnimux-forms:tasks',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="2" width="10" height="12" rx="1.5"/><path d="M6 5.5h4M6 8h4M6 10.5h2.5"/></svg>',
+  },
+  {
+    id: 'social-harvest',
+    pluginId: 'omnimux-social-harvest',
+    entryId: 'omnimux-social-harvest-entry',
+    label: '社交采收',
+    tabId: 'omnimux-social-harvest:library',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="1" fill="currentColor" stroke="none"/></svg>',
   },
 ]
 
@@ -217,10 +287,29 @@ function isValidExploreItem(item) {
   return true
 }
 
+/**
+ * 按发布渠道过滤入口：正式版只过滤 `plugin-lifecycle.json` 标为 Alpha 的
+ * 测试版入口，其余（含非 Alpha 垂直插件）保留；开发版全部保留。
+ * 判定复用 `isAlphaEntry()`，不维护第二份 Alpha 名单。
+ * @template {{ id?: string, entryId?: string, pluginId?: string }} T
+ * @param {T[]} items
+ * @param {'development' | 'production'} [channel]
+ * @returns {T[]}
+ */
+export function filterExploreItemsForChannel(items, channel = activeChannel()) {
+  if (channel !== 'production') return items
+  return items.filter((item) => !(
+    isAlphaEntry(item?.entryId) || isAlphaEntry(item?.pluginId) || isAlphaEntry(item?.id)
+  ))
+}
+
 /** 合并内置白名单与运行时注册项；id 冲突时内置项优先，注册项被忽略。 */
 export function resolveExploreMenuItems() {
   const builtin = new Set(EXPLORE_MENU_ITEMS.map((item) => item.id))
-  return [...EXPLORE_MENU_ITEMS, ...EXTRA_EXPLORE_ITEMS.filter((item) => !builtin.has(item.id))]
+  return filterExploreItemsForChannel([
+    ...EXPLORE_MENU_ITEMS,
+    ...EXTRA_EXPLORE_ITEMS.filter((item) => !builtin.has(item.id)),
+  ])
 }
 
 /**
@@ -666,6 +755,13 @@ function createApi() {
         }
       }
 
+      // 正式版渠道只暴露非 Alpha 入口：Alpha 插件在发布包里通常已不加载，
+      // 这里兜底不创建元素、不挂载、不进「更多」菜单（开发版照旧全开）。
+      if (activeChannel() === 'production' && isAlphaEntry(id)) {
+        // 不创建元素、不挂载、不进「更多」菜单；注销时清掉 seen 以保持幂等。
+        return () => { seen.delete(id) }
+      }
+
       // 收敛至探索菜单的插件：包含所有 Alpha 内测插件与垂直插件
       // 不再作为独立行渲染在侧边栏，收敛记录到 CONVERGED_ROWS 便于探索菜单委托激活
       if (isAlphaEntry(id)) {
@@ -779,6 +875,7 @@ export function getConvergedRowsForTests() {
  * Not exposed on the window global.
  */
 export function resetSidebarCoordinatorForTests() {
+  channelForTests = null
   waitObserver?.disconnect()
   collapsedAttrObserver?.disconnect()
   waitObserver = undefined

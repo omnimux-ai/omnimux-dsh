@@ -37,8 +37,9 @@ test('E2E: 非核心及内测插件仍收敛，核心常驻项仍不收敛', () 
   assert.match(content, /export function activateExploreItem/, '收敛项激活委托必须保留')
   assert.match(content, /registerExploreItem/, '运行时注册接缝必须保留')
 
-  // 3. 10 项白名单与零 Emoji 规则仍锁定（UI04）
-  const expectedLabels = ['应用', '视频剪辑', '产品库', '发布', '账号', '手机管理', '数据分析', '自动化', '任务表单', '社交采收']
+  // 3. 8 项白名单与零 Emoji 规则仍锁定（UI04；产品库已并入资产库、自动化已退役）
+  const expectedLabels = ['应用', '视频剪辑', '发布', '账号', '手机管理', '数据分析', '任务表单', '社交采收']
+  assert.equal(expectedLabels.length, 8, '入口清单锁定 8 项')
   for (const label of expectedLabels) {
     assert.ok(content.includes(`label: '${label}'`), `入口清单必须包含白名单锁定项: ${label}`)
   }
