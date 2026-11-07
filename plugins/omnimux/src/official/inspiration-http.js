@@ -306,6 +306,17 @@ export function registerInspirationRoutes(webServer, dispatcher) {
         }
         const url = new URL(req.url || PREFIX, 'http://127.0.0.1')
         if (url.pathname.startsWith(`${PREFIX}/media/`)) {
+          const mediaRequest = {
+            origin: header(req, 'origin'),
+            referer: header(req, 'referer'),
+            secFetchSite: header(req, 'sec-fetch-site'),
+            host: header(req, 'host'),
+            secure: Boolean(req.socket?.encrypted),
+          }
+          if (!isLocalWrite(mediaRequest)) {
+            sendJson(res, 403, { error: 'not-local', message: '媒体读取只接受本机同源页面' })
+            return
+          }
           await dispatcher.streamMedia(req, res)
           return
         }
