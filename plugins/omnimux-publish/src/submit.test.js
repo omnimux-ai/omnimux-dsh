@@ -452,3 +452,35 @@ describe('composeContent', () => {
     assert.equal(composeContent({}), '')
   })
 })
+
+describe('TikTok publish options', () => {
+  it('passes settings.tiktok_options into the create tool', async () => {
+    freshService()
+    const draft = seedDraft({
+      settings: { tiktok_options: { privacy_level: 'PUBLIC_TO_EVERYONE', allow_comment: false } },
+    })
+    await service.run(draft.id)
+    const create = tools.calls.find((call) => call.name === 'omnimux_publish_create')
+    assert.equal(create.arguments.tiktok_options.privacy_level, 'PUBLIC_TO_EVERYONE')
+    assert.equal(create.arguments.tiktok_options.allow_comment, false)
+    assert.equal(create.arguments.tiktok_options.allow_duet, true)
+  })
+
+  it('leaves tiktok_options out when the draft has none', async () => {
+    freshService()
+    const draft = seedDraft()
+    await service.run(draft.id)
+    const create = tools.calls.find((call) => call.name === 'omnimux_publish_create')
+    assert.equal(Object.hasOwn(create.arguments, 'tiktok_options'), false)
+  })
+
+  it('blocks branded content with SELF_ONLY before any upload', async () => {
+    freshService()
+    const draft = seedDraft({
+      settings: { tiktok_options: { privacy_level: 'SELF_ONLY', commercial_content: true, branded_content: true, music_usage_confirmed: true } },
+    })
+    await assert.rejects(() => service.run(draft.id), (error) => error.code === 'validation-failed'
+      && error.details.errors.some((item) => item.code === 'branded-requires-public'))
+    assert.equal(tools.calls.filter((call) => call.name === 'omnimux_publish_presign').length, 0)
+  })
+})

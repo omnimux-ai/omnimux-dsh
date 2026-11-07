@@ -5,6 +5,7 @@ import { validateForSubmit, validationError } from './validate.js'
 import { requirePublishingAccounts } from './accounts.js'
 import { ACCOUNT_SOURCE_MESSAGE, PUBLISH_PROVIDER } from './account-policy.js'
 import { createSubmitMedia, composeContent } from './submit-media.js'
+import { buildCreateTikTokOptions } from './shared/tiktok-options.js'
 export { composeContent } from './submit-media.js'
 /** @typedef {import('./submit-media.js').ExecutionOptions} ExecutionOptions */
 
@@ -63,7 +64,7 @@ export function createSubmitService(deps) {
     const verdict = validateForSubmit({
       type: record.type, title: record.title, description: record.description,
       mediaRows: mediaRowsOf(record), coverRow: cover ? { id: cover.id, kind: cover.kind } : null,
-      account_ids: record.account_ids,
+      account_ids: record.account_ids, settings: record.settings,
     }, { accounts: accountRows, platforms: config.platforms })
     if (!verdict.ok) throw validationError(verdict.errors)
     const selected = record.account_ids
@@ -94,10 +95,14 @@ export function createSubmitService(deps) {
     }
     const content = composeContent(record)
     const mediaItems = record.media_ids.map((mediaId) => ({ url: uploads[mediaId] }))
+    const tiktokOptions = buildCreateTikTokOptions(record.settings?.tiktok_options)
     for (const task of tasks) {
       const perTask = execOpts(opts)
       try {
-        const data = await channel.createPost({ account_ids: [task.account_id], content, media_items: mediaItems }, perTask)
+        const data = await channel.createPost({
+          account_ids: [task.account_id], content, media_items: mediaItems,
+          ...(tiktokOptions ? { tiktok_options: tiktokOptions } : {}),
+        }, perTask)
         const postId = extractPostId(data, 'omnimux_publish_create')
         store.updateTask(task.id, { status: 'submitted', post_id: postId, error: null, submitted_at: now() })
       } catch (error) {
@@ -178,8 +183,12 @@ export function createSubmitService(deps) {
     }
     const content = composeContent(rawRecord)
     const mediaItems = rawRecord.media_ids.map((mediaId) => ({ url: uploads[mediaId] }))
+    const tiktokOptions = buildCreateTikTokOptions(rawRecord.settings?.tiktok_options)
     try {
-      const data = await channel.createPost({ account_ids: [rawTask.account_id], content, media_items: mediaItems }, execOpts(opts))
+      const data = await channel.createPost({
+        account_ids: [rawTask.account_id], content, media_items: mediaItems,
+        ...(tiktokOptions ? { tiktok_options: tiktokOptions } : {}),
+      }, execOpts(opts))
       const postId = extractPostId(data, 'omnimux_publish_create')
       const task = store.updateTask(taskId, { status: 'submitted', post_id: postId, error: null, submitted_at: now(), raw_status: null })
       return { record: store.getView(rawRecord.id), task }

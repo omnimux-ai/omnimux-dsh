@@ -22,7 +22,7 @@ import {
   updateInspiration,
   uploadMedia,
 } from './inspiration.js'
-import { createPost, getPost, presignMedia } from './publish.js'
+import { createPost, creatorInfo, getPost, presignMedia } from './publish.js'
 import { createInspirationShareApi } from './inspiration-share.js'
 import { fetchSocialData } from './social-data.js'
 
@@ -563,6 +563,12 @@ export function mountOfficial(ctx, deps) {
       content_type: { type: 'string' },
     },
     (args) => presignMedia(client, args),
+  )
+  tool(
+    'omnimux_accounts_creator_info',
+    'Read the TikTok account publishing capability (privacy level options, disabled interactions). Requires OmniMux sign-in.',
+    { id: { type: 'string', required: true }, provider: { type: 'string', enum: ['tiktok_direct', 'zernio'], required: true } },
+    (args) => creatorInfo(client, args),
   )
   tool(
     'omnimux_publish_create',

@@ -33,3 +33,16 @@ describe('RecordDetail private-visibility notice (Issue #3913)', () => {
     assert.equal(showsPrivateNotice([null, 'x']), false)
   })
 })
+
+describe('privacy-aware private notice', () => {
+  it('hides the notice when the record was published with a wider privacy level', () => {
+    const tasks = [{ ...OFFICIAL, status: 'published', post_id: 'v_pub_2' }]
+    assert.equal(showsPrivateNotice(tasks, { settings: { tiktok_options: { privacy_level: 'PUBLIC_TO_EVERYONE' } } }), false)
+  })
+
+  it('keeps the notice for SELF_ONLY and for legacy records without options', () => {
+    const tasks = [{ ...OFFICIAL, status: 'published', post_id: 'v_pub_3' }]
+    assert.equal(showsPrivateNotice(tasks, { settings: { tiktok_options: { privacy_level: 'SELF_ONLY' } } }), true)
+    assert.equal(showsPrivateNotice(tasks, { settings: {} }), true)
+  })
+})

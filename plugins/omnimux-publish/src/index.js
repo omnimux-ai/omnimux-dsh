@@ -74,7 +74,7 @@ export function apply(ctx, config = {}) {
   const channel = createHubChannel({ tools: ctx.tools })
   const accounts = createAccountSource({ channel, overlayPath: paths.accountsOverlayPath })
   const service = createSubmitService({ store, media, channel, accounts, config: parsed })
-  const dispatcher = createPublishDispatcher({ store, media, accounts, service, config: parsed })
+  const dispatcher = createPublishDispatcher({ store, media, accounts, service, channel, config: parsed })
 
   // ---- 惰性 HTTP 挂载（webServer 是 Service，就绪后端口才可读）----
   const mountHttp = (httpCtx) => {

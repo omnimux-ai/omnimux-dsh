@@ -92,6 +92,11 @@ export function recordDetail(id) {
   return publishRequest(`/omnimux/publish/records/detail?id=${encodeURIComponent(id)}`)
 }
 
+/** 账号在 TikTok 侧的发布能力（隐私级别选项、互动开关禁用状态）。 */
+export function creatorInfo(accountId) {
+  return publishRequest(`/omnimux/publish/creator-info?id=${encodeURIComponent(accountId)}`)
+}
+
 /** 合并后能力矩阵（表单裁剪数据源，与工具校验同源）。 */
 export function getCapabilities() {
   return publishRequest('/omnimux/publish/capabilities')

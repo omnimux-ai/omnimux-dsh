@@ -67,11 +67,15 @@ describe('TikTok publish minimal loop E2E contracts (Issue #3898)', () => {
 
   it('shows the pre-review private-visibility notice for a live TikTok direct subtask', async () => {
     const recordDetailSrc = readFileSync(join(clientDir, 'RecordDetail.jsx'), 'utf8')
-    assert.match(recordDetailSrc, /showsPrivateNotice\(tasks\)/)
+    assert.match(recordDetailSrc, /showsPrivateNotice\(tasks, record\)/)
     assert.match(recordDetailSrc, /t\('detail\.privateNotice'\)/)
     assert.equal(showsPrivateNotice([{ platform: 'tiktok', provider: 'tiktok_direct', status: 'submitted', post_id: 'p1' }]), true)
     assert.equal(showsPrivateNotice([{ platform: 'tiktok', provider: 'tiktok_direct', status: 'failed', post_id: 'p1' }]), false)
     assert.equal(showsPrivateNotice([{ platform: 'tiktok', provider: 'tiktok_direct', status: 'submitted' }]), false)
+    assert.equal(showsPrivateNotice(
+      [{ platform: 'tiktok', provider: 'tiktok_direct', status: 'published', post_id: 'p1' }],
+      { settings: { tiktok_options: { privacy_level: 'PUBLIC_TO_EVERYONE' } } },
+    ), false)
     assert.equal(zh['detail.privateNotice'].includes('仅自己可见'), true)
     assert.equal(en['detail.privateNotice'].includes('Only you'), true)
   })

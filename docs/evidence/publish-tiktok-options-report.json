@@ -1,5 +1,5 @@
 {
-  "task": "Issue #3963",
+  "task": "Issue #3969",
   "total": 9,
   "failed": 0,
   "assertions": [
@@ -46,15 +46,15 @@
     {
       "name": "缺品牌时提示选择商业类型",
       "pass": true,
-      "detail": "商业内容需要选择「你的品牌」或「付费推广」商业内容需要勾选音乐使用确认媒体素材设为封面移除添加图片封面图—"
+      "detail": "checked"
     }
   ],
   "pass": true,
   "screenshot": "docs/evidence/publish-tiktok-options.png",
   "screenshotBytes": 100020,
-  "url": "http://127.0.0.1:49226/",
+  "url": "http://127.0.0.1:59418/",
   "chrome": "Google Chrome 157.0.8103.39",
-  "bundleSha256": "5c717de5dd8c92b7f72228c06aa2c85e22092b79ef8b4732c81f9a7440181126",
-  "headSha": "56b638d417cf4bfc2aa0b538dc4a351da9eb56b6",
-  "ranAt": "2026-11-07T02:57:43.516Z"
+  "bundleSha256": "c3dbe74934e70070ae91eeface99844ed2b9c9f8ac2de0fd420dc8a878045320",
+  "headSha": "06c248a63dbcf8606f53d40e441550aef8777dec",
+  "ranAt": "2026-11-07T03:16:08.527Z"
 }
