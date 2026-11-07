@@ -1,13 +1,13 @@
 {
   "task": "Issue #3971：侧栏入口按发布渠道显隐（开发版全开，正式版过滤 Alpha）",
-  "codeHead": "a43f6d0f35a941a07f3b473723f16261036bfb74",
-  "verifiedAt": "2026-11-07T03:31:57.887Z",
+  "codeHead": "501b35c2e36858ce5942ad54d80b1b4eea048df8",
+  "verifiedAt": "2026-11-07T03:41:54.124Z",
   "environment": {
     "mode": "ui",
     "scope": "smoke",
     "taskBinding": "unknown",
-    "appPort": 63411,
-    "cdpPort": 63449
+    "appPort": 49584,
+    "cdpPort": 49591
   },
   "result": "pass",
   "browserJourneyAssertions": {
@@ -39,13 +39,16 @@
   ],
   "screenshot": "docs/evidence/sidebar-channel-visibility-dev.png",
   "unitTests": [
-    "plugins/omnimux/src/client/sidebar-coordinator.test.js（20 项全过）",
-    "plugins/omnimux/src/client/explore-more-menu.test.js（5 组全过）"
+    "plugins/omnimux/src/client/sidebar-coordinator.test.js：21/21 pass（含正式版渠道 Alpha 行不挂 DOM）",
+    "plugins/omnimux/src/client/explore-more-menu.test.js：19/19 pass",
+    "tests/e2e/sidebar-channel-visibility.e2e.test.mjs：4/4 pass",
+    "tests/e2e/sidebar-explore-convergence.e2e.test.mjs：2/2 pass"
   ],
   "staticChecks": [
     "node scripts/verify-plugin-boundaries.mjs ✅",
     "node scripts/verify-stage-contracts.mjs PASS",
     "node --test scripts/verify-anti-slop.test.mjs ✅"
   ],
-  "notes": "开发版（development 渠道）侧栏恢复 项目/技能·专家/资产库/灵感社区 常驻行与「更多」；正式版（production）过滤 Alpha 四项由单测 filterExploreItemsForChannel 覆盖。"
+  "notes": "开发版（development）侧栏恢复 项目/技能·专家/资产库/灵感社区 常驻行与「更多」8 项；正式版（production）只保留非 Alpha 4 项，Alpha 行注册兜底不挂载（单测覆盖）。AI 网红工作室自 #3811 起已在「更多」菜单、不占侧栏行。",
+  "updatedAt": "2026-11-07T03:42:13.862131+00:00"
 }
