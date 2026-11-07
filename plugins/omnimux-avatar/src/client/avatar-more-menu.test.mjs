@@ -134,3 +134,40 @@ describe('「更多」菜单项行为', () => {
     assert.equal(tree.props.icon.props['aria-hidden'], 'true', '图标是装饰性的')
   })
 })
+
+describe('Alpha 内测角标', () => {
+  it('isAlpha=true 时渲染 Alpha 角标并带统一说明', () => {
+    const description = 'Alpha · 内测：开发阶段优先完善非 Alpha 功能；正式版不包含此功能。'
+    const Content = createAvatarMoreMenuContent({
+      MenuItemButton: DummyMenuItemButton,
+      title: () => 'AI网红工作室',
+      iconSvg: '',
+      open: () => {},
+      isAlpha: () => true,
+      alphaDescription: () => description,
+    })
+    const tree = Content({})
+    const wrapper = tree.props.children
+    assert.equal(wrapper.type, 'span', 'Alpha 行用 inline-flex 包裹文案与角标')
+    assert.equal(wrapper.props.className, 'omnimux-avatar-more-label')
+    const [label, badge] = wrapper.props.children
+    assert.equal(label.props.children, 'AI网红工作室', '文案不变')
+    assert.equal(badge.props.className, 'omnimux-avatar-more-alpha')
+    assert.equal(badge.props.children, 'Alpha', '角标文案固定为 Alpha')
+    assert.equal(badge.props.title, description, '角标 title 使用中枢统一内测说明')
+  })
+
+  it('isAlpha=false（或判定缺失）时保持纯文案，不渲染角标', () => {
+    for (const deps of [{ isAlpha: () => false }, {}]) {
+      const Content = createAvatarMoreMenuContent({
+        MenuItemButton: DummyMenuItemButton,
+        title: () => 'AI网红工作室',
+        iconSvg: '',
+        open: () => {},
+        ...deps,
+      })
+      const tree = Content({})
+      assert.equal(tree.props.children, 'AI网红工作室', '非 Alpha 行 children 仍是纯字符串')
+    }
+  })
+})

@@ -163,9 +163,10 @@ const unregister = window.__omnimuxSidebar.registerExploreItem({
 | Rule | Detail |
 |---|---|
 | 判定真源 | 复用 `sidebar-coordinator.isAlphaEntry()`（读 `plugin-lifecycle.json`）；菜单面 MUST NOT 维护第二份 Alpha 名单或第二个判定函数 |
+| 自注册项 | 由插件自行 `ctx.slots.register` 到官方「更多」菜单的行（如 `omnimux-avatar`）MUST 从 `window.__omnimuxSidebar` 读取 `isAlphaEntry` 与 `alphaDescription` 渲染同一角标，MUST NOT 复制名单或文案 |
 | 渲染位置 | Alpha 项的行内容为「文案 + `Alpha` 标识」片段，非 Alpha 项保持纯字符串；标识 MUST NOT 出现在非 Alpha 项上 |
 | 文案 | 标识文本 `Alpha`，`title` 为 `sidebar-coordinator.ALPHA_DESCRIPTION`（与侧栏行同一份说明） |
-| 样式 | 追加到 `styles.js` 的 `HUB_CSS`，颜色走 `--dsw-alias-*` Token、字号 12px；MUST NOT 新建第二个 `<style>` 注入点 |
+| 样式 | 中枢清单行追加到 `styles.js` 的 `HUB_CSS`；自注册项可在自身样式表消费同一 Token 度量（同色/同字号/12px）。两处都 MUST NOT 引入第二套字号或第二套图标尺寸 |
 | 可见性 | 标识必须落在行矩形内、宽高非零，且不把行文案挤到零宽（官方 `.itemLabel` 是单行省略） |
 
 ## Offline vs Cloud Visibility

@@ -825,6 +825,13 @@ function createApi() {
         if (index >= 0) EXTRA_EXPLORE_ITEMS.splice(index, 1)
       }
     },
+    /**
+     * Alpha 判定与统一内测说明（只读）：
+     * 插件自行注册到官方「更多」菜单的行（如 omnimux-avatar）用它们渲染与中枢清单
+     * 一致的 Alpha 角标，避免复制第二份 Alpha 名单或另写文案。
+     */
+    isAlphaEntry,
+    alphaDescription: ALPHA_DESCRIPTION,
   }
 }
 

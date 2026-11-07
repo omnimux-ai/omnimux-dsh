@@ -43,12 +43,18 @@ function isRenderableComponent(value) {
  *   title: () => string,
  *   iconSvg: string,
  *   open: () => void,
+ *   isAlpha?: () => boolean,
+ *   alphaDescription?: () => string | undefined,
  * }} deps
  * @returns {import('react').FunctionComponent<{ onDismiss?: () => void }>}
  */
-export function createAvatarMoreMenuContent({ MenuItemButton, title, iconSvg, open }) {
+export function createAvatarMoreMenuContent({ MenuItemButton, title, iconSvg, open, isAlpha, alphaDescription }) {
   /** 官方「更多」菜单内容：owner 提供 `onDismiss`，其余输入来自本插件真源。 */
   function AvatarMoreMenuContent({ onDismiss }) {
+    const label = title()
+    // Alpha 判定来自中枢单一真源（window.__omnimuxSidebar），本插件不维护第二份名单。
+    const alpha = typeof isAlpha === 'function' && isAlpha() === true
+    const description = typeof alphaDescription === 'function' ? alphaDescription() : undefined
     return (
       <MenuItemButton
         icon={<span className="omnimux-avatar-more-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: iconSvg }} />}
@@ -57,7 +63,12 @@ export function createAvatarMoreMenuContent({ MenuItemButton, title, iconSvg, op
           open()
         }}
       >
-        {title()}
+        {alpha ? (
+          <span className="omnimux-avatar-more-label">
+            <span className="omnimux-avatar-more-label-text">{label}</span>
+            <span className="omnimux-avatar-more-alpha" title={description}>{'Alpha'}</span>
+          </span>
+        ) : label}
       </MenuItemButton>
     )
   }
