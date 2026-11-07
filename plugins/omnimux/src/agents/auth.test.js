@@ -320,6 +320,7 @@ describe('launchAgentLogin', () => {
       const calls = []
       const result = await launchAgentLogin('claude', {
         platform: 'darwin',
+        mode: 'terminal',
         home: HOME,
         scriptDir: dir,
         run: async (bin, args, opts) => {
@@ -357,4 +358,48 @@ describe('launchAgentLogin', () => {
       assert.equal(fs.existsSync(dir), false, 'temporary directory must be cleaned up')
     }
   })
+  it('runs the login in a background pseudo-terminal without opening Terminal', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'omnimux-agent-login-bg-'))
+    try {
+      const calls = []
+      let unrefed = false
+      const result = await launchAgentLogin('codex', {
+        platform: 'darwin',
+        home: dir,
+        scriptDir: dir,
+        spawnImpl: (bin, args, opts) => {
+          calls.push({ bin, args, opts })
+          return { unref: () => { unrefed = true } }
+        },
+      })
+      assert.equal(result.ok, true)
+      assert.equal(result.mode, 'background')
+      assert.match(result.logPath, /omnimux-codex-login\.log$/)
+      assert.equal(calls.length, 1)
+      assert.equal(calls[0].bin, '/usr/bin/script')
+      assert.deepEqual(calls[0].args.slice(0, 4), ['-q', '/dev/null', '/bin/sh', '-lc'])
+      assert.match(calls[0].args[4], /exec codex login/)
+      assert.equal(calls[0].opts.detached, true)
+      assert.equal(calls[0].opts.cwd, dir)
+      assert.equal(unrefed, true)
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('reports launch-failed when the background spawn throws', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'omnimux-agent-login-bg-'))
+    try {
+      const result = await launchAgentLogin('codex', {
+        platform: 'darwin',
+        home: dir,
+        scriptDir: dir,
+        spawnImpl: () => { throw new Error('spawn denied') },
+      })
+      assert.deepEqual(result, { ok: false, error: 'launch-failed' })
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
 })

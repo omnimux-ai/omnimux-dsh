@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
 import { KNOWN_AGENTS } from './local.js'
 
@@ -205,26 +205,61 @@ export async function launchAgentLogin(id, options = {}) {
   if (!agent.login) return { ok: false, error: 'login-unsupported' }
   const platform = options.platform || process.platform
   if (platform !== 'darwin') return { ok: false, error: 'unsupported-platform' }
-  const script = buildLoginScript(agent)
-  if (!script) return { ok: false, error: 'login-unsupported' }
+  const parts = commandParts(agent.login)
+  if (!parts) return { ok: false, error: 'login-unsupported' }
+  const mode = options.mode === 'terminal' || process.env.OMNIMUX_CLI_LOGIN_MODE === 'terminal'
+    ? 'terminal'
+    : 'background'
   const fsImpl = options.fsImpl || fs
+  const home = options.home || os.homedir()
   const scriptDir = options.scriptDir || path.join(os.tmpdir(), 'omnimux-agent-login')
-  const scriptPath = path.join(scriptDir, `omnimux-${agent.id}-login.command`)
-  let prepared = true
+
+  if (mode === 'terminal') {
+    const script = buildLoginScript(agent)
+    if (!script) return { ok: false, error: 'login-unsupported' }
+    const scriptPath = path.join(scriptDir, `omnimux-${agent.id}-login.command`)
+    let prepared = true
+    try {
+      fsImpl.mkdirSync(scriptDir, { recursive: true })
+      fsImpl.writeFileSync(scriptPath, script, { mode: 0o700 })
+    } catch {
+      prepared = false
+    }
+    if (!prepared) return { ok: false, error: 'launch-failed' }
+    const run = typeof options.run === 'function' ? options.run : execFileAsync
+    let opened = true
+    try {
+      await run('open', ['-a', 'Terminal', scriptPath], { timeout: LOGIN_OPEN_TIMEOUT_MS })
+    } catch {
+      opened = false
+    }
+    if (!opened) return { ok: false, error: 'launch-failed' }
+    return { ok: true, launched: true, mode: 'terminal' }
+  }
+
+  // Background PTY: the CLI still sees a terminal (so its browser/device
+  // hand-off works) but no Terminal.app window is opened. `script` allocates
+  // the pseudo-terminal; the child is detached from the Host lifetime.
+  const logPath = path.join(scriptDir, `omnimux-${agent.id}-login.log`)
+  const invocation = `cd "$HOME" || exit 1\nexec ${parts.bin} ${parts.args.join(' ')}`
+  const spawnImpl = typeof options.spawnImpl === 'function' ? options.spawnImpl : spawn
   try {
     fsImpl.mkdirSync(scriptDir, { recursive: true })
-    fsImpl.writeFileSync(scriptPath, script, { mode: 0o700 })
+    const fd = fsImpl.openSync(logPath, 'a')
+    let child
+    try {
+      child = spawnImpl('/usr/bin/script', ['-q', '/dev/null', '/bin/sh', '-lc', invocation], {
+        cwd: home,
+        env: { ...process.env, HOME: home, TERM: 'xterm-256color' },
+        detached: true,
+        stdio: ['ignore', fd, fd],
+      })
+    } finally {
+      fsImpl.closeSync(fd)
+    }
+    if (child && typeof child.unref === 'function') child.unref()
+    return { ok: true, launched: true, mode: 'background', logPath }
   } catch {
-    prepared = false
+    return { ok: false, error: 'launch-failed' }
   }
-  if (!prepared) return { ok: false, error: 'launch-failed' }
-  const run = typeof options.run === 'function' ? options.run : execFileAsync
-  let opened = true
-  try {
-    await run('open', ['-a', 'Terminal', scriptPath], { timeout: LOGIN_OPEN_TIMEOUT_MS })
-  } catch {
-    opened = false
-  }
-  if (!opened) return { ok: false, error: 'launch-failed' }
-  return { ok: true, launched: true, mode: 'terminal' }
 }
