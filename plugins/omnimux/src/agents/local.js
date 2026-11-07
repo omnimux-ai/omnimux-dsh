@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process'
+import { execFile, execFileSync } from 'node:child_process'
 import { promisify } from 'node:util'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -190,12 +190,34 @@ export function isSafeAgentModel(model) {
  * If the config/cache is present, returns live model identifiers; otherwise returns
  * the static known models for that agent.
  * @param {string} id
- * @param {{ codexPath?: string, kimiPath?: string }} [options]
+ * @param {{ codexPath?: string, kimiPath?: string, runCodexModels?: () => string }} [options]
  * @returns {string[]}
  */
 export function probeAgentModels(id, options = {}) {
   try {
     if (id === 'codex') {
+      const runModels = options.codexPath
+        ? null
+        : (typeof options.runCodexModels === 'function'
+            ? options.runCodexModels
+            : () => execFileSync('codex', ['debug', 'models'], {
+                timeout: 5000,
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'ignore'],
+              }))
+      let live = null
+      try {
+        live = runModels ? JSON.parse(String(runModels() || '')) : null
+      } catch {
+        live = null
+      }
+      if (live && Array.isArray(live.models)) {
+        const list = live.models
+          .filter((model) => model && model.visibility === 'list')
+          .map((model) => String(model.slug || model.id || '').trim())
+          .filter((model) => isSafeAgentModel(model))
+        if (list.length > 0) return [...new Set(list)]
+      }
       const cachePath = options.codexPath || path.join(os.homedir(), '.codex', 'models_cache.json')
       if (fs.existsSync(cachePath)) {
         const raw = fs.readFileSync(cachePath, 'utf8')
@@ -244,7 +266,7 @@ export async function probeAgentBin(bin, run = execFileAsync) {
  * Scan PATH for the known agent CLIs. Returns every known agent with its
  * availability and dynamically probed models.
  * @param {(file: string, args: string[], opts: object) => Promise<{ stdout: string, stderr: string }>} [run]
- * @param {{ codexPath?: string, kimiPath?: string }} [options]
+ * @param {{ codexPath?: string, kimiPath?: string, runCodexModels?: () => string }} [options]
  */
 export async function scanLocalAgents(run = execFileAsync, options = {}) {
   const rows = await Promise.all(KNOWN_AGENTS.map(async (agent) => {

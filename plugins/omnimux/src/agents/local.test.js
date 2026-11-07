@@ -39,6 +39,40 @@ describe('scanLocalAgents', () => {
     const claudeModels = probeAgentModels('claude')
     assert.ok(Array.isArray(claudeModels) && claudeModels.includes('claude-3-7-sonnet'))
   })
+
+  it('prefers the live codex debug models catalog over the cache', () => {
+    const models = probeAgentModels('codex', {
+      runCodexModels: () => JSON.stringify({
+        models: [
+          { slug: 'gpt-6.1-sol', visibility: 'list' },
+          { slug: 'gpt-6.1-terra', visibility: 'list' },
+          { slug: 'codex-auto-review', visibility: 'hidden' },
+          { slug: '-bad-option', visibility: 'list' },
+        ],
+      }),
+    })
+    assert.deepEqual(models, ['gpt-6.1-sol', 'gpt-6.1-terra'])
+  })
+
+  it('falls back to the codex cache when the live debug command fails', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'omnimux-codex-models-'))
+    const cachePath = path.join(dir, 'models_cache.json')
+    fs.writeFileSync(cachePath, JSON.stringify({
+      models: [
+        { id: 'gpt-cache-live', visibility: 'list' },
+        { id: 'gpt-cache-hidden', visibility: 'hidden' },
+      ],
+    }))
+    try {
+      const models = probeAgentModels('codex', {
+        codexPath: cachePath,
+        runCodexModels: () => { throw new Error('debug models unavailable') },
+      })
+      assert.deepEqual(models, ['gpt-cache-live'])
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('agentTextCommand', () => {
