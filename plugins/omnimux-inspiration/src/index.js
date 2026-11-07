@@ -1,6 +1,6 @@
 import { resolveInspirationPaths } from './paths.js'
 import { createLocalStore } from './local-store.js'
-import { LOCAL_PREFIX, createLocalInspirationDispatcher, formatErrorMessage, readJsonBody, sendJson } from './http-routes.js'
+import { LOCAL_PREFIX, assertLocalWrite, createLocalInspirationDispatcher, formatErrorMessage, readJsonBody, sendJson } from './http-routes.js'
 import { capabilityOf, parseSocialMeta } from './http-handlers.js'
 import { fallbackResolveSocial } from './scraper-fallback.js'
 import { zh } from './client/locales.js'
@@ -316,12 +316,20 @@ export function apply(ctx) {
   const callLocalEndpoint = async (req, res) => {
     const cancellation = trackRequestCancellation(req, res)
     try {
-      // Cross-origin pages (e.g. a file:// workbench) preflight JSON POSTs with
-      // OPTIONS. `sendJson` already carries the full CORS headers, so answering
-      // 204 here is all the browser needs to let the real request through.
+      // OPTIONS remains a protocol preflight only. Real JSON responses stay
+      // same-origin; a write from another origin is rejected below by origin.
       if ((req.method || '').toUpperCase() === 'OPTIONS') {
-        sendJson(res, 204, {})
+        sendJson(res, 204, {}, '*')
         return
+      }
+      const method = (req.method || 'GET').toUpperCase()
+      if (method !== 'GET' && method !== 'HEAD') {
+        try {
+          assertLocalWrite(req)
+        } catch {
+          sendJson(res, 403, { error: 'not-local' })
+          return
+        }
       }
       const rawUrl = req.url || '/omnimux/inspiration/local'
       const url = new URL(rawUrl, 'http://127.0.0.1')
