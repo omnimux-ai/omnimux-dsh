@@ -365,7 +365,6 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
               disabled={!agent.installed}
               onClick={() => {
                 if (!agent.installed) return
-                if (agent.id !== selectedAgent) setAgentModel('')
                 setSelectedAgent(agent.id)
                 setTestedId('')
                 setError('')
