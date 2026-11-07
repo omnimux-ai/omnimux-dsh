@@ -53,7 +53,11 @@ function fail(status, message, detail = {}) {
 
 function assertLocal(req, res) {
   try {
-    assertLocalWrite(readOriginHeaders(req), { rejectSameSite: true })
+    assertLocalWrite({
+      ...readOriginHeaders(req),
+      host: req.headers?.host,
+      secure: Boolean(req.socket?.encrypted),
+    }, { rejectSameSite: true })
     return true
   } catch {
     sendJson(res, 403, { error: 'not-local' })

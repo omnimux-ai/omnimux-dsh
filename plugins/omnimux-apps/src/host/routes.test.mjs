@@ -87,6 +87,7 @@ describe('omnimux-apps Routes & Preset Snapshot Hydration', () => {
     const routes = createAppsRoutes({
       service: fakeService,
       getHeadlessSeam: () => fakeSeam,
+      getConnection: () => ({ requestRejection: () => undefined }),
     });
 
     let statusCode = 0;
@@ -140,6 +141,7 @@ describe('omnimux-apps Routes & Preset Snapshot Hydration', () => {
     const routes = createAppsRoutes({
       service: fakeService,
       getHeadlessSeam: () => fakeSeam,
+      getConnection: () => ({ requestRejection: () => undefined }),
     });
 
     let statusCode = 0;
@@ -182,6 +184,7 @@ describe('omnimux-apps Routes & Preset Snapshot Hydration', () => {
     const routes = createAppsRoutes({
       service: fakeService,
       getHeadlessSeam: () => null,
+      getConnection: () => ({ requestRejection: () => undefined }),
     });
 
     let statusCode = 0;

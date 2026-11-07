@@ -53,6 +53,8 @@ export interface WorkflowDispatchRequest {
   origin?: string;
   referer?: string;
   secFetchSite?: string;
+  host?: string;
+  secure?: boolean;
   body?: unknown;
   range?: string;
   /** Set only by the authenticated raw HTTP adapter, never an Agent argument. */

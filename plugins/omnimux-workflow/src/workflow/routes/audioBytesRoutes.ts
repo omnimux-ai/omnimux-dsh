@@ -15,7 +15,7 @@ export function assertAudioRequestOrigin(req: IncomingMessage): void {
   const referer = header(req, 'referer');
   const host = header(req, 'host');
   try {
-    assertLocalWrite({ origin, referer, secFetchSite: header(req, 'sec-fetch-site') });
+    assertLocalWrite({ origin, referer, secFetchSite: header(req, 'sec-fetch-site'), host, secure: Boolean((req.socket as { encrypted?: boolean }).encrypted) });
     if (!host || (!origin && !referer)) throw new Error('missing origin');
     const secure = Boolean((req.socket as { encrypted?: boolean }).encrypted);
     const target = new URL(`${secure ? 'https' : 'http'}://${host}`);

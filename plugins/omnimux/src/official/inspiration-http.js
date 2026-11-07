@@ -118,6 +118,9 @@ export function createInspirationDispatcher(deps = {}) {
     if (path.startsWith(`${PREFIX}/media/`)) {
       return { status: 404, body: { error: 'use stream' } }
     }
+    if (method === 'GET' && !isLocalWrite(req)) {
+      return { status: 403, body: { error: 'not-local', message: '灵感读取只接受本机同源页面' } }
+    }
     const isShareRequest = method === 'POST' && path.endsWith('/share')
     if (isShareRequest && !isLocalWrite(req)) {
       return { status: 403, body: { error: 'not-local', message: '分享请求只接受本机同源页面' } }
@@ -319,6 +322,8 @@ export function registerInspirationRoutes(webServer, dispatcher) {
           origin: header(req, 'origin'),
           referer: header(req, 'referer'),
           secFetchSite: header(req, 'sec-fetch-site'),
+          host: header(req, 'host'),
+          secure: Boolean(req.socket?.encrypted),
         })
         sendResponse(res, result.status, result.body)
       } catch {

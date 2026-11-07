@@ -32,6 +32,7 @@ function makeRoutes(service = {}, options = {}) {
       ...service,
     },
     getHeadlessSeam: () => null,
+    getConnection: () => ({ requestRejection: () => undefined }),
     ...options,
   });
 }

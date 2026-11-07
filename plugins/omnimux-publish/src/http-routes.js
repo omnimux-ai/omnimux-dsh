@@ -26,7 +26,7 @@ export function registerPublishRoutes(webServer, dispatcher) {
       const subPath = extractSubPath(url.pathname)
       if (method === 'POST') {
         try {
-          assertLocalWrite({ origin: header(req, 'origin'), referer: header(req, 'referer'), secFetchSite: header(req, 'sec-fetch-site') })
+          assertLocalWrite({ origin: header(req, 'origin'), referer: header(req, 'referer'), secFetchSite: header(req, 'sec-fetch-site'), host: header(req, 'host'), secure: Boolean(/** @type {{ encrypted?: boolean } | undefined} */ (req.socket)?.encrypted) })
         } catch {
           sendJson(res, 403, { error: 'not-local', message: 'cross-origin write refused' })
           return
