@@ -95,7 +95,14 @@ export function createAppsRoutes(deps: {
       };
 
       const readBody = async (): Promise<any> => {
-        if (req.body && typeof req.body === 'object') return req.body;
+        if (req.body && typeof req.body === 'object') {
+          try {
+            if (Buffer.byteLength(JSON.stringify(req.body)) > MAX_BODY_BYTES) return undefined;
+          } catch {
+            return undefined;
+          }
+          return req.body;
+        }
         return new Promise((resolve) => {
           const chunks: Buffer[] = [];
           let size = 0;
@@ -360,7 +367,10 @@ export function registerAppsApiRoutes(
   if (!webServer || typeof webServer.register !== 'function') {
     return () => {};
   }
-  const router = createAppsRoutes(deps);
+  const router = createAppsRoutes({
+    ...deps,
+    getConnection: typeof deps.getConnection === 'function' ? deps.getConnection : () => undefined,
+  });
   return webServer.register({
     kind: 'prefix',
     path: PREFIX,

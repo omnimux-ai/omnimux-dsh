@@ -57,6 +57,11 @@
 假设 1：生产宿主始终通过 `ctx.get('connection')` 提供连接鉴权服务，`mountHubHttp` 与 apps 的 `apply` 会把它传入；开发/单测未注入时，相关路由不获得“默认放行”，而是沿用现有测试 seam 或返回 503。
 假设 2：桌面 UI 的本地请求是同源 `http(s)://<host>:<port>`；跨源 `file://` 页面不是必须支持的产品路径，若需要支持必须另加 nonce/token，不能恢复通配 CORS。
 
+## 旧标准变更
+
+- `plugins/omnimux/src/official/http-routes.test.js` :: `rejects account and analytics reads before dispatch when connection rejects`
+  原断言只比对 `error`；错误响应统一补 `message` 后仍断言 `error`，并追加 `message` 断言，拒绝语义未被削弱。
+
 ## 证伪方式
 
 - 若 `pnpm --filter omnimux test` 失败，说明共享 JSON 或 local-origin 修改破坏了现有路由；若新增测试中 foreign origin 仍返回 200，说明 CORS/来源校验没有收紧。

@@ -441,10 +441,13 @@ export function registerOfficialRoutes(webServer, dispatcher, deps = {}) {
    * @returns {boolean}
    */
   function rejectProtected(req, res) {
-    if (getConnection === undefined) return false
+    if (getConnection === undefined) {
+      sendJson(res, 503, { error: 'auth-unavailable', message: 'Host connection authentication is unavailable' })
+      return true
+    }
     const rejection = requestRejection(req, getConnection)
     if (rejection === undefined) return false
-    sendJson(res, rejection, { error: 'request-denied' })
+    sendJson(res, rejection, { error: 'request-denied', message: 'Request not authorized' })
     return true
   }
 

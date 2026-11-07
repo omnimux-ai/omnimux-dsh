@@ -284,8 +284,10 @@ export function registerInspirationRoutes(webServer, dispatcher) {
     kind: 'prefix',
     path: PREFIX,
     async handler(req, res) {
+      const method = (req.method || 'GET').toUpperCase()
+      const sendResponse = method === 'GET' || method === 'HEAD' ? sendPublicJson : sendJson
       try {
-        if ((req.method || '').toUpperCase() === 'OPTIONS') {
+        if (method === 'OPTIONS') {
           sendPublicJson(res, 204, {})
           return
         }
@@ -297,7 +299,7 @@ export function registerInspirationRoutes(webServer, dispatcher) {
         const wantsBody = req.method === 'POST' || req.method === 'PATCH'
         const body = wantsBody ? await readJsonBody(req) : undefined
         if (wantsBody && body === null) {
-          sendPublicJson(res, 400, { error: 'invalid json' })
+          sendResponse(res, 400, { error: 'invalid json' })
           return
         }
         const result = await dispatcher.dispatch({
@@ -308,9 +310,9 @@ export function registerInspirationRoutes(webServer, dispatcher) {
           referer: header(req, 'referer'),
           secFetchSite: header(req, 'sec-fetch-site'),
         })
-        sendPublicJson(res, result.status, result.body)
+        sendResponse(res, result.status, result.body)
       } catch {
-        sendPublicJson(res, 500, { error: 'internal error' })
+        sendResponse(res, 500, { error: 'internal error' })
       }
     },
   })
