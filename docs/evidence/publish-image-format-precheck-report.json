@@ -1,0 +1,60 @@
+{
+  "task": "Issue #3957",
+  "total": 9,
+  "failed": 0,
+  "assertions": [
+    {
+      "name": "PNG 被拦截且未上传",
+      "pass": true,
+      "detail": "uploads=0"
+    },
+    {
+      "name": "PNG 提示包含格式要求",
+      "pass": true,
+      "detail": "TikTok 图文仅支持 JPEG/WebP，sample.png 格式不受支持，请先转换后上传"
+    },
+    {
+      "name": "PNG 未进入素材列表",
+      "pass": true,
+      "detail": "media=0"
+    },
+    {
+      "name": "JPEG 正常上传",
+      "pass": true,
+      "detail": "[{\"name\":\"sample.jpg\",\"type\":\"image/jpeg\"}]"
+    },
+    {
+      "name": "JPEG 进入素材列表",
+      "pass": true,
+      "detail": "media=1"
+    },
+    {
+      "name": "草稿 JPEG 无格式标记",
+      "pass": true,
+      "detail": "badge=0"
+    },
+    {
+      "name": "草稿 JPEG 可提交",
+      "pass": true,
+      "detail": "disabled=false"
+    },
+    {
+      "name": "草稿 PNG 显示格式标记",
+      "pass": true,
+      "detail": "格式不支持"
+    },
+    {
+      "name": "草稿 PNG 禁用提交",
+      "pass": true,
+      "detail": "disabled=true"
+    }
+  ],
+  "pass": true,
+  "screenshot": "docs/evidence/publish-image-format-precheck.png",
+  "screenshotBytes": 66477,
+  "url": "http://127.0.0.1:62474/",
+  "chrome": "Google Chrome 157.0.8103.39",
+  "bundleSha256": "f77947f188f63a7de6cddce8fd76b9931bfb4affee9ff9b0f152db04c841a140",
+  "headSha": "7b0c61863c7cfbaa45cfb81372150cfbadee2424",
+  "ranAt": "2026-11-07T02:16:05.255Z"
+}
