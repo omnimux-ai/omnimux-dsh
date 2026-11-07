@@ -7,6 +7,7 @@
 import { PublishError } from './publish-error.js'
 import { RECORD_TYPES } from './record-schema.js'
 import { isObject, isStringArray } from './shared/values.js'
+import { normalizeTikTokOptions, tiktokOptionProblems } from './shared/tiktok-options.js'
 /** @typedef {{ path?: string, media_id?: string, kind?: string }} MediaRef */
 /** @typedef {{ type?: unknown, title?: unknown, description?: unknown, topics?: string[], media?: MediaRef[], cover?: MediaRef, settings?: Record<string, unknown>, account_ids?: string[] }} DraftPayload */
 import { accountAvailability } from './accounts.js'
@@ -95,6 +96,13 @@ export function validateContent(draft) {
   return errors
 }
 
+/** @type {Record<string, string>} */
+const TIKTOK_OPTION_MESSAGES = {
+  'commercial-brand-required': '商业内容披露需要选择「你的品牌」或「付费推广」',
+  'branded-requires-public': '付费推广不能设置为「仅自己可见」',
+  'music-confirmation-required': '商业内容需要勾选「已获得音乐使用授权」',
+}
+
 /**
  * submit 前全量校验：内容 + 账号存在性 + 账号可用性 + 平台能力冲突。
  * @param {{
@@ -104,12 +112,18 @@ export function validateContent(draft) {
  *   mediaRows?: Array<{ kind: string, id: string }>,
  *   coverRow?: { kind: string, id: string } | null,
  *   account_ids: string[],
+ *   settings?: Record<string, unknown>,
  * }} draft
  * @param {{ accounts: Record<string, unknown>[], platforms: Record<string, import('./config.js').PlatformCapabilities> }} ctx
  * @returns {{ ok: boolean, errors: Array<{ code: string, field: string, message: string }> }}
  */
 export function validateForSubmit(draft, ctx) {
   const errors = [...validateContent(draft)]
+  if (draft.settings && isObject(draft.settings.tiktok_options)) {
+    for (const code of tiktokOptionProblems(normalizeTikTokOptions(draft.settings.tiktok_options))) {
+      errors.push({ code, field: 'settings.tiktok_options', message: TIKTOK_OPTION_MESSAGES[code] ?? code })
+    }
+  }
   if (!Array.isArray(draft.account_ids) || draft.account_ids.length === 0) {
     errors.push({ code: 'accounts-required', field: 'account_ids', message: '提交前需要至少选择一个账号（publish_assign_accounts）' })
     return { ok: false, errors }

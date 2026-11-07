@@ -65,6 +65,19 @@ export async function createPost(client, args, accountMetaStore) {
 }
 
 /**
+ * Read the authorized account's live TikTok publishing capability (privacy
+ * levels, disabled interactions). Used by the publishing composer before it
+ * renders the options panel.
+ * @param {{ withPat: Function }} client
+ * @param {{ id?: string, provider?: unknown }} args
+ */
+export async function creatorInfo(client, args) {
+  const provider = requireSocialProvider(args.provider)
+  const id = encodeURIComponent(String(args.id || ''))
+  return assertSocialSuccess(await client.withPat(`/api/social/v1/accounts/${id}/creator-info?provider=${provider}`))
+}
+
+/**
  * @param {{ withPat: Function }} client
  * @param {{ id?: string, provider?: unknown }} args
  */

@@ -337,3 +337,15 @@ describe('presign header normalization (Issue #3943)', () => {
     assert.equal(sent['if-none-match'], '*')
   })
 })
+
+describe('creatorInfo (TikTok 发布能力)', () => {
+  it('calls omnimux_accounts_creator_info with the publishing provider', async () => {
+    const tools = mockTools({
+      omnimux_accounts_creator_info: () => okEnvelope({ privacy_level_options: ['SELF_ONLY'], comment_disabled: false }),
+    })
+    const channel = createHubChannel({ tools })
+    const info = await channel.creatorInfo('42')
+    assert.deepEqual(info, { privacy_level_options: ['SELF_ONLY'], comment_disabled: false })
+    assert.deepEqual(tools.calls[0].arguments, { id: '42', provider: 'tiktok_direct' })
+  })
+})

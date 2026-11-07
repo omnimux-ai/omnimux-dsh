@@ -44,6 +44,7 @@
 
 媒体预签名仍依赖 Zernio，未增加来源参数，后续跟踪 #624。
 上传 PUT 不携带网关凭据。本次不改计费、席位、官方撤销和 Zernio 402 政策。
+发布参数可携带 `tiktok_options`（隐私级别、评论/合拍/拼接开关、商业内容披露、音乐使用确认），由 `omnimux_publish_create` 透传给网关；发布页先用 `omnimux_accounts_creator_info`（网关 `GET /accounts/:id/creator-info`）取可用隐私级别再渲染选项。
 预签名响应里的 `headers` 是签名绑定的请求头（例如 R2 的 `if-none-match`），上传时必须原样回放；`upload_method` 不是 `PUT` 时明确失败，不猜测。
 真实授权、发布、状态回收、解绑，以及预签名 URL 有效期与复用能力均需独立证据。
 fixture 和本地测试不证明官方发布全链路成功。

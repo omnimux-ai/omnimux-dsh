@@ -153,6 +153,16 @@ export function createHubChannel(deps = {}) {
   }
 
   /**
+   * 读取账号在 TikTok 侧的发布能力（可用隐私级别、禁用的互动项）。
+   * @param {string} accountId
+   * @param {{ agent?: unknown, signal?: AbortSignal }} [opts]
+   */
+  async function creatorInfo(accountId, opts = {}) {
+    const value = await exec('omnimux_accounts_creator_info', { id: String(accountId), provider: PUBLISH_PROVIDER }, opts)
+    return unwrap(value, 'omnimux_accounts_creator_info')
+  }
+
+  /**
    * @param {{ agent?: unknown, signal?: AbortSignal }} [opts]
    */
   async function listAccounts(opts = {}) {
@@ -203,7 +213,7 @@ export function createHubChannel(deps = {}) {
     return { ok: true, status: response.status }
   }
 
-  return { exec, unwrap, presign, createPost, getPost, listAccounts, putBytes }
+  return { exec, unwrap, presign, createPost, getPost, listAccounts, creatorInfo, putBytes }
 }
 
 /**

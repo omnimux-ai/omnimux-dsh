@@ -81,7 +81,7 @@ describe('hub apply composition', () => {
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
   })
 
-  it('registers all 54 tools and 20 seams by default', () => {
+  it('registers all 55 tools and 20 seams by default', () => {
     const names = []
     const provided = []
     apply({
@@ -90,7 +90,7 @@ describe('hub apply composition', () => {
       get() { return undefined },
     })
 
-    assert.equal(names.length, 54)
+    assert.equal(names.length, 55)
     assert.ok(names.includes('omnimux_video_submit'))
     assert.ok(names.includes('omnimux_image_submit'))
     assert.ok(names.includes('omnimux_audio_submit'))

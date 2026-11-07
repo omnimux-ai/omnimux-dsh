@@ -11,11 +11,12 @@ import { isStringArray } from './shared/values.js'
  *   media: ReturnType<typeof import('./media.js').createMediaStore>,
  *   accounts: ReturnType<typeof import('./accounts.js').createAccountSource>,
  *   service: ReturnType<typeof import('./submit.js').createSubmitService>,
+ *   channel: ReturnType<typeof import('./hubtools.js').createHubChannel>,
  *   config: import('./config.js').PublishConfig,
  * }} deps
  */
 export function createPublishDispatcher(deps) {
-  const { store, media, accounts, service, config } = deps
+  const { store, media, accounts, service, channel, config } = deps
 
   /** @param {{ path?: string, media_id?: string }} ref */
   function resolveMediaRef(ref) {
@@ -90,6 +91,16 @@ export function createPublishDispatcher(deps) {
   function deleteDraft(input) {
     if (input.confirm !== true) throw new PublishError('confirm-required', '删除草稿需要显式 confirm:true（防误删；草稿删除不可恢复）')
     return store.remove(String(input.draft_id || ''))
+  }
+
+  /** @param {{ account_id: string }} input */
+  async function creatorInfo(input) {
+    const accountId = String(input.account_id || '')
+    if (accountId === '') throw new PublishError('invalid-arguments', 'account_id is required')
+    if (!channel || typeof channel.creatorInfo !== 'function') {
+      throw new PublishError('hub-tool-unavailable', 'creator info is unavailable')
+    }
+    return channel.creatorInfo(accountId)
   }
 
   /** @param {{ platform?: string }} [input] */
@@ -189,7 +200,7 @@ export function createPublishDispatcher(deps) {
     }
   }
   return {
-    createDraft, updateDraft, deleteDraft, listAccounts, assignAccounts, submit, submitPrepare, submitDispatch,
+    createDraft, updateDraft, deleteDraft, listAccounts, creatorInfo, assignAccounts, submit, submitPrepare, submitDispatch,
     setRecordError, openMedia, getRecord, retryTask, listRecords, capabilities, importMedia, importPath, state, tabCounts,
   }
 }

@@ -8,9 +8,16 @@ import {
   IconTrashOutline16,
 } from 'dsh-ui-kit'
 import { Button, InputField, Toolbar } from 'dsh-ui-kit'
-import { createDraft, errorText, getCapabilities, mediaContentUrl, recordDetail, submitRecord, updateDraft, uploadMedia } from '../api.js'
+import { createDraft, creatorInfo, errorText, getCapabilities, mediaContentUrl, recordDetail, submitRecord, updateDraft, uploadMedia } from '../api.js'
 import { formCapabilities, parseTopics } from '../capabilities.js'
 import { isSupportedImageFormat, unsupportedImageRows } from '../image-format.js'
+import {
+  DEFAULT_TIKTOK_OPTIONS,
+  normalizeTikTokOptions,
+  privacyChoices,
+  storeTikTokOptions,
+  tiktokOptionProblems,
+} from '../../shared/tiktok-options.js'
 import { AccountPanel } from '../AccountPanel.jsx'
 
 /**
@@ -43,6 +50,10 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [tiktokOptions, setTiktokOptions] = useState(() => normalizeTikTokOptions(DEFAULT_TIKTOK_OPTIONS))
+  /** @type {[Record<string, unknown> | null, Function]} */
+  const [accountCreator, setAccountCreator] = useState(null)
+  const [optionsLoading, setOptionsLoading] = useState(false)
   const fileInputRef = useRef(null)
 
   // 能力矩阵（表单裁剪数据源，与工具校验同源）
@@ -77,6 +88,7 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
         content_type: String(row.content_type || ''),
       })))
       setCoverMediaId(record.cover_media_id ? String(record.cover_media_id) : '')
+      setTiktokOptions(normalizeTikTokOptions(record.settings?.tiktok_options))
       setAccountIds((Array.isArray(record.account_ids) ? record.account_ids : []).map(String))
     }).catch((caught) => {
       setError(caught instanceof Error ? caught.message : String(caught))
@@ -88,6 +100,38 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
   const videos = mediaList.filter((m) => m.kind === 'video')
   const unsupportedImages = type === 'image' ? unsupportedImageRows(images) : []
   const imageFormatBlocked = unsupportedImages.length > 0
+  // 账号发布能力（隐私级别/禁用的互动项）——选第一个账号即可代表本次发布。
+  useEffect(() => {
+    const accountId = accountIds.length > 0 ? String(accountIds[0]) : ''
+    if (accountId === '') return
+    if (accountCreator && String(accountCreator.account_id || '') === accountId) return
+    let disposed = false
+    setOptionsLoading(true)
+    creatorInfo(accountId).then((result) => {
+      if (disposed) return
+      const payload = result.ok && result.body ? result.body : null
+      const data = payload && typeof payload === 'object' ? (payload.data ?? payload) : null
+      setAccountCreator(data && typeof data === 'object' ? { ...data, account_id: accountId } : { account_id: accountId, degraded: true })
+      setOptionsLoading(false)
+    }).catch(() => {
+      if (disposed) return
+      setAccountCreator({ account_id: accountId, degraded: true })
+      setOptionsLoading(false)
+    })
+    return () => { disposed = true }
+  }, [accountIds, accountCreator])
+
+  useEffect(() => {
+    const allowed = privacyChoices(accountCreator)
+    setTiktokOptions((prev) => (allowed.includes(prev.privacy_level) ? prev : { ...prev, privacy_level: allowed[0] }))
+  }, [accountCreator])
+
+  const optionsProblems = tiktokOptionProblems(tiktokOptions)
+  const optionsBlocked = optionsProblems.length > 0
+  const toggleDisabled = (flag) => accountCreator?.[flag] === true
+  const patchOptions = useCallback((patch) => {
+    setTiktokOptions((prev) => normalizeTikTokOptions({ ...prev, ...patch }))
+  }, [])
   const caps = formCapabilities({
     platforms,
     selectedAccounts: accountRows,
@@ -144,10 +188,11 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
       description,
       topics: parseTopics(topicsRaw),
       media: mediaList.map((m) => ({ media_id: m.id })),
+      settings: { tiktok_options: storeTikTokOptions(tiktokOptions) },
     }
     if (type === 'image' && coverMediaId) payload.cover = { media_id: coverMediaId }
     return payload
-  }, [title, description, topicsRaw, mediaList, coverMediaId, type])
+  }, [title, description, topicsRaw, mediaList, coverMediaId, type, tiktokOptions])
 
   /**
    * 保存草稿（新建或更新，含账号挂载——Host 走与 assign 工具同一条校验）。
@@ -187,6 +232,10 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
 
   /** 一键发布：保存 → POST submit（立即返回）→ 轮询跟进由舞台层接管。 */
   const handleSubmit = useCallback(async () => {
+    if (optionsBlocked) {
+      setError(optionsProblems.map((code) => t(`form.options.problem.${code}`)).join(' '))
+      return
+    }
     if (imageFormatBlocked) {
       setError(t('form.imageFormatBlocked', { count: unsupportedImages.length }))
       return
@@ -207,7 +256,7 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
     } finally {
       setBusy(false)
     }
-  }, [accountIds.length, imageFormatBlocked, unsupportedImages.length, persistDraft, onSubmitted, t])
+  }, [accountIds.length, imageFormatBlocked, unsupportedImages.length, optionsBlocked, optionsProblems, persistDraft, onSubmitted, t])
 
   // ---- M2 类型选择（新草稿入口）----
   if (!type) {
@@ -257,7 +306,7 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
               <Button variant="secondary" size="sm" disabled={uploading} loading={busy} onClick={() => { void persistDraft() }}>
                 {t('form.saveDraft')}
               </Button>
-              <Button variant="primary" size="sm" disabled={uploading || imageFormatBlocked} loading={busy} onClick={() => { void handleSubmit() }}>
+              <Button variant="primary" size="sm" disabled={uploading || imageFormatBlocked || optionsBlocked} loading={busy} onClick={() => { void handleSubmit() }}>
                 {busy ? t('form.submitting') : t('form.submit')}
               </Button>
             </>
@@ -291,6 +340,78 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
           placeholder={t('form.topicsPlaceholder')}
           onChange={(event) => { setTopicsRaw(event.currentTarget.value) }}
         />
+
+        <div className="omnimux-publish-field omnimux-publish-options">
+          <span className="omnimux-publish-label">{t('form.options.title')}</span>
+          {optionsLoading ? <Hint text={t('form.options.loading')} /> : null}
+          <label className="omnimux-publish-option-row">
+            <span className="omnimux-publish-label">{t('form.options.privacy')}</span>
+            <select
+              className="omnimux-publish-select"
+              value={tiktokOptions.privacy_level}
+              onChange={(event) => { patchOptions({ privacy_level: event.currentTarget.value }) }}
+            >
+              {privacyChoices(accountCreator).map((level) => (
+                <option key={level} value={level}>{t(`form.options.privacy.${level}`)}</option>
+              ))}
+            </select>
+          </label>
+          {[['allow_comment', 'form.options.comment', 'comment_disabled'], ['allow_duet', 'form.options.duet', 'duet_disabled'], ['allow_stitch', 'form.options.stitch', 'stitch_disabled']].map(([key, label, flag]) => (
+            <label key={key} className="omnimux-publish-option-check">
+              <input
+                type="checkbox"
+                checked={tiktokOptions[key] === true}
+                disabled={toggleDisabled(flag)}
+                onChange={(event) => { patchOptions({ [key]: event.currentTarget.checked }) }}
+              />
+              <span>{t(label)}</span>
+              {toggleDisabled(flag) ? <em className="omnimux-publish-option-note">{t('form.options.disabledByAccount')}</em> : null}
+            </label>
+          ))}
+          <label className="omnimux-publish-option-check">
+            <input
+              type="checkbox"
+              checked={tiktokOptions.commercial_content}
+              onChange={(event) => { patchOptions({ commercial_content: event.currentTarget.checked }) }}
+            />
+            <span>{t('form.options.commercial')}</span>
+          </label>
+          {tiktokOptions.commercial_content ? (
+            <>
+              <div className="omnimux-publish-option-radios">
+                <label className="omnimux-publish-option-check">
+                  <input
+                    type="radio"
+                    name="omnimux-commercial-kind"
+                    checked={tiktokOptions.your_brand}
+                    onChange={() => { patchOptions({ your_brand: true, branded_content: false }) }}
+                  />
+                  <span>{t('form.options.yourBrand')}</span>
+                </label>
+                <label className="omnimux-publish-option-check">
+                  <input
+                    type="radio"
+                    name="omnimux-commercial-kind"
+                    checked={tiktokOptions.branded_content}
+                    onChange={() => { patchOptions({ your_brand: false, branded_content: true }) }}
+                  />
+                  <span>{t('form.options.branded')}</span>
+                </label>
+              </div>
+              <label className="omnimux-publish-option-check">
+                <input
+                  type="checkbox"
+                  checked={tiktokOptions.music_usage_confirmed}
+                  onChange={(event) => { patchOptions({ music_usage_confirmed: event.currentTarget.checked }) }}
+                />
+                <span>{t('form.options.music')}</span>
+              </label>
+            </>
+          ) : null}
+          {optionsProblems.map((code) => (
+            <Hint key={code} tone="warn" text={t(`form.options.problem.${code}`)} />
+          ))}
+        </div>
 
         <div className="omnimux-publish-field">
           <span className="omnimux-publish-label">{t('form.media')}</span>

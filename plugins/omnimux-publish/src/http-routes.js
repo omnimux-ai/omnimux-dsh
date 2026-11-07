@@ -48,6 +48,15 @@ export function registerPublishRoutes(webServer, dispatcher) {
         sendJson(res, 200, await dispatcher.getRecord({ record_id: url.searchParams.get('id') || '', refresh: false }))
         return
       }
+      if (method === 'GET' && subPath === '/creator-info') {
+        try {
+          sendJson(res, 200, await dispatcher.creatorInfo({ account_id: url.searchParams.get('id') || '' }))
+        } catch (error) {
+          if (error instanceof PublishError) sendJson(res, STATUS_BY_CODE[error.code] ?? 400, { error: error.code, message: error.message })
+          else sendJson(res, 500, { error: 'internal', message: messageOf(error) })
+        }
+        return
+      }
       if (method === 'GET' && subPath === '/capabilities') {
         sendJson(res, 200, dispatcher.capabilities())
         return

@@ -117,7 +117,7 @@ export function RecordDetail({ t, recordId, onBack, onChanged }) {
       {record.error ? (
         <div role="alert" className="omnimux-publish-alert banner">{String(record.error)}</div>
       ) : null}
-      {showsPrivateNotice(tasks) ? (
+      {showsPrivateNotice(tasks, record) ? (
         <div className="omnimux-publish-alert banner">{t('detail.privateNotice')}</div>
       ) : null}
 
