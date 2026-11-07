@@ -100,5 +100,10 @@
     }
   },
   "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omnimux-ai/omnimux-dsh.git",
+    "directory": "plugins/omnimux"
+  },
   "description": "OmniMux execution hub for DeepSeek Harness: product chrome, identity, model routes, and video jobs."
 }
