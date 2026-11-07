@@ -643,7 +643,7 @@ describe('registerOfficialRoutes body parsing', () => {
     return {
       method,
       url,
-      headers: { origin: 'http://127.0.0.1:8787' },
+      headers: { host: '127.0.0.1:8787', origin: 'http://127.0.0.1:8787' },
       async *[Symbol.asyncIterator]() {
         if (rawBody !== undefined) yield Buffer.from(rawBody, 'utf8')
       },
@@ -705,6 +705,22 @@ describe('registerOfficialRoutes body parsing', () => {
     assert.equal(res.state.status, 400)
     assert.equal(JSON.parse(res.state.body).error, 'invalid json')
     assert.equal(dispatched, 0, 'the dispatcher never sees a broken body')
+  })
+
+  it('rejects account and analytics reads before dispatch when connection rejects', async () => {
+    const webServer = fakeWebServer()
+    let dispatched = 0
+    const dispatcher = {
+      async dispatch() { dispatched += 1; return { status: 200, body: {} } },
+    }
+    registerOfficialRoutes(webServer, dispatcher, {
+      getConnection: () => ({ requestRejection: () => 403 }),
+    })
+    const res = fakeRes()
+    await handlerFor(webServer)(fakeReq('GET', '/omnimux/accounts?provider=zernio'), res)
+    assert.equal(res.state.status, 403)
+    assert.deepEqual(JSON.parse(res.state.body), { error: 'request-denied' })
+    assert.equal(dispatched, 0)
   })
 
   it('writes avatar bytes instead of JSON', async () => {

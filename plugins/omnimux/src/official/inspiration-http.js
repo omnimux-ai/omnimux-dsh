@@ -21,6 +21,9 @@ import {
   uploadMedia,
 } from './inspiration.js'
 
+/** The official cloud inspiration catalog is public; keep its explicit cross-origin read contract. */
+const sendPublicJson = (res, status, body) => sendJson(res, status, body, '*')
+
 const PREFIX = '/omnimux/inspiration'
 const SITE_MEDIA = '/api/inspiration/v1/media/'
 
@@ -111,7 +114,7 @@ export function createInspirationDispatcher(deps = {}) {
     const isShareRequest = method === 'POST' && path.endsWith('/share')
     if (method !== 'GET' && !isShareRequest) {
       try {
-        assertLocalWrite(req)
+        assertLocalWrite(req, { rejectSameSite: true })
         if (deps.identity && typeof deps.identity.require === 'function') {
           const profile = await deps.identity.require()
           const isAdmin = Boolean(profile?.is_admin || (typeof profile?.role === 'number' && profile.role >= 10))
@@ -218,21 +221,21 @@ export function createInspirationDispatcher(deps = {}) {
    */
   async function streamMedia(req, res) {
     if (!official.mount) {
-      sendJson(res, 404, { error: 'not found' })
+      sendPublicJson(res, 404, { error: 'not found' })
       return
     }
     const url = new URL(req.url || PREFIX, 'http://127.0.0.1')
     const key = mediaKeyFromHostPath(url.pathname)
     if (!key || key.includes('..')) {
-      sendJson(res, 400, { error: 'invalid media key' })
+      sendPublicJson(res, 400, { error: 'invalid media key' })
       return
     }
     if ((req.method || 'GET').toUpperCase() !== 'GET') {
-      sendJson(res, 405, { error: 'method not allowed' })
+      sendPublicJson(res, 405, { error: 'method not allowed' })
       return
     }
     if (typeof client.withPatRaw !== 'function') {
-      sendJson(res, 502, { error: 'media stream unavailable' })
+      sendPublicJson(res, 502, { error: 'media stream unavailable' })
       return
     }
     try {
@@ -265,7 +268,7 @@ export function createInspirationDispatcher(deps = {}) {
         return
       }
       const mapped = mapError(error)
-      sendJson(res, mapped.status, mapped.body)
+      sendPublicJson(res, mapped.status, mapped.body)
     }
   }
 
@@ -283,7 +286,7 @@ export function registerInspirationRoutes(webServer, dispatcher) {
     async handler(req, res) {
       try {
         if ((req.method || '').toUpperCase() === 'OPTIONS') {
-          sendJson(res, 204, {})
+          sendPublicJson(res, 204, {})
           return
         }
         const url = new URL(req.url || PREFIX, 'http://127.0.0.1')
@@ -294,7 +297,7 @@ export function registerInspirationRoutes(webServer, dispatcher) {
         const wantsBody = req.method === 'POST' || req.method === 'PATCH'
         const body = wantsBody ? await readJsonBody(req) : undefined
         if (wantsBody && body === null) {
-          sendJson(res, 400, { error: 'invalid json' })
+          sendPublicJson(res, 400, { error: 'invalid json' })
           return
         }
         const result = await dispatcher.dispatch({
@@ -305,9 +308,9 @@ export function registerInspirationRoutes(webServer, dispatcher) {
           referer: header(req, 'referer'),
           secFetchSite: header(req, 'sec-fetch-site'),
         })
-        sendJson(res, result.status, result.body)
+        sendPublicJson(res, result.status, result.body)
       } catch {
-        sendJson(res, 500, { error: 'internal error' })
+        sendPublicJson(res, 500, { error: 'internal error' })
       }
     },
   })
