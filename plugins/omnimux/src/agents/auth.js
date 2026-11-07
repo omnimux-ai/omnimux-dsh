@@ -192,12 +192,13 @@ export function buildLoginScript(agent) {
 }
 
 /**
- * Start one CLI's account sign-in where the user can actually see it. The
- * command is interactive (a browser hand-off or a device code on stderr), so
- * it runs in a real terminal window rather than invisibly in the host process.
+ * Start one CLI's account sign-in. By default it runs in a detached background
+ * pseudo-terminal so the browser/device hand-off works without opening
+ * Terminal.app; pass `mode: 'terminal'` (or set OMNIMUX_CLI_LOGIN_MODE=terminal)
+ * to use the visible Terminal fallback.
  * @param {string} id
- * @param {{ platform?: string, run?: Function, fsImpl?: typeof fs, scriptDir?: string }} [options]
- * @returns {Promise<{ ok: true, launched: true, mode: 'terminal' } | { ok: false, error: string }>}
+ * @param {{ platform?: string, mode?: 'background'|'terminal', home?: string, run?: Function, spawnImpl?: Function, fsImpl?: typeof fs, scriptDir?: string }} [options]
+ * @returns {Promise<{ ok: true, launched: true, mode: 'terminal'|'background', logPath?: string } | { ok: false, error: string }>}
  */
 export async function launchAgentLogin(id, options = {}) {
   const agent = findAgent(id)
@@ -243,19 +244,38 @@ export async function launchAgentLogin(id, options = {}) {
   const logPath = path.join(scriptDir, `omnimux-${agent.id}-login.log`)
   const invocation = `cd "$HOME" || exit 1\nexec ${parts.bin} ${parts.args.join(' ')}`
   const spawnImpl = typeof options.spawnImpl === 'function' ? options.spawnImpl : spawn
+  const safeEnv = {
+    HOME: home,
+    PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
+    TERM: 'xterm-256color',
+  }
+  for (const key of ['USER', 'LOGNAME', 'SHELL', 'TMPDIR', 'LANG', 'LC_ALL', 'LC_CTYPE']) {
+    if (process.env[key]) safeEnv[key] = process.env[key]
+  }
   try {
-    fsImpl.mkdirSync(scriptDir, { recursive: true })
-    const fd = fsImpl.openSync(logPath, 'a')
+    fsImpl.mkdirSync(scriptDir, { recursive: true, mode: 0o700 })
+    const fd = fsImpl.openSync(logPath, 'a', 0o600)
     let child
     try {
       child = spawnImpl('/usr/bin/script', ['-q', '/dev/null', '/bin/sh', '-lc', invocation], {
         cwd: home,
-        env: { ...process.env, HOME: home, TERM: 'xterm-256color' },
+        env: safeEnv,
         detached: true,
         stdio: ['ignore', fd, fd],
       })
     } finally {
       fsImpl.closeSync(fd)
+    }
+    if (child && typeof child.on === 'function') child.on('error', () => {})
+    if (child && typeof child.once === 'function') {
+      const earlyFailure = await new Promise((resolve) => {
+        let done = false
+        const settle = (value) => { if (!done) { done = true; resolve(value) } }
+        child.once('error', (error) => settle(error))
+        child.once('exit', (code) => { if (code !== 0) settle(new Error(`exit ${code}`)) })
+        setTimeout(() => settle(null), 800)
+      })
+      if (earlyFailure) return { ok: false, error: 'launch-failed' }
     }
     if (child && typeof child.unref === 'function') child.unref()
     return { ok: true, launched: true, mode: 'background', logPath }

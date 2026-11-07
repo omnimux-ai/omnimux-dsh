@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { EventEmitter } from 'node:events'
 import { describe, it } from 'node:test'
 import { launchAgentLogin, probeAgentAuth } from './auth.js'
 
@@ -367,6 +368,7 @@ describe('launchAgentLogin', () => {
         platform: 'darwin',
         home: dir,
         scriptDir: dir,
+        run: async () => { throw new Error('background mode must not call open') },
         spawnImpl: (bin, args, opts) => {
           calls.push({ bin, args, opts })
           return { unref: () => { unrefed = true } }
@@ -375,12 +377,17 @@ describe('launchAgentLogin', () => {
       assert.equal(result.ok, true)
       assert.equal(result.mode, 'background')
       assert.match(result.logPath, /omnimux-codex-login\.log$/)
+      assert.equal(fs.existsSync(result.logPath), true, 'the background login log must be created')
       assert.equal(calls.length, 1)
       assert.equal(calls[0].bin, '/usr/bin/script')
       assert.deepEqual(calls[0].args.slice(0, 4), ['-q', '/dev/null', '/bin/sh', '-lc'])
       assert.match(calls[0].args[4], /exec codex login/)
       assert.equal(calls[0].opts.detached, true)
       assert.equal(calls[0].opts.cwd, dir)
+      assert.equal(typeof calls[0].opts.stdio[1], 'number')
+      assert.equal(calls[0].opts.stdio[1], calls[0].opts.stdio[2])
+      assert.equal(calls[0].opts.env.OMNIMUX_ACCESS_TOKEN, undefined, 'host secrets must not leak to the CLI')
+      assert.equal(calls[0].opts.env.HOME, dir)
       assert.equal(unrefed, true)
     } finally {
       fs.rmSync(dir, { recursive: true, force: true })
@@ -398,6 +405,49 @@ describe('launchAgentLogin', () => {
       })
       assert.deepEqual(result, { ok: false, error: 'launch-failed' })
     } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('surfaces an asynchronous spawn error as launch-failed', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'omnimux-agent-login-bg-'))
+    try {
+      const child = new EventEmitter()
+      child.unref = () => {}
+      const pending = launchAgentLogin('codex', {
+        platform: 'darwin',
+        home: dir,
+        scriptDir: dir,
+        spawnImpl: () => {
+          setImmediate(() => child.emit('error', new Error('spawn ENOENT')))
+          return child
+        },
+      })
+      const result = await pending
+      assert.deepEqual(result, { ok: false, error: 'launch-failed' })
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('honours OMNIMUX_CLI_LOGIN_MODE=terminal', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'omnimux-agent-login-env-'))
+    const previous = process.env.OMNIMUX_CLI_LOGIN_MODE
+    process.env.OMNIMUX_CLI_LOGIN_MODE = 'terminal'
+    try {
+      const calls = []
+      const result = await launchAgentLogin('claude', {
+        platform: 'darwin',
+        home: dir,
+        scriptDir: dir,
+        run: async (bin, args) => { calls.push({ bin, args }); return { stdout: '', stderr: '' } },
+      })
+      assert.equal(result.mode, 'terminal')
+      assert.equal(calls[0].bin, 'open')
+      assert.ok(calls[0].args.includes('Terminal'))
+    } finally {
+      if (previous === undefined) delete process.env.OMNIMUX_CLI_LOGIN_MODE
+      else process.env.OMNIMUX_CLI_LOGIN_MODE = previous
       fs.rmSync(dir, { recursive: true, force: true })
     }
   })
