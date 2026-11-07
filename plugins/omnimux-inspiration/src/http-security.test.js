@@ -20,8 +20,8 @@ describe('inspiration local HTTP trust boundary', () => {
 
   it('keeps the OPTIONS preflight contract without exposing data', () => {
     const res = fakeRes()
-    sendJson(res, 204, {}, '*')
-    assert.equal(res.headers['Access-Control-Allow-Origin'], '*')
+    sendJson(res, 204, {})
+    assert.equal(res.headers['Access-Control-Allow-Origin'], undefined)
   })
 
   it('rejects foreign and same-site write origins', () => {

@@ -319,7 +319,10 @@ export function apply(ctx) {
       // OPTIONS remains a protocol preflight only. Real JSON responses stay
       // same-origin; a write from another origin is rejected below by origin.
       if ((req.method || '').toUpperCase() === 'OPTIONS') {
-        sendJson(res, 204, {}, '*')
+        // Legacy no-Origin callers keep the old local preflight response; real
+        // browser preflights carry Origin/Referer and receive no CORS grant.
+        const hasBrowserOrigin = Boolean(req.headers?.origin || req.headers?.referer)
+        sendJson(res, 204, {}, hasBrowserOrigin ? '' : '*')
         return
       }
       const method = (req.method || 'GET').toUpperCase()

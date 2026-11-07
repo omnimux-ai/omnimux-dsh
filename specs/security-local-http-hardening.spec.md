@@ -67,6 +67,10 @@
   原断言要求官方云灵感 GET 响应带 `Access-Control-Allow-Origin: *`；该接口可用用户 PAT 并包含收藏等用户态字段，改为断言无 CORS（同源 UI 仍可用），证明通配数据暴露已关闭。
 - `plugins/omnimux/src/official/inspiration-http.test.js` :: `answers OPTIONS preflight with 204 and CORS headers`
   原断言要求 OPTIONS 带通配 CORS；改为断言 204 且无 CORS，证明预检不再为外部来源开放本地响应。
+- `plugins/omnimux-inspiration/src/http-security.test.js` :: `keeps the OPTIONS preflight contract without exposing data`
+  原断言把 OPTIONS 的 `*` 固化为期望；改为断言 204 无 `Access-Control-Allow-Origin`，证明本地灵感库不再发送通配 CORS。
+
+
 
 ## 证伪方式
 
