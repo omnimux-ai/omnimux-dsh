@@ -813,42 +813,51 @@ th[style*="--pub-min-w"] { min-width: var(--pub-min-w); }
   flex-wrap: wrap;
   gap: 4px;
 }
-.omnimux-publish-options {
+.omnimux-publish-settings {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--dsw-alias-border-l1, #e2e8f0);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.04));
 }
-.omnimux-publish-option-row {
+.omnimux-publish-settings-head {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
 }
-.omnimux-publish-select {
-  min-width: 180px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  border: 1px solid var(--dsw-alias-border-l1, #e2e8f0);
-  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.04));
+.omnimux-publish-settings-title {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--dsw-alias-label-primary, #0f172a);
-  font-size: 13px;
 }
-.omnimux-publish-option-check {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--dsw-alias-label-secondary, #475569);
-}
-.omnimux-publish-option-radios {
-  display: flex;
-  gap: 16px;
-  padding-left: 20px;
-}
-.omnimux-publish-option-note {
-  font-style: normal;
+.omnimux-publish-settings-summary {
   font-size: 12px;
   color: var(--dsw-alias-label-tertiary, #94a3b8);
+}
+.omnimux-publish-setting-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+}
+.omnimux-publish-setting-label {
+  flex: 0 0 56px;
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary, #94a3b8);
+}
+.omnimux-publish-setting-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.omnimux-publish-setting-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 68px;
 }
 .omnimux-publish-media-badge {
   align-self: flex-start;

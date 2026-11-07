@@ -1,0 +1,80 @@
+{
+  "task": "Issue #3973",
+  "total": 13,
+  "failed": 0,
+  "assertions": [
+    {
+      "name": "隐私级别使用下拉触发器",
+      "pass": true,
+      "detail": "BUTTON"
+    },
+    {
+      "name": "未审计显示仅自己可见",
+      "pass": true,
+      "detail": "仅自己可见"
+    },
+    {
+      "name": "下拉展开后只有一项可用",
+      "pass": true,
+      "detail": "items=1"
+    },
+    {
+      "name": "已审计下拉有多个选项",
+      "pass": true,
+      "detail": "items=2"
+    },
+    {
+      "name": "下拉包含公开选项",
+      "pass": true,
+      "detail": "公开"
+    },
+    {
+      "name": "选中后触发器回显公开",
+      "pass": true,
+      "detail": "公开"
+    },
+    {
+      "name": "草稿隐私级别为公开",
+      "pass": true,
+      "detail": "PUBLIC_TO_EVERYONE"
+    },
+    {
+      "name": "互动项改为胶囊按钮",
+      "pass": true,
+      "detail": "chips=4"
+    },
+    {
+      "name": "账号侧禁用的互动项置灰",
+      "pass": true,
+      "detail": "disabled=true"
+    },
+    {
+      "name": "禁用项有说明文案",
+      "pass": true,
+      "detail": "checked"
+    },
+    {
+      "name": "商业内容胶囊存在",
+      "pass": true,
+      "detail": "ok"
+    },
+    {
+      "name": "商业内容展开品牌与音乐选项",
+      "pass": true,
+      "detail": "sub=3"
+    },
+    {
+      "name": "缺品牌时给出合并提示",
+      "pass": true,
+      "detail": "checked"
+    }
+  ],
+  "pass": true,
+  "screenshot": "docs/evidence/publish-options-ui.png",
+  "screenshotBytes": 100115,
+  "url": "http://127.0.0.1:54507/",
+  "chrome": "Google Chrome 157.0.8103.39",
+  "bundleSha256": "8adb379b96543b9f187978c8f820da2bb04dc0c9ae114f8c50ef010367fe3e64",
+  "headSha": "d75eda194916a5c3bd60e0183128ae6fc90b970b",
+  "ranAt": "2026-11-07T04:03:01.543Z"
+}
