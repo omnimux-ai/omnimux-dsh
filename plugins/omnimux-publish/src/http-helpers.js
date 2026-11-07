@@ -51,19 +51,28 @@ export async function readRawBody(req) {
   return Buffer.concat(chunks)
 }
 
-/** @param {{ secFetchSite?: string, 'sec-fetch-site'?: string, origin?: string, referer?: string }} [headers] */
+/** @param {{ secFetchSite?: string, 'sec-fetch-site'?: string, origin?: string, referer?: string, host?: string, secure?: boolean }} [headers] */
 export function assertLocalWrite(headers = {}) {
   const site = String(headers.secFetchSite ?? headers['sec-fetch-site'] ?? '').toLowerCase()
   if (site === 'cross-site' || site === 'same-site') throw new Error('cross-origin write refused')
   const origin = headers.origin || originFromReferer(headers.referer)
   if (!origin) return
-  let host
+  let parsed
   try {
-    host = new URL(origin).hostname
+    parsed = new URL(origin)
   } catch {
     throw new Error('cross-origin write refused')
   }
-  if (!LOCAL_HOSTS.has(host)) throw new Error('cross-origin write refused')
+  if (!LOCAL_HOSTS.has(parsed.hostname)) throw new Error('cross-origin write refused')
+  if (headers.host) {
+    let expected
+    try {
+      expected = new URL(`${headers.secure === true ? 'https' : 'http'}://${headers.host}`).origin
+    } catch {
+      throw new Error('cross-origin write refused')
+    }
+    if (parsed.origin !== expected) throw new Error('cross-origin write refused')
+  }
 }
 
 /** @param {string | undefined} referer */

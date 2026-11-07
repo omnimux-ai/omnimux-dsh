@@ -470,6 +470,8 @@ export function registerOfficialRoutes(webServer, dispatcher, deps = {}) {
           origin: header(req, 'origin'),
           referer: header(req, 'referer'),
           secFetchSite: header(req, 'sec-fetch-site'),
+          host: header(req, 'host'),
+          secure: Boolean(req.socket?.encrypted),
         })
         if (result.raw) {
           res.writeHead(result.status, result.headers || { 'Content-Type': 'application/octet-stream' })
@@ -502,6 +504,8 @@ export function registerOfficialRoutes(webServer, dispatcher, deps = {}) {
           origin: header(req, 'origin'),
           referer: header(req, 'referer'),
           secFetchSite: header(req, 'sec-fetch-site'),
+          host: header(req, 'host'),
+          secure: Boolean(req.socket?.encrypted),
         })
         sendJson(res, result.status, result.body)
       } catch {

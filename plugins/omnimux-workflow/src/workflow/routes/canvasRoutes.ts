@@ -411,6 +411,8 @@ export function registerWorkflowRoutes(
           origin: header(req, 'origin'),
           referer: header(req, 'referer'),
           secFetchSite: header(req, 'sec-fetch-site'),
+          host: header(req, 'host'),
+          secure: Boolean((req.socket as { encrypted?: boolean } | undefined)?.encrypted),
           range: header(req, 'range'),
           body,
           browserOwner: authenticatedDirectorSession?.owner,

@@ -63,18 +63,29 @@ export function assertLocalWrite(headers: {
   origin?: string;
   referer?: string;
   secFetchSite?: string;
+  host?: string;
+  secure?: boolean;
 }): void {
   const site = String(headers.secFetchSite || '').toLowerCase();
   if (site === 'cross-site' || site === 'same-site') throw new Error('cross-origin write refused');
   const origin = headers.origin || originFromReferer(headers.referer);
   if (!origin) return;
-  let host: string;
+  let parsed: URL;
   try {
-    host = new URL(origin).hostname;
+    parsed = new URL(origin);
   } catch {
     throw new Error('cross-origin write refused');
   }
-  if (!LOCAL_HOSTS.has(host)) throw new Error('cross-origin write refused');
+  if (!LOCAL_HOSTS.has(parsed.hostname)) throw new Error('cross-origin write refused');
+  if (headers.host) {
+    let expected: string;
+    try {
+      expected = new URL(`${headers.secure === true ? 'https' : 'http'}://${headers.host}`).origin;
+    } catch {
+      throw new Error('cross-origin write refused');
+    }
+    if (parsed.origin !== expected) throw new Error('cross-origin write refused');
+  }
 }
 
 function originFromReferer(referer: string | undefined): string {

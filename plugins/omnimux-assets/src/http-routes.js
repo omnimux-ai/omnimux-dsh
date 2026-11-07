@@ -194,20 +194,29 @@ export async function readJsonBody(req) {
 
 /**
  * POST routes only accept same-machine browser calls.
- * @param {{ origin?: string, referer?: string, secFetchSite?: string }} headers
+ * @param {{ origin?: string, referer?: string, secFetchSite?: string, host?: string, secure?: boolean }} headers
  */
 export function assertLocalWrite(headers = {}) {
   const site = String(headers.secFetchSite || '').toLowerCase()
   if (site === 'cross-site' || site === 'same-site') throw new Error('cross-origin write refused')
   const origin = headers.origin || originFromReferer(headers.referer)
   if (!origin) return
-  let host
+  let parsed
   try {
-    host = new URL(origin).hostname
+    parsed = new URL(origin)
   } catch {
     throw new Error('cross-origin write refused')
   }
-  if (!LOCAL_HOSTS.has(host)) throw new Error('cross-origin write refused')
+  if (!LOCAL_HOSTS.has(parsed.hostname)) throw new Error('cross-origin write refused')
+  if (headers.host) {
+    let expected
+    try {
+      expected = new URL(`${headers.secure === true ? 'https' : 'http'}://${headers.host}`).origin
+    } catch {
+      throw new Error('cross-origin write refused')
+    }
+    if (parsed.origin !== expected) throw new Error('cross-origin write refused')
+  }
 }
 
 /**
@@ -813,6 +822,8 @@ export function registerAssetsRoutes(webServer, dispatcher) {
           origin: header(req, 'origin'),
           referer: header(req, 'referer'),
           secFetchSite: header(req, 'sec-fetch-site'),
+          host: header(req, 'host'),
+          secure: Boolean(req.socket?.encrypted),
           body,
         })
         if (result.redirect) {

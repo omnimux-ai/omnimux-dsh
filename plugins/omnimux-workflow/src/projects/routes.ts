@@ -80,6 +80,8 @@ export interface ProjectDispatchRequest {
   origin?: string;
   referer?: string;
   secFetchSite?: string;
+  host?: string;
+  secure?: boolean;
   body?: unknown;
 }
 

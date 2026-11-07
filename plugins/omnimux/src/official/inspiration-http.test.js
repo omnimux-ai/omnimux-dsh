@@ -407,6 +407,47 @@ describe('registerInspirationRoutes', () => {
     }
   }
 
+  it('rejects a foreign-origin GET before dispatch', async () => {
+    let handler = null
+    registerInspirationRoutes({
+      register(route) {
+        handler = route.handler
+        return () => {}
+      },
+    }, createInspirationDispatcher({ official: { mount: true }, client: clientWith(async () => ({ data: { items: [], total: 0 } })) }))
+    const res = mockRes()
+    await handler({
+      method: 'GET',
+      url: '/omnimux/inspiration?page=1',
+      headers: { origin: 'https://evil.example', host: '127.0.0.1:8787' },
+    }, res)
+    assert.equal(res.status, 403)
+    assert.equal(JSON.parse(res.bodyText).error, 'not-local')
+  })
+
+  it('rejects a foreign-origin media stream before reading bytes', async () => {
+    let handler = null
+    let streamed = false
+    registerInspirationRoutes({
+      register(route) {
+        handler = route.handler
+        return () => {}
+      },
+    }, {
+      async dispatch() { return { status: 200 } },
+      async streamMedia() { streamed = true },
+    })
+    const res = mockRes()
+    await handler({
+      method: 'GET',
+      url: '/omnimux/inspiration/media/asset-1',
+      headers: { origin: 'https://evil.example', host: '127.0.0.1:8787' },
+    }, res)
+    assert.equal(res.status, 403)
+    assert.equal(JSON.parse(res.bodyText).error, 'not-local')
+    assert.equal(streamed, false)
+  })
+
   it('emits CORS headers on the gateway list response so cross-origin pages can fetch', async () => {
     let handler = null
     registerInspirationRoutes({

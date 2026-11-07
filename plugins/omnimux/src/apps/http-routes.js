@@ -164,6 +164,8 @@ export function registerAppsRoutes(webServer, dispatcher) {
           origin: header(req, 'origin'),
           referer: header(req, 'referer'),
           secFetchSite: header(req, 'sec-fetch-site'),
+          host: header(req, 'host'),
+          secure: Boolean(req.socket?.encrypted),
         })
         sendJson(res, result.status, result.body)
       } catch {
