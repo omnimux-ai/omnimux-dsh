@@ -7,7 +7,7 @@ import {
   IconPlusOutline16,
   IconTrashOutline16,
 } from 'dsh-ui-kit'
-import { Button, InputField, Toolbar } from 'dsh-ui-kit'
+import { Button, DropdownSelect, InputField, Toolbar } from 'dsh-ui-kit'
 import { createDraft, creatorInfo, errorText, getCapabilities, mediaContentUrl, recordDetail, submitRecord, updateDraft, uploadMedia } from '../api.js'
 import { formCapabilities, parseTopics } from '../capabilities.js'
 import { isSupportedImageFormat, unsupportedImageRows } from '../image-format.js'
@@ -341,78 +341,6 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
           onChange={(event) => { setTopicsRaw(event.currentTarget.value) }}
         />
 
-        <div className="omnimux-publish-field omnimux-publish-options">
-          <span className="omnimux-publish-label">{t('form.options.title')}</span>
-          {optionsLoading ? <Hint text={t('form.options.loading')} /> : null}
-          <label className="omnimux-publish-option-row">
-            <span className="omnimux-publish-label">{t('form.options.privacy')}</span>
-            <select
-              className="omnimux-publish-select"
-              value={tiktokOptions.privacy_level}
-              onChange={(event) => { patchOptions({ privacy_level: event.currentTarget.value }) }}
-            >
-              {privacyChoices(accountCreator).map((level) => (
-                <option key={level} value={level}>{t(`form.options.privacy.${level}`)}</option>
-              ))}
-            </select>
-          </label>
-          {[['allow_comment', 'form.options.comment', 'comment_disabled'], ['allow_duet', 'form.options.duet', 'duet_disabled'], ['allow_stitch', 'form.options.stitch', 'stitch_disabled']].map(([key, label, flag]) => (
-            <label key={key} className="omnimux-publish-option-check">
-              <input
-                type="checkbox"
-                checked={tiktokOptions[key] === true}
-                disabled={toggleDisabled(flag)}
-                onChange={(event) => { patchOptions({ [key]: event.currentTarget.checked }) }}
-              />
-              <span>{t(label)}</span>
-              {toggleDisabled(flag) ? <em className="omnimux-publish-option-note">{t('form.options.disabledByAccount')}</em> : null}
-            </label>
-          ))}
-          <label className="omnimux-publish-option-check">
-            <input
-              type="checkbox"
-              checked={tiktokOptions.commercial_content}
-              onChange={(event) => { patchOptions({ commercial_content: event.currentTarget.checked }) }}
-            />
-            <span>{t('form.options.commercial')}</span>
-          </label>
-          {tiktokOptions.commercial_content ? (
-            <>
-              <div className="omnimux-publish-option-radios">
-                <label className="omnimux-publish-option-check">
-                  <input
-                    type="radio"
-                    name="omnimux-commercial-kind"
-                    checked={tiktokOptions.your_brand}
-                    onChange={() => { patchOptions({ your_brand: true, branded_content: false }) }}
-                  />
-                  <span>{t('form.options.yourBrand')}</span>
-                </label>
-                <label className="omnimux-publish-option-check">
-                  <input
-                    type="radio"
-                    name="omnimux-commercial-kind"
-                    checked={tiktokOptions.branded_content}
-                    onChange={() => { patchOptions({ your_brand: false, branded_content: true }) }}
-                  />
-                  <span>{t('form.options.branded')}</span>
-                </label>
-              </div>
-              <label className="omnimux-publish-option-check">
-                <input
-                  type="checkbox"
-                  checked={tiktokOptions.music_usage_confirmed}
-                  onChange={(event) => { patchOptions({ music_usage_confirmed: event.currentTarget.checked }) }}
-                />
-                <span>{t('form.options.music')}</span>
-              </label>
-            </>
-          ) : null}
-          {optionsProblems.map((code) => (
-            <Hint key={code} tone="warn" text={t(`form.options.problem.${code}`)} />
-          ))}
-        </div>
-
         <div className="omnimux-publish-field">
           <span className="omnimux-publish-label">{t('form.media')}</span>
           <div className="omnimux-publish-media">
@@ -488,6 +416,102 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
           {caps.typeConflicts.length > 0 ? (
             <Hint text={`${caps.typeConflicts.join(', ')} × ${t(`type.${type}`)}`} tone="warn" />
           ) : null}
+        </div>
+
+        <div className="omnimux-publish-settings">
+          <div className="omnimux-publish-settings-head">
+            <span className="omnimux-publish-settings-title">{t('form.options.title')}</span>
+            <span className="omnimux-publish-settings-summary">
+              {[
+                t(`form.options.privacy.${tiktokOptions.privacy_level}`),
+                tiktokOptions.allow_comment ? t('form.options.comment.short') : null,
+                tiktokOptions.allow_duet ? t('form.options.duet.short') : null,
+                tiktokOptions.allow_stitch ? t('form.options.stitch.short') : null,
+              ].filter(Boolean).join(' · ')}
+            </span>
+          </div>
+          {optionsLoading ? <Hint text={t('form.options.loading')} /> : null}
+          <div className="omnimux-publish-setting-row">
+            <span className="omnimux-publish-setting-label">{t('form.options.privacy')}</span>
+            <DropdownSelect
+              aria-label={t('form.options.privacy')}
+              value={tiktokOptions.privacy_level}
+              options={privacyChoices(accountCreator).map((level) => ({ value: level, label: t(`form.options.privacy.${level}`) }))}
+              onChange={(value) => { patchOptions({ privacy_level: value }) }}
+            />
+          </div>
+          <div className="omnimux-publish-setting-row">
+            <span className="omnimux-publish-setting-label">{t('form.options.interaction')}</span>
+            <div className="omnimux-publish-setting-chips">
+              {[['allow_comment', 'form.options.comment', 'comment_disabled'], ['allow_duet', 'form.options.duet', 'duet_disabled'], ['allow_stitch', 'form.options.stitch', 'stitch_disabled']].map(([key, label, flag]) => (
+                <Button
+                  key={key}
+                  type="button"
+                  size="xs"
+                  variant={tiktokOptions[key] === true ? 'secondary' : 'ghost'}
+                  leadingIcon={tiktokOptions[key] === true ? <IconCheckOutline16 size={14} /> : undefined}
+                  disabled={toggleDisabled(flag)}
+                  aria-pressed={tiktokOptions[key] === true}
+                  onClick={() => { patchOptions({ [key]: tiktokOptions[key] !== true }) }}
+                >
+                  {t(label)}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="omnimux-publish-setting-row">
+            <span className="omnimux-publish-setting-label">{t('form.options.commercial.row')}</span>
+            <div className="omnimux-publish-setting-chips">
+              <Button
+                type="button"
+                size="xs"
+                variant={tiktokOptions.commercial_content ? 'secondary' : 'ghost'}
+                leadingIcon={tiktokOptions.commercial_content ? <IconCheckOutline16 size={14} /> : undefined}
+                aria-pressed={tiktokOptions.commercial_content === true}
+                onClick={() => { patchOptions({ commercial_content: tiktokOptions.commercial_content !== true }) }}
+              >
+                {tiktokOptions.commercial_content ? t('form.options.commercial.on') : t('form.options.commercial.off')}
+              </Button>
+            </div>
+          </div>
+          {tiktokOptions.commercial_content ? (
+            <div className="omnimux-publish-setting-sub">
+              <Button
+                type="button"
+                size="xs"
+                variant={tiktokOptions.your_brand ? 'secondary' : 'ghost'}
+                aria-pressed={tiktokOptions.your_brand === true}
+                onClick={() => { patchOptions({ your_brand: true, branded_content: false }) }}
+              >
+                {t('form.options.yourBrand')}
+              </Button>
+              <Button
+                type="button"
+                size="xs"
+                variant={tiktokOptions.branded_content ? 'secondary' : 'ghost'}
+                aria-pressed={tiktokOptions.branded_content === true}
+                onClick={() => { patchOptions({ your_brand: false, branded_content: true }) }}
+              >
+                {t('form.options.branded')}
+              </Button>
+              <Button
+                type="button"
+                size="xs"
+                variant={tiktokOptions.music_usage_confirmed ? 'secondary' : 'ghost'}
+                leadingIcon={tiktokOptions.music_usage_confirmed ? <IconCheckOutline16 size={14} /> : undefined}
+                aria-pressed={tiktokOptions.music_usage_confirmed === true}
+                onClick={() => { patchOptions({ music_usage_confirmed: tiktokOptions.music_usage_confirmed !== true }) }}
+              >
+                {t('form.options.music.chip')}
+              </Button>
+            </div>
+          ) : null}
+          {optionsProblems.length > 0 ? (
+            <Hint tone="warn" text={optionsProblems.map((code) => t(`form.options.problem.${code}`)).join('；')} />
+          ) : null}
+          {[['comment_disabled', 'form.options.comment.disabled'], ['duet_disabled', 'form.options.duet.disabled'], ['stitch_disabled', 'form.options.stitch.disabled']]
+            .filter(([flag]) => toggleDisabled(flag))
+            .map(([, label]) => <Hint key={label} text={t(label)} />)}
         </div>
 
         {type === 'image' ? (
