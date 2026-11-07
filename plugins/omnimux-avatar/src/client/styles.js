@@ -1580,6 +1580,16 @@ ${CANONICAL_SCROLL_DECL}
   .omx-avatar-page:not([data-mobile-section="create"]) .omnimux-avatar-body > section:first-child { display:none; }
   .omx-avatar-head { gap:8px;padding:12px; }
 }
+
+/* 官方「更多」菜单 Alpha 角标（#3985）：与中枢清单 Alpha 行同一视觉规范 */
+.omnimux-avatar-more-label { display:inline-flex; align-items:center; width:100%; min-width:0; }
+.omnimux-avatar-more-label-text { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.omnimux-avatar-more-alpha {
+  flex:none; margin-inline-start:6px; padding:0 5px;
+  border:1px solid var(--dsw-alias-border-l2); border-radius:4px;
+  color:var(--dsw-alias-label-secondary);
+  font-size:12px; line-height:16px; font-weight:400; white-space:nowrap;
+}
 `
 
 /**

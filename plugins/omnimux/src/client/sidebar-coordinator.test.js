@@ -12,6 +12,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  ALPHA_DESCRIPTION,
   EXPLORE_MENU_ITEMS,
   SIDEBAR_GLOBAL,
   activateExploreItem,
@@ -406,6 +407,16 @@ test('正式版渠道：Alpha 行注册不创建元素、不进收敛集合，�
     disposeClip()
     setReleaseChannelForTests('development')
   }
+})
+
+test('侧栏全局 seam 暴露 Alpha 判定与统一说明，供插件自注册菜单复用', () => {
+  setup()
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+  assert.equal(typeof api.isAlphaEntry, 'function', '必须暴露 isAlphaEntry')
+  assert.equal(api.isAlphaEntry('omnimux-avatar-entry'), true, 'avatar 已在 lifecycle 列为 Alpha')
+  assert.equal(api.isAlphaEntry('omnimux-workflow-entry'), false, '非 Alpha 项必须返回 false')
+  assert.equal(api.alphaDescription, ALPHA_DESCRIPTION, '内测说明与中枢常量逐字一致')
 })
 
 test('desktop 外壳包住内层 pane 时 assets 常驻项挂进侧栏 DOM', async () => {

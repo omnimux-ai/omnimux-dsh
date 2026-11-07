@@ -167,6 +167,9 @@ export function apply(ctx) {
     title: () => resolveTitle(t),
     iconSvg: ENTRY_ICON,
     open: () => stageStore.open(),
+    // Alpha 判定/说明只在渲染时从中枢公共 seam 读取：单一真源，不复制名单或文案。
+    isAlpha: () => (typeof window === 'undefined' ? false : window.__omnimuxSidebar?.isAlphaEntry?.('omnimux-avatar') === true),
+    alphaDescription: () => (typeof window === 'undefined' ? undefined : window.__omnimuxSidebar?.alphaDescription),
   })
 
   const registerAvatarTab = (sidebar) => {
