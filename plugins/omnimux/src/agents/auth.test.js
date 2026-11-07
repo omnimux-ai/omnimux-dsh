@@ -430,6 +430,27 @@ describe('launchAgentLogin', () => {
     }
   })
 
+  it('surfaces an early non-zero exit as launch-failed', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'omnimux-agent-login-bg-'))
+    try {
+      const child = new EventEmitter()
+      child.unref = () => {}
+      const pending = launchAgentLogin('codex', {
+        platform: 'darwin',
+        home: dir,
+        scriptDir: dir,
+        spawnImpl: () => {
+          setImmediate(() => child.emit('exit', 1))
+          return child
+        },
+      })
+      const result = await pending
+      assert.deepEqual(result, { ok: false, error: 'launch-failed' })
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
   it('honours OMNIMUX_CLI_LOGIN_MODE=terminal', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'omnimux-agent-login-env-'))
     const previous = process.env.OMNIMUX_CLI_LOGIN_MODE
