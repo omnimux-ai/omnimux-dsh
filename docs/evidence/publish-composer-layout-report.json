@@ -1,0 +1,70 @@
+{
+  "task": "Issue #3990",
+  "total": 11,
+  "failed": 0,
+  "assertions": [
+    {
+      "name": "创建页有编辑区",
+      "pass": true,
+      "detail": "editor"
+    },
+    {
+      "name": "创建页有预览区",
+      "pass": true,
+      "detail": "preview"
+    },
+    {
+      "name": "底部有操作栏",
+      "pass": true,
+      "detail": "actionbar"
+    },
+    {
+      "name": "预览同步标题",
+      "pass": true,
+      "detail": "title"
+    },
+    {
+      "name": "预览同步正文",
+      "pass": true,
+      "detail": "body"
+    },
+    {
+      "name": "预览显示账号名",
+      "pass": true,
+      "detail": "account"
+    },
+    {
+      "name": "设置区默认展开",
+      "pass": true,
+      "detail": "open"
+    },
+    {
+      "name": "点击设置头可收起",
+      "pass": true,
+      "detail": "closed"
+    },
+    {
+      "name": "再次点击可展开",
+      "pass": true,
+      "detail": "reopen"
+    },
+    {
+      "name": "操作栏有保存草稿",
+      "pass": true,
+      "detail": "save"
+    },
+    {
+      "name": "操作栏有确认发布",
+      "pass": true,
+      "detail": "publish"
+    }
+  ],
+  "pass": true,
+  "screenshot": "docs/evidence/publish-composer-layout.png",
+  "screenshotBytes": 96148,
+  "url": "http://127.0.0.1:49643/",
+  "chrome": "Google Chrome 157.0.8103.39",
+  "bundleSha256": "36721687a35e807748cb748264e80c05160244b364ad36762f857831a85780f7",
+  "headSha": "50da57e5be6ff6ae8e20b912fef080a646c8ddeb",
+  "ranAt": "2026-11-07T12:37:42.731Z"
+}
