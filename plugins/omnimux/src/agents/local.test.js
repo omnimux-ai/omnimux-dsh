@@ -3,7 +3,26 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { describe, it } from 'node:test'
-import { agentTextCommand, isSafeAgentModel, probeAgentBin, probeAgentModels, runAgentText, scanLocalAgents } from './local.js'
+import { agentTextCommand, isSafeAgentModel, probeAgentBin, probeAgentModels, resolveBinPath, runAgentText, scanLocalAgents } from './local.js'
+
+describe('resolveBinPath with a minimal GUI PATH', () => {
+  it('finds nvm and kimi user-bin installs outside process PATH', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'omnimux-gui-path-'))
+    const nvmBin = path.join(dir, '.nvm', 'versions', 'node', 'v25.8.0', 'bin')
+    const kimiBin = path.join(dir, '.kimi-code', 'bin')
+    try {
+      fs.mkdirSync(nvmBin, { recursive: true })
+      fs.mkdirSync(kimiBin, { recursive: true })
+      fs.writeFileSync(path.join(nvmBin, 'codex'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+      fs.writeFileSync(path.join(kimiBin, 'kimi'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+      const env = { PATH: '/usr/bin:/bin', HOME: dir }
+      assert.equal(resolveBinPath('codex', { env, platform: 'darwin' }), fs.realpathSync(path.join(nvmBin, 'codex')))
+      assert.equal(resolveBinPath('kimi', { env, platform: 'darwin' }), fs.realpathSync(path.join(kimiBin, 'kimi')))
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
 
 describe('scanLocalAgents', () => {
   it('marks only the binaries that answer --version as installed', async () => {

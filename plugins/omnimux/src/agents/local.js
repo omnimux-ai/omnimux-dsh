@@ -151,7 +151,27 @@ export function resolveBinPath(bin, options = {}) {
     }
     return executable(raw) ? realpath(raw) : ''
   }
-  const dirs = String(env.PATH || '').split(platform === 'win32' ? ';' : ':').filter(Boolean)
+  const home = env.HOME || os.homedir()
+  const pathDirs = String(env.PATH || '').split(platform === 'win32' ? ';' : ':').filter(Boolean)
+  const extraDirs = [
+    path.join(home, '.local', 'bin'),
+    path.join(home, '.bun', 'bin'),
+    path.join(home, '.kimi-code', 'bin'),
+    path.join(home, '.grok', 'bin'),
+    path.join(home, '.codeium', 'windsurf', 'bin'),
+    path.join(home, '.volta', 'bin'),
+    path.join(home, '.npm-global', 'bin'),
+    path.join(home, 'Library', 'pnpm'),
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+  ]
+  try {
+    const nvmRoot = path.join(home, '.nvm', 'versions', 'node')
+    for (const version of fsImpl.readdirSync(nvmRoot)) extraDirs.push(path.join(nvmRoot, version, 'bin'))
+  } catch {
+    // No nvm install; ignore.
+  }
+  const dirs = [...new Set([...pathDirs, ...extraDirs])]
   const extensions = platform === 'win32' ? ['.exe', '.cmd', '.bat', ''] : ['']
   for (const dir of dirs) {
     for (const extension of extensions) {
@@ -270,7 +290,8 @@ export async function probeAgentBin(bin, run = execFileAsync) {
  */
 export async function scanLocalAgents(run = execFileAsync, options = {}) {
   const rows = await Promise.all(KNOWN_AGENTS.map(async (agent) => {
-    const probe = await probeAgentBin(agent.bin, run)
+    const resolved = resolveBinPath(agent.bin, options)
+    const probe = await probeAgentBin(resolved || agent.bin, run)
     const models = probeAgentModels(agent.id, options)
     return {
       id: agent.id,
