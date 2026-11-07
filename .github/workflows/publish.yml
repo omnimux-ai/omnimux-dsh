@@ -1,0 +1,151 @@
+name: Publish npm package (Trusted Publishing)
+
+# Trusted Publishing (OIDC): GitHub Actions 用 OIDC 短时凭证向 npm 证明发布身份，
+# CI 内 npm publish 不需要任何 npm token，也不需要人工 2FA，并自动生成 provenance。
+# npm 端可信发布者必须与此文件一致：
+#   Provider=GitHub Actions / Owner=omnimux-ai / Repository=omnimux-dsh
+#   Workflow filename=publish.yml / Environment 留空
+# 版本 bump 仍走现有 PR + Merge Queue，合入后由维护者手动触发本 workflow。
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "要发布的包目录名（plugins/<name>，默认 omnimux）"
+        required: true
+        default: omnimux
+        type: string
+      dry_run:
+        description: "只打包与校验，不真正发布"
+        required: false
+        default: false
+        type: boolean
+
+# 同一包的发布不能并发：避免两次 publish 抢同一个版本。
+concurrency:
+  group: publish-${{ inputs.package }}
+  cancel-in-progress: false
+
+# id-token: write 是 OIDC 必需权限；本 workflow 不引用任何 npm token secret。
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+
+jobs:
+  publish:
+    name: Publish ${{ inputs.package }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install npm 11 (Trusted Publishing needs >= 11.5.1)
+        run: |
+          npm install --global npm@11
+          npm --version
+          node --input-type=module - <<'JS'
+          import { execFileSync } from 'node:child_process'
+          const raw = execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim()
+          const [major, minor, patch] = raw.split('.').map(Number)
+          const supported = major > 11 || (major === 11 && (minor > 5 || (minor === 5 && patch >= 1)))
+          if (!supported) {
+            console.error(`npm >= 11.5.1 is required for Trusted Publishing, got ${raw}`)
+            process.exit(1)
+          }
+          JS
+
+      - name: Preflight publish source
+        env:
+          INPUT_PACKAGE: ${{ inputs.package }}
+        run: |
+          set -euo pipefail
+          case "$INPUT_PACKAGE" in
+            *[!a-z0-9-]*|"")
+              echo "::error::invalid package input: '$INPUT_PACKAGE'"
+              exit 1
+              ;;
+          esac
+          test -f "plugins/$INPUT_PACKAGE/package.json" || {
+            echo "::error::missing plugins/$INPUT_PACKAGE/package.json"
+            exit 1
+          }
+          if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+            echo "::error::working tree is not clean; the published bytes must come from a commit"
+            git status --short
+            exit 1
+          fi
+          node scripts/verify-publish-source.mjs "plugins/$INPUT_PACKAGE"
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Publish
+        env:
+          INPUT_PACKAGE: ${{ inputs.package }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          cd "plugins/$INPUT_PACKAGE"
+          if [ "$INPUT_DRY_RUN" = "true" ]; then
+            npm publish --access public --dry-run
+          else
+            npm publish --access public
+          fi
+
+      - name: Verify published package
+        if: ${{ inputs.dry_run != true }}
+        env:
+          INPUT_PACKAGE: ${{ inputs.package }}
+        run: |
+          node --input-type=module - <<'JS'
+          import { execFileSync } from 'node:child_process'
+          import { readFileSync } from 'node:fs'
+          import { join } from 'node:path'
+
+          const dir = join('plugins', process.env.INPUT_PACKAGE)
+          const { name, version } = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
+          const expectedGitHead = process.env.GITHUB_SHA
+          const viewOnce = () => {
+            try {
+              return execFileSync('npm', ['view', `${name}@${version}`, 'dist.tarball', 'gitHead'], {
+                cwd: dir,
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'ignore']
+              }).trim()
+            } catch {
+              return ''
+            }
+          }
+
+          let output = ''
+          for (let attempt = 1; attempt <= 10 && !output; attempt += 1) {
+            output = viewOnce()
+            if (!output) {
+              console.log(`waiting for the registry to expose ${name}@${version} (${attempt}/10)`)
+              execFileSync('sleep', ['15'])
+            }
+          }
+          if (!output) throw new Error(`registry does not expose ${name}@${version} after publish`)
+          console.log(output)
+
+          const [gitHead] = output.match(/[0-9a-f]{40}/g) ?? []
+          if (!gitHead) throw new Error(`published ${name}@${version} has no gitHead`)
+          if (expectedGitHead && gitHead !== expectedGitHead) {
+            throw new Error(`gitHead ${gitHead} does not match workflow commit ${expectedGitHead}`)
+          }
+          console.log(`verified ${name}@${version} gitHead=${gitHead}`)
+          JS
