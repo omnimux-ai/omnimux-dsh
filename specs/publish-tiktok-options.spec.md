@@ -40,4 +40,12 @@ Issue: #3969 · 分支 `agent/publish-tiktok-options2-issue-3969` · 风险等�
 
 - `plugins/omnimux-publish/tests/e2e/publish-tiktok-flow.e2e.test.mjs` :: `shows the pre-review private-visibility notice for a live TikTok direct subtask`
 
+- `plugins/omnimux/src/host/apply.test.js` :: `registers all 54 tools and 20 seams by default`
+
+- `plugins/omnimux/src/official/mount.test.js` :: `registers official tools by default`
+
+- `plugins/omnimux/src/official/mount.test.js` :: `skips fine-grained tools when gate.tools.<name> is false`
+
+apply.test 原断言默认工具数 54，新增 `omnimux_accounts_creator_info` 后为 55；mount.test 原断言官方工具数 41、关闭 2 个后 39，新增同一工具后为 42 / 40。三处都只把计数加一，用例语义与其余断言不变；新期望证据为 Hub 工具注册数从 41 增至 42（`pnpm --filter omnimux test` 与 `pnpm test:agent-tools`）。
+
 原断言 `assert.match(recordDetailSrc, /showsPrivateNotice\(tasks\)/)`；提示改为按隐私级别显示后调用点变为 `showsPrivateNotice(tasks, record)`，新期望正则 `/showsPrivateNotice\(tasks, record\)/`，并新增「公开级别不显示提示」断言。
