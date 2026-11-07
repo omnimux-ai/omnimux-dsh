@@ -10,6 +10,7 @@ import {
 import { Button, InputField, Toolbar } from 'dsh-ui-kit'
 import { createDraft, errorText, getCapabilities, mediaContentUrl, recordDetail, submitRecord, updateDraft, uploadMedia } from '../api.js'
 import { formCapabilities, parseTopics } from '../capabilities.js'
+import { isSupportedImageFormat, unsupportedImageRows } from '../image-format.js'
 import { AccountPanel } from '../AccountPanel.jsx'
 
 /**
@@ -31,7 +32,7 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [topicsRaw, setTopicsRaw] = useState('')
-  /** @type {[Array<{ id: string, kind: string, filename: string }>, Function]} */
+  /** @type {[Array<{ id: string, kind: string, filename: string, content_type?: string }>, Function]} */
   const [mediaList, setMediaList] = useState([])
   const [coverMediaId, setCoverMediaId] = useState('')
   const [accountIds, setAccountIds] = useState([])
@@ -69,7 +70,12 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
       setDescription(String(record.description || ''))
       setTopicsRaw(Array.isArray(record.topics) ? record.topics.join(' ') : '')
       const mediaRows = Array.isArray(result.body.media) ? result.body.media : []
-      setMediaList(mediaRows.map((row) => ({ id: String(row.id), kind: String(row.kind || 'image'), filename: String(row.filename || '') })))
+      setMediaList(mediaRows.map((row) => ({
+        id: String(row.id),
+        kind: String(row.kind || 'image'),
+        filename: String(row.filename || ''),
+        content_type: String(row.content_type || ''),
+      })))
       setCoverMediaId(record.cover_media_id ? String(record.cover_media_id) : '')
       setAccountIds((Array.isArray(record.account_ids) ? record.account_ids : []).map(String))
     }).catch((caught) => {
@@ -80,6 +86,8 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
 
   const images = mediaList.filter((m) => m.kind === 'image')
   const videos = mediaList.filter((m) => m.kind === 'video')
+  const unsupportedImages = type === 'image' ? unsupportedImageRows(images) : []
+  const imageFormatBlocked = unsupportedImages.length > 0
   const caps = formCapabilities({
     platforms,
     selectedAccounts: accountRows,
@@ -93,12 +101,29 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
     if (list.length === 0) return
     setUploading(true)
     setError('')
+    const rejected = []
+    const accepted = []
     for (const file of list) {
+      const mime = String(file.type || '')
+      const looksLikeImage = mime !== '' ? mime.startsWith('image/') : /\.(png|gif|bmp|tiff?|avif|heic)$/i.test(String(file.name || ''))
+      if (type === 'image' && looksLikeImage && !isSupportedImageFormat(mime, file.name)) {
+        rejected.push(String(file.name || 'image'))
+        continue
+      }
+      accepted.push(file)
+    }
+    if (rejected.length > 0) setError(t('form.imageFormatRejected', { names: rejected.join('、') }))
+    for (const file of accepted) {
       try {
         const result = await uploadMedia(file)
         if (result.ok && result.body && result.body.media) {
           const media = result.body.media
-          setMediaList((prev) => [...prev, { id: String(media.id), kind: String(media.kind), filename: String(media.filename) }])
+          setMediaList((prev) => [...prev, {
+            id: String(media.id),
+            kind: String(media.kind),
+            filename: String(media.filename),
+            content_type: String(media.content_type || file.type || ''),
+          }])
         } else {
           setError(t('form.uploadFailed', { reason: errorText(result.body, result.status) }))
         }
@@ -107,7 +132,7 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
       }
     }
     setUploading(false)
-  }, [t])
+  }, [t, type])
 
   /**
    * 组装提交给 Host 的 payload（与 publish_create_draft 同构）。
@@ -162,6 +187,10 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
 
   /** 一键发布：保存 → POST submit（立即返回）→ 轮询跟进由舞台层接管。 */
   const handleSubmit = useCallback(async () => {
+    if (imageFormatBlocked) {
+      setError(t('form.imageFormatBlocked', { count: unsupportedImages.length }))
+      return
+    }
     if (accountIds.length === 0) {
       setError(t('form.submitNoAccounts'))
       return
@@ -178,7 +207,7 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
     } finally {
       setBusy(false)
     }
-  }, [accountIds.length, persistDraft, onSubmitted, t])
+  }, [accountIds.length, imageFormatBlocked, unsupportedImages.length, persistDraft, onSubmitted, t])
 
   // ---- M2 类型选择（新草稿入口）----
   if (!type) {
@@ -228,7 +257,7 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
               <Button variant="secondary" size="sm" disabled={uploading} loading={busy} onClick={() => { void persistDraft() }}>
                 {t('form.saveDraft')}
               </Button>
-              <Button variant="primary" size="sm" disabled={uploading} loading={busy} onClick={() => { void handleSubmit() }}>
+              <Button variant="primary" size="sm" disabled={uploading || imageFormatBlocked} loading={busy} onClick={() => { void handleSubmit() }}>
                 {busy ? t('form.submitting') : t('form.submit')}
               </Button>
             </>
@@ -273,6 +302,9 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
                 ) : (
                   <div className="omnimux-publish-thumb"><IconPlayOutline16 size={20} /></div>
                 )}
+                {type === 'image' && media.kind === 'image' && !isSupportedImageFormat(media.content_type, media.filename) ? (
+                  <span className="omnimux-publish-media-badge">{t('form.imageFormatUnsupported')}</span>
+                ) : null}
                 <div className="omnimux-publish-media-actions">
                   {type === 'image' && media.kind === 'image' ? (
                     <Button
@@ -326,6 +358,9 @@ export function Composer({ t, draftId, onBack, onManageAccounts, onSubmitted, on
           </div>
           {type === 'video' && videos.length === 0 ? <Hint text={t('form.needVideo')} /> : null}
           {type === 'image' && images.length === 0 ? <Hint text={t('form.needImage')} /> : null}
+          {type === 'image' && imageFormatBlocked ? (
+            <Hint text={t('form.imageFormatBlocked', { count: unsupportedImages.length })} tone="warn" />
+          ) : null}
           {type === 'image' && typeof caps.imageLimit === 'number' ? (
             <Hint text={caps.imageOverLimit ? t('form.imageOverLimit', { count: images.length, max: caps.imageLimit }) : t('form.imageLimit', { count: caps.imageLimit })} tone={caps.imageOverLimit ? 'warn' : 'muted'} />
           ) : null}

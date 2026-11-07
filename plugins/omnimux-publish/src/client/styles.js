@@ -802,6 +802,15 @@ th[style*="--pub-min-w"] { min-width: var(--pub-min-w); }
   flex-wrap: wrap;
   gap: 4px;
 }
+.omnimux-publish-media-badge {
+  align-self: flex-start;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--dsw-alias-state-warn-text, #b45309);
+  background: var(--dsw-alias-state-warn-subtle, rgba(245, 158, 11, 0.12));
+}
 .omnimux-publish-thumb {
   display: flex;
   align-items: center;
