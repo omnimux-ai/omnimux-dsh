@@ -131,15 +131,22 @@ jobs:
             }
           }
 
+          // npm 发布后 registry 传播实测约 2 分钟（发布时会提示 "may take a few
+          // minutes to become available"）；给 5 分钟窗口，避免成功发布会因传播
+          // 延迟假红。窗口内的每次失败都重试，超窗才判定失败。
+          const MAX_ATTEMPTS = 20
+          const RETRY_DELAY_SECONDS = 15
           let output = ''
-          for (let attempt = 1; attempt <= 10 && !output; attempt += 1) {
+          for (let attempt = 1; attempt <= MAX_ATTEMPTS && !output; attempt += 1) {
             output = viewOnce()
             if (!output) {
-              console.log(`waiting for the registry to expose ${name}@${version} (${attempt}/10)`)
-              execFileSync('sleep', ['15'])
+              console.log(`waiting for the registry to expose ${name}@${version} (${attempt}/${MAX_ATTEMPTS})`)
+              execFileSync('sleep', [String(RETRY_DELAY_SECONDS)])
             }
           }
-          if (!output) throw new Error(`registry does not expose ${name}@${version} after publish`)
+          if (!output) {
+            throw new Error(`registry does not expose ${name}@${version} within ${(MAX_ATTEMPTS * RETRY_DELAY_SECONDS) / 60} minutes after publish`)
+          }
           console.log(output)
 
           const [gitHead] = output.match(/[0-9a-f]{40}/g) ?? []
