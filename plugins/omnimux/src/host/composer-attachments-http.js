@@ -43,7 +43,7 @@ export function createComposerAttachmentsDispatcher(deps = {}) {
       return { status: 405, body: { error: 'method-not-allowed', message: 'method not allowed' } }
     }
     try {
-      assertLocalWrite(req)
+      assertLocalWrite(req, { rejectSameSite: true })
     } catch {
       return { status: 403, body: { error: 'not-local', message: 'cross-origin write refused' } }
     }

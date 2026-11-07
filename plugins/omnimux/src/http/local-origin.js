@@ -4,10 +4,13 @@ const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
 
 /**
  * @param {{ origin?: string, referer?: string, secFetchSite?: string }} headers
+ * @param {{ rejectSameSite?: boolean }} [options]
  */
-export function assertLocalWrite(headers) {
+export function assertLocalWrite(headers, options = {}) {
   const site = String(headers.secFetchSite || '').toLowerCase()
-  if (site === 'cross-site') throw new Error('cross-origin write refused')
+  if (site === 'cross-site' || (options.rejectSameSite === true && site === 'same-site')) {
+    throw new Error('cross-origin write refused')
+  }
   const origin = headers.origin || originFromReferer(headers.referer)
   if (!origin) return
   let host

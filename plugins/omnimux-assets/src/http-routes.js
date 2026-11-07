@@ -198,7 +198,7 @@ export async function readJsonBody(req) {
  */
 export function assertLocalWrite(headers = {}) {
   const site = String(headers.secFetchSite || '').toLowerCase()
-  if (site === 'cross-site') throw new Error('cross-origin write refused')
+  if (site === 'cross-site' || site === 'same-site') throw new Error('cross-origin write refused')
   const origin = headers.origin || originFromReferer(headers.referer)
   if (!origin) return
   let host

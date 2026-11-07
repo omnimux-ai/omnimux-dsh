@@ -77,7 +77,7 @@ export function createPluginDispatcher(deps = {}) {
 
     if (method !== 'GET') {
       try {
-        assertLocalWrite(req)
+        assertLocalWrite(req, { rejectSameSite: true })
       } catch (error) {
         return { status: 403, body: { error: error instanceof Error ? error.message : String(error) } }
       }
