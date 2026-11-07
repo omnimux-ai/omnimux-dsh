@@ -15,6 +15,7 @@ import {
   EXPLORE_MENU_ITEMS,
   SIDEBAR_GLOBAL,
   activateExploreItem,
+  filterExploreItemsForChannel,
   installSidebarGlobal,
   resolveExploreMenuItems,
 } from './sidebar-coordinator.js'
@@ -323,7 +324,7 @@ test('openCollapsedNewMenuAt uses topbar anchor rect not hidden rail', async () 
   }
 })
 
-test('Alpha entries are excluded from sidebar placement while retaining source registers', async () => {
+test('开发版：Alpha 内测项不挂 DOM，核心常驻项挂回侧栏', async () => {
   setup()
   const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
   installSidebarGlobal()
@@ -338,22 +339,37 @@ test('Alpha entries are excluded from sidebar placement while retaining source r
     return { name, element, row, dispose: api.register(row) }
   })
 
+  api.place()
+  const root = document.querySelector('[data-pane="sidebar"]')
+  const mounted = new Set(['workflow', 'inspiration'])
   for (const { name, element } of rows) {
-    // PINNED_ENTRY_PREFIXES 为空：所有 omnimux-* 均收敛，不挂入 DOM
-    assert.equal(element.parentElement, null, `${name} 内测版与收敛项不得挂入侧栏 DOM`)
+    if (mounted.has(name)) {
+      assert.equal(element.parentElement, root, `${name} 是核心常驻项，必须挂回侧栏`)
+    } else {
+      assert.equal(element.parentElement, null, `${name} 内测版与收敛项不得挂入侧栏 DOM`)
+    }
   }
 
   assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 0)
   assert.equal(document.querySelectorAll('[data-release-stage="alpha"]').length, 0)
 
-  api.place()
   await new Promise(resolve => setTimeout(resolve, 20))
   assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 0)
 
   for (const { dispose } of rows) dispose()
 })
 
-test('desktop 外壳包住内层 pane 时 assets 收敛不挂 DOM', async () => {
+test('发布渠道过滤：开发版保留全部入口，正式版只过滤 Alpha 测试版', () => {
+  const dev = filterExploreItemsForChannel(EXPLORE_MENU_ITEMS, 'development')
+  assert.deepEqual(dev.map((item) => item.label), [
+    '应用', '视频剪辑', '发布', '账号', '手机管理', '数据分析', '任务表单', '社交采收',
+  ])
+  const prod = filterExploreItemsForChannel(EXPLORE_MENU_ITEMS, 'production')
+  assert.deepEqual(prod.map((item) => item.label), ['应用', '视频剪辑', '手机管理', '社交采收'])
+  assert.equal(resolveExploreMenuItems().length, EXPLORE_MENU_ITEMS.length, '开发版默认渠道返回全部入口')
+})
+
+test('desktop 外壳包住内层 pane 时 assets 常驻项挂进侧栏 DOM', async () => {
   setup(`<!doctype html><html><body>
     <div class="dshDesktopSidebarSurface">
       <div class="dshDesktopUpstreamSidebar">
@@ -375,8 +391,8 @@ test('desktop 外壳包住内层 pane 时 assets 收敛不挂 DOM', async () => 
   const dispose = api.register({ id: 'omnimux-assets-entry', rank: 6, create: () => belowBtn })
   try {
     const pane = document.querySelector('[data-pane="sidebar"]')
-    // PINNED_ENTRY_PREFIXES 为空：assets 收敛，不挂入侧栏 DOM
-    assert.equal(belowBtn.parentElement, null, 'assets 收敛，不挂入侧栏 DOM')
+    api.place()
+    assert.equal(belowBtn.parentElement, pane, 'assets 是核心常驻项，必须挂进内层侧栏 pane')
     assert.equal(pane.querySelector('[data-omnimux-explore-entry]'), null, '探索行已退役')
   } finally {
     dispose()
@@ -424,7 +440,7 @@ test('移除回归：侧栏不再渲染探索行，源码不再残留浮动菜�
   assert.match(source, /export function activateExploreItem/)
 })
 
-test('常驻行按 rank 挂载在侧栏，探索行不再出现在最下方', async () => {
+test('核心常驻行按 rank 挂载在侧栏，探索行不再出现', async () => {
   setup()
   installSidebarGlobal()
   const api = SIDEBAR_GLOBAL()
@@ -449,10 +465,11 @@ test('常驻行按 rank 挂载在侧栏，探索行不再出现在最下方', as
     api.place()
     const root = document.querySelector('[data-pane="sidebar"]')
     assert.equal(root.querySelector('[data-omnimux-explore-entry]'), null, '探索行已退役，不得再占位')
-    // PINNED_ENTRY_PREFIXES 为空：所有 omnimux-* 均收敛，不挂入 DOM
     for (const btn of [workflowBtn, marketBtn, assetsBtn, inspirationBtn]) {
-      assert.equal(btn.parentElement, null, `${btn.id} 收敛，不挂入侧栏 DOM`)
+      assert.equal(btn.parentElement, root, `${btn.id} 必须挂入侧栏 DOM`)
     }
+    const order = [workflowBtn, marketBtn, assetsBtn, inspirationBtn].map((btn) => [...root.children].indexOf(btn))
+    assert.deepEqual([...order].sort((a, b) => a - b), order, '常驻行按 rank 升序排列')
   } finally {
     disposeWorkflow()
     disposeMarket()
