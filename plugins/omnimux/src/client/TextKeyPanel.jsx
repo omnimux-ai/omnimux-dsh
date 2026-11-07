@@ -117,17 +117,6 @@ export function TextKeyPanel({ t, busy, setBusy, setError, setNotice, bindScenar
           ))}
         </div>
         <div className="omx-key-field">
-          <span className="omx-key-label">{t('runtime.quickFill')}</span>
-          <DropdownSelect
-            id="omnimux-key-quick-fill"
-            aria-label={t('runtime.quickFill')}
-            value={provider}
-            options={TEXT_KEY_PROVIDERS.map((item) => ({ value: item.id, label: item.quickLabel }))}
-            disabled={busy}
-            onChange={choose}
-          />
-        </div>
-        <div className="omx-key-field">
           <span className="omx-key-label">{t('runtime.apiKey')}</span>
           <InputField
             id="omnimux-key-api-key"

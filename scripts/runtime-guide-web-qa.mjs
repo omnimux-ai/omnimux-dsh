@@ -573,7 +573,6 @@ async function runRuntimeGuideWebQa(options = {}) {
     // 新文本配置界面：7 家提供商、快速填充、API Key、Base URL、模型下拉；不得出现媒体字段。
     const keyProviderIds = await evaluate(`[...document.querySelectorAll('${guideSelector} [data-omnimux-key-draft] [data-provider]')].map((el) => el.getAttribute('data-provider'))`);
     check('key-provider-count', Array.isArray(keyProviderIds) && keyProviderIds.length === 7, JSON.stringify(keyProviderIds));
-    check('key-quick-fill', await waitFor(`Boolean(document.querySelector('${guideSelector} [aria-label="快速填充提供方"]'))`, 3000), '');
     check('key-api-key', await waitFor(`Boolean(document.querySelector('${guideSelector} input[aria-label="API Key"]'))`, 3000), '');
     check('key-base-url', await waitFor(`Boolean(document.querySelector('${guideSelector} input[aria-label="Base URL"]'))`, 3000), '');
     check('key-model-select', await waitFor(`Boolean(document.querySelector('${guideSelector} [aria-label="模型"]'))`, 3000), '');
