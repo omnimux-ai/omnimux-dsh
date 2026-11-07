@@ -26,7 +26,7 @@
 ## 假设
 
 1. `plugin-lifecycle.json` 是 Alpha 名单唯一真源；`scripts/plugin-lifecycle.mjs`、`sync-stable.sh`、中枢侧栏 `isAlphaEntry()` 全部消费它，不另存第二份。
-2. omximux-avatar 的 agent 工具名以 `avatar_` 开头（见 `plugins/omnimux-avatar/dsh.manifest.json`），因此 `toolPrefixes: ["avatar_"]` 能在正式版关闭其工具暴露。
+2. omnimux-avatar 的 agent 工具名以 `avatar_` 开头（见 `plugins/omnimux-avatar/dsh.manifest.json`）；`toolPrefixes: ["avatar_"]` 记录该项供中枢 gate 做名称级关闭。omnimux-avatar 通过原始 `ctx.tools.register` 注册、不经 `defineTool` 的 gate 判定，正式版的实际排除以「整插件不进入发布产物」为准，前缀仅作纵深防御。
 3. 正式版排除插件后，其在官方「更多」菜单的自注册项也随之消失，无死条目。
 
 ## 证伪方式
