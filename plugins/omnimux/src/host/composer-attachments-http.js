@@ -8,12 +8,16 @@ import {
 
 function requestOrigin(req) {
   const origin = header(req, 'origin') || header(req, 'referer') || ''
-  if (!origin) return 'http://127.0.0.1'
-  try {
-    return new URL(origin).origin
-  } catch {
-    return 'http://127.0.0.1'
+  if (origin) {
+    try {
+      return new URL(origin).origin
+    } catch {
+      // fall through to the Host-derived local origin
+    }
   }
+  const host = header(req, 'host')
+  if (host) return `${req.socket?.encrypted ? 'https' : 'http'}://${host}`
+  return 'http://127.0.0.1'
 }
 
 function header(req, name) {
@@ -43,7 +47,7 @@ export function createComposerAttachmentsDispatcher(deps = {}) {
       return { status: 405, body: { error: 'method-not-allowed', message: 'method not allowed' } }
     }
     try {
-      assertLocalWrite(req)
+      assertLocalWrite(req, { rejectSameSite: true })
     } catch {
       return { status: 403, body: { error: 'not-local', message: 'cross-origin write refused' } }
     }

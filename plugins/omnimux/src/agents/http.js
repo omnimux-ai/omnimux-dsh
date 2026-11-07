@@ -10,7 +10,7 @@ const NAMESPACE = 'omnimux'
 
 function assertLocal(req, res) {
   try {
-    assertLocalWrite(readOriginHeaders(req))
+    assertLocalWrite(readOriginHeaders(req), { rejectSameSite: true })
     return true
   } catch {
     sendJson(res, 403, { error: 'not-local' })

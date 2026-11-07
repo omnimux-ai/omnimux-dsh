@@ -643,7 +643,7 @@ describe('registerOfficialRoutes body parsing', () => {
     return {
       method,
       url,
-      headers: { origin: 'http://127.0.0.1:8787' },
+      headers: { host: '127.0.0.1:8787', origin: 'http://127.0.0.1:8787' },
       async *[Symbol.asyncIterator]() {
         if (rawBody !== undefined) yield Buffer.from(rawBody, 'utf8')
       },
@@ -686,7 +686,7 @@ describe('registerOfficialRoutes body parsing', () => {
       official: { mount: true },
       client: clientWith(async () => accountFixture()),
     })
-    registerOfficialRoutes(webServer, dispatcher)
+    registerOfficialRoutes(webServer, dispatcher, { getConnection: () => ({ requestRejection: () => undefined }) })
     const res = fakeRes()
     await handlerFor(webServer)(fakeReq('PATCH', '/omnimux/accounts/a?provider=zernio', '{"group":"ops"}'), res)
     assert.equal(res.state.status, 200)
@@ -699,12 +699,38 @@ describe('registerOfficialRoutes body parsing', () => {
     const dispatcher = {
       async dispatch() { dispatched += 1; return { status: 200, body: {} } },
     }
-    registerOfficialRoutes(webServer, dispatcher)
+    registerOfficialRoutes(webServer, dispatcher, { getConnection: () => ({ requestRejection: () => undefined }) })
     const res = fakeRes()
     await handlerFor(webServer)(fakeReq('PATCH', '/omnimux/accounts/a?provider=zernio', 'not-json{'), res)
     assert.equal(res.state.status, 400)
     assert.equal(JSON.parse(res.state.body).error, 'invalid json')
     assert.equal(dispatched, 0, 'the dispatcher never sees a broken body')
+  })
+
+  it('rejects account and analytics reads before dispatch when connection rejects', async () => {
+    const webServer = fakeWebServer()
+    let dispatched = 0
+    const dispatcher = {
+      async dispatch() { dispatched += 1; return { status: 200, body: {} } },
+    }
+    registerOfficialRoutes(webServer, dispatcher, {
+      getConnection: () => ({ requestRejection: () => 403 }),
+    })
+    const res = fakeRes()
+    await handlerFor(webServer)(fakeReq('GET', '/omnimux/accounts?provider=zernio'), res)
+    assert.equal(res.state.status, 403)
+    assert.deepEqual(JSON.parse(res.state.body), { error: 'request-denied', message: 'Request not authorized' })
+    assert.equal(dispatched, 0)
+  })
+
+  it('fails closed when the connection service is not mounted', async () => {
+    const webServer = fakeWebServer()
+    const dispatcher = { async dispatch() { return { status: 200, body: { accounts: [] } } } }
+    registerOfficialRoutes(webServer, dispatcher)
+    const res = fakeRes()
+    await handlerFor(webServer)(fakeReq('GET', '/omnimux/accounts?provider=zernio'), res)
+    assert.equal(res.state.status, 503)
+    assert.equal(JSON.parse(res.state.body).error, 'auth-unavailable')
   })
 
   it('writes avatar bytes instead of JSON', async () => {
@@ -716,7 +742,7 @@ describe('registerOfficialRoutes body parsing', () => {
         hits: { a: { buffer: PNG_BYTES, mimeType: 'image/png', ext: 'png' } },
       }),
     })
-    registerOfficialRoutes(webServer, dispatcher)
+    registerOfficialRoutes(webServer, dispatcher, { getConnection: () => ({ requestRejection: () => undefined }) })
     const res = fakeRes()
     await handlerFor(webServer)(fakeReq('GET', '/omnimux/accounts/a/avatar'), res)
     assert.equal(res.state.status, 200)
@@ -730,7 +756,7 @@ describe('registerOfficialRoutes body parsing', () => {
   it('rejects an invalid JSON POST body with 400', async () => {
     const webServer = fakeWebServer()
     const dispatcher = { async dispatch() { return { status: 200, body: {} } } }
-    registerOfficialRoutes(webServer, dispatcher)
+    registerOfficialRoutes(webServer, dispatcher, { getConnection: () => ({ requestRejection: () => undefined }) })
     const res = fakeRes()
     await handlerFor(webServer)(fakeReq('POST', '/omnimux/accounts', '{oops'), res)
     assert.equal(res.state.status, 400)

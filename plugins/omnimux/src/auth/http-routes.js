@@ -17,21 +17,24 @@ export const SECRET_PATTERN = /(?:^|[^A-Za-z0-9])sk-(?:proj-)?[A-Za-z0-9]{8,}|ac
  * @param {import('node:http').ServerResponse} res
  * @param {number} status
  * @param {unknown} body
+ * @param {string} [corsOrigin] Only public read-only endpoints may pass an explicit origin.
  */
-export function sendJson(res, status, body) {
+export function sendJson(res, status, body, corsOrigin = '') {
   const text = JSON.stringify(body)
   if (SECRET_PATTERN.test(text)) {
     res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' })
     res.end(JSON.stringify({ error: 'refused to emit a secret' }))
     return
   }
-  res.writeHead(status, {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Private-Network': 'true',
-  })
+  /** @type {Record<string, string>} */
+  const headers = { 'Content-Type': 'application/json; charset=utf-8' }
+  if (corsOrigin !== '') {
+    headers['Access-Control-Allow-Origin'] = corsOrigin
+    headers['Access-Control-Allow-Headers'] = '*'
+    headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+    headers['Access-Control-Allow-Private-Network'] = 'true'
+  }
+  res.writeHead(status, headers)
   res.end(text)
 }
 

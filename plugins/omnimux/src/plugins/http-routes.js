@@ -77,7 +77,7 @@ export function createPluginDispatcher(deps = {}) {
 
     if (method !== 'GET') {
       try {
-        assertLocalWrite(req)
+        assertLocalWrite(req, { rejectSameSite: true })
       } catch (error) {
         return { status: 403, body: { error: error instanceof Error ? error.message : String(error) } }
       }
@@ -146,7 +146,7 @@ export function registerPluginRoutes(webServer, dispatcher) {
     path: '/omnimux/plugins',
     async handler(req, res) {
       try {
-        const body = req.method === 'POST' ? await readJsonBody(req) : undefined
+        const body = req.method === 'POST' ? await readJsonBody(req, 1024 * 1024) : undefined
         if (req.method === 'POST' && body === null) {
           sendJson(res, 400, { error: 'invalid json' })
           return
@@ -158,10 +158,13 @@ export function registerPluginRoutes(webServer, dispatcher) {
           origin: header(req, 'origin'),
           referer: header(req, 'referer'),
           secFetchSite: header(req, 'sec-fetch-site'),
+          host: header(req, 'host'),
+          secure: Boolean(req.socket?.encrypted),
         })
         sendJson(res, result.status, result.body)
-      } catch {
-        sendJson(res, 500, { error: 'internal error' })
+      } catch (error) {
+        const status = error?.code === 'request_too_large' ? 413 : 500
+        sendJson(res, status, { error: status === 413 ? 'request-too-large' : 'internal error' })
       }
     },
     }),

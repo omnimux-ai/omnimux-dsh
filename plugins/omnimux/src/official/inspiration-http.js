@@ -21,8 +21,18 @@ import {
   uploadMedia,
 } from './inspiration.js'
 
+/** The official cloud inspiration catalog is public; keep its explicit cross-origin read contract. */
 const PREFIX = '/omnimux/inspiration'
 const SITE_MEDIA = '/api/inspiration/v1/media/'
+
+function isLocalWrite(req) {
+  try {
+    assertLocalWrite(req, { rejectSameSite: true })
+    return true
+  } catch {
+    return false
+  }
+}
 
 function queryRecord(url) {
   /** @type {Record<string, unknown>} */
@@ -109,9 +119,12 @@ export function createInspirationDispatcher(deps = {}) {
       return { status: 404, body: { error: 'use stream' } }
     }
     const isShareRequest = method === 'POST' && path.endsWith('/share')
+    if (isShareRequest && !isLocalWrite(req)) {
+      return { status: 403, body: { error: 'not-local', message: '分享请求只接受本机同源页面' } }
+    }
     if (method !== 'GET' && !isShareRequest) {
       try {
-        assertLocalWrite(req)
+        assertLocalWrite(req, { rejectSameSite: true })
         if (deps.identity && typeof deps.identity.require === 'function') {
           const profile = await deps.identity.require()
           const isAdmin = Boolean(profile?.is_admin || (typeof profile?.role === 'number' && profile.role >= 10))
@@ -281,8 +294,10 @@ export function registerInspirationRoutes(webServer, dispatcher) {
     kind: 'prefix',
     path: PREFIX,
     async handler(req, res) {
+      const method = (req.method || 'GET').toUpperCase()
+      const sendResponse = sendJson
       try {
-        if ((req.method || '').toUpperCase() === 'OPTIONS') {
+        if (method === 'OPTIONS') {
           sendJson(res, 204, {})
           return
         }
@@ -294,7 +309,7 @@ export function registerInspirationRoutes(webServer, dispatcher) {
         const wantsBody = req.method === 'POST' || req.method === 'PATCH'
         const body = wantsBody ? await readJsonBody(req) : undefined
         if (wantsBody && body === null) {
-          sendJson(res, 400, { error: 'invalid json' })
+          sendResponse(res, 400, { error: 'invalid json' })
           return
         }
         const result = await dispatcher.dispatch({
@@ -305,9 +320,9 @@ export function registerInspirationRoutes(webServer, dispatcher) {
           referer: header(req, 'referer'),
           secFetchSite: header(req, 'sec-fetch-site'),
         })
-        sendJson(res, result.status, result.body)
+        sendResponse(res, result.status, result.body)
       } catch {
-        sendJson(res, 500, { error: 'internal error' })
+        sendResponse(res, 500, { error: 'internal error' })
       }
     },
   })

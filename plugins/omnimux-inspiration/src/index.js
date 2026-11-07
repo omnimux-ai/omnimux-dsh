@@ -1,6 +1,6 @@
 import { resolveInspirationPaths } from './paths.js'
 import { createLocalStore } from './local-store.js'
-import { LOCAL_PREFIX, createLocalInspirationDispatcher, formatErrorMessage, readJsonBody, sendJson } from './http-routes.js'
+import { LOCAL_PREFIX, assertLocalWrite, createLocalInspirationDispatcher, formatErrorMessage, readJsonBody, sendJson } from './http-routes.js'
 import { capabilityOf, parseSocialMeta } from './http-handlers.js'
 import { fallbackResolveSocial } from './scraper-fallback.js'
 import { zh } from './client/locales.js'
@@ -304,6 +304,26 @@ export function apply(ctx) {
   }
 
   /**
+   * Browser extensions are first-class local clients; ordinary websites are
+   * never allowed to read or write the local library.
+   * @param {any} req
+   */
+  function corsOriginFor(req) {
+    const raw = String(req.headers?.origin || '').trim()
+    if (!raw || raw === 'null') return ''
+    if (/^(?:chrome-extension|moz-extension|safari-web-extension):\/\//i.test(raw)) return raw
+    try {
+      const parsed = new URL(raw)
+      const host = String(req.headers?.host || '').trim()
+      if (!host) return ''
+      const expected = new URL(`${req.socket?.encrypted ? 'https' : 'http'}://${host}`)
+      return parsed.origin === expected.origin ? raw : ''
+    } catch {
+      return ''
+    }
+  }
+
+  /**
    * Serve one request under this plugin's HTTP prefix.
    *
    * The handler is deliberately routing-free: media streams, then everything
@@ -315,13 +335,23 @@ export function apply(ctx) {
    */
   const callLocalEndpoint = async (req, res) => {
     const cancellation = trackRequestCancellation(req, res)
+    const responseCors = corsOriginFor(req)
     try {
-      // Cross-origin pages (e.g. a file:// workbench) preflight JSON POSTs with
-      // OPTIONS. `sendJson` already carries the full CORS headers, so answering
-      // 204 here is all the browser needs to let the real request through.
+      // OPTIONS remains a protocol preflight only. Browser extensions may
+      // receive their exact origin; ordinary websites never receive a grant.
       if ((req.method || '').toUpperCase() === 'OPTIONS') {
-        sendJson(res, 204, {})
+        const hasBrowserOrigin = Boolean(req.headers?.origin || req.headers?.referer)
+        sendJson(res, 204, {}, responseCors || (hasBrowserOrigin ? '' : '*'))
         return
+      }
+      const method = (req.method || 'GET').toUpperCase()
+      if (method !== 'OPTIONS') {
+        try {
+          assertLocalWrite(req)
+        } catch {
+          sendJson(res, 403, { error: 'not-local' }, responseCors)
+          return
+        }
       }
       const rawUrl = req.url || '/omnimux/inspiration/local'
       const url = new URL(rawUrl, 'http://127.0.0.1')
@@ -340,7 +370,7 @@ export function apply(ctx) {
       const body = wantsBody ? await readJsonBody(req, { signal: cancellation.signal }) : undefined
       cancellation.signal.throwIfAborted()
       if (wantsBody && body === null) {
-        sendJson(res, 400, { error: 'invalid json' })
+        sendJson(res, 400, { error: 'invalid json' }, responseCors)
         return
       }
       const result = await dispatcher.dispatch({
@@ -349,14 +379,14 @@ export function apply(ctx) {
         body,
         signal: cancellation.signal,
       })
-      sendJson(res, result.status, result.body)
+      sendJson(res, result.status, result.body, responseCors)
     } catch (err) {
       if (res.destroyed) return
       if (err?.name === 'AbortError' || err?.code === 'ABORT_ERR') {
-        sendJson(res, 499, { error: 'aborted' })
+        sendJson(res, 499, { error: 'aborted' }, responseCors)
         return
       }
-      sendJson(res, 500, { error: 'internal error' })
+      sendJson(res, 500, { error: 'internal error' }, responseCors)
     } finally {
       cancellation.dispose()
     }

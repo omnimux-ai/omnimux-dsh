@@ -64,12 +64,16 @@ function decodeSegment(raw: string): string | null {
   }
 }
 
+const MAX_BODY_BYTES = 1024 * 1024;
+
 export function createAppsRoutes(deps: {
   service: OmnimuxAppsService;
   getHeadlessSeam: () => HeadlessExecutionSeam | null;
   getModelCatalog?: () => any;
   /** 可注入的内置清单读取（测试据此覆盖「读不到」分支）；默认读随包清单。 */
   loadBuiltinApps?: () => any[] | null;
+  /** Host connection auth; production apply wires this so browser requests are authenticated. */
+  getConnection?: () => { requestRejection?: (req: any) => number | undefined } | undefined;
 }) {
   const { service, getHeadlessSeam, getModelCatalog } = deps;
   const readBuiltinApps = deps.loadBuiltinApps ?? loadBuiltinApps;
@@ -91,11 +95,33 @@ export function createAppsRoutes(deps: {
       };
 
       const readBody = async (): Promise<any> => {
-        if (req.body && typeof req.body === 'object') return req.body;
+        if (req.body && typeof req.body === 'object') {
+          try {
+            if (Buffer.byteLength(JSON.stringify(req.body)) > MAX_BODY_BYTES) return undefined;
+          } catch {
+            return undefined;
+          }
+          return req.body;
+        }
         return new Promise((resolve) => {
           const chunks: Buffer[] = [];
-          req.on('data', (chunk: Buffer) => chunks.push(chunk));
+          let size = 0;
+          let tooLarge = false;
+          req.on('data', (chunk: Buffer) => {
+            if (tooLarge) return;
+            size += chunk.length;
+            if (size > MAX_BODY_BYTES) {
+              tooLarge = true;
+              chunks.length = 0;
+              return;
+            }
+            chunks.push(chunk);
+          });
           req.on('end', () => {
+            if (tooLarge) {
+              resolve(undefined);
+              return;
+            }
             try {
               const str = Buffer.concat(chunks).toString('utf-8');
               resolve(str ? JSON.parse(str) : {});
@@ -106,6 +132,19 @@ export function createAppsRoutes(deps: {
           req.on('error', () => resolve({}));
         });
       };
+
+      const connection = typeof deps.getConnection === 'function' ? deps.getConnection() : undefined;
+      if (typeof deps.getConnection === 'function') {
+        if (!connection || typeof connection.requestRejection !== 'function') {
+          sendJson(503, { error: 'auth-unavailable', message: 'Host connection authentication is unavailable' });
+          return true;
+        }
+        const rejection = connection.requestRejection(req);
+        if (rejection !== undefined) {
+          sendJson(rejection, { error: 'request-denied', message: 'Request not authorized' });
+          return true;
+        }
+      }
 
       // 0. GET /omnimux-apps/api/apps (官方内置应用清单；只读，不含用户已发布记录)
       //    读不到清单回 503，绝不伪装成「成功但零个应用」——那是把故障说成空数据。
@@ -166,6 +205,10 @@ export function createAppsRoutes(deps: {
       // 1. POST /omnimux-apps/api/apps/manifest (保存应用清单至用户磁盘目录，实现物理隔离)
       if (pathname === `${PREFIX}/manifest` && method === 'POST') {
         const body = await readBody();
+        if (body === undefined) {
+          sendJson(413, { error: 'body_too_large', message: `应用清单不能超过 ${MAX_BODY_BYTES} 字节` });
+          return true;
+        }
         if (!body || typeof body !== 'object' || !body.appId) {
           sendJson(400, { error: 'invalid_manifest', message: 'appId is required' });
           return true;
@@ -193,13 +236,18 @@ export function createAppsRoutes(deps: {
           return true;
         }
         const body = await readBody();
-        const inputs = body.inputs || {};
+        if (body === undefined) {
+          sendJson(413, { error: 'body_too_large', message: `执行请求不能超过 ${MAX_BODY_BYTES} 字节` });
+          return true;
+        }
+        const payload = body && typeof body === 'object' ? body : {};
+        const inputs = payload.inputs || {};
 
         // 存储层现在会对损坏的索引抛 io_error；这里必须接住并回稳定错误码，
         // 否则异常会穿过路由变成连接级失败（评审 N2 实测：从 404 JSON 退化成空响应）。
         let manifest: any = null;
         try {
-          manifest = await service.getManifest(appId, body.version);
+          manifest = await service.getManifest(appId, payload.version);
         } catch (err: any) {
           if (err?.code === 'io_error' || err?.code === 'invalid_manifest') {
             sendJson(500, { error: 'manifest_read_failed', message: '读取应用清单失败' });
@@ -211,8 +259,15 @@ export function createAppsRoutes(deps: {
           const builtins = readBuiltinApps() ?? [];
           manifest = builtins.find((a) => a.appId === appId) || null;
         }
-        if (!manifest && body.manifest && body.manifest.appId === appId) {
-          manifest = body.manifest;
+        if (!manifest && payload.manifest && payload.manifest.appId === appId) {
+          const validation = typeof service.validateManifest === 'function'
+            ? service.validateManifest(payload.manifest)
+            : null;
+          if (validation && validation.valid !== true) {
+            sendJson(400, { error: 'invalid_manifest', message: '内联应用清单校验失败' });
+            return true;
+          }
+          manifest = payload.manifest;
         }
 
         if (!manifest) {
@@ -234,7 +289,7 @@ export function createAppsRoutes(deps: {
 
         try {
           const modelCatalog =
-            body.modelCatalog ??
+            payload.modelCatalog ??
             (typeof getModelCatalog === 'function' ? getModelCatalog() : undefined);
           const result = await service.executeApp(manifest, inputs, headlessSeam, { modelCatalog });
           sendJson(200, result);
@@ -306,12 +361,16 @@ export function registerAppsApiRoutes(
     service: OmnimuxAppsService;
     getHeadlessSeam: () => HeadlessExecutionSeam | null;
     getModelCatalog?: () => any;
+    getConnection?: () => { requestRejection?: (req: any) => number | undefined } | undefined;
   },
 ): () => void {
   if (!webServer || typeof webServer.register !== 'function') {
     return () => {};
   }
-  const router = createAppsRoutes(deps);
+  const router = createAppsRoutes({
+    ...deps,
+    getConnection: typeof deps.getConnection === 'function' ? deps.getConnection : () => undefined,
+  });
   return webServer.register({
     kind: 'prefix',
     path: PREFIX,
