@@ -1,0 +1,60 @@
+{
+  "task": "Issue #3963",
+  "total": 9,
+  "failed": 0,
+  "assertions": [
+    {
+      "name": "未审计只显示一个隐私级别",
+      "pass": true,
+      "detail": "1"
+    },
+    {
+      "name": "未审计默认 SELF_ONLY",
+      "pass": true,
+      "detail": "SELF_ONLY"
+    },
+    {
+      "name": "已审计显示多个隐私级别",
+      "pass": true,
+      "detail": "2"
+    },
+    {
+      "name": "保存草稿按钮存在",
+      "pass": true,
+      "detail": "ok"
+    },
+    {
+      "name": "草稿携带 tiktok_options",
+      "pass": true,
+      "detail": "{\"tiktok_options\":{\"privacy_level\":\"PUBLIC_TO_EVERYONE\",\"allow_comment\":true,\"allow_duet\":true,\"allow_stitch\":true,\"commercial_content\":false,\"your_brand\":false,\"branded_content\":false,\"music_usage_confirmed\":false}}"
+    },
+    {
+      "name": "草稿隐私级别为公开",
+      "pass": true,
+      "detail": "PUBLIC_TO_EVERYONE"
+    },
+    {
+      "name": "账号侧禁用的互动开关被禁用",
+      "pass": true,
+      "detail": "disabled=true"
+    },
+    {
+      "name": "勾选商业内容后出现品牌选项",
+      "pass": true,
+      "detail": "radios=2"
+    },
+    {
+      "name": "缺品牌时提示选择商业类型",
+      "pass": true,
+      "detail": "商业内容需要选择「你的品牌」或「付费推广」商业内容需要勾选音乐使用确认媒体素材设为封面移除添加图片封面图—"
+    }
+  ],
+  "pass": true,
+  "screenshot": "docs/evidence/publish-tiktok-options.png",
+  "screenshotBytes": 100020,
+  "url": "http://127.0.0.1:49226/",
+  "chrome": "Google Chrome 157.0.8103.39",
+  "bundleSha256": "5c717de5dd8c92b7f72228c06aa2c85e22092b79ef8b4732c81f9a7440181126",
+  "headSha": "56b638d417cf4bfc2aa0b538dc4a351da9eb56b6",
+  "ranAt": "2026-11-07T02:57:43.516Z"
+}
