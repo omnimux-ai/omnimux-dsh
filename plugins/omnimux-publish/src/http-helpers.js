@@ -54,7 +54,7 @@ export async function readRawBody(req) {
 /** @param {{ secFetchSite?: string, 'sec-fetch-site'?: string, origin?: string, referer?: string }} [headers] */
 export function assertLocalWrite(headers = {}) {
   const site = String(headers.secFetchSite ?? headers['sec-fetch-site'] ?? '').toLowerCase()
-  if (site === 'cross-site') throw new Error('cross-origin write refused')
+  if (site === 'cross-site' || site === 'same-site') throw new Error('cross-origin write refused')
   const origin = headers.origin || originFromReferer(headers.referer)
   if (!origin) return
   let host

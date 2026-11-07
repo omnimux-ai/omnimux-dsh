@@ -28,6 +28,9 @@ export { detectPlatformFromUrl } from './url-normalizer.js'
 
 export const LOCAL_PREFIX = '/omnimux/inspiration/local'
 
+const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
+const EXTENSION_PROTOCOLS = new Set(['chrome-extension:', 'moz-extension:', 'safari-web-extension:'])
+
 const CODE_MESSAGES = {
   'needs-omnimux': '需要登录 OmniMux 账号，请在 设置 → 个人资料 中登录',
 }
@@ -153,18 +156,51 @@ export async function readJsonBody(req, { signal } = {}) {
   })
 }
 
-/** Send JSON HTTP response. */
-export function sendJson(res, status, payload) {
+/** Send JSON HTTP response. Local inspiration data is same-origin only; only the preflight may advertise CORS. */
+export function sendJson(res, status, payload, corsOrigin = '') {
   const json = JSON.stringify(payload)
-  res.writeHead(status, {
+  /** @type {Record<string, string>} */
+  const headers = {
     'Content-Type': 'application/json; charset=utf-8',
-    'Content-Length': Buffer.byteLength(json),
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Private-Network': 'true',
-  })
+    'Content-Length': String(Buffer.byteLength(json)),
+  }
+  if (corsOrigin !== '') {
+    headers['Access-Control-Allow-Origin'] = corsOrigin
+    headers['Access-Control-Allow-Headers'] = '*'
+    headers['Access-Control-Allow-Methods'] = 'GET, POST, PATCH, DELETE, OPTIONS'
+    Object.assign(headers, { 'Access-Control-Allow-Private-Network': 'true' })
+  }
+  res.writeHead(status, headers)
   res.end(json)
+}
+
+/**
+ * Reject foreign and same-site write requests before they reach the local
+ * library. Missing Origin stays valid for native/curl callers; a browser
+ * request from another localhost port carries `Sec-Fetch-Site: same-site` and
+ * must not inherit the app's local write permission.
+ * @param {{ headers?: Record<string, string | string[] | undefined>, socket?: { encrypted?: boolean } }} req
+ */
+export function assertLocalWrite(req) {
+  const headers = req?.headers ?? {}
+  const site = String(headers['sec-fetch-site'] || '').toLowerCase()
+  if (site === 'cross-site' || site === 'same-site') throw new Error('cross-origin write refused')
+  const rawOrigin = headers.origin || headers.referer
+  if (!rawOrigin) return
+  if (rawOrigin === 'null') throw new Error('cross-origin write refused')
+  let actual
+  try {
+    actual = new URL(rawOrigin)
+  } catch {
+    throw new Error('cross-origin write refused')
+  }
+  if (EXTENSION_PROTOCOLS.has(actual.protocol)) return
+  if (!LOCAL_HOSTS.has(actual.hostname)) throw new Error('cross-origin write refused')
+  const host = headers.host
+  if (host) {
+    const expected = new URL(`${req.socket?.encrypted ? 'https' : 'http'}://${host}`)
+    if (actual.origin !== expected.origin) throw new Error('cross-origin write refused')
+  }
 }
 
 function isCollectionPath(path) {

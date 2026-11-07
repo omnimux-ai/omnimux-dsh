@@ -1,4 +1,5 @@
 import { sendJson, readJsonBody } from '../auth/http-routes.js'
+import { requestRejection } from '../host/request-authorization.js'
 import { DEFAULT_SITE, resolveSiteBaseUrl } from '../auth/omnimux-auth.js'
 import { assertLocalWrite } from '../apps/origin.js'
 import { OmnimuxError } from '../media/errors.js'
@@ -273,7 +274,7 @@ export function createOfficialDispatcher(deps = {}) {
     }
     if (method !== 'GET') {
       try {
-        assertLocalWrite(req)
+        assertLocalWrite(req, { rejectSameSite: true })
       } catch (error) {
         return { status: 403, body: { error: error instanceof Error ? error.message : String(error) } }
       }
@@ -428,13 +429,34 @@ export function createOfficialDispatcher(deps = {}) {
 /**
  * @param {{ register: (route: { kind: string, path: string, handler: Function }) => () => void }} webServer
  * @param {ReturnType<typeof createOfficialDispatcher>} dispatcher
+ * @param {{ getConnection?: () => { requestRejection: Function } | undefined }} [deps]
  */
-export function registerOfficialRoutes(webServer, dispatcher) {
+export function registerOfficialRoutes(webServer, dispatcher, deps = {}) {
+  const getConnection = typeof deps.getConnection === 'function' ? deps.getConnection : undefined
+  /**
+   * Account and analytics reads expose signed-in user data, so they use the
+   * same exact-origin/connection gate as the hub's other protected reads.
+   * @param {{ method?: string, headers?: Record<string, string | string[] | undefined>, socket?: { encrypted?: boolean } }} req
+   * @param {import('node:http').ServerResponse} res
+   * @returns {boolean}
+   */
+  function rejectProtected(req, res) {
+    if (getConnection === undefined) {
+      sendJson(res, 503, { error: 'auth-unavailable', message: 'Host connection authentication is unavailable' })
+      return true
+    }
+    const rejection = requestRejection(req, getConnection)
+    if (rejection === undefined) return false
+    sendJson(res, rejection, { error: 'request-denied', message: 'Request not authorized' })
+    return true
+  }
+
   const disposeAccounts = webServer.register({
     kind: 'prefix',
     path: '/omnimux/accounts',
     async handler(req, res) {
       try {
+        if (rejectProtected(req, res)) return
         const wantsBody = req.method === 'POST' || req.method === 'PATCH'
         const body = wantsBody ? await readJsonBody(req) : undefined
         if (wantsBody && body === null) {
@@ -466,6 +488,7 @@ export function registerOfficialRoutes(webServer, dispatcher) {
     path: '/omnimux/analytics',
     async handler(req, res) {
       try {
+        if (rejectProtected(req, res)) return
         const wantsBody = req.method === 'POST' || req.method === 'PATCH'
         const body = wantsBody ? await readJsonBody(req) : undefined
         if (wantsBody && body === null) {

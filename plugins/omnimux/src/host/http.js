@@ -93,7 +93,7 @@ export function mountHubHttp(httpCtx, deps) {
       ...officialDeps,
       metaStore: deps.accountMetaStore,
       avatarStore: deps.accountAvatarStore,
-    }))
+    }), { getConnection: deps.getConnection })
     const stopInspiration = registerInspirationRoutes(webServer, createInspirationDispatcher(officialDeps))
     const stopAvatar = registerAvatarRoutes(webServer, createAvatarDispatcher({
       store: deps.avatarStore,
