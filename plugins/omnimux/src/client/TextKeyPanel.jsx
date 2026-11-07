@@ -129,20 +129,20 @@ export function TextKeyPanel({ t, busy, setBusy, setError, setNotice, bindScenar
         </div>
         <div className="omx-key-field">
           <span className="omx-key-label">{t('runtime.apiKey')}</span>
-          <div className="omx-key-input-row">
-            <InputField
-              id="omnimux-key-api-key"
-              aria-label={t('runtime.apiKey')}
-              type={showKey ? 'text' : 'password'}
-              value={apiKey}
-              placeholder={t('runtime.apiKeyPlaceholder')}
-              disabled={busy}
-              onChange={(event) => setApiKey(event.target.value)}
-            />
-            <Button variant="ghost" className="omx-key-reveal" disabled={busy} onClick={() => setShowKey((value) => !value)}>
-              {showKey ? t('runtime.hideKey') : t('runtime.showKey')}
-            </Button>
-          </div>
+          <InputField
+            id="omnimux-key-api-key"
+            aria-label={t('runtime.apiKey')}
+            type={showKey ? 'text' : 'password'}
+            value={apiKey}
+            placeholder={t('runtime.apiKeyPlaceholder')}
+            disabled={busy}
+            onChange={(event) => setApiKey(event.target.value)}
+            suffix={(
+              <Button variant="ghost" className="omx-key-reveal" disabled={busy} onClick={() => setShowKey((value) => !value)}>
+                {showKey ? t('runtime.hideKey') : t('runtime.showKey')}
+              </Button>
+            )}
+          />
         </div>
         <div className="omx-key-field">
           <span className="omx-key-label">{t('runtime.baseUrl')}</span>

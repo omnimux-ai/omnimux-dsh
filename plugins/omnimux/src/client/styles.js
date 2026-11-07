@@ -1836,6 +1836,9 @@ button[aria-label*="context used"] {
 }
 .omx-key-reveal {
   flex: none;
+  height: 28px;
+  padding: 0 8px;
+  color: var(--dsw-alias-label-secondary);
 }
 .omx-key-actions {
   display: flex;
@@ -1850,14 +1853,23 @@ button[aria-label*="context used"] {
   font-size: 14px;
   font-weight: 600;
 }
-.omx-key-panel input {
+.omx-key-panel [class*="InputField-control"] {
   box-sizing: border-box;
-  width: 100%;
-  height: 32px;
+  height: 40px;
+  min-height: 40px;
   padding: 0 12px;
   border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.16)); /* exempt-ui03: 输入框描边回退 */
   border-radius: 10px;
   background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.05)); /* exempt-ui03: 输入框底色回退 */
+}
+.omx-key-panel input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
   color: var(--dsw-alias-label-primary);
   font-size: 14px;
 }
