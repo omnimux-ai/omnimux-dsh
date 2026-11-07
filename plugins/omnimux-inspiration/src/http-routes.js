@@ -29,6 +29,7 @@ export { detectPlatformFromUrl } from './url-normalizer.js'
 export const LOCAL_PREFIX = '/omnimux/inspiration/local'
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
+const EXTENSION_PROTOCOLS = new Set(['chrome-extension:', 'moz-extension:', 'safari-web-extension:'])
 
 const CODE_MESSAGES = {
   'needs-omnimux': '需要登录 OmniMux 账号，请在 设置 → 个人资料 中登录',
@@ -167,7 +168,7 @@ export function sendJson(res, status, payload, corsOrigin = '') {
     headers['Access-Control-Allow-Origin'] = corsOrigin
     headers['Access-Control-Allow-Headers'] = '*'
     headers['Access-Control-Allow-Methods'] = 'GET, POST, PATCH, DELETE, OPTIONS'
-    headers['Access-Control-Allow-Private-Network'] = 'true'
+    Object.assign(headers, { 'Access-Control-Allow-Private-Network': 'true' })
   }
   res.writeHead(status, headers)
   res.end(json)
@@ -193,6 +194,7 @@ export function assertLocalWrite(req) {
   } catch {
     throw new Error('cross-origin write refused')
   }
+  if (EXTENSION_PROTOCOLS.has(actual.protocol)) return
   if (!LOCAL_HOSTS.has(actual.hostname)) throw new Error('cross-origin write refused')
   const host = headers.host
   if (host) {
