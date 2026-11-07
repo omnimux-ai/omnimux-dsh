@@ -271,7 +271,7 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
         body: JSON.stringify({ id: agent.id }),
       })
       if (res && res.ok && res.launched) {
-        setNotice(t('runtime.cliLoginOpened'))
+        setNotice(t(res.mode === 'background' ? 'runtime.cliLoginStarted' : 'runtime.cliLoginOpened'))
         startLoginPoll(agent.id)
       } else {
         setError(t('runtime.cliLoginFail'))
