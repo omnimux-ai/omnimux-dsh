@@ -210,6 +210,23 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
     }, 3000)
   }, [stopLoginPoll])
 
+  const waitForSignedIn = async (id) => {
+    const deadline = Date.now() + 120000
+    while (Date.now() < deadline) {
+      try {
+        const data = await api('/omnimux/agents')
+        const list = Array.isArray(data.agents) ? data.agents : []
+        setAgents(list)
+        const row = list.find((item) => item && item.id === id)
+        if (row && row.auth && row.auth.state === 'signed-in') return true
+      } catch {
+        // Poll best-effort; a transient scan failure must not abort login.
+      }
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+    }
+    return false
+  }
+
   const continueWithAgent = async () => {
     const agent = agents.find((item) => item && item.id === selectedAgent)
     if (busy || !agent || !agent.installed) return
@@ -217,6 +234,20 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
     setError('')
     setNotice(t('runtime.testingConnection'))
     try {
+      if (selectedAuth && selectedAuth.state === 'signed-out' && selectedAuth.loginSupported === true) {
+        const login = await api('/omnimux/agents/login', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: agent.id }),
+        })
+        if (!login || login.ok !== true || login.launched !== true) {
+          throw new Error(t('runtime.cliLoginFail'))
+        }
+        setNotice(t(login.mode === 'background' ? 'runtime.cliLoginStarted' : 'runtime.cliLoginOpened'))
+        const signedIn = await waitForSignedIn(agent.id)
+        if (!signedIn) throw new Error(t('runtime.cliLoginTimeout'))
+        setNotice(t('runtime.testingConnection'))
+      }
       const checked = await api('/omnimux/agents/select', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -367,7 +398,11 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
               <span className="omx-agent-icon" data-agent-icon={agent.id} aria-hidden="true"><AgentBrandIcon id={agent.id} name={agent.name} /></span>
               <span className="omx-agent-card-copy">
                 <span className="omx-agent-name">{agent.name}</span>
-                <span className="omx-agent-version">{agent.version || t('runtime.notDetected')}</span>
+                <span className="omx-agent-version">
+                  {agent.auth && agent.auth.state === 'signed-out'
+                    ? t('runtime.cliNeedsLogin')
+                    : (agent.version || t('runtime.notDetected'))}
+                </span>
               </span>
             </button>
           )
@@ -385,11 +420,6 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
             onChange={handleModelChange}
           />
           <div className="omx-agent-selected-actions">
-            {selectedSignedOut && selectedLoginSupported ? (
-              <Button variant="ghost" disabled={busy || loggingInId === selected.id} onClick={(event) => { void loginAgent(event, selected) }}>
-                {t('runtime.cliLogin')}
-              </Button>
-            ) : null}
             {showSelectedUpdate ? (
               <Button variant="ghost" disabled={busy || updatingId === selected.id} onClick={(event) => { void updateAgent(event, selected) }}>
                 {updatingId === selected.id ? t('runtime.cliUpdating') : (updateVersion ? t('runtime.cliUpdateTo', { version: updateVersion }) : t('runtime.cliUpdate'))}
@@ -403,7 +433,7 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
       <div className="omx-agent-footer">
         <Button
           variant="primary"
-          disabled={busy || !selected || !selected.installed || (selectedSignedOut && selectedLoginSupported)}
+          disabled={busy || !selected || !selected.installed}
           onClick={() => { void continueWithAgent() }}
         >
           {t('runtime.continue')}
