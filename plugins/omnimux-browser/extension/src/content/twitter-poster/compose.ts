@@ -35,15 +35,28 @@ export function isComposePath(pathname: string): boolean {
 export function parsePendingPoster(value: unknown, now = Date.now()): PendingPosterPayload | null {
   if (typeof value !== 'object' || value === null) return null
   const candidate = value as Partial<PendingPosterPayload>
-  if (typeof candidate.dataUrl !== 'string' || !candidate.dataUrl.startsWith('data:image/png;base64,')) {
-    return null
+  const dataUrls: string[] = []
+  if (Array.isArray(candidate.dataUrls)) {
+    for (const dataUrl of candidate.dataUrls) {
+      if (typeof dataUrl === 'string' && dataUrl.startsWith('data:image/png;base64,')) dataUrls.push(dataUrl)
+    }
   }
+  // Payloads written before pagination only carry the single `dataUrl` field.
+  if (
+    dataUrls.length === 0
+    && typeof candidate.dataUrl === 'string'
+    && candidate.dataUrl.startsWith('data:image/png;base64,')
+  ) {
+    dataUrls.push(candidate.dataUrl)
+  }
+  if (dataUrls.length === 0) return null
   const createdAt = Number(candidate.createdAt)
   if (!Number.isFinite(createdAt) || now - createdAt > POSTER_PENDING_TTL_MS || createdAt > now + 60_000) {
     return null
   }
   return {
-    dataUrl: candidate.dataUrl,
+    dataUrls,
+    dataUrl: dataUrls[0],
     text: typeof candidate.text === 'string' ? candidate.text : '',
     sourceUrl: typeof candidate.sourceUrl === 'string' ? candidate.sourceUrl : '',
     theme: parsePosterTheme(candidate.theme),
@@ -80,8 +93,20 @@ function storage(): StorageArea | null {
 export async function savePendingPoster(payload: PendingPosterPayload): Promise<void> {
   const area = storage()
   if (area === null) throw new Error('扩展存储不可用')
-  if (dataUrlByteSize(payload.dataUrl) > POSTER_PENDING_MAX_BYTES) throw new Error('海报过大')
-  await area.set({ [POSTER_PENDING_KEY]: payload })
+  const dataUrls = Array.isArray(payload.dataUrls) && payload.dataUrls.length > 0
+    ? payload.dataUrls
+    : payload.dataUrl !== undefined
+      ? [payload.dataUrl]
+      : []
+  if (dataUrls.length === 0) throw new Error('海报为空')
+  const totalBytes = dataUrls.reduce((total, dataUrl) => total + dataUrlByteSize(dataUrl), 0)
+  if (totalBytes > POSTER_PENDING_MAX_BYTES) throw new Error('海报过大')
+  const stored: PendingPosterPayload = { ...payload, dataUrls }
+  // A multi-page payload must not duplicate its first page under the legacy
+  // single-page key: that copy costs another full PNG's base64 bytes.
+  if (dataUrls.length === 1) stored.dataUrl = dataUrls[0]
+  else delete stored.dataUrl
+  await area.set({ [POSTER_PENDING_KEY]: stored })
 }
 
 /** Reads the payload without claiming it. */
@@ -165,12 +190,38 @@ function dataUrlToFile(dataUrl: string, fileName: string): File | null {
 }
 
 /**
- * Attaches the PNG to the composer's file input.
- *
- * X reads the input's `files` and listens for `change`; a synthetic drag is
- * both more fragile and more invasive. Returns `false` when the page structure
- * did not offer an input we could write to.
+ * Attaches one or more PNG pages to the composer's file input in one change
+ * event. X reads the input's `files` and listens for `change`; a synthetic drag
+ * is both more fragile and more invasive. Returns the number of attached files,
+ * or 0 when the page structure did not offer an input we could write to.
  */
+export async function attachPosterImages(
+  dataUrls: readonly string[],
+  doc: Document = document,
+  input: HTMLInputElement | null = findFileInput(doc),
+): Promise<number> {
+  if (input === null || dataUrls.length === 0) return 0
+  const files: File[] = []
+  for (let index = 0; index < dataUrls.length; index += 1) {
+    const file = dataUrlToFile(dataUrls[index], `omnimux-poster-${files.length + 1}.png`)
+    if (file === null) continue
+    files.push(file)
+  }
+  if (files.length === 0) return 0
+
+  try {
+    const transfer = new DataTransfer()
+    for (const file of files) transfer.items.add(file)
+    input.files = transfer.files
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+    return files.length
+  } catch {
+    return 0
+  }
+}
+
+/** Single-page wrapper kept for callers that still hold one data URL. */
 export async function attachPosterImage(
   dataUrl: string,
   doc: Document = document,
@@ -179,7 +230,6 @@ export async function attachPosterImage(
   if (input === null) return false
   const file = dataUrlToFile(dataUrl, 'omnimux-poster.png')
   if (file === null) return false
-
   try {
     const transfer = new DataTransfer()
     transfer.items.add(file)
@@ -263,6 +313,7 @@ export type HandoffStatus = 'none' | 'done' | 'occupied' | 'no-editor'
 export interface HandoffResult {
   status: HandoffStatus
   attached: boolean
+  attachedCount: number
   filled: FillResult
   payload: PendingPosterPayload | null
 }
@@ -289,13 +340,15 @@ export async function runComposeHandoff(options: HandoffOptions = {}): Promise<H
   const pollMs = options.pollMs ?? 250
 
   const payload = await readPendingPoster()
-  if (payload === null) return { status: 'none', attached: false, filled: 'failed', payload: null }
+  if (payload === null) return { status: 'none', attached: false, attachedCount: 0, filled: 'failed', payload: null }
 
   const editor = await waitFor(() => findComposerEditor(doc), waitMs, pollMs)
-  if (editor === null) return { status: 'no-editor', attached: false, filled: 'no-editor', payload }
+  if (editor === null) {
+    return { status: 'no-editor', attached: false, attachedCount: 0, filled: 'no-editor', payload }
+  }
 
-  const attached = await attachPosterImage(payload.dataUrl, doc)
-  if (attached) {
+  const attachedCount = await attachPosterImages(payload.dataUrls, doc)
+  if (attachedCount > 0) {
     // Give X a moment to start the upload before the text lands beside it.
     await new Promise((resolve) => setTimeout(resolve, 600))
   }
@@ -305,7 +358,8 @@ export async function runComposeHandoff(options: HandoffOptions = {}): Promise<H
 
   return {
     status: filled === 'occupied' ? 'occupied' : 'done',
-    attached,
+    attached: attachedCount > 0,
+    attachedCount,
     filled,
     payload,
   }

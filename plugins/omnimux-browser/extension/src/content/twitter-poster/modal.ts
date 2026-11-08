@@ -36,7 +36,7 @@ export const POSTER_MODAL_HOST_ID = 'omnimux-poster-modal'
 const COPY = {
   zh: {
     title: '生成海报',
-    description: '选择主题后生成海报与个人观点，并跳到发帖页自动附图、预填正文。发布前由你确认。',
+    description: '选择主题后生成海报与个人观点，长文会自动拆成多页；跳到发帖页自动附图、预填正文，发布前由你确认。',
     themesLabel: '主题',
     posterStep: '生成海报',
     opinionStep: '生成观点',
@@ -48,7 +48,7 @@ const COPY = {
   },
   en: {
     title: 'Create poster',
-    description: 'Pick a theme. We generate the poster and a personal opinion, then open the composer with the image attached and the text filled in. You confirm before posting.',
+    description: 'Pick a theme. We generate the poster and a personal opinion; long posts are split into multiple pages, then open the composer with the images attached and the text filled in. You confirm before posting.',
     themesLabel: 'Theme',
     posterStep: 'Poster',
     opinionStep: 'Opinion',
@@ -229,9 +229,13 @@ export function openPosterModal(options: PosterModalOptions): PosterModalHandle 
         const reason = typeof detail === 'string' ? detail.trim() : ''
         label.textContent =
           state === 'done'
-            ? options.locale === 'en'
-              ? 'Done'
-              : '完成'
+            ? reason !== ''
+              ? options.locale === 'en'
+                ? `Done · ${reason}`
+                : `完成 · ${reason}`
+              : options.locale === 'en'
+                ? 'Done'
+                : '完成'
             : state === 'failed'
               ? reason !== ''
                 ? reason.slice(0, 80)
