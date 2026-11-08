@@ -31,8 +31,8 @@ import {
 import {
   isHostRightSidebarFullscreen,
   enterHostRightSidebarFullscreen,
-  HOST_RIGHT_PANEL_ATTR,
 } from './host-fullscreen.js'
+import { currentRightbarPanel } from './current-panel.js'
 import {
   applyConversationCollapsedAttr,
   persistConversationCollapsed,
@@ -182,9 +182,9 @@ export function createTabViewportReconciler(deps = {}) {
     const doc = getDoc()
     if (!doc) return
 
-    // 检查面板是否展开展示
-    const panel = doc.querySelector?.(`[${HOST_RIGHT_PANEL_ATTR}][data-sidebar-right-open]`)
-    if (!panel) {
+    // 检查当前会话面板是否展开展示（rc.3 的隐藏旧会话面板不算）
+    const panel = currentRightbarPanel(doc)
+    if (!panel || !panel.hasAttribute?.('data-sidebar-right-open')) {
       lastActiveTabId = null
       lastMode = null
       lastPanelOpen = false
@@ -334,7 +334,7 @@ export function installTabViewportReconciler(doc = hostDocument()) {
     subtree: true,
     childList: true,
     attributes: true,
-    attributeFilter: ['data-sidebar-right-panel', 'data-sidebar-right-open', 'data-dockkit-tab', 'aria-selected', 'class'],
+    attributeFilter: ['data-sidebar-right-panel', 'data-sidebar-right-open', 'hidden', 'aria-hidden', 'data-dockkit-tab', 'aria-selected', 'class'],
   })
 
   // 监听点击事件辅助触发（确保用户点击 Tabbar 或模式按钮时立即触发调和）

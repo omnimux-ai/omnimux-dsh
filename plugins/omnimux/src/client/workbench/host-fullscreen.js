@@ -18,6 +18,7 @@
 
 import { hostWindow } from './host-adapter.js'
 
+
 /** 官方面板在真实界面上处于全屏：模式键 + 展开键同时命中。 */
 export const HOST_FULLSCREEN_PANEL_SELECTOR = '[data-sidebar-right-panel="fullscreen"][data-sidebar-right-open]'
 /** 壳层外框镜像全屏键（由官方外框写，插件只读）。 */
@@ -62,29 +63,45 @@ const DOCUMENT_WIDE_ENTER_SELECTORS = Object.freeze([
   `button[${HOST_FULLSCREEN_MODE_BUTTON_ATTR}="fullscreen"]`,
 ])
 
+
+
+/** 当前会话的右栏面板；优先 mounted，排除隐藏旧会话面板。 */
 function isVisibleSidebarPanel(panel) {
-  if (!panel || typeof panel.closest !== 'function') return false
+  if (!panel) return false
+  if (typeof panel.closest !== 'function') return true
   try {
-    if (typeof panel.hasAttribute === 'function') {
-      if (panel.hasAttribute('hidden')) return false
-      if (panel.getAttribute?.('aria-hidden') === 'true') return false
-    }
-    const parent = panel.parentElement
-    return !parent || parent.closest('[hidden], [aria-hidden="true"]') === null
+    if (panel.hasAttribute?.('hidden') || panel.getAttribute?.('aria-hidden') === 'true') return false
+    return !panel.parentElement?.closest?.('[hidden], [aria-hidden="true"]')
   } catch {
     return true
   }
 }
 
-/** 官方面板根节点（无论全屏与否都会渲染）；优先返回在屏会话的面板。 */
-export function findHostRightPanel(doc) {
+function panelSessionId(panel) {
+  return panel?.getAttribute?.('data-sidebar-right-session')
+    || panel?.closest?.('[data-sidebar-right-session]')?.getAttribute('data-sidebar-right-session')
+}
+
+function currentRightbarPanel(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return null
   try {
-    const panels = [...doc.querySelectorAll(`[${HOST_RIGHT_PANEL_ATTR}]`)]
+    const panels = typeof doc.querySelectorAll === 'function'
+      ? [...doc.querySelectorAll(`[${HOST_RIGHT_PANEL_ATTR}]`)]
+      : [doc.querySelector(`[${HOST_RIGHT_PANEL_ATTR}]`)].filter(Boolean)
+    const mounted = hostWindow()?.__omnimuxWorkbench?.getSnapshot?.()?.sessionId
+    if (mounted && panels.some(panelSessionId)) {
+      const own = panels.find((panel) => panelSessionId(panel) === mounted)
+      return own && isVisibleSidebarPanel(own) ? own : null
+    }
     return panels.find(isVisibleSidebarPanel) || null
   } catch {
     return null
   }
+}
+
+/** 官方面板根节点（无论全屏与否都会渲染）；优先返回当前在屏会话的面板。 */
+export function findHostRightPanel(doc) {
+  return currentRightbarPanel(doc)
 }
 
 /**

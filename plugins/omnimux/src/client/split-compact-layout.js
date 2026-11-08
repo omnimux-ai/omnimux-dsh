@@ -92,6 +92,33 @@ const ROOT_ATTRIBUTE_FILTER = Object.freeze([
 ])
 
 /** @returns {Document | undefined} */
+
+/** 当前会话的右栏面板：优先 mounted，排除隐藏旧会话面板（避免全局第一个面板串台）。 */
+function currentRightbarPanel(doc) {
+  if (!doc || typeof doc.querySelector !== 'function') return null
+  try {
+    const panels = typeof doc.querySelectorAll === 'function'
+      ? [...doc.querySelectorAll('[data-sidebar-right-panel]')]
+      : [doc.querySelector('[data-sidebar-right-panel]')].filter(Boolean)
+    const visible = (panel) => {
+      if (!panel) return false
+      if (typeof panel.closest !== 'function') return true
+      if (panel.hasAttribute?.('hidden') || panel.getAttribute?.('aria-hidden') === 'true') return false
+      return !panel.parentElement?.closest?.('[hidden], [aria-hidden="true"]')
+    }
+    const panelSession = (panel) => panel.getAttribute?.('data-sidebar-right-session')
+      || panel.closest?.('[data-sidebar-right-session]')?.getAttribute('data-sidebar-right-session')
+    const mounted = doc.defaultView?.__omnimuxWorkbench?.getSnapshot?.()?.sessionId
+    if (mounted && panels.some(panelSession)) {
+      const own = panels.find((panel) => panelSession(panel) === mounted)
+      return own && visible(own) ? own : null
+    }
+    return panels.find(visible) || null
+  } catch {
+    return null
+  }
+}
+
 function hostDocument() {
   return typeof document !== 'undefined' ? document : undefined
 }
@@ -277,7 +304,7 @@ function measure(doc, notify) {
   const signals = readSplitCompactSignals(doc)
   const next = { splitCompact: signals.splitCompact, rightbarCollapsed: signals.sidebarCollapsed }
   const workbench = doc?.defaultView?.__omnimuxWorkbench
-  const panel = doc?.querySelector?.('[data-sidebar-right-panel]')
+  const panel = currentRightbarPanel(doc)
   const sessionId = workbench?.getSnapshot?.()?.sessionId
   const presentation = panel ? {
     panel, sessionId,
@@ -402,7 +429,7 @@ function installWatchers(doc) {
   if (ObserverClass && doc.body) {
     const nativeObserver = new ObserverClass(refresh)
     nativeObserver.observe(doc.body, { subtree: true, childList: true, attributes: true,
-      attributeFilter: ['data-sidebar-right-panel', 'data-sidebar-right-open'] })
+      attributeFilter: ['data-sidebar-right-panel', 'data-sidebar-right-open', 'hidden', 'aria-hidden'] })
     disposers.push(() => nativeObserver.disconnect())
   }
 

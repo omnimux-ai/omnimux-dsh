@@ -106,6 +106,8 @@ export default async ({ send, sleep, evidenceDir, io }) => {
       center: center ? { width: Math.round(rect.width), opacity: style.opacity, visibility: style.visibility } : null,
       canvasVisible: document.querySelector('[data-omnimux-canvas-tab]')?.getAttribute('data-visible') || null,
       currentSessionId: window.__omnimuxWorkbench?.getSnapshot?.()?.sessionId ?? null,
+      rightbarOpen: document.documentElement.getAttribute('data-omnimux-rightbar-open'),
+      rightbarFullscreen: document.documentElement.getAttribute('data-omnimux-rightbar-fullscreen'),
       middleTextLength: center ? (center.innerText || '').trim().length : 0,
     }
   })()`)
@@ -120,6 +122,8 @@ export default async ({ send, sleep, evidenceDir, io }) => {
   assert.notEqual(state?.center?.opacity, '0', '中间会话栏不得透明')
   assert.ok(state?.middleTextLength > 0, '中间会话栏必须渲染出会话内容/输入区')
   assert.equal(state?.canvasVisible, 'true', '画布 tab 必须可见')
+  assert.equal(state?.rightbarOpen, 'true', '右栏状态镜像必须标记当前会话已展开')
+  assert.notEqual(state?.rightbarFullscreen, 'true', '当前画布是分栏态，不得镜像为全屏')
 
   return {
     assertions: [

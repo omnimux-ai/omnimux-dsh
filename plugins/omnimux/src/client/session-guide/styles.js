@@ -89,8 +89,8 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 html[data-omnimux-split-compact] [data-omnimux-starter-host] [data-composer-seat],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [data-composer-seat],
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [data-composer-seat],
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [data-composer-seat] {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) [data-omnimux-starter-host] [data-composer-seat],
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) [data-omnimux-starter-host] [data-composer-seat] {
   justify-content:flex-end!important;
   padding-bottom:0!important;
   padding-top:0!important;
@@ -99,8 +99,8 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 html[data-omnimux-split-compact] [data-omnimux-starter-host] [class*="composerStack"],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [class*="composerStack"],
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="composerStack"],
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="composerStack"] {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) [data-omnimux-starter-host] [class*="composerStack"],
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) [data-omnimux-starter-host] [class*="composerStack"] {
   justify-content:flex-end!important;
   width:100%!important;
   max-width:100%!important;
@@ -109,8 +109,8 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 html[data-omnimux-split-compact] [data-omnimux-starter-host] [class*="composerHero"],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [class*="composerHero"],
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="composerHero"],
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="composerHero"] {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) [data-omnimux-starter-host] [class*="composerHero"],
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) [data-omnimux-starter-host] [class*="composerHero"] {
   width:100%!important;
   max-width:100%!important;
   padding-bottom:0!important;
@@ -118,12 +118,12 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 html[data-omnimux-split-compact] [data-omnimux-starter-host] [data-composer-card],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [data-composer-card],
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [data-composer-card],
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [data-composer-card],
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) [data-omnimux-starter-host] [data-composer-card],
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) [data-omnimux-starter-host] [data-composer-card],
 html[data-omnimux-split-compact] [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
   width:100%!important;
   /* 宽度铁律：工作区选择行与输入框同宽 680px（Issue 2830，提交 0b917e92e），
      顶部未吸底态与滚动吸底态严格一致。原 952px 原生 token 封顶已废。 */
@@ -132,8 +132,8 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 html[data-omnimux-split-compact] [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
   padding-left:var(--dsh-composer-side-clearance, 12px)!important;
   padding-right:var(--dsh-composer-side-clearance, 12px)!important;
   box-sizing:border-box!important;
@@ -3458,8 +3458,8 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-seat],
 html[data-omnimux-split-compact] [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-seat],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-seat],
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-seat],
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-seat] {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-seat],
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-seat] {
   padding-bottom: calc(var(--omnimux-dock-bottom, 20px) + var(--omnimux-dock-card-height, 168px) + 56px) !important;
 }
 /* 归还原生输入框。原生输入框没有「取消」概念，这是接管期间唯一的自绘控件。 */

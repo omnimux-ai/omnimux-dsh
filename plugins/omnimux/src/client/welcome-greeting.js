@@ -6,6 +6,7 @@
  */
 
 import { hostDocument, hostWindow } from './workbench/host-adapter.js'
+import { currentRightbarPanel } from './workbench/current-panel.js'
 import { resolveHeroLogoSvg } from './hero-brand.js'
 
 export const WELCOME_HEADER_CLASS = 'omnimux-welcome-header'
@@ -41,7 +42,7 @@ export function isSplitMode(doc = hostDocument()) {
     return false
   }
   if (doc.documentElement?.hasAttribute('data-omnimux-conversation-collapsed')) return false
-  const panel = doc.querySelector('[data-sidebar-right-panel]')
+  const panel = currentRightbarPanel(doc)
   const isOpen = panel ? panel.hasAttribute('data-sidebar-right-open') : false
   const isFullscreen = panel ? panel.getAttribute('data-sidebar-right-panel') === 'fullscreen' : false
   if (doc.documentElement?.hasAttribute('data-omnimux-split-compact')) {
@@ -141,6 +142,8 @@ export function installWelcomeGreetingObserver(doc = hostDocument()) {
         attributeFilter: [
           'data-sidebar-right-panel',
           'data-sidebar-right-open',
+          'hidden',
+          'aria-hidden',
           'data-rightbar-collapsed',
           'data-omnimux-split-compact',
           'data-omnimux-conversation-collapsed',

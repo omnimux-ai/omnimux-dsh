@@ -24,6 +24,7 @@ import { WORKBENCH_TAB_TITLE_FALLBACKS } from './focus-state.js'
 import { findOfficialSidebarColumn } from './geometry.js'
 import { hostDocument, hostWindow, getWorkbenchSidebarRight } from './host-adapter.js'
 import { isHostRightSidebarFullscreen } from './host-fullscreen.js'
+import { currentRightbarPanel } from './current-panel.js'
 
 /** 官方会话行的选中真源：`role` + `aria-selected` 双键（类名是 CSS-module 哈希，不可用）。 */
 export const SESSION_ROW_SELECTOR = '[role="treeitem"][aria-selected="true"]'
@@ -43,6 +44,8 @@ export const ROOT_SIGNAL_ATTRS = Object.freeze([
   'data-sidebar-right-panel',
   'data-sidebar-right-open',
   'data-sidebar-right-mode',
+  'hidden',
+  'aria-hidden',
   'data-rightbar-fullscreen',
   'data-rightbar-collapsed',
   'data-omnimux-conversation-collapsed',
@@ -205,12 +208,7 @@ function readNativePanel(sidebarRight) {
  */
 function readDomPanel(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return { expanded: false, activeTabKey: undefined }
-  let panel = null
-  try {
-    panel = doc.querySelector('[data-sidebar-right-panel]')
-  } catch {
-    panel = null
-  }
+  const panel = currentRightbarPanel(doc)
   if (!panel || typeof panel.hasAttribute !== 'function') return { expanded: false, activeTabKey: undefined }
   return { expanded: panel.hasAttribute('data-sidebar-right-open'), activeTabKey: undefined }
 }

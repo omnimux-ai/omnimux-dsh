@@ -527,8 +527,8 @@ html [data-composer-card][data-omnimux-inline-density='icon'] .sh-model-capsule-
 
 /* 非全屏（右侧打开辅助面板分屏）模式下：快捷方式那一排自动隐藏，让输入框自然贴底 */
 html[data-omnimux-split-compact] .omx-quick-shortcuts,
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omx-quick-shortcuts,
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omx-quick-shortcuts {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) .omx-quick-shortcuts,
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) .omx-quick-shortcuts {
   display: none !important;
 }
 

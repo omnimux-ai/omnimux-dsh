@@ -11,6 +11,7 @@ import { ensureComposerCompactChrome, installComposerCompactObserver } from './c
 import { ensureConversationScrollbarChrome, installConversationScrollbarReveal } from './conversation-scrollbar.js'
 import { installWelcomeGreetingObserver } from './welcome-greeting.js'
 import { installFullscreenCollapseSync } from './workbench/fullscreen-collapse-sync.js'
+import { installRightbarStateMirror } from './workbench/rightbar-state-mirror.js'
 import { installComposerWidthGuard } from './composer-width-guard.js'
 import { installTabViewportReconciler } from './workbench/tab-viewport-reconciler.js'
 import { installAgentPresetAvatarEnhancer } from './agent-preset-enhancer.js'
@@ -96,6 +97,7 @@ export function installHubChrome(ctx) {
     const unsubWelcome = installWelcomeGreetingObserver()
     const unsubScrollbar = installConversationScrollbarReveal()
     const unsubFullscreenCollapse = installFullscreenCollapseSync()
+    const unsubRightbarMirror = installRightbarStateMirror()
     const unsubWidthGuard = installComposerWidthGuard()
     const unsubTabReconciler = installTabViewportReconciler()
     return () => {
@@ -112,6 +114,7 @@ export function installHubChrome(ctx) {
       unsubWelcome?.()
       unsubScrollbar?.()
       unsubFullscreenCollapse?.()
+      unsubRightbarMirror?.()
       unsubWidthGuard?.()
       unsubTabReconciler?.()
     }

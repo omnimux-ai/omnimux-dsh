@@ -43,8 +43,8 @@ html:not([data-omnimux-conversation-collapsed]) [class*="centerCol"]{
 
 /* 非全屏（分屏）模式下，迎宾区靠左上角独立图层对齐排布 */
 html[data-omnimux-split-compact] .omnimux-welcome-header,
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-header,
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-header {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) .omnimux-welcome-header,
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) .omnimux-welcome-header {
   position:absolute!important;
   top:28px!important;
   left:24px!important;
@@ -59,15 +59,15 @@ html[data-omnimux-split-compact] .omnimux-welcome-header,
   gap:12px!important;
 }
 html[data-omnimux-split-compact] .omnimux-welcome-texts,
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-texts,
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-texts {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) .omnimux-welcome-texts,
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) .omnimux-welcome-texts {
   width:auto!important;
   flex:1 1 auto!important;
   min-width:0!important;
 }
 html[data-omnimux-split-compact] .omnimux-welcome-title,
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-title,
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-title {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) .omnimux-welcome-title,
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) .omnimux-welcome-title {
   font-size:18px!important;
   line-height:24px!important;
   font-weight:600!important;
@@ -76,8 +76,8 @@ html[data-omnimux-split-compact] .omnimux-welcome-title,
   text-overflow:ellipsis!important;
 }
 html[data-omnimux-split-compact] .omnimux-welcome-subtitle,
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-subtitle,
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-subtitle {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) .omnimux-welcome-subtitle,
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) .omnimux-welcome-subtitle {
   font-size:13px!important;
   line-height:18px!important;
   white-space:nowrap!important;
@@ -86,30 +86,30 @@ html[data-omnimux-split-compact] .omnimux-welcome-subtitle,
 }
 /* 隐藏非全屏模式下输入框上方的空居中外壳，确保输入框紧凑贴底（使用语义级 display:none 杜绝零高度负溢出） */
 html[data-omnimux-split-compact] [data-phase='hero'] [class*="composerHero"] > :first-child:not(.omnimux-welcome-header),
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"] > :first-child:not(.omnimux-welcome-header),
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"] > :first-child:not(.omnimux-welcome-header) {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) [data-phase='hero'] [class*="composerHero"] > :first-child:not(.omnimux-welcome-header),
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) [data-phase='hero'] [class*="composerHero"] > :first-child:not(.omnimux-welcome-header) {
   display:none!important;
 }
 
 /* 非全屏（分栏）模式下：输入框两侧紧凑收敛至12px，严格对齐工作区行左侧，消除底部悬空 */
 html[data-omnimux-split-compact] [data-composer-seat],
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-composer-seat],
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-composer-seat] {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) [data-composer-seat],
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) [data-composer-seat] {
   padding-bottom:0!important;
   padding-top:0!important;
   --dsh-composer-side-clearance:12px!important;
 }
 html[data-omnimux-split-compact] [data-phase='hero'] [class*="composerHero"],
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"],
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"] {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) [data-phase='hero'] [class*="composerHero"],
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) [data-phase='hero'] [class*="composerHero"] {
   padding-bottom:0!important;
   width:100%!important;
   max-width:100%!important;
   margin-inline:0!important;
 }
 html[data-omnimux-split-compact] [data-phase='hero'] [class*="heroWorkspaceRow"],
-.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="heroWorkspaceRow"],
-[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="heroWorkspaceRow"] {
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) [data-phase='hero'] [class*="heroWorkspaceRow"],
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) [data-phase='hero'] [class*="heroWorkspaceRow"] {
   width:100%!important;
   max-width:100%!important;
   margin-inline:0!important;

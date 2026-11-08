@@ -20,6 +20,7 @@
  */
 
 import { findSidebarColumn, readShellRailWidthPx } from './sidebar-toggle-topbar.js'
+import { currentRightbarPanel } from './workbench/current-panel.js'
 
 /** 收起态标记属性（由 conversation-collapse.js 写入 html）。 */
 export const COLLAPSED_ATTR = 'data-omnimux-conversation-collapsed'
@@ -52,8 +53,9 @@ function hostWindow(doc) {
 }
 
 function findPanel(doc) {
-  // Closed native panels remain mounted, so cleanup must not require the open marker.
-  return doc?.querySelector?.(PANEL_SELECTOR) || null
+  // Closed native panels remain mounted; resolve the current session's panel, not the
+  // first hidden panel left by a previously visited session.
+  return currentRightbarPanel(doc)
 }
 
 function measureEnv(doc) {
@@ -156,7 +158,7 @@ export function installCollapsedPanelFill(doc = typeof document !== 'undefined' 
     observer.observe(root, {
       attributes: true,
       subtree: true,
-      attributeFilter: [COLLAPSED_ATTR, LEFT_COLLAPSED_ATTR, 'style', 'data-sidebar-right-open', 'data-sidebar-right-panel'],
+      attributeFilter: [COLLAPSED_ATTR, LEFT_COLLAPSED_ATTR, 'style', 'data-sidebar-right-open', 'data-sidebar-right-panel', 'hidden', 'aria-hidden'],
     })
   }
   let isApplying = false
