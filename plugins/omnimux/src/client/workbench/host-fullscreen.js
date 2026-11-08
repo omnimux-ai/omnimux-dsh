@@ -62,11 +62,26 @@ const DOCUMENT_WIDE_ENTER_SELECTORS = Object.freeze([
   `button[${HOST_FULLSCREEN_MODE_BUTTON_ATTR}="fullscreen"]`,
 ])
 
-/** 官方面板根节点（无论全屏与否都会渲染）。 */
+function isVisibleSidebarPanel(panel) {
+  if (!panel || typeof panel.closest !== 'function') return false
+  try {
+    if (typeof panel.hasAttribute === 'function') {
+      if (panel.hasAttribute('hidden')) return false
+      if (panel.getAttribute?.('aria-hidden') === 'true') return false
+    }
+    const parent = panel.parentElement
+    return !parent || parent.closest('[hidden], [aria-hidden="true"]') === null
+  } catch {
+    return true
+  }
+}
+
+/** 官方面板根节点（无论全屏与否都会渲染）；优先返回在屏会话的面板。 */
 export function findHostRightPanel(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return null
   try {
-    return doc.querySelector(`[${HOST_RIGHT_PANEL_ATTR}]`)
+    const panels = [...doc.querySelectorAll(`[${HOST_RIGHT_PANEL_ATTR}]`)]
+    return panels.find(isVisibleSidebarPanel) || null
   } catch {
     return null
   }
@@ -80,7 +95,8 @@ export function findHostRightPanel(doc) {
 export function isHostRightSidebarFullscreen(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return false
   try {
-    if (doc.querySelector(HOST_FULLSCREEN_PANEL_SELECTOR)) return true
+    const panels = [...doc.querySelectorAll(HOST_FULLSCREEN_PANEL_SELECTOR)]
+    if (panels.some(isVisibleSidebarPanel)) return true
   } catch {
     // 选择器不被支持时退回镜像判定。
   }
@@ -91,6 +107,9 @@ export function isHostRightSidebarFullscreen(doc) {
     mirror = null
   }
   if (!mirror) return false
+  // 有面板但全部在隐藏会话里时，镜像只是旧会话残留，不能判定当前会话全屏。
+  const panels = [...doc.querySelectorAll(`[${HOST_RIGHT_PANEL_ATTR}]`)]
+  if (panels.length > 0 && !panels.some(isVisibleSidebarPanel)) return false
   // 镜像键由壳层写；只要面板自己已声明非全屏模式，就不采信镜像。
   const panel = findHostRightPanel(doc)
   const mode = panel && typeof panel.getAttribute === 'function'
@@ -108,7 +127,12 @@ export function findHostFullscreenExitButton(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return null
   let panel = null
   try {
-    panel = doc.querySelector(HOST_FULLSCREEN_PANEL_SELECTOR) || doc.querySelector(`[${HOST_RIGHT_PANEL_ATTR}]`)
+    const panels = [...doc.querySelectorAll(HOST_FULLSCREEN_PANEL_SELECTOR)]
+    panel = panels.find(isVisibleSidebarPanel) || null
+    if (!panel) {
+      const fallback = findHostRightPanel(doc)
+      panel = fallback && isVisibleSidebarPanel(fallback) ? fallback : null
+    }
   } catch {
     panel = null
   }
@@ -119,7 +143,7 @@ export function findHostFullscreenExitButton(doc) {
     }
   }
   for (const selector of DOCUMENT_WIDE_EXIT_SELECTORS) {
-    const found = doc.querySelector(selector)
+    const found = [...doc.querySelectorAll(selector)].find(isVisibleSidebarPanel)
     if (found && typeof found.click === 'function') return found
   }
   return null
@@ -173,7 +197,10 @@ export function findHostFullscreenEnterButton(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return null
   let panel = null
   try {
-    panel = doc.querySelector(`[${HOST_RIGHT_PANEL_ATTR}][data-sidebar-right-open]`)
+    const panels = [...doc.querySelectorAll(`[${HOST_RIGHT_PANEL_ATTR}][data-sidebar-right-open]`)]
+    const fallback = findHostRightPanel(doc)
+    panel = panels.find(isVisibleSidebarPanel)
+      || (fallback && isVisibleSidebarPanel(fallback) ? fallback : null)
   } catch {
     panel = null
   }
@@ -184,7 +211,7 @@ export function findHostFullscreenEnterButton(doc) {
     }
   }
   for (const selector of DOCUMENT_WIDE_ENTER_SELECTORS) {
-    const found = doc.querySelector(selector)
+    const found = [...doc.querySelectorAll(selector)].find(isVisibleSidebarPanel)
     if (found && typeof found.click === 'function') return found
   }
   return null

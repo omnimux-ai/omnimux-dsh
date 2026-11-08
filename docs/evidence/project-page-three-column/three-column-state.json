@@ -1,0 +1,20 @@
+{
+  "title": "QA 三栏可见 1794110907584",
+  "projectId": "08b28d23-6c16-4118-912b-61567cf3b8c7",
+  "settled": {
+    "boundSessionId": "session-88c1eed7-db69-407f-9836-759c3b9bace6",
+    "width": 360,
+    "islandMounted": true
+  },
+  "state": {
+    "collapsed": false,
+    "center": {
+      "width": 360,
+      "opacity": "1",
+      "visibility": "visible"
+    },
+    "canvasVisible": "true",
+    "currentSessionId": "session-88c1eed7-db69-407f-9836-759c3b9bace6",
+    "middleTextLength": 57
+  }
+}

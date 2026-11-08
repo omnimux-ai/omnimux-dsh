@@ -98,3 +98,78 @@ test('分栏态不动折叠键，取消安装后不再响应', async () => {
   await new Promise((r) => setTimeout(r, 30))
   assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), false, '取消安装后不得再写折叠键')
 })
+
+test('隐藏会话遗留的 fullscreen 面板不得折叠当前中间栏（rc.3 多会话挂载）', async () => {
+  const dom = new JSDOM(`<!doctype html><html><body>
+    <div class="dshDesktopFrame">
+      <aside class="dshDesktopSidebarSurface"></aside>
+      <main class="dshDesktopConversationSurface"></main>
+      <aside class="dshDesktopRightbarSurface">
+        <div class="Ng7Ira_session" hidden>
+          <div class="Ng7Ira_panel" data-sidebar-right-panel="fullscreen" data-sidebar-right-open="true"></div>
+        </div>
+        <div class="Ng7Ira_session">
+          <div class="Ng7Ira_panel" data-sidebar-right-panel="push" data-sidebar-right-open="true"></div>
+        </div>
+      </aside>
+    </div>
+  </body></html>`, { url: 'http://127.0.0.1:45120/' })
+  const doc = dom.window.document
+  const root = doc.documentElement
+  const uninstall = installFullscreenCollapseSync(doc)
+  await new Promise((r) => setTimeout(r, 30))
+  assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), false, '隐藏会话的全屏面板不得折叠当前中间栏')
+  uninstall()
+})
+
+test('会话包装的 hidden 翻转也会触发全屏判定重算', async () => {
+  const dom = new JSDOM(`<!doctype html><html><body>
+    <div class="dshDesktopFrame">
+      <aside class="dshDesktopSidebarSurface"></aside>
+      <main class="dshDesktopConversationSurface"></main>
+      <aside class="dshDesktopRightbarSurface">
+        <div class="Ng7Ira_session" data-sidebar-right-session="session-old">
+          <div class="Ng7Ira_panel" data-sidebar-right-panel="fullscreen" data-sidebar-right-open="true"></div>
+        </div>
+        <div class="Ng7Ira_session" data-sidebar-right-session="session-current">
+          <div class="Ng7Ira_panel" data-sidebar-right-panel="push" data-sidebar-right-open="true"></div>
+        </div>
+      </aside>
+    </div>
+  </body></html>`, { url: 'http://127.0.0.1:45120/' })
+  const doc = dom.window.document
+  const root = doc.documentElement
+  const oldSession = doc.querySelector('[data-sidebar-right-session="session-old"]')
+  const uninstall = installFullscreenCollapseSync(doc)
+  await new Promise((r) => setTimeout(r, 30))
+  assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), true, '旧会话可见全屏时应折叠')
+  oldSession.setAttribute('hidden', '')
+  await new Promise((r) => setTimeout(r, 30))
+  assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), false, '隐藏旧会话后必须解除折叠')
+  uninstall()
+})
+
+test('无关元素的 hidden 变化不得清掉用户手动收起的中间栏', async () => {
+  const doc = fixture('push')
+  const root = doc.documentElement
+  const unrelated = doc.createElement('div')
+  doc.body.append(unrelated)
+  const uninstall = installFullscreenCollapseSync(doc)
+  root.setAttribute(CONVERSATION_COLLAPSED_ATTR, '')
+  unrelated.setAttribute('hidden', '')
+  await new Promise((r) => setTimeout(r, 30))
+  assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), true, '无关 hidden 变化不得改变用户手动收起状态')
+  uninstall()
+})
+
+test('安装后新增无关 DOM 节点不得清掉用户手动收起的中间栏', async () => {
+  const doc = fixture('push')
+  const root = doc.documentElement
+  const uninstall = installFullscreenCollapseSync(doc)
+  root.setAttribute(CONVERSATION_COLLAPSED_ATTR, '')
+  const unrelated = doc.createElement('div')
+  doc.body.append(unrelated)
+  await new Promise((r) => setTimeout(r, 30))
+  assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), true, '无关节点插入不得改变手动收起状态')
+  uninstall()
+})

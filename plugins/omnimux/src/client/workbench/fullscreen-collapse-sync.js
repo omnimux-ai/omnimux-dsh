@@ -83,7 +83,24 @@ export function installFullscreenCollapseSync(doc = hostDocument()) {
   const Observer = doc.defaultView?.MutationObserver
   if (typeof Observer !== 'function') return () => {}
 
-  const observer = new Observer(sync)
+  const observer = new Observer((records) => {
+    // hidden/aria-hidden 只在会话包装上代表「该会话是否在屏」；无关元素的属性变化
+    // 不得触发重算，否则会把用户手动收起的会话栏顶开。
+    const relevant = records.some((record) => {
+      const name = record.attributeName
+      if (name === 'hidden' || name === 'aria-hidden') {
+        const target = record.target
+        return Boolean(target && typeof target.hasAttribute === 'function' && target.hasAttribute('data-sidebar-right-session'))
+      }
+      if (name) return true
+      // 子树增删只在涉及右栏面板/会话包装时重算；普通页面节点的插入不得顶开手动收起的会话栏。
+      const nodes = [...(record.addedNodes || []), ...(record.removedNodes || [])]
+      return nodes.some((node) => node && node.nodeType === 1
+        && (node.matches?.('[data-sidebar-right-panel], [data-sidebar-right-session]')
+          || node.querySelector?.('[data-sidebar-right-panel], [data-sidebar-right-session]')))
+    })
+    if (relevant) sync()
+  })
   observer.observe(root, {
     subtree: true,
     childList: true,
@@ -92,6 +109,8 @@ export function installFullscreenCollapseSync(doc = hostDocument()) {
       'data-sidebar-right-panel',
       'data-sidebar-right-open',
       'data-rightbar-fullscreen',
+      'hidden',
+      'aria-hidden',
       FULLSCREEN_COLLAPSE_SNAPSHOT_ATTR,
     ],
   })
