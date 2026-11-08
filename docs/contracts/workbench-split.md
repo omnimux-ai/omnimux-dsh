@@ -58,6 +58,8 @@ Official AppFrame is already `sidebar | conversation | details`. Workbench does 
 
 Resolution order is `mounted` → `current`; a missing value is `undefined`, never a guessed first row. The Workbench-side adapter owns this (`plugins/omnimux/src/client/workbench/host-adapter.js`), and the sidebar support package must agree: `dsh-better-sidebar` **0.19.1 reads only `current`** and therefore keeps an empty session slot whenever the host leaves it undefined — every left-rail entry then silently no-ops (#3800). Identity and installed version MUST match `scripts/sidebar-support-identity.json` (currently 0.28.1, which reads `mounted`); a managed snapshot or `node_modules` copy that disagrees with that identity fails the materialize pre-check by name instead of degrading silently (#3835).
 
+**Per-session panel retention (rc.3).** The host keeps every visited Session's right panel mounted and marks inactive ones with `hidden` on the `[data-sidebar-right-session]` wrapper; the inner panel still carries `data-sidebar-right-panel="fullscreen"`. Any fullscreen detection or exit-control lookup MUST exclude panels inside `[hidden]` / `[aria-hidden="true"]` ancestors (the same visibility rule the host's own `visibleSidebarPane` uses). Otherwise a previous Session's fullscreen state is mistaken for the current one and `conversationCollapse` folds the middle column permanently — the project creation page then opens the canvas into a blank middle column.
+
 | Tab id | Owner | Default focus | Left row |
 |---|---|---|---|
 | `omnimux-assets:library` | `omnimux-assets` | `gui` | `[data-omnimux-assets-entry]` |

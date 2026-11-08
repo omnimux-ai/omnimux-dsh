@@ -13,6 +13,7 @@ import {
   HOST_FULLSCREEN_PANEL_SELECTOR,
   exitHostRightSidebarFullscreen,
   findHostFullscreenExitButton,
+  findHostRightPanel,
   enterHostRightSidebarFullscreen,
   findHostFullscreenEnterButton,
   isHostRightSidebarFullscreen,
@@ -58,6 +59,52 @@ test('fullscreen is the official panel key, mirror is only a fallback', () => {
   const closed = setupDom('<div data-sidebar-right-panel="fullscreen"></div>')
   assert.equal(isHostRightSidebarFullscreen(closed), false)
   assert.equal(closed.querySelector(HOST_FULLSCREEN_PANEL_SELECTOR), null)
+})
+
+test('a hidden session panel never marks the current session fullscreen (rc.3 keeps visited sessions mounted)', () => {
+  const doc = setupDom(`
+    <div data-sidebar-right-session="session-hidden" hidden>
+      <div data-sidebar-right-panel="fullscreen" data-sidebar-right-open>
+        <button data-sidebar-right-mode="push" id="hidden-exit"></button>
+      </div>
+    </div>
+    <div data-sidebar-right-session="session-current">
+      <div data-sidebar-right-panel="push" data-sidebar-right-open>
+        <button data-sidebar-right-mode="fullscreen" id="current-enter"></button>
+      </div>
+    </div>
+  `)
+  assert.equal(isHostRightSidebarFullscreen(doc), false)
+  assert.equal(findHostRightPanel(doc)?.getAttribute('data-sidebar-right-panel'), 'push')
+  assert.equal(findHostFullscreenExitButton(doc), null)
+  assert.equal(findHostFullscreenEnterButton(doc)?.id, 'current-enter')
+})
+
+test('aria-hidden session wrappers are treated the same as hidden ones', () => {
+  const doc = setupDom(`
+    <div data-sidebar-right-session="session-hidden" aria-hidden="true">
+      <div data-sidebar-right-panel="fullscreen" data-sidebar-right-open></div>
+    </div>
+    <div data-sidebar-right-session="session-current">
+      <div data-sidebar-right-panel="push" data-sidebar-right-open></div>
+    </div>
+  `)
+  assert.equal(isHostRightSidebarFullscreen(doc), false)
+})
+
+test('an on-screen fullscreen panel still wins over hidden peers', () => {
+  const doc = setupDom(`
+    <div data-sidebar-right-session="session-hidden" hidden>
+      <div data-sidebar-right-panel="push" data-sidebar-right-open></div>
+    </div>
+    <div data-sidebar-right-session="session-current">
+      <div data-sidebar-right-panel="fullscreen" data-sidebar-right-open>
+        <button data-sidebar-right-mode="push" id="current-exit"></button>
+      </div>
+    </div>
+  `)
+  assert.equal(isHostRightSidebarFullscreen(doc), true)
+  assert.equal(findHostFullscreenExitButton(doc)?.id, 'current-exit')
 })
 
 test('the shell mirror counts only when the panel does not disclaim fullscreen', () => {
@@ -178,3 +225,25 @@ test('entering an already fullscreen panel is a pure no-op', () => {
   assert.deepEqual(modes, [])
 })
 
+test('仅隐藏面板存在时，不得把隐藏面板的按钮当成退出/进入控件', () => {
+  const doc = setupDom(`
+    <div class="dshDesktopFrame" data-rightbar-fullscreen="true">
+      <div data-sidebar-right-session="session-hidden" hidden>
+        <div data-sidebar-right-panel="fullscreen" data-sidebar-right-open>
+          <button data-sidebar-right-mode="push" id="hidden-exit"></button>
+          <button data-sidebar-right-mode="fullscreen" id="hidden-enter"></button>
+        </div>
+      </div>
+    </div>
+  `)
+  // 面板全在隐藏会话里：镜像只是残留，不能判定当前会话全屏。
+  assert.equal(isHostRightSidebarFullscreen(doc), false)
+  assert.equal(findHostFullscreenExitButton(doc), null)
+  assert.equal(findHostFullscreenEnterButton(doc), null)
+})
+
+test('面板自身的 aria-hidden 等同隐藏，不参与在屏判定', () => {
+  const doc = setupDom('<div data-sidebar-right-panel="fullscreen" data-sidebar-right-open aria-hidden="true"></div>')
+  assert.equal(isHostRightSidebarFullscreen(doc), false)
+  assert.equal(findHostRightPanel(doc), null)
+})
