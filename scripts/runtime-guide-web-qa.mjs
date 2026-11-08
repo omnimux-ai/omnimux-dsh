@@ -89,6 +89,7 @@ function buildHarnessHtml() {
   window.__qaReady = false;
   window.__qaOverlay = [];
   const byokState = { revision: 0, providers: [], bindings: {}, providerRevisions: {}, credentialVersions: {} };
+  let claudeSignedIn = false
   const demoAgents = params.get('agentauth') === '1'
     ? [
         { id: 'codex', name: 'Codex CLI', version: '0.167.0', installed: true, models: ['gpt-6.1-sol', 'gpt-6.1-codex'], auth: { state: 'signed-in', method: 'file', loginSupported: true } },
@@ -131,7 +132,15 @@ function buildHarnessHtml() {
       notify();
       return json({ ok: true });
     }
-    if (path === '/omnimux/agents') return json({ agents: demoAgents });
+    if (path === '/omnimux/agents') {
+      return json({ agents: demoAgents.map((item) => (item.id === 'claude' && claudeSignedIn
+        ? { ...item, auth: { ...item.auth, state: 'signed-in' } }
+        : item)) });
+    }
+    if (path === '/omnimux/agents/login' && method === 'POST') {
+      claudeSignedIn = true;
+      return json({ ok: true, launched: true, mode: 'background' });
+    }
     if (path === '/omnimux/agents/updates') return json({ updates: {} });
     if (path === '/omnimux/agents/select' && method === 'POST') return json({ ok: true });
     // BYOK stubs honour the real contract in plugins/omnimux/src/byok/http.js:
@@ -531,12 +540,12 @@ async function runRuntimeGuideWebQa(options = {}) {
     await clickByText(`${guideSelector} button, ${guideSelector} [role="button"], ${guideSelector} .omnimux-runtime-guide-card`, '本地Agent');
     check('agent-grid-count', await waitFor(`document.querySelectorAll('${guideSelector} .omx-agent-card').length === 4`, 3000), '');
     await clickByText(`${guideSelector} .omx-agent-card`, 'Claude Code');
-    check('agent-login-visible', await waitFor(`[...document.querySelectorAll('${guideSelector} button')].some((el) => (el.innerText || '').trim() === '登录')`, 3000), '');
+    check('agent-no-login-button', await evaluate(`![...document.querySelectorAll('${guideSelector} button')].some((el) => (el.innerText || '').trim() === '登录')`), '');
     const claudeContinue = await evaluate(`(() => {
       const el = [...document.querySelectorAll('${guideSelector} button')].find((node) => (node.innerText || '').trim() === '继续');
       return el ? Boolean(el.disabled) : null;
     })()`);
-    check('agent-login-continue-disabled', claudeContinue === true, String(claudeContinue));
+    check('agent-login-continue-enabled', claudeContinue === false, String(claudeContinue));
     await clickByText(`${guideSelector} .omx-agent-card`, 'Codex CLI');
     check('agent-model-label', await waitFor(pageBodyIncludes('模型 · Codex CLI'), 3000), '');
     check('agent-model-trigger', await waitFor(`Boolean(document.querySelector('${guideSelector} #omx-agent-model-codex'))`, 3000), '');
