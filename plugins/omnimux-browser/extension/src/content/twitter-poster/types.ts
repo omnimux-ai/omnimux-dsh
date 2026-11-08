@@ -19,8 +19,14 @@ export interface TweetPosterSource {
   avatar: string
   /** Whether the header rendered a verification mark. */
   verified: boolean
-  /** Post body, original line breaks preserved. */
+  /** Post body used for the visual export; full article text on X Articles. */
   text: string
+  /**
+   * Optional model-facing body. The poster reads the whole article, while the
+   * opinion prompt keeps the existing 8,000-character budget; absent means
+   * `text` is also the prompt body.
+   */
+  promptText?: string
   /** Permanent post address. */
   url: string
   /**
@@ -39,17 +45,24 @@ export interface PosterRenderResult {
   dataUrl: string
   width: number
   height: number
+  /** 1-based page number when the result belongs to a paginated set. */
+  page?: number
+  /** Total pages in the set; both page fields are absent on legacy single results. */
+  pageCount?: number
 }
 
 /**
  * The payload stored before navigating to X's composer.
  *
- * `dataUrl` is a PNG data URL rather than a blob URL: blob URLs belong to the
- * page that minted them and die with the navigation, while the compose page is
- * a fresh document.
+ * `dataUrls` is an ordered list of PNG data URLs rather than blob URLs: blob
+ * URLs belong to the page that minted them and die with the navigation, while
+ * the compose page is a fresh document. `dataUrl` stays for payloads written by
+ * builds that only knew the single-page poster.
  */
 export interface PendingPosterPayload {
-  dataUrl: string
+  dataUrls: string[]
+  /** First page, kept for backward compatibility with single-page payloads. */
+  dataUrl?: string
   /** Generated personal opinion; `''` when the model was unavailable. */
   text: string
   sourceUrl: string

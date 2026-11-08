@@ -172,8 +172,8 @@ function drawCircularAvatar(
   centreX: number,
   centreY: number,
   avatar: PosterImage | null,
+  radius = POSTER_AVATAR_RADIUS,
 ): void {
-  const radius = POSTER_AVATAR_RADIUS
   context.save()
   context.beginPath()
   context.arc(centreX, centreY, radius, 0, Math.PI * 2)
@@ -214,7 +214,12 @@ function drawVerifiedMark(context: PosterContext, tokens: PosterThemeTokens, x: 
   context.restore()
 }
 
-function drawWatermark(context: PosterContext, tokens: PosterThemeTokens, height: number): void {
+function drawWatermark(
+  context: PosterContext,
+  tokens: PosterThemeTokens,
+  height: number,
+  width = POSTER_WIDTH,
+): void {
   const text = 'OmniMux'
   const baselineY = height - 55
   context.save()
@@ -224,13 +229,13 @@ function drawWatermark(context: PosterContext, tokens: PosterThemeTokens, height
   context.textAlign = 'right'
   context.textBaseline = 'middle'
   const textWidth = context.measureText(text).width
-  context.fillText(text, POSTER_WIDTH - POSTER_PADDING, baselineY)
+  context.fillText(text, width - POSTER_PADDING, baselineY)
 
   // A small solid square reads as a mark without depending on a vector path or
   // a loaded image, so the watermark cannot fail on a browser without Path2D.
   const markSize = 14
   context.fillRect(
-    POSTER_WIDTH - POSTER_PADDING - textWidth - 14 - markSize,
+    width - POSTER_PADDING - textWidth - 14 - markSize,
     baselineY - markSize / 2,
     markSize,
     markSize,
@@ -331,4 +336,298 @@ export async function renderPoster(
     width: POSTER_WIDTH,
     height,
   }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Long-form pagination                                                      */
+/* ------------------------------------------------------------------------- */
+
+/** X shows a single photo in full between 2:1 and 3:4; long pages use 3:4. */
+export const POSTER_PAGE_WIDTH = 1920
+export const POSTER_PAGE_HEIGHT = 2560
+export const POSTER_PAGE_PADDING = 120
+export const POSTER_PAGE_AVATAR_RADIUS = 64
+export const POSTER_PAGE_HEADER_HEIGHT = POSTER_PAGE_AVATAR_RADIUS * 2 + 72
+export const POSTER_PAGE_WATERMARK_HEIGHT = 120
+export const POSTER_PAGE_MAX_PAGES = 4
+
+export interface PosterPageLayout {
+  readonly bodySize: number
+  readonly lineHeight: number
+  readonly paragraphGap: number
+}
+
+/**
+ * Long-page typography, largest first. The first layout that fits in four
+ * pages wins, so a shorter article keeps the most readable type.
+ */
+export const POSTER_PAGE_LAYOUTS: readonly PosterPageLayout[] = [
+  { bodySize: 24, lineHeight: 40, paragraphGap: 12 },
+  { bodySize: 22, lineHeight: 37, paragraphGap: 11 },
+  { bodySize: 20, lineHeight: 34, paragraphGap: 10 },
+  { bodySize: 18, lineHeight: 30, paragraphGap: 9 },
+]
+
+/** Thrown when even the smallest long-page layout needs more than four pages. */
+export class PosterTooLongError extends Error {
+  constructor() {
+    super('poster-too-long')
+    this.name = 'PosterTooLongError'
+  }
+}
+
+/**
+ * Splits text into non-empty paragraphs and wraps each one. Unlike the single
+ * poster's `wrapPosterText`, blank source lines are structural separators and
+ * do not become a full empty line; the long-page renderer uses a compact
+ * paragraph gap instead, which keeps a 20-minute article inside four pages.
+ */
+export function wrapPosterParagraphs(
+  text: string,
+  measure: (value: string) => number,
+  maxWidth: number,
+): string[][] {
+  const paragraphs: string[][] = []
+  for (const paragraph of String(text).split('\n')) {
+    if (paragraph.trim() === '') continue
+    const lines = wrapPosterText(paragraph, measure, maxWidth)
+    if (lines.length > 0) paragraphs.push(lines)
+  }
+  return paragraphs
+}
+
+/**
+ * Packs wrapped paragraphs into pages. `capacityPx` is the body box height,
+ * `lineHeight` the height of one line, and `paragraphGap` the space inserted
+ * between paragraphs that share a page. A paragraph longer than one page is
+ * split by line; no text is dropped.
+ */
+export function paginatePosterParagraphs(
+  paragraphs: readonly string[][],
+  capacityPx: number,
+  lineHeight: number,
+  paragraphGap: number,
+): string[][][] {
+  const pages: string[][][] = []
+  let page: string[][] = []
+  let used = 0
+
+  const flush = (): void => {
+    if (page.length === 0) return
+    pages.push(page)
+    page = []
+    used = 0
+  }
+
+  for (const paragraph of paragraphs) {
+    let remaining = paragraph.slice()
+    while (remaining.length > 0) {
+      const gap = page.length === 0 ? 0 : paragraphGap
+      const available = capacityPx - used - gap
+      const fit = Math.floor(available / lineHeight)
+      if (fit <= 0) {
+        flush()
+        continue
+      }
+      if (remaining.length <= fit) {
+        page.push(remaining)
+        used += gap + remaining.length * lineHeight
+        remaining = []
+      } else {
+        page.push(remaining.slice(0, fit))
+        flush()
+        remaining = remaining.slice(fit)
+      }
+    }
+  }
+  flush()
+  return pages
+}
+
+/** Page body height available to text. */
+export function posterPageBodyHeight(): number {
+  return POSTER_PAGE_HEIGHT - POSTER_PAGE_PADDING - POSTER_PAGE_HEADER_HEIGHT - POSTER_PAGE_WATERMARK_HEIGHT
+}
+
+function drawLongHeader(
+  context: PosterContext,
+  tokens: PosterThemeTokens,
+  source: TweetPosterSource,
+  avatar: PosterImage | null,
+): void {
+  const radius = POSTER_PAGE_AVATAR_RADIUS
+  const centreX = POSTER_PAGE_PADDING + radius
+  const centreY = POSTER_PAGE_PADDING + radius
+  drawCircularAvatar(context, tokens, source, centreX, centreY, avatar, radius)
+
+  const textX = centreX + radius + 32
+  context.fillStyle = tokens.heading
+  context.font = `700 48px ${SANS_STACK}`
+  context.fillText(source.name, textX, centreY - 52)
+  const nameWidth = context.measureText(source.name).width
+
+  if (source.verified && source.name !== '') {
+    drawVerifiedMark(context, tokens, textX + nameWidth + 12, centreY - 52 + 2)
+  }
+
+  context.fillStyle = tokens.secondary
+  context.font = `400 36px ${SANS_STACK}`
+  context.fillText(source.handle === '' ? '' : `@${source.handle}`, textX, centreY + 14)
+
+  context.globalAlpha = 0.9
+  context.fillStyle = tokens.divider
+  context.fillRect(
+    POSTER_PAGE_PADDING,
+    POSTER_PAGE_PADDING + POSTER_PAGE_HEADER_HEIGHT - 28,
+    POSTER_PAGE_WIDTH - POSTER_PAGE_PADDING * 2,
+    2,
+  )
+  context.globalAlpha = 1
+}
+
+function drawPageFooter(
+  context: PosterContext,
+  tokens: PosterThemeTokens,
+  pageNumber: number,
+  pageCount: number,
+): void {
+  const baselineY = POSTER_PAGE_HEIGHT - 55
+  context.save()
+  context.fillStyle = tokens.secondary
+  context.font = `400 30px ${SANS_STACK}`
+  context.textAlign = 'left'
+  context.textBaseline = 'middle'
+  context.fillText(`${pageNumber} / ${pageCount}`, POSTER_PAGE_PADDING, baselineY)
+  context.restore()
+  drawWatermark(context, tokens, POSTER_PAGE_HEIGHT, POSTER_PAGE_WIDTH)
+}
+
+async function renderPosterPage(
+  source: TweetPosterSource,
+  theme: PosterTheme,
+  paragraphs: readonly string[][],
+  pageNumber: number,
+  pageCount: number,
+  layout: PosterPageLayout,
+  deps: PosterRenderDeps,
+  avatar: PosterImage | null,
+): Promise<PosterRenderResult> {
+  const tokens = POSTER_THEMES[theme]
+  const canvas = (deps.createCanvas ?? defaultCreateCanvas)()
+  canvas.width = POSTER_PAGE_WIDTH
+  canvas.height = POSTER_PAGE_HEIGHT
+  const context = canvas.getContext('2d')
+  if (context === null) throw new Error('无法创建海报画布')
+
+  context.fillStyle = tokens.background
+  context.fillRect(0, 0, POSTER_PAGE_WIDTH, POSTER_PAGE_HEIGHT)
+  context.textBaseline = 'top'
+  context.textAlign = 'left'
+
+  drawLongHeader(context, tokens, source, avatar)
+
+  context.fillStyle = tokens.foreground
+  context.font = `400 ${layout.bodySize}px ${SANS_STACK}`
+  let bodyY = POSTER_PAGE_PADDING + POSTER_PAGE_HEADER_HEIGHT
+  for (let index = 0; index < paragraphs.length; index += 1) {
+    if (index > 0) bodyY += layout.paragraphGap
+    for (const line of paragraphs[index]) {
+      if (line !== '') context.fillText(line, POSTER_PAGE_PADDING, bodyY)
+      bodyY += layout.lineHeight
+    }
+  }
+
+  drawPageFooter(context, tokens, pageNumber, pageCount)
+
+  return {
+    dataUrl: canvas.toDataURL('image/png'),
+    width: POSTER_PAGE_WIDTH,
+    height: POSTER_PAGE_HEIGHT,
+    page: pageNumber,
+    pageCount,
+  }
+}
+
+/**
+ * Renders one poster for short content, or an ordered set of 3:4 pages for a
+ * long post. Pagination is the default for any body that does not fit the
+ * single-page height cap; no text is silently truncated.
+ */
+export async function renderPosterPages(
+  source: TweetPosterSource,
+  theme: PosterTheme,
+  deps: PosterRenderDeps = {},
+): Promise<PosterRenderResult[]> {
+  const rawBody = String(source.text || '').trim() || POSTER_EMPTY_BODY
+  const createCanvas = deps.createCanvas ?? defaultCreateCanvas
+  const loadImage = deps.loadImage ?? defaultLoadImage
+
+  const probe = createCanvas()
+  probe.width = POSTER_WIDTH
+  const probeContext = probe.getContext('2d')
+  if (probeContext === null) throw new Error('无法创建海报画布')
+  probeContext.font = `400 ${POSTER_BODY_SIZE}px ${SANS_STACK}`
+  const singleCache = new Map<string, number>()
+  const singleMeasure = (value: string): number => {
+    const hit = singleCache.get(value)
+    if (hit !== undefined) return hit
+    const width = probeContext.measureText(value).width
+    singleCache.set(value, width)
+    return width
+  }
+  const singleLines = wrapPosterText(rawBody, singleMeasure, POSTER_CONTENT_WIDTH)
+  if (singleLines.length <= maxPosterBodyLines()) {
+    const single = await renderPoster(source, theme, deps)
+    return [{ ...single, page: 1, pageCount: 1 }]
+  }
+
+  const avatarUrl = source.avatarDataUrl !== undefined && source.avatarDataUrl !== '' ? source.avatarDataUrl : source.avatar
+  const avatar = avatarUrl === '' ? null : await loadImage(avatarUrl)
+
+  for (const layout of POSTER_PAGE_LAYOUTS) {
+    const layoutProbe = createCanvas()
+    layoutProbe.width = POSTER_PAGE_WIDTH
+    const layoutContext = layoutProbe.getContext('2d')
+    if (layoutContext === null) continue
+    layoutContext.font = `400 ${layout.bodySize}px ${SANS_STACK}`
+    const cache = new Map<string, number>()
+    const measure = (value: string): number => {
+      const hit = cache.get(value)
+      if (hit !== undefined) return hit
+      const width = layoutContext.measureText(value).width
+      cache.set(value, width)
+      return width
+    }
+    const paragraphs = wrapPosterParagraphs(
+      rawBody,
+      measure,
+      POSTER_PAGE_WIDTH - POSTER_PAGE_PADDING * 2,
+    )
+    const pages = paginatePosterParagraphs(
+      paragraphs,
+      posterPageBodyHeight(),
+      layout.lineHeight,
+      layout.paragraphGap,
+    )
+    if (pages.length === 0 || pages.length > POSTER_PAGE_MAX_PAGES) continue
+
+    const results: PosterRenderResult[] = []
+    for (let index = 0; index < pages.length; index += 1) {
+      results.push(
+        await renderPosterPage(
+          source,
+          theme,
+          pages[index],
+          index + 1,
+          pages.length,
+          layout,
+          deps,
+          avatar,
+        ),
+      )
+    }
+    return results
+  }
+
+  throw new PosterTooLongError()
 }

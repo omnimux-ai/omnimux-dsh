@@ -1,0 +1,156 @@
+{
+  "task": "browser-x-poster-pagination-issue-4001",
+  "base": "origin/main",
+  "generatedAt": "2026-11-08T03:10:59.695Z",
+  "fixture": {
+    "bodyChars": 9257,
+    "titleChars": 22,
+    "fullTextChars": 9469,
+    "blocks": 95
+  },
+  "checks": [
+    {
+      "name": "extension-service-worker-loaded",
+      "pass": true,
+      "url": "chrome-extension://pifmlfjkgkmlnpcaolhdbgpinbobagac/background.js",
+      "extensionId": "pifmlfjkgkmlnpcaolhdbgpinbobagac"
+    },
+    {
+      "name": "article-fixture-mounted",
+      "pass": true,
+      "articles": 1,
+      "readViews": 1,
+      "posterButtons": 1,
+      "title": "AIE Shanghai 2026 大会印象",
+      "bodyChars": 9257
+    },
+    {
+      "name": "poster-modal-opened",
+      "pass": true,
+      "modalText": "OmniMux 生成海报 选择主题后生成海报与个人观点，长文会自动拆成多页；跳到发帖页自动附图、预填正文，发布前由你确认。 OmniMux 白底 白底海报预览 OmniMux 黑底 黑底海报预览 生成海报 生成观点 取消 生成并预填"
+    },
+    {
+      "name": "pending-poster-payload-written",
+      "pass": true,
+      "pageCount": 4
+    },
+    {
+      "name": "page-1-is-3x4",
+      "pass": true,
+      "width": 1920,
+      "height": 2560
+    },
+    {
+      "name": "page-2-is-3x4",
+      "pass": true,
+      "width": 1920,
+      "height": 2560
+    },
+    {
+      "name": "page-3-is-3x4",
+      "pass": true,
+      "width": 1920,
+      "height": 2560
+    },
+    {
+      "name": "page-4-is-3x4",
+      "pass": true,
+      "width": 1920,
+      "height": 2560
+    },
+    {
+      "name": "long-article-paginated",
+      "pass": true,
+      "pageCount": 4
+    },
+    {
+      "name": "compose-received-all-pages",
+      "pass": true,
+      "count": 4,
+      "names": [
+        "omnimux-poster-1.png",
+        "omnimux-poster-2.png",
+        "omnimux-poster-3.png",
+        "omnimux-poster-4.png"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "index": 1,
+      "width": 1920,
+      "height": 2560,
+      "bytes": 1358546,
+      "path": "docs/evidence/issue-4001/poster-page-1.png"
+    },
+    {
+      "index": 2,
+      "width": 1920,
+      "height": 2560,
+      "bytes": 1270699,
+      "path": "docs/evidence/issue-4001/poster-page-2.png"
+    },
+    {
+      "index": 3,
+      "width": 1920,
+      "height": 2560,
+      "bytes": 1132619,
+      "path": "docs/evidence/issue-4001/poster-page-3.png"
+    },
+    {
+      "index": 4,
+      "width": 1920,
+      "height": 2560,
+      "bytes": 972443,
+      "path": "docs/evidence/issue-4001/poster-page-4.png"
+    }
+  ],
+  "screenshots": [
+    "docs/evidence/issue-4001/modal.png",
+    "docs/evidence/issue-4001/poster-page-1.png",
+    "docs/evidence/issue-4001/poster-page-2.png",
+    "docs/evidence/issue-4001/poster-page-3.png",
+    "docs/evidence/issue-4001/poster-page-4.png",
+    "docs/evidence/issue-4001/compose-with-pages.png"
+  ],
+  "chromePid": 58245,
+  "extensionDir": "plugins/omnimux-browser/extension/dist",
+  "chromePath": "Google Chrome for Testing",
+  "extensionId": "pifmlfjkgkmlnpcaolhdbgpinbobagac",
+  "articleFacts": {
+    "articles": 1,
+    "readViews": 1,
+    "posterButtons": 1,
+    "title": "AIE Shanghai 2026 大会印象",
+    "bodyChars": 9257
+  },
+  "payload": {
+    "pageCount": 4,
+    "textChars": 0,
+    "theme": "light",
+    "keys": [
+      "createdAt",
+      "dataUrls",
+      "sourceUrl",
+      "text",
+      "theme"
+    ]
+  },
+  "compose": {
+    "count": 4,
+    "names": [
+      "omnimux-poster-1.png",
+      "omnimux-poster-2.png",
+      "omnimux-poster-3.png",
+      "omnimux-poster-4.png"
+    ]
+  },
+  "lastPage": {
+    "index": 4,
+    "width": 1920,
+    "height": 2560,
+    "bytes": 972443,
+    "path": "docs/evidence/issue-4001/poster-page-4.png"
+  },
+  "pass": true
+}

@@ -46,8 +46,8 @@ function collapse(text: string | null | undefined): string {
   return (text || '').replace(/\s+/g, ' ').trim()
 }
 
-function capped(text: string): string {
-  return text.length <= ARTICLE_TEXT_MAX_CHARS ? text : `${text.slice(0, ARTICLE_TEXT_MAX_CHARS - 1)}…`
+function capped(text: string, maxChars = ARTICLE_TEXT_MAX_CHARS): string {
+  return text.length <= maxChars ? text : `${text.slice(0, maxChars - 1)}…`
 }
 
 /** The first match for `selector` in `scope` that is not inside the excluded quote card. */
@@ -71,8 +71,15 @@ function textWithoutEmbeds(el: Element): string {
  *
  * @param exclude - A nested quote card; its article nodes are skipped so the
  *   quote is never reported as the owning post's own body.
+ * @param maxChars - Optional output budget; defaults to the prompt budget.
+ *   Visual exports pass `Infinity` to read the whole article without the
+ *   model-context cap.
  */
-export function readArticleText(scope: ParentNode | null | undefined, exclude?: Element | null): string {
+export function readArticleText(
+  scope: ParentNode | null | undefined,
+  exclude?: Element | null,
+  maxChars = ARTICLE_TEXT_MAX_CHARS,
+): string {
   if (!scope) return ''
   const titleEl = firstOwnNode(scope, ARTICLE_TITLE_SELECTOR, exclude)
   const bodyEl = firstOwnNode(scope, ARTICLE_BODY_SELECTOR, exclude)
@@ -86,14 +93,14 @@ export function readArticleText(scope: ParentNode | null | undefined, exclude?: 
       .filter((block) => block !== '')
     body = blocks.length > 0 ? blocks.join('\n\n') : textWithoutEmbeds(bodyEl)
   }
-  return capped([title, body].filter(Boolean).join('\n\n'))
+  return capped([title, body].filter(Boolean).join('\n\n'), maxChars)
 }
 
 /** The text of a card that is itself a post: its `tweetText`, else its article body. */
-export function readCardText(scope: ParentNode | null | undefined): string {
+export function readCardText(scope: ParentNode | null | undefined, maxChars = ARTICLE_TEXT_MAX_CHARS): string {
   if (!scope) return ''
   const text = (scope.querySelector(TWEET_TEXT_SELECTOR)?.textContent || '').trim()
-  return text !== '' ? capped(text) : readArticleText(scope)
+  return text !== '' ? capped(text, maxChars) : readArticleText(scope, undefined, maxChars)
 }
 
 /**
@@ -122,8 +129,13 @@ export function findQuoteContainer(scope: ParentNode | null | undefined): Elemen
  * when present, otherwise the X Article title and body.
  *
  * @param exclude - The quote container, when the caller already resolved it.
+ * @param maxChars - Optional output budget; defaults to the prompt budget.
  */
-export function readTweetBody(scope: ParentNode | null | undefined, exclude?: Element | null): string {
+export function readTweetBody(
+  scope: ParentNode | null | undefined,
+  exclude?: Element | null,
+  maxChars = ARTICLE_TEXT_MAX_CHARS,
+): string {
   if (!scope) return ''
   const quote = exclude ?? findQuoteContainer(scope)
   const articleBody = firstOwnNode(scope, ARTICLE_BODY_SELECTOR, quote)
@@ -132,9 +144,9 @@ export function readTweetBody(scope: ParentNode | null | undefined, exclude?: El
     // Text embedded inside the article body is an embed, not the article's own body.
     if (articleBody?.contains(el)) continue
     const text = (el.textContent || '').trim()
-    if (text !== '') return capped(text)
+    if (text !== '') return capped(text, maxChars)
   }
-  return readArticleText(scope, quote)
+  return readArticleText(scope, quote, maxChars)
 }
 
 /** Whether `scope` draws any post body at all (normal text or article title/body). */

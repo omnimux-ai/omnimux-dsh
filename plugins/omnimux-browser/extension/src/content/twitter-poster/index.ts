@@ -10,11 +10,12 @@
  */
 
 import { extractTweetCapture } from '../twitter-capture/extractor.ts'
+import { readTweetBody } from '../tweet-body.ts'
 import { BRAND_MARK_COLOR } from '../surfaces/media-trigger.ts'
 import { FEATURE_FLAG, readFlag, readFlagSync, subscribeFlag } from '../../feature-flags.ts'
 import { generateOpinionResult, type PosterLocale } from './opinion.ts'
 import { openPosterModal, type PosterModalHandle } from './modal.ts'
-import { renderPoster } from './render.ts'
+import { PosterTooLongError, renderPosterPages } from './render.ts'
 import { DEFAULT_POSTER_THEME } from './themes.ts'
 import {
   isComposePath,
@@ -37,11 +38,13 @@ const COPY = {
     noTweet: '没有读取到这篇帖子的正文',
     posterFailed: '海报生成失败，请重试',
     posterTooLarge: '海报过大，请重试',
+    posterTooLong: '内容过长，单帖最多 4 页',
     navigating: '即将跳转发帖页…',
     attached: '海报已附加，观点已预填，请确认后发布',
     attachedNoOpinion: '海报已附加；观点未生成，请手动补充',
     attachedNoOpinionManual: '海报已附加；未能预填观点，请手动补充',
     attachFailed: '未能自动附图，请手动添加',
+    attachedPartial: (count: number) => `仅附加了 ${count} 张海报，其余请手动添加`,
     occupied: '输入框已有内容，未覆盖',
     noComposer: '请先登录 X，再打开发帖页',
     genericFail: '操作失败，请重试',
@@ -51,11 +54,13 @@ const COPY = {
     noTweet: 'Could not read this post',
     posterFailed: 'Poster generation failed, please retry',
     posterTooLarge: 'Poster is too large, please retry',
+    posterTooLong: 'Content too long — up to 4 pages per post',
     navigating: 'Opening the composer…',
     attached: 'Poster attached and opinion prefilled — review, then post',
     attachedNoOpinion: 'Poster attached; opinion was empty, please add it',
     attachedNoOpinionManual: 'Poster attached; opinion could not be prefilled',
     attachFailed: 'Could not attach the image automatically',
+    attachedPartial: (count: number) => `Only ${count} poster pages were attached; add the rest manually`,
     occupied: 'Composer already has text; left it untouched',
     noComposer: 'Sign in to X, then open the composer',
     genericFail: 'Something went wrong, please retry',
@@ -126,13 +131,19 @@ function fetchAvatarDataUrl(url: string): Promise<string> {
 
 function sourceFromArticle(article: HTMLElement): TweetPosterSource | null {
   const capture = extractTweetCapture(article)
-  if (capture === null || capture.text.trim() === '') return null
+  if (capture === null) return null
+  // Poster input is a visual export, not a model prompt: read the whole article
+  // so a long-form post is paginated instead of being capped at 8,000 chars.
+  const fullText = readTweetBody(article, undefined, Number.MAX_SAFE_INTEGER).trim()
+  const text = fullText !== '' ? fullText : capture.text
+  if (text.trim() === '') return null
   return {
     name: capture.author.name,
     handle: capture.author.handle,
     avatar: capture.author.avatar,
     verified: capture.author.verified,
-    text: capture.text,
+    text,
+    promptText: capture.text,
     url: capture.url,
   }
 }
@@ -281,29 +292,38 @@ function createController(): PosterController {
 
     const avatarPromise = fetchAvatarDataUrl(source.avatar)
     const posterPromise = avatarPromise.then((avatarDataUrl) =>
-      renderPoster(
+      renderPosterPages(
         avatarDataUrl === '' ? source : { ...source, avatarDataUrl },
         selectedTheme,
       ),
     )
     const opinionPromise = generateOpinionResult({
-      text: source.text,
+      text: source.promptText ?? source.text,
       author: source.handle,
       locale: localeCode,
     })
 
-    let poster: Awaited<typeof posterPromise> | null = null
+    let posters: Awaited<typeof posterPromise> | null = null
     try {
-      poster = await posterPromise
-    } catch {
-      poster = null
+      posters = await posterPromise
+    } catch (error) {
+      posters = null
+      if (error instanceof PosterTooLongError) {
+        handle.setStep('poster', 'failed')
+        handle.setPhase('error', copy.posterTooLong)
+        return
+      }
     }
-    if (poster === null) {
+    if (posters === null || posters.length === 0) {
       handle.setStep('poster', 'failed')
       handle.setPhase('error', copy.posterFailed)
       return
     }
-    handle.setStep('poster', 'done')
+    handle.setStep(
+      'poster',
+      'done',
+      posters.length > 1 ? (localeCode === 'zh' ? `${posters.length} 页` : `${posters.length} pages`) : '',
+    )
 
     const opinion = await opinionPromise.catch((error: unknown) => ({
       text: '',
@@ -312,8 +332,9 @@ function createController(): PosterController {
     handle.setStep('opinion', opinion.text === '' ? 'failed' : 'done', opinion.error)
 
     try {
+      const dataUrls = posters.map((poster) => poster.dataUrl)
       await savePendingPoster({
-        dataUrl: poster.dataUrl,
+        dataUrls,
         text: opinion.text,
         sourceUrl: source.url,
         theme: selectedTheme,
@@ -346,10 +367,11 @@ function createController(): PosterController {
       showPosterToast(copy.occupied)
       return
     }
+    const expectedPages = result.payload?.dataUrls.length ?? 0
     if (result.filled === 'occupied') {
       showPosterToast(copy.occupied)
-    } else if (!result.attached) {
-      showPosterToast(copy.attachFailed)
+    } else if (!result.attached || result.attachedCount < expectedPages) {
+      showPosterToast(result.attachedCount > 0 ? copy.attachedPartial(result.attachedCount) : copy.attachFailed)
     } else if ((result.payload?.text ?? '') === '') {
       showPosterToast(copy.attachedNoOpinion)
     } else {

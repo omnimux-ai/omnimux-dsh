@@ -56,6 +56,8 @@ interface PendingPosterPayload {
 }
 ```
 
+> 长文分页后新增有序 `dataUrls: string[]`（`dataUrl` 仅兼容旧单页载荷），见 [x-article-poster-pagination.spec.md](./x-article-poster-pagination.spec.md#4-数据契约)。
+
 - 存储键：`omnimux_x_poster_pending`（`chrome.storage.local`）。
 - TTL：10 分钟；消费或过期即删除。只在 `x.com/compose/post`、`x.com/compose/tweet`、`/intent/post` 消费，其他页面保留等待跳转。
 - 载荷体积上限：8 MB（超限视为生成失败，提示「海报过大」）。
@@ -71,7 +73,7 @@ interface PendingPosterPayload {
 - 作者行：头像（失败时首字母圆底）+ 名称 + 认证勾（单色描边，不用平台蓝）+ `@handle`；下方 2px 分隔线。
 - 正文：按字符换行，保留原文换行；连续空行最多保留一个空行；不修改文案。
 - 水印：右下角 `OmniMux` 文字 + 幽灵品牌 mark（来自 `media-hover/overlay-icons.ts` 的 `BRAND_GHOST_PATH`），透明度 `.8`。
-- 高度：`PAD + head + bodyLines * 68 + watermark`，宽度固定 1280；高度上限 4000，超出截断并在末尾显示省略号（保证 X 可上传）。
+- 高度：`PAD + head + bodyLines * 68 + watermark`，宽度固定 1280；单张模式高度上限 4000，超出时不再截断，转入 [长文分页模式](./x-article-poster-pagination.spec.md)：按自然段拆成最多 4 张 1920×2560（3:4）海报（保证 X 可上传，并在信息流完整展示）。
 - 导出：`canvas.toDataURL('image/png')`；不使用 `toBlob`（避免回调复杂度）。
 
 ## 6. 观点生成
