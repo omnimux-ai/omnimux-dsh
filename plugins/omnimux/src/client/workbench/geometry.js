@@ -15,6 +15,7 @@ import {
 import { WORKBENCH_FOCUS } from '../../workbench/contract.js'
 import { activeTabId, hostDocument, hostWindow, liveSnapshot } from './host-adapter.js'
 import { focusRecordForTab } from './focus-state.js'
+import { currentRightbarPanel } from './current-panel.js'
 // 比例解析的唯一真源在顶栏模块（存储 → 老用户迁移 → 默认 + 缓存）。本模块只消费它的结果，
 // 不得自己实现一套（H-4）。依赖方向：workbench/geometry → client/sidebar-toggle-topbar，
 // 后者只依赖 conversation-ratio / workspace-layout-store / host-adapter，不构成环。
@@ -189,8 +190,8 @@ export function findWorkbenchPanelElement(doc = hostDocument()) {
     if (tagged && isLikelyWorkbenchPanel(tagged)) return tagged
     const dragging = doc.querySelector('[data-dragging]:not(.dshDesktopFrame):not([class*="frame"])')
     if (dragging && isLikelyWorkbenchPanel(dragging)) return dragging
-    const rightPanel = doc.querySelector('[data-sidebar-right-panel][data-sidebar-right-open]')
-    if (rightPanel && isLikelyWorkbenchPanel(rightPanel)) return rightPanel
+    const rightPanel = currentRightbarPanel(doc)
+    if (rightPanel && rightPanel.hasAttribute?.('data-sidebar-right-open') && isLikelyWorkbenchPanel(rightPanel)) return rightPanel
   } catch {
     // ignore
   }

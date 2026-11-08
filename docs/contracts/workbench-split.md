@@ -60,6 +60,8 @@ Resolution order is `mounted` → `current`; a missing value is `undefined`, nev
 
 **Per-session panel retention (rc.3).** The host keeps every visited Session's right panel mounted and marks inactive ones with `hidden` on the `[data-sidebar-right-session]` wrapper; the inner panel still carries `data-sidebar-right-panel="fullscreen"`. Any fullscreen detection or exit-control lookup MUST exclude panels inside `[hidden]` / `[aria-hidden="true"]` ancestors (the same visibility rule the host's own `visibleSidebarPane` uses). Otherwise a previous Session's fullscreen state is mistaken for the current one and `conversationCollapse` folds the middle column permanently — the project creation page then opens the canvas into a blank middle column.
 
+All client code that reads right-panel state MUST go through `workbench/current-panel.js` (`currentRightbarPanel` / `readCurrentRightbarState`), which prefers `ctx.sidebarRight.mounted` and never falls back to a hidden session panel. Styles MUST use the current-session mirror `html[data-omnimux-rightbar-open]` / `html[data-omnimux-rightbar-fullscreen]` maintained by `workbench/rightbar-state-mirror.js`; do not add `:has([data-sidebar-right-panel][data-sidebar-right-open])` selectors that match all retained session panels.
+
 | Tab id | Owner | Default focus | Left row |
 |---|---|---|---|
 | `omnimux-assets:library` | `omnimux-assets` | `gui` | `[data-omnimux-assets-entry]` |

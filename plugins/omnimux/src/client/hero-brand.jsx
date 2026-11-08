@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { configFromWindow } from '../brand/overlay.js'
 import { DEFAULT_CONFIG } from '../brand/defaults.js'
 import { useOmnimuxAuth } from './use-omnimux-auth.js'
+import { currentRightbarPanel } from './workbench/current-panel.js'
 
 /**
  * Empty-session hero brand-mark slot.
@@ -30,7 +31,7 @@ export function HeroBrandWelcome({ size = 34, className, win = typeof window !==
   useEffect(() => {
     if (!win || !win.document) return
     const checkSplit = () => {
-      const panel = win.document.querySelector('[data-sidebar-right-panel]')
+      const panel = currentRightbarPanel(win.document)
       const isOpen = panel && panel.hasAttribute('data-sidebar-right-open')
       const isFullscreen = panel && panel.getAttribute('data-sidebar-right-panel') === 'fullscreen'
       setIsSplit(Boolean(isOpen && !isFullscreen))
@@ -39,7 +40,7 @@ export function HeroBrandWelcome({ size = 34, className, win = typeof window !==
     const observer = new MutationObserver(checkSplit)
     observer.observe(win.document.documentElement, {
       attributes: true,
-      attributeFilter: ['data-sidebar-right-panel', 'data-sidebar-right-open', 'data-omnimux-conversation-collapsed'],
+      attributeFilter: ['data-sidebar-right-panel', 'data-sidebar-right-open', 'hidden', 'aria-hidden', 'data-omnimux-conversation-collapsed'],
       subtree: true,
     })
     return () => observer.disconnect()

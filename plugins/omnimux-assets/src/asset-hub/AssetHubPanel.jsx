@@ -90,7 +90,7 @@ export function AssetHubPanel(props) {
     if (observer && doc?.documentElement) {
       observer.observe(doc.documentElement, {
         attributes: true,
-        attributeFilter: ['data-sidebar-right-panel', 'data-rightbar-fullscreen'],
+        attributeFilter: ['data-sidebar-right-panel', 'data-rightbar-fullscreen', 'hidden', 'aria-hidden'],
         subtree: true,
       })
     }
