@@ -79,6 +79,8 @@
     "public-plugin-apply.test.mjs",
     "qa-label.mjs",
     "qa-label.test.mjs",
+    "release-check.mjs",
+    "release-check.test.mjs",
     "reload-dev-app.mjs",
     "repair-inspiration-covers.mjs",
     "repair-inspiration-covers.test.mjs",
