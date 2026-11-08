@@ -3,6 +3,7 @@ import { Button, DropdownSelect, InputField } from 'dsh-ui-kit'
 import { useOmnimuxAuth } from './use-omnimux-auth.js'
 import { ScenarioSelection } from './ScenarioSelection.jsx'
 import { ProviderConfigPanel } from './ProviderConfigPanel.jsx'
+import { AgentBrandIcon } from './agent-brand-icons.jsx'
 
 async function api(path, init) {
   const response = await fetch(path, init)
@@ -363,7 +364,7 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
                 setNotice('')
               }}
             >
-              <span className="omx-agent-icon" aria-hidden="true">{agent.name ? agent.name[0] : 'C'}</span>
+              <span className="omx-agent-icon" data-agent-icon={agent.id} aria-hidden="true"><AgentBrandIcon id={agent.id} name={agent.name} /></span>
               <span className="omx-agent-card-copy">
                 <span className="omx-agent-name">{agent.name}</span>
                 <span className="omx-agent-version">{agent.version || t('runtime.notDetected')}</span>
