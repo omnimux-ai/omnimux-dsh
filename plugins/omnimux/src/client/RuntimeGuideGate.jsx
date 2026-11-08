@@ -48,6 +48,7 @@ export function RuntimeGuideGate({ t, scope }) {
 
   const [step, setStep] = useState('choose')
   const [busy, setBusy] = useState(false)
+  const [pending, setPending] = useState('')
   const [loggedIn, setLoggedIn] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const finishing = useRef(false)
@@ -126,6 +127,8 @@ export function RuntimeGuideGate({ t, scope }) {
   const finish = useCallback(async (mode, options = {}) => {
     if (finishing.current) return
     finishing.current = true
+    setBusy(true)
+    setPending(mode === 'official' ? (options.dismiss === true ? 'skip' : 'official') : '')
     try {
       const response = await fetch('/omnimux/runtime/mode', {
         method: 'PUT',
@@ -139,6 +142,8 @@ export function RuntimeGuideGate({ t, scope }) {
       if (options.dismiss === true) setDismissed(true)
     } catch (caught) {
       finishing.current = false
+      setBusy(false)
+      setPending('')
       setError(caught instanceof Error ? caught.message : String(caught))
     }
   }, [])
@@ -146,10 +151,14 @@ export function RuntimeGuideGate({ t, scope }) {
   const startOfficial = useCallback(() => {
     const auth = typeof window !== 'undefined' ? /** @type {any} */ (window).__omnimuxAuth : undefined
     if (auth && typeof auth.ensureLogin === 'function') {
+      setBusy(true)
+      setPending('official')
       auth.ensureLogin({
         reason: t('runtime.official'),
         kind: 'explicit',
         onSuccess: () => { void finish('official') },
+        onCancel: () => { setBusy(false); setPending('') },
+        onError: () => { setBusy(false); setPending('') },
       })
       return
     }
@@ -181,21 +190,22 @@ export function RuntimeGuideGate({ t, scope }) {
                   variant="primary"
                   className="omnimux-login-gate-cta"
                   disabled={busy}
+                  loading={busy && pending === 'official'}
                   onClick={loggedIn ? () => { void finish('official') } : startOfficial}
                 >
                   {loggedIn ? t('runtime.officialContinueLogged') : t('runtime.officialCta')}
                 </Button>
                 <div className="omnimux-runtime-guide-alt">
-                  <Button variant="ghost" disabled={busy} onClick={() => { setError(''); setNotice(''); setStep('agent') }}>
+                  <Button variant="ghost" disabled={busy} onClick={() => { setError(''); setNotice(''); setPending(''); setStep('agent') }}>
                     {t('runtime.agent')}
                   </Button>
                   <span className="omnimux-runtime-guide-or">{t('runtime.or')}</span>
-                  <Button variant="ghost" disabled={busy} onClick={() => { setError(''); setNotice(''); setStep('key') }}>
+                  <Button variant="ghost" disabled={busy} onClick={() => { setError(''); setNotice(''); setPending(''); setStep('key') }}>
                     {t('runtime.keyCta')}
                   </Button>
                 </div>
                 <div className="omnimux-runtime-guide-skip">
-                  <Button variant="ghost" className="omnimux-runtime-guide-skip-button" disabled={busy} onClick={() => { void finish('official', { dismiss: true }) }}>
+                  <Button variant="ghost" className="omnimux-runtime-guide-skip-button" disabled={busy} loading={busy && pending === 'skip'} onClick={() => { void finish('official', { dismiss: true }) }}>
                     {t('runtime.skip')}
                   </Button>
                 </div>

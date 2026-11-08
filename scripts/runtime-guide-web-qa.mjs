@@ -474,6 +474,16 @@ async function runRuntimeGuideWebQa(options = {}) {
     check('loggedin-continue-put', await waitFor(`
       (window.__qaRequests || []).some((r) => r.path === '/omnimux/runtime/mode' && r.method === 'PUT' && r.body && r.body.mode === 'official')
     `), JSON.stringify(await evaluate('window.__qaRequests')));
+    // --- 场景 1b2：延迟写入时按钮立即 loading，其它按钮禁用 ---
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/?loggedin=1&delayskip=1` });
+    await waitFor('Boolean(window.__qaReady)', 10000);
+    check('loading-guide-visible', await waitFor(`Boolean(document.querySelector('${guideSelector}'))`), '');
+    await clickByText(`${guideSelector} button`, '继续（已登录）');
+    check('loading-spinner', await waitFor(`Boolean(document.querySelector('${guideSelector} button[aria-busy="true"]'))`, 1000), '');
+    check('loading-others-disabled', await evaluate(`[...document.querySelectorAll('${guideSelector} button')].every((el) => el.disabled || el.getAttribute('aria-busy') === 'true')`), '');
+    await screenshot('guide-loading');
+    await waitFor(`!document.querySelector('${guideSelector}')`, 5000);
+
     check('loggedin-guide-hidden', await waitFor(`!document.querySelector('${guideSelector}')`), '');
     await screenshot('loggedin-continue');
     // 缓存为空时回退 /omnimux/auth/status（remoteauth=1）。
