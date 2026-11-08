@@ -1968,6 +1968,14 @@ ${AGENT_PRESET_AVATAR_CSS}
   opacity: 0.5;
   cursor: default;
 }
+.omx-agent-icon[data-agent-icon="claude"] { color: #d97757; /* exempt-ui03: Claude 品牌色 */ }
+.omx-agent-icon[data-agent-icon="codex"] { color: var(--dsw-alias-label-primary); }
+.omx-agent-icon[data-agent-icon="kimi"] { color: #4c8dff; /* exempt-ui03: Kimi 品牌色 */ }
+.omx-agent-icon[data-agent-icon="qwen"] { color: #615ced; /* exempt-ui03: Qwen 品牌色 */ }
+.omx-agent-icon-letter {
+  font-size: 17px;
+  font-weight: 700;
+}
 .omx-agent-icon {
   display: flex;
   align-items: center;
