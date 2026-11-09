@@ -42,7 +42,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.contractFingerprint.length, 16)
 
     // Authoritative flat list includes contracted models under disposition governance.
-    assert.equal(catalog.models.length, 45) // #3209 google-vids-omni 下线 + minimax-h3-video → 45
+    assert.equal(catalog.models.length, 47) // 本地 45 + gateway-only gemini-4-argon / gemini-3.1-flash-lite-image / suno-sounds
     // 2026-10-21 网关对账 #3516：whisper-1 处置 draft → canonical 并上架 speech_to_text。
     assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'canonical')
     assert.equal(catalog.models.find((m) => m.id === 'grok-imagine-image-quality')?.disposition, 'draft')
@@ -66,7 +66,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
 
     // four lists derive ONLY from listed ops' output.type, intersected with the gateway
     // snapshot (P1b): seedream-5-0-pro has a listed op but the gateway does not sell it.
-    assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gpt-image-2.5'])
+    assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gemini-3.1-flash-lite-image', 'gpt-image-2.5'])
     const imageRow = catalog.image.find((row) => row.id === 'gpt-image-2.5')
     assert.equal(imageRow.label, 'GPT Image 2.5')
     assert.equal(imageRow.subtitle, '标准版 1K · 高分档依渠道')
@@ -85,7 +85,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.deepEqual(catalog.audio.map((row) => row.id), ['indextts-2', 'suno'])
     // Text bucket includes implementation-ready models without requiring live history.
     // #3516: claude-sonnet-4-6 上游渠道停用，文本桶只剩 gemini-3.8-flash。
-    assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash'])
+    assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash', 'gemini-4-argon'])
 
     // draft / canonical-without-listed-ops models never appear in any bucket
     for (const kind of ['text', 'image', 'video', 'audio']) {
@@ -119,18 +119,20 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.defaultsByOperation.text_to_music, 'suno')
     assert.equal('text_to_speech' in catalog.defaultsByOperation, false)
 
-    assert.equal(catalog.text.length, 1)
+    assert.equal(catalog.text.length, 2)
 
-    // P1b: the catalog reports the gateway truth it was built against, including the
-    // models the gateway sells with no callable local contract.
+    // P1b: the catalog reports the gateway truth it was built against. Every
+    // on-sale model now has a v2 contract; suno-sounds is the only model with
+    // no local adapter profile, so it is adapterUnsupported rather than missing.
     assert.equal(catalog.gateway.source, 'bundled')
     assert.ok(catalog.gateway.models > 0, 'the gateway snapshot must report its own membership')
-    assert.ok(catalog.gateway.missingContract.length > 0, 'gateway-only models must be counted, not silently dropped')
+    assert.deepEqual(catalog.gateway.missingContract, [])
+    assert.deepEqual(catalog.gateway.adapterUnsupported, ['suno-sounds', 'wan-3.0'])
     const sold = new Set(
       Object.assign([], catalog.text, catalog.image, catalog.video, catalog.audio).map((row) => row.id),
     )
-    for (const id of catalog.gateway.missingContract) {
-      assert.equal(sold.has(id), false, id + ' has no callable contract, so it must not be listed')
+    for (const id of catalog.gateway.adapterUnsupported) {
+      assert.equal(sold.has(id), false, id + ' has no local adapter, so it must not be listed')
     }
     assert.equal(catalog.models.find((row) => row.id === 'seedance-2-0-fast')?.gatewayListed, false)
     assert.equal(catalog.models.find((row) => row.id === 'gpt-image-2.5')?.gatewayListed, true)
@@ -232,7 +234,8 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     const catalog = buildModelCatalog({ text: h.text, media: h.media, gate: h.gate, env: {} })
     // #530 PR-A listed text set is contract-driven, not gate-invented
     assert.ok(catalog.text.some((row) => row.id === 'gemini-3.8-flash'))
-    assert.equal(catalog.text.length, 1)
+    assert.ok(catalog.text.some((row) => row.id === 'gemini-4-argon'))
+    assert.equal(catalog.text.length, 2)
     assert.equal(catalog.text.some((row) => row.id === 'whisper-1'), false)
   })
 

@@ -32,6 +32,7 @@ import { appendMediaTaskLog } from './task-log.js'
 import { resolveScenarioChoice, resolveMediaProviderChoice, DEFAULT_MEDIA_MODELS, assertScenarioRequestIntent } from '../settings/runtime-mode.js'
 import { resolveExecutionPlan } from './execution-plan.js'
 import { parseModelAndGroup, getModelChannelGroups } from '../catalog/serving/channel-groups.js'
+import { getRuntimeContractIndex } from '../catalog/runtime-index.js'
 export { probeMediaAssets } from './asset-probe.js'
 export { hostLocalAssetsIfNeeded, uploadMediaToGateway, isLocalMediaSource } from './gateway-upload.js'
 
@@ -247,6 +248,9 @@ export async function executeOmnimuxMedia(capability, input) {
     : (taskId ? findMediaTaskByUpstreamId(taskId) : null)
 
   let media = parseMediaConfig(input.media)
+  const runtimeContractIndex = getRuntimeContractIndex(
+    input.catalogIndex ? { localIndex: input.catalogIndex } : {},
+  )
 
   // Collection belongs to the persisted provider, never today's composer settings.
   if (isCollectRequest) {
@@ -507,6 +511,7 @@ export async function executeOmnimuxMedia(capability, input) {
     }
     guardPlan = assertGuardSubmit(guardRequest,
     {
+      index: runtimeContractIndex.index,
       seam,
       capability,
       outputType: capability === 'video' || capability === 'image' || capability === 'audio' ? capability : undefined,
@@ -652,8 +657,12 @@ export async function executeOmnimuxMedia(capability, input) {
         if (constraints?.operations?.length && !constraints.operations.includes(guardPlan.operationId)) {
           throw new OmnimuxError('omnimux-invalid-request', '所选备用线路不支持此生成操作')
         }
+        // Gateway Contract v2 defaults are applied by the guard and must not be
+        // treated as caller intent when checking a specific line's constraints.
+        // Local contracts keep their historical final-input semantics.
+        const gatewayModel = runtimeContractIndex.index.get(guardPlan.modelId)?.gatewaySource === true
         for (const [key, domain] of Object.entries(constraints?.parameters || {})) {
-          const value = finalInput[key] ?? guardRequest[key]
+          const value = gatewayModel ? guardRequest[key] : (finalInput[key] ?? guardRequest[key])
           if (value === undefined) continue
           if ((domain.fixed !== undefined && value !== domain.fixed)
             || (Array.isArray(domain.only) && !domain.only.includes(value))
@@ -663,7 +672,7 @@ export async function executeOmnimuxMedia(capability, input) {
           }
         }
         assertGuardSubmit({ ...guardRequest, group: candidateRow?.id || candidateRoute.group }, {
-          seam, capability, outputType: capability, requireListed: input.requireListed,
+          index: runtimeContractIndex.index, seam, capability, outputType: capability, requireListed: input.requireListed,
         })
       }
       // Pools may cross image protocols. Re-admit each candidate against the
@@ -671,7 +680,7 @@ export async function executeOmnimuxMedia(capability, input) {
       let candidateInput = finalInput
       if (!isByok && route.modelId === 'gpt-image-2.5') {
         const remapped = assertGuardSubmit({ ...guardRequest, group: candidateRoute.group }, {
-          seam, capability, outputType: capability, requireListed: input.requireListed,
+          index: runtimeContractIndex.index, seam, capability, outputType: capability, requireListed: input.requireListed,
         }).vendorPayload
         // Asset hosting is independent of the line's size protocol. Preserve its
         // public URLs and remap only the line-dependent generation parameters.

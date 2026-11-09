@@ -96,14 +96,14 @@ test('readCanvasCatalog tolerates catalogs without preview_fingerprint (old hub 
 test('real Hub catalog exposes the listed text models and selects Gemini 3.8 for video', () => {
   const catalog = projectCanvasCatalog(buildModelCatalog({ env: {} }));
   // 默认全开下 text 桶 = 全部已上架 text 模型；真实 hub 里在售 text 模型只有 Gemini 3.8 Flash。
-  assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash']);
+  assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash', 'gemini-4-argon']);
   assert.equal(catalog.defaults.text, 'gemini-3.8-flash');
   const select = (assets = [], currentModelId) => planAutoAdaptation({ catalog, outputType: 'text', currentModelId,
     fingerprint: buildUpstreamFingerprint({ prompt: 'analyze', assets }) });
   assert.equal(select().modelId, 'gemini-3.8-flash');
   const pick = select([{ sourceNodeId: 'video', type: 'video', mimeType: 'video/mp4', sizeBytes: 1024 }], 'gemini-3.8-flash');
   assert.equal(pick.modelId, 'gemini-3.8-flash');
-  assert.equal(pick.operationId, 'vision_chat');
+  assert.equal(pick.operationId, 'chat');
   assert.equal(catalog.models.find((row) => row.id === pick.modelId).operations.find((op) => op.id === pick.operationId).execution.status, 'none');
 });
 
@@ -122,7 +122,7 @@ test('real Hub catalog: the listed whisper-1 ASR contract is selectable in the a
   // ...and never through a generative bucket: whisper-1's only op binds the
   // speechToText capability seam, so it never lands in the chat list even though
   // it outputs text. The chat bucket stays generative-only.
-  assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash']);
+  assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash', 'gemini-4-argon']);
 
   const withAudio = buildUpstreamFingerprint({
     prompt: '',
@@ -136,7 +136,7 @@ test('real Hub catalog: the listed whisper-1 ASR contract is selectable in the a
   assert.equal(isZeroCandidateEmptyState(transcription), false);
 
   // Every other tool keeps the curated whitelist: a chat node never offers an ASR model.
-  const CHAT = ['gemini-3.8-flash'];
+  const CHAT = ['gemini-3.8-flash', 'gemini-4-argon'];
   const chat = buildFilteredModelOptions({ catalog, fingerprint: buildUpstreamFingerprint({ prompt: '请润色这段文字' }), outputType: 'text', tool: 'text-to-text' });
   assert.deepEqual(chat.options.map((row) => row.id).sort(), CHAT.slice().sort());
   // Callers that pass no tool keep the pre-#1789 behaviour (whitelist only).
@@ -270,7 +270,7 @@ test('operation recommendations cannot impersonate a model preference or overrid
 test('same-model valid operation recommendations initialize new nodes while invalid recommendations are removed (#3312)', () => {
   const hub = configuredHub();
   hub.defaultOperations = {
-    text: { modelId: 'gemini-3.8-flash', operationId: 'vision_chat', rule: 'configured' },
+    text: { modelId: 'gemini-3.8-flash', operationId: 'chat', rule: 'configured' },
     image: { modelId: 'gpt-image-2.5', operationId: 'text_to_image', rule: 'configured' },
     video: { modelId: 'seedance-2-0', operationId: 'video_multi_ref', rule: 'configured' },
     audio: { modelId: 'suno', operationId: 'text_to_music', rule: 'configured' },
@@ -318,7 +318,7 @@ test('an incompatible configured text default safely yields to a listed video-ca
   }) });
   assert.equal(catalog.defaults.text, 'gemini-3.8-flash');
   assert.equal(pick.modelId, 'gemini-3.8-flash');
-  assert.equal(pick.operationId, 'vision_chat');
+  assert.equal(pick.operationId, 'chat');
 });
 
 test('catalog hydration preserves saved models, operations, results and original edge data for all outputs (#3312)', () => {

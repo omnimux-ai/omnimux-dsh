@@ -134,24 +134,23 @@ test('④ submitting a delisted model is rejected with a clear reason', () => {
   assert.notEqual(contractOnly.code, 'not_listed')
 })
 
-test('⑤ gateway-sold models with no callable contract are counted, never listed', () => {
+test('⑤ gateway-sold models with no local adapter are counted, never listed', () => {
   const catalog = buildModelCatalog({ env: {}, snapshot: bundled.snapshot })
-  assert.ok(catalog.gateway.missingContract.length > 0, 'the gateway sells models the hub cannot call')
+  // The bundled v2 snapshot has a contract for every on-sale model; the only
+  // gateway-sold model without a local adapter profile is suno-sounds.
+  assert.deepEqual(catalog.gateway.missingContract, [])
+  assert.deepEqual(catalog.gateway.adapterUnsupported, ['suno-sounds', 'wan-3.0'])
   const sold = usableSnapshotModels(bundled.snapshot)
-  for (const id of catalog.gateway.missingContract) {
+  for (const id of catalog.gateway.adapterUnsupported) {
     assert.equal(sold.has(id), true, `${id} must be sold by the gateway`)
-    assert.equal(listedEverywhere(catalog, id), false, `${id} has no callable contract, so it must not be listed`)
+    assert.equal(listedEverywhere(catalog, id), false, `${id} has no local adapter, so it must not be listed`)
     const row = catalog.models.find((model) => model.id === id)
     if (row) {
       assert.deepEqual(row.operations.filter((op) => op.listed), [], `${id} must expose no listed operation`)
     }
   }
-  // An explicitly passed snapshot is reported as such, and the read-only default
-  // resolution reports the shipped floor it actually read.
-  // The catalog's own count and the read-only drift report must agree: every
-  // gateway-only model is exactly a missing-call-contract model.
   const drift = diffGatewayAgainstHub({ gateway: bundled.snapshot, hub: catalog })
-  assert.deepEqual(catalog.gateway.missingContract, drift.gatewayOnly.map((row) => row.id).sort())
+  assert.deepEqual(catalog.gateway.adapterUnsupported, drift.gatewayOnly.map((row) => row.id).sort())
   assert.equal(drift.summary.unreachable, 0)
   assert.equal(drift.summary.groupExtra, 0)
   assert.equal(drift.summary.priceChanged, 0)

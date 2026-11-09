@@ -67,14 +67,16 @@ test('mixed pool remaps each line and refuses high resolution on standard withou
     })
     if (resolution === '4K') {
       await assert.rejects(executeOmnimuxMedia('image', req), { code: 'omnimux-invalid-request' })
-      assert.equal(calls.length, 1)
+      // Gateway Contract v2 publishes only the 1K image tier for this model;
+      // reject the stale 4K request before any channel sees it.
+      assert.equal(calls.length, 0)
     } else {
       await executeOmnimuxMedia('image', req)
       assert.equal(calls.length, 2)
       assert.deepEqual(calls[1], { group: 'default', body: { model, prompt: req.prompt, size: '16:9', resolution: '1K', n: 1 } })
+      assert.equal(calls[0].group, 'gpt-image-2.5-economy')
+      assert.match(calls[0].body.size, /x/)
     }
-    assert.equal(calls[0].group, 'gpt-image-2.5-economy')
-    assert.match(calls[0].body.size, /x/)
   }
 })
 

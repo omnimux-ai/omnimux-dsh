@@ -70,13 +70,21 @@ export function parseTextConfig(value) {
 
 /**
  * Merges text.models enabled flags with gate.models.textComplete.
- * A model is enabled if and only if row.enabled !== false AND isModelEnabled(gate, id).
+ * Local rows and gateway-contract text rows share the same enabled/gate rule.
+ * A gateway row is always enabled by default; an explicit local row can still
+ * disable the same id, and gate.models.textComplete can disable either.
  *
  * @param {ReturnType<typeof parseTextConfig>} text
  * @param {object} [gate]
+ * @param {Array<{ id: string, brand?: string, role?: string, input?: string[], inputCapability?: object }>} [extraRows]
  */
-export function enabledTextModels(text, gate) {
-  return text.models.filter((row) => row.enabled !== false && isModelEnabled(gate, row.id))
+export function enabledTextModels(text, gate, extraRows = []) {
+  const rows = new Map((text.models ?? []).map((row) => [row.id, row]))
+  for (const row of extraRows) {
+    if (!row || typeof row.id !== 'string' || !row.id.trim()) continue
+    if (!rows.has(row.id)) rows.set(row.id, { ...row, enabled: true })
+  }
+  return [...rows.values()].filter((row) => row.enabled !== false && isModelEnabled(gate, row.id))
 }
 
 /**
@@ -89,9 +97,10 @@ export function enabledTextModels(text, gate) {
  * @param {ReturnType<typeof parseTextConfig>} text
  * @param {Record<string, string | undefined>} [env]
  * @param {object} [gate]
+ * @param {Array<{ id: string, brand?: string, role?: string, input?: string[], inputCapability?: object }>} [extraRows]
  */
-export function resolveTextRoute(request, text, env = process.env, gate) {
-  const enabled = enabledTextModels(text, gate)
+export function resolveTextRoute(request, text, env = process.env, gate, extraRows = []) {
+  const enabled = enabledTextModels(text, gate, extraRows)
   const references = normalizeTextReferences(request)
   const hasImage = references.some((asset) => asset.type === 'image')
   const hasVideo = references.some((asset) => asset.type === 'video')
@@ -106,7 +115,9 @@ export function resolveTextRoute(request, text, env = process.env, gate) {
     throw new OmnimuxError('unknown-model', `model '${targetBaseModel}' is not on the enabled text whitelist`)
   }
   const chat = CHAT_BY_ID.get(row.id)
-  const input = chat?.input ?? ['text']
+  const input = Array.isArray(row.input)
+    ? row.input
+    : chat?.input ?? ['text']
   for (const type of new Set(references.map((asset) => asset.type))) {
     if (!input.includes(type)) {
       throw new OmnimuxError('omnimux-invalid-request', `model '${row.id}' does not accept ${type} input`)

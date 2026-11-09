@@ -400,7 +400,7 @@ describe('omnimux_text_complete tool', () => {
     assert.equal(typeof provided.textComplete.execute, 'function')
     assert.ok(tools.omnimux_text_complete)
     // 2026-10-21 #3527：tool enum 只暴露路由声明里的现役文本型号。
-    assert.deepEqual(tools.omnimux_text_complete.parameters.properties.model.enum, ['gemini-3.8-flash'])
+    assert.deepEqual(tools.omnimux_text_complete.parameters.properties.model.enum, ['gemini-3.8-flash', 'gemini-4-argon'])
     assert.equal(tools.omnimux_text_complete.parameters.properties.model.enum.includes('claude-haiku-4-5'), false)
     assert.match(tools.omnimux_text_complete.description, /whitelist/)
     assert.ok(tools.omnimux_text_complete.parameters.properties.video)
@@ -432,9 +432,10 @@ describe('omnimux_text_complete tool', () => {
       provide() {},
       get() { return undefined },
     }, { text: { models: [{ id: 'gemini-3.8-flash', enabled: false }] } })
-    // 2026-10-21 #3527：唯一现役文本型号被禁用后，tool schema 不再提供 enum
-    // （空枚举会被省略，而不是把禁用型号暴露给模型）。
-    assert.equal(tools.omnimux_text_complete.parameters.properties.model.enum, undefined)
+    // The local model is hidden, while the gateway-only text model remains
+    // available; a disabled id is never substituted back into the enum.
+    assert.deepEqual(tools.omnimux_text_complete.parameters.properties.model.enum, ['gemini-4-argon'])
+    assert.equal(tools.omnimux_text_complete.parameters.properties.model.enum.includes('gemini-3.8-flash'), false)
   })
 
   it('rejects a missing reason at the tool', async () => {

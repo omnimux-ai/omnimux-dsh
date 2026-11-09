@@ -2,7 +2,8 @@ import { assertCapabilityEnabled, isModelEnabled, isToolEnabled } from '../gate/
 import { OmnimuxError } from '../media/errors.js'
 import { objectParams } from '../tools/schema.js'
 
-import { enabledTextModels, CHAT_MODEL_IDS } from './catalog.js'
+import { enabledTextModels } from './catalog.js'
+import { getGatewayTextRows } from '../catalog/runtime-index.js'
 import { normalizeTextReferences } from './references.js'
 import { executeOmnimuxText } from './execute.js'
 
@@ -58,7 +59,7 @@ export function mountTextComplete(ctx, hub, jsonOut, onError, deps = {}) {
     ctx.provide('textComplete', api)
   }
 
-  const enabled = enabledTextModels(hub.text, gate)
+  const enabled = enabledTextModels(hub.text, gate, getGatewayTextRows())
   const modelIds = enabled.map((row) => row.id)
 
   ctx.tools.register({

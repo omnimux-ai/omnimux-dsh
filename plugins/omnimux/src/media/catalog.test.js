@@ -122,7 +122,7 @@ describe('hub media catalog facade (contract-derived)', () => {
   })
 
   it('mediaModelIds matches the table rows', () => {
-    assert.deepEqual(mediaModelIds('image'), IMAGE_MODEL_SPECS.map((row) => row.id))
+    assert.deepEqual(mediaModelIds('image'), [...IMAGE_MODEL_SPECS.map((row) => row.id), 'gemini-3.1-flash-lite-image'])
     assert.deepEqual(mediaModelIds('audio'), AUDIO_MODEL_SPECS.map((row) => row.id))
   })
 

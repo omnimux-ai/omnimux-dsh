@@ -58,7 +58,7 @@ test('a routing group reaches the wire as a header while the body keeps the bare
   const result = await executeOmnimuxMedia('image', input)
   assert.equal(result.mode, 'live')
   assert.equal(groupHeader, 'gpt-image-2.5-economy')
-  assert.deepEqual(bodies, [{ prompt: 'a lamp', size: '1792x1024', quality: 'standard', n: 1, model: 'gpt-image-2.5' }])
+  assert.deepEqual(bodies, [{ prompt: 'a lamp', size: '1024x1024', quality: 'medium', n: 1, model: 'gpt-image-2.5' }])
   assert.equal(readFileSync(input.dest, 'utf8'), 'png')
 })
 
