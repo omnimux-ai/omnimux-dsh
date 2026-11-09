@@ -1,0 +1,51 @@
+# 规格：将图像生成插件（omnimux-studio 视觉创作台）列入 Alpha 内测
+
+- 状态：实现中
+- 归属包：`plugins/omnimux`（生命周期单一真源）+ 发布脚本策略
+- 关联任务：用户指示「把图像生成插件标记为内测版 不作为正式发布」
+
+## 目标
+
+`plugin-lifecycle.json` 是 Alpha 内测插件的唯一名单。当前 5 项（账号、发布、数据分析、任务表单、AI 网红工作室）。用户要求把「图像生成插件」——即市场插件卡中的「视觉创作台」`omnimux-studio`（对话式图像/视频生成工作台，当前为前端 Mock）——也算作内测版：开发版保留并视为内测，正式版发布策略自动剔除该插件。
+
+## 用户操作旅程
+
+1. 用户查看开发版：市场「插件」专栏仍能看到「视觉创作台」，工作台 Tab `omnimux-studio:workspace` 功能照常；名单中标记为 Alpha 后，正式版打包不再包含它。
+2. 正式版（`release-channel.json` = production）：`sync-stable.sh --prod` / `sync-to-app.sh --prod` 依据同一名单剔除 `omnimux-studio`，不进入依赖、bundles、受管快照与 node_modules。
+3. 其余 Alpha 五项行为不变；`omnimux-viewer`（多媒体查看器，右栏「图像生成」页签的注册方）不在本次范围，继续保留在正式发布中。
+
+## 验收用例
+
+| 编号 | 场景 | 期望 |
+| --- | --- | --- |
+| A1 | 读取 `plugin-lifecycle.json` | 含 `omnimux-studio` 且 `stage: alpha`、`toolPrefixes: []` |
+| A2 | `node --test scripts/sync-release-policy.test.mjs` | `alphaPluginIds` 为 6 项（accounts, publish, analytics, forms, avatar, studio）；`alphaToolPrefixes` 保持 4 个；全部用例通过 |
+| A3 | `sync-stable.sh --prod` 的既有 fixture 测试 | `omnimux-studio` 不在正式 profile 依赖、bundles、受管快照与 node_modules 中；开发目标保留 |
+| A4 | 文档 | `docs/contracts/alpha-release.md` 的 Alpha 名单含视觉创作台（omnimux-studio） |
+| A5 | 非 Alpha 插件 | `omnimux-workflow`、`omnimux-viewer` 等非 Alpha 插件在正式版中保持可用，不受影响 |
+
+## 假设
+
+1. `plugin-lifecycle.json` 是 Alpha 名单唯一真源；`scripts/plugin-lifecycle.mjs`、`sync-stable.sh`、`sync-to-app.sh`、中枢侧栏 `isAlphaEntry()` 全部消费它，不另存第二份。
+2. 用户所说的「图像生成插件」指 `omnimux-studio`（市场插件卡「视觉创作台」，对话式多模态视觉生成，图像与视频提示词工程）；不是 `omnimux-viewer`（多媒体查看器/文件预览，同时注册右栏「图像生成」页签）。
+3. `omnimux-studio` 当前无 agent 工具，`toolPrefixes: []` 合法；正式版的实际排除以「整插件不进入发布产物」为准，前缀仅作纵深防御。
+4. `omnimux-studio` 为纯前端 Mock 插件，没有 `dsh.manifest.json`；Alpha 标记只通过生命周期名单与发布脚本生效，不新增插件清单。
+
+## 证伪方式
+
+1. 运行 `node scripts/plugin-lifecycle.mjs list-alpha-plugins`，若输出不含 `omnimux-studio`，则假设 1/改动未生效。
+2. 运行 `node --test scripts/sync-release-policy.test.mjs`，任一失败即证伪；重点看 `omnimux-studio` 是否出现在 prod manifest 依赖或 bundles 中（出现即失败）。
+3. `rg -n "视觉创作台|omnimux-studio" docs/contracts/alpha-release.md`，无命中即文档未更新。
+4. 若 `omnimux-viewer` 从正式发布中被剔除或 `display_file` 不可用，则说明范围被误伤，不符合本规格。
+
+## 非目标
+
+- 不把任何 Alpha 插件转正；不改发布脚本逻辑本身（只新增名单项与默认清单项）；不写生产 profile；不重启共享 Dev App；不改 `omnimux-studio` 的菜单/功能实现。
+- 不改 `omnimux-viewer` 的发布策略或文件预览能力。
+
+## 旧标准变更
+
+- `scripts/sync-release-policy.test.mjs` :: `uses the lifecycle registry as the exact Alpha plugin and tool-prefix source`
+  - 原断言：`alphaPluginIds` 恰为 5 项（`omnimux-accounts` / `omnimux-publish` / `omnimux-analytics` / `omnimux-forms` / `omnimux-avatar`），`alphaToolPrefixes` 恰为 4 个（`omnimux_accounts_` / `omnimux_publish_` / `omnimux_analytics_` / `avatar_`）。
+  - 必须改的理由：用户要求把图像生成插件（`omnimux-studio`）列入 Alpha 内测并排除正式发布；单一真源新增一项后，原「恰为 5 项」的断言与目标冲突。
+  - 新期望证据：`alphaPluginIds` 为 6 项（accounts/publish/analytics/forms/avatar/studio），`alphaToolPrefixes` 保持 4 个（studio 无工具前缀）；测试通过。
