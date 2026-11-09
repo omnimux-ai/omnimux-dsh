@@ -70,3 +70,24 @@
 - Always：只读网关公开 snapshot；失败回退并显式记录；不伪造 unknown。
 - Ask first：新增 adapter profile 类型、改变计费/价格、生产发布。
 - Never：调用真实模型 API 探测能力；把 v2 参数写入本地 YAML 作为第二真源；静默删除旧节点。
+
+## 旧标准变更
+
+- `plugins/omnimux-workflow/src/shared/generationPolicy.hub.test.mjs` :: `real Hub catalog exposes the listed text models and selects Gemini 3.8 for video` —— 原断言 text 桶只有 `gemini-3.8-flash`；Gateway Contract v2 新增 `gemini-4-argon`，现断言两个在售文本模型，且多模态操作使用网关 canonical `chat`。
+- `plugins/omnimux-workflow/src/shared/generationPolicy.hub.test.mjs` :: `real Hub catalog: the listed whisper-1 ASR contract is selectable in the audio-transcription tool (#1789)` —— 原断言 text 桶只有一个模型；现按真实 v2 目录断言 `gemini-3.8-flash` 与 `gemini-4-argon` 两个模型。
+- `plugins/omnimux-workflow/src/shared/generationPolicy.hub.test.mjs` :: `same-model valid operation recommendations initialize new nodes while invalid recommendations are removed (#3312)` —— 原使用本地旧操作名 `vision_chat`；v2 `chat` 已合并多模态输入，现断言 `chat`，避免维护第二套操作名。
+- `plugins/omnimux-workflow/src/shared/generationPolicy.hub.test.mjs` :: `an incompatible configured text default safely yields to a listed video-capable text model (#3312)` —— 同上，默认视频理解操作改为 v2 canonical `chat`。
+- `plugins/omnimux/src/catalog/gateway-truth-p1b.test.js` :: `⑤ gateway-sold models with no callable contract are counted, never listed` —— 原断言 v1 快照下有多条 `missingContract`；v2 快照下所有在售模型都有 contract，改为断言 `missingContract=[]` 且无本地 adapter 的模型进入 `adapterUnsupported`。
+- `plugins/omnimux/src/catalog/list.test.js` :: `returns Catalog v1.1: models[] authority + listed-only four lists + defaults` —— 原断言 45 个本地模型、text/image 各 1；v2 新增两个 gateway-only 模型并保留本地模型目录，现断言 47 个模型、text/image 各 2，并更新 gateway 诊断字段。
+- `plugins/omnimux/src/catalog/list.test.js` :: `text bucket lists PR-A verified models; gate cannot invent unlisted ids` —— 原文 `text.length=1`；gateway-only `gemini-4-argon` 进入在售文本桶后现为 2，同时仍验证 gate 不能凭空造模型。
+- `plugins/omnimux/src/host/apply.test.js` :: `passes token store and credentials seam to media generators` —— 原文 text 桶长度 1；真实 v2 目录新增 `gemini-4-argon`，现断言长度 2。
+- `plugins/omnimux/src/host/apply.test.js` :: `fine-grained disables media, text models, and official tools via gate` —— 原文禁用本地 `gemini-3.8-flash` 后 enum 为空；gateway-only `gemini-4-argon` 仍可提供，现断言 enum 只剩 `gemini-4-argon`。
+- `plugins/omnimux/src/media/catalog.test.js` :: `mediaModelIds matches the table rows` —— 原文只比较本地 `IMAGE_MODEL_SPECS`；gateway-only `gemini-3.1-flash-lite-image` 进入媒体目录，现比较本地表加该 gateway 模型。
+- `plugins/omnimux/src/media/gpt-image-gateway-3071.test.js` :: `mixed pool remaps each line and refuses high resolution on standard without posting` —— 原文 4K 会先尝试 economy 线路；v2 只发布 1K 图片档，现断言 4K 在 HTTP 前被拒绝且 0 次请求。
+- `plugins/omnimux/src/media/protocols/openai-media.test.js` :: `a routing group reaches the wire as a header while the body keeps the bare model id` —— 原文 gpt 默认 `1792x1024/standard`；v2 合同固定 `1024x1024/medium`，现断言网关合同值。
+- `plugins/omnimux/src/settings/omitted-model-defaults.test.js` :: `3312: saved defaults pointing at delisted models resolve only to the fixed real published catalog` —— 原文 text/image 各一个合法模型；v2 目录增加 `gemini-4-argon` 和 `gemini-3.1-flash-lite-image`，现断言四个在售桶的完整合法集合。
+- `plugins/omnimux/src/text/execute.test.js` :: `registers and forwards onto textComplete` —— 原 tool enum 仅本地 `gemini-3.8-flash`；现按 v2 目录包含 `gemini-4-argon`。
+- `plugins/omnimux/src/text/execute.test.js` :: `hides a disabled whitelist model from the tool enum` —— 原文禁用唯一本地模型后 enum 为空；gateway-only `gemini-4-argon` 仍可提供，现断言只隐藏被禁用的本地模型。
+- `plugins/omnimux/src/text/mount.test.js` :: `registers omnimux_text_complete tool and provides textComplete seam by default` —— 原文 enum 仅本地模型；现按 v2 目录断言两个文本模型。
+- `plugins/omnimux/src/text/mount.test.js` :: `filters enum in tool parameters when gate disables specific models` —— 原文禁用本地模型后 enum 为空；现只剩 gateway-only `gemini-4-argon`。
+- `plugins/omnimux/src/text/references.test.js` :: `the tool forwards references and operation to the same guard as the seam` —— 原文用 `chat` 作为“带图时非法操作”；v2 `chat` 本身支持 image/video/pdf，改用真正不兼容的 `digital_human` 验证同一 guard 拒绝路径。
