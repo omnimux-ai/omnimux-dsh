@@ -58,13 +58,15 @@ test('Gateway text rows and SubmitGuard admit gateway-only models', () => {
   }
 })
 
-test('Gateway v1 snapshot falls back to local specs instead of breaking the catalog', () => {
+test('a v1 cached snapshot supplements missing contracts from bundled v2', () => {
   const legacy = structuredClone(bundled)
   for (const model of legacy.models ?? []) {
     if (model.contract) model.contract = { ...model.contract, schemaVersion: '1.0' }
   }
+  legacy.generatedAt = '2026-11-03T07:06:42.228Z'
   const catalog = buildModelCatalog({ env: {}, snapshot: legacy })
-  assert.ok(catalog.text.some((row) => row.id === 'gemini-3.8-flash'))
-  assert.ok(catalog.image.some((row) => row.id === 'gpt-image-2.5'))
-  assert.ok(catalog.gateway.missingContract.length > 0)
+  assert.deepEqual(catalog.text.map((row) => row.id).sort(), ['gemini-3.8-flash', 'gemini-4-argon'])
+  assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gemini-3.1-flash-lite-image', 'gpt-image-2.5'])
+  assert.deepEqual(catalog.gateway.missingContract, [])
+  assert.deepEqual(catalog.gateway.adapterUnsupported, ['suno-sounds', 'wan-3.0'])
 })
