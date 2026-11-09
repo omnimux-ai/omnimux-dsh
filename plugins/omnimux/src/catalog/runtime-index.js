@@ -10,6 +10,7 @@
 import { contentFingerprint } from './contract/load.js'
 import { getHealthyContractIndex } from './project.js'
 import { resolveCurrentSnapshot } from './cloud/current.js'
+import { readBundledSnapshot } from './cloud/bundled.js'
 import { snapshotContentDigest } from './cloud/snapshot.js'
 import { gatewayContractModels } from './gateway-contract.js'
 
@@ -26,12 +27,42 @@ const runtimeCache = new Map()
  */
 
 /**
+ * Cached snapshots can be newer than the bundled floor but still carry v1
+ * contracts. Membership/price remain the cached snapshot's truth; a missing v2
+ * capability contract is supplemented from the bundled package, never fetched.
+ *
+ * @param {object | undefined} snapshot
+ * @returns {object | undefined}
+ */
+export function withBundledGatewayContracts(snapshot) {
+  if (!snapshot || !Array.isArray(snapshot.models) || snapshot.models.length === 0) return snapshot
+  const bundled = readBundledSnapshot().snapshot
+  if (!bundled || !Array.isArray(bundled.models) || bundled.models.length === 0) return snapshot
+  const bundledContracts = new Map()
+  for (const model of bundled.models) {
+    if (model?.id && model.contract?.schemaVersion === '2.0') bundledContracts.set(model.id, model.contract)
+  }
+  if (bundledContracts.size === 0) return snapshot
+  let changed = false
+  const models = snapshot.models.map((model) => {
+    if (!model || typeof model !== 'object') return model
+    if (model.contract?.schemaVersion === '2.0') return model
+    const contract = bundledContracts.get(model.id)
+    if (!contract) return model
+    changed = true
+    return { ...model, contract }
+  })
+  return changed ? { ...snapshot, models } : snapshot
+}
+
+/**
  * @param {object} localIndex
  * @param {object | undefined} snapshot
  * @returns {RuntimeIndexResult}
  */
 export function mergeRuntimeContractIndex(localIndex, snapshot) {
-  const overlay = gatewayContractModels(snapshot, localIndex, localIndex?.profiles)
+  const effectiveSnapshot = withBundledGatewayContracts(snapshot)
+  const overlay = gatewayContractModels(effectiveSnapshot, localIndex, localIndex?.profiles)
   const byId = new Map(localIndex?.byId instanceof Map ? localIndex.byId : [])
   for (const [id, model] of overlay.models) byId.set(id, model)
 
@@ -104,7 +135,7 @@ export function getRuntimeContractIndex(opts = {}) {
       gatewayDigest: null,
     }
   }
-  const key = `${localIndex?.contentFingerprint ?? ''}|${snapshot?.generatedAt ?? ''}|${snapshotContentDigest(snapshot)}`
+  const key = `${localIndex?.contentFingerprint ?? ''}|${snapshot?.generatedAt ?? ''}|${snapshotContentDigest(withBundledGatewayContracts(snapshot))}`
   const cached = runtimeCache.get(key)
   if (cached) return cached
   const result = mergeRuntimeContractIndex(localIndex, snapshot)

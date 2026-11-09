@@ -151,9 +151,15 @@ v2 contracts over the local `ContractIndex` for `modelCatalog.list()`:
   v2 contract but no matching local profile is reported as
   `gateway.adapterUnsupported` and stays out of every picker; it is not
   misreported as `missingContract`.
-- **Fallback** — a sold model without a v2 contract, a v1 snapshot, or an
-  invalid v2 object keeps the old local-spec projection. This preserves old
-  installs and makes the overlay fail closed.
+- **Cached snapshot supplement** — the live resolver may choose a disk snapshot
+  whose `generatedAt` is newer than the bundled floor but whose model contracts
+  are still v1. Membership, lines and prices stay from that snapshot; a missing
+  v2 contract is supplemented per model from the bundled floor without fetching
+  the network or deleting the user's cache.
+- **Fallback** — a sold model without a v2 contract in either current or bundled
+  snapshot, an invalid v2 object, or a model absent from bundled keeps the old
+  local-spec projection. This preserves old installs and makes the overlay fail
+  closed.
 - **No local YAML for gateway-only models** — `gemini-4-argon` and
   `gemini-3.1-flash-lite-image` are examples: their contract is gateway data,
   their labels/visual metadata are local presentation, and their execution
