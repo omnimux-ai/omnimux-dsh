@@ -171,6 +171,14 @@ export function projectRow(model, ops, snapshot) {
   if (model.parameters && typeof model.parameters === 'object') {
     row.parameters = structuredClone(model.parameters);
   }
+  if (model.gatewaySource === true) {
+    row.gateway = {
+      schemaVersion: model.gatewaySchemaVersion,
+      contractVersion: model.gatewayContractVersion,
+      status: model.gatewayStatus,
+      ...(model.gatewayUnknowns ? { unknowns: [...model.gatewayUnknowns] } : {}),
+    };
+  }
   // The composer's model picker reads these rows, so pricing has to travel
   // with them — not only on the flat `models[]` DTO.
   row.channelGroups = projectChannelGroups(model.id, snapshot);
@@ -314,12 +322,22 @@ export function projectModelDto(model, dispositionsDoc, snapshot) {
     listed: model.listed === true,
     listedOperations: [...(model.listedOperations ?? [])],
     ...(model.routing ? { routing: structuredClone(model.routing) } : {}),
+    ...(model.gatewaySource === true
+      ? {
+          gateway: {
+            schemaVersion: model.gatewaySchemaVersion,
+            contractVersion: model.gatewayContractVersion,
+            status: model.gatewayStatus,
+            ...(model.gatewayUnknowns ? { unknowns: [...model.gatewayUnknowns] } : {}),
+          },
+        }
+      : {}),
     channelGroups: projectChannelGroups(model.id, snapshot),
     // P1b: whether the hub can offer this model right now - the gateway sells it on a
     // usable line AND the local contract exposes a callable operation. The contract's
     // own `listed` is left untouched (it describes the contract alone).
     gatewayListed: hasUsableGatewayGroups(findSnapshotModel(snapshot, model.id)) && model.listed === true,
-    disposition: typeof row?.disposition === 'string' ? row.disposition : 'draft',
+    disposition: typeof row?.disposition === 'string' ? row.disposition : (model.gatewaySource === true ? 'canonical' : 'draft'),
   };
 }
 

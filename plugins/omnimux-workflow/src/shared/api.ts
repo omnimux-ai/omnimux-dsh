@@ -347,6 +347,13 @@ export interface CatalogModelDto {
   listed?: boolean;
   listedOperations?: string[];
   disposition?: string;
+  /** Gateway Contract v2 provenance when the row came from the gateway catalog. */
+  gateway?: {
+    schemaVersion?: string;
+    contractVersion?: string;
+    status?: string;
+    unknowns?: string[];
+  };
   /** Gateway lines this model is served on, with their snapshot-derived prices. */
   channelGroups?: CatalogChannelGroupDto[];
 }
@@ -362,10 +369,25 @@ export interface CapabilityModelItem {
   parameters?: ModelParameterSchema;
   /** Gateway lines this model is served on, with their snapshot-derived prices. */
   channelGroups?: CatalogChannelGroupDto[];
+  /** Gateway Contract v2 provenance when the row came from the gateway catalog. */
+  gateway?: {
+    schemaVersion?: string;
+    contractVersion?: string;
+    status?: string;
+    unknowns?: string[];
+  };
 }
 
 /** GET /api/capabilities response (hub modelCatalog.list shape). */
 export interface CapabilityCatalog {
+  /** Gateway snapshot truth this catalog was built against. */
+  gateway?: {
+    source?: string;
+    digest?: string | null;
+    models?: number;
+    missingContract?: string[];
+    adapterUnsupported?: string[];
+  };
   /** Canvas product curation, separate from model input capabilities. */
   generationPolicy?: Readonly<Record<import('./canvasTypes.ts').MaterialType, import('./generationPolicy.ts').GenerationPolicy>>;
   /**

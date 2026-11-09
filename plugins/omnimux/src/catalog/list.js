@@ -9,6 +9,7 @@ import {
   projectCatalog,
   resolveModelId,
 } from './project.js'
+import { getGatewayTextRows, getRuntimeContractIndex } from './runtime-index.js'
 import {
   loadDispositions,
   loadCatalogDefaults,
@@ -18,7 +19,7 @@ import { CANONICAL_SCHEMA_VERSION } from './contract/schema.js'
 import { DEFAULT_OPERATION_AUTO } from '../settings/schema.js'
 import { resolveCurrentSnapshot } from './cloud/current.js'
 import { snapshotContentDigest } from './cloud/snapshot.js'
-import { gatewayCatalogSummary, usableSnapshotModels } from './cloud/view.js'
+import { usableSnapshotModels } from './cloud/view.js'
 
 export const CATALOG_KINDS = Object.freeze(['text', 'image', 'video', 'audio'])
 
@@ -161,25 +162,37 @@ export function buildModelCatalog(opts = {}) {
   const snapshot = resolved.snapshot
   const gatewayIds = new Set(usableSnapshotModels(snapshot).keys())
 
-  const dto = projectCatalog(index, dispositionsDoc, defaultsCfg, snapshot)
+  // Gateway Contract v2 is the capability source for models the gateway sells.
+  // The local ContractIndex remains the adapter/fallback layer. An injected
+  // contract index is the test/local-fixture entrypoint and keeps the old
+  // local-only projection unless the caller explicitly opts in.
+  const gatewayContracts = opts.gatewayContracts !== undefined
+    ? opts.gatewayContracts !== false
+    : opts.contractIndex === undefined
+  const runtime = getRuntimeContractIndex({ localIndex: index, snapshot, gatewayContracts })
+  const dto = projectCatalog(runtime.index, dispositionsDoc, defaultsCfg, snapshot)
 
-  // "Missing call contract": the gateway sells the model but no local contract
-  // operation is callable. Counted against the contract projection, so a model
-  // that merely loses its config/gate enablement is not misreported.
-  const contractedIds = new Set(
-    [...dto.text, ...dto.image, ...dto.video, ...dto.audio].map((row) => row.id),
-  )
+  // "Missing call contract": the gateway sells the model but no callable
+  // contract operation exists. Models with a v2 contract but no local adapter
+  // profile are reported separately as adapterUnsupported.
   const gateway = {
     source: resolved.source ?? 'none',
     digest: resolved.digest ?? null,
-    ...gatewayCatalogSummary(snapshot, contractedIds),
+    models: usableSnapshotModels(snapshot).size,
+    missingContract: runtime.missingContract,
+    adapterUnsupported: runtime.adapterUnsupported,
   }
 
   // Text bucket: projected listed rows ∩ gateway membership ∩ config/gate-enabled rows.
-  const enabledTextIds = new Set(enabledTextModels(text, gate).map((row) => row.id))
+  // Gateway-only text models are added by the runtime index; local text.models
+  // remains the local fallback/override list.
+  const enabledTextIds = new Set(
+    enabledTextModels(text, gate, getGatewayTextRows({ localIndex: index, snapshot, gatewayContracts }))
+      .map((row) => row.id),
+  )
   const textRows = dto.text
     .filter((row) => gatewayIds.has(row.id) && enabledTextIds.has(row.id))
-    .map((row) => ({ ...row, label: textModelLabel(row.id) }))
+    .map((row) => ({ ...row, label: row.label || textModelLabel(row.id) }))
 
   /** Only models the gateway sells, with a usable line, may enter a list. */
   const listed = (rows) => rows.filter((row) => gatewayIds.has(row.id))
@@ -215,11 +228,11 @@ export function buildModelCatalog(opts = {}) {
     defaults[kind] = resolveDefault({
       kind,
       ids,
-      env: { [ENV_DEFAULT_KEYS[kind]]: resolveModelId(index, trimId(env[ENV_DEFAULT_KEYS[kind]])) },
+      env: { [ENV_DEFAULT_KEYS[kind]]: resolveModelId(runtime.index, trimId(env[ENV_DEFAULT_KEYS[kind]])) },
       settingsDefaults: {
-        [SETTINGS_DEFAULT_KEYS[kind]]: resolveModelId(index, trimId(settingsDefaults[SETTINGS_DEFAULT_KEYS[kind]])),
+        [SETTINGS_DEFAULT_KEYS[kind]]: resolveModelId(runtime.index, trimId(settingsDefaults[SETTINGS_DEFAULT_KEYS[kind]])),
       },
-      configDefault: resolveModelId(index, configDefaults[kind]) ?? '',
+      configDefault: resolveModelId(runtime.index, configDefaults[kind]) ?? '',
       fallback,
     })
   }
@@ -242,7 +255,7 @@ export function buildModelCatalog(opts = {}) {
   // text default silently drive video/audio/document calls.
   const savedAnalysis = trimId(settingsDefaults.defaultAnalysisModel)
   if (savedAnalysis) {
-    const resolvedAnalysis = resolveModelId(index, savedAnalysis)
+    const resolvedAnalysis = resolveModelId(runtime.index, savedAnalysis)
     const compatible = resolvedAnalysis && lists.text.find((row) => row.id === resolvedAnalysis && (row.input ?? []).some((modality) => modality !== 'text'))
     defaults.analysis = compatible ? resolvedAnalysis : ''
   } else {
@@ -255,7 +268,7 @@ export function buildModelCatalog(opts = {}) {
     fingerprint: fingerprintOf(lists, defaults, {
       schemaVersion: CANONICAL_SCHEMA_VERSION,
       contractFingerprint: index.contentFingerprint,
-      listedOperations: index.listedOperations ?? [],
+      listedOperations: runtime.index.listedOperations ?? [],
       defaultsByOperation: dto.defaultsByOperation,
       defaultOperations,
       channelGroups: dto.models.map((model) => ({ modelId: model.id, groups: model.channelGroups })),
@@ -264,7 +277,7 @@ export function buildModelCatalog(opts = {}) {
         row?.disposition,
         row?.target ?? null,
       ]),
-      gateway: { source: gateway.source, digest: gateway.digest, missingContract: gateway.missingContract },
+      gateway: { source: gateway.source, digest: gateway.digest, missingContract: gateway.missingContract, adapterUnsupported: gateway.adapterUnsupported },
     }),
     contractFingerprint: index.contentFingerprint,
     /** Raw sha256 of the official voice preview mapping from the same loaded snapshot. */

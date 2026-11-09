@@ -114,8 +114,16 @@ export function admitOperation(model, operationId, profiles, opts = {}) {
   if (!rawOp) {
     return fail(GUARD_CODES.OPERATION_REQUIRED, 'operation is required')
   }
-  const opId = mapLegacyOperation(rawOp)
-  const op = (model.operations ?? []).find((o) => o && o.id === opId)
+  let opId = mapLegacyOperation(rawOp)
+  let op = (model.operations ?? []).find((o) => o && o.id === opId)
+  if (!op) {
+    const aliased = (model.operations ?? []).find((candidate) =>
+      Array.isArray(candidate?.aliases) && candidate.aliases.includes(opId))
+    if (aliased) {
+      op = aliased
+      opId = aliased.id
+    }
+  }
   if (!op) {
     return fail(GUARD_CODES.OPERATION_NOT_ON_MODEL, `operation "${opId}" not declared on model "${model.id}"`, {
       modelId: model.id,
@@ -147,13 +155,16 @@ export function admitOperation(model, operationId, profiles, opts = {}) {
     })
   }
 
-  if (op.research?.status && op.research.status !== 'verified' && requireListed) {
+  // Gateway Contract v2 operations are admitted by the gateway's executable
+  // bit plus a local adapter profile. The local research field records local
+  // evidence and must not override that authoritative gateway signal.
+  if (!op.gatewaySource && op.research?.status && op.research.status !== 'verified' && requireListed) {
     return fail(GUARD_CODES.RESEARCH_NOT_VERIFIED, `research status ${op.research.status}`, {
       modelId: model.id,
       operationId: opId,
     })
   }
-  if (op.implementation?.status && op.implementation.status !== 'ready' && requireListed) {
+  if (!op.gatewaySource && op.implementation?.status && op.implementation.status !== 'ready' && requireListed) {
     return fail(GUARD_CODES.IMPLEMENTATION_UNAVAILABLE, `implementation status ${op.implementation.status}`, {
       modelId: model.id,
       operationId: opId,

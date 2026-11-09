@@ -14,6 +14,7 @@ import { resolveScenarioChoice, readScenarioSettings, assertScenarioRequestInten
 import { parseModelAndGroup, resolveRequestChannelIntent } from '../catalog/serving/channel-groups.js'
 import { runAgentText } from '../agents/local.js'
 import { buildModelCatalog } from '../catalog/list.js'
+import { getGatewayTextRows, getRuntimeContractIndex } from '../catalog/runtime-index.js'
 
 /** 识别已知思考通道引导词/纯思考断言的前缀特征 */
 const REASONING_PREAMBLE_RE = /^(?:i['’]?m\s+thinking\s+through|let\s+me\s+think|thinking\s+process|thought\s*:)/i
@@ -227,13 +228,20 @@ export async function executeOmnimuxText(input) {
   }
 
   const runtimeSettings = readScenarioSettings(input.settings)
+  const runtime = getRuntimeContractIndex(
+    input.catalogIndex ? { localIndex: input.catalogIndex } : {},
+  )
+  const gatewayTextRows = getGatewayTextRows(
+    input.catalogIndex ? { localIndex: input.catalogIndex } : {},
+  )
+  const gatewayTextIds = new Set(gatewayTextRows.map((row) => row.id))
   const scenario = references.length ? 'analysis' : 'text'
   const { modelId: inputModelId } = parseModelAndGroup(input.model)
   const channelIntent = requestedIntent
   const targetChannel = String(channelIntent.requestedChannel || channelIntent.effectiveChannel || '').toLowerCase().trim()
   const isExplicitAgent = targetChannel === 'agent' || targetChannel === 'local'
   const explicitOfficial = channelIntent.isOfficialChannel
-    || Boolean(inputModelId && CHAT_MODEL_IDS.includes(inputModelId) && !targetChannel)
+    || Boolean(inputModelId && (CHAT_MODEL_IDS.includes(inputModelId) || gatewayTextIds.has(inputModelId)) && !targetChannel)
   let scenarioSettings = runtimeSettings
   if (channelIntent.isByokChannel || isExplicitAgent || explicitOfficial) {
     const binding = channelIntent.isByokChannel
@@ -322,7 +330,7 @@ export async function executeOmnimuxText(input) {
       strategy: input.strategy,
       group: input.group,
       allowedGroups: input.allowedGroups,
-    }, officialText, input.env, gate)
+    }, officialText, input.env, gate, gatewayTextRows)
 
   const maxTokens = typeof input.maxTokens === 'number' && Number.isFinite(input.maxTokens) && input.maxTokens > 0
     ? input.maxTokens
@@ -366,8 +374,9 @@ export async function executeOmnimuxText(input) {
       capability: 'text',
     },
     {
-      // Tests may inject a fixture catalog; production callers pass nothing.
-      index: input.catalogIndex,
+      // Runtime index includes gateway Contract v2 models; tests may inject a
+      // fixture local index, which is promoted through the same overlay.
+      index: runtime.index,
       specsDir: input.specsDir,
       seam: 'textComplete',
       capability: 'text',

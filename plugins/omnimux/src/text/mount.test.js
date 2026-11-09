@@ -23,7 +23,7 @@ describe('mountTextComplete capability gate', () => {
     assert.equal(tools[0].name, 'omnimux_text_complete')
     assert.ok(provided.textComplete)
     // 2026-10-21 #3527：路由声明只剩网关现役文本型号。
-    assert.deepEqual(tools[0].parameters.properties.model.enum, ['gemini-3.8-flash'])
+    assert.deepEqual(tools[0].parameters.properties.model.enum, ['gemini-3.8-flash', 'gemini-4-argon'])
     assert.equal(tools[0].parameters.properties.metadata, undefined)
     assert.ok(tools[0].parameters.properties.strategy)
     assert.ok(tools[0].parameters.properties.group)
@@ -66,8 +66,9 @@ describe('mountTextComplete capability gate', () => {
 
     mountTextComplete(ctx, hub, {}, () => {})
     assert.equal(tools.length, 1)
-    // 2026-10-21 #3527：唯一现役文本型号被 gate 禁用后，空枚举被省略而不是暴露。
-    assert.equal(tools[0].parameters.properties.model.enum, undefined)
+    // The local model is hidden; the gateway-only text model remains offered.
+    assert.deepEqual(tools[0].parameters.properties.model.enum, ['gemini-4-argon'])
+    assert.equal(tools[0].parameters.properties.model.enum.includes('gemini-3.8-flash'), false)
   })
 
   it('throws capability-disabled at execution time when calling a disabled model', async () => {

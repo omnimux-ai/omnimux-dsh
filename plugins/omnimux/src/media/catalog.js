@@ -10,7 +10,8 @@
  * There is no legacy table to fall back to.
  */
 
-import { getHealthyContractIndex, projectDirectoryRows, resolveModelId } from '../catalog/project.js'
+import { getHealthyContractIndex, projectDirectoryRows, projectRow, resolveModelId } from '../catalog/project.js'
+import { getRuntimeContractIndex } from '../catalog/runtime-index.js'
 
 // Top-level contract load; throws (fail-closed) when specs are broken.
 const __contractIndex = getHealthyContractIndex()
@@ -29,8 +30,30 @@ const TABLES = Object.freeze({
  * @param {'image' | 'video' | 'audio'} kind
  * @returns {ReadonlyArray<{ id: string, label: string, badge?: string, subtitle?: string, family?: string, inputCapability?: object, parameters?: object }>}
  */
+/**
+ * Gateway-only models that have a local adapter profile and at least one
+ * executable operation for this media kind. They are projected through the
+ * same row shape as local directory rows.
+ *
+ * @param {'image' | 'video' | 'audio'} kind
+ */
+export function gatewayMediaModels(kind) {
+  const runtime = getRuntimeContractIndex()
+  return runtime.index.all()
+    .filter((model) => model.gatewaySource === true && model.managementGroup === kind)
+    .filter((model) => (model.operations ?? []).some((operation) =>
+      operation.listed === true && operation.output?.type === kind))
+    .map((model) => projectRow(model, model.operations ?? [], runtime.snapshot))
+}
+
 export function mediaModels(kind) {
-  return TABLES[kind] ?? []
+  const rows = [...(TABLES[kind] ?? []), ...gatewayMediaModels(kind)]
+  const seen = new Set()
+  return rows.filter((row) => {
+    if (!row?.id || seen.has(row.id)) return false
+    seen.add(row.id)
+    return true
+  })
 }
 
 /** @param {'image' | 'video' | 'audio'} kind */
@@ -48,7 +71,7 @@ export function findMediaModel(kind, id) {
   const models = mediaModels(kind)
   const match = models.find((row) => row.id === id)
   if (match) return match
-  const canonical = resolveModelId(__contractIndex, id)
+  const canonical = resolveModelId(getRuntimeContractIndex().index, id)
   if (canonical) {
     const aliased = models.find((row) => row.id === canonical)
     if (aliased) return aliased

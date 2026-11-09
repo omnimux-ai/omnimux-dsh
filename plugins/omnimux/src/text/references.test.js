@@ -86,7 +86,7 @@ describe('ordered text references', () => {
     await tool.execute(input, {})
     await seam.execute(input)
     assert.equal(deps.saved.length, 4)
-    await assert.rejects(() => tool.execute({ ...input, operation: 'chat' }, {}), { code: 'omnimux-invalid-request' })
+    await assert.rejects(() => tool.execute({ ...input, operation: 'digital_human' }, {}), { code: 'omnimux-invalid-request' })
     assert.equal(deps.calls.length, 2)
   })
 })

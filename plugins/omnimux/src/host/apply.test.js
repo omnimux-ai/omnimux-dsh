@@ -77,7 +77,7 @@ describe('hub apply composition', () => {
     assert.equal(catalog.source, 'omnimux')
     assert.ok(Array.isArray(catalog.text))
     // #3516: claude-sonnet-4-6 上游渠道停用（仅登记不上架），文本桶只剩 Gemini 3.8。
-    assert.equal(catalog.text.length, 1)
+    assert.equal(catalog.text.length, 2)
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
   })
 
@@ -172,9 +172,9 @@ describe('hub apply composition', () => {
 
     assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'composerAttachments', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'inspirationShare', 'socialData', 'youtube', 'tiktok', 'instagram', 'x', 'decisions', 'modelCatalog', 'generationProducts', 'mediaInspect', 'nativeFilePicker'])
 
-    // #3527：唯一现役文本型号被 gate 禁用后，空枚举被省略而不是暴露。
+    // The local model is hidden; the gateway-only text model remains offered.
     const textEnum = tools.omnimux_text_complete.parameters.properties.model.enum
-    assert.equal(textEnum, undefined)
+    assert.deepEqual(textEnum, ['gemini-4-argon'])
   })
 })
 

@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-18"
-updated: "2026-10-25"
+updated: "2026-11-09"
 authors: ["x", "agent-architect", "gao-jianyuan"]
 subsystem: "omnimux"
 tags:
@@ -26,6 +26,8 @@ related:
 This contract owns the internal directory and retained technical selectors. It does not make every registered model a public product choice. Ordinary character creation follows [product positioning](product-positioning.md); hiding IDs and automatic group matching are product requirements, not proof that existing selectors or request schemas have changed.
 
 The app's OmniMux model list has one **field authority**: `plugins/omnimux/cordis.patch.yml` says what every model looks like — wire parameters, modalities, context windows, reasoning efforts. **Who is on sale is a different truth, owned by the gateway snapshot.** The hub's four catalog lists are the projection of `snapshot on-sale ∩ call contract`, and the `composerHiddenModels` setting can subtract further (canvas pickers use the sibling `canvasHiddenModels` field; see spec `canvas-model-visibility`). Neither the patch nor any local table or flag decides membership. See [Composer list membership](#composer-list-membership).
+
+For models the gateway sells with a **Gateway Contract v2**, the capability surface (operations, input slots, parameters, status, unknowns) comes from that contract, not from a per-model local YAML. The local `specs/*.yaml` remain the adapter/fallback layer: they own implementation profiles, seams, labels, conservative local safety caps, and the old no-v2 behavior. The runtime merge is `plugins/omnimux/src/catalog/runtime-index.js`; see [Gateway Contract v2 overlay](#gateway-contract-v2-overlay).
 
 Model modes, input modalities, limits and wire parameters MUST follow the selected channel's official API documentation under [model API authority](model-api-authority.md). EvoLink and APIMart are the primary channels. Do not issue real model requests for research or contract acceptance. Historical measurements below do not define current channel support.
 
@@ -134,6 +136,37 @@ it that way: user layers set `agent-default-model` only.
   follow [model-display-label.md](./model-display-label.md): no `-` in the
   visible model name; brand casing preserved (`Claude Opus 4.6`, `GPT 5.5`).
 
+## Gateway Contract v2 overlay
+
+`plugins/omnimux/src/catalog/cloud/snapshot.js` already preserves each sold model's
+`contract` object. `plugins/omnimux/src/catalog/runtime-index.js` merges those
+v2 contracts over the local `ContractIndex` for `modelCatalog.list()`:
+
+- **Capability authority** — `operations[].executable` decides admission,
+  `inputs[]` decides slots and limits, `parameters[]` decides guard/UI
+  parameters, and `status`/`unknowns` travel as metadata. A v2 value is never
+  overridden by a local spec.
+- **Execution authority** — the local `adapter-profiles.json` must still provide
+  a live implementation profile for every executable operation. A model with a
+  v2 contract but no matching local profile is reported as
+  `gateway.adapterUnsupported` and stays out of every picker; it is not
+  misreported as `missingContract`.
+- **Fallback** — a sold model without a v2 contract, a v1 snapshot, or an
+  invalid v2 object keeps the old local-spec projection. This preserves old
+  installs and makes the overlay fail closed.
+- **No local YAML for gateway-only models** — `gemini-4-argon` and
+  `gemini-3.1-flash-lite-image` are examples: their contract is gateway data,
+  their labels/visual metadata are local presentation, and their execution
+  profile is local adapter data. Adding a sibling model should normally require
+  only gateway contract + adapter profile changes.
+- **Local safety caps** — where the gateway does not publish a file-size cap,
+  the adapter may retain a conservative local upload cap (for example text image
+  attachments). It may tighten a gateway limit, never widen one.
+- **Compatibility aliases** — old local operation ids remain read-only aliases
+  (`vision_chat` → gateway `chat`, `multi_reference` ↔ gateway
+  `image_to_image`). Saved nodes keep working; the gateway operation id remains
+  the canonical new id.
+
 ## Composer list membership
 
 The chat composer's model list is a settings surface of the `llm-pi-ai` provider
@@ -184,6 +217,8 @@ visibility setting changes.
 
 Hub models are shared contracts. Adding, re-parameterizing, changing operations of, aliasing, or deprecating a model closes atomically across plugins.
 
+For a model covered by Gateway Contract v2 (the normal path for an on-sale gateway model), steps 1–3 are replaced by the gateway contract itself: the gateway operation must be `executable: true` and the local `adapter-profiles.json` must provide a live profile. Do not add a duplicate local YAML just to satisfy the lifecycle; update the gateway contract / adapter profile instead. The 5-step lifecycle below applies to a local-only model that the gateway does not sell, or to a legacy fallback that has no v2 contract.
+
 When the user requests listing or making a model available to the canvas/consumers, the task MUST execute the 5-step listing lifecycle atomically instead of leaving the model in "draft":
 
 1. **Contract definition**: Register the canonical runtime model ID, brand, operation IDs, inputs, and defaults in the corresponding specs YAML (`plugins/omnimux/src/catalog/specs/*.yaml`).
@@ -211,9 +246,12 @@ reference shape.
   sold may not silently disappear, only a reviewed
   `snapshotDropAcknowledged` entry may), and the listed ↔ on-sale
   reconciliation (`gateway_missing_contract_drift`, comparing
-  `catalog.gateway.missingContract` against the bundled snapshot). Verify
-  patch-specific field mapping with isolated fixtures as needed. Online
-  existence and real-generation scripts are not acceptance requirements.
+  `catalog.gateway.missingContract` against the bundled snapshot). A v2
+  `executable` operation counts as contract-listed here even when a local
+  adapter is missing; adapter gaps are surfaced separately as
+  `catalog.gateway.adapterUnsupported`. Verify patch-specific field mapping with
+  isolated fixtures as needed. Online existence and real-generation scripts are
+  not acceptance requirements.
 - `dsh --profile <name> --dump-config` — the composed `llm-pi-ai` provider
   block must come from `omnimux` (dump headers name the patching layer),
   and no `omnimux-compat` provider may exist anywhere.

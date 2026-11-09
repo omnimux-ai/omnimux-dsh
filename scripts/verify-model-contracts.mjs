@@ -226,6 +226,16 @@ export function verifyGatewayMembership(options = {}) {
       if (operation?.listed === true) contractListed.add(model.id);
     }
   }
+  // Gateway Contract v2: an executable operation is a callable contract even
+  // when the local adapter profile is missing. adapterUnsupported is reported
+  // separately by the catalog; this membership gate must not conflate the two.
+  for (const snapshotModel of Array.isArray(read.snapshot?.models) ? read.snapshot.models : []) {
+    const contract = snapshotModel?.contract;
+    if (contract?.schemaVersion !== '2.0') continue;
+    if ((Array.isArray(contract.operations) ? contract.operations : []).some((operation) => operation?.executable === true)) {
+      contractListed.add(snapshotModel.id);
+    }
+  }
 
   let catalog = options.catalog;
   if (!catalog) {
