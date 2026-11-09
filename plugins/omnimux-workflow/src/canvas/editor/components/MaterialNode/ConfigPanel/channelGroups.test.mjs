@@ -185,34 +185,34 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
   });
 
   it('resolves compact model names for the trigger capsule', () => {
-    assert.equal(resolveShortModelName('seedance-2-0-fast'), '2.0 Fast');
-    assert.equal(resolveShortModelName('seedance-2-0'), 'Seedance 2.0');
-    assert.equal(resolveShortModelName('claude-opus-4-6'), 'Opus 4.6');
-    assert.equal(resolveShortModelName('deepseek-v4-flash'), 'Flash Vision');
+    assert.equal(resolveShortModelName('seedance-2-0-fast'), 'seedance-2-0-fast');
+    assert.equal(resolveShortModelName('seedance-2-0'), 'seedance-2-0');
+    assert.equal(resolveShortModelName('claude-opus-4-6'), 'claude-opus-4-6');
+    assert.equal(resolveShortModelName('deepseek-v4-flash'), 'deepseek-v4-flash');
     assert.equal(resolveShortModelName(''), '选择模型');
   });
 
   it('keeps the capsule label across the midjourney/nano-banana canonical rename (#1751)', () => {
     // 家族优先：契约 family 不随 canonical 改名变化，这是防「下次改名再断一次」的主路径。
-    assert.equal(resolveShortModelName('mj-v8-1', 'midjourney'), 'Midjourney');
-    assert.equal(resolveShortModelName('mj-v7', 'midjourney'), 'Midjourney');
-    assert.equal(resolveShortModelName('nano-banana-2', 'nanobanana'), 'NanoBanana');
-    assert.equal(resolveShortModelName('nano-banana-pro', 'nanobanana'), 'NanoBanana');
-    assert.equal(resolveShortModelName('seedream-5-0-pro', 'seedream'), 'Seedream');
+    assert.equal(resolveShortModelName('mj-v8-1', 'midjourney'), 'mj-v8-1');
+    assert.equal(resolveShortModelName('mj-v7', 'midjourney'), 'mj-v7');
+    assert.equal(resolveShortModelName('nano-banana-2', 'nanobanana'), 'nano-banana-2');
+    assert.equal(resolveShortModelName('nano-banana-pro', 'nanobanana'), 'nano-banana-pro');
+    assert.equal(resolveShortModelName('seedream-5-0-pro', 'seedream'), 'seedream-5-0-pro');
     // family 大小写 / 空白不敏感
-    assert.equal(resolveShortModelName('mj-v8-1', '  MidJourney '), 'Midjourney');
+    assert.equal(resolveShortModelName('mj-v8-1', '  MidJourney '), 'mj-v8-1');
     // 目录未提供 family 时的显式 id 条目兜底（含动作变体与渠道后缀）
-    assert.equal(resolveShortModelName('mj-v8-1'), 'Midjourney');
-    assert.equal(resolveShortModelName('mj-v7'), 'Midjourney');
-    assert.equal(resolveShortModelName('mj-v7-upscale'), 'Midjourney');
-    assert.equal(resolveShortModelName('mj-v8-1@standard'), 'Midjourney');
-    assert.equal(resolveShortModelName('nano-banana-2'), 'NanoBanana');
-    assert.equal(resolveShortModelName('nano-banana-pro@standard'), 'NanoBanana');
+    assert.equal(resolveShortModelName('mj-v8-1'), 'mj-v8-1');
+    assert.equal(resolveShortModelName('mj-v7'), 'mj-v7');
+    assert.equal(resolveShortModelName('mj-v7-upscale'), 'mj-v7-upscale');
+    assert.equal(resolveShortModelName('mj-v8-1@standard'), 'mj-v8-1');
+    assert.equal(resolveShortModelName('nano-banana-2'), 'nano-banana-2');
+    assert.equal(resolveShortModelName('nano-banana-pro@standard'), 'nano-banana-pro');
     // 旧写法仍是契约别名，短名不得因此丢失
-    assert.equal(resolveShortModelName('midjourney-8.1'), 'Midjourney');
-    assert.equal(resolveShortModelName('midjourney-8.1', 'midjourney'), 'Midjourney');
+    assert.equal(resolveShortModelName('midjourney-8.1'), 'midjourney-8.1');
+    assert.equal(resolveShortModelName('midjourney-8.1', 'midjourney'), 'midjourney-8.1');
     // 未被 family 命中的 id 不得被家族表误吞
-    assert.equal(resolveShortModelName('gpt-5.5', 'openai'), 'GPT-5.5');
+    assert.equal(resolveShortModelName('gpt-5.5', 'openai'), 'gpt-5.5');
   });
 
   // #1818：线路约束是完整规格——参数选项集与固定值，不只是固定时长。

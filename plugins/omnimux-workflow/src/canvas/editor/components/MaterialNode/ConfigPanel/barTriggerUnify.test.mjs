@@ -70,7 +70,7 @@ test('模型触发器不再携带内联业务样式', () => {
   assert.doesNotMatch(jsx, /style=\{\{/, '模型触发器的业务样式必须落在样式表，不再内联');
   assert.match(jsx, /className="wf-model-cascade-capsule"/);
   assert.match(jsx, /className="wf-model-cascade-capsule__name"/);
-  assert.match(jsx, /className="wf-model-cascade-capsule__badge"/);
+  assert.doesNotMatch(jsx, /wf-model-cascade-capsule__badge/, '选中后不得再显示渠道分组文本');
 });
 
 test('模型触发器 chevron 与共享组图标同阶（14px）并随展开翻转', () => {
