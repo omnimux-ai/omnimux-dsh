@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { evaluatePr, parseArgs, summarizeChecks, waitForPr } from './pr-wait.mjs'
+import { evaluatePr, main, parseArgs, summarizeChecks, waitForPr } from './pr-wait.mjs'
 
 function pr(overrides = {}) {
   return { number: 12, state: 'OPEN', statusCheckRollup: [], ...overrides }
@@ -33,6 +33,10 @@ test('evaluatePr waits for checks and fails on a failed check', () => {
   assert.match(failed.reason, /FAILURE/)
   assert.equal(evaluatePr(pr({ statusCheckRollup: checks('STARTUP_FAILURE') }), 'checks').status, 'fail')
   assert.equal(evaluatePr(pr({ statusCheckRollup: checks('STALE') }), 'checks').status, 'fail')
+  const statusContext = [{ __typename: 'StatusContext', context: 'legacy/check', state: 'SUCCESS' }]
+  assert.equal(evaluatePr(pr({ statusCheckRollup: statusContext }), 'checks').status, 'pass')
+  const pendingContext = [{ __typename: 'StatusContext', context: 'legacy/check', state: 'PENDING' }]
+  assert.equal(evaluatePr(pr({ statusCheckRollup: pendingContext }), 'checks').status, 'wait')
 })
 
 test('evaluatePr treats MERGED with identity as pass and CLOSED as fail', () => {
@@ -72,4 +76,37 @@ test('parseArgs requires a PR, a supported condition, and positive timings', () 
   assert.throws(() => parseArgs(['--pr', '0', '--until', 'checks']), /positive integer/)
   assert.throws(() => parseArgs(['--pr', '12', '--until', 'done']), /checks or merged/)
   assert.throws(() => parseArgs(['--pr', '12', '--until', 'checks', '--nope']), /unknown argument/)
+})
+
+test('main emits clean JSON and maps pass/fail/timeout to exit codes', async () => {
+  const writes = []
+  const original = process.stdout.write
+  process.stdout.write = chunk => { writes.push(String(chunk)); return true }
+  try {
+    const pass = await main(
+      ['--pr', '12', '--until', 'merged', '--json'],
+      { query: () => ({ number: 12, state: 'MERGED', mergedAt: 'now', mergeCommit: { oid: 'abc' } }), now: () => 0 },
+    )
+    assert.equal(pass, 0)
+    assert.equal(JSON.parse(writes.join('')).ok, true)
+
+    const fail = await main(
+      ['--pr', '12', '--until', 'checks', '--json'],
+      { query: () => pr({ statusCheckRollup: checks('FAILURE') }), now: () => 0 },
+    )
+    assert.equal(fail, 1)
+
+    let now = 0
+    const timeout = await main(
+      ['--pr', '12', '--until', 'merged', '--interval', '1', '--timeout', '2', '--json'],
+      {
+        query: () => pr({ statusCheckRollup: checks('SUCCESS') }),
+        now: () => now,
+        sleep: async ms => { now += ms },
+      },
+    )
+    assert.equal(timeout, 2)
+  } finally {
+    process.stdout.write = original
+  }
 })

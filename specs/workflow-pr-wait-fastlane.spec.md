@@ -11,6 +11,7 @@
 ## 技术范围
 
 - 新增 `scripts/pr-wait.mjs`：以固定间隔轮询单个 PR，等待 `checks` 通过或 `merged` 完成，超时/失败以非零退出码结束；供 `bash` 的 `run_in_background` 使用。
+- 新增 `scripts/pr-wait.test.mjs` 并登记到 `package.json` 的 `test:ci` 与 `scripts/governance-manifest.json`。
 - 更新 `.agents/skills/omnimux-repo-workflow/SKILL.md`：等待规则、批量读取、小改快车道。
 - 更新 `docs/contracts/plugin-git-pr.md` 与 `docs/contracts/plugin-qa.md` 的相应口径。
 
@@ -25,13 +26,6 @@
 - 运行 `node --test scripts/pr-wait.test.mjs`；若任一 pending/pass/fail/merged/timeout 分支与实际不符，测试应失败。
 - 用真实 PR 跑 `node scripts/pr-wait.mjs --pr <n> --until checks --interval 5`，确认进程在检查完成时退出，而不是持续占用模型回合。
 - 检查 `git diff --check` 与文档链接；若 skill 或合同引用不存在的路径/命令，文档检查应失败。
-
-## 旧标准变更
-
-- `scripts/pr-wait.test.mjs` :: `waitForPr polls until checks pass without leaving the process stuck`
-  - 原断言：`result.pr.number === undefined`（假 PR 对象未带 number）。
-  - 必须改的理由：让假 PR 带 `number: 12` 后，应断言实际透传的 PR 编号，旧断言已不成立。
-  - 新期望证据：`result.pr.number === 12`，与 `waitForPr` 返回快照的字段一致。
 
 ## 验收标准
 

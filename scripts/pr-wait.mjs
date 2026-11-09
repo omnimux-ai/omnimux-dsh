@@ -147,7 +147,7 @@ export async function waitForPr(options, deps = {}) {
   }
 }
 
-export async function main(argv = process.argv.slice(2)) {
+export async function main(argv = process.argv.slice(2), deps = {}) {
   let options
   try {
     options = parseArgs(argv)
@@ -157,7 +157,10 @@ export async function main(argv = process.argv.slice(2)) {
   }
   let result
   try {
-    result = await waitForPr(options, { log: line => (options.json ? process.stderr : process.stdout).write(`${line}\n`) })
+    result = await waitForPr(options, {
+      ...deps,
+      log: deps.log || (line => (options.json ? process.stderr : process.stdout).write(`${line}\n`)),
+    })
   } catch (error) {
     process.stderr.write(`[pr-wait] ERROR ${error.message}\n`)
     return 2
