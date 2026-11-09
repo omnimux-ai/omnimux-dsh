@@ -1,0 +1,30 @@
+{
+  "task": "omnimux-fullscreen-composer-clip",
+  "method": "actual Dev Electron renderer via CDP 9229; conversation width set to the code fix value for the layout check",
+  "before": {
+    "composer": {
+      "x": 309,
+      "width": 610
+    },
+    "panel": {
+      "x": 640,
+      "width": 1088
+    },
+    "overlap": true
+  },
+  "after": {
+    "composer": {
+      "x": 309,
+      "width": 300,
+      "right": 609
+    },
+    "panel": {
+      "x": 640,
+      "width": 1088,
+      "right": 1728
+    },
+    "grid": "280px 360px 1088px"
+  },
+  "assertion": "composer.right <= panel.x",
+  "pass": true
+}

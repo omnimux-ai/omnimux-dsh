@@ -911,7 +911,15 @@ export function computeChromeLayout(doc) {
     }
   }
   const tabPadLeft = panelLeft == null ? 0 : Math.max(0, toggleEnd - panelLeft)
-  const conversationWidth = deriveConversationWidthPx(doc, collapsed, leftRailW, lastGoodLeftRailW)
+  const derivedConversationWidth = deriveConversationWidthPx(doc, collapsed, leftRailW, lastGoodLeftRailW)
+  // A host-fullscreen right panel reserves the minimum conversation rail by
+  // design. The split ratio can still say ~670px from the last split gesture;
+  // using it here would put a 610px composer under the right-anchored panel,
+  // leaving its right half unclickable. Keep the authored fullscreen panel and
+  // the 360px conversation floor, both of which are already the shell contract.
+  const conversationWidth = !collapsed && isHostRightSidebarFullscreen(doc)
+    ? Math.min(CONVERSATION_MIN_CHAT_PX, derivedConversationWidth)
+    : derivedConversationWidth
   return { collapsed, leftRailW, toggleLeft, toggleEnd, newSessionLeft, panelLeft, tabPadLeft, conversationWidth }
 }
 
