@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-28"
-updated: "2026-10-25"
+updated: "2026-11-09"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 ---
@@ -186,6 +186,7 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 | DSH 合同 / inject（运行时加载校验） | `pnpm verify:plugin-load` + `pnpm test:plugin-load` | 触及的插件包测 | — |
 | 模型契约 / 路由 / 白名单 / 模型面定价 | `pnpm verify:model-contracts`（**含**跨插件对齐、模态对账、随包快照丢型号门禁与 listed ↔ 在售对账；`verify:cross-plugin-models` 已在其中，不必单跑） | 快照新鲜度：`pnpm catalog:snapshot:check`；`pnpm verify:models`（离线 patch × `CHAT_MODELS` × 随包快照，#3763 起不联网不取密钥）；相关 submission/whitelist 检查；需要面板时 `pnpm hub:interfaces` | 禁止用真实付费探测发现能力；`verify:models` 已离线化，不是联网存在性探测 |
 | Client / Stage / 侧栏 / 文案 / CSS | 先读 design 与文案规范；`pnpm verify:stages`（及触及的 `verify:stage-scroll` / `verify:slots` / `test:ui`） | **必做**隔离工作树功能路径浏览器证据（`pnpm test:worktree-web` 或 ego-browser + 截图/结构化报告） | 禁止首页打卡冒充；禁止单测绿替代浏览器证据；Dev `verify:live@45120` 归人工，非 Agent 必做 |
+| 纯展示文案/样式（无数据/逻辑/接口变化） | 按「Client / Stage / 侧栏 / 文案 / CSS」行执行；另加相关包定向测试 | 同「Client / Stage / 侧栏 / 文案 / CSS」行的 stage 附加门禁 | 不额外跑全量 hub/workflow |
 | 表单合同 | `pnpm verify:forms` | 相关包测 | — |
 | 壳层 / Electron 门控 | 相关静态/包测；若有页面则加隔离 Web | 仅 Electron-only 行为时 `pnpm verify:cdp` | 不能只用网页替代 Electron |
 | 多面混合 | 上表并集 | 仅对真实触及面加跑 | 仍禁止无差别全仓 |
@@ -230,6 +231,7 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 | 只改 `docs/contracts/*.md` | `git diff --check` + 链接抽查 |
 | 只改 `plugins/omnimux-accounts` 非 UI 逻辑 | `pnpm --filter omnimux-accounts test` |
 | 改 Stage/client JSX | `pnpm verify:stages`（+ 触及静态门）+ 隔离工作树功能路径浏览器证据 |
+| 纯展示文案/样式（无数据/逻辑/接口变化） | 按上表「Client / Stage / 侧栏 / 文案 / CSS」行执行（含 design/文案规范与触及的 stage 门禁）+ 相关包定向测试 + 一次隔离工作树浏览器证据；不额外跑全量 hub/workflow |
 
 ## 静态与测试证据
 
