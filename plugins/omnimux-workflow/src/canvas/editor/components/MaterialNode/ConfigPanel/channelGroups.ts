@@ -738,17 +738,11 @@ const FAMILY_SHORT_NAMES: Readonly<Record<string, string>> = {
  * @param modelId Model id (may carry a `@channelGroup` suffix).
  * @param family Contract family of the row, when the catalog exposes it.
  */
-export function resolveShortModelName(modelId?: string, family?: string): string {
+export function resolveShortModelName(modelId?: string, _family?: string): string {
   if (!modelId) return '选择模型';
+  // Display names are canonical model IDs across every consumer. Keep this
+  // helper as the single formatting seam for existing callers.
   const { modelId: id } = parseModelAndGroup(modelId);
-  if (typeof family === 'string' && family.trim()) {
-    const byFamily = FAMILY_SHORT_NAMES[family.trim().toLowerCase()];
-    if (byFamily) return byFamily;
-  }
-  const lower = id.toLowerCase();
-  for (const [fragment, label] of SHORT_MODEL_NAMES) {
-    if (lower.includes(fragment)) return label;
-  }
   return id;
 }
 

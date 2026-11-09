@@ -33,7 +33,6 @@ import {
   resolveModelChannelGroups,
   rowChannelGroups,
   parseModelAndGroup,
-  resolveShortModelName,
   isByokGroup,
   buildChannelSelectionPayload,
   type ChannelGroupItem,
@@ -259,15 +258,10 @@ const CascadeModelItem: React.FC<{
   >
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
       <span className="wf-cascade-model-item__title">
-        {(item.label || item.id) || item.id}
+        {item.id}
       </span>
       {isSelected ? <Check size={15} color="rgb(0, 230, 118)" strokeWidth={2.5} /> : null}
     </div>
-    {item.subtitle ? (
-      <div className="wf-cascade-model-item__desc">
-        {item.subtitle}
-      </div>
-    ) : null}
   </button>
 );
 
@@ -390,7 +384,6 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   const [hoverBrandId, setHoverBrandId] = useState<string | null>(null);
   const [hoverModelId, setHoverModelId] = useState<string | null>(null);
 
-  const activeFamily = options.find((row) => row.id === activeModelId)?.family;
   const modelsForBrand = useCallback((brandId: string) => (
     brandList.find((brand) => brand.id === brandId)?.rows ?? []
   ), [brandList]);
@@ -620,13 +613,8 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
     setHoverModelId(null);
   }, [isOpen]);
 
-  const shortName = activeModelId ? resolveShortModelName(activeModelId, activeFamily) : '待重新选择';
-  const selectedGroupId = selectedGroupIds[0];
-  const activeGroup = activeChannelGroups.find((g) => g.id === selectedGroupId);
-  const isFallback = Boolean(fallbackState?.isFallback);
-  const triggerDisplayText = isFallback
-    ? (fallbackState?.triggerDisplayText || shortName)
-    : (activeGroup ? `${shortName} · ${activeGroup.label}` : shortName);
+  const { modelId: triggerModelId } = parseModelAndGroup(activeModelId);
+  const triggerDisplayText = triggerModelId || '待重新选择';
 
   return (
     <>
@@ -642,13 +630,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <ModelBrandIcon modelId={activeModelId} size={15} />
-        <span className="wf-model-cascade-capsule__name">{isFallback ? triggerDisplayText : shortName}</span>
-
-        {activeGroup && activeChannelGroups.length > 1 && !isFallback ? (
-          <span className="wf-model-cascade-capsule__badge">
-            <span>{activeGroup.label}</span>
-          </span>
-        ) : null}
+        <span className="wf-model-cascade-capsule__name">{triggerDisplayText}</span>
 
         <ChevronDown className="wf-model-cascade-capsule__chevron" size={14} strokeWidth={1.75} />
       </button>

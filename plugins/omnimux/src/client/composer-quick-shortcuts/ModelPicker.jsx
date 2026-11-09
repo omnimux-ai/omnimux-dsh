@@ -82,25 +82,25 @@ const DEFAULT_PRESET_MODELS = {
   video: [
     {
       id: 'seedance-2-5',
-      name: 'Dreamina Seedance 2.5',
-      capsuleName: 'Seedance 2.5 旗舰版',
-      subtitle: '30秒视频生成，精准片段编辑',
+      name: 'seedance-2-5',
+      capsuleName: 'seedance-2-5',
+      subtitle: '',
       pro: true,
       icon: 'bytedance',
     },
     {
       id: 'seedance-2-0',
-      name: 'Dreamina Seedance 2.0',
-      capsuleName: 'Seedance 2.0 旗舰版',
-      subtitle: '更精准的参考，更真实，高达4K',
+      name: 'seedance-2-0',
+      capsuleName: 'seedance-2-0',
+      subtitle: '',
       pro: true,
       icon: 'bytedance',
     },
     {
       id: 'seedance-2-0-fast',
-      name: 'Dreamina Seedance 2.0 Fast',
-      capsuleName: 'Seedance 2.0 极速版',
-      subtitle: '细节和质量提升，成本更低',
+      name: 'seedance-2-0-fast',
+      capsuleName: 'seedance-2-0-fast',
+      subtitle: '',
       pro: true,
       badge: { text: '高达43%折扣', type: 'purple' },
       icon: 'bytedance',
@@ -109,17 +109,17 @@ const DEFAULT_PRESET_MODELS = {
   image: [
     {
       id: 'seedream-5-0-pro',
-      name: 'Seedream 5.0 Pro',
-      capsuleName: 'Seedream 5.0 Pro',
-      subtitle: '更精确、更可控的编辑',
+      name: 'seedream-5-0-pro',
+      capsuleName: 'seedream-5-0-pro',
+      subtitle: '',
       pro: true,
       icon: 'seedream',
     },
     {
       id: 'gpt-image-2.5',
-      name: 'GPT Image 2.5',
-      capsuleName: 'GPT Image 2.5',
-      subtitle: '高精细节渲染与指令遵循',
+      name: 'gpt-image-2.5',
+      capsuleName: 'gpt-image-2.5',
+      subtitle: '',
       pro: true,
       icon: 'openai',
     },
@@ -492,16 +492,13 @@ export function ModelPicker({ sessionId }) {
           if (!rawId || seenIds.has(rawId)) return null;
           seenIds.add(rawId);
 
-          const name = (typeof row.name === 'string' && row.name.trim())
-            || (typeof row.label === 'string' && row.label.trim())
-            || rawId;
-          const capsuleName = (typeof row.capsuleName === 'string' && row.capsuleName.trim())
-            || name;
+          const name = rawId;
+          const capsuleName = rawId;
           return {
             id: rawId,
             name,
             capsuleName,
-            subtitle: (typeof row.subtitle === 'string' && row.subtitle.trim()) || defaultSubtitle,
+            subtitle: '',
             pro: typeof row.pro === 'boolean' ? row.pro : true,
             badge: typeof row.badge === 'string'
               ? { text: row.badge, type: 'purple' }

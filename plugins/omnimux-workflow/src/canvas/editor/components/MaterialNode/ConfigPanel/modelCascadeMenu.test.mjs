@@ -176,12 +176,13 @@ test('empty brand selection has no fabricated default', () => {
   assert.equal(groupPickerCandidates([])[0]?.rows[0]?.id, undefined);
   assert.doesNotMatch(cascadeSrc, /FALLBACK_MODELS_BY_BRAND|DEFAULT_MODEL_BY_BRAND|needsActive|defaultModelFor\(/);
 });
-test('picker consumes only final filtered options and renders their labels', () => {
+test('picker consumes only final filtered options and renders canonical model IDs', () => {
   assert.match(configSrc, /options=\{filteredModels\.options\}/);
   assert.match(cascadeSrc, /groupPickerCandidates\(options\)/);
   assert.doesNotMatch(cascadeSrc, /catalog\?\.|allowedBrandsFor/);
-  assert.match(cascadeSrc, /item\.label \|\| item\.id/);
-  assert.match(cascadeSrc, /item\.subtitle/);
+  assert.match(cascadeSrc, /\{item\.id\}/);
+  assert.doesNotMatch(cascadeSrc, /item\.label \|\| item\.id/);
+  assert.doesNotMatch(cascadeSrc, /item\.subtitle/);
 });
 test('emission and channel lists validate model membership', () => {
   assert.match(cascadeSrc, /if \(!isPickerCandidate\(options, modelId\)\) return;/);

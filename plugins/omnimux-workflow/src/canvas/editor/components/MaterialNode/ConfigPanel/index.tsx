@@ -412,11 +412,11 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       const subtitle = row.subtitle ?? visuals.subtitle;
       return {
         value: row.id,
-        label: row.label,
+        label: row.id,
         triggerLabel: (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             {icon ? <span style={{ display: 'inline-flex', opacity: 0.8 }}>{icon}</span> : null}
-            <span>{row.label}</span>
+            <span>{row.id}</span>
           </span>
         ),
         icon,

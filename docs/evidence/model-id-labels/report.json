@@ -1,0 +1,10 @@
+{
+  "task": "omnimux-model-id-labels",
+  "method": "workflow UI source e2e + model picker DOM contract checks",
+  "selectedTrigger": "brand icon + canonical model id only; no activeGroup.label and no badge",
+  "modelRow": "item.id only; no item.label or item.subtitle",
+  "compatSelect": "row.id label + row.id triggerLabel",
+  "composerPicker": "dynamic catalog row name/capsuleName = rawId; offline fallback uses IDs; subtitle empty",
+  "catalogDataLabelsUnchanged": true,
+  "pass": true
+}
