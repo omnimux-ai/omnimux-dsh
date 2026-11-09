@@ -230,7 +230,7 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 | 只改 `docs/contracts/*.md` | `git diff --check` + 链接抽查 |
 | 只改 `plugins/omnimux-accounts` 非 UI 逻辑 | `pnpm --filter omnimux-accounts test` |
 | 改 Stage/client JSX | `pnpm verify:stages`（+ 触及静态门）+ 隔离工作树功能路径浏览器证据 |
-| 纯展示文案/样式（无数据/逻辑/接口变化） | 相关包定向测试 + `pnpm verify:stages`（触及 Stage/client 时）+ 一次隔离工作树浏览器证据；不跑全量 hub/workflow |
+| 纯展示文案/样式（无数据/逻辑/接口变化） | 按上表「Client / Stage / 侧栏 / 文案 / CSS」行执行（含 design/文案规范与触及的 stage 门禁）+ 相关包定向测试 + 一次隔离工作树浏览器证据；不额外跑全量 hub/workflow |
 
 ## 静态与测试证据
 

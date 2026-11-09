@@ -40,7 +40,7 @@ Input: the user's goal, affected files, acceptance evidence, and authorization a
 
 - Batch independent reads, searches, and status checks into one tool message; prefer `read` / `glob` / `grep` over `cat` / `sed` / `find`. One round-trip per file read multiplies model time without adding evidence.
 - Never wait through a foreground `sleep` loop. A wait longer than about 15 seconds is a background job: run `node scripts/pr-wait.mjs --pr <n> --until checks|merged` once through the harness background-job facility, retain its job id, and continue other authorized work until the completion notification. One job per PR/head; do not start duplicate timers or shell polling daemons.
-- Pure display copy/style changes with no data, logic, API, schema, or shared-component change use the fast lane: the affected package's targeted test file(s), `pnpm verify:stages` when Stage/client contracts are touched, and one worktree browser screenshot of the exact changed UI. Do not run full hub/workflow suites or repeat already-green checks after commit/push. Any shared code, contract, model, or cross-package change falls back to the full minimal command matrix.
+- Pure display copy/style changes with no data, logic, API, schema, or shared-component change use the fast lane defined by the QA matrix: read `design.md` and the copy standards, run `pnpm verify:stages` plus any touched `verify:stage-scroll` / `verify:slots` / `test:ui`, the affected package's targeted test file(s), and one worktree browser screenshot of the exact changed UI. Do not add full hub/workflow suites or repeat already-green checks after commit/push. Any shared code, contract, model, or cross-package change falls back to the full minimal command matrix.
 
 ## Wait and resume
 
