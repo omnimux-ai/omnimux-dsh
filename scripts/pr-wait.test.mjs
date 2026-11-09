@@ -31,6 +31,8 @@ test('evaluatePr waits for checks and fails on a failed check', () => {
   const failed = evaluatePr(pr({ statusCheckRollup: checks('SUCCESS', 'FAILURE') }), 'checks')
   assert.equal(failed.status, 'fail')
   assert.match(failed.reason, /FAILURE/)
+  assert.equal(evaluatePr(pr({ statusCheckRollup: checks('STARTUP_FAILURE') }), 'checks').status, 'fail')
+  assert.equal(evaluatePr(pr({ statusCheckRollup: checks('STALE') }), 'checks').status, 'fail')
 })
 
 test('evaluatePr treats MERGED with identity as pass and CLOSED as fail', () => {

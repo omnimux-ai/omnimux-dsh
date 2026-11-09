@@ -15,7 +15,7 @@ const DEFAULT_REPO = process.env.OMNIMUX_PR_REPO || 'omnimux-ai/omnimux-dsh'
 const DEFAULT_INTERVAL_SECONDS = 20
 const DEFAULT_TIMEOUT_SECONDS = 1800
 
-const FAILURE_STATES = new Set(['FAILURE', 'FAILED', 'ERROR', 'CANCELLED', 'TIMED_OUT', 'ACTION_REQUIRED'])
+const FAILURE_STATES = new Set(['FAILURE', 'FAILED', 'ERROR', 'CANCELLED', 'TIMED_OUT', 'ACTION_REQUIRED', 'STARTUP_FAILURE', 'STALE'])
 const PENDING_STATES = new Set(['PENDING', 'QUEUED', 'IN_PROGRESS', 'REQUESTED', 'WAITING', 'EXPECTED', ''])
 
 function positiveInteger(value, name) {
@@ -106,7 +106,7 @@ export function queryPr(prNumber, repo) {
   const result = spawnSync('gh', [
     'pr', 'view', String(prNumber), '--repo', repo, '--json',
     'number,url,state,headRefOid,mergeStateStatus,statusCheckRollup,mergedAt,mergeCommit',
-  ], { encoding: 'utf8' })
+  ], { encoding: 'utf8', timeout: 60_000 })
   if (result.error) throw result.error
   if (result.status !== 0) throw new Error((result.stderr || result.stdout || 'gh pr view failed').trim())
   return JSON.parse(result.stdout)
@@ -157,7 +157,7 @@ export async function main(argv = process.argv.slice(2)) {
   }
   let result
   try {
-    result = await waitForPr(options, { log: line => process.stdout.write(`${line}\n`) })
+    result = await waitForPr(options, { log: line => (options.json ? process.stderr : process.stdout).write(`${line}\n`) })
   } catch (error) {
     process.stderr.write(`[pr-wait] ERROR ${error.message}\n`)
     return 2
