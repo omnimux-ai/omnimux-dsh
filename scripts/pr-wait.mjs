@@ -143,7 +143,8 @@ export async function waitForPr(options, deps = {}) {
     if (now() - startedAt >= options.timeoutMs) {
       return { ok: false, status: 'timeout', reason: `timed out after ${Math.round(options.timeoutMs / 1000)}s`, checks: verdict.checks, polls, elapsedMs: now() - startedAt, pr: snapshot(pr) }
     }
-    await sleep(options.intervalMs)
+    const remaining = options.timeoutMs - (now() - startedAt)
+    await sleep(Math.min(options.intervalMs, remaining))
   }
 }
 

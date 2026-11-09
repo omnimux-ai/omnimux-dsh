@@ -63,12 +63,12 @@ R0/R1 不在无人值守机器预授权范围内，由协调 Agent 接收现场�
 
 ### 当前任务的交互式通道
 
-交互式通道按上方「授权边界」连续执行。合入前独立评审可由另一 Agent 完成，不是人类批准环节。合入前适用证据与授权齐备后直接加入 Merge Queue；等待 CI/队列时保留唯一续跑机制：用 `node scripts/pr-wait.mjs --pr <n> --until checks|merged` 作为单个后台任务，完成通知后再继续，禁止在前台用 `sleep` 轮询或为同一 head 重复开等待任务。可恢复失败自行修复，只有实际越界或必要人类输入才询问。不得把会话授权伪装成 `/auto-approve` 评论，也不得放宽无人值守机器预授权条件。
+交互式通道按上方「授权边界」连续执行。合入前独立评审可由另一 Agent 完成，不是人类批准环节。合入前适用证据与授权齐备后直接加入 Merge Queue；等待 CI/队列时保留唯一续跑机制：用 `node scripts/pr-wait.mjs --pr <n> --until checks` 或 `--until merged` 作为单个后台任务，完成通知后再继续，禁止在前台用 `sleep` 轮询或为同一 head 重复开等待任务。可恢复失败自行修复，只有实际越界或必要人类输入才询问。不得把会话授权伪装成 `/auto-approve` 评论，也不得放宽无人值守机器预授权条件。
 
 ## 当前自动化能力边界
 
 - `auto-pipeline` 不能读取当前对话中的直接用户授权。`--manual` 兼容入口允许协调 Agent 驱动准备，但参数本身不构成许可，调用前须核对任务授权。机器授权不足的 R0/R1 也必须显式选择该入口才可写远端。准备完成后返回 `ready-for-agent`，保留 PR、风险、证据与下一动作；协调 Agent 读取最新授权、撤销状态、PR head 和 required checks 后继续交付，不要求用户再次批准已授权动作。旧 `ready-for-boss` 现场按相同交接语义恢复，不盲目重跑实施。
-- `waitForCi` 只判断 PR 上可见 check rollup 是否非空、无失败且无 pending，尚未核对分支保护的 required-check 名单；该结果不能单独证明 required checks 完整。
+- `waitForCi` / `pr-wait --until checks` 只判断 PR 上可见 check rollup 是否非空、无失败且无 pending，尚未核对分支保护的 required-check 名单；该结果不能单独证明 required checks 完整。
 - `quality-gate.yml` 与 `ci-verdict.mjs` 只聚合当前 diff 的合入前静态检查、自动化测试和前序 CI 状态，不要求或消费合入前浏览器报告。标签投影先清理旧 `qa:pass`，再按真实聚合结果决定是否添加；它不证明 Dev 物化或运行通过。影响面中的 `browser`/`dev` 维度记录合并后验收需求（`phase=post-merge`、`target=dev`）；尚未执行时为 `status=pending`、`pass=null`，不得伪造成通过。
 - 适用 Dev 真机验收的部分属人工职责，Agent 不等待、不以其为卡点。自动流水线在确认合并后返回 `ready-for-agent`：Agent 完成隔离 worktree Web 验证，并在收尾时把本次合并的插件改动装进 Dev。Dev 运行验收不是交付前置。清理任务 worktree 不以 Dev 验收为前置，但带已合并 PR 的清理必须补上这次安装。`--no-merge` / `--no-materialize` 仍须遵守；纯文档、流程或脚本无需 App 物化。
 - dry-run 仅验证模拟流程，不执行真实浏览器、远端写入、合入或物化；模拟日志不构成实际验收证据。

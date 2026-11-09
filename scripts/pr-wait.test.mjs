@@ -11,7 +11,7 @@ function checks(...states) {
     __typename: 'CheckRun',
     name: `check-${index}`,
     status: state === 'SUCCESS' ? 'COMPLETED' : 'IN_PROGRESS',
-    conclusion: state === 'SUCCESS' ? 'SUCCESS' : state,
+    conclusion: state === 'SUCCESS' ? 'SUCCESS' : state === 'IN_PROGRESS' ? null : state,
   }))
 }
 
@@ -33,6 +33,7 @@ test('evaluatePr waits for checks and fails on a failed check', () => {
   assert.match(failed.reason, /FAILURE/)
   assert.equal(evaluatePr(pr({ statusCheckRollup: checks('STARTUP_FAILURE') }), 'checks').status, 'fail')
   assert.equal(evaluatePr(pr({ statusCheckRollup: checks('STALE') }), 'checks').status, 'fail')
+  assert.equal(evaluatePr(pr({ statusCheckRollup: [{ __typename: 'CheckRun', status: 'COMPLETED', conclusion: 'SKIPPED' }] }), 'checks').status, 'pass')
   const statusContext = [{ __typename: 'StatusContext', context: 'legacy/check', state: 'SUCCESS' }]
   assert.equal(evaluatePr(pr({ statusCheckRollup: statusContext }), 'checks').status, 'pass')
   const pendingContext = [{ __typename: 'StatusContext', context: 'legacy/check', state: 'PENDING' }]
@@ -67,6 +68,17 @@ test('waitForPr reports timeout instead of pretending success', async () => {
   )
   assert.equal(result.ok, false)
   assert.equal(result.status, 'timeout')
+})
+
+test('waitForPr caps sleep at the remaining timeout budget', async () => {
+  let now = 0
+  const result = await waitForPr(
+    { pr: '12', until: 'merged', repo: 'owner/repo', intervalMs: 30_000, timeoutMs: 2_000 },
+    { now: () => now, sleep: async ms => { now += ms }, query: () => pr({ statusCheckRollup: checks('SUCCESS') }), log: () => {} },
+  )
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 'timeout')
+  assert.equal(result.elapsedMs, 2_000)
 })
 
 test('parseArgs requires a PR, a supported condition, and positive timings', () => {

@@ -12,7 +12,7 @@
 
 - 新增 `scripts/pr-wait.mjs`：以固定间隔轮询单个 PR，等待 `checks` 通过或 `merged` 完成，超时/失败以非零退出码结束；供 `bash` 的 `run_in_background` 使用。
 - 新增 `scripts/pr-wait.test.mjs` 并登记到 `package.json` 的 `test:ci` 与 `scripts/governance-manifest.json`。
-- 更新 `.agents/skills/omnimux-repo-workflow/SKILL.md`：等待规则、批量读取、小改快车道。
+- 更新 `.agents/skills/omnimux-repo-workflow/SKILL.md`：等待规则、批量读取、小改快车道、独立任务并行委派边界。
 - 更新 `docs/contracts/plugin-git-pr.md` 与 `docs/contracts/plugin-qa.md` 的相应口径。
 
 ## 假设
