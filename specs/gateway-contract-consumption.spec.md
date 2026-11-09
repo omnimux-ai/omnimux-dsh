@@ -20,6 +20,7 @@
 - 输入：`plugins/omnimux/src/catalog/cloud/bundled/pricing.json`（生产 v2 快照）与运行时 `/api/pricing` 刷新得到的 snapshot。
 - 新增：`plugins/omnimux/src/catalog/gateway-contract.js`、`plugins/omnimux/src/catalog/runtime-index.js`。
 - 修改：`plugins/omnimux/src/catalog/list.js`、`plugins/omnimux/src/catalog/project.js`、`plugins/omnimux/src/text/catalog.js`、`plugins/omnimux/src/text/execute.js`、`plugins/omnimux/src/text/mount.js`、`plugins/omnimux/src/media/catalog.js`、`plugins/omnimux/src/media/execute.js`、`plugins/omnimux/src/media/execution-plan.js`；必要时更新 `plugins/omnimux-workflow` 的 catalog 类型与参数展示。
+- 生成物：`plugins/omnimux-assets/cloud-catalog/voice-preview-snapshot.json` 的 `catalog_fingerprint` 随 runtime catalog 指纹变化刷新；`preview_fingerprint` 与 voices 不变，`omnimux-assets` 导出器 `--check` 通过。
 - 第一期 overlay 范围：`llm` 与 `image`。`video`/`audio` 的旧本地行为保持不变；没有本地可调用 operation 的 `wan-3.0` / `suno-sounds` 以 `gateway.adapterUnsupported` 暴露，待视频/音频专项再接入。
 - 不修改网关仓库；不发起真实模型请求；不改变计费/额度/预扣/结算。
 
