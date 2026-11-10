@@ -1728,17 +1728,21 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
 }
 
 /* ── Defensive hiding of official ContextMeter (token usage progress ring) in composer ──
-   部分宿主回归里 .JdJrwG_root 的隐藏会被更高/更后的规则覆盖，用 html body 提升特异性压过。 */
+   注意：整条规则的任何一个选择器非法都会让浏览器丢弃整条规则。原规则里把 :has 嵌套进
+   另一个 :has（非法写法），导致整条 ContextMeter 隐藏规则被丢弃、上下文环一直显示。
+   这里把「基础类名/属性」与「卡片内 :has 兜底」拆成两条独立规则，且不再嵌套 :has。 */
 html body [class*="JdJrwG_root"],
 html body [class*="ContextMeter_root"],
 .JdJrwG_root,
-[class*="ContextMeter_root"],
+[class*="ContextMeter_root"] {
+  display: none !important;
+}
 [data-composer-card] [class*="trailing"] > span:has(button[aria-label*="上下文已用"]),
 [data-composer-card] [class*="trailing"] > span:has(button[aria-label*="context used"]),
 [data-composer-card] [class*="trailing"] > span:has(svg circle[class*="fill"]),
 [data-composer-card] [class*="trailing"] button[aria-label*="上下文已用"],
 [data-composer-card] [class*="trailing"] button[aria-label*="context used"],
-[class*="trailing"] > span:has(button[aria-haspopup="dialog"]:has(circle)),
+[class*="trailing"] > span:has(button[aria-haspopup="dialog"]),
 button[aria-label*="上下文已用"],
 button[aria-label*="context used"] {
   display: none !important;
