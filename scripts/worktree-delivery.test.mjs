@@ -1193,6 +1193,40 @@ test('配置命令失败时要回收已建的数据目录，保持可重试（Is
   } finally { f.cleanup() }
 })
 
+test('已有合法索引时再 init 失败不能删掉既有索引（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-keep')
+  try {
+    assert.equal(f.run(['init', f.worktree]).status, 0, '先建出合法索引')
+    const [own] = readdirSync(f.home)
+    // 把 sag 换成「config --url 必失败」，模拟升级后配置坏掉再 init。
+    writeFileSync(join(f.dir, 'bin', 'sag'), [
+      '#!/bin/sh',
+      'case "$1" in',
+      '  --version) echo "sag 0.0.0-stub" ;;',
+      '  config) if [ "$2" = "--url" ]; then exit 1; fi; echo \'{"url":"http://stub.local","model":"stub-model"}\' ;;',
+      '  *) exit 0 ;;',
+      'esac',
+      '',
+    ].join('\n'), { mode: 0o755 })
+    const again = f.run(['init', f.worktree])
+    assert.equal(again.status, 1, '配置失败仍应以 1 结束')
+    assert.deepEqual(readdirSync(f.home), [own], '既有合法索引必须原样保留，不能被失败回收误删')
+    assert.ok(existsSync(join(f.home, own, 'worktree.path')), '归属记录也要保留')
+  } finally { f.cleanup() }
+})
+
+test('缺少子命令参数按用法错误退出 2（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-usage')
+  try {
+    for (const command of ['init', 'status', 'remove']) {
+      const result = f.run([command])
+      assert.equal(result.status, 2, `${command} 缺参应以 2 结束：${result.stdout}\n${result.stderr}`)
+      assert.match(result.stderr, /usage:/, '要给人话用法提示')
+      assert.doesNotMatch(result.stderr, /TypeError|paths\[0\]/, '不得漏出内部异常')
+    }
+  } finally { f.cleanup() }
+})
+
 test('search 在没有索引时自动建库后执行检索（Issue #4068）', () => {
   const f = cliFixture('omnimux-cli-search')
   try {

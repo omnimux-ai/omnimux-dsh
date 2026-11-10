@@ -43,19 +43,22 @@ describe('数据目录按路径唯一 (#4068)', () => {
     assert.match(a, /^task-[0-9a-f]{8}$/, '目录名应保留可读前缀并带路径哈希')
   })
 
-  it('自建软链父目录：真实与软链路径同哈希，且目录删除后哈希不变', () => {
-    // 不依赖系统 tmpdir 是否含软链（ubuntu 的 /tmp 不是软链，那样的断言在 Linux CI 上
-    // 新旧实现都「稳定」，等于假绿）。这里自己造 real/ 与指向它的 link/。
+  it('被删除的路径本身含软链成分时，哈希仍与真实路径一致', () => {
+    // 关键：要删的那条路径必须**经过软链**。只建一个 link/ 但用 real/ 断言，
+    // 在 Linux（/tmp 非软链）上新旧实现都稳定，等于假绿。
     const base = mkdtempSync(join(tmpdir(), 'sag-wt-link-'))
     try {
       mkdirSync(join(base, 'real', 'leaf'), { recursive: true })
-      symlinkSync(join(base, 'real'), join(base, 'link'))
-      const viaReal = join(base, 'real', 'leaf')
-      const viaLink = join(base, 'link', 'leaf')
-      const before = dataDirName(viaReal)
-      assert.equal(dataDirName(viaLink), before, '软链路径必须归一到与真实路径相同的哈希')
+      symlinkSync(join(base, 'real'), join(base, 'linked'))
+      const viaSymlink = join(base, 'linked', 'leaf')
+      const before = dataDirName(viaSymlink)
+      assert.equal(dataDirName(join(base, 'real', 'leaf')), before, '软链路径与真实路径必须同哈希')
       rmSync(join(base, 'real', 'leaf'), { recursive: true, force: true })
-      assert.equal(dataDirName(viaReal), before, '目录被删后必须仍然算出同一个哈希（否则索引删不掉）')
+      assert.equal(
+        dataDirName(viaSymlink),
+        before,
+        '目录删除后仍必须算出同一哈希：否则 worktree.sh 先删目录再清理时永远删不到索引',
+      )
     } finally { rmSync(base, { recursive: true, force: true }) }
   })
 

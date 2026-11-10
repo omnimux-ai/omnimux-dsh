@@ -181,9 +181,10 @@ function init(worktreePath, env = process.env) {
   try {
     ensureJevConfig(dir)
   } catch (error) {
-    // 配置失败时 sag 可能已经建了数据目录；留下「有数据无记录」会让下次 init 报
-    // 归属不符，只能手删。失败即回收，保持可重试（评审 Finding 2）。
-    rmSync(dir, { recursive: true, force: true })
+    // 配置失败时 sag 可能已经建了数据目录，留下「有数据无记录」会让下次 init 报归属
+    // 不符、只能手删。只回收本次新建的目录；`match` 说明这是已有合法索引，失败时
+    // 绝不能连它一起删掉（评审第二轮 finding 2）。
+    if (verdict !== 'match') rmSync(dir, { recursive: true, force: true })
     throw error
   }
   writeRecord(dir, wt, repoRoot)

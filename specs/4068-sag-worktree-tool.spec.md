@@ -51,9 +51,9 @@ Node CLI，子命令与旧脚本保持一致（`init` / `status` / `search` / `l
 | 9 | 本机没有 `sag` | `init` 报 blocked（退出码 3）且不写任何记录（`worktree-delivery.test.mjs` 有端到端用例） |
 | 10 | 配置缺失（`sag config` 无 url/model） | 整洁单行报错、退出码 1，且**不留下**归属记录 |
 | 11 | 软链路径（如 `/tmp` → `/private/tmp`） | 目录被删前后哈希一致，索引不会变成永久孤儿；用例自建软链父目录，不依赖系统 tmpdir 是否含软链（Linux CI 同样能区分新旧实现） |
-| 12 | `sag config --url` 失败且已建数据目录 | 回收该目录，下次 `init` 仍是配置失败而不是「归属不符」，保持可重试 |
+| 12 | `sag config --url` 失败且已建数据目录 | 回收该目录，下次 `init` 仍是配置失败而不是「归属不符」，保持可重试；但 `match`（已有合法索引）时的失败**不得**回收既有索引 |
 | 13 | `search` 在无索引时 | 自动懒建索引（写入归属记录）后执行检索 |
-| 14 | 缺少子命令参数 | 按用法错误退出 2，不抛 TypeError |
+| 14 | 缺少子命令参数 | 按用法错误退出 2，不抛 TypeError（`worktree-delivery.test.mjs` 有回归用例） |
 
 ## 4. 假设
 
@@ -98,3 +98,11 @@ Node CLI，子命令与旧脚本保持一致（`init` / `status` / `search` / `l
 - `scripts/worktree-delivery.test.mjs` :: `search 在没有索引时自动建库后执行检索（Issue #4068）`
 
 新增用例（无原断言可削弱），覆盖验收 #13：断言起点无索引、`search` 后恰好生成一份带归属记录的隔离索引。
+
+- `scripts/worktree-delivery.test.mjs` :: `已有合法索引时再 init 失败不能删掉既有索引（Issue #4068）`
+
+新增用例（无原断言可削弱），覆盖验收 #12 的边界：先建出合法索引，再让配置失败后 `init`，断言数据目录与归属记录原样保留。
+
+- `scripts/worktree-delivery.test.mjs` :: `缺少子命令参数按用法错误退出 2（Issue #4068）`
+
+新增用例（无原断言可削弱），覆盖验收 #14：`init` / `status` / `remove` 缺参均退出 2、有 `usage:` 提示、不泄漏 `TypeError`。
