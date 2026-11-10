@@ -303,8 +303,10 @@ export function apply(ctx, config = {}) {
           /* logging must never break the sync */
         }
       }
-      const configEditor = typeof ctx.get === 'function' ? ctx.get('configEditor') : undefined
+      const configEditor = (typeof ctx.get === 'function' ? ctx.get('configEditor') : undefined)
+        ?? settings.ownerContext?.configEditor
       const composerSync = createComposerListSync({ settings, configEditor, log: logComposerSync })
+      if (!configEditor) logComposerSync('composer-list-config-editor-missing')
       /**
        * The stored OmniMux settings. `register()` hands back a scope carrying
        * `get()`; the service read is the fallback, so a scope without it still
@@ -340,6 +342,13 @@ export function apply(ctx, config = {}) {
         }
         try {
           const res = await composerSync.sync({ hubText, hiddenIds })
+          if (res && res.reason !== 'unchanged') {
+            logComposerSync('composer-list-sync', {
+              reason: res.reason,
+              written: res.written,
+              modelIds: res.modelIds,
+            })
+          }
           // If llm-pi-ai settings namespace registration lagged behind in
           // Cordis startup order, back off and retry up to 3 times so the list
           // converges without waiting for an external settings change.
