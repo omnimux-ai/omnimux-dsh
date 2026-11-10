@@ -24,7 +24,9 @@
 
 托管块里的扩展名必须排序且覆盖本仓代码类型（`md/ts/tsx/js/jsx/mjs/yml/yaml`），文件以换行结尾，这样重复索引同一目录时该块字节稳定，已跟踪文件不会被改脏——`ship` / `remove` 对脏工作树是 `die`，这里必须做到零 diff。实测：本工作树跑真实 `sag-worktree init` 后 `diff` 无差异。
 
-托管块里的 `file_types.code=false` 是 SAG 自己的内部分类位，扩展名白名单才是实际范围；实测 `sag -F AppWorkspaceView` 命中 7 个文件（其中 3 个 `.ts/.tsx`），语义检索可直接命中原生 `.tsx` 源码，说明代码确实进了索引。
+**残留风险（已知、未消除）**：零 diff 依赖仓外工具 `sag-worktree` 写入的托管块。仓库测试锁住了扩展名顺序与 `file_types` / `convert_other_formats` 三个字段，把「工具升级后悄悄改写块」的概率压到最低，但无法在 CI 里证明外部工具的未来输出；一旦漂移，`.sagignore` 会变脏，而 `ship` / `remove` 对脏工作树是 `die`。届时按测试报错同步字段即可，不需要改代码。
+
+托管块里的 `file_types.code=false` 是 SAG 自己的内部分类位，扩展名白名单才是实际范围；实测 `sag -F AppWorkspaceView` 命中 8 个文件（其中 3 个 `.ts/.tsx`，另 5 个是本任务新增的 spec/文档），语义检索可直接命中原生 `.tsx` 源码，说明代码确实进了索引。
 
 ### 2.2 工作树生命周期钩子（`scripts/worktree.sh`）
 
@@ -33,7 +35,7 @@
 | `cmd_ship` 删除工作树后 | `sag-worktree remove <worktree>` |
 | `cmd_remove` 删除工作树后 | 同上 |
 | `clean_one` 批量清理后 | 同上 |
-| `cmd_prune` / `cmd_clean` 结束 | `sag-worktree gc` 回收孤儿索引 |
+| `cmd_prune` / `cmd_clean` 结束且 `OMNIMUX_SAG_GC=1` | `sag-worktree gc` 回收孤儿索引 |
 
 四条硬性要求：
 
@@ -58,7 +60,7 @@
 | --- | --- | --- |
 | 1 | `worktree.sh ship` 删除工作树 | 删除后调用 `sag-worktree remove <绝对路径>` |
 | 2 | `worktree.sh remove --abandon` | 同上 |
-| 3 | `worktree.sh clean` 批量删除 | 每个被删工作树都清理，最后回收孤儿索引 |
+| 3 | `worktree.sh clean` 批量删除 | 每个被删工作树都清理；`OMNIMUX_SAG_GC=1` 时在批量清理之后回收孤儿索引 |
 | 4 | `worktree.sh prune` / `clean` 且 `OMNIMUX_SAG_GC=1` | 在删完记录/批量清理**之后**调用 `sag-worktree gc` |
 | 5 | 本机没有 `sag-worktree` | 建树与交付照常，退出码不变，无输出 |
 | 6 | `OMNIMUX_SAG_INDEX=0`，或未设 `OMNIMUX_SAG_GC=1` | 前者完全不调用该工具；后者不触发全局 `gc` |
@@ -76,7 +78,8 @@
 ## 证伪方式
 
 1. 用桩可执行文件冒充 `sag-worktree`（记录 argv），在临时 git 仓里真实执行 `new` / `remove` / `prune` / `clean`：实测 `new` 记录为空、`remove` 记录 `remove <绝对路径>`、`prune` 记录 `gc`、`OMNIMUX_SAG_INDEX=0` 记录为空、PATH 去掉桩后 `new` 仍 exit 0 —— 若钩子阻塞交付，该断言立刻变红。
-   为什么这条不做成仓库测试：`guard-anti-cheat` 对**新增**测试文件里的 `node:child_process` 导入按 `runtime-code-execution-import-needs-review` 硬拒（只有既有文件里早就存在的同族导入才沿用基线，`scripts/worktree-delivery.test.mjs` 属于后者）。因此桩执行证据在 PR 里以终端记录留档，仓库测试保留源码级断言。
+   仓库内已可复现的部分：`scripts/worktree-delivery.test.mjs` 新增用例用桩 `sag-worktree` 跑真实 `worktree.sh ship`，断言删除后恰好调用一次 `remove <该工作树>`，且不碰无关工作树；把 `cmd_ship` 的清理调用删掉该用例即变红。
+   其余路径为什么不做成仓库测试：`guard-anti-cheat` 对**新增**测试文件里的 `node:child_process` 导入按 `runtime-code-execution-import-needs-review` 硬拒（只有既有文件里早就存在的同族导入才沿用基线，`scripts/worktree-delivery.test.mjs` 属于后者）。因此桩执行证据在 PR 里以终端记录留档，仓库测试保留源码级断言。
 2. 把 `cmd_ship` 里的 `sag_forget_worktree` 调用删掉，第 1 条断言必须变红；把 `OMNIMUX_SAG_INDEX` 判断删掉，第 6 条断言必须变红；把 `cmd_new` 里重新塞回索引调用，第 8 条断言必须变红。
 3. 真实索引不接受「命令执行成功」作为证据：必须在任务工作树里 `sag-worktree init` 后看到 `index_ready: true` 与非空 `indexed_files`，并跑一次语义检索拿到真实代码片段。
 
@@ -86,44 +89,18 @@
 
 ## 旧标准变更
 
-本任务第一版把钩子写成「建树时登记共享库索引根」，在确认以隔离库为真源后改为「只在删除时清理」。测试文件 `scripts/worktree-sag-index.test.mjs` 是本任务新建、尚未合入任何基线；新增文件在 CI 侧（`verify-test-standard-declarations.mjs`）直接跳过，这些声明只被写前门禁消费，保留作为改动留痕，不声称存在更早的合入基线：
+本任务在实施中替换了自己写下的断言（先按共享库多根写、后改为隔离库；评审后又收紧告警与顺序断言）。按写前门禁要求逐条声明如下。
 
-- `scripts/worktree-sag-index.test.mjs` :: `SAG 索引随工作树生命周期登记与清理 (#4060)`
+注意：这些声明只被写前门禁消费。新增测试文件在 CI 侧 `scripts/verify-test-standard-declarations.mjs` 里因 `change.before === null` 被直接跳过，因此 `scripts/worktree-sag-index.test.mjs` 的用例名不参与 CI 复核；它不声称存在更早的合入基线。
 
-原断言：describe 分组按「登记与清理」组织；必须改的理由：方案从共享库多根切换为隔离库，用例已按「删除时清理 / best-effort / .sagignore」重组；新期望证据：`node --test scripts/worktree-sag-index.test.mjs` 三组全绿。
+- `scripts/worktree-delivery.test.mjs` :: `ship 删除工作树后清理该工作树的 SAG 隔离索引（Issue #4060）`
 
-- `scripts/worktree-sag-index.test.mjs` :: `new 在建成工作树之后登记索引根`
-
-原断言：`cmd_new` 必须调用 `sag_index_worktree`；必须改的理由：建树同步索引会把交付卡几分钟，改为惰性建立；新期望证据：反向断言 `cmd_new` 不含任何索引调用。
-
-- `scripts/worktree-sag-index.test.mjs` :: `ship 删除工作树之后清理索引根`
-
-原断言：`ship` 删除后调用 `sag forget`；必须改的理由：改为隔离库清理；新期望证据：`sag_forget_worktree` 出现在 `git worktree remove --force` 之后。
-
-- `scripts/worktree-sag-index.test.mjs` :: `remove 与 clean 同样清理索引根`
-
-原断言：同名断言作用于共享库清理；必须改的理由：同上方案切换；新期望证据：`cmd_remove` 与 `clean_one` 都在删除工作树后调用清理。
-
-- `scripts/worktree-sag-index.test.mjs` :: `不把主检出注册成根，缺 .sagignore 时跳过`
-
-原断言：登记前检查主根与 `.sagignore`；必须改的理由：隔离库没有「根」概念，风险变成「误写共享库」；新期望证据：源码不出现裸 `sag add`/`sag remove`，且 prune/clean 调用 `sag_collect_orphans`。
-
-- `scripts/worktree-sag-index.test.mjs` :: `带 SAG 托管块且扩展名覆盖代码类型`
-
-原断言：托管块含八类扩展名；必须改的理由：托管块改由 `sag-worktree` 的 TYPES 生成，需与之一致；新期望证据：块内扩展名排序且覆盖 `md/ts/tsx/js/jsx/mjs/yml/yaml`。
-
-- `scripts/worktree-sag-index.test.mjs` :: `登记与清理都是 best-effort，不阻断建树与交付`
-
-原断言：两个辅助函数都不 `die`；必须改的理由：函数从「登记+清理」变为「清理+回收孤儿」；新期望证据：三个辅助函数都不 `die`、不改退出码，失败分支 `|| return 0`。
-
-- `scripts/worktree-sag-index.test.mjs` :: `缺少 sag 可执行文件时静默跳过，并支持整机关闭与自定义可执行文件`
-
-原断言对象是 `SAG_BIN`；必须改的理由：可执行文件改为 `sag-worktree`；新期望证据：探测 `command -v "${SAG_WORKTREE_BIN}"`、`OMNIMUX_SAG_INDEX=0`、`SAG_WORKTREE_BIN:-sag-worktree` 均存在。
+原断言：直接用 `join(repo, '.worktrees/sag-feature')` 与桩记录的 argv 全等比较；必须改的理由：macOS 上 `tmpdir` 给 `/var/...` 软链，而 `worktree.sh` 用 git 解析出 `/private/var/...` 真路径，全等比较在正确实现上也会失败；新期望证据：按 `/.worktrees/sag-feature` 后缀匹配且恰好一次，同时断言没有清理无关工作树。
 
 - `scripts/worktree-sag-index.test.mjs` :: `收尾失败不影响交付`
 
-原断言：清理与回收失败分支都用 `|| return 0` 静默；必须改的理由：评审指出 AC7「失败只打印一行警告」实际没实现，静默吞掉会让人以为索引已清；新期望证据：断言 `sag_forget_worktree` 含 `SAG 索引清理失败` 告警，且 `sag_collect_orphans` 受 `OMNIMUX_SAG_GC` 显式开关控制。
+原断言：清理与回收失败分支都用 `|| return 0` 静默，且 `gc` 开关只要求出现过 `OMNIMUX_SAG_GC` 字样；必须改的理由：首轮评审指出 AC7 的「失败一行警告」没实现，二轮评审指出开关断言可被注释满足（恒绿）；新期望证据：断言 `sag_forget_worktree` 与 `sag_collect_orphans` 都有 `echo ... >&2` 告警，且 `[ "${OMNIMUX_SAG_GC:-0}" = "1" ] || return 0` 这一行真实存在。
 
 - `scripts/worktree-sag-index.test.mjs` :: `prune 与 clean 结束时回收孤儿索引`
 
-原断言：只断言 `sag_collect_orphans` 字符串出现在两个函数里，把调用挪到清理循环之前仍然绿；必须改的理由：评审指出这测不出 AC3 要求的「最后回收」顺序；新期望证据：断言 `gc` 的位置在 `git worktree prune` 与最后一次 `clean_one` 之后。
+原断言：只断言 `sag_collect_orphans` 出现在两个函数里，并把 `cmd_prune` 锚点取为裸子串 `git worktree prune`；必须改的理由：把调用挪到清理循环之前仍绿（测不出 AC3 顺序），而裸子串会被同函数的 `say "git worktree prune"` 命中，删掉真命令仍绿；新期望证据：用 `\n  git worktree prune\n` 行级锚点，并断言 gc 在真命令与最后一次 `clean_one` 之后。

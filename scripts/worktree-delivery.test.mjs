@@ -907,3 +907,57 @@ test('shared kit 刷新后本次插件仍失败时判失败并退出 3（Issue #
     assert.deepEqual(calls, ['1 1', '2 0', '3 1'], '仍应走完 增量→完整→增量重试 三步')
   } finally { rmSync(fixture, { recursive: true, force: true }) }
 })
+
+test('ship 删除工作树后清理该工作树的 SAG 隔离索引（Issue #4060）', () => {
+  const fixture = mkdtempSync(join(tmpdir(), 'omnimux-ship-sag-'))
+  const repo = join(fixture, 'repo')
+  const remote = join(fixture, 'origin.git')
+  const bin = join(fixture, 'bin')
+  const log = join(fixture, 'sag.log')
+  const git = (...args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+  try {
+    mkdirSync(repo)
+    mkdirSync(bin)
+    git('init', '--bare', '-b', 'main', remote)
+    git('init', '-b', 'main')
+    git('config', 'user.name', 'delivery-test')
+    git('config', 'user.email', 'delivery@example.test')
+    mkdirSync(join(repo, 'scripts'))
+    copyFileSync(join(root, 'scripts/worktree.sh'), join(repo, 'scripts/worktree.sh'))
+    writeFileSync(join(repo, '.gitignore'), '.worktrees/\n')
+    git('add', '.')
+    git('commit', '-m', 'seed')
+    git('remote', 'add', 'origin', remote)
+    git('push', '-u', 'origin', 'main')
+    const worktree = join(repo, '.worktrees/sag-feature')
+    git('worktree', 'add', '-b', 'agent/sag-feature', worktree)
+    writeFileSync(join(worktree, 'feature.txt'), 'pending acceptance\n')
+    git('-C', worktree, 'add', 'feature.txt')
+    git('-C', worktree, 'commit', '-m', 'feature')
+    const head = git('-C', worktree, 'rev-parse', 'HEAD')
+    git('push', 'origin', 'agent/sag-feature:main')
+    writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *'--json state -q .state'*) echo 'MERGED' ;;\n  *) printf '%s\\t%s\\t%s\\t%s\\t%s\\n' 'MERGED' 'agent/sag-feature' '${head}' 'main' '${head}' ;;\nesac\n`, { mode: 0o755 })
+    writeFileSync(join(bin, 'sag-worktree'), `#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\nexit 0\n`, { mode: 0o755 })
+
+    const result = spawnSync('bash', ['scripts/worktree.sh', 'ship', 'sag-feature', '--pr', '866'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(existsSync(worktree), false, 'ship 必须删掉已合入的任务工作树')
+    const calls = existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n').filter(Boolean) : []
+    // 路径比较用 basename 后缀：macOS 上 tmpdir 给的是 /var/... 软链，而 worktree.sh
+    // 通过 git 解析得到 /private/var/... 的真实路径，两者指向同一目录。
+    assert.equal(
+      calls.filter((line) => /^remove .*\/\.worktrees\/sag-feature$/.test(line)).length,
+      1,
+      `删除工作树后必须清理它那份隔离索引，实际调用：${JSON.stringify(calls)}`,
+    )
+    assert.equal(
+      calls.some((line) => /^remove .*\/(?:common|plugin|docs)-feature$/.test(line)),
+      false,
+      '不得清理与本任务无关的工作树索引',
+    )
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})

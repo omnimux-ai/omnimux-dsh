@@ -117,7 +117,10 @@ sag_collect_orphans() {
   # 顺手动到别的任务的数据。需要时显式 OMNIMUX_SAG_GC=1 打开。
   [ "${OMNIMUX_SAG_GC:-0}" = "1" ] || return 0
   sag_available || return 0
-  "${SAG_WORKTREE_BIN}" gc >/dev/null 2>&1 || return 0
+  if ! "${SAG_WORKTREE_BIN}" gc >/dev/null 2>&1; then
+    # 与清理同一条原则：失败要能看见，但不能把交付带崩。
+    echo "worktree.sh: ⚠️  SAG 孤儿索引回收失败（不影响交付）：sag-worktree gc" >&2
+  fi
   return 0
 }
 

@@ -66,10 +66,12 @@ describe('工作树删除时清理隔离索引 (#4060)', () => {
   })
 
   it('prune 与 clean 结束时回收孤儿索引', () => {
-    const pruneAt = cmdPrune.lastIndexOf('git worktree prune')
+    // 锚点必须落在真正的 `git worktree prune` 命令行上：函数里还有一行
+    // `say "git worktree prune"`，用裸子串锚定会在真命令被删掉时依然命中（恒绿）。
+    const pruneCommand = /\n  git worktree prune\n/.exec(cmdPrune)
+    assert.ok(pruneCommand, 'cmd_prune 必须真的执行 git worktree prune')
     const pruneGc = cmdPrune.indexOf('sag_collect_orphans')
-    assert.notEqual(pruneAt, -1, 'prune 必须真的删记录')
-    assert.ok(pruneAt < pruneGc, 'prune 必须在删完记录之后回收孤儿索引')
+    assert.ok(pruneCommand.index < pruneGc, 'prune 必须在删完记录之后回收孤儿索引')
     const lastClean = cmdClean.lastIndexOf('clean_one "${wt}" "${branch}" "${merged}"')
     const cleanGc = cmdClean.indexOf('sag_collect_orphans')
     assert.notEqual(lastClean, -1, 'cmd_clean 必须真的调用 clean_one')
@@ -89,8 +91,9 @@ describe('钩子是 best-effort，且不写共享知识库 (#4060)', () => {
     for (const body of [sagForget, sagGc]) {
       assert.match(body, /return 0/, '每条分支都必须静默返回')
     }
-    assert.match(sagForget, /SAG 索引清理失败/, '清理失败必须留一行可诊断警告，不能静默吞掉（AC7）')
-    assert.match(sagGc, /OMNIMUX_SAG_GC/, 'gc 跨本机所有工作树且不可逆，必须显式开关才执行')
+    assert.match(sagForget, /echo "[^"]*SAG 索引清理失败[^"]*" >&2/, '清理失败必须在 stderr 留一行可诊断警告，不能静默吞掉，也不能只写 stdout（AC7）')
+    assert.match(source, /\[ "\$\{OMNIMUX_SAG_GC:-0\}" = "1" \] \|\| return 0/, 'gc 必须由真实的条件判断挡住，而不是只在注释里提到开关（否则恒绿）')
+    assert.match(sagGc, /echo "[^"]*SAG 孤儿索引回收失败[^"]*" >&2/, '回收失败同样要留一行 stderr 警告')
     for (const [name, body] of [['cmd_ship', cmdShip], ['cmd_remove', cmdRemove], ['clean_one', cleanOne]]) {
       assert.equal(/sag_forget_worktree "\$\{wt\}"\s*\|\|/.test(body), false, `${name} 不得把钩子接进失败短路`)
     }
@@ -128,6 +131,23 @@ describe('.sagignore 纳入版本库 (#4060)', () => {
       [...options.extensions].sort(),
       '扩展名必须排序：重复索引同目录才能字节稳定、不把已跟踪文件改脏',
     )
+  })
+
+  it('托管块其余字段与当前工具一致', () => {
+    const match = sagignore.match(/# SAG Wiki index options: begin\n# (\{.*\})\n# SAG Wiki index options: end/)
+    assert.ok(match, '必须带 SAG 托管块')
+    const options = JSON.parse(match[1])
+    assert.deepEqual(
+      options.file_types,
+      { markdown: true, text: true, code: false, config: false },
+      'file_types 是 SAG 的内部分类位，被工具改写就会产生 diff；变了必须同步本断言而不是放着让 .sagignore 变脏',
+    )
+    assert.equal(options.convert_other_formats, false, 'convert_other_formats 同样必须与工具输出一致')
+  })
+
+  it('测试文件自身以换行结尾', () => {
+    const self = readFileSync(join(here, 'worktree-sag-index.test.mjs'), 'utf8')
+    assert.ok(self.endsWith('\n'), '本测试文件也要以换行结尾，别一边要求别人一边自己缺')
   })
 
   it('托管块以换行结尾', () => {
