@@ -83,37 +83,17 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   const isLiveOccupant = (occupant: SlotOccupant): boolean =>
     Boolean(occupant.sourceNodeId) && liveNodeIds.has(occupant.sourceNodeId)
     && Boolean(occupant.edgeId) && liveEdgeSource.get(occupant.edgeId as string) === occupant.sourceNodeId;
-  // Pruning by "slot no longer exists" is only trustworthy when the model/operation actually
-  // resolved. A missing/loading catalog yields an empty layout; treating that as "all slots
-  // removed" would wipe every unpinned V1 binding on a transient catalog hiccup.
-  const layoutResolved = Boolean(model && operation);
-  const shouldKeepOccupant = (slotName: string, occupant: SlotOccupant): boolean => {
-    if (occupant.pinned) return true;
-    if (!isLiveOccupant(occupant)) return false;
-    return layoutResolved ? layout.slots.some((spec) => spec.slot === slotName) : true;
-  };
-  // Saved conflicts are derived state; drop the ones whose occupant the pruning above removes so
-  // they cannot resurrect a stale binding or keep reporting role_conflict.
-  const savedConflicts = (plainSpeech ? [] : node.data.slotConflicts ?? []) as SlotConflict[];
-  const keptConflicts = currentVersion ? savedConflicts.filter((item) => shouldKeepOccupant(item.slot, item.occupant)) : savedConflicts;
-  let prunedAny = false;
   if (explicit) {
-    const source = explicit;
-    const next: SlotBindings = Object.fromEntries(Object.entries(source).flatMap(([slot, occupants]) => {
-      const kept = occupants
-        .filter((occupant) => {
-          const keep = currentVersion ? shouldKeepOccupant(slot, occupant) : (!modeChanged || occupant.pinned);
-          if (!keep) prunedAny = true;
-          return keep;
-        })
-        .map((occupant) => ({ ...occupant }));
-      // Preserve an explicit empty array (the user cleared that slot); drop a slot only when
-      // pruning removed its last real occupant so no `{slot: []}` residue remains.
-      if (kept.length === 0 && occupants.length > 0) return [];
-      return [[slot, kept] as const];
-    }));
-    for (const conflict of keptConflicts) {
-      const occupants = next[conflict.slot] ??= [];
+    explicit = Object.fromEntries(Object.entries(explicit)
+      .map(([slot, occupants]) => [slot,
+        occupants
+          .filter((occupant) => currentVersion ? (isLiveOccupant(occupant) || occupant.pinned) : (!modeChanged || occupant.pinned))
+          .map((occupant) => ({ ...occupant }))] as const)
+      // Drop slots emptied by pruning so the node does not keep a `{slot: []}` residue
+      // that reads as an explicit user-clear to downstream readers.
+      .filter(([, occupants]) => occupants.length > 0));
+    for (const conflict of (plainSpeech ? [] : node.data.slotConflicts ?? []) as SlotConflict[]) {
+      const occupants = explicit[conflict.slot] ??= [];
       if (!occupants.some((item) => item.edgeId === conflict.occupant.edgeId)) occupants.push({ ...conflict.occupant });
     }
     // Only new edges may carry a picker hint. Stale edge mirrors never override node slots.
@@ -125,17 +105,8 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
         : layout.slots.find((item) => item.role === asset.role && item.type === asset.type);
       const hint = slot?.slot ?? asset.targetSlot ?? `role:${asset.role}`;
       const occupant = { sourceNodeId: asset.sourceNodeId, edgeId: asset.edgeId, outputId: asset.outputId, pinned: true };
-      next[hint] = slot?.max === 1 ? [occupant] : [...(next[hint] ?? []), occupant];
+      explicit[hint] = slot?.max === 1 ? [occupant] : [...(explicit[hint] ?? []), occupant];
     }
-    explicit = next;
-  }
-  // If pruning removed every explicit occupant and left no user-clear key, restore the
-  // "not initialized" state instead of persisting `{}` (which display and submission would
-  // interpret differently). A real user clear keeps its `{slot: []}` keys and is untouched.
-  let resetToUninitialized = false;
-  if (currentVersion && prunedAny && explicit && Object.keys(explicit).length === 0) {
-    explicit = undefined;
-    resetToUninitialized = true;
   }
   const standbyIds = Array.isArray(node.data.slotStandbyEdgeIds) ? node.data.slotStandbyEdgeIds.filter((id): id is string => typeof id === 'string') : [];
   // A missing V1 `slotBindings` means "not initialized yet", not "the user cleared every slot": the display
@@ -146,19 +117,15 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   const selfHealed = explicit === undefined ? autoFillSlots(feed, layout, {}, standbyIds) : undefined;
   const filledAnything = selfHealed !== undefined && Object.values(selfHealed.bindings).some((occupants) => occupants.length > 0);
   const fill = currentVersion
-    ? (filledAnything ? selfHealed! : { bindings: explicit ?? {}, conflicts: keptConflicts })
+    ? (filledAnything ? selfHealed! : { bindings: explicit ?? {}, conflicts: (node.data.slotConflicts ?? []) as SlotConflict[] })
     : explicit ? autoFillSlots(feed, layout, explicit, standbyIds) : hydrateSlotBindings(feed, layout, graph.edges.filter((edge) => edge.target === node.id));
-  // A pruned-to-empty node with no supply must stay "uninitialized" (no slotBindings key),
-  // never `{}`: the display and submission readers both auto-fill only for undefined, so they
-  // stay in agreement and a later reconnection can auto-fill again.
-  const persistedBindings = currentVersion && resetToUninitialized && !filledAnything ? undefined : fill.bindings;
   const fingerprint = effectiveSlotFingerprint(raw, layout, fill.bindings, fill.conflicts, currentVersion ? 1 : undefined);
   const match = operation && permitted ? matchOperationInputs(operation, fingerprint) : undefined;
   const reasonCodes = !view.available ? ['catalog_unavailable'] : !permitted ? ['not_listed'] : !model ? ['unknown_model']
     : !operation ? ['operation_incompatible'] : [...(match?.rejections ?? []), ...(match?.pending ?? [])].map((item) => item.code);
   if (fill.conflicts.length) reasonCodes.push('role_conflict');
   return { ...node, data: { ...node.data, params, ...(autoDerived ? { autoOperationId: autoDerived } : {}),
-    slotBindings: persistedBindings as SlotBindings, slotConflicts: fill.conflicts,
+    slotBindings: fill.bindings, slotConflicts: fill.conflicts,
     compat: { status: operation && permitted ? 'ok' : 'configuration_error', acceptsCurrentInputs: match?.accepts ?? false,
       readyToSubmit: Boolean(match?.ready), operation: operation?.id, reasonCodes,
       fingerprint: fingerprint.signature, catalogFingerprint: catalog?.fingerprint ?? '' } } };
