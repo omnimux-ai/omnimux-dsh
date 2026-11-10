@@ -180,6 +180,8 @@
     "pr-wait.test.mjs",
     "prepublish-path-depth.test.mjs",
     "registry-tool.mjs",
+    "sag-worktree.mjs",
+    "sag-worktree.test.mjs",
     "scan-ui-gates.mjs",
     "serve-model-console.mjs",
     "smoke.sh",

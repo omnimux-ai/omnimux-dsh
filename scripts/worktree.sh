@@ -92,24 +92,40 @@ archive_worktree_evidence() {
 #
 # 这里只负责收尾：工作树被删掉时停掉并清掉它那份索引，否则孤儿索引会一直占着磁盘。
 # 全部 best-effort：本机没有 sag-worktree 就静默跳过；失败只警告，绝不影响交付。
-SAG_WORKTREE_BIN="${SAG_WORKTREE_BIN:-sag-worktree}"
+SAG_CMD=()
 
+# 解析顺序：显式 SAG_WORKTREE_BIN > 仓内 scripts/sag-worktree.mjs > PATH 里的 sag-worktree。
+# 仓内实现把数据目录命名成「文件夹名 + 路径哈希」，不会和别的仓同名任务撞车（#4068）；
+# 家目录里的旧脚本仍可作为兜底，但不再是默认依赖。
 sag_available() {
   [ "${OMNIMUX_SAG_INDEX:-1}" = "0" ] && return 1
-  command -v "${SAG_WORKTREE_BIN}" >/dev/null 2>&1 || return 1
+  if [ -n "${SAG_WORKTREE_BIN:-}" ]; then
+    command -v "${SAG_WORKTREE_BIN}" >/dev/null 2>&1 || return 1
+    SAG_CMD=("${SAG_WORKTREE_BIN}")
+    return 0
+  fi
+  if [ -f "${ROOT}/scripts/sag-worktree.mjs" ] && command -v node >/dev/null 2>&1; then
+    SAG_CMD=(node "${ROOT}/scripts/sag-worktree.mjs")
+    return 0
+  fi
+  command -v sag-worktree >/dev/null 2>&1 || return 1
+  SAG_CMD=(sag-worktree)
   return 0
 }
 
 sag_forget_worktree() {
   local wt="$1" status=0
   sag_available || return 0
-  "${SAG_WORKTREE_BIN}" remove "${wt}" >/dev/null 2>&1 || status=$?
+  "${SAG_CMD[@]}" remove "${wt}" >/dev/null 2>&1 || status=$?
   case "${status}" in
     0) say "SAG: 已清理该工作树的隔离索引 ${wt#${ROOT}/}" ;;
     # 2 = 该数据目录记的是另一个同名路径，工具拒绝删除。这既不是成功也不是失败：
     # 照旧报「已清理」就是假成功，报失败又会在每次无关任务上刷警告。
     2) say "SAG: 跳过清理 ${wt#${ROOT}/}（本机同名索引不属于该路径）" ;;
-    *) echo "worktree.sh: ⚠️  SAG 索引清理失败（退出码 ${status}，不影响工作树）：${SAG_WORKTREE_BIN} remove ${wt}" >&2 ;;
+    # 3 = 本机没有安装 sag。这属于「能力不存在」而不是「清理出错」，按静默跳过处理：
+    # 没有索引可清，就不该在每次删工作树时刷一行警告。
+    3) : ;;
+    *) echo "worktree.sh: ⚠️  SAG 索引清理失败（退出码 ${status}，不影响工作树）：${SAG_CMD[*]} remove ${wt}" >&2 ;;
   esac
   return 0
 }
@@ -119,9 +135,9 @@ sag_collect_orphans() {
   # 顺手动到别的任务的数据。需要时显式 OMNIMUX_SAG_GC=1 打开。
   [ "${OMNIMUX_SAG_GC:-0}" = "1" ] || return 0
   sag_available || return 0
-  if ! "${SAG_WORKTREE_BIN}" gc >/dev/null 2>&1; then
+  if ! "${SAG_CMD[@]}" gc >/dev/null 2>&1; then
     # 与清理同一条原则：失败要能看见，但不能把交付带崩。
-    echo "worktree.sh: ⚠️  SAG 孤儿索引回收失败（不影响交付）：${SAG_WORKTREE_BIN} gc" >&2
+    echo "worktree.sh: ⚠️  SAG 孤儿索引回收失败（不影响交付）：${SAG_CMD[*]} gc" >&2
   fi
   return 0
 }

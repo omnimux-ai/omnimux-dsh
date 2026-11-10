@@ -988,6 +988,7 @@ function sagFixture(prefix) {
   git('config', 'user.email', 'delivery@example.test')
   mkdirSync(join(repo, 'scripts'))
   copyFileSync(join(root, 'scripts/worktree.sh'), join(repo, 'scripts/worktree.sh'))
+  copyFileSync(join(root, 'scripts/sag-worktree.mjs'), join(repo, 'scripts/sag-worktree.mjs'))
   writeFileSync(join(repo, '.gitignore'), '.worktrees/\n')
   git('add', '.')
   git('commit', '-m', 'seed')
@@ -1095,14 +1096,32 @@ test('OMNIMUX_SAG_INDEX=0 时完全不调用 sag-worktree（Issue #4060）', () 
   } finally { f.cleanup() }
 })
 
+test('仓内 sag-worktree.mjs 优先于 PATH 里的旧脚本（Issue #4068）', () => {
+  const f = sagFixture('omnimux-sag-prefer-repo')
+  try {
+    const dir = f.worktree('prefer-repo')
+    // 不设 SAG_WORKTREE_BIN，解析应落到仓内 scripts/sag-worktree.mjs；SAG_WT_HOME 指向
+    // 临时目录，保证绝不碰本机真实索引。
+    const result = f.run(['remove', 'prefer-repo', '--force'], {
+      SAG_WORKTREE_BIN: '',
+      SAG_WT_HOME: join(f.fixture, 'sag-home'),
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(existsSync(dir), false, '工作树照常删除')
+    assert.deepEqual(f.calls(), [], '仓内实现优先时，PATH 里的旧脚本不得被调用')
+    assert.match(result.stdout, /跳过清理/, '仓内实现对该路径没有归属记录，应播报跳过而不是成功')
+  } finally { f.cleanup() }
+})
+
 test('清理失败与「索引不属于该路径」必须给出不同输出（Issue #4060）', () => {
   const f = sagFixture('omnimux-sag-status')
   try {
     const failed = f.worktree('will-fail')
-    const failRun = f.run(['remove', 'will-fail', '--force'], { SAG_STUB_EXIT: '3' })
+    // 3 已保留给「本机没有 sag」的 blocked 语义（worktree.sh 静默跳过），通用失败用 4。
+    const failRun = f.run(['remove', 'will-fail', '--force'], { SAG_STUB_EXIT: '4' })
     assert.equal(failRun.status, 0, '清理失败不得阻断交付')
     assert.equal(existsSync(failed), false, '工作树仍要被删掉')
-    assert.match(failRun.stderr, /SAG 索引清理失败（退出码 3/, `失败必须留 stderr 警告：${failRun.stderr}`)
+    assert.match(failRun.stderr, /SAG 索引清理失败（退出码 4/, `失败必须留 stderr 警告：${failRun.stderr}`)
     assert.doesNotMatch(failRun.stdout, /已清理该工作树的隔离索引/, '失败不得报成功')
 
     const skipped = f.worktree('will-skip')
