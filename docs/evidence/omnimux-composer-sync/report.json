@@ -1,0 +1,9 @@
+{
+  "task": "omnimux-composer-sync-fix-3-issue-4043",
+  "issue": 4043,
+  "mode": "live-dev-desktop",
+  "app": "OmniMux Dev 2.0.21, profile ~/.omnimux-dev",
+  "assertion": "The composer model picker lists OmniMux > Gemini 3.8 Flash, Gemini 4 Argon, Seed Evolving after bootstrap from configEditor.",
+  "result": "pass",
+  "screenshot": "model-list.png"
+}
