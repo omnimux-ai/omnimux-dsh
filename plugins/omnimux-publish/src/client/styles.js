@@ -145,7 +145,7 @@ const CSS = `
   color: var(--dsw-alias-label-primary, #ffffff);
   font-size: 13px;
   line-height: 18px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--dsw-shadow-lv2, 0 10px 28px rgba(0, 0, 0, 0.4));
   animation: omnimux-publish-toast-in 0.14s ease-out;
   pointer-events: none;
   white-space: nowrap;
