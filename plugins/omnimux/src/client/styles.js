@@ -388,6 +388,27 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
   flex-direction: column;
   gap: 20px;
 }
+.omnimux-settings-savebar {
+  position: sticky;
+  top: 8px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-elevated);
+  box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-1);
+}
+.omnimux-settings-savebar__label {
+  margin-right: auto;
+  min-width: 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
 .omx-runtime-section {
   display: flex;
   flex-direction: column;
@@ -1728,21 +1749,17 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
 }
 
 /* ── Defensive hiding of official ContextMeter (token usage progress ring) in composer ──
-   注意：整条规则的任何一个选择器非法都会让浏览器丢弃整条规则。原规则里把 :has 嵌套进
-   另一个 :has（非法写法），导致整条 ContextMeter 隐藏规则被丢弃、上下文环一直显示。
-   这里把「基础类名/属性」与「卡片内 :has 兜底」拆成两条独立规则，且不再嵌套 :has。 */
+   部分宿主回归里 .JdJrwG_root 的隐藏会被更高/更后的规则覆盖，用 html body 提升特异性压过。 */
 html body [class*="JdJrwG_root"],
 html body [class*="ContextMeter_root"],
 .JdJrwG_root,
-[class*="ContextMeter_root"] {
-  display: none !important;
-}
+[class*="ContextMeter_root"],
 [data-composer-card] [class*="trailing"] > span:has(button[aria-label*="上下文已用"]),
 [data-composer-card] [class*="trailing"] > span:has(button[aria-label*="context used"]),
 [data-composer-card] [class*="trailing"] > span:has(svg circle[class*="fill"]),
 [data-composer-card] [class*="trailing"] button[aria-label*="上下文已用"],
 [data-composer-card] [class*="trailing"] button[aria-label*="context used"],
-[class*="trailing"] > span:has(button[aria-haspopup="dialog"]),
+[class*="trailing"] > span:has(button[aria-haspopup="dialog"]:has(circle)),
 button[aria-label*="上下文已用"],
 button[aria-label*="context used"] {
   display: none !important;

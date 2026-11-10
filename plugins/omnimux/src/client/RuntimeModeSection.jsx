@@ -264,6 +264,11 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
       if (!saved || saved.ok !== true) {
         throw new Error((saved && saved.error) || t('runtime.agentFail'))
       }
+      // The Host route above already wrote runtimeAgentId/runtimeAgentVerified
+      // through settings.update, so adopt its new revision before staging the
+      // companion model field; otherwise this page's later save would be fenced
+      // to the pre-route revision and falsely conflict.
+      if (scope && typeof scope.adoptRevision === 'function') await scope.adoptRevision()
       if (scope && typeof scope.set === 'function' && agentModel !== (value.runtimeAgentModel || '')) {
         const savedModel = await scope.set('runtimeAgentModel', agentModel)
         if (savedModel === false) throw new Error(t('runtime.error'))
