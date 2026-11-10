@@ -108,7 +108,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
 
     // Config defaults survive where listed, including synchronous speech.
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
-    assert.equal(catalog.defaultsMeta.text.source, 'offline-floor')
+    assert.equal(catalog.defaultsMeta.text.source, 'gateway-recommended')
     assert.equal(catalog.defaults.image, 'gpt-image-2.5')
     assert.equal(catalog.defaults.video, 'seedance-2-5')
     assert.equal(catalog.defaults.audio, 'suno') // #3516: text_to_speech 键移除，audio 归属迁到 suno
