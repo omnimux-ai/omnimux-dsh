@@ -1,9 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync, execFileSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { restartDevApp, verifiedDevAppPids, verifiedDevMainPids, devLaunchEnv } from './reload-dev-app.mjs'
 
@@ -988,6 +988,7 @@ function sagFixture(prefix) {
   git('config', 'user.email', 'delivery@example.test')
   mkdirSync(join(repo, 'scripts'))
   copyFileSync(join(root, 'scripts/worktree.sh'), join(repo, 'scripts/worktree.sh'))
+  copyFileSync(join(root, 'scripts/sag-worktree.mjs'), join(repo, 'scripts/sag-worktree.mjs'))
   writeFileSync(join(repo, '.gitignore'), '.worktrees/\n')
   git('add', '.')
   git('commit', '-m', 'seed')
@@ -1095,14 +1096,214 @@ test('OMNIMUX_SAG_INDEX=0 时完全不调用 sag-worktree（Issue #4060）', () 
   } finally { f.cleanup() }
 })
 
+/**
+ * 直接驱动仓内 CLI（`scripts/sag-worktree.mjs`）的端到端用例（Issue #4068）。
+ * SAG_WT_HOME 指向临时目录，绝不触碰本机真实索引。
+ */
+function cliFixture(prefix, { sagWorks = true, badConfig = false, configFailsAfterMkdir = false } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), `${prefix}-`))
+  const repo = join(dir, 'repo')
+  const bin = join(dir, 'bin')
+  const home = join(dir, 'sag-home')
+  mkdirSync(repo)
+  mkdirSync(bin)
+  const git = (...args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+  git('init', '-b', 'main')
+  git('config', 'user.name', 'cli-test')
+  git('config', 'user.email', 'cli@example.test')
+  writeFileSync(join(repo, '.gitignore'), '.worktrees/\n')
+  writeFileSync(join(repo, '.sagignore'), '# SAG Wiki index options: begin\n# SAG Wiki index options: end\n')
+  git('add', '.')
+  git('commit', '-m', 'seed')
+  const worktree = join(dir, 'wt')
+  git('worktree', 'add', '-b', 'agent/wt', worktree)
+  if (sagWorks) {
+    // 桩：config 返回可用 url/model；add/check/remove/service 一律成功。
+    writeFileSync(join(bin, 'sag'), [
+      '#!/bin/sh',
+      'case "$1" in',
+      '  --version) echo "sag 0.0.0-stub" ;;',
+      configFailsAfterMkdir
+        ? '  config) if [ "$2" = "--url" ]; then mkdir -p "$SAG_DATA_DIR"; exit 1; fi; echo \'{"url":"http://stub.local","model":"stub-model"}\' ;;'
+        : `  config) echo '${badConfig ? '{}' : '{"url":"http://stub.local","model":"stub-model"}'}' ;;`,
+      '  check) echo \'{"index_ready":true,"indexed_files":42,"coverage":"included","extensions":["ts"]}\' ;;',
+      '  *) exit 0 ;;',
+      'esac',
+      '',
+    ].join('\n'), { mode: 0o755 })
+    writeFileSync(join(dir, 'credentials.json'), JSON.stringify({ jev: 'stub-key' }))
+  } else {
+    writeFileSync(join(bin, 'sag'), '#!/bin/sh\nexit 127\n', { mode: 0o755 })
+  }
+  const run = (args) => spawnSync(process.execPath, [join(root, 'scripts/sag-worktree.mjs'), ...args], {
+    cwd: repo,
+    encoding: 'utf8',
+    env: { ...process.env, SAG_WT_HOME: home, PATH: `${bin}:${process.env.PATH}`, SAG_DATA_DIR: dir },
+  })
+  const cleanup = () => rmSync(dir, { recursive: true, force: true })
+  return { dir, repo, home, worktree, run, cleanup }
+}
+
+test('init 成功后写入归属记录，status 报 index_ready（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-init')
+  try {
+    const result = f.run(['init', f.worktree])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const dirs = readdirSync(f.home)
+    assert.equal(dirs.length, 1, '只应建一份隔离数据目录')
+    assert.match(dirs[0], /^wt-[0-9a-f]{8}$/, '目录名应为 文件夹名-路径哈希')
+    const status = f.run(['status', f.worktree])
+    assert.equal(status.status, 0, `${status.stdout}\n${status.stderr}`)
+    assert.match(status.stdout, /"index_ready":true/)
+    assert.match(status.stdout, /"ownership":"match"/)
+  } finally { f.cleanup() }
+})
+
+test('本机没有 sag 时 init 报 blocked 且不写归属记录（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-blocked', { sagWorks: false })
+  try {
+    const result = f.run(['init', f.worktree])
+    assert.equal(result.status, 3, `缺 sag 必须以 blocked(3) 结束：${result.stdout}\n${result.stderr}`)
+    assert.match(result.stderr, /blocked: sag CLI is not installed/)
+    assert.deepEqual(existsSync(f.home) ? readdirSync(f.home) : [], [], '失败不得留下半套数据目录/记录')
+  } finally { f.cleanup() }
+})
+
+test('配置缺失时 init 整洁报错且不留半套归属记录（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-badconfig', { badConfig: true })
+  try {
+    const result = f.run(['init', f.worktree])
+    assert.equal(result.status, 1, `配置缺失应以 1 结束：${result.stdout}\n${result.stderr}`)
+    assert.match(result.stderr, /cannot read Jev url\/model/, '要给人话，不要原始堆栈')
+    assert.doesNotMatch(result.stderr, /\n\s+at /, '不得输出 Node 原始堆栈')
+    assert.deepEqual(existsSync(f.home) ? readdirSync(f.home) : [], [], '失败不得留下归属记录')
+  } finally { f.cleanup() }
+})
+
+test('配置命令失败时要回收已建的数据目录，保持可重试（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-rollback', { configFailsAfterMkdir: true })
+  try {
+    const first = f.run(['init', f.worktree])
+    assert.equal(first.status, 1, `配置失败应以 1 结束：${first.stdout}\n${first.stderr}`)
+    assert.deepEqual(existsSync(f.home) ? readdirSync(f.home) : [], [], '失败必须回收数据目录，否则下次 init 会卡在「归属不符」')
+    // 再跑一次也不能因为残留目录被拒（说明状态是可重试的）。
+    const second = f.run(['init', f.worktree])
+    assert.equal(second.status, 1, '仍然应是配置失败，而不是「归属不符」拒绝')
+    assert.doesNotMatch(second.stderr, /refuse:/, '不得退化成需要手删的死态')
+  } finally { f.cleanup() }
+})
+
+test('已有合法索引时再 init 失败不能删掉既有索引（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-keep')
+  try {
+    assert.equal(f.run(['init', f.worktree]).status, 0, '先建出合法索引')
+    const [own] = readdirSync(f.home)
+    // 把 sag 换成「config --url 必失败」，模拟升级后配置坏掉再 init。
+    writeFileSync(join(f.dir, 'bin', 'sag'), [
+      '#!/bin/sh',
+      'case "$1" in',
+      '  --version) echo "sag 0.0.0-stub" ;;',
+      '  config) if [ "$2" = "--url" ]; then exit 1; fi; echo \'{"url":"http://stub.local","model":"stub-model"}\' ;;',
+      '  *) exit 0 ;;',
+      'esac',
+      '',
+    ].join('\n'), { mode: 0o755 })
+    const again = f.run(['init', f.worktree])
+    assert.equal(again.status, 1, '配置失败仍应以 1 结束')
+    assert.deepEqual(readdirSync(f.home), [own], '既有合法索引必须原样保留，不能被失败回收误删')
+    assert.ok(existsSync(join(f.home, own, 'worktree.path')), '归属记录也要保留')
+  } finally { f.cleanup() }
+})
+
+test('缺少子命令参数按用法错误退出 2（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-usage')
+  try {
+    for (const command of ['init', 'status', 'remove']) {
+      const result = f.run([command])
+      assert.equal(result.status, 2, `${command} 缺参应以 2 结束：${result.stdout}\n${result.stderr}`)
+      assert.match(result.stderr, /usage:/, '要给人话用法提示')
+      assert.doesNotMatch(result.stderr, /TypeError|paths\[0\]/, '不得漏出内部异常')
+    }
+  } finally { f.cleanup() }
+})
+
+test('search 在没有索引时自动建库后执行检索（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-search')
+  try {
+    assert.deepEqual(existsSync(f.home) ? readdirSync(f.home) : [], [], '起点没有任何索引')
+    const result = f.run(['search', f.worktree, '任意问题', '-m', '2'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const dirs = readdirSync(f.home)
+    assert.equal(dirs.length, 1, 'search 应按需懒建一份索引')
+    assert.match(dirs[0], /^wt-[0-9a-f]{8}$/)
+    assert.ok(existsSync(join(f.home, dirs[0], 'worktree.path')), '懒建后必须写入归属记录')
+  } finally { f.cleanup() }
+})
+
+test('remove 对无归属记录的目录返回 2 并保留原数据（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-unrecorded')
+  try {
+    // 手工造一个「有数据但没记录」的目录，模拟旧版工具留下的残骸。
+    const stray = join(f.home, `${basename(f.worktree)}-deadbeef`)
+    mkdirSync(stray, { recursive: true })
+    writeFileSync(join(stray, 'index.db'), 'x')
+    const result = f.run(['remove', f.worktree])
+    assert.equal(result.status, 2, `无记录必须跳过而不是删：${result.stdout}\n${result.stderr}`)
+    assert.match(result.stderr, /is unrecorded/)
+    assert.equal(existsSync(stray), true, '不能误删没有归属记录的目录')
+  } finally { f.cleanup() }
+})
+
+test('gc 只删同仓孤儿，跨仓与有记录的目录一律保留（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-gc')
+  try {
+    assert.equal(f.run(['init', f.worktree]).status, 0)
+    const [own] = readdirSync(f.home)
+    // 造一个同仓孤儿（记录指向已不存在的路径）与一个跨仓条目。
+    const orphan = join(f.home, 'gone-11111111')
+    mkdirSync(orphan, { recursive: true })
+    // 记录里的仓根按真实路径写（工具 writeRecord 也是 realpath 归一后才落盘）。
+    const realRepo = realpathSync(f.repo)
+    writeFileSync(join(orphan, 'worktree.path'), join(f.dir, 'already-deleted'))
+    writeFileSync(join(orphan, 'repo.root'), realRepo)
+    const foreign = join(f.home, 'other-22222222')
+    mkdirSync(foreign, { recursive: true })
+    writeFileSync(join(foreign, 'worktree.path'), join(f.dir, 'other-place'))
+    writeFileSync(join(foreign, 'repo.root'), join(f.dir, 'another-repo'))
+    const result = f.run(['gc'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const left = readdirSync(f.home).sort()
+    assert.deepEqual(left, [own, 'other-22222222'].sort(), '只该回收同仓孤儿')
+    assert.match(result.stdout, /"removed":\["gone-11111111"\]/)
+  } finally { f.cleanup() }
+})
+
+test('仓内 sag-worktree.mjs 优先于 PATH 里的旧脚本（Issue #4068）', () => {
+  const f = sagFixture('omnimux-sag-prefer-repo')
+  try {
+    const dir = f.worktree('prefer-repo')
+    // 不设 SAG_WORKTREE_BIN，解析应落到仓内 scripts/sag-worktree.mjs；SAG_WT_HOME 指向
+    // 临时目录，保证绝不碰本机真实索引。
+    const result = f.run(['remove', 'prefer-repo', '--force'], {
+      SAG_WORKTREE_BIN: '',
+      SAG_WT_HOME: join(f.fixture, 'sag-home'),
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(existsSync(dir), false, '工作树照常删除')
+    assert.deepEqual(f.calls(), [], '仓内实现优先时，PATH 里的旧脚本不得被调用')
+    assert.match(result.stdout, /跳过清理/, '仓内实现对该路径没有归属记录，应播报跳过而不是成功')
+  } finally { f.cleanup() }
+})
+
 test('清理失败与「索引不属于该路径」必须给出不同输出（Issue #4060）', () => {
   const f = sagFixture('omnimux-sag-status')
   try {
     const failed = f.worktree('will-fail')
-    const failRun = f.run(['remove', 'will-fail', '--force'], { SAG_STUB_EXIT: '3' })
+    // 3 已保留给「本机没有 sag」的 blocked 语义（worktree.sh 静默跳过），通用失败用 4。
+    const failRun = f.run(['remove', 'will-fail', '--force'], { SAG_STUB_EXIT: '4' })
     assert.equal(failRun.status, 0, '清理失败不得阻断交付')
     assert.equal(existsSync(failed), false, '工作树仍要被删掉')
-    assert.match(failRun.stderr, /SAG 索引清理失败（退出码 3/, `失败必须留 stderr 警告：${failRun.stderr}`)
+    assert.match(failRun.stderr, /SAG 索引清理失败（退出码 4/, `失败必须留 stderr 警告：${failRun.stderr}`)
     assert.doesNotMatch(failRun.stdout, /已清理该工作树的隔离索引/, '失败不得报成功')
 
     const skipped = f.worktree('will-skip')

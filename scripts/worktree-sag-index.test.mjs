@@ -100,9 +100,16 @@ describe('钩子是 best-effort，且不写共享知识库 (#4060)', () => {
   })
 
   it('缺工具时静默跳过，并支持整机关闭与自定义可执行文件', () => {
-    assert.match(sagAvailable, /command -v "\$\{SAG_WORKTREE_BIN\}"/, '必须先探测 sag-worktree 是否存在')
+    assert.match(sagAvailable, /command -v "\$\{SAG_WORKTREE_BIN\}"/, '显式指定的可执行文件必须先探测是否存在')
     assert.match(sagAvailable, /OMNIMUX_SAG_INDEX:-1/, '必须提供 OMNIMUX_SAG_INDEX=0 整机关闭开关')
-    assert.match(source, /SAG_WORKTREE_BIN:-sag-worktree/, '必须允许 SAG_WORKTREE_BIN 指定可执行文件')
+    // 解析顺序：显式指定 → 仓内实现 → PATH 里的旧脚本。仓内实现按路径哈希命名数据目录，
+    // 默认依赖家目录脚本时，两个仓的同名任务会共用一份索引。
+    const explicit = sagAvailable.indexOf('SAG_WORKTREE_BIN:-')
+    const inRepo = sagAvailable.indexOf('scripts/sag-worktree.mjs')
+    const onPath = sagAvailable.indexOf('command -v sag-worktree')
+    assert.ok(explicit !== -1 && inRepo !== -1 && onPath !== -1, '三个来源都要出现在解析函数里')
+    assert.ok(explicit < inRepo, '显式指定必须排在最前面')
+    assert.ok(inRepo < onPath, '仓内实现必须优先于 PATH 里的家目录脚本')
   })
 
   it('永不直接写共享知识库，也不在建树时同步索引', () => {

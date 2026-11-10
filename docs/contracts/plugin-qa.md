@@ -48,7 +48,7 @@ subsystem: "omnimux"
 
 rc.3 起 agent preset 由壳启动时向 profile 注入 `@deepseek-ai/dsh-agent-preset` 声明行；隔离启动走 `desktop-cli.js` 绕过壳，因此准备器按壳的同一套规则（跳过上游已声明 id、丢弃宿主解析不到的包行但放过 `cordis:` 内建别名、裁掉 rc.3 拒绝的 subagent 字段）在一次性隔离 profile 里自行声明，只写该私有 profile，不触碰共享 Dev profile。
 
-语义检索索引同样按工作树隔离：每个任务工作树各自持有 `SAG_DATA_DIR`（由开发机上的 `sag-worktree` 管理），索引在第一次检索时惰性建立，工作树被 `ship` / `remove` / `clean` 删除时由 `worktree.sh` 顺带清理，缺该工具时静默跳过。主检出不得把 `.worktrees/` 并进自己的索引——SAG 以仓库根为根扫描时会跳过点开头目录，并进来的结果是不可检索的 `excluded`；`.sagignore` 随版本库分发，保证每个工作树用同一套排除规则（[#4060 spec](../../specs/4060-sag-workspace-index.spec.md)）。
+语义检索索引同样按工作树隔离：每个任务工作树各自持有 `SAG_DATA_DIR`（由仓内 `scripts/sag-worktree.mjs` 管理，数据目录名 = 文件夹名 + 工作树绝对路径哈希，删除前核对归属，孤儿回收只在同仓且路径确实消失时进行），索引在第一次检索时惰性建立，工作树被 `ship` / `remove` / `clean` 删除时由 `worktree.sh` 顺带清理，缺该工具时静默跳过。主检出不得把 `.worktrees/` 并进自己的索引——SAG 以仓库根为根扫描时会跳过点开头目录，并进来的结果是不可检索的 `excluded`；`.sagignore` 随版本库分发，保证每个工作树用同一套排除规则（[#4060 spec](../../specs/4060-sag-workspace-index.spec.md)）。
 
 现有 `scripts/test-env-bootstrap.mjs` 的 `startTestEnvironment({ root, mode })` 是兼容准备路径，`root` 必须是本仓 `.worktrees/` 内真实双向登记的直接任务工作树；创建源码工作树本身不读取或复制凭据。调用者负责在 `finally` 中等待 `cleanup()`，只将脱敏 `summary` 写入证据。启动就绪不等于业务验收通过，现有完整装配也不等于新用户安装。
 
