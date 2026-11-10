@@ -3,23 +3,24 @@ import { RecordsTable } from './RecordsTable.jsx'
 import { GridView } from './GridView.jsx'
 
 export function PublishBatchBar(props) {
-  const { t, selectedCount, totalFiltered, onToggleAll, onBatchRetry, onBatchDeleteDrafts, onExitBatch } = props
+  const { t, selectedCount, totalFiltered, isBatchMode, onToggleAll, onBatchRetry, onBatchDeleteDrafts, onExitBatch } = props
   const isAllSelected = selectedCount > 0 && selectedCount === totalFiltered
+  const empty = selectedCount === 0
   return (
     <div className="omnimux-publish-batch-bar">
-      <span>已选 {selectedCount} 项</span>
+      <span>{t('action.selectedCount').replace('{count}', String(selectedCount))}</span>
       <div className="omnimux-publish-batch-actions">
-        <Button size="xs" variant="outline" onClick={() => onToggleAll(!isAllSelected)}>
-          {isAllSelected ? '取消全选' : t('action.selectAll')}
+        <Button size="xs" variant="outline" disabled={totalFiltered === 0} onClick={() => onToggleAll(!isAllSelected)}>
+          {isAllSelected ? t('action.clearAll') : t('action.selectAll')}
         </Button>
-        <Button size="xs" variant="outline" onClick={onBatchRetry}>
+        <Button size="xs" variant="outline" disabled={empty} onClick={onBatchRetry}>
           {t('action.batchRetry')}
         </Button>
-        <Button size="xs" variant="outline" onClick={onBatchDeleteDrafts}>
+        <Button size="xs" variant="outline" disabled={empty} onClick={onBatchDeleteDrafts}>
           {t('action.batchDeleteDrafts')}
         </Button>
         <Button size="xs" variant="ghost" onClick={onExitBatch}>
-          {t('action.exitBatch')}
+          {isBatchMode ? t('action.exitBatch') : t('action.clearSelection')}
         </Button>
       </div>
     </div>
@@ -69,16 +70,21 @@ export function PublishViewContent(props) {
   return renderGrid(props)
 }
 
+export function shouldShowBatchBar(isBatchMode, selectedCount) {
+  return Boolean(isBatchMode) || selectedCount > 0
+}
+
 export function PublishViewport(props) {
   const { toastMsg, isBatchMode, selectedIds, filteredRecords, batchActions } = props
   return (
     <main className="omnimux-publish-viewport">
       {toastMsg ? <div className="omnimux-publish-alert">{toastMsg}</div> : null}
-      {isBatchMode ? (
+      {shouldShowBatchBar(isBatchMode, selectedIds.size) ? (
         <PublishBatchBar
           t={props.t}
           selectedCount={selectedIds.size}
           totalFiltered={filteredRecords.length}
+          isBatchMode={isBatchMode}
           onToggleAll={batchActions.onToggleAll}
           onBatchRetry={batchActions.onBatchRetry}
           onBatchDeleteDrafts={batchActions.onBatchDeleteDrafts}

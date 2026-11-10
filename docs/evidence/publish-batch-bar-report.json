@@ -1,0 +1,45 @@
+{
+  "task": "Issue #4051",
+  "total": 6,
+  "failed": 0,
+  "assertions": [
+    {
+      "name": "未选中时批量栏隐藏",
+      "pass": true,
+      "detail": "false"
+    },
+    {
+      "name": "选中一项即显示批量栏",
+      "pass": true,
+      "detail": "true"
+    },
+    {
+      "name": "批量栏显示已选数量",
+      "pass": true,
+      "detail": "已选 2 项全选批量重试失败批量删除草稿取消选择"
+    },
+    {
+      "name": "批量栏有批量重试",
+      "pass": true,
+      "detail": "retry"
+    },
+    {
+      "name": "批量栏有批量删除草稿",
+      "pass": true,
+      "detail": "delete"
+    },
+    {
+      "name": "批量栏有取消选择",
+      "pass": true,
+      "detail": "clear"
+    }
+  ],
+  "pass": true,
+  "screenshot": "docs/evidence/publish-batch-bar.png",
+  "screenshotBytes": 15331,
+  "url": "http://127.0.0.1:62746/",
+  "chrome": "Google Chrome 157.0.8103.39",
+  "bundleSha256": "0c94b2649da1fa16f5eb5b9b22b46e49478125306d776b5b3468260a82886c4b",
+  "headSha": "34fc25e911c517060ffa57341c680a9defebfe44",
+  "ranAt": "2026-11-10T12:10:08.336Z"
+}
