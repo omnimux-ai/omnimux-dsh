@@ -1,0 +1,35 @@
+{
+  "task": "Issue #4058",
+  "total": 4,
+  "failed": 0,
+  "assertions": [
+    {
+      "name": "统计草稿与失败记录",
+      "pass": true,
+      "detail": "{\"draftCount\":1,\"failedCount\":1}"
+    },
+    {
+      "name": "草稿选择显示删除草稿",
+      "pass": true,
+      "detail": "已选 1 项全选批量删除草稿取消选择"
+    },
+    {
+      "name": "失败选择显示批量重试",
+      "pass": true,
+      "detail": "已选 1 项全选批量重试失败取消选择"
+    },
+    {
+      "name": "无可操作时给说明",
+      "pass": true,
+      "detail": "已选 1 项全选所选记录暂无可批量操作取消选择"
+    }
+  ],
+  "pass": true,
+  "screenshot": "docs/evidence/publish-batch-actions.png",
+  "screenshotBytes": 23297,
+  "url": "http://127.0.0.1:56202/",
+  "chrome": "Google Chrome 157.0.8103.39",
+  "bundleSha256": "8ce3a90e2012bc1a7532702c1999b934d9cd4d563a3f7e446e0c0f06b03b947c",
+  "headSha": "977725bc228dd2dce6e4d66e282b31ea198890b1",
+  "ranAt": "2026-11-10T13:04:28.429Z"
+}

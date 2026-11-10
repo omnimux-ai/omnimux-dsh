@@ -126,7 +126,36 @@ const CSS = `
   border-radius: 8px;
   font-size: 13px;
 }
-.omnimux-publish-batch-actions { display: flex; gap: 8px; }
+.omnimux-publish-batch-actions { display: flex; gap: 8px; align-items: center; }
+.omnimux-publish-batch-note {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary, #94a3b8);
+}
+.omnimux-publish-toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  max-width: min(560px, calc(100vw - 48px));
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.16));
+  background: var(--dsw-alias-bg-elevated, #1c1c1f);
+  color: var(--dsw-alias-label-primary, #ffffff);
+  font-size: 13px;
+  line-height: 18px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
+  animation: omnimux-publish-toast-in 0.14s ease-out;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@keyframes omnimux-publish-toast-in {
+  from { opacity: 0; transform: translate(-50%, -6px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
 .omnimux-publish-view-switcher { display: flex; gap: 2px; }
 
 /* Composer and detail stay inside the workbench stage. */

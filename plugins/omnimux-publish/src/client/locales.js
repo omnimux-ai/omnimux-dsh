@@ -25,6 +25,7 @@ export const zh = {
   'action.clearSelection': '取消选择',
   'action.selectedCount': '已选 {count} 项',
   'action.clearAll': '取消全选',
+  'action.noBatchActions': '所选记录暂无可批量操作',
   'action.selectAll': '全选',
   // 视图与工具
   'view.grid': '网格视图',
@@ -265,6 +266,7 @@ export const en = {
   'action.clearSelection': 'Clear selection',
   'action.selectedCount': '{count} selected',
   'action.clearAll': 'Clear all',
+  'action.noBatchActions': 'Nothing to batch for the selected records',
   'action.selectAll': 'Select All',
   'view.grid': 'Grid View',
   'view.table': 'Table View',
