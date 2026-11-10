@@ -33,11 +33,14 @@ export const QUICK_SHORTCUTS_CSS = `
   align-items: center;
   justify-content: center;
   gap: 6px 24px;
-  /* 与输入框卡同宽：宿主 InputBar 根节点已用 --dsh-composer-side-clearance（16px/边）
-     给卡片让出左右留白，卡片本身只封顶 680px。这一排在同一 padded 根内，直接用
-     100% 撑满父内容（= 卡片宽度），再封顶 680px，即与卡片同宽；不要再额外减
-     2×clearance，否则会比卡片左右各窄 16px。 */
-  width: min(680px, 100%);
+  /* 与输入框卡同宽：上限取卡片最大宽，窄列下再各让出宿主给输入框的侧边清除量，
+     否则这一排会比输入框左右各宽出 12px（680px 令牌统一，窄列实测同宽）。
+     注意这是**同一个令牌 + 同一条清除量**的第二次求值，与卡片自身 max-width 的那次求值
+     逐宽度同解（720–1600px 共 45 个宽度实测宽差恒为 0），所以不要再给这一排换宽度来源。 */
+  width: min(
+    var(--dsh-composer-card-max-width, 680px),
+    calc(100% - 2 * var(--dsh-composer-side-clearance, 16px))
+  );
   margin: 0 auto;
   padding: 0;
 }
