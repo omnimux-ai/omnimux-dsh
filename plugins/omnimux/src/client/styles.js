@@ -388,6 +388,27 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
   flex-direction: column;
   gap: 20px;
 }
+.omnimux-settings-savebar {
+  position: sticky;
+  top: 8px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-elevated);
+  box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-1);
+}
+.omnimux-settings-savebar__label {
+  margin-right: auto;
+  min-width: 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
 .omx-runtime-section {
   display: flex;
   flex-direction: column;
