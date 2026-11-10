@@ -1717,13 +1717,20 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
 .omnimux-quota-gate-icon { display: grid; place-items: center; width: 32px; height: 32px; margin-bottom: 16px; border-radius: 50%; background: var(--dsw-alias-label-warning); color: var(--dsw-alias-bg-elevated); font-weight: 700; }
 .omnimux-quota-gate-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-/* ── Defensive hiding of official StatsLine in composer dock ── */
+/* ── Defensive hiding of official StatsLine in composer dock ──
+   StatsLine 占位恒在 slot conversation.composer.dock 内，其可见根元素类名后缀为 _anchor；
+   不同宿主构建的哈希前缀会变（如 K-8v-a_anchor），故按 slot + 结构匹配，不依赖前缀。
+   保留旧哈希选择器作兼容。 */
 [class*="StatsLine_root"],
-.FJxK0a_root {
+.FJxK0a_root,
+[data-slot="conversation.composer.dock"] [class*="_anchor"] {
   display: none !important;
 }
 
-/* ── Defensive hiding of official ContextMeter (token usage progress ring) in composer ── */
+/* ── Defensive hiding of official ContextMeter (token usage progress ring) in composer ──
+   部分宿主回归里 .JdJrwG_root 的隐藏会被更高/更后的规则覆盖，用 html body 提升特异性压过。 */
+html body [class*="JdJrwG_root"],
+html body [class*="ContextMeter_root"],
 .JdJrwG_root,
 [class*="ContextMeter_root"],
 [data-composer-card] [class*="trailing"] > span:has(button[aria-label*="上下文已用"]),
