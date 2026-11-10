@@ -56,9 +56,9 @@
 - **硬性门禁卡点 (UI04)**：由 `scripts/guard-ui-rules.mjs` 与 CI `scripts/scan-ui-gates.mjs` 自动强校验，违规代码在编辑时被 PreToolUse Hook 打断，在 CI 时直接阻断构建。特化场景须使用 `// exempt-ui04 <业务原因>`。
 
 ### 2.6a 输入框宽度基准（Composer Width）
-- **新会话欢迎页输入框**：顶部未吸底态与滚动吸底态输入框及工作区选择行严格统一锁定 **`680px`** 紧凑黄金比例——`max-width: min(680px, calc(100% - 24px))!important`，保持优雅水平居中；顶部到底部 100% 绝对等宽。
+- **新会话欢迎页输入框**：顶部未吸底态与滚动吸底态输入框及工作区选择行严格统一锁定 **`680px`** 紧凑黄金比例，并保持优雅水平居中、顶部到底部绝对等宽。左右留白对齐官方原生：由宿主 `InputBar` 的 `--dsh-composer-side-clearance`（16px/边）承担，**不得再叠加 `calc(100% - 24px)` 造成双重收缩**——卡片 `max-width: 680px!important`，工作区行 `width: calc(100% - 32px)!important; max-width: 680px!important`（行不在被 padding 的 InputBar 内，需自身让出 16px/边）。
 - **吸底 Dock 上限**：`DOCK_MAX_WIDTH = 680`（`session-guide/useComposerDocking.js` 单源）。
-- **严禁**：任何后续任务或 Agent 以「对齐宿主聊天气泡底座」为由改宽（780px / 952px / `100%` / `none`）；吸底状态的宽度计算必须走同一 680px 令牌，严禁 fallback 到旧的 952px。
+- **严禁**：任何后续任务或 Agent 以「对齐宿主聊天气泡底座」为由改宽（780px / 952px / `none`）；吸底状态的宽度计算必须走同一 680px 令牌，严禁 fallback 到旧的 952px。
 
 ### 2.6 WCAG AA 无障碍对比度（Accessibility & Contrast）
 - 正文及关键交互文本对背景的对比度必须 ≥ **4.5:1**。

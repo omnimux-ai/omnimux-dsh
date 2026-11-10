@@ -46,7 +46,9 @@ body[data-ds-dark-theme] {
 /* 输入框与工作区选择行独立收敛：优雅居中，680px 紧凑黄金打字宽度，顶部与吸底态完全同宽 */
 [data-omnimux-starter-host] [data-composer-card] {
   width:100%!important;
-  max-width:min(680px, calc(100% - 24px))!important;
+  /* 宽度交给宿主 InputBar 的 --dsh-composer-side-clearance（16px/边）承担左右留白，
+     这里只保留 680px 紧凑上限；不再叠加额外的百分比二次收缩。 */
+  max-width:680px!important;
   margin-inline:auto!important;
 }
 /* 素材导轨贴合输入框内壁，首张卡片由自身 padding-left: 12px 严格与底栏加号按钮垂直共线靠左对齐 */
@@ -70,8 +72,10 @@ body[data-ds-dark-theme] {
    注入顺序不保证（Issue 3868 实测通用规则赢，行宽变成原生 920、左移 120）。
    多一个属性选择器让本规则在两种注入顺序下都稳定胜出。 */
 [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
-  width:100%!important;
-  max-width:min(680px, calc(100% - 24px))!important;
+  /* 与输入框卡片同宽同左缘：卡片靠宿主 16px 侧边留白收边；行是同级元素（不在
+     被 padding 的 InputBar 内），需自身再让出 16px/边，故整体宽度减 32px。 */
+  width:calc(100% - 32px)!important;
+  max-width:680px!important;
   margin-inline:auto!important;
 }
 
@@ -95,7 +99,7 @@ html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="t
   padding-bottom:0!important;
   padding-top:0!important;
   padding-inline:0!important;
-  --dsh-composer-side-clearance:12px!important;
+  --dsh-composer-side-clearance:16px!important;
 }
 html[data-omnimux-split-compact] [data-omnimux-starter-host] [class*="composerStack"],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [class*="composerStack"],
@@ -119,15 +123,21 @@ html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="t
 html[data-omnimux-split-compact] [data-omnimux-starter-host] [data-composer-card],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [data-composer-card],
 html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) [data-omnimux-starter-host] [data-composer-card],
-html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) [data-omnimux-starter-host] [data-composer-card],
+html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) [data-omnimux-starter-host] [data-composer-card] {
+  width:100%!important;
+  /* 分栏/紧凑下左右留白交给宿主 --dsh-composer-side-clearance（16px/边），
+     卡片只保留 680px 紧凑上限，不再叠加 calc(100% - 24px) 造成双重收缩。 */
+  max-width:680px!important;
+  margin-inline:auto!important;
+}
+/* 宽度铁律：工作区选择行与输入框同宽 680px（Issue 2830），顶部/吸底态一致。
+   行不在被 padding 的 InputBar 内，需自身让出 16px/边，与卡片同宽同左缘。 */
 html[data-omnimux-split-compact] [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
 html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
 html[data-omnimux-rightbar-open="true"]:not([data-omnimux-rightbar-fullscreen="true"]) [class*="frame"]:not([data-rightbar-collapsed="true"]) [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
-  width:100%!important;
-  /* 宽度铁律：工作区选择行与输入框同宽 680px（Issue 2830，提交 0b917e92e），
-     顶部未吸底态与滚动吸底态严格一致。原 952px 原生 token 封顶已废。 */
-  max-width:min(680px, calc(100% - 24px))!important;
+  width:calc(100% - 32px)!important;
+  max-width:680px!important;
   margin-inline:auto!important;
 }
 html[data-omnimux-split-compact] [data-phase][data-omnimux-starter-host] [class*="heroWorkspaceRow"],
