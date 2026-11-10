@@ -117,3 +117,37 @@ test('#4048 阻断3：裁剪后保留空槽键，展示/提交不出现「显示
   assert.equal(selected.length, 1, '提交侧必须消费同一条');
   assert.equal(selected[0].occupant.edgeId, 'e-ref', '显示=提交一致');
 });
+
+test('#4048 阻断1b：无 feed 裁剪后保持未初始化，重新连线可在数据层自动装填', () => {
+  const target = {
+    id: 'target', type: 'material', position: { x: 0, y: 0 },
+    data: {
+      materialType: 'video', nodeKind: 'generate', status: 'empty', inputBindingVersion: 1, prompt: 'p',
+      params: { model: 'wan-3.0', operation: 'video_multi_ref' },
+      slotBindings: { first_frame: [{ sourceNodeId: 'upstream', edgeId: 'e-ref', outputId: 'o', pinned: false }] },
+    },
+  };
+  const first = recomputeCanvasSlots(target, { nodes: [target], edges: [] }, { catalog: videoCatalog() });
+  assert.ok(!Object.hasOwn(first.data.slotBindings ?? {}, 'first_frame'), '旧槽位键必须移除');
+  assert.equal((first.data.slotBindings?.reference_images ?? []).length, 0, '无 feed 时不得凭空装填');
+
+  const second = recomputeCanvasSlots(first, { nodes: [upstream, first], edges: [edge] }, { catalog: videoCatalog() });
+  assert.equal((second.data.slotBindings?.reference_images ?? []).length, 1, '重新连线后数据层应自动装填');
+});
+
+test('#4048 Q2：用户显式空数组清空不被自愈覆盖', () => {
+  const target = {
+    id: 'target', type: 'material', position: { x: 0, y: 0 },
+    data: {
+      materialType: 'video', nodeKind: 'generate', status: 'empty', inputBindingVersion: 1, prompt: 'p',
+      params: { model: 'wan-3.0', operation: 'video_multi_ref' },
+      slotBindings: {
+        reference_images: [],
+        first_frame: [{ sourceNodeId: 'upstream', edgeId: 'e-ref', outputId: 'o', pinned: false }],
+      },
+    },
+  };
+  const result = recomputeCanvasSlots(target, { nodes: [upstream, target], edges: [edge] }, { catalog: videoCatalog() });
+  assert.deepEqual(result.data.slotBindings?.reference_images ?? [], [], '用户显式清空的空数组不得被 autoFill 覆盖');
+  assert.ok(!Object.hasOwn(result.data.slotBindings ?? {}, 'first_frame'), '失效槽位键应移除');
+});

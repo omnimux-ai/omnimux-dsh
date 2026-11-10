@@ -99,7 +99,7 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   let prunedAny = false;
   if (explicit) {
     const source = explicit;
-    const next: SlotBindings = Object.fromEntries(Object.entries(source).map(([slot, occupants]) => {
+    const next: SlotBindings = Object.fromEntries(Object.entries(source).flatMap(([slot, occupants]) => {
       const kept = occupants
         .filter((occupant) => {
           const keep = currentVersion ? shouldKeepOccupant(slot, occupant) : (!modeChanged || occupant.pinned);
@@ -107,8 +107,11 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
           return keep;
         })
         .map((occupant) => ({ ...occupant }));
-      return [slot, kept] as const;
-    }).filter(([, occupants]) => occupants.length > 0));
+      // Preserve an explicit empty array (the user cleared that slot); drop a slot only when
+      // pruning removed its last real occupant so no `{slot: []}` residue remains.
+      if (kept.length === 0 && occupants.length > 0) return [];
+      return [[slot, kept] as const];
+    }));
     for (const conflict of keptConflicts) {
       const occupants = next[conflict.slot] ??= [];
       if (!occupants.some((item) => item.edgeId === conflict.occupant.edgeId)) occupants.push({ ...conflict.occupant });
@@ -126,11 +129,14 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
     }
     explicit = next;
   }
-  // If pruning consumed every explicit occupant, treat the node as "not initialized" so the
-  // same auto-fill is persisted for both the display and submission readers (and later
-  // reconnections can auto-fill again). A real user clear is `{}` with prunedAny=false and
-  // is left untouched.
-  if (currentVersion && prunedAny && explicit && Object.keys(explicit).length === 0) explicit = undefined;
+  // If pruning removed every explicit occupant and left no user-clear key, restore the
+  // "not initialized" state instead of persisting `{}` (which display and submission would
+  // interpret differently). A real user clear keeps its `{slot: []}` keys and is untouched.
+  let resetToUninitialized = false;
+  if (currentVersion && prunedAny && explicit && Object.keys(explicit).length === 0) {
+    explicit = undefined;
+    resetToUninitialized = true;
+  }
   const standbyIds = Array.isArray(node.data.slotStandbyEdgeIds) ? node.data.slotStandbyEdgeIds.filter((id): id is string => typeof id === 'string') : [];
   // A missing V1 `slotBindings` means "not initialized yet", not "the user cleared every slot": the display
   // side self-heals such a node by auto-filling, so the store must persist that same fill. Leaving `{}` behind
@@ -142,13 +148,17 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   const fill = currentVersion
     ? (filledAnything ? selfHealed! : { bindings: explicit ?? {}, conflicts: keptConflicts })
     : explicit ? autoFillSlots(feed, layout, explicit, standbyIds) : hydrateSlotBindings(feed, layout, graph.edges.filter((edge) => edge.target === node.id));
+  // A pruned-to-empty node with no supply must stay "uninitialized" (no slotBindings key),
+  // never `{}`: the display and submission readers both auto-fill only for undefined, so they
+  // stay in agreement and a later reconnection can auto-fill again.
+  const persistedBindings = currentVersion && resetToUninitialized && !filledAnything ? undefined : fill.bindings;
   const fingerprint = effectiveSlotFingerprint(raw, layout, fill.bindings, fill.conflicts, currentVersion ? 1 : undefined);
   const match = operation && permitted ? matchOperationInputs(operation, fingerprint) : undefined;
   const reasonCodes = !view.available ? ['catalog_unavailable'] : !permitted ? ['not_listed'] : !model ? ['unknown_model']
     : !operation ? ['operation_incompatible'] : [...(match?.rejections ?? []), ...(match?.pending ?? [])].map((item) => item.code);
   if (fill.conflicts.length) reasonCodes.push('role_conflict');
   return { ...node, data: { ...node.data, params, ...(autoDerived ? { autoOperationId: autoDerived } : {}),
-    slotBindings: fill.bindings, slotConflicts: fill.conflicts,
+    slotBindings: persistedBindings as SlotBindings, slotConflicts: fill.conflicts,
     compat: { status: operation && permitted ? 'ok' : 'configuration_error', acceptsCurrentInputs: match?.accepts ?? false,
       readyToSubmit: Boolean(match?.ready), operation: operation?.id, reasonCodes,
       fingerprint: fingerprint.signature, catalogFingerprint: catalog?.fingerprint ?? '' } } };

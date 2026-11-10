@@ -13,20 +13,20 @@
 - 数据层：`plugins/omnimux-workflow/src/shared/graph/canvasSlotRecompute.ts`
 - 表现层：`plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/SlotWells/SlotWells.tsx`
 - 测试：`slotSubmissionConsistency.test.mjs`（新增跨模式残留清理用例）、`slotInteractionRefinement.test.mjs`（改为断言任何状态都不渲染 `wf-slot-well__state`）
-- 不改动：hover 预览、提交/执行内核、模型契约。
+- 不改动：提交/执行内核、模型契约；hover 预览仅新增 inactive 原因展示。
 
 ## 四、技术方案 (Technical Design)
 1. **数据层**：在 V1 `explicit` 过滤处，未固定（`pinned=false`）占位者保留条件改为：
    `slotExistsInLayout && isLiveOccupant(occupant)`；`pinned=true` 仍保留（既有 invalid-intent 语义）。
    `slotExistsInLayout = layout.slots.some(spec => spec.slot === slotName)`。
-   裁剪后保留空数组，维持「显示=提交」一致。
+   裁剪导致无任何显式占用时移除 `slotBindings`（回到未初始化），由重算 `autoFillSlots` 统一落盘，展示与提交同源读取；用户显式空数组保留，不被自愈覆盖。
 2. **表现层**：删除 `SlotWells` 的常驻 `wf-slot-well__state` 文本节点（不再按 `model.state` 渲染任何文案）。视觉状态仍由占位符（裂图/加载/文字缩略图）与 `wf-slot-well--conflict` 等样式表达；原因在 `SlotHoverPreview`。
 
 ## 五、验收标准 (Success Criteria)
-1. 构造 `text_to_video`（layout 无 reference_images）+ `slotBindings.reference_images`（pinned=false、source/edge 均存活）→ 重算后该槽位绑定为空数组，`compat.reasonCodes` 不再包含该槽位带来的 `role_conflict`。
+1. 构造 `text_to_video`（layout 无 reference_images）+ `slotBindings.reference_images`（pinned=false、source/edge 均存活）→ 重算后该槽位不再有有效占用（无 feed 时移除键/回到未初始化；有可用供给时自动装填到可接受槽位），`compat.reasonCodes` 不再包含该槽位带来的 `role_conflict`。
 2. `pinned=true` 的同槽位绑定仍保留（不破坏 invalid-intent 流程）。
 3. `SlotWells` 渲染：对 `state=invalid / inactive / pending / input_unavailable` 任一状态，均不输出 `wf-slot-well__state` 与任何「不兼容/不可用/等待中/未使用/无效」文本。
-4. 既有 `SlotHoverPreview` 原因展示与无障碍标签不变。
+4. `SlotHoverPreview` 对 invalid/inactive/pending 展示原因，不影响槽位区布局与无障碍标签。
 5. 定向 + 包级全量测试、typecheck 全绿。
 
 ## 六、边界约束 (Boundaries)
