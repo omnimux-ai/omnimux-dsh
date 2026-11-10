@@ -178,7 +178,11 @@ route: `omnimux` is declared there as a configurable provider, and
 `providers.omnimux.models` is what the app's selectors render. Membership is
 maintained at runtime by `plugins/omnimux/src/catalog/composer-sync.js`, which
 writes the composed list once settings are ready and again whenever the
-visibility setting changes.
+visibility setting changes, the catalog changes, or the user runs the manual
+catalog refresh. If the host does not expose `llm-pi-ai` through
+`settings.describe()`, the sync falls back to the official `configEditor` entry
+and replaces only `providers.omnimux.models`; credential, address, protocol and
+other provider fields are preserved.
 
 - **Field truth** — the gateway contract's `executionProfile` projection. A
   model's known context window, output cap, modalities, tool/streaming/caching

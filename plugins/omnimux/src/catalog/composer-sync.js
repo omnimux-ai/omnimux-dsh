@@ -66,13 +66,79 @@ export function providerModels(layer, provider = OMNIMUX_PROVIDER) {
  *
  * @param {{
  *   settings: { describe?: Function, update?: Function },
+ *   configEditor?: { entries?: Function, edit?: Function },
  *   log?: (event: string, detail?: Record<string, unknown>) => void,
  * }} deps
  * @returns {{ sync: (input: { hubText?: unknown, hiddenIds?: unknown }) => Promise<ComposerSyncResult> }}
  */
 export function createComposerListSync(deps) {
   const settings = deps?.settings;
+  const configEditor = deps?.configEditor;
   const log = typeof deps?.log === 'function' ? deps.log : () => {};
+
+  function configEntry() {
+    if (!configEditor || typeof configEditor.entries !== 'function') return null;
+    try {
+      const rows = configEditor.entries();
+      return Array.isArray(rows)
+        ? rows.find((row) => row && row.options && row.options.id === PI_AI_NAMESPACE) ?? null
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Fallback for hosts where `settings.describe()` does not expose the
+   * `llm-pi-ai` form. The official config editor still owns the active profile
+   * entry; editing that entry preserves the provider's credential/address
+   * fields and writes only the model list.
+   *
+   * @param {{ hubText?: unknown, hiddenIds?: unknown }} input
+   * @returns {Promise<ComposerSyncResult>}
+   */
+  async function syncViaConfigEditor(input) {
+    if (!configEditor || typeof configEditor.edit !== 'function') {
+      return { written: false, reason: 'namespace-absent' };
+    }
+    const entry = configEntry();
+    if (!entry) return { written: false, reason: 'namespace-absent' };
+
+    try {
+      const current = providerModels(entry.options?.config);
+      const target = composeComposerModels({
+        hubText: input?.hubText,
+        shippedModels: current,
+        hiddenIds: input?.hiddenIds,
+      });
+      if (target.length === 0) return { written: false, reason: 'hidden-all' };
+      if (sameModelList(current, target)) {
+        return { written: false, reason: 'unchanged', modelIds: target.map((row) => String(row.id)) };
+      }
+      await configEditor.edit(entry, (raw) => {
+        const config = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+        const providers = config.providers && typeof config.providers === 'object' && !Array.isArray(config.providers)
+          ? config.providers
+          : {};
+        const previous = providers[OMNIMUX_PROVIDER] && typeof providers[OMNIMUX_PROVIDER] === 'object'
+          && !Array.isArray(providers[OMNIMUX_PROVIDER])
+          ? providers[OMNIMUX_PROVIDER]
+          : {};
+        return {
+          ...config,
+          providers: {
+            ...providers,
+            [OMNIMUX_PROVIDER]: { ...previous, models: target },
+          },
+        };
+      });
+      log('composer-list-written', { count: target.length, via: 'config-editor' });
+      return { written: true, reason: 'written', modelIds: target.map((row) => String(row.id)) };
+    } catch (error) {
+      log('composer-list-write-failed', { message: error instanceof Error ? error.message : String(error) });
+      return { written: false, reason: 'write-failed', error };
+    }
+  }
 
   /**
    * Bring the composer list in line with the hub. Idempotent: an already-matching
@@ -82,8 +148,12 @@ export function createComposerListSync(deps) {
    * @returns {Promise<ComposerSyncResult>}
    */
   async function sync(input) {
-    if (!settings || typeof settings.describe !== 'function' || typeof settings.update !== 'function') {
-      return { written: false, reason: 'settings-unavailable' };
+    const settingsUsable = settings
+      && typeof settings.describe === 'function'
+      && typeof settings.update === 'function';
+    if (!settingsUsable) {
+      if (!configEditor) return { written: false, reason: 'settings-unavailable' };
+      return syncViaConfigEditor(input);
     }
 
     const hubIds = catalogIds(input?.hubText);
@@ -101,7 +171,7 @@ export function createComposerListSync(deps) {
       } catch (error) {
         return { written: false, reason: 'describe-failed', error };
       }
-      if (!descriptor) return { written: false, reason: 'namespace-absent' };
+      if (!descriptor) return syncViaConfigEditor(input);
 
       const target = composeComposerModels({
         hubText: input?.hubText,
@@ -129,6 +199,10 @@ export function createComposerListSync(deps) {
       } catch (error) {
         const stale = Boolean(error && typeof error === 'object' && error.code === 'SETTINGS_CONFLICT');
         if (stale && attempt === 0) continue;
+        // A host may report the namespace in describe() but still refuse the
+        // form write. Fall back to the official profile editor before giving up.
+        const fallback = await syncViaConfigEditor(input);
+        if (fallback.written || fallback.reason === 'unchanged') return fallback;
         // A refused write leaves the previous list serving. Report it; never
         // retry with a smaller list and never clear the list to "recover".
         log('composer-list-write-failed', { message: error instanceof Error ? error.message : String(error) });

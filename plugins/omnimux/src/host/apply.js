@@ -43,7 +43,7 @@ import { createCatalogDiagnostics } from '../catalog/cloud/diagnostics.js'
 import { createGenerationProducts } from '../catalog/generation-products.js'
 import { createGenerationMapping } from '../media/generation-mapping.js'
 import { listSessionModels } from '../catalog/session-models.js'
-import { createComposerListSync } from '../catalog/composer-sync.js'
+import { createComposerListSync, PI_AI_NAMESPACE } from '../catalog/composer-sync.js'
 import { SettingsConfig } from '../settings/schema.js'
 import { readScenarioSettings } from '../settings/runtime-mode.js'
 import { mountHubHttp } from './http.js'
@@ -107,6 +107,9 @@ export function apply(ctx, config = {}) {
     home: homeDir,
     bundledDir: hub.catalog.bundledDir || undefined,
   })
+  // Set once the settings surface is ready; lets a manual catalog refresh
+  // rewrite the composer provider list without waiting for another startup.
+  let syncComposerListAfterCatalogRefresh = null;
   const catalogRefresher = createCatalogRefresher({
     live: liveCatalog,
     url: resolvePricingUrl(hub.catalog, siteBaseUrl),
@@ -116,6 +119,7 @@ export function apply(ctx, config = {}) {
     onChanged: () => {
       refreshCurrentCatalogView()
       ctx.emit?.('omnimux/model-catalog-updated')
+      syncComposerListAfterCatalogRefresh?.()
     },
   })
   // P1b: one resolution per catalog change, shared by the served catalog, the
@@ -212,7 +216,11 @@ export function apply(ctx, config = {}) {
     avatarStore,
     listCatalog,
     catalogDiagnostics,
-    refreshCatalog: () => catalogRefresher.refreshOnce(true),
+    refreshCatalog: async () => {
+      const result = await catalogRefresher.refreshOnce(true)
+      syncComposerListAfterCatalogRefresh?.()
+      return result
+    },
     hubEvents,
     mailbox,
     sessionQuery: null,
@@ -295,7 +303,8 @@ export function apply(ctx, config = {}) {
           /* logging must never break the sync */
         }
       }
-      const composerSync = createComposerListSync({ settings, log: logComposerSync })
+      const configEditor = typeof ctx.get === 'function' ? ctx.get('configEditor') : undefined
+      const composerSync = createComposerListSync({ settings, configEditor, log: logComposerSync })
       /**
        * The stored OmniMux settings. `register()` hands back a scope carrying
        * `get()`; the service read is the fallback, so a scope without it still
@@ -346,6 +355,9 @@ export function apply(ctx, config = {}) {
         }
       }
 
+      syncComposerListAfterCatalogRefresh = () => {
+        void syncComposerList(0)
+      }
       if (scope && typeof scope.watch === 'function') {
         scope.watch(() => {
           ctx.emit?.('omnimux/model-catalog-updated')
@@ -360,6 +372,9 @@ export function apply(ctx, config = {}) {
         })
         ctx.on('omnimux/model-catalog-updated', () => {
           void syncComposerList(0)
+        })
+        ctx.on('settings/document-updated', (ns) => {
+          if (ns === 'omnimux' || ns === PI_AI_NAMESPACE) void syncComposerList(0)
         })
       }
 

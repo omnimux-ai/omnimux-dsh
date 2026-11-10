@@ -26,6 +26,32 @@ function hub(...ids) {
   return ids.map((id) => ({ id, label: `Label ${id}` }))
 }
 
+/** A config-editor double for the host that cannot expose llm-pi-ai through settings.describe. */
+function fakeConfigEditor(models = [{ id: 'alpha', name: 'Alpha' }]) {
+  const state = {
+    config: {
+      providers: {
+        omnimux: {
+          apiKeyEnv: 'OMNIMUX_API_KEY',
+          baseURL: 'https://api.omnimux.ai/v1',
+          api: 'openai-completions',
+          models: structuredClone(models),
+        },
+      },
+    },
+  }
+  const writes = []
+  return {
+    state,
+    writes,
+    entries: () => [{ options: { id: PI_AI_NAMESPACE, config: state.config } }],
+    edit: async (entry, change) => {
+      state.config = change(structuredClone(entry.options.config))
+      writes.push(structuredClone(state.config))
+    },
+  }
+}
+
 /**
  * A settings provider double that records writes and serves descriptors.
  * @param {{ base?: unknown, user?: unknown, revision?: number, update?: Function, describe?: Function }} [options]
@@ -243,5 +269,31 @@ describe('createComposerListSync', () => {
     assert.equal(res2.written, true)
     assert.equal(res2.reason, 'written')
     assert.deepEqual(res2.modelIds, ['alpha'])
+  })
+
+  it('falls back to configEditor when settings.describe omits llm-pi-ai', async () => {
+    const settings = fakeSettings({ describe: () => [{ ns: 'other', revision: 1 }] })
+    const configEditor = fakeConfigEditor()
+    const sync = createComposerListSync({ settings, configEditor })
+    const result = await sync.sync({ hubText: hub('alpha', 'beta') })
+    assert.equal(result.written, true)
+    assert.equal(result.reason, 'written')
+    assert.deepEqual(result.modelIds, ['alpha', 'beta'])
+    assert.deepEqual(configEditor.state.config.providers.omnimux.models.map((row) => row.id), ['alpha', 'beta'])
+    assert.equal(configEditor.state.config.providers.omnimux.baseURL, 'https://api.omnimux.ai/v1')
+  })
+
+  it('falls back to configEditor when the settings form refuses the write', async () => {
+    const settings = fakeSettings({
+      base: baseLayer([{ id: 'alpha', name: 'Alpha' }]),
+      update: async () => { throw new Error('Plugin entry "llm-pi-ai" has no volatile fields') },
+    })
+    const configEditor = fakeConfigEditor()
+    const sync = createComposerListSync({ settings, configEditor })
+    const result = await sync.sync({ hubText: hub('alpha', 'beta') })
+    assert.equal(result.written, true)
+    assert.equal(result.reason, 'written')
+    assert.deepEqual(result.modelIds, ['alpha', 'beta'])
+    assert.equal(configEditor.state.config.providers.omnimux.apiKeyEnv, 'OMNIMUX_API_KEY')
   })
 })
