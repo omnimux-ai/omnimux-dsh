@@ -124,13 +124,45 @@ export function useStagedConfigScope(scope) {
     user: applyStagedUser(raw.user, staged),
   }), [raw, staged])
 
+  /**
+   * Adopt the revision a page-owned server action just wrote. Some settings
+   * fields (the local-agent selector) are persisted by a Host route before a
+   * client draft is staged; waiting for the settings mirror keeps the next
+   * save's revision fence current instead of reporting a false conflict.
+   */
+  const adoptRevision = useCallback(async () => {
+    if (!scope || typeof scope.getSnapshot !== 'function') return
+    const initial = scope.getSnapshot()?.revision
+    if (initial === undefined) return
+    if (baselineRevision.current !== initial) {
+      baselineRevision.current = initial
+      return
+    }
+    await new Promise((resolve) => {
+      let settled = false
+      let unsubscribe = () => {}
+      const finish = () => {
+        if (settled) return
+        settled = true
+        unsubscribe()
+        baselineRevision.current = scope.getSnapshot()?.revision ?? baselineRevision.current
+        resolve()
+      }
+      unsubscribe = scope.subscribe?.(() => {
+        if (scope.getSnapshot()?.revision !== initial) finish()
+      }) ?? (() => {})
+      setTimeout(finish, 800)
+    })
+  }, [scope])
+
   const draftScope = useMemo(() => ({
     getSnapshot: () => snapshot,
     subscribe: (listener) => (scope && typeof scope.subscribe === 'function' ? scope.subscribe(listener) : () => {}),
     set,
     unset,
     mutate,
-  }), [mutate, scope, set, snapshot, unset])
+    adoptRevision,
+  }), [adoptRevision, mutate, scope, set, snapshot, unset])
 
   const save = useCallback(async () => {
     if (saving || staged.size === 0) return false
