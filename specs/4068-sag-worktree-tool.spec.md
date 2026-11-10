@@ -50,7 +50,10 @@ Node CLI，子命令与旧脚本保持一致（`init` / `status` / `search` / `l
 | 8 | `worktree.sh` 解析顺序 | 显式 `SAG_WORKTREE_BIN` 优先；未指定时优先仓内实现，其次 PATH；缺 `sag` 时交付照常、退出码不变 |
 | 9 | 本机没有 `sag` | `init` 报 blocked（退出码 3）且不写任何记录（`worktree-delivery.test.mjs` 有端到端用例） |
 | 10 | 配置缺失（`sag config` 无 url/model） | 整洁单行报错、退出码 1，且**不留下**归属记录 |
-| 11 | 软链路径（如 `/tmp` → `/private/tmp`） | 目录被删前后哈希一致，索引不会变成永久孤儿 |
+| 11 | 软链路径（如 `/tmp` → `/private/tmp`） | 目录被删前后哈希一致，索引不会变成永久孤儿；用例自建软链父目录，不依赖系统 tmpdir 是否含软链（Linux CI 同样能区分新旧实现） |
+| 12 | `sag config --url` 失败且已建数据目录 | 回收该目录，下次 `init` 仍是配置失败而不是「归属不符」，保持可重试 |
+| 13 | `search` 在无索引时 | 自动懒建索引（写入归属记录）后执行检索 |
+| 14 | 缺少子命令参数 | 按用法错误退出 2，不抛 TypeError |
 
 ## 4. 假设
 
@@ -87,3 +90,11 @@ Node CLI，子命令与旧脚本保持一致（`init` / `status` / `search` / `l
 - `scripts/worktree-delivery.test.mjs` :: `配置缺失时 init 整洁报错且不留半套归属记录（Issue #4068）`
 
 新增用例（无原断言可削弱），用于把验收 #10 从函数层升级到 CLI 层：断言退出码 1、stderr 出现 `cannot read Jev url/model` 且不含 Node 原始堆栈、`SAG_WT_HOME` 下不出现任何数据目录。
+
+- `scripts/worktree-delivery.test.mjs` :: `配置命令失败时要回收已建的数据目录，保持可重试（Issue #4068）`
+
+新增用例（无原断言可削弱），覆盖验收 #12：断言失败后 `SAG_WT_HOME` 为空、二次 `init` 仍以 1 结束且 stderr 不含 `refuse:`（即没有退化成需要手删的死态）。
+
+- `scripts/worktree-delivery.test.mjs` :: `search 在没有索引时自动建库后执行检索（Issue #4068）`
+
+新增用例（无原断言可削弱），覆盖验收 #13：断言起点无索引、`search` 后恰好生成一份带归属记录的隔离索引。

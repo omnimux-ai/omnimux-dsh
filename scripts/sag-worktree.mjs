@@ -41,6 +41,7 @@ export function dataRoot(env = process.env) {
  * `/private/tmp` 这类软链会算出不同哈希，索引永远删不掉（评审 F1）。
  */
 export function canonicalPath(input) {
+  if (typeof input !== 'string' || input === '') return null
   try { return realpathSync(input) } catch { /* 目录已不存在，走父目录归一 */ }
   const absolute = resolve(input)
   try {
@@ -158,7 +159,7 @@ function ensureJevConfig(dir) {
   try { key = String(JSON.parse(readFileSync(join(primaryDataRoot(), 'credentials.json'), 'utf8')).jev || '') } catch { /* 无 key 时按无鉴权处理 */ }
   const args = configArgs({ url, model })
   const configured = run('sag', args, { env: { SAG_DATA_DIR: dir }, input: key })
-  if (configured.status !== 0) fail(`init failed: cannot configure isolated SAG data dir (${configured.stderr || configured.stdout || 'no output'})`)
+  if (configured.status !== 0) throw new Error(`cannot configure isolated SAG data dir (${configured.stderr || configured.stdout || 'no output'})`)
 }
 
 function init(worktreePath, env = process.env) {
@@ -177,7 +178,14 @@ function init(worktreePath, env = process.env) {
   requireSag()
   // 先确保配置可用再落归属记录：配置失败留下半套记录，会让下次 init 报「归属不符」，
   // 用户只能手工删目录（评审 F2）。
-  ensureJevConfig(dir)
+  try {
+    ensureJevConfig(dir)
+  } catch (error) {
+    // 配置失败时 sag 可能已经建了数据目录；留下「有数据无记录」会让下次 init 报
+    // 归属不符，只能手删。失败即回收，保持可重试（评审 Finding 2）。
+    rmSync(dir, { recursive: true, force: true })
+    throw error
+  }
   writeRecord(dir, wt, repoRoot)
   const localIgnore = join(wt, '.sagignore')
   if (!existsSync(localIgnore) && existsSync(join(repoRoot, '.sagignore'))) {
@@ -307,14 +315,19 @@ Env:
   SAG_WT_TYPES   extension allowlist (default: ${DEFAULT_TYPES.join(',')})
 `
 
+function requireWorktree(value, usage) {
+  if (typeof value !== 'string' || value === '') fail(`usage: ${usage}`, 2)
+  return value
+}
+
 function main(argv) {
   const [command, ...rest] = argv
   switch (command) {
-    case 'init': return init(rest[0])
-    case 'status': return status(rest[0])
+    case 'init': return init(requireWorktree(rest[0], 'sag-worktree init <worktree>'))
+    case 'status': return status(requireWorktree(rest[0], 'sag-worktree status <worktree>'))
     case 'search': return search(rest)
     case 'list': return list()
-    case 'remove': return remove(rest[0])
+    case 'remove': return remove(requireWorktree(rest[0], 'sag-worktree remove <worktree>'))
     case 'gc': return gc()
     case undefined:
     case '-h':

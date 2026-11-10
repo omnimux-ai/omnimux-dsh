@@ -1100,7 +1100,7 @@ test('OMNIMUX_SAG_INDEX=0 时完全不调用 sag-worktree（Issue #4060）', () 
  * 直接驱动仓内 CLI（`scripts/sag-worktree.mjs`）的端到端用例（Issue #4068）。
  * SAG_WT_HOME 指向临时目录，绝不触碰本机真实索引。
  */
-function cliFixture(prefix, { sagWorks = true, badConfig = false } = {}) {
+function cliFixture(prefix, { sagWorks = true, badConfig = false, configFailsAfterMkdir = false } = {}) {
   const dir = mkdtempSync(join(tmpdir(), `${prefix}-`))
   const repo = join(dir, 'repo')
   const bin = join(dir, 'bin')
@@ -1123,7 +1123,9 @@ function cliFixture(prefix, { sagWorks = true, badConfig = false } = {}) {
       '#!/bin/sh',
       'case "$1" in',
       '  --version) echo "sag 0.0.0-stub" ;;',
-      `  config) echo '${badConfig ? '{}' : '{"url":"http://stub.local","model":"stub-model"}'}' ;;`,
+      configFailsAfterMkdir
+        ? '  config) if [ "$2" = "--url" ]; then mkdir -p "$SAG_DATA_DIR"; exit 1; fi; echo \'{"url":"http://stub.local","model":"stub-model"}\' ;;'
+        : `  config) echo '${badConfig ? '{}' : '{"url":"http://stub.local","model":"stub-model"}'}' ;;`,
       '  check) echo \'{"index_ready":true,"indexed_files":42,"coverage":"included","extensions":["ts"]}\' ;;',
       '  *) exit 0 ;;',
       'esac',
@@ -1175,6 +1177,32 @@ test('配置缺失时 init 整洁报错且不留半套归属记录（Issue #4068
     assert.match(result.stderr, /cannot read Jev url\/model/, '要给人话，不要原始堆栈')
     assert.doesNotMatch(result.stderr, /\n\s+at /, '不得输出 Node 原始堆栈')
     assert.deepEqual(existsSync(f.home) ? readdirSync(f.home) : [], [], '失败不得留下归属记录')
+  } finally { f.cleanup() }
+})
+
+test('配置命令失败时要回收已建的数据目录，保持可重试（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-rollback', { configFailsAfterMkdir: true })
+  try {
+    const first = f.run(['init', f.worktree])
+    assert.equal(first.status, 1, `配置失败应以 1 结束：${first.stdout}\n${first.stderr}`)
+    assert.deepEqual(existsSync(f.home) ? readdirSync(f.home) : [], [], '失败必须回收数据目录，否则下次 init 会卡在「归属不符」')
+    // 再跑一次也不能因为残留目录被拒（说明状态是可重试的）。
+    const second = f.run(['init', f.worktree])
+    assert.equal(second.status, 1, '仍然应是配置失败，而不是「归属不符」拒绝')
+    assert.doesNotMatch(second.stderr, /refuse:/, '不得退化成需要手删的死态')
+  } finally { f.cleanup() }
+})
+
+test('search 在没有索引时自动建库后执行检索（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-search')
+  try {
+    assert.deepEqual(existsSync(f.home) ? readdirSync(f.home) : [], [], '起点没有任何索引')
+    const result = f.run(['search', f.worktree, '任意问题', '-m', '2'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const dirs = readdirSync(f.home)
+    assert.equal(dirs.length, 1, 'search 应按需懒建一份索引')
+    assert.match(dirs[0], /^wt-[0-9a-f]{8}$/)
+    assert.ok(existsSync(join(f.home, dirs[0], 'worktree.path')), '懒建后必须写入归属记录')
   } finally { f.cleanup() }
 })
 

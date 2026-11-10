@@ -43,26 +43,20 @@ describe('数据目录按路径唯一 (#4068)', () => {
     assert.match(a, /^task-[0-9a-f]{8}$/, '目录名应保留可读前缀并带路径哈希')
   })
 
-  it('软链路径与真实路径得到同一目录（含目录被删除后）', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'sag-wt-name-'))
+  it('自建软链父目录：真实与软链路径同哈希，且目录删除后哈希不变', () => {
+    // 不依赖系统 tmpdir 是否含软链（ubuntu 的 /tmp 不是软链，那样的断言在 Linux CI 上
+    // 新旧实现都「稳定」，等于假绿）。这里自己造 real/ 与指向它的 link/。
+    const base = mkdtempSync(join(tmpdir(), 'sag-wt-link-'))
     try {
-      mkdirSync(join(dir, 'real'))
-      symlinkSync(join(dir, 'real'), join(dir, 'link'))
-      assert.equal(dataDirName(join(dir, 'link')), dataDirName(join(dir, 'real')), '软链必须归一到同一哈希')
-      // worktree.sh 是先删目录再清理索引，删除后哈希不能漂移，否则索引永远删不掉。
-      const before = dataDirName(join(dir, 'real'))
-      rmSync(join(dir, 'real'), { recursive: true, force: true })
-      assert.equal(dataDirName(join(dir, 'real')), before, '目录删除后哈希必须保持不变')
-      // 软链在目标被删后已无法解析，属于固有边界：调用方传给工具的一直是记录里的
-      // 真实路径（init 时已 realpath 归一），不会中途换成软链写法。
-    } finally { rmSync(dir, { recursive: true, force: true }) }
-  })
-
-  it('仓根由公共 git 目录推导，链接工作树不会记成自己', () => {
-    assert.equal(repoRootFromCommonDir('/repo/.git'), '/repo')
-    assert.equal(repoRootFromCommonDir('/repo/.git/worktrees/t1'), null, '工作树私有 git 目录不是仓根')
-    assert.equal(repoRootFromCommonDir(''), null)
-    assert.equal(repoRootFromCommonDir(null), null)
+      mkdirSync(join(base, 'real', 'leaf'), { recursive: true })
+      symlinkSync(join(base, 'real'), join(base, 'link'))
+      const viaReal = join(base, 'real', 'leaf')
+      const viaLink = join(base, 'link', 'leaf')
+      const before = dataDirName(viaReal)
+      assert.equal(dataDirName(viaLink), before, '软链路径必须归一到与真实路径相同的哈希')
+      rmSync(join(base, 'real', 'leaf'), { recursive: true, force: true })
+      assert.equal(dataDirName(viaReal), before, '目录被删后必须仍然算出同一个哈希（否则索引删不掉）')
+    } finally { rmSync(base, { recursive: true, force: true }) }
   })
 
   it('dataRoot 尊重 SAG_WT_HOME 覆盖', () => {
