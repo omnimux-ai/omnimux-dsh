@@ -1417,16 +1417,25 @@ export const ASSETS_CSS = `
   color: var(--dsw-alias-label-tertiary);
 }
 .omnimux-assets-cloud-notice {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  max-width: min(560px, calc(100vw - 48px));
   margin: 0;
-  padding: 6px 10px;
+  padding: 9px 14px;
+  border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 8px;
   font-size: 12px;
-  background: var(--dsw-alias-bg-module-platform);
-  color: var(--dsw-alias-label-secondary);
+  background: var(--dsw-alias-bg-elevated);
+  color: var(--dsw-alias-label-primary);
+  box-shadow: var(--dsw-shadow-lv2);
   /* 资产名可以很长：截断成一行，避免通知条换行把工具区向下顶。 */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  pointer-events: none;
 }
 
 /* ---- cloud assets category rows layout (All category stream) ---- */

@@ -95,9 +95,11 @@ const STYLES = `
   color: var(--dsw-alias-label-danger); font-size: 11px; }
 .sh-merr .hint { margin-top: 4px; color: var(--dsw-alias-label-tertiary); font-size: 12px; }
 .sh-empty { text-align: center; color: var(--dsw-alias-label-tertiary); font-size: 13px; padding: 36px 0; }
-.sh-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+.sh-toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+  max-width: min(560px, calc(100vw - 48px)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   background: var(--dsw-alias-bg-elevated); border: 1px solid var(--dsw-alias-border-l2);
   padding: 9px 16px; border-radius: 8px; font-size: 13px; z-index: 1200;
+  box-shadow: var(--dsw-shadow-lv2);
   color: var(--dsw-alias-label-primary); }
 .sh-mfoot { display: flex; justify-content: flex-end; gap: 8px; }
 `

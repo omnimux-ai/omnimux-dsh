@@ -863,8 +863,13 @@ export function injectDeviceStyles() {
     /* 悬浮 Toast */
     .omx-toast-float {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: min(560px, calc(100vw - 48px));
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       background: var(--dsw-alias-bg-elevated, #1c1c1f);
       border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12));
       padding: 8px 16px;
@@ -872,7 +877,7 @@ export function injectDeviceStyles() {
       font-size: 12px;
       color: var(--dsw-alias-label-primary, #ffffff);
       z-index: 1000;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); /* exempt-ui03: 浮动提示阴影 */
+      box-shadow: var(--dsw-shadow-lv2, 0 8px 24px rgba(0, 0, 0, 0.5)); /* exempt-ui03: 浮动提示阴影 */
     }
 
     /* SaaS 科技增强：双时区胶囊与次级时区标注 */

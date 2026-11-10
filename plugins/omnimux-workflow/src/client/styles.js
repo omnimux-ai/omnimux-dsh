@@ -731,10 +731,20 @@ export const WORKFLOW_CSS = `
   stroke: currentColor;
 }
 .omx-apptab-notice {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  max-width: min(560px, calc(100vw - 48px));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 12px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  line-height: 1;
+  padding: 8px 14px;
+  border-radius: 8px;
+  line-height: 16px;
+  box-shadow: var(--dsw-shadow-lv2);
 }
 .omx-apptab-notice--info {
   background: var(--dsw-alias-bg-layer-2);
