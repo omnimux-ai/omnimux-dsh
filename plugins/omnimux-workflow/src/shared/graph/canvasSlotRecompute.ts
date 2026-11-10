@@ -3,7 +3,7 @@ import type { CanvasInputMutationState, CanvasMutationRuntimeContext, CanvasNode
 import type { MaterialType } from '../canvasTypes.ts';
 import { buildCanvasUpstreamFingerprint, readCanvasParams } from './canvasInputSources.ts';
 import { buildContractView, buildUpstreamFingerprint, isMediaInputType, matchOperationInputs, planAutoAdaptation, resolveModelView } from '../validation/compatKernel.ts';
-import { autoFillSlots, deriveSlotLayout, hydrateSlotBindings, type SlotBindings, type SlotConflict } from './feedSlot/index.ts';
+import { autoFillSlots, deriveSlotLayout, hydrateSlotBindings, type SlotBindings, type SlotConflict, type SlotOccupant } from './feedSlot/index.ts';
 import { effectiveSlotFingerprint, feedFromFingerprint } from './feedSlot/effectiveFingerprint.ts';
 import { resolveSlotOperation } from './feedSlot/resolveSlotOperation.ts';
 import { narrowCatalogByRouting } from '../validation/lineConstraints.ts';
@@ -71,9 +71,21 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   }
   const priorParams = previous ? readCanvasParams(previous) : {};
   const modeChanged = previous && (priorParams.operation !== params.operation || priorParams.model !== params.model);
+  // A V1 occupant is authoritative only while its source node and edge still exist on the
+  // canvas. Unpinned (auto-filled) occupants whose supply vanished are junk that must be
+  // pruned here, otherwise the stale binding keeps re-persisting and the node stays blocked
+  // as `input_unavailable`. Pinned occupants are user intent and are kept as an invalid
+  // conflict the user can disable/repair (matching the invalid-intent flows).
+  const liveNodeIds = new Set(graph.nodes.map((item) => item.id));
+  const liveEdgeIds = new Set(graph.edges.filter((edge) => edge.target === node.id).map((edge) => edge.id));
+  const isLiveOccupant = (occupant: SlotOccupant): boolean =>
+    Boolean(occupant.sourceNodeId) && liveNodeIds.has(occupant.sourceNodeId)
+    && Boolean(occupant.edgeId) && liveEdgeIds.has(occupant.edgeId as string);
   if (explicit) {
     explicit = Object.fromEntries(Object.entries(explicit).map(([slot, occupants]) => [slot,
-      occupants.filter((occupant) => currentVersion || !modeChanged || occupant.pinned).map((occupant) => ({ ...occupant }))]));
+      occupants
+        .filter((occupant) => currentVersion ? (isLiveOccupant(occupant) || occupant.pinned) : (!modeChanged || occupant.pinned))
+        .map((occupant) => ({ ...occupant }))]));
     for (const conflict of (plainSpeech ? [] : node.data.slotConflicts ?? []) as SlotConflict[]) {
       const occupants = explicit[conflict.slot] ??= [];
       if (!occupants.some((item) => item.edgeId === conflict.occupant.edgeId)) occupants.push({ ...conflict.occupant });
