@@ -83,9 +83,6 @@ Node CLI，子命令与旧脚本保持一致（`init` / `status` / `search` / `l
 
 原断言：用桩退出码 `3` 代表通用失败并期待 stderr 警告；必须改的理由：`3` 已被本任务征用为「本机没有 sag」的 blocked 语义（`worktree.sh` 对它静默跳过），继续用它当通用失败会把两种语义混在一起；新期望证据：通用失败改用退出码 `4` 并断言 stderr 出现「退出码 4」的警告，跳过分支（退出码 `2`）仍只播报「跳过清理」。
 
-- `scripts/worktree-delivery.test.mjs` :: `清理失败与「索引不属于该路径」必须给出不同输出（Issue #4060）`
-
-原断言：同上一条（退出码 `3` 当通用失败）；必须改的理由与证据见上，另加本轮新增的 init/blocked/无记录/gc 四条端到端用例一起覆盖 CLI 行为。
 
 - `scripts/worktree-delivery.test.mjs` :: `配置缺失时 init 整洁报错且不留半套归属记录（Issue #4068）`
 
