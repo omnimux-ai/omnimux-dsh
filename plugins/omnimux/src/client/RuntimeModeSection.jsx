@@ -185,6 +185,9 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
   }, [])
 
   useEffect(() => {
+    // The mount read counts as this panel's first refresh, so becoming the
+    // visible tab right afterwards must not scan a second time.
+    lastAutoRefreshRef.current = Date.now()
     void refreshAgents().then(() => refreshUpdates())
   }, [refreshAgents, refreshUpdates])
 
@@ -206,7 +209,7 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
   }, [active, autoRefresh])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return undefined
+    if (active !== true || typeof window === 'undefined') return undefined
     const onFocus = () => autoRefresh()
     const onVisibility = () => { if (document.visibilityState === 'visible') autoRefresh() }
     window.addEventListener('focus', onFocus)
@@ -215,7 +218,7 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
       window.removeEventListener('focus', onFocus)
       document.removeEventListener?.('visibilitychange', onVisibility)
     }
-  }, [autoRefresh])
+  }, [active, autoRefresh])
 
   const scanNow = useCallback(() => {
     void refreshAgents({ refresh: true }).then(() => refreshUpdates({ refresh: true }))

@@ -70,4 +70,25 @@ describe('probeAgentAuth · qwen settings.json', () => {
     const result = await probeAgentAuth('qwen', { home: HOME, fsImpl, env: {} })
     assert.deepEqual(result, { state: 'unknown', method: 'file' })
   })
+
+  it('reports signed-in for a provider list whose key is present, even without selectedType', async () => {
+    const fsImpl = virtualFs([settingsFile({
+      modelProviders: { openai: [{ id: 'qwen3.8-max', envKey: 'QWENCLOUD_API_KEY' }] },
+      env: { QWENCLOUD_API_KEY: 'present-not-read' },
+    })])
+    const result = await probeAgentAuth('qwen', { home: HOME, fsImpl, env: {} })
+    assert.deepEqual(result, { state: 'signed-in', method: 'file' }, 'a configured provider with its key is usable')
+  })
+
+  it('does not borrow another provider key for the selected protocol', async () => {
+    const fsImpl = virtualFs([settingsFile({
+      modelProviders: {
+        openai: [{ id: 'qwen3.8-max' }],
+        anthropic: [{ id: 'claude-sonnet-4-5' }],
+      },
+      security: { auth: { selectedType: 'anthropic' } },
+    })])
+    const result = await probeAgentAuth('qwen', { home: HOME, fsImpl, env: { OPENAI_API_KEY: 'other-protocol-key' } })
+    assert.deepEqual(result, { state: 'unknown', method: 'file' }, 'the anthropic protocol must not count an openai key')
+  })
 })

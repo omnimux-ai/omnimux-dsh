@@ -182,10 +182,12 @@ async function probeByConfig(spec, options) {
     settings = null
   }
   if (!settings) return { state: 'unknown', method }
-  const selectedType = readDotted(settings, spec.selectedTypePath)
-  if (typeof selectedType !== 'string' || !selectedType.trim()) {
-    return legacy.state === 'signed-in' ? { state: 'signed-in', method } : { state: 'signed-out', method }
-  }
+  const rawType = readDotted(settings, spec.selectedTypePath)
+  const selectedType = typeof rawType === 'string' ? rawType.trim() : ''
+  const providers = readDotted(settings, spec.providersPath)
+  const providerIds = providers && typeof providers === 'object' && !Array.isArray(providers)
+    ? Object.keys(providers).filter((id) => Array.isArray(providers[id]) && providers[id].length > 0)
+    : []
   const envLayer = readDotted(settings, spec.envPath)
   const declaredKeys = configEnvKeys(spec, settings, selectedType)
   const keyVisible = declaredKeys.some((key) => (
@@ -193,9 +195,11 @@ async function probeByConfig(spec, options) {
     || isNonEmptyString(env[key])
   ))
   if (keyVisible) return { state: 'signed-in', method }
-  // A protocol is selected but no key is visible here; the user's shell may
-  // hold it, so this is not proof of being signed out.
-  return legacy.state === 'signed-in' ? { state: 'signed-in', method } : { state: 'unknown', method }
+  if (legacy.state === 'signed-in') return { state: 'signed-in', method }
+  // A model list or a chosen protocol is configured but no key is visible from
+  // here; the user's shell may hold it, so this is not proof of being signed out.
+  if (selectedType || providerIds.length > 0) return { state: 'unknown', method }
+  return { state: 'signed-out', method }
 }
 
 /** @param {unknown} value */
@@ -215,17 +219,21 @@ function configEnvKeys(spec, settings, selectedType) {
   const defaults = spec.defaultEnvKeys && typeof spec.defaultEnvKeys === 'object' ? spec.defaultEnvKeys : {}
   const keys = []
   const providers = readDotted(settings, spec.providersPath)
-  if (providers && typeof providers === 'object' && !Array.isArray(providers)) {
-    for (const [providerId, list] of Object.entries(providers)) {
-      if (!Array.isArray(list)) continue
-      for (const entry of list) {
-        const explicit = entry && typeof entry === 'object' ? entry.envKey : ''
-        if (isNonEmptyString(explicit)) keys.push(explicit.trim())
-        else if (typeof defaults[providerId] === 'string') keys.push(defaults[providerId])
-      }
+  const addProvider = (providerId, list) => {
+    if (!Array.isArray(list)) return
+    for (const entry of list) {
+      const explicit = entry && typeof entry === 'object' ? entry.envKey : ''
+      if (isNonEmptyString(explicit)) keys.push(explicit.trim())
+      else if (typeof defaults[providerId] === 'string') keys.push(defaults[providerId])
     }
   }
-  if (typeof defaults[selectedType] === 'string') keys.push(defaults[selectedType])
+  if (providers && typeof providers === 'object' && !Array.isArray(providers)) {
+    // A chosen protocol narrows the search to its own provider: a key that
+    // belongs to some other provider must not make this one look signed in.
+    if (selectedType) addProvider(selectedType, providers[selectedType])
+    else for (const [providerId, list] of Object.entries(providers)) addProvider(providerId, list)
+  }
+  if (selectedType && typeof defaults[selectedType] === 'string') keys.push(defaults[selectedType])
   return [...new Set(keys.filter(Boolean))]
 }
 

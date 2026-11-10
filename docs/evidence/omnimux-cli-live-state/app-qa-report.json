@@ -1,11 +1,11 @@
 {
-  "runId": "9f271523-8177-47f2-bb2e-0d0e2eb657f6",
+  "runId": "a419b820-6098-437f-b571-775bdde10c3c",
   "mode": "ui",
   "pass": true,
   "scope": "smoke",
   "contract": "none",
-  "startedAt": "2026-11-10T13:33:34.417Z",
-  "completedAt": "2026-11-10T13:34:12.814Z",
+  "startedAt": "2026-11-10T13:52:52.582Z",
+  "completedAt": "2026-11-10T13:53:32.769Z",
   "summary": {
     "mode": "ui",
     "evidenceLevel": "full",
@@ -75,10 +75,6 @@
       "pass": true
     },
     {
-      "name": "journey:cli-panel-visible",
-      "pass": true
-    },
-    {
       "name": "journey:cli-rows-visible",
       "pass": true
     },
@@ -91,7 +87,19 @@
       "pass": true
     },
     {
+      "name": "journey:model-source-visible",
+      "pass": true
+    },
+    {
       "name": "journey:model-source-declared",
+      "pass": true
+    },
+    {
+      "name": "journey:count-line-in-viewport",
+      "pass": true
+    },
+    {
+      "name": "journey:model-source-in-viewport",
       "pass": true
     },
     {
@@ -108,7 +116,7 @@
     "path": "cli-live-panel.png",
     "width": 1280,
     "height": 800,
-    "bytes": 85022
+    "bytes": 94725
   },
   "cleanup": {
     "cleaned": true

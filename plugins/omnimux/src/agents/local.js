@@ -412,12 +412,21 @@ export async function probeAgentModelsDetailed(id, options = {}) {
       } else if (!options.codexPath) {
         // A build without `debug models` is expected capability variance, not an
         // error: the CLI's own cache file is the next source. A real failure
-        // there still yields the preset list rather than an empty one.
-        const live = await execFileAsync('codex', ['debug', 'models'], {
+        // there still yields the preset list rather than an empty one. The
+        // resolved binary and the widened PATH matter for a GUI launch, whose
+        // PATH does not include the user's version-manager shims.
+        const codexBin = options.binPath || 'codex'
+        const probePath = [
+          options.binPath ? path.dirname(options.binPath) : '',
+          ...extraBinDirs(home, fsImpl),
+          process.env.PATH || '',
+        ].filter(Boolean).join(path.delimiter)
+        const live = await execFileAsync(codexBin, ['debug', 'models'], {
           timeout: PROBE_TIMEOUT_MS,
           maxBuffer: CODEX_MODELS_MAX_BUFFER,
           encoding: 'utf8',
           stdio: ['ignore', 'pipe', 'ignore'],
+          env: { ...process.env, PATH: probePath },
         })
           .then(({ stdout }) => codexModelsFromPayload(parseJsonText(stdout)))
           .catch(() => [])
