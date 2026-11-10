@@ -1,6 +1,6 @@
 # 模型设置显式保存（Issue #4050）
 
-HEAD: 以本任务 worktree 的 `git rev-parse HEAD` 为准（代码提交后见 review-evidence）
+HEAD: 74903d2b4d3ecce8763363cd655de86473bc9a84（实现 + 单测；其后仅补证据文档）
 
 ## 现象与根因
 

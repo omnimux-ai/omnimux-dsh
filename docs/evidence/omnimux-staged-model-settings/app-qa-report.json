@@ -1,11 +1,19 @@
 {
-  "runId": "25029202-cf94-4a08-9e61-351c10409ef5",
+  "runId": "f1f1aea8-f06b-47c9-af17-d56d74349036",
   "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-staged-model-settings",
+  "origin": "http://127.0.0.1:50872",
+  "appPort": 50872,
+  "cdpPort": 50875,
+  "startedAt": "2026-11-10T12:20:02.711Z",
+  "completedAt": "2026-11-10T12:20:42.787Z",
   "pass": true,
   "scope": "smoke",
+  "producer": "controlled-runner",
   "contract": "none",
-  "startedAt": "2026-11-10T12:04:37.459Z",
-  "completedAt": "2026-11-10T12:05:24.181Z",
+  "taskBinding": "unknown",
+  "userFresh": "unknown",
+  "inputClosure": "unknown",
   "summary": {
     "mode": "ui",
     "evidenceLevel": "full",
@@ -115,14 +123,124 @@
       "pass": true
     }
   ],
-  "errors": [],
   "screenshot": {
     "path": "after-save.png",
     "width": 1280,
     "height": 800,
     "bytes": 93608
   },
+  "errors": [],
   "cleanup": {
-    "cleaned": true
+    "cleaned": true,
+    "resources": [
+      {
+        "name": "app-child",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "mock-server",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "app-private-directory",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "browser-child",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "cdp-transport",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "browser-private-directory",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      }
+    ]
+  },
+  "observations": {
+    "rawOutputRetained": false,
+    "appEvents": [
+      {
+        "event": "spawn",
+        "code": null,
+        "signal": null,
+        "pid": 89262,
+        "parentPid": 87722
+      },
+      {
+        "event": "exit",
+        "code": null,
+        "signal": "SIGKILL",
+        "pid": null,
+        "parentPid": null
+      },
+      {
+        "event": "close",
+        "code": null,
+        "signal": "SIGKILL",
+        "pid": null,
+        "parentPid": null
+      }
+    ],
+    "browserEvents": [
+      {
+        "event": "spawn",
+        "code": null,
+        "signal": null,
+        "pid": 89296,
+        "parentPid": 87722
+      },
+      {
+        "event": "exit",
+        "code": 143,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      },
+      {
+        "event": "close",
+        "code": 143,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      }
+    ],
+    "cdpSocketClosed": {
+      "code": 1006,
+      "reason": ""
+    },
+    "cdpLastCompleted": "Page.captureScreenshot",
+    "targetEvents": [
+      {
+        "method": "Target.attachedToTarget",
+        "sessionId": "CDDB2B75E2D486E1",
+        "targetId": "1A879CF137EF2255",
+        "type": "page",
+        "url": "about:blank"
+      }
+    ],
+    "cdpSocketError": true
+  },
+  "beforeCaptureMs": 0,
+  "hubPath": {
+    "clickedNewSession": false,
+    "exploreVisible": true,
+    "assetHubOpened": true,
+    "librarySelected": true,
+    "workbenchRequestAccepted": true
   }
 }
