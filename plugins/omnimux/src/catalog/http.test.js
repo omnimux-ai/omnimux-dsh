@@ -100,10 +100,26 @@ test('mounted POST reports fixed public invalid, stale and unavailable outcomes 
   }
 })
 test('legacy catalog exact body and failure behavior remain unchanged', async () => {
-  let route; registerCatalogRoutes({ register(r) { route = r; return () => {} } }, { list: () => ({ source: 'legacy', defaults: {}, text: [], image: [], video: [], audio: [] }) })
-  const m = { routes: [route] }; const result = await dispatch(m, '/omnimux/model-catalog')
+  const routes = []; registerCatalogRoutes({ register(r) { routes.push(r); return () => {} } }, { list: () => ({ source: 'legacy', defaults: {}, text: [], image: [], video: [], audio: [] }) })
+  const m = { routes }; const result = await dispatch(m, '/omnimux/model-catalog')
   assert.equal(result.status, 200); assert.deepEqual(result.body, { source: 'legacy', defaults: {}, text: [], image: [], video: [], audio: [] })
 })
+test('manual catalog refresh is POST-only, authorized and reports the refresher result', async () => {
+  const routes = []
+  let calls = 0
+  registerCatalogRoutes({ register(route) { routes.push(route); return () => {} } }, {
+    list: () => ({ source: 'fixture' }),
+    refresh: async () => { calls += 1; return { status: 'ok', changed: true, digest: 'fixture-digest' } },
+    getConnection: () => ({ requestRejection: () => undefined }),
+  })
+  const m = { routes }
+  assert.equal((await dispatch(m, '/omnimux/model-catalog/refresh')).status, 404)
+  const refreshed = await dispatch(m, '/omnimux/model-catalog/refresh', { method: 'POST', body: '{}' })
+  assert.equal(refreshed.status, 200)
+  assert.deepEqual(refreshed.body, { status: 'ok', changed: true, digest: 'fixture-digest' })
+  assert.equal(calls, 1)
+})
+
 test('mounted HTTP over real ephemeral server handles authenticated JSON preview with no provider/auth/task calls', async () => {
   const { api } = products(); const m = mount(api)
   assert.ok(m.routes.find(r => r.path === '/omnimux/generation-products/preview'))
@@ -157,7 +173,7 @@ test('repair repeated mounted guarded labels yield fixed catalog unavailable on 
     issues: [{ code: 'parameter_invalid', field: 'access_token' }] }) })
   const result = await dispatch(guarded, '/omnimux/generation-products/preview', { method: 'POST', body: '{}' })
   assert.equal(result.status, 503); assert.deepEqual(result.body.issues, [{ code: 'catalog_unavailable' }])
-  let oldRoute
-  registerCatalogRoutes({ register(route) { oldRoute = route; return () => {} } }, { list: () => ({ label: 'access_token' }) })
-  assert.deepEqual((await dispatch({ routes: [oldRoute] }, '/omnimux/model-catalog')).body, { error: 'refused to emit a secret' })
+  const oldRoutes = []
+  registerCatalogRoutes({ register(route) { oldRoutes.push(route); return () => {} } }, { list: () => ({ label: 'access_token' }) })
+  assert.deepEqual((await dispatch({ routes: oldRoutes }, '/omnimux/model-catalog')).body, { error: 'refused to emit a secret' })
 })

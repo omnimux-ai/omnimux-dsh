@@ -89,7 +89,7 @@ window.fetch = async (path, init = {}) => {
   requests.push(attempt)
   const permitted = (path === '/omnimux/byok/config' && (method === 'GET' || method === 'PUT'))
     || (path === '/omnimux/byok/test' && method === 'POST')
-    || (['/omnimux/model-catalog', '/omnimux/agents', '/omnimux/agents/updates', '/omnimux/auth/status'].includes(path) && method === 'GET')
+    || (['/omnimux/model-catalog', '/omnimux/model-catalog?view=diagnostics', '/omnimux/agents', '/omnimux/agents/updates', '/omnimux/auth/status'].includes(path) && method === 'GET')
   if (!permitted) { unexpectedRequests.push(attempt); throw new Error('unexpected synthetic request') }
   let body = null
   try { body = init.body ? JSON.parse(init.body) : null }
@@ -128,6 +128,7 @@ window.fetch = async (path, init = {}) => {
       revision: config.revision, credentialVersion: config.providers[0].credentialVersion,
       checkedAt: '2026-10-14T15:00:00Z' })
   }
+  if (path === '/omnimux/model-catalog?view=diagnostics' && method === 'GET') return response({ snapshot: { source: 'fixture', generatedAt: '2026-11-10T00:00:00Z', stale: false }, refresh: {} })
   if (path === '/omnimux/model-catalog' && method === 'GET') return response({
     text: [{ id: 'known-text', label: 'Known text' }], image: [{ id: 'known-image', label: 'Known image' }],
     video: [{ id: 'known-video', label: 'Known video' }], audio: [{ id: 'known-audio', label: 'Known audio' }],

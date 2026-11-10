@@ -223,6 +223,7 @@ export function normalizePricingPayload(payload, opts = {}) {
       usable: keyedObject(root.usable_group ?? root.usableGroup),
       auto: stringList(root.auto_groups ?? root.autoGroups),
     },
+    ...(root.defaults && typeof root.defaults === 'object' ? { defaults: keyedObject(root.defaults) } : {}),
     coverage: {
       models: models.size,
       channels: null,

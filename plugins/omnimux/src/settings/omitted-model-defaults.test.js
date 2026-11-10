@@ -128,7 +128,7 @@ test('3312: saved defaults pointing at delisted models resolve only to the fixed
   assert.deepEqual(catalog.image.map(row => row.id), ['gemini-3.1-flash-lite-image', 'gpt-image-2.5'])
   assert.deepEqual(catalog.video.map(row => row.id), ['minimax-h3-video', 'seedance-2-0', 'seedance-2-5', 'wan-3.0'])
   assert.deepEqual(catalog.audio.map(row => row.id), ['indextts-2', 'suno', 'suno-sounds'])
-  assert.deepEqual(catalog.defaults, { text: 'gemini-3.8-flash', analysis: '', image: 'gpt-image-2.5', video: 'seedance-2-5', audio: 'suno' })
+  assert.deepEqual(catalog.defaults, { text: 'gemini-3.8-flash', analysis: 'gemini-3.8-flash', image: 'gpt-image-2.5', video: 'seedance-2-5', audio: 'suno' })
 }))
 
 test('3312: omitted official text refuses delisted saved Sonnet while explicit model and text gate retain priority', async () => isolated(async () => {
@@ -195,7 +195,7 @@ test('3312: invalid saved defaults fall back to legal fixed catalog models and a
   const current = Object.assign(officialSettings(), { defaultTextModel: 'invalid-default', defaultImageModel: 'invalid-default',
     defaultVideoModel: 'invalid-default', defaultAudioModel: 'invalid-default' })
   const catalog = buildModelCatalog({ env: {}, settingsDefaults: current })
-  assert.deepEqual(catalog.defaults, { text: 'gemini-3.8-flash', analysis: '', image: 'gpt-image-2.5', video: 'seedance-2-5', audio: 'suno' })
+  assert.deepEqual(catalog.defaults, { text: 'gemini-3.8-flash', analysis: 'gemini-3.8-flash', image: 'gpt-image-2.5', video: 'seedance-2-5', audio: 'suno' })
   const seen = []
   const text = await executeOmnimuxText({ prompt: 'synthetic text', settings: getter(current, []), env: {}, llm: stream(seen) })
   assert.equal(text.model, 'gemini-3.8-flash')

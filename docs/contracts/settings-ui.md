@@ -33,7 +33,7 @@ MUST NOT register plugin config, plugin install, or social-account management as
 
 Current official Hosts expose plugin Config volatile fields through `configForms`, not the legacy `settingsScope` / `settings.plugin.item` seat. OmniMux reference media storage uses one `referenceStorage` volatile field and the existing global Plugins page: `plugins.item`, id `omnimux-reference-storage`, registered only while the `omnimux` form is served. Summary renders explanation only; page renders the configuration. Bundle/row detail contributions target OmniMux explicitly and never another plugin.
 
-Task-model pickers ride the same seat and the same form scope: `plugins.item` id `omnimux-task-models` binds `defaultTextModel` (plain text tasks) and `defaultAnalysisModel` (multimodal understanding) through `ctx.configForms.get('omnimux')`, with a matching `plugins.detail.section` on the plugin detail page. Options come from `/omnimux/model-catalog` `catalog.text` — the analysis picker lists only rows whose `input` advertises a non-text modality — never a local model list, so an on-sale change the hub stops serving cannot be re-picked here. A stored id the hub no longer serves stays visible with a "needs confirmation" suffix.
+Task-model and model-default pickers ride the same seat and form scope: `plugins.item` id `omnimux-model-settings` binds `defaultTextModel`, `defaultAnalysisModel`, `defaultImageModel`, `defaultVideoModel` and `defaultAudioModel` through `ctx.configForms.get('omnimux')`, with matching `plugins.bundle.config` (key `omnimux`) and `plugins.detail.section` entries for bundle detail pages. Options come from `/omnimux/model-catalog`; the analysis picker lists only rows whose `inputCapability.modalities` advertises a non-text modality, never a local model list, so an on-sale change the hub stops serving cannot be re-picked here. A stored id the hub no longer serves stays visible with a "needs confirmation" suffix. Empty values mean "auto (gateway recommendation)", not an explicit user choice.
 
 Non-secret configuration persists through official SettingsForms / ConfigEditor with the entry revision. Access identifier and secret are separate official credential references; reads report presence and writability, never their values. Every generation prepares from the current operation snapshot. See [reference media storage](../guides/reference-media-storage.md) for scope and privacy boundaries.
 
@@ -47,8 +47,9 @@ The legacy seats below remain descriptions of older composition surfaces; their 
 | `settings.plugins.tab` | `omnimux-dsh-plugins` | `omnimux` | Install / uninstall into the `omnimux` profile |
 | `settings.plugin.item` | `web-search` | official `ui-settings-plugins` | DeepSeek search key via credentials |
 | `plugins.item` | `omnimux-reference-storage` | `omnimux` | Reference media storage fields on the `omnimux` form scope |
-| `plugins.item` | `omnimux-task-models` | `omnimux` | Text / analysis task-model pickers on the `omnimux` form scope |
-| `plugins.detail.section` | `omnimux-task-models` | `omnimux` | Same task-model pickers on the plugin detail page |
+| `plugins.item` | `omnimux-model-settings` | `omnimux` | Model defaults, runtime mode and catalog sync on the `omnimux` form scope |
+| `plugins.bundle.config` | `omnimux` | `omnimux` | Same model settings on the `omnimux` bundle detail page |
+| `plugins.detail.section` | `omnimux-model-settings` | `omnimux` | Shared model summary/settings on every OmniMux bundle detail page |
 | Workbench Tab | `omnimux-accounts:library` | `omnimux-accounts` | Accounts page registered with `ctx.betterSidebar.registerTab`, not a Settings seat or Apps shelf |
 | Workbench Tab | `omnimux-inspiration:library` | `omnimux-inspiration` | 灵感社区 page registered with `ctx.betterSidebar.registerTab`; Host `/omnimux/inspiration` |
 
@@ -56,15 +57,15 @@ Official Settings plugin tabs already occupy `configurable` (order 0) and `all` 
 
 ## Account and model configuration ownership
 
-OmniMux keeps its existing profile and sign-in surface. DeepSeek official API configuration and session model providers remain on the Host model settings surface. The additional OmniMux model-service card, canvas-default-model card, and retired first-run runtime chooser are no longer registered, on either current configuration forms or legacy Settings seats. Reference media storage remains independent.
+OmniMux keeps its existing profile and sign-in surface. DeepSeek official API configuration and session model providers remain on the Host model settings surface. The OmniMux model settings card is registered on the official Plugins page through `plugins.item`, `plugins.bundle.config` and `plugins.detail.section`; it owns model defaults, runtime-mode/provider configuration, and catalog refresh status. It is not a top-level Settings section. Reference media storage remains independent.
 
 Stored `scenarioBindings`, provider records, canvas defaults and composer choices remain readable for compatibility; removing their extra settings UI does not erase data or change routing. Saving a provider does not select it for every scenario or write a global runtime mode. Canvas defaults apply to unspecified new-node choices, never rewrite saved nodes; the canvas projection preserves a lawful Hub default before its curated fallback. Official API configuration is distinct from a newer Host's official account sign-in capability; the installed Host must actually ship that capability before it can be offered.
 
 A pending media-analysis choice can be recovered in the analysis panel with
 “使用 OmniMux 分析服务”. This explicit action updates only the `analysis`
 binding through the Hub's revision-checked `/omnimux/analysis/service` route;
-it does not start analysis, change other scenarios or restore the retired
-model-service card. Existing configured choices continue to route as saved.
+it does not start analysis or change other scenarios; the model settings card
+remains the canonical provider/default surface. Existing configured choices continue to route as saved.
 The existing Profile section owns explicit selection of an account API key for
 official analysis; the domain panel never reads or stores that value.
 

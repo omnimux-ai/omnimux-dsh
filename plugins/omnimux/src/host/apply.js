@@ -212,6 +212,7 @@ export function apply(ctx, config = {}) {
     avatarStore,
     listCatalog,
     catalogDiagnostics,
+    refreshCatalog: () => catalogRefresher.refreshOnce(true),
     hubEvents,
     mailbox,
     sessionQuery: null,
@@ -277,10 +278,10 @@ export function apply(ctx, config = {}) {
       httpDeps.settings = settings
       const scope = settings.register('omnimux', SettingsConfig, {
         base: {
-          defaultTextModel: hub.text.defaultModel,
-          defaultImageModel: hub.media.providers.omnimux.models.image,
-          defaultVideoModel: hub.media.providers.omnimux.models.video,
-          defaultAudioModel: hub.media.providers.omnimux.models.audio,
+          defaultTextModel: '',
+          defaultImageModel: '',
+          defaultVideoModel: '',
+          defaultAudioModel: '',
         },
       })
       // The composer's text-model list is a settings surface of the pi-ai

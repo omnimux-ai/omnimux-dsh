@@ -5,7 +5,7 @@ import { NS } from './locales.js'
 import { ProfileSection } from './ProfileSection.jsx'
 import { DshPluginsSection } from './DshPluginsSection.jsx'
 import { ReferenceStorageSection } from './ReferenceStorageSection.jsx'
-import { TaskModelsSection } from './TaskModelsSection.jsx'
+import { ModelsSettingsCard } from './ModelsSettingsCard.jsx'
 import { LoginGate } from './LoginGate.jsx'
 import { RuntimeGuideGate } from './RuntimeGuideGate.jsx'
 import { setRuntimeChoiceReader } from './auth-gate.js'
@@ -116,6 +116,9 @@ export function apply(ctx) {
   const omnimuxSubject = (subject) => subject?.kind === 'bundle' && subject.pkg?.name === 'omnimux'
     || subject?.kind === 'row' && subject.pkg?.name === 'omnimux' && subject.row?.rowId === 'omnimux'
     || subject?.kind === 'item' && subject.id === 'omnimux'
+  const omnimuxBundleSubject = (subject) => subject?.kind === 'bundle'
+    && typeof subject.pkg?.name === 'string'
+    && (subject.pkg.name === 'omnimux' || subject.pkg.name.startsWith('omnimux-'))
   ctx.slots.inject('plugins.detail.section', () => ctx.slots.register({
     name: 'plugins.detail.section',
     id: 'omnimux-reference-storage',
@@ -133,14 +136,18 @@ export function apply(ctx) {
       label: () => t('referenceStorage.title'), locale: NS, inject: () => ({ t }),
     }, ({ t: translate, view }) => view === 'summary' ? translate('referenceStorage.description') : createElement(ReferenceStorageSection, { t: translate })))), 'omnimux: reference storage configuration')
     formCtx.effect(() => formCtx.configForms.whileServed(['omnimux'], () => formCtx.slots.inject('plugins.item', () => formCtx.slots.register({
-      name: 'plugins.item', id: 'omnimux-task-models', order: 90,
-      label: () => t('taskModels.title'), locale: NS,
+      name: 'plugins.item', id: 'omnimux-model-settings', order: 90,
+      label: () => t('models.settingsTitle'), locale: NS,
       inject: () => ({ t, scope: formCtx.configForms.get('omnimux') }),
-    }, ({ t: translate, scope, view }) => view === 'summary' ? translate('taskModels.summary') : createElement(TaskModelsSection, { t: translate, scope })))), 'omnimux: task model pickers')
+    }, ({ t: translate, scope, view }) => view === 'summary' ? translate('models.settingsSummary') : createElement(ModelsSettingsCard, { t: translate, scope })))), 'omnimux: model settings')
+    formCtx.effect(() => formCtx.configForms.whileServed(['omnimux'], () => formCtx.slots.inject('plugins.bundle.config', () => formCtx.slots.register({
+      name: 'plugins.bundle.config', key: 'omnimux', id: 'omnimux-model-settings', order: 90, locale: NS,
+      inject: () => ({ t, scope: formCtx.configForms.get('omnimux') }),
+    }, ({ t: translate, scope }) => createElement(ModelsSettingsCard, { t: translate, scope })))), 'omnimux: model settings bundle')
     formCtx.effect(() => formCtx.configForms.whileServed(['omnimux'], () => formCtx.slots.inject('plugins.detail.section', () => formCtx.slots.register({
-      name: 'plugins.detail.section', id: 'omnimux-task-models', order: 90, locale: NS,
+      name: 'plugins.detail.section', id: 'omnimux-model-settings', order: 90, locale: NS,
       inject: () => ({ t, scope: formCtx.configForms.get('omnimux') }),
-    }, ({ t: translate, scope, subject }) => omnimuxSubject(subject) ? createElement(TaskModelsSection, { t: translate, scope }) : null))), 'omnimux: task model pickers detail')
+    }, ({ t: translate, scope, subject }) => omnimuxBundleSubject(subject) ? createElement(ModelsSettingsCard, { t: translate, scope }) : null))), 'omnimux: model settings detail')
     // First-run model-route guide: a full-screen chooser for the text
     // conversation channel (official / local agent / own key) shown only
     // when nothing has been configured yet. Unlike the settings cards it

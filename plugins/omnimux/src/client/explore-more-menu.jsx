@@ -63,11 +63,11 @@ const PANEL_ROW_ICON_SVG =
 /**
  * 允许进「更多」菜单的官方面板行 id（白名单）。
  *
- * 只放行「自动化任务」：官方「插件」行由产品自研插件管理模块取代，彻底隐藏、
- * 不提供入口。用白名单而非黑名单，是为了让官方将来新增的面板不会未经决策
- * 就自动出现在菜单里。
+ * 放行官方「插件」和「自动化任务」：「插件」是 DSH 官方面板的开关与配置入口，
+ * 产品自研的应用商店只负责安装/更新，不替代官方插件管理。用白名单而非黑名单，
+ * 是为了让官方将来新增的面板不会未经决策就自动出现在菜单里。
  */
-const PANEL_ENTRY_WHITELIST = new Set(['schedules'])
+const PANEL_ENTRY_WHITELIST = new Set(['plugins', 'schedules'])
 
 /**
  * 官方面板行的图标容器：与清单行同一 class 与同一信任边界（受信 14×14 纯矢量）。
@@ -131,8 +131,8 @@ export function createExploreMoreMenuContent({ MenuItemButton } = {}) {
    */
   function ExploreMoreMenuContent({ onDismiss, entries, onOpen }) {
     const items = resolveExploreMenuItems()
-    // 白名单：只让「自动化任务」进「更多」菜单。官方「插件」行由产品自研插件管理
-    // 模块取代，因此彻底隐藏、不提供入口；其余官方新增面板也不自动冒出来。
+    // 白名单：官方「插件」和「自动化任务」进「更多」菜单；官方「插件」承载 bundle
+    // 开关和配置页，其余官方新增面板不自动冒出来。
     const panels = Array.isArray(entries)
       ? entries.filter((entry) => PANEL_ENTRY_WHITELIST.has(entry?.id))
       : []
