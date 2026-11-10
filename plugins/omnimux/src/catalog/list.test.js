@@ -302,10 +302,12 @@ describe('media facade tables (derived from contracts)', () => {
 describe('gateway default recommendation', () => {
   it('wins over the offline defaults when its row is ready', () => {
     const snapshot = JSON.parse(readFileSync(new URL('./cloud/bundled/pricing.json', import.meta.url), 'utf8'))
-    snapshot.defaults = { image: 'gemini-3.1-flash-lite-image' }
+    snapshot.defaults = { image: 'gemini-3.1-flash-lite-image', vision_chat: 'gemini-3.8-flash' }
     const catalog = buildModelCatalog({ env: {}, snapshot, settingsDefaults: {} })
     assert.equal(catalog.defaults.image, 'gemini-3.1-flash-lite-image')
     assert.equal(catalog.defaultsMeta.image.source, 'gateway-recommended')
+    assert.equal(catalog.defaults.analysis, 'gemini-3.8-flash')
+    assert.equal(catalog.defaultsMeta.analysis.source, 'gateway-recommended')
   })
 })
 
