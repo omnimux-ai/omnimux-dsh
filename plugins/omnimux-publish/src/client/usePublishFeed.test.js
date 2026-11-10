@@ -211,6 +211,43 @@ test('executeBatchDeleteDrafts deletes only drafts in selection', async () => {
   }
 })
 
+test('executeBatchDeleteDrafts ignores selections that are no longer in the list', async () => {
+  const origFetch = globalThis.fetch
+  const calls = []
+  globalThis.fetch = async (url, opts) => {
+    calls.push({ url, body: JSON.parse(opts.body) })
+    return new Response(JSON.stringify({ id: 'draft_1', deleted: true }), { status: 200 })
+  }
+  try {
+    let toast = ''
+    const records = [{ id: 'draft_1', status: 'draft' }]
+    await executeBatchDeleteDrafts(records, new Set(['ghost', 'draft_1']), (msg) => { toast = msg }, () => {})
+    assert.equal(toast, '已删除 1 条草稿')
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].body.draft_id, 'draft_1')
+  } finally {
+    globalThis.fetch = origFetch
+  }
+})
+
+test('executeBatchDeleteDrafts explains an empty target set instead of reporting zero deletions', async () => {
+  const origFetch = globalThis.fetch
+  let called = 0
+  globalThis.fetch = async () => {
+    called++
+    return new Response(JSON.stringify({}), { status: 200 })
+  }
+  try {
+    let toast = ''
+    const records = [{ id: 'sub_2', status: 'submitted' }]
+    await executeBatchDeleteDrafts(records, new Set(['ghost', 'sub_2']), (msg) => { toast = msg }, () => {})
+    assert.equal(toast, '所选记录中没有可删除的草稿，请重新选择')
+    assert.equal(called, 0)
+  } finally {
+    globalThis.fetch = origFetch
+  }
+})
+
 test('retry excludes legacy sources and does not report a rejected request as success', async () => {
   const originalFetch = globalThis.fetch
   const calls = []
