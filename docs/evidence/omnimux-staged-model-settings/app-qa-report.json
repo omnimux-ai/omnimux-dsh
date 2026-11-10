@@ -1,0 +1,128 @@
+{
+  "runId": "25029202-cf94-4a08-9e61-351c10409ef5",
+  "mode": "ui",
+  "pass": true,
+  "scope": "smoke",
+  "contract": "none",
+  "startedAt": "2026-11-10T12:04:37.459Z",
+  "completedAt": "2026-11-10T12:05:24.181Z",
+  "summary": {
+    "mode": "ui",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "realModelRequest": false,
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true
+    },
+    {
+      "name": "journey:more-menu-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:plugins-menu-item-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:omnimux-card-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:omnimux-detail-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:reasoning-select-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:no-savebar-before-edit",
+      "pass": true
+    },
+    {
+      "name": "journey:reasoning-menu-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:reasoning-option-picked",
+      "pass": true
+    },
+    {
+      "name": "journey:savebar-visible-after-edit",
+      "pass": true
+    },
+    {
+      "name": "journey:savebar-copy",
+      "pass": true
+    },
+    {
+      "name": "journey:page-does-not-reload-on-edit",
+      "pass": true
+    },
+    {
+      "name": "journey:savebar-cleared-after-save",
+      "pass": true
+    },
+    {
+      "name": "journey:detail-still-mounted-after-save",
+      "pass": true
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "screenshot": {
+    "path": "staged-save-dirty.png",
+    "width": 1280,
+    "height": 800,
+    "bytes": 93608
+  },
+  "cleanup": {
+    "cleaned": true
+  }
+}

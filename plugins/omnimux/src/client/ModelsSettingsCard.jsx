@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button, DropdownSelect, SelectableTile } from 'dsh-ui-kit'
 import { RuntimeModeSection } from './RuntimeModeSection.jsx'
+import { useStagedConfigScope } from './staged-config-scope.js'
 
 /** Sentinel the hub stores for "no explicit choice"; the picker shows the resolved mode instead. */
 const DEFAULT_OPERATION_AUTO = 'auto'
@@ -128,7 +129,8 @@ function CatalogSyncPanel({ t }) {
 
 /**
  * Consolidated model settings card on the official Plugins page.
- * Writes top-level fields through the official config form scope.
+ * Stages top-level field edits locally and writes them only on explicit save.
+ * Writes go through the official config form scope.
  *
  * @param {{
  *   t: (key: string, params?: Record<string, string>) => string,
@@ -141,18 +143,11 @@ function CatalogSyncPanel({ t }) {
  * }} props
  */
 export function ModelsSettingsCard({ t, scope }) {
-  const snapshot = useSyncExternalStore(
-    (listener) => {
-      if (!scope || typeof scope.subscribe !== 'function') return () => {}
-      return scope.subscribe(listener)
-    },
-    () => (scope && typeof scope.getSnapshot === 'function'
-      ? scope.getSnapshot()
-      : { status: 'unavailable', value: undefined, writable: false, user: undefined }),
-  )
+  const draft = useStagedConfigScope(scope)
+  const snapshot = draft.snapshot
+  const formScope = draft.scope
 
   const [catalog, setCatalog] = useState(null)
-  const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -287,42 +282,20 @@ export function ModelsSettingsCard({ t, scope }) {
   }, [defaultReasoningFor, effectiveOperationId, user, value])
 
   const onChange = useCallback(async (field, next) => {
-    if (!scope || typeof scope.set !== 'function' || !writable || busy) return
-    setBusy(true)
-    setError('')
-    try {
-      // 'auto' restores the unconfigured state: unset the field rather than
-      // persisting the sentinel.
-      if (next === 'auto' && typeof scope.unset === 'function') {
-        await scope.unset(field)
-      } else {
-        await scope.set(field, next)
-      }
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('omnimux:model-catalog-updated'))
-      }
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught))
-    } finally {
-      setBusy(false)
+    if (!writable || draft.state.saving) return
+    // 'auto' restores the unconfigured state: stage a clear rather than
+    // persisting the sentinel. Nothing reaches the Host before save.
+    if (next === 'auto' && typeof formScope.unset === 'function') {
+      await formScope.unset(field)
+    } else {
+      await formScope.set(field, next)
     }
-  }, [scope, writable, busy])
+  }, [draft.state.saving, formScope, writable])
 
   const onReset = useCallback(async (field) => {
-    if (!scope || typeof scope.unset !== 'function' || !writable || busy) return
-    setBusy(true)
-    setError('')
-    try {
-      await scope.unset(field)
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('omnimux:model-catalog-updated'))
-      }
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught))
-    } finally {
-      setBusy(false)
-    }
-  }, [scope, writable, busy])
+    if (!writable || draft.state.saving || typeof formScope.unset !== 'function') return
+    await formScope.unset(field)
+  }, [draft.state.saving, formScope, writable])
 
   /** Hub-listed text models — the membership authority for the composer list. */
   const composerModels = Array.isArray(catalog?.text) ? catalog.text : []
@@ -356,31 +329,21 @@ export function ModelsSettingsCard({ t, scope }) {
    * own and no local setting can put it back.
    */
   const onToggleComposerModel = useCallback(async (id, visible) => {
-    if (!scope || typeof scope.set !== 'function' || !writable || busy) return
+    if (!writable || draft.state.saving) return
     const current = Array.isArray(value.composerHiddenModels) ? value.composerHiddenModels : []
     if (!visible && current.length + 1 >= composerModels.length) {
       // Hiding the last visible model would leave the composer with nothing
       // usable, and the sync refuses to write an empty list anyway. Say so
-      // rather than storing a choice that cannot take effect.
+      // rather than staging a choice that cannot take effect.
       setError(t('models.composerKeepOne'))
       return
     }
     const next = visible
       ? current.filter((entry) => entry !== id)
       : [...new Set([...current, id])]
-    setBusy(true)
     setError('')
-    try {
-      await scope.set('composerHiddenModels', next)
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('omnimux:model-catalog-updated'))
-      }
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught))
-    } finally {
-      setBusy(false)
-    }
-  }, [scope, writable, busy, value, composerModels, t])
+    await formScope.set('composerHiddenModels', next)
+  }, [draft.state.saving, formScope, writable, value, composerModels, t])
 
   /**
    * Flip one model's visibility in the canvas pickers.
@@ -390,7 +353,7 @@ export function ModelsSettingsCard({ t, scope }) {
    * fully hidden (canvas nodes then fall back through the not_listed path).
    */
   const onToggleCanvasModel = useCallback(async (kind, id, visible, label) => {
-    if (!scope || typeof scope.set !== 'function' || !writable || busy) return
+    if (!writable || draft.state.saving) return
     const stored = value.canvasHiddenModels
     const current = (stored && typeof stored === 'object' && Array.isArray(stored[kind]))
       ? stored[kind].filter((entry) => typeof entry === 'string' && entry)
@@ -402,30 +365,53 @@ export function ModelsSettingsCard({ t, scope }) {
       ...(stored && typeof stored === 'object' ? stored : {}),
       [kind]: next,
     }
-    setBusy(true)
     setError('')
-    try {
-      await scope.set('canvasHiddenModels', nextHidden)
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('omnimux:model-catalog-updated'))
-      }
-      if (!visible && catalog?.defaults?.[kind] === id) {
-        setError(t('error.hiddenDefault', {
-          label: label || id,
-          group: t(`models.group${cap(kind)}`),
-        }))
-      }
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught))
-    } finally {
-      setBusy(false)
+    await formScope.set('canvasHiddenModels', nextHidden)
+    if (!visible && catalog?.defaults?.[kind] === id) {
+      setError(t('error.hiddenDefault', {
+        label: label || id,
+        group: t(`models.group${cap(kind)}`),
+      }))
     }
-  }, [scope, writable, busy, value, catalog, t])
+  }, [draft.state.saving, formScope, writable, value, catalog, t])
+
+  const saveDraft = useCallback(async () => {
+    const saved = await draft.save()
+    if (saved && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('omnimux:model-catalog-updated'))
+    }
+  }, [draft])
 
   if (!available) return null
 
   return (
     <div className="omnimux-settings-sections">
+      {draft.state.dirty || draft.state.saving || draft.state.failed ? (
+        <div className="omnimux-settings-savebar" data-dirty="true" role="region" aria-label={t('models.unsaved')}>
+          <span className="omnimux-settings-savebar__label" role="status">
+            {draft.state.failed ? t('models.saveFailed') : t('models.unsaved')}
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={draft.state.saving}
+            onClick={draft.discard}
+          >
+            {t('models.discard')}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="primary"
+            loading={draft.state.saving ? true : undefined}
+            disabled={!draft.state.dirty || draft.state.saving}
+            onClick={() => { void saveDraft() }}
+          >
+            {draft.state.saving ? t('models.saving') : t('models.save')}
+          </Button>
+        </div>
+      ) : null}
       <CatalogSyncPanel t={t} />
       {/* 栏目一：对话与媒体生成模型 */}
       <div className="omnimux-models-card" data-section="runtime">
@@ -434,7 +420,7 @@ export function ModelsSettingsCard({ t, scope }) {
           <p className="omnimux-models-card__desc">{t('runtime.cardDesc')}</p>
         </div>
         <div className="omnimux-models-card__body">
-          <RuntimeModeSection t={t} scope={scope} />
+          <RuntimeModeSection t={t} scope={formScope} />
         </div>
       </div>
 
@@ -463,7 +449,7 @@ export function ModelsSettingsCard({ t, scope }) {
                             size="sm"
                             variant="ghost"
                             className="omnimux-models-card__reset"
-                            disabled={!writable || busy}
+                            disabled={!writable || draft.state.saving}
                             onClick={() => { void onReset(row.key) }}
                           >
                             {t('models.reset')}
@@ -474,7 +460,7 @@ export function ModelsSettingsCard({ t, scope }) {
                           aria-label={`${t(group.titleKey)} ${t(row.labelKey)}`}
                           value={current}
                           options={options}
-                          disabled={!writable || busy || options.length === 0}
+                          disabled={!writable || draft.state.saving || options.length === 0}
                           placeholder={t('models.loading')}
                           onChange={(next) => { void onChange(row.key, next) }}
                         />
@@ -497,7 +483,7 @@ export function ModelsSettingsCard({ t, scope }) {
                     selectionType="checkbox"
                     selected={!hiddenModels.includes(model.id)}
                     title={model.label || model.id}
-                    disabled={!writable || busy}
+                    disabled={!writable || draft.state.saving}
                     onChange={(next) => { void onToggleComposerModel(model.id, next) }}
                   />
                 ))}
@@ -526,7 +512,7 @@ export function ModelsSettingsCard({ t, scope }) {
                         badge={model.id === defaultId ? (
                           <span className="omnimux-models-card__default-badge">{t('models.defaultBadge')}</span>
                         ) : undefined}
-                        disabled={!writable || busy}
+                        disabled={!writable || draft.state.saving}
                         onChange={(next) => { void onToggleCanvasModel(kind, model.id, next, model.label || model.id) }}
                       />
                     ))}
