@@ -141,7 +141,8 @@ function remapClonedBindings(
   const data = (node.data ?? {}) as Record<string, unknown>;
   const bindings = data.slotBindings as CloneSlotBindings | undefined;
   const standby = data.slotStandbyEdgeIds;
-  if (!bindings && !Array.isArray(standby)) return node;
+  const conflicts = data.slotConflicts;
+  if (!bindings && !Array.isArray(standby) && !Array.isArray(conflicts)) return node;
   const next: Record<string, unknown> = { ...data };
   if (bindings) {
     const remapped: CloneSlotBindings = {};
@@ -162,6 +163,6 @@ function remapClonedBindings(
       .filter((id): id is string => Boolean(id));
   }
   // Conflicts are derived state; carrying pre-clone identities would resurrect ghosts.
-  if ('slotConflicts' in next) next.slotConflicts = [];
+  if (Array.isArray(conflicts)) next.slotConflicts = [];
   return { ...node, data: next as CanvasNode['data'] };
 }
