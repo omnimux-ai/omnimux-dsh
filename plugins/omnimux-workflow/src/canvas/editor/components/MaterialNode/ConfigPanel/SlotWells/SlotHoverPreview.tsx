@@ -64,8 +64,8 @@ export default function SlotHoverPreview({ anchor, upstream, state, reasonCode, 
   const available = Math.max(0, Math.min(position.maxHeight, position.placement === 'top' ? window.innerHeight - (position.bottom ?? 0) - 12 : window.innerHeight - (position.top ?? 0) - 12));
   const hasActions = Boolean(onReplace || onSetUse);
   const mediaMaxHeight = Math.max(0, available - (hasActions ? ACTION_ROW_HEIGHT : 16));
-  const media = state === 'invalid' || state === 'pending' ? <span>{t(reasonCode === 'input_unavailable' ? 'input.state.unavailable'
-    : state === 'pending' ? 'input.state.pending' : 'input.state.invalid')}</span>
+  const media = state === 'invalid' || state === 'pending' || state === 'inactive' ? <span>{t(reasonCode === 'input_unavailable' ? 'input.state.unavailable'
+    : state === 'pending' ? 'input.state.pending' : state === 'inactive' ? 'input.state.inactive' : 'input.state.invalid')}</span>
     : upstream?.url && upstream.availability === 'ready' && upstream.materialType === 'image' ? <img src={upstream.url} alt={upstream.label} style={{ maxHeight: mediaMaxHeight }} />
       : upstream?.url && upstream.availability === 'ready' && upstream.materialType === 'video' ? <video src={upstream.url} muted controls style={{ maxHeight: mediaMaxHeight }} />
         : upstream?.url && upstream.availability === 'ready' && upstream.materialType === 'audio' ? <audio src={upstream.url} controls />

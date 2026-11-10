@@ -83,23 +83,25 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   const isLiveOccupant = (occupant: SlotOccupant): boolean =>
     Boolean(occupant.sourceNodeId) && liveNodeIds.has(occupant.sourceNodeId)
     && Boolean(occupant.edgeId) && liveEdgeSource.get(occupant.edgeId as string) === occupant.sourceNodeId;
+  // Pruning by "slot no longer exists" is only trustworthy when the model/operation actually
+  // resolved. A missing/loading catalog yields an empty layout; treating that as "all slots
+  // removed" would wipe every unpinned V1 binding on a transient catalog hiccup.
+  const layoutResolved = Boolean(model && operation);
+  const shouldKeepOccupant = (slotName: string, occupant: SlotOccupant): boolean => {
+    if (occupant.pinned) return true;
+    if (!isLiveOccupant(occupant)) return false;
+    return layoutResolved ? layout.slots.some((spec) => spec.slot === slotName) : true;
+  };
+  // Saved conflicts are derived state; drop the ones whose occupant the pruning above removes so
+  // they cannot resurrect a stale binding or keep reporting role_conflict.
+  const savedConflicts = (plainSpeech ? [] : node.data.slotConflicts ?? []) as SlotConflict[];
+  const keptConflicts = currentVersion ? savedConflicts.filter((item) => shouldKeepOccupant(item.slot, item.occupant)) : savedConflicts;
   if (explicit) {
-    explicit = Object.fromEntries(Object.entries(explicit)
-      .map(([slot, occupants]) => {
-        // A slot removed by the current operation/layout is not a real input any more;
-        // unpinned leftovers from a previous mode must be pruned (pinned intent is kept).
-        const slotExistsInLayout = layout.slots.some((spec) => spec.slot === slot);
-        return [slot,
-          occupants
-            .filter((occupant) => currentVersion
-              ? (occupant.pinned || (slotExistsInLayout && isLiveOccupant(occupant)))
-              : (!modeChanged || occupant.pinned))
-            .map((occupant) => ({ ...occupant }))] as const;
-      })
-      // Drop slots emptied by pruning so the node does not keep a `{slot: []}` residue
-      // that reads as an explicit user-clear to downstream readers.
-      .filter(([, occupants]) => occupants.length > 0));
-    for (const conflict of (plainSpeech ? [] : node.data.slotConflicts ?? []) as SlotConflict[]) {
+    explicit = Object.fromEntries(Object.entries(explicit).map(([slot, occupants]) => [slot,
+      occupants
+        .filter((occupant) => currentVersion ? shouldKeepOccupant(slot, occupant) : (!modeChanged || occupant.pinned))
+        .map((occupant) => ({ ...occupant }))]));
+    for (const conflict of keptConflicts) {
       const occupants = explicit[conflict.slot] ??= [];
       if (!occupants.some((item) => item.edgeId === conflict.occupant.edgeId)) occupants.push({ ...conflict.occupant });
     }
@@ -124,7 +126,7 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   const selfHealed = explicit === undefined ? autoFillSlots(feed, layout, {}, standbyIds) : undefined;
   const filledAnything = selfHealed !== undefined && Object.values(selfHealed.bindings).some((occupants) => occupants.length > 0);
   const fill = currentVersion
-    ? (filledAnything ? selfHealed! : { bindings: explicit ?? {}, conflicts: (node.data.slotConflicts ?? []) as SlotConflict[] })
+    ? (filledAnything ? selfHealed! : { bindings: explicit ?? {}, conflicts: keptConflicts })
     : explicit ? autoFillSlots(feed, layout, explicit, standbyIds) : hydrateSlotBindings(feed, layout, graph.edges.filter((edge) => edge.target === node.id));
   const fingerprint = effectiveSlotFingerprint(raw, layout, fill.bindings, fill.conflicts, currentVersion ? 1 : undefined);
   const match = operation && permitted ? matchOperationInputs(operation, fingerprint) : undefined;
