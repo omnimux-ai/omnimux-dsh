@@ -137,11 +137,7 @@ export function useStagedConfigScope(scope) {
     if (!scope || typeof scope.getSnapshot !== 'function') return
     const initial = scope.getSnapshot()?.revision
     if (initial === undefined) return
-    if (baselineRevision.current !== initial) {
-      baselineRevision.current = initial
-      return
-    }
-    await new Promise((resolve) => {
+    const waitForNextRevision = () => new Promise((resolve) => {
       let settled = false
       let unsubscribe = () => {}
       const finish = () => {
@@ -156,6 +152,19 @@ export function useStagedConfigScope(scope) {
       }) ?? (() => {})
       setTimeout(finish, 800)
     })
+    // A server-side write may be visible in the mirror already, or may arrive
+    // a tick later. With no draft baseline yet, wait for that revision change
+    // before the first local stage; otherwise it would be fenced to a stale
+    // pre-action revision.
+    if (baselineRevision.current === null) {
+      await waitForNextRevision()
+      return
+    }
+    if (baselineRevision.current !== initial) {
+      baselineRevision.current = initial
+      return
+    }
+    await waitForNextRevision()
   }, [scope])
 
   const draftScope = useMemo(() => ({
