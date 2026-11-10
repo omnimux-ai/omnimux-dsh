@@ -24,6 +24,8 @@
 
 托管块里的扩展名必须排序且覆盖本仓代码类型（`md/ts/tsx/js/jsx/mjs/yml/yaml`），文件以换行结尾，这样重复索引同一目录时该块字节稳定，已跟踪文件不会被改脏——`ship` / `remove` 对脏工作树是 `die`，这里必须做到零 diff。实测：本工作树跑真实 `sag-worktree init` 后 `diff` 无差异。
 
+**残留风险（已知、未消除）**：`sag-worktree gc` 仍按「记录路径的目录不存在」判定孤儿，卷未挂载或仓目录改名时可能误删活索引，因此默认关闭、只由 `OMNIMUX_SAG_GC=1` 显式触发。
+
 **残留风险（已知、未消除）**：零 diff 依赖仓外工具 `sag-worktree` 写入的托管块。仓库测试锁住了扩展名顺序与 `file_types` / `convert_other_formats` 三个字段，把「工具升级后悄悄改写块」的概率压到最低，但无法在 CI 里证明外部工具的未来输出；一旦漂移，`.sagignore` 会变脏，而 `ship` / `remove` 对脏工作树是 `die`。届时按测试报错同步字段即可，不需要改代码。
 
 托管块里的 `file_types.code=false` 是 SAG 自己的内部分类位，扩展名白名单才是实际范围；实测 `sag -F AppWorkspaceView` 命中 8 个文件（其中 3 个 `.ts/.tsx`，另 5 个是本任务新增的 spec/文档），语义检索可直接命中原生 `.tsx` 源码，说明代码确实进了索引。
@@ -51,6 +53,7 @@
 
 1. `remove` 原本会删掉带托管块的 `.sagignore`；该文件入库后就是「删除已跟踪文件」，把工作树弄脏。改为**只删未跟踪的那份**。
 2. `TYPES` 补上 `mjs`、`yml`（本仓有 1241 个 `.mjs`），并支持 `SAG_WORKTREE_TYPES` 覆盖。
+3. 数据目录只按 basename 命名：`remove` 先核对 `worktree.path` 归属，不匹配时以**退出码 2** 跳过（本仓按「跳过」而不是「已清理」播报，避免假成功）；`init` 遇到同名不同路径直接拒绝，防止覆盖别人的归属记录。
 
 这两处不写入本仓，PR 内记录为外部依赖说明；仓库侧不假设该脚本一定存在。
 
@@ -69,13 +72,13 @@
 | 9 | `.sagignore` | 托管块 JSON 可解析、扩展名有序且含代码类型、源码目录未被排除 |
 | 10 | 真实索引 | 任务工作树 `sag-worktree init` 后 `status` 报 `index_ready: true`，且一次语义检索返回真实代码片段 |
 
-## 假设
+## 4. 假设
 
 1. 假设 `sag-worktree` 的隔离知识库（`SAG_DATA_DIR`）与用户共享库互不影响，清理工作树索引时停掉的是该工作树自己的服务进程。
 2. 假设 `sag-worktree remove` 对已经被删除的目录路径仍然有效（它只按路径推导数据目录），因此可以在 `git worktree remove` 之后再调用。
 3. 假设开发者机器上可能根本没有安装 `sag` / `sag-worktree`；缺工具时必须静默降级而不是报错。
 
-## 证伪方式
+## 5. 证伪方式
 
 1. 用桩可执行文件冒充 `sag-worktree`（记录 argv），在临时 git 仓里真实执行 `new` / `remove` / `prune` / `clean`：实测 `new` 记录为空、`remove` 记录 `remove <绝对路径>`、`prune` 记录 `gc`、`OMNIMUX_SAG_INDEX=0` 记录为空、PATH 去掉桩后 `new` 仍 exit 0 —— 若钩子阻塞交付，该断言立刻变红。
    仓库内已可复现的部分：`scripts/worktree-delivery.test.mjs` 新增用例用桩 `sag-worktree` 跑真实 `worktree.sh ship`，断言删除后恰好调用一次 `remove <该工作树>`，且不碰无关工作树；把 `cmd_ship` 的清理调用删掉该用例即变红。
@@ -104,3 +107,7 @@
 - `scripts/worktree-sag-index.test.mjs` :: `prune 与 clean 结束时回收孤儿索引`
 
 原断言：只断言 `sag_collect_orphans` 出现在两个函数里，并把 `cmd_prune` 锚点取为裸子串 `git worktree prune`；必须改的理由：把调用挪到清理循环之前仍绿（测不出 AC3 顺序），而裸子串会被同函数的 `say "git worktree prune"` 命中，删掉真命令仍绿；新期望证据：用 `\n  git worktree prune\n` 行级锚点，并断言 gc 在真命令与最后一次 `clean_one` 之后。
+
+- `scripts/worktree-sag-index.test.mjs` :: `带 SAG 托管块且扩展名覆盖本仓代码类型`
+
+原断言：扩展名只做「包含必需项 + 已排序」的超集检查；必须改的理由：评审指出工具新增一个扩展名时本断言仍绿，但托管块已被改写、`.sagignore` 会变脏并让 `ship`/`remove` 的脏树检查 `die`；新期望证据：与工具当前输出精确相等（顺序敏感），工具变更新增扩展名时测试必须变红并要求同步。

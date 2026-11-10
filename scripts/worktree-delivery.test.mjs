@@ -961,3 +961,115 @@ test('ship 删除工作树后清理该工作树的 SAG 隔离索引（Issue #406
     )
   } finally { rmSync(fixture, { recursive: true, force: true }) }
 })
+
+/**
+ * 建一个带裸远程的临时仓，并放一个记录 argv 的 `sag-worktree` 桩（Issue #4060）。
+ * 桩的退出码由 SAG_STUB_EXIT 控制，用来验证「跳过 / 失败 / 成功」三种输出。
+ */
+function sagFixture(prefix) {
+  const fixture = mkdtempSync(join(tmpdir(), `${prefix}-`))
+  const repo = join(fixture, 'repo')
+  const remote = join(fixture, 'origin.git')
+  const bin = join(fixture, 'bin')
+  const log = join(fixture, 'sag.log')
+  const git = (...args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+  mkdirSync(repo)
+  mkdirSync(bin)
+  git('init', '--bare', '-b', 'main', remote)
+  git('init', '-b', 'main')
+  git('config', 'user.name', 'delivery-test')
+  git('config', 'user.email', 'delivery@example.test')
+  mkdirSync(join(repo, 'scripts'))
+  copyFileSync(join(root, 'scripts/worktree.sh'), join(repo, 'scripts/worktree.sh'))
+  writeFileSync(join(repo, '.gitignore'), '.worktrees/\n')
+  git('add', '.')
+  git('commit', '-m', 'seed')
+  git('remote', 'add', 'origin', remote)
+  git('push', '-u', 'origin', 'main')
+  writeFileSync(
+    join(bin, 'sag-worktree'),
+    `#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\n[ -n "\${SAG_STUB_EXIT:-}" ] && exit "\${SAG_STUB_EXIT}"\nexit 0\n`,
+    { mode: 0o755 },
+  )
+  const worktree = (name) => {
+    const dir = join(repo, '.worktrees', name)
+    git('worktree', 'add', '-b', `agent/${name}`, dir)
+    writeFileSync(join(dir, 'f.txt'), `${name}\n`)
+    git('-C', dir, 'add', 'f.txt')
+    git('-C', dir, 'commit', '-m', name)
+    return dir
+  }
+  const run = (args, env = {}) => spawnSync('bash', ['scripts/worktree.sh', ...args], {
+    cwd: repo,
+    encoding: 'utf8',
+    env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, ...env },
+  })
+  const calls = () => (existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n').filter(Boolean) : [])
+  const cleanup = () => rmSync(fixture, { recursive: true, force: true })
+  return { fixture, repo, git, worktree, run, calls, cleanup }
+}
+
+test('remove 删除工作树后清理该工作树的 SAG 隔离索引（Issue #4060）', () => {
+  const f = sagFixture('omnimux-sag-remove')
+  try {
+    const dir = f.worktree('removable')
+    const result = f.run(['remove', 'removable', '--abandon'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(existsSync(dir), false)
+    assert.equal(f.calls().filter((line) => /^remove .*\/\.worktrees\/removable$/.test(line)).length, 1, `实际调用：${JSON.stringify(f.calls())}`)
+  } finally { f.cleanup() }
+})
+
+test('clean 批量删除后先逐个清理索引、最后回收孤儿（Issue #4060）', () => {
+  const f = sagFixture('omnimux-sag-clean')
+  try {
+    f.worktree('sweep-one')
+    // 两个分支都合进 origin/main 才会被判为可清理；第二个必须基于更新后的 main。
+    f.git('push', 'origin', 'agent/sweep-one:main')
+    f.git('fetch', 'origin')
+    f.git('merge', '--ff-only', 'origin/main')
+    f.worktree('sweep-two')
+    f.git('push', 'origin', 'agent/sweep-two:main')
+    const result = f.run(['clean'], { OMNIMUX_SAG_GC: '1' })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const removes = f.calls().filter((line) => /^remove .*\/\.worktrees\/sweep-/.test(line))
+    assert.equal(removes.length, 2, `每个被删工作树都要清理索引，实际：${JSON.stringify(f.calls())}`)
+    const gcAt = f.calls().indexOf('gc')
+    assert.notEqual(gcAt, -1, '开启开关后必须回收孤儿索引')
+    assert.equal(
+      f.calls().filter((line) => line.startsWith('remove ')).every((line) => f.calls().indexOf(line) < gcAt),
+      true,
+      '孤儿回收必须发生在逐个清理之后，否则漏掉本轮删除的工作树',
+    )
+  } finally { f.cleanup() }
+})
+
+test('prune 只在 OMNIMUX_SAG_GC=1 时回收孤儿索引（Issue #4060）', () => {
+  const f = sagFixture('omnimux-sag-prune')
+  try {
+    assert.equal(f.run(['prune']).status, 0)
+    assert.deepEqual(f.calls(), [], '未开开关时不得触碰任何全局索引操作')
+    assert.equal(f.run(['prune'], { OMNIMUX_SAG_GC: '1' }).status, 0)
+    assert.deepEqual(f.calls(), ['gc'], '开了开关才回收孤儿索引')
+  } finally { f.cleanup() }
+})
+
+test('清理失败与「索引不属于该路径」必须给出不同输出（Issue #4060）', () => {
+  const f = sagFixture('omnimux-sag-status')
+  try {
+    const failed = f.worktree('will-fail')
+    const failRun = f.run(['remove', 'will-fail', '--force'], { SAG_STUB_EXIT: '3' })
+    assert.equal(failRun.status, 0, '清理失败不得阻断交付')
+    assert.equal(existsSync(failed), false, '工作树仍要被删掉')
+    assert.match(failRun.stderr, /SAG 索引清理失败（退出码 3/, `失败必须留 stderr 警告：${failRun.stderr}`)
+    assert.doesNotMatch(failRun.stdout, /已清理该工作树的隔离索引/, '失败不得报成功')
+
+    const skipped = f.worktree('will-skip')
+    const skipRun = f.run(['remove', 'will-skip', '--force'], { SAG_STUB_EXIT: '2' })
+    assert.equal(skipRun.status, 0)
+    assert.equal(existsSync(skipped), false)
+    assert.match(skipRun.stdout, /跳过清理/, '工具拒绝删除时必须说「跳过」，不能报成功')
+    assert.doesNotMatch(skipRun.stdout, /已清理该工作树的隔离索引/, '跳过不得报成功（假成功）')
+    assert.doesNotMatch(skipRun.stderr, /清理失败/, '跳过不是失败，不该刷失败警告')
+  } finally { f.cleanup() }
+})

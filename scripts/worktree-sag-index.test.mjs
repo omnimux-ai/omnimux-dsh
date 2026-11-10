@@ -122,14 +122,10 @@ describe('.sagignore 纳入版本库 (#4060)', () => {
     const match = sagignore.match(/# SAG Wiki index options: begin\n# (\{.*\})\n# SAG Wiki index options: end/)
     assert.ok(match, '.sagignore 必须带 SAG 托管块（缺它时索引会退回只收文档）')
     const options = JSON.parse(match[1])
-    const extensions = new Set(options.extensions)
-    for (const required of ['md', 'ts', 'tsx', 'js', 'jsx', 'mjs', 'yml', 'yaml']) {
-      assert.ok(extensions.has(required), `托管块必须包含 ${required}，否则这类文件不可检索`)
-    }
     assert.deepEqual(
       options.extensions,
-      [...options.extensions].sort(),
-      '扩展名必须排序：重复索引同目录才能字节稳定、不把已跟踪文件改脏',
+      ['css', 'go', 'html', 'js', 'json', 'jsx', 'md', 'mjs', 'sql', 'ts', 'tsx', 'yaml', 'yml'],
+      '托管块必须与 sag-worktree 的 TYPES 精确一致：工具新增一个扩展名就会改写这个已跟踪文件，而 ship/remove 对脏工作树是 die，所以这里不允许超集',
     )
   })
 

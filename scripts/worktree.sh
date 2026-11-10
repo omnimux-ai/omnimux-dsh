@@ -101,14 +101,16 @@ sag_available() {
 }
 
 sag_forget_worktree() {
-  local wt="$1"
+  local wt="$1" status=0
   sag_available || return 0
-  if "${SAG_WORKTREE_BIN}" remove "${wt}" >/dev/null 2>&1; then
-    say "SAG: 已清理该工作树的隔离索引 ${wt#${ROOT}/}"
-  else
-    # 失败必须留一行可诊断警告：静默吞掉会让人以为索引清过了，实际还在占磁盘。
-    echo "worktree.sh: ⚠️  SAG 索引清理失败（不影响工作树）：sag-worktree remove ${wt}" >&2
-  fi
+  "${SAG_WORKTREE_BIN}" remove "${wt}" >/dev/null 2>&1 || status=$?
+  case "${status}" in
+    0) say "SAG: 已清理该工作树的隔离索引 ${wt#${ROOT}/}" ;;
+    # 2 = 该数据目录记的是另一个同名路径，工具拒绝删除。这既不是成功也不是失败：
+    # 照旧报「已清理」就是假成功，报失败又会在每次无关任务上刷警告。
+    2) say "SAG: 跳过清理 ${wt#${ROOT}/}（本机同名索引不属于该路径）" ;;
+    *) echo "worktree.sh: ⚠️  SAG 索引清理失败（退出码 ${status}，不影响工作树）：${SAG_WORKTREE_BIN} remove ${wt}" >&2 ;;
+  esac
   return 0
 }
 
@@ -119,7 +121,7 @@ sag_collect_orphans() {
   sag_available || return 0
   if ! "${SAG_WORKTREE_BIN}" gc >/dev/null 2>&1; then
     # 与清理同一条原则：失败要能看见，但不能把交付带崩。
-    echo "worktree.sh: ⚠️  SAG 孤儿索引回收失败（不影响交付）：sag-worktree gc" >&2
+    echo "worktree.sh: ⚠️  SAG 孤儿索引回收失败（不影响交付）：${SAG_WORKTREE_BIN} gc" >&2
   fi
   return 0
 }
