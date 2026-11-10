@@ -193,6 +193,7 @@ Config.understand:      # v2.1
 
 - 复刻 OPC 五维结构：一句话描述 → 核心目标 → 影响力 → 叙事 → 画面（含表格）→ 复刻策略
 - 默认模型 `Config.understand.defaultModel`
+- `model` 只是可选覆盖项；工作流的视频拆解与分镜调用它时**不写死 ID**：模型取自 hub `/omnimux/model-catalog`（优先 `executionStatus` 可执行且声明 `video` 输入的文本行，其次网关的分析默认 `defaults.analysis`），目录里没有可用模型时返回 `analyze-model-unavailable` 并提示去「模型设置」同步目录或启用支持视频的模型
 - 用户故事：运营拆爆款 / 给 video→carousel 内部事实源
 
 #### `video_reverse_prompt`

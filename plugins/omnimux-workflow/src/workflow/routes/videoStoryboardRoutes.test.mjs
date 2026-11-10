@@ -116,6 +116,22 @@ function harness(t, opts = {}) {
     },
   };
 
+  // The analysis model is resolved from the hub catalog, so every harness needs
+  // a catalog double; the id differs from any literal to prove it is read.
+  const visionCatalog = {
+    list: () => ({
+      text: [
+        {
+          id: 'catalog-vision-pro',
+          label: 'Catalog Vision Pro',
+          executionStatus: 'ready',
+          inputCapability: { modalities: ['text', 'image', 'video'] },
+        },
+      ],
+      defaults: { analysis: 'catalog-vision-pro' },
+    }),
+  };
+
   const dispatcher = createWorkflowDispatcher({
     store,
     mediaDir: join(root, 'media'),
@@ -130,6 +146,7 @@ function harness(t, opts = {}) {
     },
     getSeam: (name) => {
       if (opts.disableTools) return undefined;
+      if (name === 'modelCatalog') return opts.modelCatalog ?? visionCatalog;
       if (name === 'videoAnalyze') return videoAnalyzeTool;
       if (name === 'videoProcess') return videoProcessTool;
       return undefined;
@@ -149,7 +166,7 @@ function harness(t, opts = {}) {
       ...extra,
     });
 
-  return { call, toolCalls, store, workspace, url, dummyVideo, root, mediaDir: join(root, 'media'), dispatcher };
+  return { call, request: call, toolCalls, store, workspace, url, dummyVideo, root, mediaDir: join(root, 'media'), dispatcher };
 }
 
 test('videoStoryboard: 成功生成分镜表并持久化 .htable 多模态数据', async (t) => {
@@ -669,4 +686,31 @@ test('videoStoryboard: targetNodeId 为空串/纯空白时视为未提供（不�
   const snapshot = h.store.get(h.workspace.id);
   assert.equal(snapshot.nodes.filter((n) => n.type === 'table').length, 1, '单一下游约束仍然成立');
   assertSourceVideoUntouched(h);
+});
+
+test('videoStoryboard: 分析模型取自中枢目录而不是写死的 ID', async (t) => {
+  const h = harness(t);
+  const res = await h.request({ nodeId: 'node_video_1', videoPath: h.dummyVideo });
+
+  assert.equal(res.status, 200);
+  const analyzeCall = h.toolCalls.find((c) => c.tool === 'video_analyze');
+  assert.ok(analyzeCall, 'video_analyze must be invoked');
+  assert.equal(analyzeCall.args.model, 'catalog-vision-pro');
+});
+
+test('videoStoryboard: 目录里没有支持视频的模型时报 analyze-model-unavailable', async (t) => {
+  const h = harness(t, {
+    modelCatalog: {
+      list: () => ({
+        text: [{ id: 'text-only-model', executionStatus: 'ready', inputCapability: { modalities: ['text'] } }],
+        defaults: {},
+      }),
+    },
+  });
+  const res = await h.request({ nodeId: 'node_video_1', videoPath: h.dummyVideo });
+
+  assert.equal(res.status, 502);
+  assert.equal(res.body.error, 'analyze-model-unavailable');
+  assert.match(res.body.message, /模型目录/);
+  assert.equal(h.toolCalls.some((c) => c.tool === 'video_analyze'), false);
 });
