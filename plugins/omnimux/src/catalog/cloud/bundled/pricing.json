@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "source": "pricing",
-  "generatedAt": "2026-10-24T12:23:12.114Z",
+  "generatedAt": "2026-11-10T07:06:00.000Z",
   "groups": {
     "ratio": {
       "cheap": 0.5,
@@ -430,7 +430,13 @@
             "en": "Charged by reported token usage; price is USD per 1M tokens",
             "zh": "按上游返回的词元用量计费，单价为每百万词元美元价"
           }
-        }
+        },
+        "reasoning_efforts": {
+          "high": "high",
+          "low": "low",
+          "medium": "medium"
+        },
+        "default_reasoning_effort": "medium"
       },
       "contractPresent": true
     },
@@ -539,7 +545,13 @@
             "en": "Charges use reported usage: USD 1.7 per 1M input tokens, USD 8.5 per 1M output tokens and USD 0.086 per 1M cached input tokens, with a USD 0.01/68 minimum per request rounded to the gateway billing unit. The official input anchor is USD 4 per 1M tokens; model-specific billing rules determine the effective selling price. Input includes reported tool-use input; output includes reported thinking. Cached tokens are an input subset, counted once.",
             "zh": "按实际报告用量结算，每百万词元输入 1.7 美元、输出 8.5 美元、缓存读取 0.086 美元；每次最低 0.01/68 美元，按本站最小计费单位取整。官方输入基准为每百万词元 4 美元，实际售价由模型专属计费规则确定。输入包含已报告的工具输入，输出包含已报告的思考；缓存是输入子集，各计一次。"
           }
-        }
+        },
+        "reasoning_efforts": {
+          "high": "high",
+          "low": "low",
+          "medium": "medium"
+        },
+        "default_reasoning_effort": "medium"
       },
       "contractPresent": true
     },
@@ -2716,5 +2728,12 @@
       },
       "contractPresent": true
     }
-  ]
+  ],
+  "defaults": {
+    "chat": "gemini-3.8-flash",
+    "text_to_image": "gpt-image-2.5",
+    "text_to_music": "suno",
+    "text_to_video": "seedance-2-5",
+    "vision_chat": "gemini-3.8-flash"
+  }
 }
