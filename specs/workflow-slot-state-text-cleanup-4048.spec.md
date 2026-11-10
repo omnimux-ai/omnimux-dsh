@@ -41,3 +41,9 @@
 
 ## 证伪方式
 证伪方式：构造一个 `text_to_video` 节点，其 `slotBindings.reference_images` 指向存活图片节点与存活边（pinned=false），调用 `recomputeCanvasSlots` 后断言该槽位被清空、`compat.reasonCodes` 不含 `role_conflict`；再构造同槽位 pinned=true 的对照，断言其被保留。同时渲染 `SlotWells` 的 invalid/pending 记录，断言 HTML 不含 `wf-slot-well__state`。任一断言失败即假设被推翻、用例变红。
+
+## 旧标准变更
+- `plugins/omnimux-workflow/src/shared/graph/slotModeSwitchResidual.test.mjs` :: `#4048 阻断3：裁剪后保留空槽键，展示/提交不出现「显示已填、提交为空」`
+  原断言：裁剪后必须保留 `first_frame` 空槽键，并且直接把 `result.data.slotBindings` 传给展示/提交读取断言为空。
+  必须改：评审实测 ConfigPanel 会把「无匹配槽位」的绑定归一成未初始化并 autoFill，保留空槽键会同时造成「显示已填、提交为空」以及同槽位后续连线无法自动装填；改为「裁剪导致无任何显式占用时，按未初始化重新自动装填并落盘」。
+  新期望证据：重算后 `first_frame` 不残留，同一条 live 边自动装填到 `reference_images`，展示与提交选中同一条。

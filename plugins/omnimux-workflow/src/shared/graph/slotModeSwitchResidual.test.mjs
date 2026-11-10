@@ -105,11 +105,15 @@ test('#4048 阻断3：裁剪后保留空槽键，展示/提交不出现「显示
   };
   const result = recomputeCanvasSlots(target, { nodes: [upstream, target], edges: [edge] }, { catalog: videoCatalog() });
   assert.equal((result.data.slotBindings?.first_frame ?? []).length, 0, 'first_frame 槽不在 video_multi_ref，应清理');
-  assert.ok(Object.hasOwn(result.data.slotBindings ?? {}, 'first_frame'), '必须保留空槽键而非落成 {}');
+  assert.ok(!Object.hasOwn(result.data.slotBindings ?? {}, 'first_frame'), 'first_frame 空槽键必须移除');
 
+  // 裁剪致空后按未初始化自愈：同一条 live 边自动装填到新模式的 reference_images
+  assert.equal((result.data.slotBindings?.reference_images ?? []).length, 1, '新槽位应自动装填');
   const layout = deriveSlotLayout(videoCatalog(), 'wan-3.0', 'video_multi_ref');
   const feed = [{ edgeId: 'e-ref', sourceNodeId: 'upstream', outputId: 'o', type: 'image', availability: 'ready', ordinal: 0, url: 'https://fixture.test/r.png' }];
   const display = effectiveInputDisplay(layout, feed, result.data.slotBindings, result.data.slotConflicts ?? [], [], [], 1);
-  assert.equal(display.records.find((record) => record.slot.slot === 'reference_images'), undefined, '不得 autoFill 出显示态');
-  assert.deepEqual(selectSlotOccupants(layout, display.bindings, feed, display.conflicts, 1), [], '提交侧不得出现选择，显示=提交一致');
+  assert.equal(display.records.find((record) => record.slot.slot === 'reference_images')?.state, 'ready', '展示侧应为已填');
+  const selected = selectSlotOccupants(layout, display.bindings, feed, display.conflicts, 1);
+  assert.equal(selected.length, 1, '提交侧必须消费同一条');
+  assert.equal(selected[0].occupant.edgeId, 'e-ref', '显示=提交一致');
 });

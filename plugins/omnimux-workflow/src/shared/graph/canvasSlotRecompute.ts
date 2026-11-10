@@ -96,13 +96,21 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   // they cannot resurrect a stale binding or keep reporting role_conflict.
   const savedConflicts = (plainSpeech ? [] : node.data.slotConflicts ?? []) as SlotConflict[];
   const keptConflicts = currentVersion ? savedConflicts.filter((item) => shouldKeepOccupant(item.slot, item.occupant)) : savedConflicts;
+  let prunedAny = false;
   if (explicit) {
-    explicit = Object.fromEntries(Object.entries(explicit).map(([slot, occupants]) => [slot,
-      occupants
-        .filter((occupant) => currentVersion ? shouldKeepOccupant(slot, occupant) : (!modeChanged || occupant.pinned))
-        .map((occupant) => ({ ...occupant }))]));
+    const source = explicit;
+    const next: SlotBindings = Object.fromEntries(Object.entries(source).map(([slot, occupants]) => {
+      const kept = occupants
+        .filter((occupant) => {
+          const keep = currentVersion ? shouldKeepOccupant(slot, occupant) : (!modeChanged || occupant.pinned);
+          if (!keep) prunedAny = true;
+          return keep;
+        })
+        .map((occupant) => ({ ...occupant }));
+      return [slot, kept] as const;
+    }).filter(([, occupants]) => occupants.length > 0));
     for (const conflict of keptConflicts) {
-      const occupants = explicit[conflict.slot] ??= [];
+      const occupants = next[conflict.slot] ??= [];
       if (!occupants.some((item) => item.edgeId === conflict.occupant.edgeId)) occupants.push({ ...conflict.occupant });
     }
     // Only new edges may carry a picker hint. Stale edge mirrors never override node slots.
@@ -114,9 +122,15 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
         : layout.slots.find((item) => item.role === asset.role && item.type === asset.type);
       const hint = slot?.slot ?? asset.targetSlot ?? `role:${asset.role}`;
       const occupant = { sourceNodeId: asset.sourceNodeId, edgeId: asset.edgeId, outputId: asset.outputId, pinned: true };
-      explicit[hint] = slot?.max === 1 ? [occupant] : [...(explicit[hint] ?? []), occupant];
+      next[hint] = slot?.max === 1 ? [occupant] : [...(next[hint] ?? []), occupant];
     }
+    explicit = next;
   }
+  // If pruning consumed every explicit occupant, treat the node as "not initialized" so the
+  // same auto-fill is persisted for both the display and submission readers (and later
+  // reconnections can auto-fill again). A real user clear is `{}` with prunedAny=false and
+  // is left untouched.
+  if (currentVersion && prunedAny && explicit && Object.keys(explicit).length === 0) explicit = undefined;
   const standbyIds = Array.isArray(node.data.slotStandbyEdgeIds) ? node.data.slotStandbyEdgeIds.filter((id): id is string => typeof id === 'string') : [];
   // A missing V1 `slotBindings` means "not initialized yet", not "the user cleared every slot": the display
   // side self-heals such a node by auto-filling, so the store must persist that same fill. Leaving `{}` behind
