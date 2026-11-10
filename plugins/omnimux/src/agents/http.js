@@ -73,7 +73,9 @@ async function readId(req) {
  */
 export function registerAgentRoutes(webServer, deps = {}) {
   const getSettings = () => (typeof deps.getSettings === 'function' ? deps.getSettings() : deps.settings)
-  const scan = typeof deps.scan === 'function' ? deps.scan : () => scanLocalAgents()
+  const scan = typeof deps.scan === 'function'
+    ? deps.scan
+    : (options = {}) => scanLocalAgents(undefined, { refresh: options?.refresh === true })
   const probe = typeof deps.probe === 'function' ? deps.probe : (bin) => probeAgentBin(bin)
   const authProbe = typeof deps.authProbe === 'function' ? deps.authProbe : (id) => probeAgentAuth(id)
   const checker = createUpdateChecker()
@@ -118,7 +120,9 @@ export function registerAgentRoutes(webServer, deps = {}) {
       // A scan reveals what lives on this machine; same-origin only.
       if (!assertLocal(req, res)) return
       try {
-        const agents = await withAuth(await scan())
+        const url = new URL(req.url || '/', 'http://localhost')
+        const refresh = url.searchParams.get('refresh') === '1'
+        const agents = await withAuth(await scan({ refresh }))
         sendJson(res, 200, { agents })
       } catch (error) {
         sendJson(res, 500, { error: typeof error?.message === 'string' ? error.message : String(error) })
@@ -134,7 +138,7 @@ export function registerAgentRoutes(webServer, deps = {}) {
       try {
         const url = new URL(req.url || '/', 'http://localhost')
         const refresh = url.searchParams.get('refresh') === '1'
-        const agents = await scan()
+        const agents = await scan({ refresh })
         const result = await updateCheck(agents, { refresh })
         sendJson(res, 200, {
           checkedAt: Number.isFinite(result?.checkedAt) ? result.checkedAt : Date.now(),

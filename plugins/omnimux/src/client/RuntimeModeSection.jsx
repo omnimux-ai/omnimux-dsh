@@ -4,6 +4,7 @@ import { useOmnimuxAuth } from './use-omnimux-auth.js'
 import { ScenarioSelection } from './ScenarioSelection.jsx'
 import { ProviderConfigPanel } from './ProviderConfigPanel.jsx'
 import { AgentBrandIcon } from './agent-brand-icons.jsx'
+import { agentModelSource, agentScanUrl, agentStatusText, agentUpdatesUrl, countInstalledAgents, shouldAutoRefresh } from './agent-live-view.js'
 
 async function api(path, init) {
   const response = await fetch(path, init)
@@ -110,6 +111,7 @@ export function RuntimeModeSection({ t, scope }) {
           setError={setError}
           notice={notice}
           setNotice={setNotice}
+          active={activeTab === 'cli'}
         />
       </div>
 
@@ -136,7 +138,7 @@ export function RuntimeModeSection({ t, scope }) {
 /**
  * CLI Agents discovery and detail configuration panel
  */
-function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, setNotice, onVerified }) {
+function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, setNotice, onVerified, active }) {
   const [agents, setAgents] = useState([])
   const [selectedAgent, setSelectedAgent] = useState(value.runtimeAgentId || '')
   const initialAgentModel = typeof value.runtimeAgentModel === 'string'
@@ -148,6 +150,7 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
   const [loggingInId, setLoggingInId] = useState('')
   const [updatingId, setUpdatingId] = useState('')
   const loginPollRef = useRef(null)
+  const lastAutoRefreshRef = useRef(0)
 
   // 登录轮询：终端完成登录后由服务端登录态收敛，最长 2 分钟
   const stopLoginPoll = useCallback(() => {
@@ -159,9 +162,9 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
 
   useEffect(() => () => stopLoginPoll(), [stopLoginPoll])
 
-  const refreshAgents = useCallback(async () => {
+  const refreshAgents = useCallback(async (options = {}) => {
     try {
-      const data = await api('/omnimux/agents')
+      const data = await api(agentScanUrl(options.refresh === true))
       if (Array.isArray(data.agents)) {
         setAgents(data.agents)
       }
@@ -170,9 +173,9 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
     }
   }, [])
 
-  const refreshUpdates = useCallback(async () => {
+  const refreshUpdates = useCallback(async (options = {}) => {
     try {
-      const data = await api('/omnimux/agents/updates')
+      const data = await api(agentUpdatesUrl(options.refresh === true))
       if (data && data.updates && typeof data.updates === 'object') {
         setUpdates(data.updates)
       }
@@ -182,7 +185,43 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
   }, [])
 
   useEffect(() => {
+    // The mount read counts as this panel's first refresh, so becoming the
+    // visible tab right afterwards must not scan a second time.
+    lastAutoRefreshRef.current = Date.now()
     void refreshAgents().then(() => refreshUpdates())
+  }, [refreshAgents, refreshUpdates])
+
+  /**
+   * Re-read the panel after the user comes back to it. A scan costs a few
+   * local process calls, so repeated focus events stay inside one 30s window
+   * and a hidden document never triggers it.
+   */
+  const autoRefresh = useCallback(() => {
+    const visibility = typeof document === 'undefined' ? 'visible' : document.visibilityState
+    if (!shouldAutoRefresh(lastAutoRefreshRef.current, Date.now(), visibility)) return
+    lastAutoRefreshRef.current = Date.now()
+    void refreshAgents().then(() => refreshUpdates())
+  }, [refreshAgents, refreshUpdates])
+
+  useEffect(() => {
+    if (active !== true) return
+    autoRefresh()
+  }, [active, autoRefresh])
+
+  useEffect(() => {
+    if (active !== true || typeof window === 'undefined') return undefined
+    const onFocus = () => autoRefresh()
+    const onVisibility = () => { if (document.visibilityState === 'visible') autoRefresh() }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener?.('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener?.('visibilitychange', onVisibility)
+    }
+  }, [active, autoRefresh])
+
+  const scanNow = useCallback(() => {
+    void refreshAgents({ refresh: true }).then(() => refreshUpdates({ refresh: true }))
   }, [refreshAgents, refreshUpdates])
 
   const startLoginPoll = useCallback((id) => {
@@ -322,8 +361,8 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
         body: JSON.stringify({ id: agent.id }),
       })
       if (res && res.ok) {
-        await refreshAgents()
-        await refreshUpdates()
+        await refreshAgents({ refresh: true })
+        await refreshUpdates({ refresh: true })
         setNotice(t('runtime.cliUpdateDone'))
       } else {
         setError(t('runtime.cliUpdateFail'))
@@ -341,6 +380,7 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
     setTestedId('')
   }
 
+  const installedCount = countInstalledAgents(agents)
   const selected = agents.find((item) => item && item.id === selectedAgent) || null
   const agent = selected
   const selectedAuth = selected && selected.auth && typeof selected.auth === 'object' ? selected.auth : null
@@ -374,11 +414,15 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
           <p className="omx-agent-subtitle">{t('runtime.cliHeader')}</p>
         </div>
         <div className="omx-agent-head-actions">
-          <Button variant="secondary" disabled={busy} onClick={() => { void refreshAgents() }}>
+          <Button variant="secondary" disabled={busy} onClick={scanNow}>
             {t('runtime.scan')}
           </Button>
-          <span className={`omx-agent-status ${busy ? 'busy' : ''}`}>
-            {busy ? t('runtime.testingConnection') : t('runtime.cliCount', { count: String(agents.length) })}
+          <span className={`omx-agent-status ${busy ? 'busy' : ''}`} data-installed={String(installedCount)} data-known={String(agents.length)}>
+            {busy
+              ? t('runtime.testingConnection')
+              : agents.length > 0
+                ? t('runtime.cliCountInstalled', { installed: String(installedCount), known: String(agents.length) })
+                : null}
           </span>
         </div>
       </div>
@@ -404,9 +448,7 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
               <span className="omx-agent-card-copy">
                 <span className="omx-agent-name">{agent.name}</span>
                 <span className="omx-agent-version">
-                  {agent.auth && agent.auth.state === 'signed-out'
-                    ? t('runtime.cliNeedsLogin')
-                    : (agent.version || t('runtime.notDetected'))}
+                  {agentStatusText(t, agent)}
                 </span>
               </span>
             </button>
@@ -416,7 +458,17 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
 
       {selected ? (
         <div className="omx-agent-model-section">
-          <div className="omx-agent-model-label">{t('runtime.modelLabel')} · {selected.name}</div>
+          <div className="omx-agent-model-label">
+            {t('runtime.modelLabel')} · {selected.name}
+            {agentModelSource(selected) ? (
+              <span className="omx-agent-source" data-source={agentModelSource(selected)}>
+                {t(agentModelSource(selected) === 'live' ? 'runtime.modelsLive' : 'runtime.modelsPreset')}
+              </span>
+            ) : null}
+          </div>
+          {agentModelSource(selected) === 'preset' ? (
+            <p className="omx-agent-source-hint">{t('runtime.modelsPresetHint')}</p>
+          ) : null}
           <DropdownSelect
             id={`omx-agent-model-${selected.id}`}
             value={agentModel || ''}

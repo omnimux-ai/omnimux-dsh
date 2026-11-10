@@ -142,9 +142,105 @@ async function probeByFile(spec, options) {
 }
 
 /**
+ * A settings-declared sign-in: the CLI records which protocol it uses, and the
+ * key lives either in its own env layer or in the process environment. Only
+ * names and emptiness are inspected; values never leave this function.
+ * @param {{
+ *   paths?: string[],
+ *   path?: string,
+ *   selectedTypePath?: string,
+ *   providersPath?: string,
+ *   envPath?: string,
+ *   defaultEnvKeys?: Record<string, string>,
+ *   legacyPaths?: string[],
+ *   legacyTokenKeys?: string[],
+ * }} spec
+ * @param {{ home?: string, fsImpl?: typeof fs, env?: Record<string, string|undefined> }} options
+ * @returns {Promise<AgentAuth>}
+ */
+async function probeByConfig(spec, options) {
+  const fsImpl = options.fsImpl || fs
+  const home = options.home || os.homedir()
+  const env = options.env || process.env
+  const method = /** @type {'file'} */ ('file')
+  const legacy = await probeByFile({ paths: spec.legacyPaths, tokenKeys: spec.legacyTokenKeys }, { fsImpl, home })
+  const settingsPath = spec.path
+    ? (path.isAbsolute(spec.path) ? spec.path : path.join(home, spec.path))
+    : ''
+  if (!settingsPath) return legacy
+  let present = false
+  try {
+    present = fsImpl.existsSync(settingsPath)
+  } catch {
+    present = false
+  }
+  if (!present) return legacy
+  let settings = null
+  try {
+    settings = parseJsonObject(fsImpl.readFileSync(settingsPath, 'utf8'))
+  } catch {
+    settings = null
+  }
+  if (!settings) return { state: 'unknown', method }
+  const rawType = readDotted(settings, spec.selectedTypePath)
+  const selectedType = typeof rawType === 'string' ? rawType.trim() : ''
+  const providers = readDotted(settings, spec.providersPath)
+  const providerIds = providers && typeof providers === 'object' && !Array.isArray(providers)
+    ? Object.keys(providers).filter((id) => Array.isArray(providers[id]) && providers[id].length > 0)
+    : []
+  const envLayer = readDotted(settings, spec.envPath)
+  const declaredKeys = configEnvKeys(spec, settings, selectedType)
+  const keyVisible = declaredKeys.some((key) => (
+    (envLayer && typeof envLayer === 'object' && isNonEmptyString(envLayer[key]))
+    || isNonEmptyString(env[key])
+  ))
+  if (keyVisible) return { state: 'signed-in', method }
+  if (legacy.state === 'signed-in') return { state: 'signed-in', method }
+  // A model list or a chosen protocol is configured but no key is visible from
+  // here; the user's shell may hold it, so this is not proof of being signed out.
+  if (selectedType || providerIds.length > 0) return { state: 'unknown', method }
+  return { state: 'signed-out', method }
+}
+
+/** @param {unknown} value */
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim() !== ''
+}
+
+/**
+ * Every environment variable name this settings document could read a key
+ * from: each model entry's explicit `envKey`, else its provider's default.
+ * @param {{ providersPath?: string, defaultEnvKeys?: Record<string, string> }} spec
+ * @param {object} settings
+ * @param {string} selectedType
+ * @returns {string[]}
+ */
+function configEnvKeys(spec, settings, selectedType) {
+  const defaults = spec.defaultEnvKeys && typeof spec.defaultEnvKeys === 'object' ? spec.defaultEnvKeys : {}
+  const keys = []
+  const providers = readDotted(settings, spec.providersPath)
+  const addProvider = (providerId, list) => {
+    if (!Array.isArray(list)) return
+    for (const entry of list) {
+      const explicit = entry && typeof entry === 'object' ? entry.envKey : ''
+      if (isNonEmptyString(explicit)) keys.push(explicit.trim())
+      else if (typeof defaults[providerId] === 'string') keys.push(defaults[providerId])
+    }
+  }
+  if (providers && typeof providers === 'object' && !Array.isArray(providers)) {
+    // A chosen protocol narrows the search to its own provider: a key that
+    // belongs to some other provider must not make this one look signed in.
+    if (selectedType) addProvider(selectedType, providers[selectedType])
+    else for (const [providerId, list] of Object.entries(providers)) addProvider(providerId, list)
+  }
+  if (selectedType && typeof defaults[selectedType] === 'string') keys.push(defaults[selectedType])
+  return [...new Set(keys.filter(Boolean))]
+}
+
+/**
  * Observe whether one local agent CLI is signed in, without network access.
  * @param {string} id
- * @param {{ run?: Function, home?: string, fsImpl?: typeof fs, timeoutMs?: number }} [options]
+ * @param {{ run?: Function, home?: string, fsImpl?: typeof fs, env?: Record<string, string|undefined>, timeoutMs?: number }} [options]
  * @returns {Promise<AgentAuth>}
  */
 export async function probeAgentAuth(id, options = {}) {
@@ -153,6 +249,7 @@ export async function probeAgentAuth(id, options = {}) {
   const spec = agent.auth
   if (spec.kind === 'command' && spec.command) return probeByCommand(spec, options)
   if (spec.kind === 'file') return probeByFile(spec, options)
+  if (spec.kind === 'config') return probeByConfig(spec, options)
   return { ...AUTH_UNKNOWN }
 }
 
