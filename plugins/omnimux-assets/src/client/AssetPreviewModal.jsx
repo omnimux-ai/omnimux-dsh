@@ -217,6 +217,10 @@ export function AssetPreviewModal({ item, t, onClose, onAddToConversation, saved
     timerRef.current = setTimeout(() => {
       setAdded(false)
     }, 1800)
+    // Issue #4024：投递完成后直接关闭预览。素材已经挂到输入框，弹窗再停留
+    // 只会逼用户额外点 X / Esc 才能回到素材列表。1800ms 回执仅在调用方没给
+    // onClose 时兜底可见；正常由 AssetsStage 传 onClose 卸载弹窗。
+    onClose?.()
   }
 
   const isImage = item.kind === 'image' && Boolean(item.previewUrl) && !broken

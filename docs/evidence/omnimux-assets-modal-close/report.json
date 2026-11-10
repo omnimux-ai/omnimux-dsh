@@ -1,0 +1,43 @@
+{
+  "task": "omnimux-assets-modal-close",
+  "issue": 4024,
+  "method": "ego-browser (real Chromium) loading a harness that mounts the real AssetPreviewModal; click real 加入对话 button",
+  "before": {
+    "backdrops": 1,
+    "title": "科技感电影风格",
+    "addBtn": true,
+    "state": {
+      "open": true,
+      "added": 0,
+      "closed": 0
+    }
+  },
+  "after": {
+    "backdrops": 0,
+    "listVisible": true,
+    "state": {
+      "open": false,
+      "added": 1,
+      "closed": 1
+    }
+  },
+  "assertions": [
+    {
+      "name": "modal-open-before-click",
+      "pass": true
+    },
+    {
+      "name": "add-dispatched-once",
+      "pass": true
+    },
+    {
+      "name": "onClose-called-once",
+      "pass": true
+    },
+    {
+      "name": "modal-closed-after-add",
+      "pass": true
+    }
+  ],
+  "pass": true
+}

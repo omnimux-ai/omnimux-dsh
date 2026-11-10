@@ -222,3 +222,88 @@ test('AssetPreviewModal：官方预览全候选失败 + description 非空 → �
 
   await act(async () => { root.unmount() })
 })
+
+/* ------------------------------------------------------------------ */
+/* Issue #4024：预览弹窗「加入对话」投递后必须自动关闭（onClose 被调用）； */
+/* 「保存到本地」只保存、不关闭。风格/文本类资产共用同一 footer 行为。      */
+/* ------------------------------------------------------------------ */
+
+const STYLE_ITEM = {
+  id: 'cloud:style-1',
+  title: '科技感电影风格',
+  kind: 'file',
+  previewUrl: '',
+  extension: '',
+  pathInfo: '',
+  text: '参考电影为《TrueLies》，真人写实风格，摄影作品，人物肖像，整体风格包含紧张，色调以低调、冷调为主，光影上使用主光。',
+  sourceAssetId: 'style-1',
+  cloud: true,
+}
+
+const findButton = (container, text) =>
+  [...container.querySelectorAll('button')].find((b) => (b.textContent || '').includes(text))
+
+test('AssetPreviewModal：点击「加入对话」投递一次并调用 onClose 自动关闭预览（Issue #4024）', async () => {
+  const window = installDom()
+  const React = pluginRequire('react')
+  const { createRoot } = pluginRequire('react-dom/client')
+  const AssetPreviewModal = await loadModal()
+  const { act } = React
+
+  let added = 0
+  let closed = 0
+  let addedId = ''
+  const container = window.document.getElementById('root')
+  const root = createRoot(container)
+  await act(async () => {
+    root.render(React.createElement(AssetPreviewModal, {
+      item: STYLE_ITEM,
+      t,
+      onAddToConversation: (item) => { added += 1; addedId = item.id },
+      onClose: () => { closed += 1 },
+    }))
+  })
+
+  const addBtn = findButton(container, t('modal.addToConversation'))
+  assert.equal(Boolean(addBtn), true, '「加入对话」按钮已渲染')
+  assert.ok(addBtn, '「加入对话」按钮已渲染')
+  await act(async () => { addBtn.click() })
+
+  assert.equal(added, 1, '点击「加入对话」必须投递一次')
+  assert.equal(addedId, 'cloud:style-1', '投递的是当前预览项')
+  assert.equal(closed, 1, '投递后必须调用 onClose 让预览弹窗自动关闭')
+
+  await act(async () => { root.unmount() })
+})
+
+test('AssetPreviewModal：点击「保存到本地」只保存、不关闭预览（Issue #4024 回归）', async () => {
+  const window = installDom()
+  const React = pluginRequire('react')
+  const { createRoot } = pluginRequire('react-dom/client')
+  const AssetPreviewModal = await loadModal()
+  const { act } = React
+
+  let saved = 0
+  let closed = 0
+  const container = window.document.getElementById('root')
+  const root = createRoot(container)
+  await act(async () => {
+    root.render(React.createElement(AssetPreviewModal, {
+      item: STYLE_ITEM,
+      t,
+      onAddToConversation: () => {},
+      onClose: () => { closed += 1 },
+      onSaveToLocal: () => { saved += 1 },
+    }))
+  })
+
+  const saveBtn = findButton(container, t('modal.saveToLocal'))
+  assert.equal(Boolean(saveBtn), true, '「保存到本地」按钮已渲染')
+  assert.ok(saveBtn, '「保存到本地」按钮已渲染')
+  await act(async () => { saveBtn.click() })
+
+  assert.equal(saved, 1, '点击「保存到本地」必须保存一次')
+  assert.equal(closed, 0, '「保存到本地」不得关闭预览弹窗')
+
+  await act(async () => { root.unmount() })
+})
