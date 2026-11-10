@@ -214,7 +214,6 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
             onReturnFocus={returnPreviewFocus} onReplace={() => onPickSlot({ ...pickRequest(spec), replaceEdgeId: occupant.edgeId, openerAnchor: hover.anchor, onReturnFocus: returnPreviewFocus })}
             use={model.state === 'inactive' ? 'inactive' : 'active'} onSetUse={props.onSetUse ? use => props.onSetUse!(spec.slot, occupant.edgeId, use) : undefined} onClose={closeHover} />
         ) : null}
-        {model.state && model.state !== 'ready' && model.reasonCode !== 'input_unavailable' ? <span className="wf-slot-well__state">{t(model.state === 'inactive' ? 'input.state.inactive' : model.state === 'pending' ? 'input.state.pending' : 'input.state.invalid')}</span> : null}
         {occupant && !props.records ? (
           <button
             type="button"

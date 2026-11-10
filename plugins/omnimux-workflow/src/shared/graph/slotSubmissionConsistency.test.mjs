@@ -181,4 +181,29 @@ describe('Issue #3128 · 显示已装填 ⇒ 提交必含该 reference', () => {
     const mismatch = recomputeCanvasSlots(mismatchNode, { nodes: [mismatchNode, srcA], edges: [{ id: 'e', source: 'srcB', target: 'target' }] }, { catalog });
     assert.equal((mismatch.data.slotBindings?.reference_image ?? []).length, 0, '边源与占位源不一致不得视为存活');
   });
+
+  it('切换生成方式后，当前 layout 不存在的槽位绑定（未固定）被清理（Issue #4048）', () => {
+    const catalog = imageCatalog();
+    const upstream = {
+      id: 'upstream', type: 'material', position: { x: 0, y: 0 },
+      data: { materialType: 'image', nodeKind: 'import', mediaAssets: [{ type: 'image', url: 'https://fixture.test/r.png', mimeType: 'image/png', sizeBytes: 2048 }] },
+    };
+    const node = targetNode({
+      params: { model: 'gpt-image-2.5', operation: 'text_to_image' },
+      slotBindings: { reference_image: [{ sourceNodeId: 'upstream', edgeId: 'e-ref', outputId: 'o', pinned: false }] },
+    });
+    const result = recomputeCanvasSlots(node, { nodes: [upstream, node], edges: [edge] }, { catalog });
+    assert.equal((result.data.slotBindings?.reference_image ?? []).length, 0, '当前模式的 layout 无该槽位，未固定绑定必须清理');
+    assert.ok(!(result.data.compat?.reasonCodes ?? []).includes('role_conflict'), '清理后不得再报 role_conflict');
+  });
+
+  it('切换生成方式后，pinned 的旧槽位绑定仍保留为可停用意图（Issue #4048）', () => {
+    const catalog = imageCatalog();
+    const node = targetNode({
+      params: { model: 'gpt-image-2.5', operation: 'text_to_image' },
+      slotBindings: { reference_image: [{ sourceNodeId: 'upstream', edgeId: 'e-ref', outputId: 'o', pinned: true }] },
+    });
+    const result = recomputeCanvasSlots(node, { nodes: [node], edges: [] }, { catalog });
+    assert.equal((result.data.slotBindings?.reference_image ?? []).length, 1, 'pinned 用户选择不得被静默清理');
+  });
 });

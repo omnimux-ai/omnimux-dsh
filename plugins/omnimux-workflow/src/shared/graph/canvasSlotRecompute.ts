@@ -85,10 +85,17 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
     && Boolean(occupant.edgeId) && liveEdgeSource.get(occupant.edgeId as string) === occupant.sourceNodeId;
   if (explicit) {
     explicit = Object.fromEntries(Object.entries(explicit)
-      .map(([slot, occupants]) => [slot,
-        occupants
-          .filter((occupant) => currentVersion ? (isLiveOccupant(occupant) || occupant.pinned) : (!modeChanged || occupant.pinned))
-          .map((occupant) => ({ ...occupant }))] as const)
+      .map(([slot, occupants]) => {
+        // A slot removed by the current operation/layout is not a real input any more;
+        // unpinned leftovers from a previous mode must be pruned (pinned intent is kept).
+        const slotExistsInLayout = layout.slots.some((spec) => spec.slot === slot);
+        return [slot,
+          occupants
+            .filter((occupant) => currentVersion
+              ? (occupant.pinned || (slotExistsInLayout && isLiveOccupant(occupant)))
+              : (!modeChanged || occupant.pinned))
+            .map((occupant) => ({ ...occupant }))] as const;
+      })
       // Drop slots emptied by pruning so the node does not keep a `{slot: []}` residue
       // that reads as an explicit user-clear to downstream readers.
       .filter(([, occupants]) => occupants.length > 0));
