@@ -2051,9 +2051,31 @@ ${AGENT_PRESET_AVATAR_CSS}
   gap: 10px;
 }
 .omx-agent-model-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary);
+}
+.omx-agent-source {
+  padding: 0 6px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omx-agent-source[data-source="live"] {
+  color: var(--dsw-alias-brand-primary);
+  border-color: var(--dsw-alias-brand-primary);
+}
+.omx-agent-source-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-tertiary);
 }
 .omx-agent-selected-actions {
   display: flex;

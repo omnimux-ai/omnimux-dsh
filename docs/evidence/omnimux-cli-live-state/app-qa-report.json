@@ -1,0 +1,116 @@
+{
+  "runId": "9f271523-8177-47f2-bb2e-0d0e2eb657f6",
+  "mode": "ui",
+  "pass": true,
+  "scope": "smoke",
+  "contract": "none",
+  "startedAt": "2026-11-10T13:33:34.417Z",
+  "completedAt": "2026-11-10T13:34:12.814Z",
+  "summary": {
+    "mode": "ui",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "realModelRequest": false,
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true
+    },
+    {
+      "name": "journey:more-menu-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:plugins-menu-item-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:omnimux-card-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:omnimux-detail-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:cli-panel-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:cli-rows-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:installed-count-matches-cards",
+      "pass": true
+    },
+    {
+      "name": "journey:count-line-names-both-totals",
+      "pass": true
+    },
+    {
+      "name": "journey:model-source-declared",
+      "pass": true
+    },
+    {
+      "name": "journey:rescan-keeps-panel",
+      "pass": true
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "screenshot": {
+    "path": "cli-live-panel.png",
+    "width": 1280,
+    "height": 800,
+    "bytes": 85022
+  },
+  "cleanup": {
+    "cleaned": true
+  }
+}

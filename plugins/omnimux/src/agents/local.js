@@ -105,9 +105,21 @@ export const KNOWN_AGENTS = Object.freeze([
       'qwen-2.5-coder-32b',
     ]),
     auth: Object.freeze({
-      kind: 'file',
-      paths: Object.freeze(['.qwen/oauth_creds.json']),
-      tokenKeys: Object.freeze(['access_token']),
+      kind: 'config',
+      path: '.qwen/settings.json',
+      selectedTypePath: 'security.auth.selectedType',
+      providersPath: 'modelProviders',
+      envPath: 'env',
+      // Default key variable per protocol; a model entry may override it with envKey.
+      defaultEnvKeys: Object.freeze({
+        openai: 'OPENAI_API_KEY',
+        anthropic: 'ANTHROPIC_API_KEY',
+        gemini: 'GEMINI_API_KEY',
+        'vertex-ai': 'GOOGLE_API_KEY',
+      }),
+      // Qwen retired the account OAuth flow; keep reading its old store as a fallback.
+      legacyPaths: Object.freeze(['.qwen/oauth_creds.json']),
+      legacyTokenKeys: Object.freeze(['access_token']),
     }),
     // Qwen retired its account OAuth flow; there is no sign-in command to run.
     login: null,
@@ -272,6 +284,202 @@ export function probeAgentModels(id, options = {}) {
 }
 
 /**
+ * A model list captured while reading a CLI's own configuration. `live` means
+ * the CLI answered with its current list; `preset` is the shipped fallback and
+ * must never be presented as live.
+ * @typedef {{ models: string[], source: 'live'|'preset' }} AgentModelProbe
+ */
+
+const MODEL_CACHE_TTL_MS = 5 * 60 * 1000
+const CODEX_MODELS_MAX_BUFFER = 8 * 1024 * 1024
+
+/**
+ * Keep only safe, non-empty, unique model identifiers, preserving order.
+ * @param {unknown[]} values
+ * @returns {string[]}
+ */
+function uniqueSafeModels(values) {
+  const out = []
+  for (const value of values) {
+    const text = typeof value === 'string' ? value.trim() : ''
+    if (!text || !isSafeAgentModel(text) || out.includes(text)) continue
+    out.push(text)
+  }
+  return out
+}
+
+/**
+ * JSON text as a plain object, or null. CLI output can carry banners or be
+ * empty, which is a normal "no answer" rather than a failure to report.
+ * @param {unknown} text
+ * @returns {object|null}
+ */
+function parseJsonText(text) {
+  try {
+    const parsed = JSON.parse(String(text || ''))
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Parse exactly the rows a CLI lists for user selection.
+ * @param {unknown} payload
+ * @returns {string[]}
+ */
+function codexModelsFromPayload(payload) {
+  const parsed = payload && typeof payload === 'object' ? payload : null
+  if (!parsed || !Array.isArray(parsed.models)) return []
+  return uniqueSafeModels(parsed.models
+    .filter((model) => model && model.visibility === 'list')
+    .map((model) => model.slug || model.id || ''))
+}
+
+/**
+ * Read a JSON object without ever throwing on a missing or malformed file.
+ * @param {string} file
+ * @param {typeof fs} fsImpl
+ * @returns {object|null}
+ */
+function readJsonObject(file, fsImpl) {
+  try {
+    const parsed = JSON.parse(String(fsImpl.readFileSync(file, 'utf8')))
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Model ids Qwen Code declares for its own `/model` picker. `modelProviders`
+ * is the current source; `model.name` is the single configured selection used
+ * only when no provider list exists.
+ * @param {object|null} settings
+ * @returns {string[]}
+ */
+export function qwenProviderModels(settings) {
+  if (!settings || typeof settings !== 'object') return []
+  const providers = settings.modelProviders
+  const declared = []
+  if (providers && typeof providers === 'object' && !Array.isArray(providers)) {
+    for (const list of Object.values(providers)) {
+      if (!Array.isArray(list)) continue
+      for (const entry of list) {
+        if (typeof entry === 'string') declared.push(entry)
+        else if (entry && typeof entry === 'object') declared.push(entry.id || '')
+      }
+    }
+  }
+  const fromProviders = uniqueSafeModels(declared)
+  if (fromProviders.length > 0) return fromProviders
+  const current = settings.model && typeof settings.model === 'object' ? settings.model.name : ''
+  return uniqueSafeModels([current])
+}
+
+/**
+ * Resolve one agent's models and where they came from, with no synchronous
+ * child process on the request path.
+ * @param {string} id
+ * @param {{ codexPath?: string, kimiPath?: string, qwenPath?: string, home?: string, env?: Record<string, string|undefined>, fsImpl?: typeof fs, runCodexModels?: () => string }} [options]
+ * @returns {Promise<AgentModelProbe>}
+ */
+export async function probeAgentModelsDetailed(id, options = {}) {
+  const fsImpl = options.fsImpl || fs
+  const home = options.home || options.env?.HOME || os.homedir()
+  const presetAgent = KNOWN_AGENTS.find((agent) => agent.id === id)
+  const presetResult = {
+    models: presetAgent && Array.isArray(presetAgent.models) ? [...presetAgent.models] : [],
+    source: /** @type {'preset'} */ ('preset'),
+  }
+  try {
+    if (id === 'codex') {
+      if (typeof options.runCodexModels === 'function') {
+        let text = ''
+        try {
+          text = String(options.runCodexModels() || '')
+        } catch {
+          text = ''
+        }
+        let payload = null
+        try {
+          payload = JSON.parse(text)
+        } catch {
+          payload = null
+        }
+        const live = codexModelsFromPayload(payload)
+        if (live.length > 0) return { models: live, source: 'live' }
+      } else if (!options.codexPath) {
+        // A build without `debug models` is expected capability variance, not an
+        // error: the CLI's own cache file is the next source. A real failure
+        // there still yields the preset list rather than an empty one.
+        const live = await execFileAsync('codex', ['debug', 'models'], {
+          timeout: PROBE_TIMEOUT_MS,
+          maxBuffer: CODEX_MODELS_MAX_BUFFER,
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'ignore'],
+        })
+          .then(({ stdout }) => codexModelsFromPayload(parseJsonText(stdout)))
+          .catch(() => [])
+        if (live.length > 0) return { models: live, source: 'live' }
+      }
+      const cachePath = options.codexPath || path.join(home, '.codex', 'models_cache.json')
+      const cached = readJsonObject(cachePath, fsImpl)
+      const live = codexModelsFromPayload(cached)
+      return live.length > 0 ? { models: live, source: 'live' } : presetResult
+    }
+    if (id === 'kimi') {
+      const configPath = options.kimiPath || path.join(home, '.kimi-code', 'config.toml')
+      let raw = ''
+      try {
+        raw = String(fsImpl.readFileSync(configPath, 'utf8'))
+      } catch {
+        raw = ''
+      }
+      const live = uniqueSafeModels([...raw.matchAll(/\[models\.["']([^"']+)["']\]/g)].map((match) => match[1]))
+      return live.length > 0 ? { models: live, source: 'live' } : presetResult
+    }
+    if (id === 'qwen') {
+      const settingsPath = options.qwenPath || path.join(home, '.qwen', 'settings.json')
+      const settings = readJsonObject(settingsPath, fsImpl)
+      const live = qwenProviderModels(settings)
+      return live.length > 0 ? { models: live, source: 'live' } : presetResult
+    }
+  } catch {
+    return presetResult
+  }
+  return presetResult
+}
+
+/**
+ * Cache model probes so one page load does not re-run every CLI. `refresh`
+ * bypasses the entry for an explicit user scan.
+ * @param {{ ttlMs?: number, now?: () => number, cache?: Map<string, { at: number, entry: AgentModelProbe }> }} [options]
+ */
+export function createAgentModelResolver(options = {}) {
+  const now = typeof options.now === 'function' ? options.now : () => Date.now()
+  const ttlMs = Number.isFinite(options.ttlMs) ? options.ttlMs : MODEL_CACHE_TTL_MS
+  const cache = options.cache instanceof Map ? options.cache : new Map()
+  /**
+   * @param {string} id
+   * @param {{ binPath?: string, codexPath?: string, kimiPath?: string, qwenPath?: string, home?: string, env?: object, fsImpl?: object, runCodexModels?: () => string, refresh?: boolean }} [context]
+   * @returns {Promise<AgentModelProbe>}
+   */
+  const resolve = async (id, context = {}) => {
+    const key = [id, context.binPath || '', context.codexPath || '', context.kimiPath || '', context.qwenPath || '', context.home || ''].join('|')
+    const cached = cache.get(key)
+    if (context.refresh !== true && cached && now() - cached.at < ttlMs) return cached.entry
+    const entry = await probeAgentModelsDetailed(id, context)
+    cache.set(key, { at: now(), entry })
+    return entry
+  }
+  return { cache, resolve }
+}
+
+/** Shared resolver: the page, the update check and manual rescans all see one cache. */
+const defaultModelResolver = createAgentModelResolver()
+
+/**
  * Whether one binary answers `--version`. A missing binary, a timeout, or a
  * non-zero exit all mean "not available" — never a guess, never a fallback.
  * @param {string} bin
@@ -289,11 +497,15 @@ export async function probeAgentBin(bin, run = execFileAsync) {
 
 /**
  * Scan PATH for the known agent CLIs. Returns every known agent with its
- * availability and dynamically probed models.
+ * availability and its current models, each row naming where the list came from.
  * @param {(file: string, args: string[], opts: object) => Promise<{ stdout: string, stderr: string }>} [run]
- * @param {{ codexPath?: string, kimiPath?: string, runCodexModels?: () => string }} [options]
+ * @param {{ codexPath?: string, kimiPath?: string, qwenPath?: string, home?: string, env?: object, fsImpl?: object, runCodexModels?: () => string, refresh?: boolean, resolveModels?: { resolve: (id: string, context?: object) => Promise<AgentModelProbe> } }} [options]
  */
 export async function scanLocalAgents(run = execFileAsync, options = {}) {
+  const resolver = options.resolveModels && typeof options.resolveModels.resolve === 'function'
+    ? options.resolveModels
+    : defaultModelResolver
+  const home = options.home || options.env?.HOME || os.homedir()
   const rows = await Promise.all(KNOWN_AGENTS.map(async (agent) => {
     const resolved = resolveBinPath(agent.bin, options)
     const probeRun = resolved
@@ -301,19 +513,38 @@ export async function scanLocalAgents(run = execFileAsync, options = {}) {
           ...opts,
           env: {
             ...process.env,
-            PATH: [path.dirname(file), ...extraBinDirs(options.env?.HOME || os.homedir(), options.fsImpl || fs), process.env.PATH]
+            PATH: [path.dirname(file), ...extraBinDirs(home, options.fsImpl || fs), process.env.PATH]
               .filter(Boolean).join(path.delimiter),
           },
         })
       : run
     const probe = await probeAgentBin(resolved || agent.bin, probeRun)
-    const models = probeAgentModels(agent.id, options)
+    let probed = null
+    try {
+      probed = await resolver.resolve(agent.id, {
+        binPath: resolved,
+        home,
+        fsImpl: options.fsImpl || fs,
+        env: options.env || process.env,
+        codexPath: options.codexPath,
+        kimiPath: options.kimiPath,
+        qwenPath: options.qwenPath,
+        runCodexModels: options.runCodexModels,
+        refresh: options.refresh === true,
+      })
+    } catch {
+      probed = null
+    }
+    const models = probed && Array.isArray(probed.models) && probed.models.length > 0
+      ? probed.models
+      : (Array.isArray(agent.models) ? [...agent.models] : [])
     return {
       id: agent.id,
       name: agent.name,
       installed: probe.installed,
       version: probe.version,
-      models: models.length > 0 ? models : (Array.isArray(agent.models) ? [...agent.models] : []),
+      models,
+      modelsSource: probed && probed.source === 'live' ? 'live' : 'preset',
     }
   }))
   return rows

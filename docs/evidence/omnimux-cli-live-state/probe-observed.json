@@ -1,0 +1,24 @@
+{
+  "statusText": "已安装 2 / 已知 4",
+  "installed": "2",
+  "known": "4",
+  "cards": [
+    {
+      "text": "Claude Code未检测到程序安装",
+      "disabled": true
+    },
+    {
+      "text": "Codex CLI需要登录",
+      "disabled": false
+    },
+    {
+      "text": "Kimi CLI未检测到程序安装",
+      "disabled": true
+    },
+    {
+      "text": "Qwen Code未配置",
+      "disabled": false
+    }
+  ],
+  "badge": "live"
+}
