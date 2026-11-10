@@ -38,7 +38,10 @@ function createBatchActions(feed) {
     onToggleAll: feed.handleToggleAll,
     onBatchRetry: feed.handleBatchRetry,
     onBatchDeleteDrafts: feed.handleBatchDeleteDrafts,
-    onExitBatch: () => feed.setIsBatchMode(false),
+    onExitBatch: () => {
+      feed.setIsBatchMode(false)
+      feed.handleToggleAll?.(false)
+    },
   }
 }
 
