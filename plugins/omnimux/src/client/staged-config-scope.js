@@ -99,16 +99,19 @@ export function useStagedConfigScope(scope) {
   }, [raw.revision])
 
   const set = useCallback(async (field, value) => {
+    if (saving) return false
     stage(field, value)
     return true
-  }, [stage])
+  }, [saving, stage])
 
   const unset = useCallback(async (field) => {
+    if (saving) return false
     stage(field, STAGED_UNSET)
     return true
-  }, [stage])
+  }, [saving, stage])
 
   const mutate = useCallback(async (ops = []) => {
+    if (saving) return false
     for (const op of ops) {
       const field = Array.isArray(op?.path) ? op.path[0] : ''
       if (typeof field !== 'string' || !field) continue
@@ -116,7 +119,7 @@ export function useStagedConfigScope(scope) {
       else stage(field, op.value)
     }
     return true
-  }, [stage])
+  }, [saving, stage])
 
   const snapshot = useMemo(() => ({
     ...raw,
