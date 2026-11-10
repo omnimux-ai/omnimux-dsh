@@ -12,7 +12,8 @@
 
 ## 三、项目结构与修改范围 (Project Structure & Scope)
 - 数据层：`plugins/omnimux-workflow/src/shared/graph/canvasSlotRecompute.ts`
-  - 在 `explicit`（V1 显式 `slotBindings`）过滤处，对 `currentVersion` 的每个占位者做存活校验：`sourceNodeId ∈ graph.nodes` 且 `edgeId ∈ graph.edges(target===node.id)`；不满足即丢弃。
+  - 在 `explicit`（V1 显式 `slotBindings`）过滤处，对 `currentVersion` 的每个占位者做存活校验：`sourceNodeId ∈ graph.nodes`、`edgeId ∈ graph.edges(target===node.id)`，且该 edge 的 `source === occupant.sourceNodeId`。
+  - 存活判定通过则保留；**未固定（`pinned=false`）且不存活**的占位者丢弃；**`pinned=true` 的用户选择**保留为「可停用的无效意图」（不破坏既有 invalid-intent 流程）。裁剪后变为空的槽位键一并移除，避免留下 `{slot: []}` 残渣。
 - 表现层：`plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/SlotWells/SlotWells.tsx`
   - `reasonCode==='input_unavailable'` 时不再渲染常驻 `wf-slot-well__state` 裸「不可用」；原因保留在 `SlotHoverPreview` 悬浮预览中（符合 Tier3「Hide, Don't Grey」）。
 - 回归测试：
@@ -42,7 +43,7 @@
 新用户首次进入创作画布即可用；`catalog` 缺失时按既有 `catalog_unavailable` 降级，不引入新的空态欺骗。
 
 ## 假设
-V1 节点（`inputBindingVersion===1`）的 `slotBindings` 占位者在任何时刻都应当对应一条当前画布真实存在的 `source→target` 边；一旦源节点或边被删除，该占位者即为无效残留，必须在重算时被丢弃，而不是长期保留。
+V1 节点（`inputBindingVersion===1`）的 `slotBindings` 中，未固定（`pinned=false`）的自动占位者本应始终对应一条真实存在的 `source→target` 边；一旦源节点或边被删除，或边源与占位源不一致，它就是应被重算清理的无效残渣。而 `pinned=true` 是用户显式选择，即使供给失效也应保留为可停用的无效意图，不得静默清理。
 
 ## 证伪方式
-证伪方式：构造一个 V1 节点，其 `slotBindings` 指向不存在的 `sourceNodeId` / `edgeId`，调用 `recomputeCanvasSlots` 后断言该占位者被移除且 `compat.reasonCodes` 不含 `input_unavailable`。若占位者仍被保留，则假设被推翻、该回归用例应变红。
+证伪方式分两组：① 构造 V1 节点，其未固定占位者指向不存在的 `sourceNodeId`/`edgeId`（或边源与占位源不一致），调用 `recomputeCanvasSlots` 后断言该占位者被移除、`compat.reasonCodes` 不含它带来的 `input_unavailable`；若仍保留则假设被推翻、用例变红。② 构造 `pinned=true` 的失效占位者，断言其被保留；若被清理则同样变红。

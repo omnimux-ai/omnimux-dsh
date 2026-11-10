@@ -77,15 +77,21 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   // as `input_unavailable`. Pinned occupants are user intent and are kept as an invalid
   // conflict the user can disable/repair (matching the invalid-intent flows).
   const liveNodeIds = new Set(graph.nodes.map((item) => item.id));
-  const liveEdgeIds = new Set(graph.edges.filter((edge) => edge.target === node.id).map((edge) => edge.id));
+  const liveEdgeSource = new Map(
+    graph.edges.filter((edge) => edge.target === node.id).map((edge) => [edge.id, edge.source]),
+  );
   const isLiveOccupant = (occupant: SlotOccupant): boolean =>
     Boolean(occupant.sourceNodeId) && liveNodeIds.has(occupant.sourceNodeId)
-    && Boolean(occupant.edgeId) && liveEdgeIds.has(occupant.edgeId as string);
+    && Boolean(occupant.edgeId) && liveEdgeSource.get(occupant.edgeId as string) === occupant.sourceNodeId;
   if (explicit) {
-    explicit = Object.fromEntries(Object.entries(explicit).map(([slot, occupants]) => [slot,
-      occupants
-        .filter((occupant) => currentVersion ? (isLiveOccupant(occupant) || occupant.pinned) : (!modeChanged || occupant.pinned))
-        .map((occupant) => ({ ...occupant }))]));
+    explicit = Object.fromEntries(Object.entries(explicit)
+      .map(([slot, occupants]) => [slot,
+        occupants
+          .filter((occupant) => currentVersion ? (isLiveOccupant(occupant) || occupant.pinned) : (!modeChanged || occupant.pinned))
+          .map((occupant) => ({ ...occupant }))] as const)
+      // Drop slots emptied by pruning so the node does not keep a `{slot: []}` residue
+      // that reads as an explicit user-clear to downstream readers.
+      .filter(([, occupants]) => occupants.length > 0));
     for (const conflict of (plainSpeech ? [] : node.data.slotConflicts ?? []) as SlotConflict[]) {
       const occupants = explicit[conflict.slot] ??= [];
       if (!occupants.some((item) => item.edgeId === conflict.occupant.edgeId)) occupants.push({ ...conflict.occupant });
