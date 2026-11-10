@@ -103,12 +103,19 @@ sag_available() {
 sag_forget_worktree() {
   local wt="$1"
   sag_available || return 0
-  "${SAG_WORKTREE_BIN}" remove "${wt}" >/dev/null 2>&1 || return 0
-  say "SAG: 已清理该工作树的隔离索引 ${wt#${ROOT}/}"
+  if "${SAG_WORKTREE_BIN}" remove "${wt}" >/dev/null 2>&1; then
+    say "SAG: 已清理该工作树的隔离索引 ${wt#${ROOT}/}"
+  else
+    # 失败必须留一行可诊断警告：静默吞掉会让人以为索引清过了，实际还在占磁盘。
+    echo "worktree.sh: ⚠️  SAG 索引清理失败（不影响工作树）：sag-worktree remove ${wt}" >&2
+  fi
   return 0
 }
 
 sag_collect_orphans() {
+  # gc 会跨本机所有工作树删除孤儿索引（全局且不可逆），默认不跑：交付收尾不该
+  # 顺手动到别的任务的数据。需要时显式 OMNIMUX_SAG_GC=1 打开。
+  [ "${OMNIMUX_SAG_GC:-0}" = "1" ] || return 0
   sag_available || return 0
   "${SAG_WORKTREE_BIN}" gc >/dev/null 2>&1 || return 0
   return 0

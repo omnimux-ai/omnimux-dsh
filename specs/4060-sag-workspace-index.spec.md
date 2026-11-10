@@ -22,7 +22,9 @@
 
 排除三类低价值内容：现场证据（`docs/evidence/`、`qa-evidence/`、`deliverables/`、`artifacts/`、`tests/e2e/*-evidence/`、`**/.browser-scratch/`）、构建派生文件（`**/harness/dist/`、`panel-browser-built.js`、`pnpm-lock.yaml`）、历史归档（`archive/`）。源码目录（`plugins/`、`packages/`、`scripts/`、`specs/`）一律保留。
 
-托管块里的扩展名必须排序且覆盖本仓代码类型（`md/ts/tsx/js/jsx/mjs/yml/yaml`），这样重复索引同一目录时该块字节稳定，已跟踪文件不会被改脏。
+托管块里的扩展名必须排序且覆盖本仓代码类型（`md/ts/tsx/js/jsx/mjs/yml/yaml`），文件以换行结尾，这样重复索引同一目录时该块字节稳定，已跟踪文件不会被改脏——`ship` / `remove` 对脏工作树是 `die`，这里必须做到零 diff。实测：本工作树跑真实 `sag-worktree init` 后 `diff` 无差异。
+
+托管块里的 `file_types.code=false` 是 SAG 自己的内部分类位，扩展名白名单才是实际范围；实测 `sag -F AppWorkspaceView` 命中 7 个文件（其中 3 个 `.ts/.tsx`），语义检索可直接命中原生 `.tsx` 源码，说明代码确实进了索引。
 
 ### 2.2 工作树生命周期钩子（`scripts/worktree.sh`）
 
@@ -37,7 +39,8 @@
 
 - **不在建树时同步索引**：初次索引要处理近八千个文件，同步建树会把 `worktree.sh new` 卡住几分钟；索引由 `sag-worktree search` 首次检索时惰性建立。
 - **永不直接写共享知识库**：脚本里不出现裸 `sag add` / `sag remove`，避免把工作树并进用户主库后被父根吸收、变成不可检索的 `excluded`。
-- **best-effort**：本机没有 `sag-worktree` 就静默跳过；失败只打印警告，绝不 `die`、不改退出码、不阻断建树与交付（[product baseline](../../docs/contracts/product-baseline.md)：开发机专有能力不能成为默认路径或失败源）。
+- **best-effort**：本机没有 `sag-worktree` 就静默跳过；清理失败只打印一行警告，绝不 `die`、不改退出码、不阻断建树与交付（[product baseline](../../docs/contracts/product-baseline.md)：开发机专有能力不能成为默认路径或失败源）。
+- **孤儿回收默认关闭**：`sag-worktree gc` 会跨本机所有工作树删除索引目录，属全局不可逆动作，交付收尾不该顺手动到别的任务；只在 `OMNIMUX_SAG_GC=1` 时执行。
 - `OMNIMUX_SAG_INDEX=0` 可整机关闭，`SAG_WORKTREE_BIN` 可指定可执行文件。
 
 ### 2.3 个人工具 `~/.local/bin/sag-worktree`（仓外，随本任务一并修正）
@@ -56,10 +59,10 @@
 | 1 | `worktree.sh ship` 删除工作树 | 删除后调用 `sag-worktree remove <绝对路径>` |
 | 2 | `worktree.sh remove --abandon` | 同上 |
 | 3 | `worktree.sh clean` 批量删除 | 每个被删工作树都清理，最后回收孤儿索引 |
-| 4 | `worktree.sh prune` | 结束时调用 `sag-worktree gc` |
+| 4 | `worktree.sh prune` / `clean` 且 `OMNIMUX_SAG_GC=1` | 在删完记录/批量清理**之后**调用 `sag-worktree gc` |
 | 5 | 本机没有 `sag-worktree` | 建树与交付照常，退出码不变，无输出 |
-| 6 | `OMNIMUX_SAG_INDEX=0` | 完全不调用该工具 |
-| 7 | `sag-worktree remove` 失败 | 交付照常完成，只打印一行警告 |
+| 6 | `OMNIMUX_SAG_INDEX=0`，或未设 `OMNIMUX_SAG_GC=1` | 前者完全不调用该工具；后者不触发全局 `gc` |
+| 7 | `sag-worktree remove` 失败 | 交付照常完成，`stderr` 出现一行 `SAG 索引清理失败` 警告 |
 | 8 | 建树 | 不触发任何索引动作 |
 | 9 | `.sagignore` | 托管块 JSON 可解析、扩展名有序且含代码类型、源码目录未被排除 |
 | 10 | 真实索引 | 任务工作树 `sag-worktree init` 后 `status` 报 `index_ready: true`，且一次语义检索返回真实代码片段 |
@@ -72,7 +75,8 @@
 
 ## 证伪方式
 
-1. 用桩可执行文件冒充 `sag-worktree`（记录 argv），在临时 git 仓里真实执行 `ship` / `remove` / `clean` / `prune`，断言调用序列与路径；把 PATH 里的桩去掉再跑一次，断言退出码仍为 0 —— 若钩子阻塞交付，该断言立刻变红。
+1. 用桩可执行文件冒充 `sag-worktree`（记录 argv），在临时 git 仓里真实执行 `new` / `remove` / `prune` / `clean`：实测 `new` 记录为空、`remove` 记录 `remove <绝对路径>`、`prune` 记录 `gc`、`OMNIMUX_SAG_INDEX=0` 记录为空、PATH 去掉桩后 `new` 仍 exit 0 —— 若钩子阻塞交付，该断言立刻变红。
+   为什么这条不做成仓库测试：`guard-anti-cheat` 对**新增**测试文件里的 `node:child_process` 导入按 `runtime-code-execution-import-needs-review` 硬拒（只有既有文件里早就存在的同族导入才沿用基线，`scripts/worktree-delivery.test.mjs` 属于后者）。因此桩执行证据在 PR 里以终端记录留档，仓库测试保留源码级断言。
 2. 把 `cmd_ship` 里的 `sag_forget_worktree` 调用删掉，第 1 条断言必须变红；把 `OMNIMUX_SAG_INDEX` 判断删掉，第 6 条断言必须变红；把 `cmd_new` 里重新塞回索引调用，第 8 条断言必须变红。
 3. 真实索引不接受「命令执行成功」作为证据：必须在任务工作树里 `sag-worktree init` 后看到 `index_ready: true` 与非空 `indexed_files`，并跑一次语义检索拿到真实代码片段。
 
@@ -82,7 +86,7 @@
 
 ## 旧标准变更
 
-本任务第一版把钩子写成「建树时登记共享库索引根」，在确认以隔离库为真源后改为「只在删除时清理」。测试文件 `scripts/worktree-sag-index.test.mjs` 是本任务新建、尚未合入任何基线，但已被写前门禁记录，故按门禁要求逐条声明：
+本任务第一版把钩子写成「建树时登记共享库索引根」，在确认以隔离库为真源后改为「只在删除时清理」。测试文件 `scripts/worktree-sag-index.test.mjs` 是本任务新建、尚未合入任何基线；新增文件在 CI 侧（`verify-test-standard-declarations.mjs`）直接跳过，这些声明只被写前门禁消费，保留作为改动留痕，不声称存在更早的合入基线：
 
 - `scripts/worktree-sag-index.test.mjs` :: `SAG 索引随工作树生命周期登记与清理 (#4060)`
 
@@ -115,3 +119,11 @@
 - `scripts/worktree-sag-index.test.mjs` :: `缺少 sag 可执行文件时静默跳过，并支持整机关闭与自定义可执行文件`
 
 原断言对象是 `SAG_BIN`；必须改的理由：可执行文件改为 `sag-worktree`；新期望证据：探测 `command -v "${SAG_WORKTREE_BIN}"`、`OMNIMUX_SAG_INDEX=0`、`SAG_WORKTREE_BIN:-sag-worktree` 均存在。
+
+- `scripts/worktree-sag-index.test.mjs` :: `收尾失败不影响交付`
+
+原断言：清理与回收失败分支都用 `|| return 0` 静默；必须改的理由：评审指出 AC7「失败只打印一行警告」实际没实现，静默吞掉会让人以为索引已清；新期望证据：断言 `sag_forget_worktree` 含 `SAG 索引清理失败` 告警，且 `sag_collect_orphans` 受 `OMNIMUX_SAG_GC` 显式开关控制。
+
+- `scripts/worktree-sag-index.test.mjs` :: `prune 与 clean 结束时回收孤儿索引`
+
+原断言：只断言 `sag_collect_orphans` 字符串出现在两个函数里，把调用挪到清理循环之前仍然绿；必须改的理由：评审指出这测不出 AC3 要求的「最后回收」顺序；新期望证据：断言 `gc` 的位置在 `git worktree prune` 与最后一次 `clean_one` 之后。

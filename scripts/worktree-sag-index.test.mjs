@@ -66,8 +66,17 @@ describe('工作树删除时清理隔离索引 (#4060)', () => {
   })
 
   it('prune 与 clean 结束时回收孤儿索引', () => {
-    assert.match(cmdPrune, /sag_collect_orphans/, 'prune 结束必须回收已删工作树的孤儿索引')
-    assert.match(cmdClean, /sag_collect_orphans/, 'batch clean 结束必须回收孤儿索引')
+    const pruneAt = cmdPrune.lastIndexOf('git worktree prune')
+    const pruneGc = cmdPrune.indexOf('sag_collect_orphans')
+    assert.notEqual(pruneAt, -1, 'prune 必须真的删记录')
+    assert.ok(pruneAt < pruneGc, 'prune 必须在删完记录之后回收孤儿索引')
+    const lastClean = cmdClean.lastIndexOf('clean_one "${wt}" "${branch}" "${merged}"')
+    const cleanGc = cmdClean.indexOf('sag_collect_orphans')
+    assert.notEqual(lastClean, -1, 'cmd_clean 必须真的调用 clean_one')
+    assert.ok(
+      lastClean < cleanGc,
+      '孤儿回收必须在批量清理之后：提到循环之前会漏掉本轮刚删掉的工作树',
+    )
   })
 })
 
@@ -78,9 +87,10 @@ describe('钩子是 best-effort，且不写共享知识库 (#4060)', () => {
       assert.equal(/^\s*exit [1-9]/m.test(body), false, `${name} 不得改退出码`)
     }
     for (const body of [sagForget, sagGc]) {
-      assert.match(body, /\|\| return 0/, '命令失败必须静默返回成功')
       assert.match(body, /return 0/, '每条分支都必须静默返回')
     }
+    assert.match(sagForget, /SAG 索引清理失败/, '清理失败必须留一行可诊断警告，不能静默吞掉（AC7）')
+    assert.match(sagGc, /OMNIMUX_SAG_GC/, 'gc 跨本机所有工作树且不可逆，必须显式开关才执行')
     for (const [name, body] of [['cmd_ship', cmdShip], ['cmd_remove', cmdRemove], ['clean_one', cleanOne]]) {
       assert.equal(/sag_forget_worktree "\$\{wt\}"\s*\|\|/.test(body), false, `${name} 不得把钩子接进失败短路`)
     }
@@ -118,6 +128,10 @@ describe('.sagignore 纳入版本库 (#4060)', () => {
       [...options.extensions].sort(),
       '扩展名必须排序：重复索引同目录才能字节稳定、不把已跟踪文件改脏',
     )
+  })
+
+  it('托管块以换行结尾', () => {
+    assert.ok(sagignore.endsWith('\n'), '.sagignore 必须以换行结尾：按行重写托管块的工具有一天会回来咬你（末尾缺换行会留单字节 diff，而 ship/remove 对脏工作树是 die）')
   })
 
   it('排除证据与生成物，但不排除源码目录', () => {
