@@ -38,6 +38,7 @@ export function registerGenerationProductRoutes(webServer, deps) {
  * The model catalog, and its read-only gateway diagnostics.
  *
  * `GET /omnimux/model-catalog` returns the catalog unchanged.
+ * `POST /omnimux/model-catalog/refresh` forces one gateway snapshot refresh.
  * `GET /omnimux/model-catalog?view=diagnostics` returns where the current
  * gateway snapshot came from, whether it is stale, and how the gateway view
  * differs from the catalog the hub serves (P1a). Diagnostics ride the same
@@ -45,10 +46,10 @@ export function registerGenerationProductRoutes(webServer, deps) {
  * in sync, and the catalog body is byte-for-byte what it was before.
  *
  * @param {{register: (route: {kind: string, path: string, handler: (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => Promise<void>}) => () => void}} webServer
- * @param {{list?: () => object|null, diagnostics?: () => object|null}} deps
+ * @param {{list?: () => object|null, diagnostics?: () => object|null, refresh?: () => Promise<object>, getConnection?: () => {requestRejection: (req: import('node:http').IncomingMessage) => number | undefined} | undefined}} deps
  */
 export function registerCatalogRoutes(webServer, deps) {
-  return webServer.register({
+  const stopCatalog = webServer.register({
     kind: 'exact',
     path: '/omnimux/model-catalog',
     async handler(req, res) {
@@ -71,4 +72,34 @@ export function registerCatalogRoutes(webServer, deps) {
       }
     },
   })
+  const stopRefresh = webServer.register({
+    kind: 'exact',
+    path: '/omnimux/model-catalog/refresh',
+    async handler(req, res) {
+      const method = (req.method || 'POST').toUpperCase()
+      if (method !== 'POST') {
+        sendJson(res, 404, { error: 'not found' })
+        return
+      }
+      const rejection = requestRejection(req, deps.getConnection)
+      if (rejection !== undefined) {
+        sendJson(res, rejection, { error: 'request-denied' })
+        return
+      }
+      if (typeof deps.refresh !== 'function') {
+        sendJson(res, 503, { error: 'catalog refresh unavailable' })
+        return
+      }
+      try {
+        const result = await deps.refresh()
+        sendJson(res, 200, result && typeof result === 'object' ? result : { status: 'ok' })
+      } catch {
+        sendJson(res, 503, { status: 'failed', reason: 'refresh-failed' })
+      }
+    },
+  })
+  return () => {
+    stopCatalog()
+    stopRefresh()
+  }
 }

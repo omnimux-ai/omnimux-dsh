@@ -15,6 +15,7 @@ const GROUPS = [
     titleKey: 'models.groupText',
     rows: [
       { key: 'defaultTextModel', labelKey: 'models.rowModel' },
+      { key: 'defaultAnalysisModel', labelKey: 'taskModels.analysis', analysisOnly: true },
       { key: 'defaultTextReasoning', labelKey: 'models.rowReasoning', reasoning: true },
       { key: 'toolModel', labelKey: 'models.rowToolModel', tool: true },
     ],
@@ -47,8 +48,87 @@ const GROUPS = [
 const cap = (kind) => `${kind[0].toUpperCase()}${kind.slice(1)}`
 
 /**
- * Compact defaults card for Settings → 插件 → 可配置.
- * Writes top-level fields through official settingsScope.set / unset.
+ * Read-only gateway-sync status with one explicit refresh action.
+ * A successful refresh emits the same event every catalog consumer listens to.
+ */
+function CatalogSyncPanel({ t }) {
+  const [state, setState] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [syncError, setSyncError] = useState('')
+
+  const load = useCallback(async () => {
+    try {
+      const response = await fetch('/omnimux/model-catalog?view=diagnostics')
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      setState(await response.json())
+      setSyncError('')
+    } catch (caught) {
+      setSyncError(caught instanceof Error ? caught.message : String(caught))
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+    const onUpdated = () => { void load() }
+    window.addEventListener?.('omnimux:model-catalog-updated', onUpdated)
+    return () => window.removeEventListener?.('omnimux:model-catalog-updated', onUpdated)
+  }, [load])
+
+  const refresh = async () => {
+    if (busy) return
+    setBusy(true)
+    setSyncError('')
+    try {
+      const response = await fetch('/omnimux/model-catalog/refresh', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok || body?.status === 'failed') {
+        throw new Error(body?.reason || body?.error || `HTTP ${response.status}`)
+      }
+      window.dispatchEvent?.(new CustomEvent('omnimux:model-catalog-updated'))
+      await load()
+    } catch (caught) {
+      setSyncError(caught instanceof Error ? caught.message : String(caught))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const snapshot = state?.snapshot
+  const refreshState = state?.refresh
+  return (
+    <div className="omnimux-models-card" data-section="catalog-sync">
+      <div className="omnimux-models-card__head">
+        <h3 className="omnimux-models-card__title">{t('models.syncTitle')}</h3>
+        <p className="omnimux-models-card__desc">{t('models.syncDescription')}</p>
+      </div>
+      <div className="omnimux-models-card__body">
+        <div className="omnimux-models-card__row">
+          <span className="omnimux-models-card__row-label">{t('models.syncStatus')}</span>
+          <div className="omnimux-models-card__row-body">
+            <span className="omnimux-models-card__status" role="status">
+              {snapshot
+                ? `${snapshot.source || 'none'} · ${snapshot.generatedAt || t('models.syncUnknown')}${snapshot.stale ? ` · ${t('models.syncStale')}` : ''}`
+                : t('models.syncLoading')}
+            </span>
+            <Button type="button" size="sm" variant="secondary" disabled={busy} loading={busy ? true : undefined} onClick={() => { void refresh() }}>
+              {t('models.syncNow')}
+            </Button>
+          </div>
+        </div>
+        {refreshState?.errorCode ? <p className="omnimux-models-card__error" role="status">{refreshState.errorCode}</p> : null}
+        {syncError ? <p className="omnimux-models-card__error" role="status">{syncError}</p> : null}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Consolidated model settings card on the official Plugins page.
+ * Writes top-level fields through the official config form scope.
  *
  * @param {{
  *   t: (key: string, params?: Record<string, string>) => string,
@@ -77,18 +157,26 @@ export function ModelsSettingsCard({ t, scope }) {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/omnimux/model-catalog')
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        return response.json()
-      })
-      .then((body) => {
-        if (!cancelled) setCatalog(body)
-      })
-      .catch((caught) => {
-        if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught))
-      })
-    return () => { cancelled = true }
+    const load = () => {
+      fetch('/omnimux/model-catalog')
+        .then(async (response) => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`)
+          return response.json()
+        })
+        .then((body) => {
+          if (!cancelled) setCatalog(body)
+        })
+        .catch((caught) => {
+          if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught))
+        })
+    }
+    load()
+    const onUpdated = () => load()
+    window.addEventListener?.('omnimux:model-catalog-updated', onUpdated)
+    return () => {
+      cancelled = true
+      window.removeEventListener?.('omnimux:model-catalog-updated', onUpdated)
+    }
   }, [snapshot?.value?.defaultTextModel, snapshot?.value?.defaultImageModel, snapshot?.value?.defaultVideoModel, snapshot?.value?.defaultAudioModel, snapshot?.value?.defaultImageOperation, snapshot?.value?.defaultVideoOperation])
 
   const value = snapshot?.value && typeof snapshot.value === 'object' ? snapshot.value : {}
@@ -129,9 +217,18 @@ export function ModelsSettingsCard({ t, scope }) {
     return operations[0]?.id ?? ''
   }, [catalog, currentModelIdFor, listedOperationsFor, value])
 
+  const reasoningOptionsFor = useCallback(() => {
+    const model = (catalog?.models ?? []).find((row) => row.id === currentModelIdFor('text'))
+    const efforts = model?.executionProfile?.reasoningEfforts
+    const levels = efforts && typeof efforts === 'object' && !Array.isArray(efforts)
+      ? Object.keys(efforts)
+      : REASONING_LEVELS
+    return levels.map((level) => ({ value: level, label: t(`models.reasoning.${level}`) }))
+  }, [catalog, currentModelIdFor, t])
+
   const optionsForRow = useCallback((group, row) => {
     if (row.reasoning) {
-      return REASONING_LEVELS.map((level) => ({ value: level, label: t(`models.reasoning.${level}`) }))
+      return reasoningOptionsFor()
     }
     if (row.mode) {
       const options = listedOperationsFor(group.kind, currentModelIdFor(group.kind))
@@ -157,21 +254,25 @@ export function ModelsSettingsCard({ t, scope }) {
       return options
     }
     const rows = Array.isArray(catalog?.[group.kind]) ? catalog[group.kind] : []
-    const options = rows.map((item) => ({ value: item.id, label: item.label || item.id }))
+    const filtered = row.analysisOnly
+      ? rows.filter((item) => (item?.inputCapability?.modalities ?? item?.input ?? []).some((modality) => modality !== 'text'))
+      : rows
+    const options = [{ value: 'auto', label: t('models.operationAutoBare') }]
+    for (const item of filtered) options.push({ value: item.id, label: item.label || item.id })
     const stored = value[row.key]
     if (typeof stored === 'string' && stored && !options.some((option) => option.value === stored)) {
       options.push({ value: stored, label: `${stored} · ${t('runtime.needsConfirmation')}` })
     }
     return options
-  }, [catalog, currentModelIdFor, listedOperationsFor, t, value])
+  }, [catalog, currentModelIdFor, listedOperationsFor, reasoningOptionsFor, t, value])
 
   const currentValueForRow = useCallback((group, row, options) => {
     const stored = typeof value[row.key] === 'string' && value[row.key] ? value[row.key] : ''
     if (row.tool) return stored || 'auto'
-    if (row.reasoning) return stored || DEFAULT_REASONING
+    if (row.reasoning) return stored && options.some((option) => option.value === stored) ? stored : (options.find((option) => option.value === DEFAULT_REASONING)?.value || options[0]?.value || DEFAULT_REASONING)
     if (row.mode) return effectiveOperationId(group.kind) || stored || ''
-    return stored || catalog?.defaults?.[group.kind] || options[0]?.value || ''
-  }, [catalog, effectiveOperationId, value])
+    return stored || 'auto'
+  }, [effectiveOperationId, value])
 
   const onChange = useCallback(async (field, next) => {
     if (!scope || typeof scope.set !== 'function' || !writable || busy) return
@@ -313,6 +414,7 @@ export function ModelsSettingsCard({ t, scope }) {
 
   return (
     <div className="omnimux-settings-sections">
+      <CatalogSyncPanel t={t} />
       {/* 栏目一：对话与媒体生成模型 */}
       <div className="omnimux-models-card" data-section="runtime">
         <div className="omnimux-models-card__head">

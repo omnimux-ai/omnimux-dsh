@@ -25,9 +25,9 @@ related:
 
 This contract owns the internal directory and retained technical selectors. It does not make every registered model a public product choice. Ordinary character creation follows [product positioning](product-positioning.md); hiding IDs and automatic group matching are product requirements, not proof that existing selectors or request schemas have changed.
 
-The app's OmniMux model list has one **field authority**: `plugins/omnimux/cordis.patch.yml` says what every model looks like — wire parameters, modalities, context windows, reasoning efforts. **Who is on sale is a different truth, owned by the gateway snapshot.** The hub's four catalog lists expose every gateway-public model (snapshot model with an enabled group) plus user custom model profiles. Local adapter support is reported as `executionStatus` and never hides a row; the canvas no longer applies `canvasHiddenModels` or a local whitelist. Neither the patch nor a local table decides gateway membership. See [Composer list membership](#composer-list-membership).
+The app's OmniMux model list has two authorities with different jobs. **Who is on sale and what each gateway model exposes are owned by the gateway snapshot and its Gateway Contract v2** — membership, operations, input slots, parameters, `context_window_tokens`, `max_output_tokens`, `input_modalities`, `tool_calling`, `streaming`, `prompt_caching`, reasoning metadata, status and unknowns. The hub's four catalog lists expose every gateway-public model (snapshot model with an enabled group) plus user custom model profiles. Local adapter support is reported as `executionStatus` and never hides a row; the canvas no longer applies `canvasHiddenModels` or a local whitelist. See [Composer list membership](#composer-list-membership).
 
-For models the gateway sells with a **Gateway Contract v2**, the capability surface (operations, input slots, parameters, status, unknowns) comes from that contract, not from a per-model local YAML. The local `specs/*.yaml` remain the adapter/fallback layer: they own implementation profiles, seams, labels, conservative local safety caps, and the old no-v2 behavior. The runtime merge is `plugins/omnimux/src/catalog/runtime-index.js`; see [Gateway Contract v2 overlay](#gateway-contract-v2-overlay).
+The local `specs/*.yaml` remain the adapter/fallback layer: they own implementation profiles, seams, labels, conservative local safety caps, and the old no-v2 behavior. `plugins/omnimux/cordis.patch.yml` keeps only the provider transport shell and a bootstrap row so `llm-pi-ai` can mount before settings are ready; it is not the field authority for a gateway-public model. The runtime merge is `plugins/omnimux/src/catalog/runtime-index.js`; see [Gateway Contract v2 overlay](#gateway-contract-v2-overlay).
 
 Model modes, input modalities, limits and wire parameters MUST follow the selected channel's official API documentation under [model API authority](model-api-authority.md). EvoLink and APIMart are the primary channels. Do not issue real model requests for research or contract acceptance. Historical measurements below do not define current channel support.
 
@@ -54,29 +54,31 @@ Layer order (later wins on id match):
 The plugin patch lives at layer 1, so any layer-2+ re-declaration wins. Keep
 it that way: user layers set `agent-default-model` only.
 
-## What the plugin patch owns
+## What the gateway contract and plugin patch own
 
-- The `omnimux` provider row under `llm-pi-ai` (`apiKeyEnv`,
-  `baseURL`, `api`).
-- The model list and context windows. Resolve the actual channel, model ID and
-  endpoint, then record the corresponding official API documentation and date.
+- The gateway contract owns the model's declared capability envelope,
+  including operations, input slots, parameters, context window, output cap,
+  modalities, tool/streaming/caching flags, reasoning metadata and `unknowns`.
   Undocumented values remain unknown; do not infer them through requests.
-- Input modalities and reasoning efforts. Declare the selected channel's documented
-  fields, enums and conditions, then verify adapter mapping offline. Historical
-  observations in `docs/evidence/2026-08-18-omnimux-modality.md`,
-  `2026-08-20-omnimux-reasoning.md` and `2026-08-23-omnimux-brand-four.md`
-  remain execution records, not a requirement to repeat calls or a substitute
-  for channel documentation. A narrower current adapter is an implementation
-  gap, not evidence that the channel lacks the capability.
+- The `omnimux` provider row under `llm-pi-ai` (`apiKeyEnv`, `baseURL`, `api`)
+  and one bootstrap model row belong to the plugin patch. The bootstrap row is
+  only a startup fallback; `composer-sync` replaces the rendered list with the
+  gateway directory after settings are ready, and an id the hub no longer lists
+  disappears from the composer.
+- Input modalities and reasoning efforts. Historical observations in
+  `docs/evidence/2026-08-18-omnimux-modality.md`,
+  `docs/evidence/2026-08-20-omnimux-reasoning.md` and
+  `docs/evidence/2026-08-23-omnimux-brand-four.md` remain execution records, not
+  a requirement to repeat calls or a substitute for channel documentation. A
+  narrower current adapter is an implementation gap, not evidence that the
+  channel lacks the capability.
 - The one-shot expert whitelist (`plugins/omnimux/src/text/catalog.js`
-  `CHAT_MODELS`) is a projection of the chat directory, and its `input` matrix
-  must agree with the patch. Since 2026-10-21 (#3527) the chat directory
-  projects only text models with a **listed** text output, so a
-  contracted-but-unlisted model never re-enters the expert whitelist. The patch
-  owns the **field shape** of the rows it declares; whether a row is actually on
-  sale comes from the gateway snapshot at runtime — never from the patch, and
-  never from a local flag. `pnpm verify:models` stays an offline self-check of
-  patch ↔ projection ↔ shipped snapshot agreement (it reads
+  `CHAT_MODELS`) is a projection of the chat directory. Since 2026-10-21
+  (#3527) it projects only text models with a **listed** text output, so a
+  contracted-but-unlisted model never re-enters the expert whitelist. The
+  gateway snapshot remains the membership authority; a local flag never decides
+  what is on sale. `pnpm verify:models` stays an offline self-check of
+  projection ↔ shipped snapshot agreement (it reads
   `plugins/omnimux/src/catalog/cloud/bundled/pricing.json`, needs no credential
   and makes no request since #3763); it is not a membership authority.
 - Deployment / instance gating for the expert whitelist only:
@@ -121,17 +123,13 @@ it that way: user layers set `agent-default-model` only.
     硬编码行已物理删除，两文件为**投影 facade**（目录语义：含未上架契约行；
     契约解析/准入/处置表失败顶层 throw，无回退）。43 个 runtime ID 的治理
     处置由 `src/catalog/contract/dispositions.json` 机器真源承载（D1–D7
-    一致性校验，`--strict` 红灯）；`catalog-defaults.json` 持有
-    `defaultsByOperation` 权威默认。当时 runtime limits 按保守策略写入 YAML；该历史策略不定义渠道上限。
-    后续对账以渠道官方文档为准，不取实测样本或跨渠道更严值。**cordis 交叉验证**：verifier 断言本
-    patch 的 composer id 均可 resolve 到契约 canonical/alias
-    （`cordis_unresolvable_model`），patch 内容本身不动。seam 载荷携带
-    `operations[]`（string id + per-op status/listed metadata）。此后
-    JS SPECS / workflow `BUILTIN_*` 不得再作为能力真源（绞杀时间盒见设计）。
-  - **聊天 composer 模型列表**的字段真源仍是本文件所述 `cordis.patch.yml`；
-    其**成员资格**由 hub 已上架目录 + `composerHiddenModels` 在运行时收窄
-    （见 [Composer list membership](#composer-list-membership)）。H1/H2 **不**把
-    canvas contract 投影写进 patch，也 **不**用 canvas 目录直接替换 composer 列表。
+    一致性校验，`--strict` 红灯）；`catalog-defaults.json` 仅作为离线兜底，
+    在线默认由 gateway recommendation / ready catalog row 解析。运行时 limits
+    以网关 Contract v2 与渠道官方文档为准，不取实测样本或跨渠道更严值。
+  - **聊天 composer 模型列表**的字段真源是本文件所述 gateway contract 的
+    `executionProfile`；`cordis.patch.yml` 只提供 provider transport 和启动
+    bootstrap。其**成员资格**由 hub 已上架目录 + `composerHiddenModels` 在
+    运行时收窄（见 [Composer list membership](#composer-list-membership)）。
 - **Display labels** (UI aliases) are separate from routing ids. Labels MUST
   follow [model-display-label.md](./model-display-label.md): no `-` in the
   visible model name; brand casing preserved (`Claude Opus 4.6`, `GPT 5.5`).
@@ -182,11 +180,13 @@ maintained at runtime by `plugins/omnimux/src/catalog/composer-sync.js`, which
 writes the composed list once settings are ready and again whenever the
 visibility setting changes.
 
-- **Field truth** — the shipped `cordis.patch.yml` profile. A model's row is
-  copied verbatim from the composition `base` layer, so this sync never invents
-  wire parameters. A hub-listed model the profile does not describe is added with
-  its id and label only: no context window, modality, or reasoning level is
-  guessed, because a wrong one fails mid-conversation rather than at startup.
+- **Field truth** — the gateway contract's `executionProfile` projection. A
+  model's known context window, output cap, modalities, tool/streaming/caching
+  flags and reasoning levels travel from the snapshot through
+  `/omnimux/model-catalog`; a field the gateway does not declare remains absent.
+  No context window, modality, or reasoning level is guessed, because a wrong
+  one fails mid-conversation rather than at startup. `cordis.patch.yml` only
+  supplies the provider transport shell and a bootstrap row.
 - **Membership truth** — the hub's `text` bucket
   (`plugins/omnimux/src/catalog/list.js`, the directory the canvas also
   consumes), which is the **gateway snapshot's on-sale set ∩ the call
@@ -208,16 +208,17 @@ visibility setting changes.
 0. Confirm the model is on sale in the shipped snapshot — read
    `plugins/omnimux/src/catalog/cloud/bundled/pricing.json`, or run
    `pnpm catalog:snapshot:check`. A row the snapshot does not sell never reaches
-   any list, so editing the patch for it is wasted work; if the gateway just
-   started selling it, refresh the snapshot first.
-1. Edit `plugins/omnimux/cordis.patch.yml` (provider row + models) for the
-   **field shape** only.
-2. Compare the patch and mapper against the selected channel documentation; run
-   offline `pnpm verify:model-contracts`, `pnpm verify:models` (patch ↔
-   `CHAT_MODELS` ↔ shipped snapshot, no credential, no network) and relevant
-   isolated fixture checks. Never probe the service to discover support.
-3. Restart the app (patches resolve at every launch) and check the Settings →
-   Models list shows the new set.
+   any list; if the gateway just started selling it, refresh the snapshot first.
+1. For a Gateway Contract v2 model, update the gateway contract and local adapter
+   profile only. For a local-only or legacy model, edit `cordis.patch.yml` as the
+   fallback. Do not add a duplicate gateway model row to the patch just to make
+   it appear.
+2. Compare the contract mapper against the selected channel documentation; run
+   offline `pnpm verify:model-contracts`, `pnpm verify:models` (projection ↔
+   shipped snapshot, no credential, no network) and relevant isolated fixture
+   checks. Never probe the service to discover support.
+3. Refresh the catalog (`/omnimux/model-catalog` or the manual refresh action) and
+   check the composer, Settings → Models and canvas pickers show the new set.
 
 ### Cross-plugin closure
 

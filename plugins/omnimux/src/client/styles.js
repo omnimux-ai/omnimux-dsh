@@ -1606,6 +1606,15 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
   min-width: 150px;
   max-width: 260px;
 }
+.omnimux-models-card__status {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
 .omnimux-models-card__field {
   display: flex;
   flex-direction: column;

@@ -49,17 +49,51 @@ describe('composeComposerModels', () => {
     assert.deepEqual(out.map((row) => row.id), ['alpha'])
   })
 
-  it('appends hub-only ids after shipped rows, carrying only id and label', () => {
+  it('appends hub-only ids after shipped rows and carries a declared execution profile', () => {
     const out = composeComposerModels({
-      hubText: hub('delta', 'alpha'),
+      hubText: [
+        { id: 'delta', label: 'Label delta', executionProfile: {
+          contextWindowTokens: 12345,
+          maxOutputTokens: 678,
+          inputModalities: ['text', 'image', 'video'],
+          reasoningEfforts: { low: 'low', high: 'high' },
+        } },
+        hub('alpha')[0],
+      ],
       shippedModels: shipped(),
     })
     assert.deepEqual(out.map((row) => row.id), ['alpha', 'delta'])
     const added = out.find((row) => row.id === 'delta')
-    assert.deepEqual(added, { id: 'delta', name: 'Label delta' })
-    // Wire capabilities are not guessed for a model the profile does not describe.
-    assert.equal('contextWindow' in added, false)
-    assert.equal('input' in added, false)
+    assert.deepEqual(added, {
+      id: 'delta',
+      name: 'Label delta',
+      contextWindow: 12345,
+      maxTokens: 678,
+      input: ['text', 'image'],
+      reasoningEfforts: { low: 'low', high: 'high' },
+    })
+    // Values the gateway does not declare are not guessed.
+    assert.equal('promptCaching' in added, false)
+  })
+
+  it('lets the gateway profile update a shipped row without dropping its display name', () => {
+    const out = composeComposerModels({
+      hubText: [{ id: 'alpha', label: 'Gateway Alpha', executionProfile: {
+        contextWindowTokens: 999,
+        maxOutputTokens: 111,
+        inputModalities: ['text'],
+      } }],
+      shippedModels: shipped(),
+    })
+    assert.equal(out[0].name, 'Alpha')
+    assert.equal(out[0].contextWindow, 999)
+    assert.equal(out[0].maxTokens, 111)
+    assert.deepEqual(out[0].input, ['text'])
+  })
+
+  it('keeps only id and label when the hub has no execution profile', () => {
+    const out = composeComposerModels({ hubText: hub('delta'), shippedModels: shipped() })
+    assert.deepEqual(out.find((row) => row.id === 'delta'), { id: 'delta', name: 'Label delta' })
   })
 
   it('falls back to the id as the label when the hub states none', () => {

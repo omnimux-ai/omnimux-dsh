@@ -40,7 +40,7 @@ MUST NOT use 13px labels or 16px filled icons on these rows. MUST NOT invent a s
 | 识别方式 | 官方「更多」行带 `aria-haspopup="menu"`，其余面板行没有 —— 用 `[class*="panelRow"]:not([aria-haspopup="menu"])` 判定，**MUST NOT** 按面板 id、文案或语言匹配（那需要第二份 id 清单，官方加面板 / 改文案即漂移） |
 | 菜单内呈现 | `explore-more-menu.jsx` 用官方 owner props（`entries` + `onOpen`）渲染折叠行：文案取 `entry.label`、选中态取 `entry.active`、点击先 `onDismiss()` 再 `onOpen(id)`；MUST NOT 复制面板 id 或另写导航 |
 | 分组 | 折叠块排在最前，与产品入口之间一条分隔线；折叠块内部不画线 |
-| 插件入口 | 官方 `entries` 不含固定面板 `plugins`（官方按 `id !== FIXED_PANEL_ID` 过滤），插件入口由官方「浏览更多插件」行承担 —— MUST NOT 自行补一行伪造入口 |
+| 插件入口 | 官方 `entries` 中的 `plugins` 是官方插件管理页入口，必须保留在「更多」菜单；产品自研应用商店只负责安装/更新，MUST NOT 补一行伪造官方入口 |
 | 单一真源 | 面板清单、文案、选中态、选中委托全部来自官方 owner props；官方新增面板自动进菜单，无需改本仓代码 |
 
 ## 官方 panel 行同样消费本表度量（#3802）

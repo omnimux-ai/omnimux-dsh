@@ -9,6 +9,7 @@
  */
 
 import { mapLegacyOperation } from './contract/legacy-operation-map.js'
+import { executionProfileFromContract, isExecutionProfileComplete, mergeExecutionProfiles } from './execution-profile.js'
 
 export const GATEWAY_CONTRACT_SCHEMA_VERSION = '2.0'
 
@@ -539,6 +540,7 @@ function toRuntimeModel(snapshotModel, localModel, profiles) {
   const localParameters = localModel?.parameters && typeof localModel.parameters === 'object'
     ? structuredClone(localModel.parameters)
     : undefined
+  const executionProfile = mergeExecutionProfiles(localModel?.executionProfile, executionProfileFromContract(contract))
   const model = {
     id,
     label: text(localModel?.label) || (displayName && displayName !== id ? displayName : humanizeId(id)),
@@ -550,6 +552,10 @@ function toRuntimeModel(snapshotModel, localModel, profiles) {
     managementGroup,
     operations,
     inputCapability: inputCapabilityFor(operations),
+    ...(executionProfile ? { executionProfile } : {}),
+    executionStatus: managementGroup === 'text' && !isExecutionProfileComplete(executionProfile, family)
+      ? 'unverified'
+      : 'ready',
     ...(parameters ? { parameters } : localParameters ? { parameters: localParameters } : {}),
     listed: listedOperations.length > 0,
     listedOperations,
@@ -638,6 +644,8 @@ export function gatewayTextRows(snapshot, localIndex, profiles = localIndex?.pro
       role: model.role === 'classic' ? 'classic' : 'flagship',
       input: Array.isArray(inputCapability.modalities) ? [...inputCapability.modalities] : ['text'],
       inputCapability,
+      ...(model.executionProfile ? { executionProfile: structuredClone(model.executionProfile) } : {}),
+      executionStatus: model.executionStatus,
     })
   }
   return rows.sort((left, right) => left.id.localeCompare(right.id))

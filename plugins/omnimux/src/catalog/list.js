@@ -7,9 +7,11 @@ import { sortCatalogRows } from './sort.js'
 import {
   assertContractHealthy,
   getHealthyContractIndex,
+  mergeInputCapability,
   projectCatalog,
   resolveModelId,
 } from './project.js'
+import { executionProfileFromContract, isExecutionProfileComplete, mergeExecutionProfiles } from './execution-profile.js'
 import { getGatewayTextRows, getRuntimeContractIndex } from './runtime-index.js'
 import {
   loadDispositions,
@@ -230,6 +232,9 @@ export function buildModelCatalog(opts = {}) {
   for (const model of customModels) appendCatalogRowByKinds(lists, model, kindEnabled)
   for (const kind of CATALOG_KINDS) lists[kind] = sortCatalogRows(lists[kind])
 
+  const gatewayDefaults = resolved.snapshot && typeof resolved.snapshot.defaults === 'object'
+    ? resolved.snapshot.defaults
+    : {}
   const configDefaults = {
     text: text.defaultModel || DEFAULT_TEXT.defaultModel,
     image: media.providers?.omnimux?.models?.image || DEFAULT_MEDIA.providers.omnimux.models.image,
@@ -244,23 +249,41 @@ export function buildModelCatalog(opts = {}) {
     video: '',
     audio: '',
   }
+  /** @type {Record<string, { modelId: string, source: string, needsConfirmation?: boolean }>} */
+  const defaultsMeta = {}
   for (const kind of CATALOG_KINDS) {
     const ids = new Set(lists[kind].map((row) => row.id))
-    // env > settings > config > byOperation primary-op default > first row
+    const settingsKey = SETTINGS_DEFAULT_KEYS[kind]
+    const saved = resolveModelId(runtime.index, trimId(settingsDefaults[settingsKey]))
     const byOpDefault = dto.defaultsByOperation[KIND_PRIMARY_OP[kind]]
-    const fallback = typeof byOpDefault === 'string' && ids.has(byOpDefault)
-      ? byOpDefault
-      : lists[kind][0]?.id ?? ''
-    defaults[kind] = resolveDefault({
+    const offlineDefault = typeof byOpDefault === 'string' && ids.has(byOpDefault) ? byOpDefault : ''
+    const readyDocumented = lists[kind].find((row) => row.executionStatus === 'ready' && row.gateway?.status === 'documented')
+    const ready = lists[kind].find((row) => row.executionStatus === 'ready')
+    const fallback = offlineDefault || readyDocumented?.id || ready?.id || lists[kind][0]?.id || ''
+    const gatewayDefaultId = resolveModelId(runtime.index, trimId(gatewayDefaults[kind] ?? gatewayDefaults[KIND_PRIMARY_OP[kind]]))
+    const gatewayDefault = gatewayDefaultId && lists[kind].some((row) => row.id === gatewayDefaultId && row.executionStatus === 'ready')
+      ? gatewayDefaultId : ''
+    const resolvedDefault = resolveDefault({
       kind,
       ids,
       env: { [ENV_DEFAULT_KEYS[kind]]: resolveModelId(runtime.index, trimId(env[ENV_DEFAULT_KEYS[kind]])) },
-      settingsDefaults: {
-        [SETTINGS_DEFAULT_KEYS[kind]]: resolveModelId(runtime.index, trimId(settingsDefaults[SETTINGS_DEFAULT_KEYS[kind]])),
-      },
+      settingsDefaults: { [settingsKey]: saved },
+      gatewayDefault: gatewayDefault && ids.has(gatewayDefault) ? gatewayDefault : '',
       configDefault: resolveModelId(runtime.index, configDefaults[kind]) ?? '',
       fallback,
     })
+    defaults[kind] = resolvedDefault
+    const explicit = saved && ids.has(saved)
+    const source = gatewayDefault && !explicit && resolvedDefault === gatewayDefault ? 'gateway-recommended'
+      : offlineDefault && !explicit && resolvedDefault === offlineDefault ? 'offline-floor'
+        : !explicit && resolvedDefault === fallback ? (readyDocumented || ready ? 'first-ready' : 'offline-floor')
+          : explicit ? 'user'
+            : resolvedDefault ? 'config' : 'none'
+    defaultsMeta[kind] = {
+      modelId: resolvedDefault,
+      source,
+      ...(saved && !explicit ? { needsConfirmation: true } : {}),
+    }
   }
 
   /** Per-kind generation mode a new node starts in (see resolveDefaultOperation). */
@@ -280,12 +303,24 @@ export function buildModelCatalog(opts = {}) {
   // offers it separately from the plain-text default rather than letting the
   // text default silently drive video/audio/document calls.
   const savedAnalysis = trimId(settingsDefaults.defaultAnalysisModel)
+  const modalitiesOf = (row) => row?.inputCapability?.modalities
+    ?? row?.input
+    ?? []
+  const analysisRows = lists.text.filter((row) => row.executionStatus !== 'unverified'
+    && (modalitiesOf(row) ?? []).some((modality) => modality !== 'text'))
   if (savedAnalysis) {
     const resolvedAnalysis = resolveModelId(runtime.index, savedAnalysis)
-    const compatible = resolvedAnalysis && lists.text.find((row) => row.id === resolvedAnalysis && (row.input ?? []).some((modality) => modality !== 'text'))
+    const compatible = resolvedAnalysis && analysisRows.find((row) => row.id === resolvedAnalysis)
     defaults.analysis = compatible ? resolvedAnalysis : ''
+    defaultsMeta.analysis = {
+      modelId: defaults.analysis || analysisRows.find((row) => row.id === defaults.text)?.id || analysisRows[0]?.id || '',
+      source: compatible ? 'user' : 'first-ready',
+      ...(!compatible ? { needsConfirmation: true } : {}),
+    }
+    if (!defaults.analysis) defaults.analysis = defaultsMeta.analysis.modelId
   } else {
-    defaults.analysis = (lists.text.find((row) => row.id === defaults.text && (row.input ?? []).some((modality) => modality !== 'text')) ?? lists.text.find((row) => (row.input ?? []).some((modality) => modality !== 'text')))?.id ?? ''
+    defaults.analysis = (analysisRows.find((row) => row.id === defaults.text) ?? analysisRows[0])?.id ?? ''
+    defaultsMeta.analysis = { modelId: defaults.analysis, source: defaults.analysis ? 'first-ready' : 'none' }
   }
 
   return {
@@ -296,6 +331,7 @@ export function buildModelCatalog(opts = {}) {
       contractFingerprint: index.contentFingerprint,
       listedOperations: runtime.index.listedOperations ?? [],
       defaultsByOperation: dto.defaultsByOperation,
+      defaultsMeta,
       defaultOperations,
       channelGroups: dto.models.map((model) => ({ modelId: model.id, groups: model.channelGroups })),
       dispositions: (dispositionsDoc.dispositions ?? []).map((row) => [
@@ -310,6 +346,7 @@ export function buildModelCatalog(opts = {}) {
     preview_fingerprint: index.previewFingerprint,
     models: dto.models,
     defaults,
+    defaultsMeta,
     defaultsByOperation: dto.defaultsByOperation,
     defaultOperations,
     text: lists.text,
@@ -364,21 +401,29 @@ function projectGatewayPublicModels(snapshot, localModels, adapterUnsupported) {
     if (!contract || !Array.isArray(contract.operations)) continue
     const executable = contract.operations.filter((operation) => operation?.executable === true)
     if (!executable.length) continue
-    const status = adapterUnsupported.has(id) ? 'unsupported' : 'ready'
     const local = byId.get(id)
+    const executionProfile = mergeExecutionProfiles(local?.executionProfile, executionProfileFromContract(contract))
+    const incompleteProfile = !isExecutionProfileComplete(executionProfile, contract.family)
+    const status = adapterUnsupported.has(id)
+      ? 'unsupported'
+      : incompleteProfile ? 'unverified' : 'ready'
     const localOperations = local?.operations ?? []
     const hasLocalListedOperation = localOperations.some((operation) => operation?.listed === true)
     const operations = hasLocalListedOperation ? localOperations : executable.map((operation) => gatewayOperationDto(operation, status))
+    const inputCapability = local?.inputCapability ?? mergeInputCapability(executable)
+    const gateway = {
+      schemaVersion: contract.schemaVersion,
+      contractVersion: contract.contractVersion,
+      status: contract.status,
+      ...(Array.isArray(contract.unknowns) ? { unknowns: [...contract.unknowns] } : {}),
+    }
     const row = local ? {
       ...local,
       source: 'gateway',
       executionStatus: status,
-      gateway: {
-        schemaVersion: contract.schemaVersion,
-        contractVersion: contract.contractVersion,
-        status: contract.status,
-        ...(Array.isArray(contract.unknowns) ? { unknowns: [...contract.unknowns] } : {}),
-      },
+      ...(executionProfile ? { executionProfile } : {}),
+      ...(inputCapability ? { inputCapability } : {}),
+      gateway,
       operations,
     } : {
       id,
@@ -387,8 +432,10 @@ function projectGatewayPublicModels(snapshot, localModels, adapterUnsupported) {
       executionStatus: status,
       sourceLabel: 'OmniMux Gateway',
       family: typeof contract.family === 'string' ? contract.family : undefined,
+      ...(executionProfile ? { executionProfile } : {}),
+      ...(inputCapability ? { inputCapability } : {}),
       channelGroups: getModelChannelGroups(id, snapshot),
-      gateway: { schemaVersion: contract.schemaVersion, contractVersion: contract.contractVersion, status: contract.status, ...(Array.isArray(contract.unknowns) ? { unknowns: [...contract.unknowns] } : {}) },
+      gateway,
       operations,
     }
     models.push(row)
@@ -445,7 +492,20 @@ function appendCatalogRowByKinds(lists, model, kindEnabled = () => true) {
     .map((operation) => operation?.output?.type)
     .filter((kind) => GATEWAY_KINDS.has(kind) && kindEnabled(kind)))]
   for (const kind of kinds) {
-    if (lists[kind].some((row) => row.id === model.id)) continue
+    const operations = (model.operations ?? []).filter((operation) => operation.output?.type === kind)
+    const existing = lists[kind].find((row) => row.id === model.id)
+    if (existing) {
+      Object.assign(existing, {
+        source: model.source,
+        executionStatus: model.executionStatus ?? existing.executionStatus,
+        operations,
+        ...(model.executionProfile ? { executionProfile: structuredClone(model.executionProfile) } : {}),
+        ...(model.inputCapability ? { inputCapability: structuredClone(model.inputCapability) } : {}),
+        ...(model.gateway ? { gateway: model.gateway } : {}),
+        ...(model.channelGroups ? { channelGroups: model.channelGroups } : {}),
+      })
+      continue
+    }
     lists[kind].push({
       id: model.id,
       label: model.label,
@@ -458,7 +518,9 @@ function appendCatalogRowByKinds(lists, model, kindEnabled = () => true) {
       ...(model.sourceLabel ? { sourceLabel: model.sourceLabel } : {}),
       ...(model.channelGroups ? { channelGroups: model.channelGroups } : {}),
       ...(model.gateway ? { gateway: model.gateway } : {}),
-      operations: (model.operations ?? []).filter((operation) => operation.output?.type === kind),
+      ...(model.inputCapability ? { inputCapability: structuredClone(model.inputCapability) } : {}),
+      ...(model.executionProfile ? { executionProfile: structuredClone(model.executionProfile) } : {}),
+      operations,
       ...(model.parameters ? { parameters: model.parameters } : {}),
     })
   }
@@ -473,6 +535,7 @@ const CANVAS_HIDDEN_KINDS = ['text', 'image', 'video', 'audio']
  *   ids: Set<string>,
  *   env: Record<string, string | undefined>,
  *   settingsDefaults: Record<string, unknown>,
+ *   gatewayDefault?: string,
  *   configDefault: string,
  *   fallback: string,
  * }} input
@@ -482,6 +545,8 @@ export function resolveDefault(input) {
   if (envId && input.ids.has(envId)) return envId
   const settingsId = trimId(input.settingsDefaults[SETTINGS_DEFAULT_KEYS[input.kind]])
   if (settingsId && input.ids.has(settingsId)) return settingsId
+  const gatewayId = trimId(input.gatewayDefault)
+  if (gatewayId && input.ids.has(gatewayId)) return gatewayId
   if (input.configDefault && input.ids.has(input.configDefault)) return input.configDefault
   return input.fallback
 }
@@ -504,6 +569,7 @@ function trimId(value) {
  *   contractFingerprint: string,
  *   listedOperations: string[],
  *   defaultsByOperation: Record<string, string>,
+ *   defaultsMeta?: Record<string, { modelId: string, source: string, needsConfirmation?: boolean }>,
  *   defaultOperations?: Record<string, { modelId: string, operationId: string, rule: string }>,
  *   channelGroups?: Array<{ modelId: string, groups: object[] }>,
  *   dispositions: unknown[],
@@ -524,6 +590,7 @@ export function fingerprintOf(lists, defaults, contract) {
           contractFingerprint: contract.contractFingerprint,
           listedOperations: [...(contract.listedOperations ?? [])].sort(),
           defaultsByOperation: contract.defaultsByOperation ?? {},
+          defaultsMeta: contract.defaultsMeta ?? {},
           defaultOperations: contract.defaultOperations ?? {},
           channelGroups: contract.channelGroups ?? [],
           dispositions: contract.dispositions ?? [],

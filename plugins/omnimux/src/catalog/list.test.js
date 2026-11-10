@@ -108,6 +108,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
 
     // Config defaults survive where listed, including synchronous speech.
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
+    assert.equal(catalog.defaultsMeta.text.source, 'offline-floor')
     assert.equal(catalog.defaults.image, 'gpt-image-2.5')
     assert.equal(catalog.defaults.video, 'seedance-2-5')
     assert.equal(catalog.defaults.audio, 'suno') // #3516: text_to_speech 键移除，audio 归属迁到 suno
@@ -295,6 +296,16 @@ describe('media facade tables (derived from contracts)', () => {
     // #2256: index-tts joins the audio directory (voice clone).
     // #2801: gemini-3.8-flash-tts joins the audio directory (TTS).
     assert.equal(AUDIO_MODEL_SPECS.length, 8)
+  })
+})
+
+describe('gateway default recommendation', () => {
+  it('wins over the offline defaults when its row is ready', () => {
+    const snapshot = JSON.parse(readFileSync(new URL('./cloud/bundled/pricing.json', import.meta.url), 'utf8'))
+    snapshot.defaults = { image: 'gemini-3.1-flash-lite-image' }
+    const catalog = buildModelCatalog({ env: {}, snapshot, settingsDefaults: {} })
+    assert.equal(catalog.defaults.image, 'gemini-3.1-flash-lite-image')
+    assert.equal(catalog.defaultsMeta.image.source, 'gateway-recommended')
   })
 })
 

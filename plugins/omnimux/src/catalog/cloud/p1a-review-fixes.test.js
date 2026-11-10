@@ -14,11 +14,14 @@ import { buildModelCatalog } from '../list.js'
 
 /** Route harness: register the catalog route and dispatch one request at it. */
 async function dispatch(path) {
-  let route
-  registerCatalogRoutes({ register(registered) { route = registered; return () => {} } }, {
+  const routes = []
+  registerCatalogRoutes({ register(registered) { routes.push(registered); return () => {} } }, {
     list: () => ({ source: 'catalog', text: [{ id: 'a' }] }),
     diagnostics: () => ({ schemaVersion: 1, snapshot: { source: 'bundled' }, drift: { groupUnregistered: 3 } }),
   })
+  const pathname = path.split('?')[0]
+  const route = routes.find((registered) => registered.path === (pathname === '/omnimux/model-catalog' ? '/omnimux/model-catalog' : pathname))
+  assert.ok(route, `missing route ${path}`)
   let status = 0
   let body
   const res = {

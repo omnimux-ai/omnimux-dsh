@@ -11,10 +11,11 @@ import { normalizeTextReferences } from './references.js'
 /**
  * Chat directory — H2 facade. The hardcoded CHAT_MODELS rows were physically
  * deleted; the directory is a projection of specs/text-models.yaml via
- * src/catalog/project.js. Ids must stay a subset of `cordis.patch.yml`
- * `llm-pi-ai` / `omnimux.models`; an id missing there fails at the adapter as
- * UNKNOWN_MODEL. The dated evidence references that justified each row's
- * modalities live in the YAML research blocks (docs/evidence/…).
+ * src/catalog/project.js. Gateway-public rows add their dynamic
+ * `executionProfile` through the catalog; `cordis.patch.yml` only supplies the
+ * provider transport and a bootstrap row. The dated evidence references that
+ * justified each row's modalities live in the YAML research blocks
+ * (docs/evidence/…).
  *
  * Fail-closed: contract parse / admission failure throws at module load.
  */
@@ -35,7 +36,9 @@ export const TEXT_ROLES = Object.freeze(['flagship', 'classic'])
 
 export const DEFAULT_TEXT = Object.freeze({
   defaultProvider: 'omnimux',
-  defaultModel: 'gemini-3.8-flash',
+  // Empty means the catalog/gateway resolves the default; buildModelCatalog
+  // prefers an explicit user setting or a gateway recommendation.
+  defaultModel: '',
   maxTokens: 4096,
   models: Object.freeze(CHAT_MODELS.map((row) => Object.freeze({
     id: row.id,
@@ -218,7 +221,10 @@ function parseModelRows(value) {
  */
 function resolveDefaultModel(enabled, configDefault, env) {
   const overlay = typeof env.OMNIMUX_TEXT_DEFAULT_MODEL === 'string' ? env.OMNIMUX_TEXT_DEFAULT_MODEL.trim() : ''
-  const id = overlay || configDefault
+  const id = overlay || configDefault || enabled[0]?.id || ''
+  if (!id) {
+    throw new OmnimuxError('needs-provider', 'no enabled text model is available')
+  }
   if (!enabled.some((item) => item.id === id)) {
     throw new OmnimuxError(
       'unknown-model',

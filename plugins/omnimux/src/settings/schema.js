@@ -15,16 +15,21 @@ import { parseReferenceStorageConfig } from '../reference-storage/config.js'
 export const DEFAULT_OPERATION_AUTO = 'auto'
 
 export const SETTINGS_DEFAULTS = Object.freeze({
-  defaultTextModel: 'gemini-3.8-flash',
+  /**
+   * Empty means "auto (gateway recommendation)". Only an explicit user choice
+   * is stored here; the catalog resolves the effective model from the gateway
+   * snapshot at request time.
+   */
+  defaultTextModel: '',
   /**
    * Multimodal analysis tasks (素材理解 / 图片理解 / 视频理解). Empty means
    * "follow the hub's compatible default" — the hub picks a catalog.text row
    * whose `input` covers the reference asset types at resolve time.
    */
   defaultAnalysisModel: '',
-  defaultImageModel: 'gpt-image-2.5',
-  defaultVideoModel: 'seedance-2-5',
-  defaultAudioModel: 'suno',
+  defaultImageModel: '',
+  defaultVideoModel: '',
+  defaultAudioModel: '',
   defaultImageOperation: DEFAULT_OPERATION_AUTO,
   defaultVideoOperation: DEFAULT_OPERATION_AUTO,
   /** Route default declared in cordis.patch.yml (reasoning: max). */

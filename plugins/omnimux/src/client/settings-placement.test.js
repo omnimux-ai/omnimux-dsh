@@ -47,7 +47,9 @@ describe('settings placement', () => {
     assert.deepEqual(sectionIds(hub), ['omnimux-profile'])
     assert.deepEqual(pluginsTabIds(hub), ['omnimux-dsh-plugins'])
     assert.deepEqual(pluginItemKeys(hub), [])
-    assert.doesNotMatch(hub, /ModelsSettingsCard|omnimux-model-settings/)
+    assert.match(hub, /ModelsSettingsCard/)
+    assert.match(hub, /omnimux-model-settings/)
+    assert.match(hub, /plugins\.bundle\.config/)
     assert.ok(!hub.includes("settings.section', () =>") || sectionIds(hub).length === 1)
   })
 

@@ -14,7 +14,7 @@ describe('text whitelist', () => {
   it('defaults to the single listed chat-directory model, all enabled', () => {
     const parsed = parseTextConfig(undefined)
     assert.equal(parsed.defaultProvider, 'omnimux')
-    assert.equal(parsed.defaultModel, 'gemini-3.8-flash')
+    assert.equal(parsed.defaultModel, '')
     assert.equal(parsed.maxTokens, 4096)
     // 2026-10-21 #3527：路由声明只保留网关现役文本型号；契约与证据仍留在目录/处置表。
     assert.deepEqual(Array.from(CHAT_MODEL_IDS), ['gemini-3.8-flash'])
@@ -141,7 +141,7 @@ describe('text whitelist', () => {
   it('keeps the default table frozen identity for omitted config', () => {
     assert.equal(DEFAULT_TEXT.models.length, 1)
     assert.equal(DEFAULT_TEXT.models[0].id, 'gemini-3.8-flash')
-    assert.equal(DEFAULT_TEXT.defaultModel, 'gemini-3.8-flash')
+    assert.equal(DEFAULT_TEXT.defaultModel, '')
   })
 
   it('resolves model@group and strategy in text route', () => {

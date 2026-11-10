@@ -44,14 +44,22 @@ export function TaskModelsSection({ t, scope }) {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/omnimux/model-catalog')
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        return response.json()
-      })
-      .then((body) => { if (!cancelled) setCatalog(body) })
-      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught)) })
-    return () => { cancelled = true }
+    const load = () => {
+      fetch('/omnimux/model-catalog')
+        .then(async (response) => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`)
+          return response.json()
+        })
+        .then((body) => { if (!cancelled) setCatalog(body) })
+        .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught)) })
+    }
+    load()
+    const onUpdated = () => load()
+    if (typeof window !== 'undefined') window.addEventListener('omnimux:model-catalog-updated', onUpdated)
+    return () => {
+      cancelled = true
+      if (typeof window !== 'undefined') window.removeEventListener('omnimux:model-catalog-updated', onUpdated)
+    }
   }, [snapshot?.value?.defaultTextModel, snapshot?.value?.defaultAnalysisModel])
 
   const value = snapshot?.value && typeof snapshot.value === 'object' ? snapshot.value : {}
@@ -62,24 +70,28 @@ export function TaskModelsSection({ t, scope }) {
   const rowsFor = useCallback((analysisOnly) => {
     const rows = Array.isArray(catalog?.text) ? catalog.text : []
     if (!analysisOnly) return rows
-    return rows.filter((row) => (row?.input ?? []).some((modality) => modality !== 'text'))
+    return rows.filter((row) => {
+      const modalities = row?.inputCapability?.modalities ?? row?.input ?? []
+      return modalities.some((modality) => modality !== 'text')
+    })
   }, [catalog])
 
   const optionsFor = useCallback((field, analysisOnly) => {
-    const options = rowsFor(analysisOnly).map((row) => ({ value: row.id, label: row.label || row.id }))
+    const options = [{ value: 'auto', label: t('models.operationAutoBare') }]
+    for (const row of rowsFor(analysisOnly)) {
+      options.push({ value: row.id, label: row.label || row.id })
+    }
     const stored = typeof value[field] === 'string' ? value[field].trim() : ''
     if (stored && !options.some((option) => option.value === stored)) {
       options.push({ value: stored, label: `${stored} · ${t('runtime.needsConfirmation')}` })
     }
     return options
-  }, [catalog, rowsFor, t, value])
+  }, [rowsFor, t, value])
 
-  const currentFor = useCallback((field, analysisOnly, options) => {
+  const currentFor = useCallback((field) => {
     const stored = typeof value[field] === 'string' && value[field] ? value[field] : ''
-    if (stored) return stored
-    const fallback = analysisOnly ? catalog?.defaults?.analysis : catalog?.defaults?.text
-    return fallback || options[0]?.value || ''
-  }, [catalog, value])
+    return stored || 'auto'
+  }, [value])
 
   const onChange = useCallback(async (field, next) => {
     if (!scope || typeof scope.set !== 'function' || !writable || busy) return
@@ -117,7 +129,7 @@ export function TaskModelsSection({ t, scope }) {
       <div className="omnimux-models-card__body">
         {rows.map((row) => {
           const options = optionsFor(row.field, row.analysisOnly)
-          const current = currentFor(row.field, row.analysisOnly, options)
+          const current = currentFor(row.field)
           return (
             <div key={row.field} className="omnimux-models-card__row">
               <span className="omnimux-models-card__row-label">{t(row.labelKey)}</span>

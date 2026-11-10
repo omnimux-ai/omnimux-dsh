@@ -40,11 +40,11 @@ export function hiddenIdSet(value) {
 /**
  * A hub-listed model the shipped profile does not describe.
  *
- * Only what the hub itself states travels: the id and its display label. Wire
- * capabilities (context window, modalities, reasoning efforts) are deliberately
- * **not** guessed — an invented context window fails mid-conversation, and an
- * over-declared modality drops the request upstream. The route's own defaults
- * apply until the shipped profile describes the model.
+ * Only what the hub itself declares travels: the id, its display label and the
+ * optional `executionProfile` fields. Values the gateway leaves unknown stay
+ * absent; the route's own defaults apply for those fields. An invented context
+ * window fails mid-conversation, and an over-declared modality drops the
+ * request upstream, so neither is guessed here.
  *
  * @param {string} id
  * @param {unknown} hubRow
@@ -53,7 +53,37 @@ export function hiddenIdSet(value) {
 function hubOnlyModelRow(id, hubRow) {
   const row = hubRow && typeof hubRow === 'object' ? /** @type {Record<string, unknown>} */ (hubRow) : null;
   const label = typeof row?.label === 'string' && row.label.trim() ? row.label.trim() : id;
-  return { id, name: label };
+  return { id, name: label, ...profileFields(row) };
+}
+
+/**
+ * Map the gateway execution profile onto the fields `llm-pi-ai` understands.
+ * Values the gateway did not declare are omitted; pi-ai's route defaults still
+ * apply, and the catalog row keeps its `unverified` status for UI decisions.
+ *
+ * @param {unknown} hubRow
+ * @returns {Record<string, unknown>}
+ */
+function profileFields(hubRow) {
+  const row = hubRow && typeof hubRow === 'object' ? /** @type {Record<string, unknown>} */ (hubRow) : null;
+  const profile = row?.executionProfile;
+  if (!profile || typeof profile !== 'object' || Array.isArray(profile)) return {};
+  const input = /** @type {Record<string, unknown>} */ (profile);
+  const out = {};
+  if (typeof input.contextWindowTokens === 'number' && Number.isFinite(input.contextWindowTokens)) {
+    out.contextWindow = input.contextWindowTokens;
+  }
+  if (typeof input.maxOutputTokens === 'number' && Number.isFinite(input.maxOutputTokens)) {
+    out.maxTokens = input.maxOutputTokens;
+  }
+  if (Array.isArray(input.inputModalities)) {
+    const modalities = [...new Set(input.inputModalities.filter((item) => item === 'text' || item === 'image'))];
+    if (modalities.length > 0) out.input = modalities;
+  }
+  if (input.reasoningEfforts && typeof input.reasoningEfforts === 'object' && !Array.isArray(input.reasoningEfforts)) {
+    out.reasoningEfforts = structuredClone(input.reasoningEfforts);
+  }
+  return out;
 }
 
 /**
@@ -81,20 +111,20 @@ export function composeComposerModels(input) {
   const out = [];
   const emitted = new Set();
 
+  const byId = new Map();
+  for (const row of hubRows) {
+    const id = row && typeof row === 'object' && typeof row.id === 'string' ? row.id.trim() : '';
+    if (id && !byId.has(id)) byId.set(id, row);
+  }
   for (const row of shipped) {
     if (!row || typeof row !== 'object') continue;
     const record = /** @type {Record<string, unknown>} */ (row);
     const id = typeof record.id === 'string' ? record.id.trim() : '';
     if (!id || emitted.has(id) || !inHub.has(id) || hidden.has(id)) continue;
     emitted.add(id);
-    out.push(structuredClone(record));
+    out.push({ ...structuredClone(record), ...profileFields(byId.get(id)) });
   }
 
-  const byId = new Map();
-  for (const row of hubRows) {
-    const id = row && typeof row === 'object' && typeof row.id === 'string' ? row.id.trim() : '';
-    if (id && !byId.has(id)) byId.set(id, row);
-  }
   for (const id of hubIds) {
     if (emitted.has(id) || hidden.has(id)) continue;
     emitted.add(id);

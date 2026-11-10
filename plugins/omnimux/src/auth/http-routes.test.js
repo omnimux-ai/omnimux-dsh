@@ -376,6 +376,7 @@ describe('auth http dispatcher', () => {
       'exact:/omnimux/auth/model-key',
       'exact:/omnimux/capabilities',
       'exact:/omnimux/model-catalog',
+      'exact:/omnimux/model-catalog/refresh',
       'exact:/omnimux/generation-products',
       'exact:/omnimux/generation-products/preview',
       'prefix:/omnimux/plugins',

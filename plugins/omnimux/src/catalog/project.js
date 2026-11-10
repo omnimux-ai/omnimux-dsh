@@ -99,7 +99,7 @@ export function mergeInputCapability(ops) {
       else if (type === 'image') addModality('image');
       else if (type === 'audio') addModality('audio');
       else if (type === 'video') addModality('video');
-      else if (type === 'document') addModality('document');
+      else if (type === 'document' || type === 'pdf') addModality('document');
 
       const mergeRef = (acc) => {
         const slotMax = slot.max === null
@@ -161,6 +161,9 @@ export function projectRow(model, ops, snapshot) {
   if (typeof model.badge === 'string') row.badge = model.badge;
   if (typeof model.subtitle === 'string') row.subtitle = model.subtitle;
   if (typeof model.family === 'string') row.family = model.family;
+  if (model.executionProfile && typeof model.executionProfile === 'object') {
+    row.executionProfile = structuredClone(model.executionProfile);
+  }
   const inputCapability = mergeInputCapability(ops);
   if (inputCapability) row.inputCapability = inputCapability;
   // Per-kind slot planning consumes op ids + inputs; carry the same slim
@@ -314,6 +317,9 @@ export function projectModelDto(model, dispositionsDoc, snapshot) {
     ...(typeof model.badge === 'string' ? { badge: model.badge } : {}),
     ...(typeof model.subtitle === 'string' ? { subtitle: model.subtitle } : {}),
     ...(Array.isArray(model.aliases) ? { aliases: [...model.aliases] } : {}),
+    ...(model.executionProfile && typeof model.executionProfile === 'object'
+      ? { executionProfile: structuredClone(model.executionProfile) }
+      : {}),
     operations: (model.operations ?? []).map((op) => ({
       id: op.id,
       label: op.label,

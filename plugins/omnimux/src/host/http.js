@@ -68,6 +68,8 @@ export function mountHubHttp(httpCtx, deps) {
     const stopCatalog = registerCatalogRoutes(webServer, {
       list: typeof deps.listCatalog === 'function' ? deps.listCatalog : () => null,
       diagnostics: typeof deps.catalogDiagnostics === 'function' ? deps.catalogDiagnostics : () => null,
+      refresh: typeof deps.refreshCatalog === 'function' ? deps.refreshCatalog : undefined,
+      getConnection: deps.getConnection,
     })
     const stopProducts = registerGenerationProductRoutes(webServer, { products: deps.products, getConnection: deps.getConnection })
     const stopPlugins = registerPluginRoutes(webServer, createPluginDispatcher({
