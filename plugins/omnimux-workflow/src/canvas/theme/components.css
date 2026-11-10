@@ -5596,8 +5596,6 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 }
 .wf-slot-well__text { display: flex; flex-direction: column; width: 100%; height: 100%; padding: 4px; box-sizing: border-box; color: var(--dsw-alias-label-primary); font-size: 12px; line-height: 16px; overflow: hidden; }
 .wf-slot-well__text > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.wf-slot-well__state { position: absolute; top: 100%; left: 0; white-space: nowrap; font-size: 12px; line-height: 16px; color: var(--dsw-alias-label-secondary); }
-.wf-slot-wells:has(.wf-slot-well__state) { padding-bottom: 16px; }
 .wf-slot-well:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 2px; }
 @media (max-width: 520px) {
   .wf-picker-modal .wf-picker-toolbar { gap: 4px; }

@@ -60,3 +60,15 @@ test('input_unavailable 记录不再渲染常驻裸「不可用」，但保留�
  assert.doesNotMatch(html,/wf-slot-well__state/);
  assert.doesNotMatch(html,/不可用/);
 });
+test('任何槽位状态都不再渲染卡槽下方常驻文案（Issue #4048）',()=>{
+ const imageSpec = {slot:'reference_images',type:'image',role:'reference',min:0,max:1,labelKey:'panel.slot.reference_image'};
+ const base = {layout:{preset:'strip',slots:[imageSpec],addButton:false},
+  bindings:{reference_images:[{edgeId:'e1',sourceNodeId:'src'}]},
+  upstreams:[{edgeId:'e1',nodeId:'src',label:'img',materialType:'image',availability:'ready',hasMedia:true,url:'https://example.test/x.png'}],
+  onPickSlot(){},onClearOccupant(){},onInsertToken(){}};
+ for (const state of ['invalid','inactive','pending']) {
+  const html = render({...base, records:[{slot:imageSpec,occupant:{edgeId:'e1',sourceNodeId:'src'},state,reasonCode: state==='invalid'?'role_conflict':undefined}]});
+  assert.doesNotMatch(html,/wf-slot-well__state/, `${state}: 不得渲染常驻状态节点`);
+  for (const word of ['不兼容','不可用','等待中','未使用','无效']) assert.doesNotMatch(html,new RegExp(word), `${state}: 不得出现「${word}」`);
+ }
+});
