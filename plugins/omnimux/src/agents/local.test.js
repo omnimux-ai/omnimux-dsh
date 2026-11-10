@@ -5,6 +5,34 @@ import path from 'node:path'
 import { describe, it } from 'node:test'
 import { agentTextCommand, isSafeAgentModel, probeAgentBin, probeAgentModels, resolveBinPath, runAgentText, scanLocalAgents } from './local.js'
 
+function createAgentModelFixtures() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'omnimux-agent-models-'))
+  try {
+    const codexPath = path.join(dir, 'models_cache.json')
+    const kimiPath = path.join(dir, 'config.toml')
+    fs.writeFileSync(codexPath, JSON.stringify({
+      models: [
+        { id: 'gpt-6-astra', visibility: 'list' },
+        { id: 'gpt-6-sol', visibility: 'list' },
+        { id: 'gpt-fixture-only', visibility: 'list' },
+        { id: 'codex-auto-review', visibility: 'hidden' },
+      ],
+    }))
+    fs.writeFileSync(kimiPath, [
+      '[models."kimi-code/k3"]',
+      'provider = "moonshot"',
+      '',
+      '[models."kimi-fixture-only"]',
+      'provider = "moonshot"',
+      '',
+    ].join('\n'))
+    return { dir, codexPath, kimiPath }
+  } catch (error) {
+    fs.rmSync(dir, { recursive: true, force: true })
+    throw error
+  }
+}
+
 describe('resolveBinPath with a minimal GUI PATH', () => {
   it('finds nvm and kimi user-bin installs outside process PATH', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'omnimux-gui-path-'))
@@ -26,20 +54,42 @@ describe('resolveBinPath with a minimal GUI PATH', () => {
 
 describe('scanLocalAgents', () => {
   it('marks only the binaries that answer --version as installed', async () => {
-    const rows = await scanLocalAgents(async (bin) => {
-      if (bin === 'claude') return { stdout: 'claude 2.1.0\n', stderr: '' }
-      throw new Error('spawn not found')
-    })
-    const claude = rows.find((row) => row.id === 'claude')
-    const codex = rows.find((row) => row.id === 'codex')
-    assert.equal(claude.installed, true)
-    assert.equal(claude.version, 'claude 2.1.0')
-    assert.ok(Array.isArray(claude.models) && claude.models.includes('claude-3-7-sonnet'))
-    assert.equal(codex.installed, false)
-    assert.ok(Array.isArray(codex.models) && codex.models.includes('gpt-6-astra'))
-    assert.equal(codex.models.includes('claude-3-7-sonnet'), false, 'codex must not include claude models')
-    assert.ok(codex.models.includes('gpt-6-sol'))
-    assert.equal(rows.length, 4)
+    const fixtures = createAgentModelFixtures()
+    try {
+      const claudeBinDir = path.join(fixtures.dir, '.local', 'bin')
+      const claudePath = path.join(claudeBinDir, 'claude')
+      fs.mkdirSync(claudeBinDir, { recursive: true })
+      fs.writeFileSync(claudePath, '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+      let claudeProbePath = ''
+      const rows = await scanLocalAgents(async (bin) => {
+        if (path.basename(bin) === 'claude') {
+          claudeProbePath = bin
+          return { stdout: 'claude 2.1.0\n', stderr: '' }
+        }
+        throw new Error('spawn not found')
+      }, {
+        codexPath: fixtures.codexPath,
+        kimiPath: fixtures.kimiPath,
+        env: { HOME: fixtures.dir, PATH: '' },
+        platform: 'darwin',
+      })
+      const claude = rows.find((row) => row.id === 'claude')
+      const codex = rows.find((row) => row.id === 'codex')
+      const kimi = rows.find((row) => row.id === 'kimi')
+      assert.equal(claudeProbePath, fs.realpathSync(claudePath), 'claude must be probed through its resolved path')
+      assert.equal(claude.installed, true)
+      assert.equal(claude.version, 'claude 2.1.0')
+      assert.ok(Array.isArray(claude.models) && claude.models.includes('claude-3-7-sonnet'))
+      assert.equal(codex.installed, false)
+      assert.ok(Array.isArray(codex.models) && codex.models.includes('gpt-6-astra'))
+      assert.equal(codex.models.includes('claude-3-7-sonnet'), false, 'codex must not include claude models')
+      assert.ok(codex.models.includes('gpt-6-sol'))
+      assert.ok(codex.models.includes('gpt-fixture-only'), 'scan must use the injected model fixture')
+      assert.ok(Array.isArray(kimi.models) && kimi.models.includes('kimi-fixture-only'), 'scan must pass the kimi fixture through')
+      assert.equal(rows.length, 4)
+    } finally {
+      fs.rmSync(fixtures.dir, { recursive: true, force: true })
+    }
   })
 
   it('never guesses: a failed probe is simply not installed', async () => {
@@ -48,15 +98,22 @@ describe('scanLocalAgents', () => {
   })
 
   it('probeAgentModels returns dynamic models from local cache/config', () => {
-    const codexModels = probeAgentModels('codex')
-    assert.ok(Array.isArray(codexModels) && codexModels.includes('gpt-6-astra'))
-    assert.equal(codexModels.includes('codex-auto-review'), false, 'hidden models must be excluded')
+    const fixtures = createAgentModelFixtures()
+    try {
+      const codexModels = probeAgentModels('codex', { codexPath: fixtures.codexPath })
+      assert.ok(Array.isArray(codexModels) && codexModels.includes('gpt-6-astra'))
+      assert.equal(codexModels.includes('codex-auto-review'), false, 'hidden models must be excluded')
+      assert.ok(codexModels.includes('gpt-fixture-only'), 'dynamic cache model must be returned')
 
-    const kimiModels = probeAgentModels('kimi')
-    assert.ok(Array.isArray(kimiModels) && kimiModels.includes('kimi-code/k3'))
+      const kimiModels = probeAgentModels('kimi', { kimiPath: fixtures.kimiPath })
+      assert.ok(Array.isArray(kimiModels) && kimiModels.includes('kimi-code/k3'))
+      assert.ok(kimiModels.includes('kimi-fixture-only'), 'dynamic kimi config model must be returned')
 
-    const claudeModels = probeAgentModels('claude')
-    assert.ok(Array.isArray(claudeModels) && claudeModels.includes('claude-3-7-sonnet'))
+      const claudeModels = probeAgentModels('claude')
+      assert.ok(Array.isArray(claudeModels) && claudeModels.includes('claude-3-7-sonnet'))
+    } finally {
+      fs.rmSync(fixtures.dir, { recursive: true, force: true })
+    }
   })
 
   it('prefers the live codex debug models catalog over the cache', () => {
