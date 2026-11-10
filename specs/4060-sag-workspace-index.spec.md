@@ -45,7 +45,7 @@
 
 - **不在建树时同步索引**：初次索引要处理近八千个文件，同步建树会把 `worktree.sh new` 卡住几分钟；索引由 `sag-worktree search` 首次检索时惰性建立。
 - **永不直接写共享知识库**：脚本里不出现裸 `sag add` / `sag remove`，避免把工作树并进用户主库后被父根吸收、变成不可检索的 `excluded`。
-- **best-effort**：本机没有 `sag-worktree` 就静默跳过；清理失败只打印一行警告，绝不 `die`、不改退出码、不阻断建树与交付（[product baseline](../../docs/contracts/product-baseline.md)：开发机专有能力不能成为默认路径或失败源）。
+- **best-effort**：本机没有 `sag-worktree` 就静默跳过；清理失败只打印一行警告，绝不 `die`、不改退出码、不阻断建树与交付（[product baseline](../docs/contracts/product-baseline.md)：开发机专有能力不能成为默认路径或失败源）。
 - **孤儿回收默认关闭**：`sag-worktree gc` 会跨本机所有工作树删除索引目录，属全局不可逆动作，交付收尾不该顺手动到别的任务；只在 `OMNIMUX_SAG_GC=1` 时执行。
 - `OMNIMUX_SAG_INDEX=0` 可整机关闭，`SAG_WORKTREE_BIN` 可指定可执行文件。
 
@@ -84,7 +84,7 @@
 
 1. 用桩可执行文件冒充 `sag-worktree`（记录 argv），在临时 git 仓里真实执行 `new` / `remove` / `prune` / `clean`：实测 `new` 记录为空、`remove` 记录 `remove <绝对路径>`、`prune` 记录 `gc`、`OMNIMUX_SAG_INDEX=0` 记录为空、PATH 去掉桩后 `new` 仍 exit 0 —— 若钩子阻塞交付，该断言立刻变红。
    仓库内已可复现的部分：`scripts/worktree-delivery.test.mjs` 新增用例用桩 `sag-worktree` 跑真实 `worktree.sh ship`，断言删除后恰好调用一次 `remove <该工作树>`，且不碰无关工作树；把 `cmd_ship` 的清理调用删掉该用例即变红。
-   其余路径为什么不做成仓库测试：`guard-anti-cheat` 对**新增**测试文件里的 `node:child_process` 导入按 `runtime-code-execution-import-needs-review` 硬拒（只有既有文件里早就存在的同族导入才沿用基线，`scripts/worktree-delivery.test.mjs` 属于后者）。因此桩执行证据在 PR 里以终端记录留档，仓库测试保留源码级断言。
+   其余路径同样有仓库内行为用例（都落在既有文件 `scripts/worktree-delivery.test.mjs` 里，因此不受「新增测试文件不得导入 `node:child_process`」的限制）：`remove` 清理、`clean` 批量清理后回收孤儿、`prune` 开关生效与否、失败与跳过三态输出、以及本机缺工具时交付照常。行为用例显式隔离 `OMNIMUX_SAG_INDEX` / `OMNIMUX_SAG_GC` / `SAG_WORKTREE_BIN`，开发机导出这些开关不会让正确实现变红。
 2. 把 `cmd_ship` 里的 `sag_forget_worktree` 调用删掉，第 1 条断言必须变红；把 `OMNIMUX_SAG_INDEX` 判断删掉，第 6 条断言必须变红；把 `cmd_new` 里重新塞回索引调用，第 8 条断言必须变红。
 3. 真实索引不接受「命令执行成功」作为证据：必须在任务工作树里 `sag-worktree init` 后看到 `index_ready: true` 与非空 `indexed_files`，并跑一次语义检索拿到真实代码片段。
 

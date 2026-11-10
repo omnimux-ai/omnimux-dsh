@@ -1083,6 +1083,18 @@ test('本机没有 sag-worktree 时删除工作树照常完成且不输出 SAG �
   } finally { f.cleanup() }
 })
 
+test('OMNIMUX_SAG_INDEX=0 时完全不调用 sag-worktree（Issue #4060）', () => {
+  const f = sagFixture('omnimux-sag-off')
+  try {
+    const dir = f.worktree('opt-out')
+    const result = f.run(['remove', 'opt-out', '--force'], { OMNIMUX_SAG_INDEX: '0', OMNIMUX_SAG_GC: '1' })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(existsSync(dir), false, '关闭索引不影响工作树删除')
+    assert.deepEqual(f.calls(), [], '关闭后连探测都不该调用工具')
+    assert.doesNotMatch(`${result.stdout}${result.stderr}`, /SAG/, '关闭后不得输出任何 SAG 相关行')
+  } finally { f.cleanup() }
+})
+
 test('清理失败与「索引不属于该路径」必须给出不同输出（Issue #4060）', () => {
   const f = sagFixture('omnimux-sag-status')
   try {
