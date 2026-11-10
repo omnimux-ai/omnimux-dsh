@@ -69,12 +69,16 @@ export default async function modelSettingsJourney({ send, sleep, evidenceDir, i
         catalogSync: detail.querySelectorAll('[data-section="catalog-sync"]').length,
         bundleConfig: detail.querySelectorAll('[data-slot="plugins.bundle.config"] .omnimux-settings-sections').length,
         detailSection: detail.querySelectorAll('[data-slot="plugins.detail.section"] .omnimux-settings-sections').length,
+        runtime: detail.querySelectorAll('[data-section="runtime"]').length,
+        canvasModels: detail.querySelectorAll('[data-section="canvas-models"]').length,
       } : null
     })()`)
     assert.equal(bundle?.settingsSections, 1, 'hub bundle must render one model settings section')
     assert.equal(bundle?.catalogSync, 1, 'hub bundle must render one catalog sync card')
     assert.equal(bundle?.bundleConfig, 1, 'plugins.bundle.config must own the hub bundle card')
     assert.equal(bundle?.detailSection, 0, 'plugins.detail.section must not repeat the hub bundle card')
+    assert.equal(bundle?.runtime, 1, 'hub bundle must render one model service card')
+    assert.equal(bundle?.canvasModels, 1, 'hub bundle must render one creative canvas models card')
     check('bundle-model-settings-single', bundle?.settingsSections === 1 && bundle?.catalogSync === 1, JSON.stringify(bundle))
     check('bundle-config-owns-model-settings', bundle?.bundleConfig === 1 && bundle?.detailSection === 0, JSON.stringify(bundle))
 

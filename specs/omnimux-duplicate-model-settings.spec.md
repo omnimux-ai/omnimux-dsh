@@ -29,7 +29,7 @@
 
 ## Acceptance cases
 
-1. 单测：`isOmnimuxPeerBundleSubject({ kind: 'bundle', pkg: { name: 'omnimux' } }) === false`。
+1. 单测：`isSharedModelSettingsDetailSubject({ kind: 'bundle', pkg: { name: 'omnimux' } }) === false`。
 2. 单测：`omnimux-workflow` 等兄弟组合包返回 `true`；非 OmniMux 包、row/item subject 返回 `false`。
 3. 真实应用旅程：`omnimux` 组合包详情页 `[data-section="catalog-sync"]` 恰好 1 个，`.omnimux-settings-sections` 恰好 1 个，且 `[data-slot="plugins.detail.section"] .omnimux-settings-sections` 为 0 个。
 4. 真实应用旅程：`plugins.bundle.config` 内仍能看到完整模型设置卡（同步状态、模型服务、创作画布模型标题均可见）。
