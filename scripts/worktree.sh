@@ -82,6 +82,38 @@ archive_worktree_evidence() {
   say "已归档本任务证据 → ${dest} ($(ls -1 "${dest}" 2>/dev/null | wc -l | tr -d ' ') 个文件)"
 }
 
+# -----------------------------------------------------------------------------
+# 可选：SAG 语义索引随任务工作树清理（#4060）
+# -----------------------------------------------------------------------------
+# 本仓的开发都在 .worktrees/<task> 里进行，而 SAG 的根是「父目录吸收子目录」，
+# 且以仓根为根扫描时会硬跳过点开头目录（.sagignore 写 !.worktrees/ 也救不回来）。
+# 所以工作树不能并入共享知识库，而是由 sag-worktree 各自持有隔离的 SAG_DATA_DIR，
+# 索引按需在第一次 search 时惰性建立（本脚本不在建树时同步索引，否则建树要等几分钟）。
+#
+# 这里只负责收尾：工作树被删掉时停掉并清掉它那份索引，否则孤儿索引会一直占着磁盘。
+# 全部 best-effort：本机没有 sag-worktree 就静默跳过；失败只警告，绝不影响交付。
+SAG_WORKTREE_BIN="${SAG_WORKTREE_BIN:-sag-worktree}"
+
+sag_available() {
+  [ "${OMNIMUX_SAG_INDEX:-1}" = "0" ] && return 1
+  command -v "${SAG_WORKTREE_BIN}" >/dev/null 2>&1 || return 1
+  return 0
+}
+
+sag_forget_worktree() {
+  local wt="$1"
+  sag_available || return 0
+  "${SAG_WORKTREE_BIN}" remove "${wt}" >/dev/null 2>&1 || return 0
+  say "SAG: 已清理该工作树的隔离索引 ${wt#${ROOT}/}"
+  return 0
+}
+
+sag_collect_orphans() {
+  sag_available || return 0
+  "${SAG_WORKTREE_BIN}" gc >/dev/null 2>&1 || return 0
+  return 0
+}
+
 # List worktrees whose branch is fully merged and has no unmerged commits, so a human
 # can clean them without guessing. Read-only: never removes anything.
 audit_worktrees() {
@@ -690,6 +722,7 @@ cmd_ship() {
       git branch -d "${branch}" 2>/dev/null || git branch -D "${branch}" 2>/dev/null || true
     fi
     git worktree prune
+    sag_forget_worktree "${wt}"
     if [ "${MATERIALIZE_STATUS}" = "failed" ]; then
       # 合并与清理确实完成了，但开发版没更新——不能宣告「交付闭环完成」。
       say "⚠️ 交付未闭环：PR 已合入、主干已同步、临时工作树 [${task}] 与分支已清理，但$(materialize_dev_state)。[materialize=failed]"
@@ -771,6 +804,7 @@ cmd_remove() {
   fi
 
   git worktree prune
+  sag_forget_worktree "${wt}"
   say "done: ${task} removed"
 
   # 合并确认后必装开发版。正式版本落后时先快进再装这次拉进来的范围；
@@ -805,6 +839,7 @@ cmd_remove() {
 cmd_prune() {
   say "git worktree prune"
   git worktree prune
+  sag_collect_orphans
   echo
   echo "local branches merged into ${DEFAULT_BRANCH} (safe to delete):"
   if git rev-parse --verify --quiet "${DEFAULT_BRANCH}" >/dev/null 2>&1; then
@@ -875,6 +910,7 @@ cmd_clean() {
   fi
 
   git worktree prune
+  sag_collect_orphans
   say "clean sweep finished. Orphan directories: ${orphans}"
 }
 
@@ -904,6 +940,7 @@ clean_one() {
   say "removing merged worktree: ${wt} (branch: ${branch})"
   git worktree remove "${wt}" 2>/dev/null || rm -rf "${wt}"
   git branch -d "${branch}" 2>/dev/null || true
+  sag_forget_worktree "${wt}"
 }
 
 usage() {
