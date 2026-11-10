@@ -226,6 +226,12 @@ export function ModelsSettingsCard({ t, scope }) {
     return levels.map((level) => ({ value: level, label: t(`models.reasoning.${level}`) }))
   }, [catalog, currentModelIdFor, t])
 
+  const defaultReasoningFor = useCallback(() => {
+    const model = (catalog?.models ?? []).find((row) => row.id === currentModelIdFor('text'))
+    const effort = model?.executionProfile?.defaultReasoningEffort
+    return typeof effort === 'string' ? effort : ''
+  }, [catalog, currentModelIdFor])
+
   const optionsForRow = useCallback((group, row) => {
     if (row.reasoning) {
       return reasoningOptionsFor()
@@ -269,10 +275,16 @@ export function ModelsSettingsCard({ t, scope }) {
   const currentValueForRow = useCallback((group, row, options) => {
     const stored = typeof value[row.key] === 'string' && value[row.key] ? value[row.key] : ''
     if (row.tool) return stored || 'auto'
-    if (row.reasoning) return stored && options.some((option) => option.value === stored) ? stored : (options.find((option) => option.value === DEFAULT_REASONING)?.value || options[0]?.value || DEFAULT_REASONING)
+    if (row.reasoning) {
+      const explicit = typeof user[row.key] === 'string' ? user[row.key].trim() : ''
+      if (explicit && options.some((option) => option.value === explicit)) return explicit
+      const preferred = defaultReasoningFor()
+      if (preferred && options.some((option) => option.value === preferred)) return preferred
+      return options.find((option) => option.value === DEFAULT_REASONING)?.value || options[0]?.value || DEFAULT_REASONING
+    }
     if (row.mode) return effectiveOperationId(group.kind) || stored || ''
     return stored || 'auto'
-  }, [effectiveOperationId, value])
+  }, [defaultReasoningFor, effectiveOperationId, user, value])
 
   const onChange = useCallback(async (field, next) => {
     if (!scope || typeof scope.set !== 'function' || !writable || busy) return

@@ -308,18 +308,26 @@ export function buildModelCatalog(opts = {}) {
     ?? []
   const analysisRows = lists.text.filter((row) => row.executionStatus !== 'unverified'
     && (modalitiesOf(row) ?? []).some((modality) => modality !== 'text'))
+  const gatewayAnalysisId = resolveModelId(runtime.index, trimId(gatewayDefaults.vision_chat))
+  const gatewayAnalysis = gatewayAnalysisId
+    ? analysisRows.find((row) => row.id === gatewayAnalysisId)
+    : undefined
+  const analysisFallback = (row) => row?.id || ''
+  const firstAnalysis = analysisRows.find((row) => row.id === defaults.text) ?? analysisRows[0]
   if (savedAnalysis) {
     const resolvedAnalysis = resolveModelId(runtime.index, savedAnalysis)
     const compatible = resolvedAnalysis && analysisRows.find((row) => row.id === resolvedAnalysis)
-    defaults.analysis = compatible ? resolvedAnalysis : ''
+    defaults.analysis = compatible ? resolvedAnalysis : analysisFallback(gatewayAnalysis) || analysisFallback(firstAnalysis)
     defaultsMeta.analysis = {
-      modelId: defaults.analysis || analysisRows.find((row) => row.id === defaults.text)?.id || analysisRows[0]?.id || '',
-      source: compatible ? 'user' : 'first-ready',
+      modelId: defaults.analysis,
+      source: compatible ? 'user' : gatewayAnalysis ? 'gateway-recommended' : 'first-ready',
       ...(!compatible ? { needsConfirmation: true } : {}),
     }
-    if (!defaults.analysis) defaults.analysis = defaultsMeta.analysis.modelId
+  } else if (gatewayAnalysis) {
+    defaults.analysis = gatewayAnalysis.id
+    defaultsMeta.analysis = { modelId: gatewayAnalysis.id, source: 'gateway-recommended' }
   } else {
-    defaults.analysis = (analysisRows.find((row) => row.id === defaults.text) ?? analysisRows[0])?.id ?? ''
+    defaults.analysis = analysisFallback(firstAnalysis)
     defaultsMeta.analysis = { modelId: defaults.analysis, source: defaults.analysis ? 'first-ready' : 'none' }
   }
 

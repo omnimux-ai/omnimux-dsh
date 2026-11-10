@@ -1,0 +1,22 @@
+{
+  "task": "omnimux-gateway-profile-sync-issue-4031",
+  "issue": 4031,
+  "mode": "ui",
+  "browser": "isolated worktree headless Chromium",
+  "app": "official Plugins page inside full OmniMux app",
+  "runId": "c66a12c9-9f9b-4ce4-818a-268451528b40",
+  "assertions": [
+    "more-menu-visible",
+    "official-plugins-menu-item-visible",
+    "model-settings-item-visible",
+    "catalog-sync-section-visible",
+    "model-groups-visible",
+    "catalog-sync-button-visible",
+    "model-default-rows-rendered",
+    "screenshot-png-verified"
+  ],
+  "passed": 19,
+  "failed": 0,
+  "screenshot": "model-settings.png",
+  "note": "The official Plugins page and shared model settings path rendered in the real app; no model or cloud request was made."
+}

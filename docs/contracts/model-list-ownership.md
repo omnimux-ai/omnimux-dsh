@@ -182,7 +182,7 @@ visibility setting changes.
 
 - **Field truth** — the gateway contract's `executionProfile` projection. A
   model's known context window, output cap, modalities, tool/streaming/caching
-  flags and reasoning levels travel from the snapshot through
+  flags, reasoning levels and the default reasoning level travel from the snapshot through
   `/omnimux/model-catalog`; a field the gateway does not declare remains absent.
   No context window, modality, or reasoning level is guessed, because a wrong
   one fails mid-conversation rather than at startup. `cordis.patch.yml` only

@@ -42,6 +42,7 @@ function objectOrUndefined(value) {
  *   streaming?: boolean,
  *   promptCaching?: boolean,
  *   reasoningEfforts?: Record<string, unknown>,
+ *   defaultReasoningEffort?: string,
  *   unknowns: string[],
  *   source: 'gateway',
  * }}
@@ -69,6 +70,10 @@ export function executionProfileFromContract(contract) {
   if (typeof input.prompt_caching === 'boolean') profile.promptCaching = input.prompt_caching;
   const reasoningEfforts = objectOrUndefined(input.reasoning_efforts);
   if (reasoningEfforts) profile.reasoningEfforts = reasoningEfforts;
+  if (reasoningEfforts && typeof input.default_reasoning_effort === 'string'
+    && Object.prototype.hasOwnProperty.call(reasoningEfforts, input.default_reasoning_effort)) {
+    profile.defaultReasoningEffort = input.default_reasoning_effort;
+  }
   return profile;
 }
 

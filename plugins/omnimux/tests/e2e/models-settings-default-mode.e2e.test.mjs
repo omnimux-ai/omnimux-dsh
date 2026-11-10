@@ -112,12 +112,12 @@ async function loadCard() {
   return mod.exports.ModelsSettingsCard;
 }
 
-async function renderCard(initialValues = {}) {
+async function renderCard(initialValues = {}, catalog = CATALOG) {
   const dom = new JSDOM('<!doctype html><html><body><main></main></body></html>');
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  globalThis.fetch = async () => ({ ok: true, json: async () => CATALOG });
+  globalThis.fetch = async () => ({ ok: true, json: async () => catalog });
   const { createRoot } = await import('react-dom/client');
   const Card = await loadCard();
   const root = createRoot(document.querySelector('main'));
@@ -161,6 +161,25 @@ describe('E2E: 设置页分组卡片与默认模式', () => {
     assert.ok(imageOptions.includes('文生图'));
     assert.equal(imageOptions.some((opt) => opt.includes('垫图参考')), false, 'unlisted mode must not appear in picker');
 
+    await act(() => root.unmount());
+  });
+
+  it('uses the gateway default reasoning effort when the model publishes one', async () => {
+    const catalog = {
+      ...CATALOG,
+      models: [...CATALOG.models, {
+        id: 'gemini-3.8-flash',
+        executionProfile: {
+          reasoningEfforts: { low: 'low', medium: 'medium', high: 'high' },
+          defaultReasoningEffort: 'medium',
+        },
+      }],
+    };
+    const { document, root } = await renderCard({}, catalog);
+    const select = document.querySelector('[data-testid="omnimux-defaultTextReasoning"]');
+    assert.ok(select, 'reasoning select must render');
+    assert.deepEqual([...select.querySelectorAll('option')].map((option) => option.textContent), ['低', '中', '高']);
+    assert.equal(select.value, 'medium');
     await act(() => root.unmount());
   });
 });
