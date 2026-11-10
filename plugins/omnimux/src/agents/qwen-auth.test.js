@@ -80,6 +80,24 @@ describe('probeAgentAuth · qwen settings.json', () => {
     assert.deepEqual(result, { state: 'signed-in', method: 'file' }, 'a configured provider with its key is usable')
   })
 
+  it('does not fall back to the protocol default when the provider declares its own envKey', async () => {
+    const fsImpl = virtualFs([settingsFile({
+      modelProviders: { openai: [{ id: 'qwen3.8-max', envKey: 'DASHSCOPE_API_KEY' }] },
+      security: { auth: { selectedType: 'openai' } },
+    })])
+    const result = await probeAgentAuth('qwen', { home: HOME, fsImpl, env: { OPENAI_API_KEY: 'other-protocol-key' } })
+    assert.deepEqual(result, { state: 'unknown', method: 'file' }, 'an unrelated OPENAI_API_KEY must not stand in for the declared DASHSCOPE_API_KEY')
+  })
+
+  it('falls back to the protocol default when the provider entry declares no envKey', async () => {
+    const fsImpl = virtualFs([settingsFile({
+      modelProviders: { openai: [{ id: 'qwen3.8-max' }] },
+      security: { auth: { selectedType: 'openai' } },
+    })])
+    const result = await probeAgentAuth('qwen', { home: HOME, fsImpl, env: { OPENAI_API_KEY: 'other-protocol-key' } })
+    assert.deepEqual(result, { state: 'signed-in', method: 'file' }, 'without an explicit envKey the protocol default is the source')
+  })
+
   it('does not borrow another provider key for the selected protocol', async () => {
     const fsImpl = virtualFs([settingsFile({
       modelProviders: {

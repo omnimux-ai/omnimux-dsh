@@ -227,13 +227,19 @@ function configEnvKeys(spec, settings, selectedType) {
       else if (typeof defaults[providerId] === 'string') keys.push(defaults[providerId])
     }
   }
+  const providerList = selectedType && providers && typeof providers === 'object' && !Array.isArray(providers)
+    ? providers[selectedType]
+    : undefined
+  const hasSelectedList = Array.isArray(providerList) && providerList.length > 0
   if (providers && typeof providers === 'object' && !Array.isArray(providers)) {
     // A chosen protocol narrows the search to its own provider: a key that
     // belongs to some other provider must not make this one look signed in.
-    if (selectedType) addProvider(selectedType, providers[selectedType])
+    if (selectedType) addProvider(selectedType, providerList)
     else for (const [providerId, list] of Object.entries(providers)) addProvider(providerId, list)
   }
-  if (selectedType && typeof defaults[selectedType] === 'string') keys.push(defaults[selectedType])
+  // The protocol default is only a real source when the protocol has no model
+  // list of its own; entries that declare an envKey use exactly that variable.
+  if (selectedType && !hasSelectedList && typeof defaults[selectedType] === 'string') keys.push(defaults[selectedType])
   return [...new Set(keys.filter(Boolean))]
 }
 
