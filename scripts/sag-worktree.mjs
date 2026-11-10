@@ -19,7 +19,7 @@ import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { basename, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /** 与入库 `.sagignore` 托管块保持一致的扩展名白名单。 */
@@ -35,9 +35,19 @@ export function dataRoot(env = process.env) {
   return join(homedir(), 'Library', 'Application Support', 'com.sag.desktop', 'worktrees')
 }
 
-/** 工作树路径的规范形式：目录不存在时退回 resolve，保证同一路径始终同名。 */
+/**
+ * 工作树路径的规范形式。目录存在时直接 realpath；目录已被删除时（`worktree.sh` 是
+ * 先删目录再清理索引）退化到「realpath 父目录 + basename」——否则 `/tmp` 与
+ * `/private/tmp` 这类软链会算出不同哈希，索引永远删不掉（评审 F1）。
+ */
 export function canonicalPath(input) {
-  try { return realpathSync(input) } catch { return resolve(input) }
+  try { return realpathSync(input) } catch { /* 目录已不存在，走父目录归一 */ }
+  const absolute = resolve(input)
+  try {
+    return join(realpathSync(dirname(absolute)), basename(absolute))
+  } catch {
+    return absolute
+  }
 }
 
 /** 数据目录名 = 文件夹名 + 绝对路径哈希前 8 位，不同仓的同名工作树不会撞车。 */
@@ -114,7 +124,8 @@ function gitDir(args) {
 }
 
 function repoRootOf(worktreePath) {
-  return repoRootFromCommonDir(gitDir(['-C', worktreePath, 'rev-parse', '--path-format=absolute', '--git-common-dir']))
+  const root = repoRootFromCommonDir(gitDir(['-C', worktreePath, 'rev-parse', '--path-format=absolute', '--git-common-dir']))
+  return root ? canonicalPath(root) : null
 }
 
 function fail(message, code = 1) {
@@ -164,8 +175,10 @@ function init(worktreePath, env = process.env) {
     fail(`refuse: ${basename(dir)} exists without ownership record; remove it manually if it is stale`, 2)
   }
   requireSag()
-  writeRecord(dir, wt, repoRoot)
+  // 先确保配置可用再落归属记录：配置失败留下半套记录，会让下次 init 报「归属不符」，
+  // 用户只能手工删目录（评审 F2）。
   ensureJevConfig(dir)
+  writeRecord(dir, wt, repoRoot)
   const localIgnore = join(wt, '.sagignore')
   if (!existsSync(localIgnore) && existsSync(join(repoRoot, '.sagignore'))) {
     copyFileSync(join(repoRoot, '.sagignore'), localIgnore)
@@ -255,7 +268,7 @@ function remove(worktreePath, env = process.env) {
 
 function gc(env = process.env) {
   const root = dataRoot(env)
-  const currentRepo = repoRootFromCommonDir(gitDir(['rev-parse', '--path-format=absolute', '--git-common-dir']))
+  const currentRepo = (() => { const root = repoRootFromCommonDir(gitDir(['rev-parse', '--path-format=absolute', '--git-common-dir'])); return root ? canonicalPath(root) : null })()
   if (!existsSync(root)) {
     process.stdout.write(`${JSON.stringify({ removed: [], kept: 0, repo: currentRepo })}\n`)
     return
@@ -315,5 +328,11 @@ function main(argv) {
 }
 
 if (process.argv[1] && canonicalPath(process.argv[1]) === canonicalPath(fileURLToPath(import.meta.url))) {
-  main(process.argv.slice(2))
+  try {
+    main(process.argv.slice(2))
+  } catch (error) {
+    // 未预期异常也要一行可读的报错，不要把原始堆栈糊到交付日志里。
+    process.stderr.write(`failed: ${error?.message ?? error}\n`)
+    process.exit(1)
+  }
 }

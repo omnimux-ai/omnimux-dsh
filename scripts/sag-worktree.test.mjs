@@ -11,7 +11,7 @@
  */
 
 import assert from 'node:assert/strict'
-import { mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -43,12 +43,18 @@ describe('数据目录按路径唯一 (#4068)', () => {
     assert.match(a, /^task-[0-9a-f]{8}$/, '目录名应保留可读前缀并带路径哈希')
   })
 
-  it('同一路径（含软链写法）得到同一目录', () => {
+  it('软链路径与真实路径得到同一目录（含目录被删除后）', () => {
     const dir = mkdtempSync(join(tmpdir(), 'sag-wt-name-'))
     try {
       mkdirSync(join(dir, 'real'))
-      assert.equal(dataDirName(join(dir, 'real')), dataDirName(join(dir, 'real')), '同一路径必须稳定')
-      assert.equal(dataDirName(join(dir, 'real', '..', 'real')), dataDirName(join(dir, 'real')))
+      symlinkSync(join(dir, 'real'), join(dir, 'link'))
+      assert.equal(dataDirName(join(dir, 'link')), dataDirName(join(dir, 'real')), '软链必须归一到同一哈希')
+      // worktree.sh 是先删目录再清理索引，删除后哈希不能漂移，否则索引永远删不掉。
+      const before = dataDirName(join(dir, 'real'))
+      rmSync(join(dir, 'real'), { recursive: true, force: true })
+      assert.equal(dataDirName(join(dir, 'real')), before, '目录删除后哈希必须保持不变')
+      // 软链在目标被删后已无法解析，属于固有边界：调用方传给工具的一直是记录里的
+      // 真实路径（init 时已 realpath 归一），不会中途换成软链写法。
     } finally { rmSync(dir, { recursive: true, force: true }) }
   })
 

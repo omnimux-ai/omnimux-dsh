@@ -1,9 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync, execFileSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { restartDevApp, verifiedDevAppPids, verifiedDevMainPids, devLaunchEnv } from './reload-dev-app.mjs'
 
@@ -1093,6 +1093,126 @@ test('OMNIMUX_SAG_INDEX=0 时完全不调用 sag-worktree（Issue #4060）', () 
     assert.equal(existsSync(dir), false, '关闭索引不影响工作树删除')
     assert.deepEqual(f.calls(), [], '关闭后连探测都不该调用工具')
     assert.doesNotMatch(`${result.stdout}${result.stderr}`, /SAG/, '关闭后不得输出任何 SAG 相关行')
+  } finally { f.cleanup() }
+})
+
+/**
+ * 直接驱动仓内 CLI（`scripts/sag-worktree.mjs`）的端到端用例（Issue #4068）。
+ * SAG_WT_HOME 指向临时目录，绝不触碰本机真实索引。
+ */
+function cliFixture(prefix, { sagWorks = true, badConfig = false } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), `${prefix}-`))
+  const repo = join(dir, 'repo')
+  const bin = join(dir, 'bin')
+  const home = join(dir, 'sag-home')
+  mkdirSync(repo)
+  mkdirSync(bin)
+  const git = (...args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+  git('init', '-b', 'main')
+  git('config', 'user.name', 'cli-test')
+  git('config', 'user.email', 'cli@example.test')
+  writeFileSync(join(repo, '.gitignore'), '.worktrees/\n')
+  writeFileSync(join(repo, '.sagignore'), '# SAG Wiki index options: begin\n# SAG Wiki index options: end\n')
+  git('add', '.')
+  git('commit', '-m', 'seed')
+  const worktree = join(dir, 'wt')
+  git('worktree', 'add', '-b', 'agent/wt', worktree)
+  if (sagWorks) {
+    // 桩：config 返回可用 url/model；add/check/remove/service 一律成功。
+    writeFileSync(join(bin, 'sag'), [
+      '#!/bin/sh',
+      'case "$1" in',
+      '  --version) echo "sag 0.0.0-stub" ;;',
+      `  config) echo '${badConfig ? '{}' : '{"url":"http://stub.local","model":"stub-model"}'}' ;;`,
+      '  check) echo \'{"index_ready":true,"indexed_files":42,"coverage":"included","extensions":["ts"]}\' ;;',
+      '  *) exit 0 ;;',
+      'esac',
+      '',
+    ].join('\n'), { mode: 0o755 })
+    writeFileSync(join(dir, 'credentials.json'), JSON.stringify({ jev: 'stub-key' }))
+  } else {
+    writeFileSync(join(bin, 'sag'), '#!/bin/sh\nexit 127\n', { mode: 0o755 })
+  }
+  const run = (args) => spawnSync(process.execPath, [join(root, 'scripts/sag-worktree.mjs'), ...args], {
+    cwd: repo,
+    encoding: 'utf8',
+    env: { ...process.env, SAG_WT_HOME: home, PATH: `${bin}:${process.env.PATH}`, SAG_DATA_DIR: dir },
+  })
+  const cleanup = () => rmSync(dir, { recursive: true, force: true })
+  return { dir, repo, home, worktree, run, cleanup }
+}
+
+test('init 成功后写入归属记录，status 报 index_ready（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-init')
+  try {
+    const result = f.run(['init', f.worktree])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const dirs = readdirSync(f.home)
+    assert.equal(dirs.length, 1, '只应建一份隔离数据目录')
+    assert.match(dirs[0], /^wt-[0-9a-f]{8}$/, '目录名应为 文件夹名-路径哈希')
+    const status = f.run(['status', f.worktree])
+    assert.equal(status.status, 0, `${status.stdout}\n${status.stderr}`)
+    assert.match(status.stdout, /"index_ready":true/)
+    assert.match(status.stdout, /"ownership":"match"/)
+  } finally { f.cleanup() }
+})
+
+test('本机没有 sag 时 init 报 blocked 且不写归属记录（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-blocked', { sagWorks: false })
+  try {
+    const result = f.run(['init', f.worktree])
+    assert.equal(result.status, 3, `缺 sag 必须以 blocked(3) 结束：${result.stdout}\n${result.stderr}`)
+    assert.match(result.stderr, /blocked: sag CLI is not installed/)
+    assert.deepEqual(existsSync(f.home) ? readdirSync(f.home) : [], [], '失败不得留下半套数据目录/记录')
+  } finally { f.cleanup() }
+})
+
+test('配置缺失时 init 整洁报错且不留半套归属记录（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-badconfig', { badConfig: true })
+  try {
+    const result = f.run(['init', f.worktree])
+    assert.equal(result.status, 1, `配置缺失应以 1 结束：${result.stdout}\n${result.stderr}`)
+    assert.match(result.stderr, /cannot read Jev url\/model/, '要给人话，不要原始堆栈')
+    assert.doesNotMatch(result.stderr, /\n\s+at /, '不得输出 Node 原始堆栈')
+    assert.deepEqual(existsSync(f.home) ? readdirSync(f.home) : [], [], '失败不得留下归属记录')
+  } finally { f.cleanup() }
+})
+
+test('remove 对无归属记录的目录返回 2 并保留原数据（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-unrecorded')
+  try {
+    // 手工造一个「有数据但没记录」的目录，模拟旧版工具留下的残骸。
+    const stray = join(f.home, `${basename(f.worktree)}-deadbeef`)
+    mkdirSync(stray, { recursive: true })
+    writeFileSync(join(stray, 'index.db'), 'x')
+    const result = f.run(['remove', f.worktree])
+    assert.equal(result.status, 2, `无记录必须跳过而不是删：${result.stdout}\n${result.stderr}`)
+    assert.match(result.stderr, /is unrecorded/)
+    assert.equal(existsSync(stray), true, '不能误删没有归属记录的目录')
+  } finally { f.cleanup() }
+})
+
+test('gc 只删同仓孤儿，跨仓与有记录的目录一律保留（Issue #4068）', () => {
+  const f = cliFixture('omnimux-cli-gc')
+  try {
+    assert.equal(f.run(['init', f.worktree]).status, 0)
+    const [own] = readdirSync(f.home)
+    // 造一个同仓孤儿（记录指向已不存在的路径）与一个跨仓条目。
+    const orphan = join(f.home, 'gone-11111111')
+    mkdirSync(orphan, { recursive: true })
+    // 记录里的仓根按真实路径写（工具 writeRecord 也是 realpath 归一后才落盘）。
+    const realRepo = realpathSync(f.repo)
+    writeFileSync(join(orphan, 'worktree.path'), join(f.dir, 'already-deleted'))
+    writeFileSync(join(orphan, 'repo.root'), realRepo)
+    const foreign = join(f.home, 'other-22222222')
+    mkdirSync(foreign, { recursive: true })
+    writeFileSync(join(foreign, 'worktree.path'), join(f.dir, 'other-place'))
+    writeFileSync(join(foreign, 'repo.root'), join(f.dir, 'another-repo'))
+    const result = f.run(['gc'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const left = readdirSync(f.home).sort()
+    assert.deepEqual(left, [own, 'other-22222222'].sort(), '只该回收同仓孤儿')
+    assert.match(result.stdout, /"removed":\["gone-11111111"\]/)
   } finally { f.cleanup() }
 })
 

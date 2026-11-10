@@ -48,7 +48,9 @@ Node CLI，子命令与旧脚本保持一致（`init` / `status` / `search` / `l
 | 6 | 既有 SAG 配置缺 url/model | `configArgs` 响亮抛错，不生成半套配置 |
 | 7 | 归属记录 | 写入后可读回规范路径；空记录读成 null 而不是抛错 |
 | 8 | `worktree.sh` 解析顺序 | 显式 `SAG_WORKTREE_BIN` 优先；未指定时优先仓内实现，其次 PATH；缺 `sag` 时交付照常、退出码不变 |
-| 9 | 本机没有 `sag` | `init` 报 blocked（退出码 3）且不写任何记录 |
+| 9 | 本机没有 `sag` | `init` 报 blocked（退出码 3）且不写任何记录（`worktree-delivery.test.mjs` 有端到端用例） |
+| 10 | 配置缺失（`sag config` 无 url/model） | 整洁单行报错、退出码 1，且**不留下**归属记录 |
+| 11 | 软链路径（如 `/tmp` → `/private/tmp`） | 目录被删前后哈希一致，索引不会变成永久孤儿 |
 
 ## 4. 假设
 
@@ -77,3 +79,11 @@ Node CLI，子命令与旧脚本保持一致（`init` / `status` / `search` / `l
 - `scripts/worktree-delivery.test.mjs` :: `清理失败与「索引不属于该路径」必须给出不同输出（Issue #4060）`
 
 原断言：用桩退出码 `3` 代表通用失败并期待 stderr 警告；必须改的理由：`3` 已被本任务征用为「本机没有 sag」的 blocked 语义（`worktree.sh` 对它静默跳过），继续用它当通用失败会把两种语义混在一起；新期望证据：通用失败改用退出码 `4` 并断言 stderr 出现「退出码 4」的警告，跳过分支（退出码 `2`）仍只播报「跳过清理」。
+
+- `scripts/worktree-delivery.test.mjs` :: `清理失败与「索引不属于该路径」必须给出不同输出（Issue #4060）`
+
+原断言：同上一条（退出码 `3` 当通用失败）；必须改的理由与证据见上，另加本轮新增的 init/blocked/无记录/gc 四条端到端用例一起覆盖 CLI 行为。
+
+- `scripts/worktree-delivery.test.mjs` :: `配置缺失时 init 整洁报错且不留半套归属记录（Issue #4068）`
+
+新增用例（无原断言可削弱），用于把验收 #10 从函数层升级到 CLI 层：断言退出码 1、stderr 出现 `cannot read Jev url/model` 且不含 Node 原始堆栈、`SAG_WT_HOME` 下不出现任何数据目录。
