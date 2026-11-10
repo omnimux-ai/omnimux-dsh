@@ -103,17 +103,65 @@ export function pasteFromClipboard(
     } as CanvasNode;
   });
 
-  const newEdges = copiedEdges.map((edge) => ({
-    ...edge,
-    id: uuidv4(),
-    source: idMapping.get(edge.source) || edge.source,
-    target: idMapping.get(edge.target) || edge.target,
-    selected: false,
-  }));
+  const edgeIdMapping = new Map<string, string>();
+  const newEdges = copiedEdges.map((edge) => {
+    const newEdgeId = uuidv4();
+    edgeIdMapping.set(edge.id, newEdgeId);
+    return {
+      ...edge,
+      id: newEdgeId,
+      source: idMapping.get(edge.source) || edge.source,
+      target: idMapping.get(edge.target) || edge.target,
+      selected: false,
+    };
+  });
+
+  // Cloned generate nodes carry slotBindings that reference the ORIGINAL node/edge ids.
+  // Rewrite them to the freshly cloned identities, or the pasted copy loses its bindings
+  // when the recompute prunes occupants that point at non-existent sources/edges.
+  const remappedNodes = newNodes.map((node) => remapClonedBindings(node, idMapping, edgeIdMapping));
 
   return {
-    nodes: newNodes,
+    nodes: remappedNodes,
     edges: newEdges,
     newPastePosition: { x: pasteX, y: pasteY },
   };
+}
+
+interface CloneSlotBindings {
+  [slot: string]: Array<Record<string, unknown> & { sourceNodeId?: string; edgeId?: string }>;
+}
+
+/** Remap a cloned node's slot bindings onto the new node/edge ids produced by this paste. */
+function remapClonedBindings(
+  node: CanvasNode,
+  nodeIdMapping: Map<string, string>,
+  edgeIdMapping: Map<string, string>,
+): CanvasNode {
+  const data = (node.data ?? {}) as Record<string, unknown>;
+  const bindings = data.slotBindings as CloneSlotBindings | undefined;
+  const standby = data.slotStandbyEdgeIds;
+  if (!bindings && !Array.isArray(standby)) return node;
+  const next: Record<string, unknown> = { ...data };
+  if (bindings) {
+    const remapped: CloneSlotBindings = {};
+    for (const [slot, occupants] of Object.entries(bindings)) {
+      remapped[slot] = (occupants ?? []).flatMap((occupant) => {
+        const mappedSource = occupant?.sourceNodeId ? nodeIdMapping.get(occupant.sourceNodeId) : undefined;
+        const mappedEdge = occupant?.edgeId ? edgeIdMapping.get(occupant.edgeId) : undefined;
+        // A binding survives only when both its source node and its edge were copied too.
+        if (!mappedSource || !mappedEdge) return [];
+        return [{ ...occupant, sourceNodeId: mappedSource, edgeId: mappedEdge }];
+      });
+    }
+    next.slotBindings = remapped;
+  }
+  if (Array.isArray(standby)) {
+    next.slotStandbyEdgeIds = standby
+      .map((id) => (typeof id === 'string' ? edgeIdMapping.get(id) : undefined))
+      .filter((id): id is string => Boolean(id));
+  }
+  // Conflicts are derived state; carrying pre-clone identities would resurrect ghosts.
+  if ('slotConflicts' in next) next.slotConflicts = [];
+  return { ...node, data: next as CanvasNode['data'] };
 }
