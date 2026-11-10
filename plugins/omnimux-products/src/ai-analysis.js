@@ -16,9 +16,6 @@ import { normalizeBrandStrategy } from './brand-strategy.js'
 import { renderBrandStrategyV2Prompt, renderPhysicalImportV9Prompt } from './create-prompts.js'
 import { fencedBlocks, parseYamlMini } from './yaml-mini.js'
 
-/** Default model for both playbooks. */
-export const DEFAULT_TEXT_MODEL = 'gemini-3.8-flash'
-
 export const ANALYSIS_MODES = Object.freeze({
   MODEL: 'model',
   HEURISTIC: 'heuristic',
@@ -717,14 +714,14 @@ export async function analyzeLandingPage(input) {
   })
   if (!pageContent) return degraded('页面正文为空，未提交给模型', kind)
 
-  const model = text(input?.model) || DEFAULT_TEXT_MODEL
+  const requestedModel = text(input?.model) || undefined
   const prompt = digital
     ? renderBrandStrategyV2Prompt({ language: text(input?.language) || '中文', pageContent })
     : renderPhysicalImportV9Prompt({ url: text(input?.url), pageContent })
 
   try {
     const answer = await hub.textComplete({
-      model,
+      ...(requestedModel ? { model: requestedModel } : {}),
       prompt,
       maxTokens: digital ? MAX_TOKENS_DIGITAL : MAX_TOKENS_PHYSICAL,
       reason: text(input?.reason) || 'omnimux-products import-from-link analysis',
@@ -739,7 +736,7 @@ export async function analyzeLandingPage(input) {
       if (!fields.name && !fields.selling_points && !fields.features) {
         return degraded('模型回答未包含商品字段', kind)
       }
-      return { mode: ANALYSIS_MODES.MODEL, model, reason: null, kind, brand_strategy: null, fields }
+      return { mode: ANALYSIS_MODES.MODEL, model: text(answer?.model) || requestedModel || null, reason: null, kind, brand_strategy: null, fields }
     }
 
     let strategy = null
@@ -751,7 +748,7 @@ export async function analyzeLandingPage(input) {
     if (!strategy) return degraded('品牌拆解报告为空，未产生可用战略模块', kind)
     return {
       mode: ANALYSIS_MODES.MODEL,
-      model,
+      model: text(answer?.model) || requestedModel || null,
       reason: null,
       kind,
       brand_strategy: strategy,

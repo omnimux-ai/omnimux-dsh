@@ -30,6 +30,8 @@ test('baseline repository contracts pass cross-plugin model alignment verificati
   assert.ok(report.alignment.aspectRatiosChecked >= 8);
   // #1789 / #3516：能力 seam 现在只有 whisper-1 以 listed speech_to_text 进入画布。
   assert.equal(report.alignment.capabilityModelsChecked, 1);
+  // #4069: shipped templates are scanned for hardcoded model ids as well.
+  assert.equal(report.alignment.templateModelsChecked, 4);
 });
 
 test('fails when a capability-seam model is not canonical in hub dispositions', () => {
@@ -47,6 +49,23 @@ test('fails when a capability-seam model is not canonical in hub dispositions', 
   });
   assert.equal(report.ok, false);
   assert.ok(report.issues.some((issue) => issue.code === 'cross_plugin_capability_not_canonical'), JSON.stringify(report.issues));
+});
+
+test('accepts a shipped-template model id that is a documented alias', () => {
+  const report = verifyCrossPluginModelAlignment({
+    templateSources: [{ path: 'fixture/template.json', source: '{"model":"seedance-2.0"}' }],
+    changedFiles: [],
+  });
+  assert.equal(report.ok, true, JSON.stringify(report.issues));
+});
+
+test('fails when a shipped template references an unlisted model id', () => {
+  const report = verifyCrossPluginModelAlignment({
+    templateSources: [{ path: 'fixture/template.json', source: '{"model":"seedance-0.9"}' }],
+    changedFiles: [],
+  });
+  assert.equal(report.ok, false);
+  assert.ok(report.issues.some((issue) => issue.code === 'cross_plugin_template_model_unresolved'), JSON.stringify(report.issues));
 });
 
 test('fails when a capability tool declares a seam no admission rule consumes', () => {

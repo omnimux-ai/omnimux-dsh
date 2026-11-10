@@ -429,7 +429,11 @@ describe('ProductsDispatcher import-from-link', () => {
     const page = '<html><head><title>落地页</title></head><body><h1>智能记账 App</h1>'
       + '<ul><li>自动记账</li><li>多端同步</li><li>数据看板</li><li>团队协作</li></ul></body></html>'
     const ctx = {
-      get: (name) => (name === 'textComplete' ? { execute: () => new Promise(() => {}) } : undefined),
+      get: (name) => {
+        if (name === 'textComplete') return { execute: () => new Promise(() => {}) }
+        if (name === 'modelCatalog') return { list: () => ({ defaults: { analysis: 'catalog-analysis' } }) }
+        return undefined
+      },
       tools: { get: (name) => (name === 'omnimux_page_fetch' ? { execute: async () => ({ pageContent: '# 智能记账 App\n\n自动记账，多端同步' }) } : undefined) },
     }
     const modelReport = [
@@ -487,7 +491,11 @@ describe('products hub seams', () => {
     let seatCalls = 0
     let toolCalls = 0
     const ctx = {
-      get: (name) => (name === 'textComplete' ? { execute: async () => { seatCalls += 1; return { text: 'seat' } } } : undefined),
+      get: (name) => {
+        if (name === 'textComplete') return { execute: async () => { seatCalls += 1; return { text: 'seat' } } }
+        if (name === 'modelCatalog') return { list: () => ({ defaults: { analysis: 'catalog-analysis' } }) }
+        return undefined
+      },
       tools: { get: () => ({ execute: async () => { toolCalls += 1; return { text: 'tool' } } }) },
     }
     const seams = createHubSeams(ctx, { chatComplete: async () => ({ mode: 'live', text: 'bridged' }) })
@@ -555,20 +563,30 @@ describe('products hub seams', () => {
 
   it('bridges after a seat that throws, with the default model and cap', async () => {
     const ctx = {
-      get: (name) => (name === 'textComplete' ? { execute: async () => { throw new Error('needs-provider: textComplete requires ctx.llm') } } : undefined),
+      get: (name) => {
+        if (name === 'textComplete') return { execute: async () => { throw new Error('needs-provider: textComplete requires ctx.llm') } }
+        if (name === 'modelCatalog') return { list: () => ({ defaults: { analysis: 'catalog-analysis' } }) }
+        return undefined
+      },
     }
     const calls = []
     const seams = createHubSeams(ctx, {
       chatComplete: async (input) => { calls.push(input); return { text: 'bridged' } },
     })
     assert.deepEqual(await seams.textComplete({ prompt: 'p' }), { text: 'bridged' })
-    assert.equal(calls[0].model, 'gemini-3.8-flash')
+    assert.equal(calls[0].model, 'catalog-analysis')
     assert.ok(calls[0].maxTokens > 0)
     assert.equal(calls[0].system, undefined)
   })
 
   it('reports every channel it tried when none of them answer', async () => {
-    const ctx = { get: (name) => (name === 'textComplete' ? { execute: async () => { throw new Error('seat exploded') } } : undefined) }
+    const ctx = {
+      get: (name) => {
+        if (name === 'textComplete') return { execute: async () => { throw new Error('seat exploded') } }
+        if (name === 'modelCatalog') return { list: () => ({ defaults: { analysis: 'catalog-analysis' } }) }
+        return undefined
+      },
+    }
     const seams = createHubSeams(ctx, { chatComplete: async () => { throw new Error('no local provider') } })
     await assert.rejects(
       () => seams.textComplete({ prompt: 'p' }),
@@ -602,7 +620,11 @@ describe('products hub seams', () => {
     // answers neither success nor failure. Without the cap it would hold the
     // import for a minute or more.
     const ctx = {
-      get: (name) => (name === 'textComplete' ? { execute: () => new Promise(() => {}) } : undefined),
+      get: (name) => {
+        if (name === 'textComplete') return { execute: () => new Promise(() => {}) }
+        if (name === 'modelCatalog') return { list: () => ({ defaults: { analysis: 'catalog-analysis' } }) }
+        return undefined
+      },
     }
     const seams = createHubSeams(ctx, {
       chatComplete: async () => { throw new Error('bridge offline') },
@@ -636,7 +658,11 @@ describe('products hub seams', () => {
 
   it('answers from the chat bridge before any seat can hang', async () => {
     const ctx = {
-      get: (name) => (name === 'textComplete' ? { execute: () => new Promise(() => {}) } : undefined),
+      get: (name) => {
+        if (name === 'textComplete') return { execute: () => new Promise(() => {}) }
+        if (name === 'modelCatalog') return { list: () => ({ defaults: { text: 'catalog-chat' } }) }
+        return undefined
+      },
     }
     const seams = createHubSeams(ctx, {
       chatComplete: async () => ({ mode: 'live', text: 'fast' }),

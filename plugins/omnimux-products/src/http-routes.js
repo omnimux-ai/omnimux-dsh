@@ -192,9 +192,31 @@ function toolRegistry(ctx) {
  */
 const HUB_CHAT_MODULE = '../../omnimux/src/text/chat.js'
 
-/** Model and cap the chat bridge asks for when the caller names neither. */
-const DEFAULT_CHAT_MODEL = 'gemini-3.8-flash'
+/** Cap the chat bridge asks for when the caller names none. */
 const BRIDGE_MAX_TOKENS = 6000
+
+/**
+ * The catalog's analysis/chat default for the chat bridge fallback.
+ *
+ * The bridge is a local path: no seat, no tool. It still must not pin a model
+ * id, so read the live catalog default and let a missing/damaged catalog fail
+ * the bridge instead of reviving a retired literal.
+ */
+function catalogChatModel(ctx) {
+  const catalog = readSeat(ctx, 'modelCatalog')
+  if (!catalog || typeof catalog.list !== 'function') return ''
+  try {
+    const value = catalog.list()
+    const defaults = value && typeof value === 'object' ? value.defaults : undefined
+    if (!defaults || typeof defaults !== 'object') return ''
+    const candidate = typeof defaults.analysis === 'string' && defaults.analysis.trim()
+      ? defaults.analysis
+      : typeof defaults.text === 'string' ? defaults.text : ''
+    return candidate.trim()
+  } catch {
+    return ''
+  }
+}
 
 /**
  * How long a single fallback channel may run before the seam gives up on it. A
@@ -288,8 +310,10 @@ export function createHubSeams(ctx, deps) {
     const maxTokens = Number.isFinite(request.maxTokens) && request.maxTokens > 0
       ? request.maxTokens
       : BRIDGE_MAX_TOKENS
+    const model = request.model || catalogChatModel(ctx)
+    if (!model) throw new Error('no model named and the catalog has no analysis/chat default')
     return chat({
-      model: request.model || DEFAULT_CHAT_MODEL,
+      model,
       prompt: request.prompt,
       ...(request.system ? { system: request.system } : {}),
       maxTokens,
