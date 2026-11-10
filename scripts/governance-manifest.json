@@ -213,6 +213,7 @@
     "verify-stage-inset-contract.mjs",
     "verify-stage-scroll-contract.mjs",
     "verify-stage-scroll-contract.test.mjs",
+    "worktree-sag-index.test.mjs",
     "worktree-web-qa.test.mjs",
     "worktree.sh"
   ],

@@ -1,0 +1,29 @@
+# SAG 语义检索的索引范围（Issue #4060）。
+#
+# 本文件入库，主检出与每个任务 worktree 共用同一套规则；SAG 的目录设置块由
+# `sag add` 维护在文件尾部，手写规则请加在它上面，不要整份覆盖（覆盖会静默丢掉
+# 扩展名白名单，代码文件就不再进索引）。
+#
+# 只排除「证据快照」「生成物」「历史归档」三类：它们体积大、语义价值低，且会
+# 让检索结果指向早已过期的现场记录。源码目录（plugins/、packages/、scripts/、
+# specs/）一律保留。
+
+# 现场证据与一次性产物
+docs/evidence/
+qa-evidence/
+deliverables/
+artifacts/
+tests/e2e/*-evidence/
+**/.browser-scratch/
+
+# 构建/派生文件
+**/harness/dist/
+panel-browser-built.js
+pnpm-lock.yaml
+
+# 历史归档：旧结论会污染检索
+archive/
+
+# SAG Wiki index options: begin
+# {"extensions":["css","go","html","js","json","jsx","md","mjs","sql","ts","tsx","yaml","yml"],"file_types":{"markdown":true,"text":true,"code":false,"config":false},"convert_other_formats":false}
+# SAG Wiki index options: end
