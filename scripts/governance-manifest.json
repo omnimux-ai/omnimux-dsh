@@ -154,6 +154,7 @@
     "clean-tmp.test.mjs",
     "code-refactor-analyzer.mjs",
     "code-refactor-analyzer.test.mjs",
+    "composer-side-margin-qa.mjs",
     "dev-doctor.sh",
     "generate-hub-interfaces-html.mjs",
     "generate-model-console.mjs",

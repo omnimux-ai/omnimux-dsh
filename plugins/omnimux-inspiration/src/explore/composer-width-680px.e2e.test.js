@@ -9,35 +9,32 @@ const here = dirname(fileURLToPath(import.meta.url))
 const styles = readFileSync(join(here, '../../../omnimux/src/client/session-guide/styles.js'), 'utf8')
 
 test('e2e: 新会话欢迎页顶部输入框、工作区行与吸底态严格收敛为 680px 紧凑黄金宽度', () => {
-  // 1. 顶部输入框卡片
+  // 1. 顶部输入框卡片：只保留 680px 上限，左右留白交给宿主 --dsh-composer-side-clearance（16px/边）
   const start = styles.indexOf('[data-omnimux-starter-host] [data-composer-card] {')
   const end = styles.indexOf('/* 素材导轨贴合输入框内壁', start)
   assert.ok(start > 0 && end > start, '必须存在 [data-omnimux-starter-host] [data-composer-card] 样式声明')
   const cardRule = styles.slice(start, end)
 
-  // 严禁出现 952px 或 780px
+  // 严禁出现 952px / 780px
   assert.equal(cardRule.includes('952px'), false, '红线：新会话欢迎页输入框严禁为 952px')
   assert.equal(cardRule.includes('780px'), false, '红线：新会话欢迎页输入框严禁为 780px')
 
-  // 必须声明 680px 紧凑上限
-  assert.ok(
-    cardRule.includes('max-width:min(680px, calc(100% - 24px))!important;') ||
-    cardRule.includes('max-width: min(680px, calc(100% - 24px))!important;'),
-    '输入框卡片必须声明 max-width: min(680px, calc(100% - 24px))'
-  )
+  // 必须声明 680px 紧凑上限，且不再叠加 calc(100% - 24px) 的二次收缩
+  assert.ok(cardRule.includes('max-width:680px!important;') || cardRule.includes('max-width: 680px!important;'),
+    '输入框卡片必须声明 max-width: 680px')
+  assert.equal(cardRule.includes('calc(100% - 24px)'), false, '输入框卡片不得再叠加 calc(100% - 24px) 的重复收缩')
 
-  // 2. 工作区选择行
+  // 2. 工作区选择行：与卡片同宽（整体减 32px 让出 16px/边）+ 680px 上限
   const wsStart = styles.indexOf('[data-omnimux-starter-host] [class*="heroWorkspaceRow"] {')
   const wsEnd = styles.indexOf('}', wsStart)
   assert.ok(wsStart > 0 && wsEnd > wsStart, '必须存在 heroWorkspaceRow 样式声明')
   const wsRule = styles.slice(wsStart, wsEnd + 1)
-  assert.ok(
-    wsRule.includes('max-width:min(680px, calc(100% - 24px))!important;') ||
-    wsRule.includes('max-width: min(680px, calc(100% - 24px))!important;'),
-    '工作区选择行必须与输入框严格对齐 680px 上限'
-  )
+  assert.ok(wsRule.includes('width:calc(100% - 32px)!important;') || wsRule.includes('width: calc(100% - 32px)!important;'),
+    '工作区选择行需自身让出 16px/边（width: calc(100% - 32px)），与卡片同宽同左缘')
+  assert.ok(wsRule.includes('max-width:680px!important;') || wsRule.includes('max-width: 680px!important;'),
+    '工作区选择行必须与输入框严格对齐 680px 上限')
 
-  // 3. 吸底状态卡片
+  // 3. 吸底状态卡片：沿用既有 680px 令牌（DOCK_MAX_WIDTH），保持与顶部同宽
   const dockStart = styles.indexOf('[data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-card] {')
   const dockEnd = styles.indexOf('/* 工作区行留在 Hero', dockStart)
   assert.ok(dockStart > 0 && dockEnd > dockStart, '必须存在吸底卡片样式声明')
@@ -57,14 +54,14 @@ test('e2e: 新会话欢迎页顶部输入框、工作区行与吸底态严格收
     <div data-omnimux-starter-host data-omnimux-dock-open>
       <div data-composer-card class="docked-card"></div>
     </div>
-  </body>`)
+  </body></html>`)
 
   const card = dom.window.document.querySelector('[data-composer-card]')
   const wsRow = dom.window.document.querySelector('.heroWorkspaceRow')
   const dockedCard = dom.window.document.querySelector('.docked-card')
 
-  assert.equal(dom.window.getComputedStyle(card).maxWidth, 'min(680px, 100% - 24px)')
-  assert.equal(dom.window.getComputedStyle(wsRow).maxWidth, 'min(680px, 100% - 24px)')
+  assert.equal(dom.window.getComputedStyle(card).maxWidth, '680px')
+  assert.equal(dom.window.getComputedStyle(wsRow).maxWidth, '680px')
   assert.equal(dom.window.getComputedStyle(dockedCard).maxWidth, 'min(680px, 100% - 24px)')
 
   dom.window.close()

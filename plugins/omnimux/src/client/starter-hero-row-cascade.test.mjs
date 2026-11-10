@@ -72,7 +72,7 @@ function rowSelectorParts(css, marker) {
     .filter((selector) => selector.includes(marker))
 }
 
-const STARTER_SIZE_MARKER = 'max-width:min(680px'
+const STARTER_SIZE_MARKER = 'max-width:680px'
 const GUIDE_ROW_MARKER = '[class*="heroWorkspaceRow"]'
 const GUIDE_STARTER_COMPOUND = '[data-phase][data-omnimux-starter-host]'
 const COMPACT_NORMAL_ROW = `[data-phase='hero'] ${GUIDE_ROW_MARKER}`
