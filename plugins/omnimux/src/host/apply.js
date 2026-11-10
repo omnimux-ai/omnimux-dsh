@@ -390,6 +390,44 @@ export function apply(ctx, config = {}) {
       void syncComposerList(0)
   }
 
+  // The settings service may not be available at apply time in the desktop
+  // host. The official config editor is a separate service; use it directly so
+  // the composer still converges to the gateway text directory.
+  if (typeof ctx.inject === 'function') {
+    ctx.inject(['configEditor'], (editorCtx) => {
+      const editor = editorCtx.configEditor ?? editorCtx.get?.('configEditor')
+      if (!editor) return
+      const logComposerSync = (event, detail) => {
+        try {
+          ctx.logger?.info?.(`omnimux: ${event}`, detail ?? {})
+        } catch {
+          /* logging must never break the sync */
+        }
+      }
+      const sync = createComposerListSync({ configEditor: editor, log: logComposerSync })
+      const run = () => {
+        try {
+          const settingsService = typeof ctx.get === 'function' ? ctx.get('settings') : undefined
+          const current = settingsService && typeof settingsService.get === 'function'
+            ? settingsService.get('omnimux')
+            : undefined
+          const hiddenIds = current && typeof current === 'object' ? current.composerHiddenModels : undefined
+          void sync.sync({ hubText: listCatalog().text, hiddenIds }).catch((error) => {
+            logComposerSync('composer-list-write-failed', {
+              message: error instanceof Error ? error.message : String(error),
+            })
+          })
+        } catch (error) {
+          logComposerSync('composer-list-hub-unavailable', {
+            message: error instanceof Error ? error.message : String(error),
+          })
+        }
+      }
+      syncComposerListAfterCatalogRefresh = run
+      run()
+    })
+  }
+
   const jsonOut = JSON_TOOL_OUTPUT
   const mediaDeps = { media: hub.media, gate: hub.gate, store, jsonOut, sessionModel: sessionModelPreference, readReferenceStorageConfig }
   mountMedia(ctx, { kind: 'video', execute: executeOmnimuxVideo, ...mediaDeps })
@@ -470,8 +508,11 @@ export function apply(ctx, config = {}) {
         const hit = await credentials.resolve(ref)
         const value = hit && typeof hit.value === 'string' ? hit.value.trim() : ''
         if (value) return value
-      } catch {
-        // next ref
+      } catch (error) {
+        ctx.logger?.warn?.('omnimux: credential resolve failed', {
+          ref,
+          message: error instanceof Error ? error.message : String(error),
+        })
       }
     }
     return undefined

@@ -246,13 +246,13 @@ describe('auth http dispatcher', () => {
           })
           return
         }
-        // sessionQuery / settings / commands are optional for this scenario: model the
-        // services as absent, but never swallow an unknown dependency.
+        // sessionQuery / settings / commands / configEditor are optional for this scenario:
+        // model the services as absent, but never swallow an unknown dependency.
         if (deps[0] === 'sessionQuery') {
           assert.deepEqual(deps, ['sessionQuery'])
           return
         }
-        if (deps[0] === 'settings' || deps[0] === 'commands') return
+        if (deps[0] === 'settings' || deps[0] === 'commands' || deps[0] === 'configEditor') return
         assert.fail(`unexpected inject deps: ${JSON.stringify(deps)}`)
       },
     }, { official: { mount: false } })
@@ -363,7 +363,7 @@ describe('auth http dispatcher', () => {
           callback({ sessionQuery: sessionQuerySentinel })
           return
         }
-        if (deps[0] === 'settings' || deps[0] === 'commands') return
+        if (deps[0] === 'settings' || deps[0] === 'commands' || deps[0] === 'configEditor') return
         assert.fail(`unexpected inject deps: ${JSON.stringify(deps)}`)
       },
     })
