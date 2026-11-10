@@ -1,0 +1,120 @@
+{
+  "runId": "7124e9c1-21d5-49f7-a3ae-c9cc4e9c6aa7",
+  "mode": "ui",
+  "pass": true,
+  "scope": "smoke",
+  "contract": "none",
+  "startedAt": "2026-11-10T08:23:32.213Z",
+  "completedAt": "2026-11-10T08:24:12.539Z",
+  "summary": {
+    "mode": "ui",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "realModelRequest": false,
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true
+    },
+    {
+      "name": "journey:more-menu-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:official-plugins-menu-item-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:model-settings-item-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:catalog-sync-section-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:model-groups-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:catalog-sync-button-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:model-default-rows-rendered",
+      "pass": true
+    },
+    {
+      "name": "journey:plugin-list-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:omnimux-bundle-detail-visible",
+      "pass": true
+    },
+    {
+      "name": "journey:bundle-model-settings-single",
+      "pass": true
+    },
+    {
+      "name": "journey:bundle-config-owns-model-settings",
+      "pass": true
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true
+    }
+  ],
+  "screenshot": {
+    "path": "after-bundle-single-card.png",
+    "width": 1280,
+    "height": 800,
+    "bytes": 81326
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true
+  }
+}

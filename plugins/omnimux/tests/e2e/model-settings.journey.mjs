@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict'
 
-export default async function modelSettingsJourney({ send, sleep }) {
+export default async function modelSettingsJourney({ send, sleep, evidenceDir, io }) {
   const evaluate = async (expression) => {
     const reply = await send('Runtime.evaluate', {
       expression,
@@ -51,6 +51,41 @@ export default async function modelSettingsJourney({ send, sleep }) {
     })()`)
     check('catalog-sync-button-visible', observed?.hasSyncButton === true, observed?.syncText)
     check('model-default-rows-rendered', Number(observed?.modelRowCount) >= 5, String(observed?.modelRowCount))
+
+    // Hub bundle detail: `plugins.bundle.config` owns the card. The detail
+    // section must not mount a second identical copy below the component list.
+    await evaluate(`document.querySelector('[data-plugin-page-header] button')?.click()`)
+    check('plugin-list-visible', await waitFor(`!!document.querySelector('[data-plugin-package="omnimux"]')`))
+    await evaluate(`(() => {
+      const card = document.querySelector('[data-plugin-package="omnimux"]')
+      const open = card ? [...card.querySelectorAll('button')].find((button) => button.textContent.trim() === 'omnimux') : null
+      open?.click()
+    })()`)
+    check('omnimux-bundle-detail-visible', await waitFor(`!!document.querySelector('[data-plugin-detail="omnimux"]')`))
+    const bundle = await evaluate(`(() => {
+      const detail = document.querySelector('[data-plugin-detail="omnimux"]')
+      return detail ? {
+        settingsSections: detail.querySelectorAll('.omnimux-settings-sections').length,
+        catalogSync: detail.querySelectorAll('[data-section="catalog-sync"]').length,
+        bundleConfig: detail.querySelectorAll('[data-slot="plugins.bundle.config"] .omnimux-settings-sections').length,
+        detailSection: detail.querySelectorAll('[data-slot="plugins.detail.section"] .omnimux-settings-sections').length,
+        runtime: detail.querySelectorAll('[data-section="runtime"]').length,
+        canvasModels: detail.querySelectorAll('[data-section="canvas-models"]').length,
+      } : null
+    })()`)
+    assert.equal(bundle?.settingsSections, 1, 'hub bundle must render one model settings section')
+    assert.equal(bundle?.catalogSync, 1, 'hub bundle must render one catalog sync card')
+    assert.equal(bundle?.bundleConfig, 1, 'plugins.bundle.config must own the hub bundle card')
+    assert.equal(bundle?.detailSection, 0, 'plugins.detail.section must not repeat the hub bundle card')
+    assert.equal(bundle?.runtime, 1, 'hub bundle must render one model service card')
+    assert.equal(bundle?.canvasModels, 1, 'hub bundle must render one creative canvas models card')
+    check('bundle-model-settings-single', bundle?.settingsSections === 1 && bundle?.catalogSync === 1, JSON.stringify(bundle))
+    check('bundle-config-owns-model-settings', bundle?.bundleConfig === 1 && bundle?.detailSection === 0, JSON.stringify(bundle))
+
+    const screenshot = await send('Page.captureScreenshot', { format: 'png' })
+    if (screenshot?.data && evidenceDir && io?.writeFileSync) {
+      io.writeFileSync(`${evidenceDir}/omnimux-bundle-single-card.png`, Buffer.from(screenshot.data, 'base64'))
+    }
   } catch (error) {
     result.push({ name: 'journey-error', pass: false, detail: error instanceof Error ? error.message : String(error) })
   }
