@@ -84,6 +84,41 @@ export function speechToTextDefaultSources(options = {}) {
   ];
 }
 
+/** Shipped templates that hardcode a model id; checked against the hub index. */
+export const TEMPLATE_MODEL_SOURCES = Object.freeze([
+  'plugins/omnimux-workflow/src/client/projects/presetWorkflows.js',
+  'plugins/omnimux-apps/src/shared/builtinCatalogData.ts',
+]);
+
+/**
+ * Model ids a shipped template references.
+ * @param {string} source
+ * @returns {string[]}
+ */
+export function templateModelIds(source) {
+  const ids = new Set()
+  for (const match of String(source ?? '').matchAll(/"model"\s*:\s*"([^"]+)"/g)) {
+    const id = match[1].trim()
+    if (id) ids.add(id)
+  }
+  return [...ids]
+}
+
+/**
+ * Read the shipped template sources. Tests can inject `templateSources` instead
+ * of touching the working tree.
+ * @param {{ templateSources?: Array<{ path?: string, source: string }>, rootDir?: string }} [options]
+ * @returns {Array<{ path: string, source: string }>}
+ */
+export function templateModelSources(options = {}) {
+  if (Array.isArray(options.templateSources)) return options.templateSources
+  const rootDir = options.rootDir ?? root
+  return TEMPLATE_MODEL_SOURCES.map((path) => ({
+    path,
+    source: readFileSync(join(rootDir, path), 'utf8'),
+  }))
+}
+
 /**
  * Detect files in Git diff that touch model contracts.
  * @param {string} [cwd]
@@ -176,7 +211,7 @@ export function verifyCrossPluginModelAlignment(options = {}) {
     manifest = options.manifest ?? JSON.parse(readFileSync(options.manifestPath ?? MANIFEST_URL, 'utf8'));
   } catch (err) {
     issue('load_failed', err.message);
-    return finish(issues, null, { whitelistModelsChecked: 0, defaultModelsChecked: 0, sttDefaultsChecked: 0, aspectRatiosChecked: 0 });
+    return finish(issues, null, { whitelistModelsChecked: 0, defaultModelsChecked: 0, sttDefaultsChecked: 0, aspectRatiosChecked: 0, templateModelsChecked: 0 });
   }
 
   const governed = new Map((dispositions?.dispositions ?? []).map((row) => [row.id, row.disposition]));
@@ -428,11 +463,33 @@ export function verifyCrossPluginModelAlignment(options = {}) {
     }
   }
 
+  // 5b. Shipped template model ids must resolve to a listed hub model.
+  // A template may use a documented alias (`seedance-2.0` → `seedance-2-0`), but
+  // an alias that no longer resolves, or a retired id, must fail here rather than
+  // surface as a runtime break in a brand-new user's first app.
+  let templateModelsChecked = 0;
+  for (const entry of templateModelSources(options)) {
+    for (const rawId of templateModelIds(entry.source)) {
+      templateModelsChecked++;
+      const canonical = resolveModelId(index, rawId);
+      const model = canonical ? index.get(canonical) : undefined;
+      if (!model || model.listed !== true) {
+        issue(
+          'template_model_unresolved',
+          `Template "${entry.path}" references model "${rawId}"` +
+            (canonical && canonical !== rawId ? ` (alias of "${canonical}")` : '') +
+            ' but it does not resolve to a listed hub model. Update the template or register the alias.',
+          rawId,
+        );
+      }
+    }
+  }
+
   // 6. Diff-Aware Notice
   const changedFiles = options.changedFiles ?? detectGitModelChanges();
   const notice = changedFiles.length > 0 ? formatCrossPluginImpactNotice(changedFiles) : null;
 
-  return finish(issues, notice, { whitelistModelsChecked, defaultModelsChecked, sttDefaultsChecked, aspectRatiosChecked, channelGroupsChecked, capabilityModelsChecked });
+  return finish(issues, notice, { whitelistModelsChecked, defaultModelsChecked, sttDefaultsChecked, aspectRatiosChecked, channelGroupsChecked, capabilityModelsChecked, templateModelsChecked });
 }
 
 function finish(issues, notice, alignment) {

@@ -639,7 +639,7 @@ function stubHub(over = {}) {
       async textComplete(request) {
         calls.textComplete.push(request)
         if (over.textCompleteThrows) throw new Error('no key configured')
-        return { text: over.text ?? BRAND_REPORT, model: request.model }
+        return { text: over.text ?? BRAND_REPORT, model: request.model || 'hub-default-model' }
       },
     },
   }
@@ -654,7 +654,7 @@ describe('link importer · hub model analysis', () => {
     // A page that advertises no goods is read as a brand site, whatever the form said.
     assert.equal(draft.kind, 'digital')
     assert.equal(draft.analysis.mode, 'model')
-    assert.equal(draft.analysis.model, 'gemini-3.8-flash')
+    assert.equal(draft.analysis.model, 'hub-default-model')
     assert.equal(draft.analysis.reason, null)
     assert.deepEqual(Object.keys(draft.brand_strategy), [
       'brand_basic_info',
@@ -675,7 +675,7 @@ describe('link importer · hub model analysis', () => {
     // The hub read the page and the model got that Markdown.
     assert.deepEqual(calls.pageFetch, [DIGITAL_PAGE_URL])
     assert.equal(calls.textComplete.length, 1)
-    assert.equal(calls.textComplete[0].model, 'gemini-3.8-flash')
+    assert.equal(calls.textComplete[0].model, undefined)
     assert.match(calls.textComplete[0].prompt, /MiniMax 开放平台/)
     assert.deepEqual(Object.keys(draft), [...IMPORT_FIELD_KEYS, ...IMPORT_DRAFT_EXTRA_KEYS])
   })

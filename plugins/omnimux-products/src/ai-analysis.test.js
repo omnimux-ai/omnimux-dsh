@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   ANALYSIS_MODES,
-  DEFAULT_TEXT_MODEL,
   analyzeLandingPage,
   composePageContent,
   extractModelText,
@@ -762,7 +761,7 @@ describe('ai-analysis · one import through the model', () => {
       hub: {
         textComplete: async (request) => {
           calls.push(request)
-          return { text: BRAND_YAML, model: request.model }
+          return { text: BRAND_YAML, model: request.model || 'hub-default-model' }
         },
       },
       kind: 'digital',
@@ -771,10 +770,10 @@ describe('ai-analysis · one import through the model', () => {
     })
 
     assert.equal(result.mode, ANALYSIS_MODES.MODEL)
-    assert.equal(result.model, DEFAULT_TEXT_MODEL)
+    assert.equal(result.model, 'hub-default-model')
     assert.equal(result.kind, 'digital')
     assert.equal(calls.length, 1)
-    assert.equal(calls[0].model, 'gemini-3.8-flash')
+    assert.equal(calls[0].model, undefined)
     // The v2 playbook is the prompt, with its slots really filled.
     assert.match(calls[0].prompt, /品牌战略专家/)
     assert.match(calls[0].prompt, /一站式多模态模型服务/)

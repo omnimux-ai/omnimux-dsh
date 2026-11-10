@@ -238,6 +238,15 @@ When the user requests listing or making a model available to the canvas/consume
 4. **Manifest and consumers**: Register the model in `auto-serving-manifest.json` and give the channel-group display names in `channel-groups.js` (the hub display-override table). Canvas pickers no longer need a separate whitelist edit — every gateway-public model shows, including unsupported rows marked by execution status; custom BYOK rows are merged from `byokProviders[].modelProfiles`. `generationPolicy.ts` only seeds default-model fallbacks and `modeSelection`; it is not an admission gate. Whether the model is actually on sale, which lines it has and what they cost are decided by the gateway snapshot, not by a local flag (`requiredInAuto` was removed in #3734); the catalog lists only models the snapshot sells and the contract can call, and consumers such as the canvas read those lines straight from the catalog projection (#3762) instead of keeping a local mirror (`channelGroups.ts`'s local table was removed). Confirm the shipped snapshot sells it (step 0 above) before claiming it is listed.
 5. **Gate verification and materialization**: Run `pnpm verify:model-contracts --strict` and `verify:cross-plugin-models`, land via PR, and run `sync-to-app.sh` so canvas/consumers immediately expose the listed model.
 
+## 文档化别名与元数据标签不是漂移
+
+不要在审计里把这两个当成"模型 ID 写错"：
+
+- **文档化别名**：`seedance-2.0` 是 `seedance-2-0` 在 `plugins/omnimux/src/catalog/specs/video-models.yaml` 里声明的 `aliases`；`canonicalizeCatalogModelId` / `appTabWidgets` 的互转是给已发布应用快照保留的兼容层。禁止为了"统一网关 id"而删掉别名或改写模板——那会让旧应用直接 `unknown-model`。
+- **元数据标签**：灵感云的 `category`（`seedance 2.5` / `GPT image2.5`）和 `model` 字段是上传给灵感库的分类/关联元数据（`plugins/omnimux/src/official/inspiration-share.js`），消费方是云端列而不是执行期选型。它们不由模型目录派生，也不要强行改成目录 id。
+
+判断"是否是真漂移"的唯一口径：该 id 能否经 hub `resolveModelId` 解析到在册模型。这个口径由 `scripts/verify-cross-plugin-model-alignment.mjs` 的模板模型检查执行；模板或内置应用快照引用了无法解析/未在册的 id 时，门禁直接失败并点名文件与 id。
+
 ## User layers
 
 A user-layer `cordis.patch.yml` MUST NOT declare `- id: llm-pi-ai`. It sets
