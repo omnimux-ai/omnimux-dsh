@@ -1,0 +1,51 @@
+{
+  "task": "gateway-public-model-authority",
+  "method": "offline hub catalog + workflow model options; Dev browser acceptance follows",
+  "video": [
+    {
+      "id": "minimax-h3-video",
+      "source": "gateway",
+      "executionStatus": "ready"
+    },
+    {
+      "id": "seedance-2-0",
+      "source": "gateway",
+      "executionStatus": "ready"
+    },
+    {
+      "id": "seedance-2-5",
+      "source": "gateway",
+      "executionStatus": "ready"
+    },
+    {
+      "id": "wan-3.0",
+      "source": "gateway",
+      "executionStatus": "unsupported"
+    }
+  ],
+  "audio": [
+    {
+      "id": "indextts-2",
+      "executionStatus": "ready"
+    },
+    {
+      "id": "suno",
+      "executionStatus": "ready"
+    },
+    {
+      "id": "suno-sounds",
+      "executionStatus": "unsupported"
+    }
+  ],
+  "gateway": {
+    "source": "bundled",
+    "digest": "5c60e5c4b80f0e9ef4cc68c024b57fbda0cf45932704665570d507f28d08a8c8",
+    "models": 11,
+    "missingContract": [],
+    "adapterUnsupported": [
+      "suno-sounds",
+      "wan-3.0"
+    ]
+  },
+  "pass": true
+}

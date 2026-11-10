@@ -74,10 +74,9 @@ function validateModelPatches(current: CanvasInputMutationState, nodes: CanvasNo
     if (!isGenerate(node) || !params || !('model' in params)) continue;
     const modelId = typeof params.model === 'string' ? params.model.trim() : '';
     const model = resolveModelView(view, modelId);
-    const policy = context.catalog?.generationPolicy?.[node.data.materialType as MaterialType];
     const reasonCode = !view.available ? 'catalog_unavailable' : !model ? 'unknown_model'
       : !model.operations.some((op) => op.listed && op.output.type === node.data.materialType)
-        || (policy && !policy.allowedModelIds.includes(model.id)) ? 'not_listed' : undefined;
+        ? 'not_listed' : undefined;
     if (reasonCode) return rejectMutation(current, reasonCode, { nodeId: node.id, modelId });
   }
 }
@@ -185,8 +184,6 @@ export function validateCanvasInputSelection(graph: CanvasInputMutationState, in
   if (!view.available) return fail('catalog_unavailable');
   const model = resolveModelView(view, typeof params.model === 'string' ? params.model : undefined);
   if (!model) return fail('unknown_model');
-  const policy = catalog?.generationPolicy?.[node.data.materialType as MaterialType];
-  if (policy && !policy.allowedModelIds.includes(model.id)) return fail('not_listed');
   const operation = model.operations.find(op => op.listed && op.id === intent.chosenOperationId && op.output.type === node.data.materialType);
   if (!operation) return fail('operation_incompatible');
   const layout = deriveSlotLayout(catalog, model.id, operation.id);

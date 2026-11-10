@@ -81,6 +81,24 @@ function parseEndpoint(value) {
   return url.href.replace(/\/+$/, '')
 }
 
+function parseModelProfiles(value) {
+  if (!Array.isArray(value)) return []
+  const out = []
+  for (const raw of value) {
+    const profile = object(raw)
+    const model = str(profile.model)
+    const capability = str(profile.capability).toLowerCase()
+    if (!model || !SCENARIOS.includes(capability) || capability === 'analysis') continue
+    const row = { model, capability }
+    if (str(profile.displayName)) row.displayName = str(profile.displayName)
+    if (str(profile.protocol)) row.protocol = str(profile.protocol)
+    if (profile.parameters && typeof profile.parameters === 'object' && !Array.isArray(profile.parameters)) row.parameters = structuredClone(profile.parameters)
+    if (profile.constraints && typeof profile.constraints === 'object' && !Array.isArray(profile.constraints)) row.constraints = structuredClone(profile.constraints)
+    out.push(row)
+  }
+  return out
+}
+
 /** Parse provider metadata, never turn a media model into the text model. */
 export function parseByokPut(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) fail(400, 'invalid json')
@@ -91,6 +109,10 @@ export function parseByokPut(body) {
   for (const scenario of SCENARIOS) {
     const model = str(object(input.models)[scenario])
     if (model) models[scenario] = model
+  }
+  const modelProfiles = parseModelProfiles(input.modelProfiles)
+  for (const profile of modelProfiles) {
+    if (!models[profile.capability]) models[profile.capability] = profile.model
   }
   const patch = { runtimeKeyEndpoint: endpoint, runtimeKeyVerified: false }
   for (const capability of ['image', 'video', 'audio']) {
@@ -110,7 +132,7 @@ export function parseByokPut(body) {
   if (!Array.isArray(capabilities) || capabilities.some((cap) => !SCENARIOS.includes(cap) || !models[cap])) {
     fail(400, '能力必须对应明确配置的模型')
   }
-  return { patch, provider, endpoint, models, capabilities: [...new Set(capabilities)], apiKey: str(input.apiKey) }
+  return { patch, provider, endpoint, models, modelProfiles, capabilities: [...new Set(capabilities)], apiKey: str(input.apiKey) }
 }
 
 function projectRecord(item) {
@@ -120,8 +142,13 @@ function projectRecord(item) {
     const model = str(object(input.models)[scenario])
     if (model) models[scenario] = model
   }
+  const modelProfiles = parseModelProfiles(input.modelProfiles)
+  for (const profile of modelProfiles) {
+    if (!models[profile.capability]) models[profile.capability] = profile.model
+  }
   return {
     provider: str(input.provider).toLowerCase(), endpoint: str(input.endpoint), models,
+    ...(Array.isArray(input.modelProfiles) && input.modelProfiles.length ? { modelProfiles: structuredClone(input.modelProfiles) } : {}),
     capabilities: Array.isArray(input.capabilities) ? input.capabilities.filter((cap) => SCENARIOS.includes(cap)) : [],
     credentialRef: credentialRef(str(input.provider)),
     revision: Number.isSafeInteger(input.revision) ? input.revision : 0,
@@ -141,6 +168,7 @@ function storedMetadata(item) {
     if (typeof input[key] === 'boolean') metadata[key] = input[key]
   }
   if (input.constraints && typeof input.constraints === 'object' && !Array.isArray(input.constraints)) metadata.constraints = structuredClone(input.constraints)
+  if (Array.isArray(input.modelProfiles) && input.modelProfiles.length) metadata.modelProfiles = structuredClone(input.modelProfiles)
   return metadata
 }
 
@@ -276,6 +304,7 @@ export function registerByokRoutes(webServer, deps) {
     const previous = targetRecord(snapshot.value, provider)
     if (!deleting && previous) {
       parsed.models = { ...projectRecord(previous).models, ...parsed.models }
+      parsed.modelProfiles = [...(projectRecord(previous).modelProfiles || []), ...parsed.modelProfiles]
       if (input.capabilities === undefined) parsed.capabilities = [...new Set([...projectRecord(previous).capabilities, ...parsed.capabilities])]
     }
     const info = await describeCredential(credentials, provider)
@@ -340,7 +369,7 @@ export function registerByokRoutes(webServer, deps) {
           Object.assign(patch, { runtimeKeyVerified: false, runtimeMediaImage: false, runtimeMediaVideo: false, runtimeMediaAudio: false })
         }
       } else {
-        const record = { ...storedMetadata(previous), provider, endpoint: parsed.endpoint, models: parsed.models, capabilities: parsed.capabilities, credentialRef: ref, revision: providerRevision, verified: false }
+        const record = { ...storedMetadata(previous), provider, endpoint: parsed.endpoint, models: parsed.models, ...(parsed.modelProfiles.length ? { modelProfiles: parsed.modelProfiles } : {}), capabilities: parsed.capabilities, credentialRef: ref, revision: providerRevision, verified: false }
         delete record.saveState
         patch = { byokProviders: [...other, record] }
         if (input.scenarioBindings !== undefined) patch.scenarioBindings = bindings

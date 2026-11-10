@@ -27,7 +27,7 @@ function catalog() {
 function fp(type) { return buildUpstreamFingerprint({prompt: 'Analyze', assets: type ? [{sourceNodeId: 'asset', type}] : []}); }
 function node(id, model, materialType='text') { return {id, type:'material', position:{x:0,y:0}, data:{nodeKind:'generate', materialType, params: model ? {model} : {}, prompt:'Analyze'}}; }
 
-test('curation admits every listed catalog row minus the hidden set; policy seeds only supply fallbacks', () => {
+test('catalog rows are visible without hidden-set subtraction; policy seeds only supply fallbacks', () => {
   const raw = catalog();
   const view = projectCanvasCatalog(raw);
   // 默认全开：目录里 5 个已上架 text 模型全部可见，目录序即展示序。
@@ -39,13 +39,13 @@ test('curation admits every listed catalog row minus the hidden set; policy seed
   assert.notEqual(view.fingerprint, raw.fingerprint);
   assert.deepEqual(view.audio, []);
   assert.equal(view.defaults.audio, '');
-  // 隐藏集相减：把若干 id 放进 canvasHiddenModels 即从可见集移除。
+  // 旧 canvasHiddenModels 不再改变可见性；目录行本身仍是可见来源。
   const hidden = projectCanvasCatalog({...catalog(), canvasHiddenModels:{ text:[GEMINI, DEEPSEEK] }});
-  assert.deepEqual(hidden.text.map((m)=>m.id), ['unapproved', CLAUDE, GPT]);
+  assert.deepEqual(hidden.text.map((m)=>m.id), ['unapproved', CLAUDE, GEMINI, DEEPSEEK, GPT]);
   // 去掉一个目录行后，该行不再被承认（无隐藏也进不来——它已不在 catalog[kind]）。
   raw.text = raw.text.filter((m)=>m.id!==GEMINI);
-  assert.equal(projectCanvasCatalog(raw).models.some((m)=>m.id===GEMINI), false);
-  // 未上架（listed=false）的目录行仍被裁掉——可见性只放开「已上架」，不放开「未上架」。
+  assert.equal(projectCanvasCatalog(raw).text.some((m)=>m.id===GEMINI), false);
+  // 目录行即使没有 listed operation 也可见；执行状态由 catalog row 的 executionStatus 决定。
   raw.models.find((m)=>m.id===GPT).operations.forEach((op)=>{op.listed=false;});
   assert.equal(projectCanvasCatalog(raw).text.some((m)=>m.id===GPT), false);
 });
@@ -71,7 +71,7 @@ test('audio policy admits every listed model; the configured default wins over t
     && m.operations.some((op) => op.id === 'text_to_music')));
   // 隐藏集相减仍生效：藏掉 suno 即从画布消失。
   const hidden = projectCanvasCatalog({...raw, canvasHiddenModels:{ audio:['suno'] }});
-  assert.ok(!hidden.audio.some((m) => m.id === 'suno'));
+  assert.ok(hidden.audio.some((m) => m.id === 'suno'), '旧 hidden 设置不再过滤目录行');
 });
 
 test('new nodes use compatible manual preference, then type default, then curated order', () => {
@@ -130,8 +130,7 @@ test('saved models that fell out of the visible set degrade via not_listed while
   const result=reconcileCanvasForCatalog({nodes:[original],edges:[],catalog:projectCanvasCatalog(hidden),preferredModels:{text:GPT},previousFingerprint:'old'});
   assert.equal(result.nodes[0].data.params.model,'unapproved');
   assert.equal(result.nodes[0].data.content,'existing result');
-  assert.equal(result.nodes[0].data.compat.status,'configuration_error');
-  assert.deepEqual(result.nodes[0].data.compat.reasonCodes,['not_listed']);
+  assert.equal(result.nodes[0].data.compat.status,'ok');
   // 新建空节点优先采用可用的手动偏好（GPT 可见）而非目录默认 unapproved。
   const delayed=reconcileCanvasForCatalog({nodes:[node('empty')],edges:[],catalog:projectCanvasCatalog(catalog()),preferredModels:{text:GPT},previousFingerprint:'old'});
   assert.equal(delayed.nodes[0].data.params.model,GPT);
@@ -167,7 +166,7 @@ test('only upstream text contributes prompt; media captions cannot make an empty
   assert.equal(result.nodes.find((n) => n.id === 'target').data.compat.readyToSubmit, false);
 });
 
-test('canvasHiddenModels subtracts per-kind rows from the effective policy and shifts the fingerprint', () => {
+test('legacy canvasHiddenModels no longer changes the effective policy or fingerprint', () => {
   const raw = catalog();
   const open = projectCanvasCatalog(raw);
   // 基线：默认全开时 effectivePolicy 覆盖全部可见行。
@@ -175,17 +174,15 @@ test('canvasHiddenModels subtracts per-kind rows from the effective policy and s
   assert.equal(open.generationPolicy.text.defaultModelId, 'unapproved');
   // 隐藏集相减：hidden id 从 allowedModelIds 消失，可见行与其余 kind 不动。
   const hidden = projectCanvasCatalog({ ...raw, canvasHiddenModels: { text: [GEMINI], video: ['any-id'] } });
-  assert.deepEqual(hidden.text.map((m) => m.id), ['unapproved', CLAUDE, DEEPSEEK, GPT]);
-  assert.deepEqual(hidden.generationPolicy.text.allowedModelIds, ['unapproved', CLAUDE, DEEPSEEK, GPT]);
-  assert.equal(hidden.generationPolicy.text.allowedModelIds.includes(GEMINI), false);
+  assert.deepEqual(hidden.text.map((m) => m.id), open.text.map((m) => m.id));
+  assert.deepEqual(hidden.generationPolicy.text.allowedModelIds, open.generationPolicy.text.allowedModelIds);
+  assert.equal(hidden.generationPolicy.text.allowedModelIds.includes(GEMINI), true);
   assert.deepEqual(hidden.video.map((m) => m.id), open.video.map((m) => m.id), 'unknown hidden ids are ignored');
-  // 隐藏默认 id：defaultModelId 落到策略种子（仍在可见集里）。
+  // 隐藏默认 id：默认选择不再被旧 hidden 设置改变。
   const hiddenDefault = projectCanvasCatalog({ ...raw, canvasHiddenModels: { text: ['unapproved'] } });
-  assert.equal(hiddenDefault.generationPolicy.text.defaultModelId, GEMINI);
-  assert.equal(hiddenDefault.defaults.text, GEMINI);
-  // 指纹随有效可见集变化，相同输入保持确定。
-  assert.notEqual(hidden.fingerprint, open.fingerprint);
-  assert.equal(projectCanvasCatalog({ ...raw, canvasHiddenModels: { text: [GEMINI] } }).fingerprint, hidden.fingerprint);
+  assert.equal(hiddenDefault.generationPolicy.text.defaultModelId, 'unapproved');
+  assert.equal(hiddenDefault.defaults.text, 'unapproved');
+  assert.equal(projectCanvasCatalog({ ...raw, canvasHiddenModels: { text: [GEMINI] } }).fingerprint, open.fingerprint);
 });
 
 test('capability seam admits only LISTED speech models, and only to the tool that consumes the seam', () => {
@@ -197,8 +194,9 @@ test('capability seam admits only LISTED speech models, and only to the tool tha
   const models = [asr('asr-listed', true), asr('asr-unlisted', false), asr('asr-other-seam', true, 'videoGenerate')];
   const raw = { source: 'omnimux', fingerprint: 'fixture', models, text: [], image: [], video: [], audio: [] };
   const view = projectCanvasCatalog(raw);
-  // Only the listed speech model joins models[]; an unlisted one or another seam never does.
-  assert.deepEqual(view.models.map((m) => m.id), ['asr-listed']);
+  // Catalog rows are visible; the generative bucket stays empty and only the
+  // listed speech seam is admitted to the transcription tool.
+  assert.deepEqual(view.models.map((m) => m.id), ['asr-listed', 'asr-unlisted', 'asr-other-seam']);
   assert.deepEqual(view.text, [], 'capability models must not enter a generative bucket');
 
   const fingerprint = buildUpstreamFingerprint({ prompt: '', assets: [{ sourceNodeId: 'audio', type: 'audio', mimeType: 'audio/mpeg', sizeBytes: 1024 }] });
@@ -208,10 +206,10 @@ test('capability seam admits only LISTED speech models, and only to the tool tha
   // A caller with no tool, and a tool with a different seam, both see nothing.
   assert.deepEqual(buildFilteredModelOptions({ catalog: view, fingerprint, outputType: 'text' }).options, []);
   assert.deepEqual(buildFilteredModelOptions({ catalog: view, fingerprint, outputType: 'video', tool: 'video-generation' }).options, []);
-  // Unlisting the contract op removes it again — there is no id list to maintain here.
+  // Unlisting the contract op still removes the tool option even though the row is visible.
   models[0].operations[0].listed = false;
   const afterUnlist = projectCanvasCatalog(raw);
-  assert.equal(afterUnlist.models.some((m) => m.id === 'asr-listed'), false);
+  assert.equal(afterUnlist.models.some((m) => m.id === 'asr-listed'), true);
   assert.equal(isZeroCandidateEmptyState(
     buildFilteredModelOptions({ catalog: afterUnlist, fingerprint, outputType: 'text', tool: 'audio-transcription' }),
   ), true);

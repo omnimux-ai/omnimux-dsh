@@ -13,7 +13,7 @@ subsystem: "omnimux-workflow"
 
 现行角色创作方向见[产品定位](product-positioning.md)。下表和手动偏好属于既有画布策略说明，不定义新的对外模型清单；普通用户不展示模型 ID、不选渠道组是目标要求，不是已全量完成的结论。保留历史项目、音频、编辑与续写用途，禁止因文档同步批量删改配置。
 
-画布可选集合不再由代码白名单维护：`projectCanvasCatalog` 以目录已上架行为全集，再减去用户在官方插件设置页通过 `canvasHiddenModels` 隐藏的 id（spec `canvas-model-visibility`）。[generationPolicy.ts](../../plugins/omnimux-workflow/src/shared/generationPolicy.ts) 的 `CANVAS_GENERATION_POLICY` 常量只剩两个角色：给 `defaultModelId` 做兜底种子、给 `modeSelection` 提供缺省值；Hub 继续独占渠道、输入能力和执行合同。此策略取代旧兼容性规格中的同系列优先、禁止产品模型筛选及所有节点一律按 operation 数量展示模式的规则。
+画布可选集合由 Hub catalog 决定：网关公开模型（snapshot 有 enableGroups）和用户自定义 `byokProviders[].modelProfiles` 都是候选；本地 adapter 只通过 `executionStatus` 标记是否可执行，不作为可见性过滤。[generationPolicy.ts](../../plugins/omnimux-workflow/src/shared/generationPolicy.ts) 的 `CANVAS_GENERATION_POLICY` 常量只给 `defaultModelId` 做兜底种子、给 `modeSelection` 提供缺省值；Hub 继续独占渠道、输入能力和执行合同。
 
 | 类型 | 兜底默认项（`CANVAS_GENERATION_POLICY.defaultModelId`，仅当目录无首选时回退） | 模式展示 |
 | --- | --- | --- |

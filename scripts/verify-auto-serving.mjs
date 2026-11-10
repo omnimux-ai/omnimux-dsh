@@ -69,9 +69,6 @@ export function verifyAutoServing(options = {}) {
     if (!contract || resolveModelId(index, productId) !== productId || governed.get(productId) !== 'canonical') {
       issue('not_canonical', 'productId must name a canonical contract, not an alias', productId)
     }
-    if (!policy[kind].allowedModelIds.includes(productId) && row.canvasExcluded !== true) {
-      issue('not_allowed', 'Model is not in its canvas whitelist or explicitly canvasExcluded', productId)
-    }
     // P1b: whether a model is actually on sale is decided by the gateway
     // snapshot at runtime, so this offline gate no longer asserts a local
     // "required in auto" flag; it validates the registration itself.
@@ -83,11 +80,6 @@ export function verifyAutoServing(options = {}) {
     if (row.upstreamWireId !== undefined && (typeof row.upstreamWireId !== 'string' || !row.upstreamWireId.trim()
       || (contract?.routing?.wireModel && contract.routing.wireModel !== row.upstreamWireId))) {
       issue('wire_mismatch', 'upstreamWireId must agree with documented routing when supplied', productId)
-    }
-  }
-  for (const [kind, entry] of Object.entries(policy)) {
-    for (const productId of entry.allowedModelIds) {
-      if (registered.get(productId)?.kind !== kind) issue('missing', `Missing ${kind} whitelist registration`, productId)
     }
   }
   return finish(issues, [...registered.values()], offlineGatewayCheck({ ...options, manifest }, issue, warning), warnings)

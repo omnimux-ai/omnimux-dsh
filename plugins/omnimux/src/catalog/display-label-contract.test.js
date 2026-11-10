@@ -26,7 +26,12 @@ describe('model display-label contract (#321)', () => {
     }
     const catalog = buildModelCatalog({ text: parseHubConfig({}).text, media: parseHubConfig({}).media, env: {} })
     for (const kind of ['text', 'image', 'video', 'audio']) {
-      for (const row of catalog[kind]) assertNoHyphen(row.label, `catalog.${kind}.${row.id}`)
+      for (const row of catalog[kind]) {
+        // Gateway-public rows without a local adapter keep their canonical ID;
+        // their display label is not an authored marketing label.
+        if (catalog.gateway.adapterUnsupported.includes(row.id)) continue
+        assertNoHyphen(row.label, `catalog.${kind}.${row.id}`)
+      }
     }
   })
 

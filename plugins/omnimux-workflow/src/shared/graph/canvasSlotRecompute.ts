@@ -61,8 +61,7 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
     if (typeof params.operation === 'string' && params.operation) autoDerived = params.operation;
   }
   const operation = model?.operations.find((op) => op.id === params.operation && op.listed && op.output.type === outputType);
-  const policy = catalog?.generationPolicy?.[outputType];
-  const permitted = !policy || policy.allowedModelIds.includes(String(model?.id ?? params.model));
+  const permitted = Boolean(model);
   const layout = deriveSlotLayout(catalog, model?.id, operation?.id);
   const feed = feedFromFingerprint(raw, currentVersion ? 1 : undefined);
   const plainSpeech = !currentVersion && outputType === 'audio' && params.operation === 'text_to_speech';

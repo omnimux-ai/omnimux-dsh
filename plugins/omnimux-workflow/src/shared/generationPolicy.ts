@@ -95,64 +95,47 @@ export function isCanvasCapabilityModel(catalog: CapabilityCatalog, modelId: str
 }
 
 /**
- * Project both catalog representations so no picker, planner or agent can bypass curation.
+ * Project the hub catalog for canvas consumers.
  *
- * Membership is now settings-driven (spec canvas-model-visibility): every hub-listed
- * row for a kind is a candidate, the user's `canvasHiddenModels[kind]` ids are
- * subtracted, and each survivor must still prove a listed output op in the
- * authoritative catalog. `CANVAS_GENERATION_POLICY` only seeds default fallbacks
- * and `modeSelection`; the emitted `generationPolicy[kind].allowedModelIds` is the
- * post-filter set — it is what capability-only checks (ASR exclusion) read.
+ * Visibility is owned by the hub: gateway-public rows and custom BYOK model
+ * profiles are passed through as-is. Local adapter support is represented by
+ * `executionStatus` on the row and never removes it here. `CANVAS_GENERATION_POLICY`
+ * only seeds default fallbacks and `modeSelection`; `allowedModelIds` is the
+ * current visible set used for ordering, not an admission gate.
  */
 export function projectCanvasCatalog(catalog: CapabilityCatalog): CapabilityCatalog {
   const policy = CANVAS_GENERATION_POLICY;
   const kinds = Object.keys(policy) as MaterialType[];
-  const hidden = catalog.canvasHiddenModels ?? {};
-  const lists = {} as Record<MaterialType, CapabilityModelItem[]>;
+  // Visibility is owned by the hub catalog (gateway public + custom rows). The
+  // canvas projection is deliberately an identity pass: it must not subtract
+  // hidden ids or remove rows whose local adapter is unavailable.
+  const models = catalog.models ? [...catalog.models] : undefined;
+  const modelIds = new Set((models ?? []).map((model) => model.id));
+  const rowsFor = (kind: MaterialType) => (catalog[kind] ?? []).filter((row) => {
+    // New hub rows carry provenance/status and are authoritative. Legacy
+    // bucket-only fixtures keep the old listed-operation safety check so an
+    // old stale bucket cannot masquerade as an executable catalog.
+    if (row.source === 'gateway' || row.source === 'custom' || row.executionStatus) return true;
+    if (!models) return false;
+    return models.some((model) => model.id === row.id
+      && model.operations?.some((op) => op.listed === true && op.output?.type === kind));
+  });
+  const lists = Object.fromEntries(kinds.map((kind) => [kind, rowsFor(kind)])) as Record<MaterialType, CapabilityModelItem[]>;
   const defaults: NonNullable<CapabilityCatalog['defaults']> = {};
   for (const kind of kinds) {
-    const hiddenIds = new Set(hidden[kind] ?? []);
-    // Catalog row order is the display order; subtract-only filtering preserves it.
-    lists[kind] = (catalog[kind] ?? []).filter((row) => {
-      if (!row?.id || hiddenIds.has(row.id)) return false;
-      // Every candidate must prove a real listed output in the authoritative catalog.
-      return Boolean(catalog.models?.some((model) => model.id === row.id
-        && model.operations?.some((op) => op.listed === true && op.output?.type === kind)));
-    });
+    const rows = lists[kind].filter((row) => !models || modelIds.has(row.id));
     defaults[kind] = [catalog.defaults?.[kind], policy[kind].defaultModelId]
-      .find((id) => lists[kind].some((row) => row.id === id))
-      ?? lists[kind][0]?.id ?? '';
+      .find((id) => id && rows.some((row) => row.id === id))
+      ?? rows[0]?.id ?? '';
   }
-  const capabilitySeams = new Set<string>(CANVAS_INPUT_CAPABILITY_SEAMS);
-  const capabilityAdmitted = new Set((catalog.models ?? [])
-    .filter((model) => (model.operations ?? []).some((op) => op.listed === true
-      && capabilitySeams.has(operationSeam(op))))
-    .map((model) => model.id));
-  const models = catalog.models?.flatMap((model): CatalogModelDto[] => {
-    const outputs = kinds.filter((kind) => lists[kind].some((row) => row.id === model.id));
-    const capability = capabilityAdmitted.has(model.id);
-    if (!outputs.length && !capability) return [];
-    const operations = (model.operations ?? []).filter((op) => op.listed === true
-      && (outputs.includes(op.output?.type as MaterialType)
-        || (capability && capabilitySeams.has(operationSeam(op)))));
-    // Never hand the picker an operation-less shell: a row is admitted only with a listed operation.
-    if (!operations.length) return [];
-    return [{ ...model, operations, listedOperations: operations.map((op) => `${model.id}#${op.id}`) }];
-  });
   const defaultsByOperation = Object.fromEntries(Object.entries(catalog.defaultsByOperation ?? {})
     .filter(([operation, id]) => models?.some((model) => model.id === id
       && model.operations?.some((op) => op.id === operation))));
-  for (const kind of kinds) {
-    const defaultModel = models?.find((model) => model.id === defaults[kind]);
-    for (const op of defaultModel?.operations ?? []) {
-      if (op.output?.type === kind) defaultsByOperation[op.id] = defaultModel!.id;
-    }
-  }
+  // Keep the existing default operation map only when it still names a real
+  // model/op pair; never use it as an admission decision.
   const defaultOperations = Object.fromEntries(Object.entries(catalog.defaultOperations ?? {})
     .filter(([kind, recommendation]) => models?.some((model) => model.id === recommendation?.modelId
-      && model.operations?.some((op) => op.id === recommendation.operationId && op.output?.type === kind))));
-  // Effective policy: the post-filter set, not the seed constant. This is the
-  // shape consumers (compatKernel, isCanvasCapabilityModel) read.
+      && model.operations?.some((operation) => operation.id === recommendation.operationId && operation.output?.type === kind))));
   const effectivePolicy = Object.fromEntries(kinds.map((kind) => [kind, {
     allowedModelIds: lists[kind].map((row) => row.id),
     defaultModelId: defaults[kind] ?? '',

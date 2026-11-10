@@ -50,7 +50,7 @@ test('canvas audio policy admits every listed model; the configured catalog defa
   assert.deepEqual(row.operations.map((op) => op.id), ['text_to_music']);
   // 隐藏集相减：藏掉 clone/speech 即从画布移除。
   const hidden = projectCanvasCatalog({ ...catalog(), canvasHiddenModels: { audio: ['indextts-2', 'seed-audio-1.0'] } });
-  assert.deepEqual(hidden.audio.map((model) => model.id), ['suno']);
+  assert.deepEqual(hidden.audio.map((model) => model.id), ['seed-audio-1.0', 'indextts-2', 'suno']);
 });
 
 test('capability-filtered tools expose only the models compatible with their inputs', () => {

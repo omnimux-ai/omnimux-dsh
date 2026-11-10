@@ -83,7 +83,7 @@ Object.defineProperty(Config, '~standard', { value: {
         }
       }
       scanSettings(settingsValues)
-      const providerKeys = new Set(['provider', 'verified', 'endpoint', 'credentialRef', 'revision', 'saveState', 'protocol', 'capabilities', 'models', 'imageModel', 'videoModel', 'audioModel', 'model', 'image', 'video', 'audio', 'runtimeMediaImage', 'runtimeMediaVideo', 'runtimeMediaAudio', 'constraints'])
+      const providerKeys = new Set(['provider', 'verified', 'endpoint', 'credentialRef', 'revision', 'saveState', 'protocol', 'capabilities', 'models', 'imageModel', 'videoModel', 'audioModel', 'model', 'image', 'video', 'audio', 'runtimeMediaImage', 'runtimeMediaVideo', 'runtimeMediaAudio', 'constraints', 'modelProfiles'])
       for (const provider of settingsValues.byokProviders || []) {
         if (!provider || typeof provider !== 'object' || Array.isArray(provider) || Object.keys(provider).some(key => !providerKeys.has(key))) throw new Error('供应商设置包含不支持的字段')
       }

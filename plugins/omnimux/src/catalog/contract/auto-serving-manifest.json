@@ -179,8 +179,7 @@
         "minimax-h3-video"
       ],
       "upstreamWireId": "minimax_h3_image_audio_to_video",
-      "canvasExcluded": true,
-      "note": "2026-11-02：AutoDL ComfyUI 任务泳道（渠道 70/71/72）在架可售；与 APIMart minimax-h3 同族独立，对口型/首尾帧/多参考经 metadata 透传。任务提交走 tasks/autodl 泳道，不进画布白名单（canvasExcluded）。"
+      "note": "2026-11-02：AutoDL ComfyUI 任务泳道（渠道 70/71/72）在架可售；与 APIMart minimax-h3 同族独立，对口型/首尾帧/多参考经 metadata 透传。画布可见性由网关公开列表决定，不再使用 canvasExcluded。"
     },
     {
       "productId": "grok-imagine-video-1-5",

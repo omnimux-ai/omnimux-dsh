@@ -11,8 +11,14 @@ function submissionModel(req: SubmitRequest, catalog: CapabilityCatalog) {
   }
   const id = req.model?.trim() || catalog.defaults?.[req.capability] || '';
   const model = resolveModelView(buildContractView(catalog), id);
-  if (!model || !catalog[req.capability]?.some((row) => row.id === model.id)) {
-    throw new SeamGatewayError('model-not-allowed', '请选择此类节点白名单中可用的模型');
+  const row = catalog[req.capability]?.find((candidate) => candidate.id === model?.id);
+  if (!model || !row) {
+    throw new SeamGatewayError('model-not-allowed', '请选择当前目录中的可用模型');
+  }
+  if (row.executionStatus === 'unsupported' || row.executionStatus === 'unverified') {
+    throw new SeamGatewayError('model-unsupported', row.executionStatus === 'unverified'
+      ? '该自定义模型服务尚未验证，请先在设置中完成配置'
+      : '该网关模型缺少本地执行适配，暂时无法生成');
   }
   if (model.synthesized) {
     throw new SeamGatewayError('contract_missing', '模型目录缺少生成方式合同，请刷新目录后重试');

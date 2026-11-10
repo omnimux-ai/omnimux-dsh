@@ -252,14 +252,21 @@ const CascadeModelItem: React.FC<{
     aria-current={interactive ? isSelected : undefined}
     data-testid={interactive ? `wf-cascade-model-${item.id}` : undefined}
     tabIndex={interactive ? undefined : -1}
+    disabled={interactive && item.executable === false}
+    title={item.executionStatus === 'unsupported' ? '本地执行适配不可用' : item.executionStatus === 'unverified' ? '模型服务尚未验证' : undefined}
     onMouseEnter={interactive ? onHover : undefined}
-    onClick={interactive ? onSelect : undefined}
-    className={`wf-cascade-model-item ${isSelected ? 'is-selected' : ''} ${isHovered ? 'is-hovered' : ''}`}
+    onClick={interactive && item.executable !== false ? onSelect : undefined}
+    className={`wf-cascade-model-item ${isSelected ? 'is-selected' : ''} ${isHovered ? 'is-hovered' : ''} ${item.executable === false ? 'is-disabled' : ''}`}
   >
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
       <span className="wf-cascade-model-item__title">
         {item.id}
       </span>
+      {item.executable === false ? (
+        <span style={{ fontSize: 10, color: 'var(--dsw-alias-label-tertiary)', marginLeft: 6 }}>
+          {item.executionStatus === 'unverified' ? '未验证' : '不可执行'}
+        </span>
+      ) : null}
       {isSelected ? <Check size={15} color="rgb(0, 230, 118)" strokeWidth={2.5} /> : null}
     </div>
   </button>
