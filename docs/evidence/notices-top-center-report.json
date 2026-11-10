@@ -1,0 +1,13 @@
+{
+  "task": "Issue #4066",
+  "scope": "non-alpha plugins: market, social-harvest, device, assets, workflow",
+  "assertions": [
+    { "name": "market .sh-toast top-center", "pass": true, "detail": "top:16px; left:50%; translateX(-50%)" },
+    { "name": "harvest .sh-toast top-center", "pass": true, "detail": "top:16px; left:50%; translateX(-50%)" },
+    { "name": "device .omx-toast-float top-center", "pass": true, "detail": "top:16px; left:50%; translateX(-50%)" },
+    { "name": "assets .omnimux-assets-cloud-notice top-center", "pass": true, "detail": "fixed top-center pill replacing inline <p>" },
+    { "name": "workflow .omx-apptab-notice top-center", "pass": true, "detail": "fixed top-center pill replacing header span" }
+  ],
+  "screenshot": "docs/evidence/notices-top-center.png",
+  "ranAt": "2026-11-10T13:45:00.000Z"
+}
