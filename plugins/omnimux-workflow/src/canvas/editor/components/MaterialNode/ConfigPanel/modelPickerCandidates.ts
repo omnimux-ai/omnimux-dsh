@@ -5,6 +5,10 @@ export interface PickerCandidate {
   label: string;
   subtitle?: string;
   family?: string;
+  source?: 'gateway' | 'custom';
+  executionStatus?: 'ready' | 'unsupported' | 'unverified';
+  executable?: boolean;
+  disabledReason?: 'adapter_unsupported' | 'provider_unverified';
   /**
    * Gateway lines of this model, straight from the hub catalog row. The channel
    * column renders these and nothing else.

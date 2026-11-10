@@ -88,6 +88,17 @@ describe('parseByokPut', () => {
   })
 })
 
+describe('byok model profiles', () => {
+  it('derives legacy models from modelProfiles and keeps profile metadata', () => {
+    const parsed = parseByokPut({
+      provider: 'custom', endpoint: 'https://fixture.invalid/v1', apiKey: 'fixture-key',
+      modelProfiles: [{ model: 'my-video-model', capability: 'video', protocol: 'openai-videos', parameters: { duration: 5 } }],
+    })
+    assert.deepEqual(parsed.models, { video: 'my-video-model' })
+    assert.deepEqual(parsed.modelProfiles, [{ model: 'my-video-model', capability: 'video', protocol: 'openai-videos', parameters: { duration: 5 } }])
+  })
+})
+
 describe('byok routes', () => {
   it('analysis confirmation changes only its binding and checks the settings revision', async () => {
     const settings = fakeSettings({ scenarioBindings: { text: { channel: 'agent' }, analysis: { channel: 'pending' },

@@ -3,6 +3,7 @@ import { isMediaEnabled } from '../gate/guard.js'
 import { DEFAULT_MEDIA } from '../media/route.js'
 import { DEFAULT_TEXT, enabledTextModels } from '../text/catalog.js'
 import { textModelLabel } from './labels.js'
+import { sortCatalogRows } from './sort.js'
 import {
   assertContractHealthy,
   getHealthyContractIndex,
@@ -20,6 +21,7 @@ import { DEFAULT_OPERATION_AUTO } from '../settings/schema.js'
 import { resolveCurrentSnapshot } from './cloud/current.js'
 import { snapshotContentDigest } from './cloud/snapshot.js'
 import { usableSnapshotModels } from './cloud/view.js'
+import { getModelChannelGroups } from './serving/channel-groups.js'
 
 export const CATALOG_KINDS = Object.freeze(['text', 'image', 'video', 'audio'])
 
@@ -183,6 +185,23 @@ export function buildModelCatalog(opts = {}) {
     adapterUnsupported: runtime.adapterUnsupported,
   }
 
+  // Gateway publication is the display authority. Local adapter support is an
+  // execution status, never a visibility filter; gateway rows without a local
+  // adapter remain visible but are marked unsupported.
+  const enrichGatewayPublic = opts.contractIndex === undefined || opts.snapshot !== undefined
+  const gatewayPublic = enrichGatewayPublic
+    ? projectGatewayPublicModels(snapshot, dto.models, new Set(gateway.adapterUnsupported))
+    : { models: [] }
+  for (const model of gatewayPublic.models) {
+    const index = dto.models.findIndex((row) => row.id === model.id)
+    if (index >= 0) dto.models[index] = model
+    else dto.models.push(model)
+  }
+  const customModels = projectCustomModels(settingsDefaults.byokProviders)
+  for (const model of customModels) {
+    if (!dto.models.some((row) => row.id === model.id)) dto.models.push(model)
+  }
+
   // Text bucket: projected listed rows ∩ gateway membership ∩ config/gate-enabled rows.
   // Gateway-only text models are added by the runtime index; local text.models
   // remains the local fallback/override list.
@@ -203,6 +222,13 @@ export function buildModelCatalog(opts = {}) {
     video: isMediaEnabled(gate, 'video') ? listed(dto.video) : [],
     audio: isMediaEnabled(gate, 'audio') ? listed(dto.audio) : [],
   }
+  // Add gateway-public rows that the local contract projection dropped (e.g.
+  // no local adapter yet) and user-defined BYOK models. These rows are visible
+  // by definition; executionStatus on the row decides whether they may run.
+  const kindEnabled = (kind) => kind === 'text' || isMediaEnabled(gate, kind)
+  for (const model of gatewayPublic.models) appendCatalogRowByKinds(lists, model, kindEnabled)
+  for (const model of customModels) appendCatalogRowByKinds(lists, model, kindEnabled)
+  for (const kind of CATALOG_KINDS) lists[kind] = sortCatalogRows(lists[kind])
 
   const configDefaults = {
     text: text.defaultModel || DEFAULT_TEXT.defaultModel,
@@ -290,36 +316,156 @@ export function buildModelCatalog(opts = {}) {
     image: lists.image,
     video: lists.video,
     audio: lists.audio,
-    /**
-     * Canvas-only visibility: per-kind model ids the user hid in settings.
-     * Subtract-only — the lists above stay the membership authority; the
-     * canvas projection removes these from the pickers. Never enters the
-     * catalog fingerprint (the canvas `:canvas:` policy suffix owns that).
-     */
-    canvasHiddenModels: sanitizeCanvasHiddenModels(settingsDefaults.canvasHiddenModels),
     /** Gateway truth this catalog was built against (P1b). */
     gateway,
   }
 }
 
-const CANVAS_HIDDEN_KINDS = ['text', 'image', 'video', 'audio']
+const GATEWAY_KINDS = new Set(CATALOG_KINDS)
+const CUSTOM_OPERATION_BY_KIND = Object.freeze({
+  text: { id: 'chat', label: '文本对话', inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', required: true, min: 1, max: 1 }], output: { type: 'text' } },
+  image: { id: 'text_to_image', label: '文生图', inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', required: true, min: 1, max: 1 }], output: { type: 'image' } },
+  video: { id: 'text_to_video', label: '文生视频', inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', required: true, min: 1, max: 1 }], output: { type: 'video' } },
+  audio: { id: 'text_to_speech', label: '文本转语音', inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', required: true, min: 1, max: 1 }], output: { type: 'audio' } },
+})
+
+/** Convert one Gateway Contract v2 operation into the catalog DTO operation shape. */
+function gatewayOperationDto(operation, executionStatus) {
+  const parameters = {}
+  for (const parameter of Array.isArray(operation?.parameters) ? operation.parameters : []) {
+    if (parameter && typeof parameter.name === 'string' && parameter.name) parameters[parameter.name] = structuredClone(parameter)
+  }
+  return {
+    id: operation.id,
+    label: operation.id,
+    output: structuredClone(operation.output ?? {}),
+    inputs: (Array.isArray(operation.inputs) ? operation.inputs : []).map((slot) => ({
+      ...structuredClone(slot),
+      slot: slot.slot || slot.type || 'input',
+      ...(slot.required === true ? { required: true } : {}),
+    })),
+    ...(Object.keys(parameters).length ? { parameters } : {}),
+    listed: true,
+    implementation: { status: executionStatus === 'ready' ? 'ready' : 'missing' },
+    execution: { status: executionStatus === 'ready' ? 'live' : 'none' },
+  }
+}
 
 /**
- * Keep only usable per-kind string-id arrays; anything malformed degrades to
- * "nothing hidden" rather than failing the whole catalog.
- * @param {unknown} raw
+ * Build visible rows for every gateway-public model, including models whose
+ * local adapter is unsupported. The gateway's executable operations are the
+ * display contract; adapter support only changes executionStatus.
  */
-function sanitizeCanvasHiddenModels(raw) {
-  const input = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
-  const out = {}
-  for (const kind of CANVAS_HIDDEN_KINDS) {
-    const ids = input[kind]
-    out[kind] = Array.isArray(ids)
-      ? [...new Set(ids.filter((entry) => typeof entry === 'string' && entry.trim()).map((entry) => entry.trim()))]
-      : []
+function projectGatewayPublicModels(snapshot, localModels, adapterUnsupported) {
+  const models = []
+  const byId = new Map((localModels ?? []).map((model) => [model.id, model]))
+  for (const [id, snapshotModel] of usableSnapshotModels(snapshot)) {
+    const contract = snapshotModel?.contract?.schemaVersion === '2.0' ? snapshotModel.contract : null
+    if (!contract || !Array.isArray(contract.operations)) continue
+    const executable = contract.operations.filter((operation) => operation?.executable === true)
+    if (!executable.length) continue
+    const status = adapterUnsupported.has(id) ? 'unsupported' : 'ready'
+    const local = byId.get(id)
+    const localOperations = local?.operations ?? []
+    const hasLocalListedOperation = localOperations.some((operation) => operation?.listed === true)
+    const operations = hasLocalListedOperation ? localOperations : executable.map((operation) => gatewayOperationDto(operation, status))
+    const row = local ? {
+      ...local,
+      source: 'gateway',
+      executionStatus: status,
+      gateway: {
+        schemaVersion: contract.schemaVersion,
+        contractVersion: contract.contractVersion,
+        status: contract.status,
+        ...(Array.isArray(contract.unknowns) ? { unknowns: [...contract.unknowns] } : {}),
+      },
+      operations,
+    } : {
+      id,
+      label: typeof snapshotModel.displayName === 'string' && snapshotModel.displayName.trim() ? snapshotModel.displayName.trim() : id,
+      source: 'gateway',
+      executionStatus: status,
+      sourceLabel: 'OmniMux Gateway',
+      family: typeof contract.family === 'string' ? contract.family : undefined,
+      channelGroups: getModelChannelGroups(id, snapshot),
+      gateway: { schemaVersion: contract.schemaVersion, contractVersion: contract.contractVersion, status: contract.status, ...(Array.isArray(contract.unknowns) ? { unknowns: [...contract.unknowns] } : {}) },
+      operations,
+    }
+    models.push(row)
   }
-  return out
+  return { models }
 }
+
+/** Build visible rows from legacy BYOK model maps and the new optional profile list. */
+function projectCustomModels(byokProviders) {
+  const providers = Array.isArray(byokProviders) ? byokProviders : []
+  const rows = []
+  const seen = new Set()
+  for (const provider of providers) {
+    if (!provider || typeof provider !== 'object' || typeof provider.provider !== 'string') continue
+    const providerId = provider.provider.trim().toLowerCase()
+    if (!providerId) continue
+    const profiles = Array.isArray(provider.modelProfiles) ? provider.modelProfiles : []
+    const entries = profiles.length
+      ? profiles.map((profile) => ({
+        model: typeof profile?.model === 'string' ? profile.model.trim() : '',
+        capability: typeof profile?.capability === 'string' ? profile.capability : '',
+        parameters: profile?.parameters,
+      }))
+      : Object.entries(provider.models && typeof provider.models === 'object' ? provider.models : {}).map(([capability, model]) => ({
+        model: typeof model === 'string' ? model.trim() : '',
+        capability: capability === 'analysis' ? 'text' : capability,
+      }))
+    for (const entry of entries) {
+      if (!entry.model || !CUSTOM_OPERATION_BY_KIND[entry.capability]) continue
+      const id = `${providerId}:${entry.model}`
+      if (seen.has(id)) continue
+      seen.add(id)
+      const operation = CUSTOM_OPERATION_BY_KIND[entry.capability]
+      rows.push({
+        id,
+        label: entry.model,
+        source: 'custom',
+        executionStatus: 'ready',
+        providerId,
+        sourceLabel: providerId,
+        family: providerId,
+        operations: [{ ...structuredClone(operation), listed: true, implementation: { status: 'ready' }, execution: { status: 'ready' } }],
+        channelGroups: [{ id: `byok-${providerId}`, label: providerId, enabled: true }],
+      })
+    }
+  }
+  return rows
+}
+
+/** Append one visible model row into each catalog bucket represented by its operations. */
+function appendCatalogRowByKinds(lists, model, kindEnabled = () => true) {
+  const kinds = [...new Set((model.operations ?? [])
+    .filter((operation) => operation?.listed === true)
+    .map((operation) => operation?.output?.type)
+    .filter((kind) => GATEWAY_KINDS.has(kind) && kindEnabled(kind)))]
+  for (const kind of kinds) {
+    if (lists[kind].some((row) => row.id === model.id)) continue
+    lists[kind].push({
+      id: model.id,
+      label: model.label,
+      ...(model.badge ? { badge: model.badge } : {}),
+      ...(model.subtitle ? { subtitle: model.subtitle } : {}),
+      ...(model.family ? { family: model.family } : {}),
+      source: model.source,
+      executionStatus: model.executionStatus,
+      ...(model.providerId ? { providerId: model.providerId } : {}),
+      ...(model.sourceLabel ? { sourceLabel: model.sourceLabel } : {}),
+      ...(model.channelGroups ? { channelGroups: model.channelGroups } : {}),
+      ...(model.gateway ? { gateway: model.gateway } : {}),
+      operations: (model.operations ?? []).filter((operation) => operation.output?.type === kind),
+      ...(model.parameters ? { parameters: model.parameters } : {}),
+    })
+  }
+}
+
+const CANVAS_HIDDEN_KINDS = ['text', 'image', 'video', 'audio']
+
 
 /**
  * @param {{

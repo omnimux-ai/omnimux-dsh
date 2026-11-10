@@ -332,9 +332,20 @@ export interface CatalogChannelGroupDto {
 }
 
 /** Authoritative model row of the Catalog v1.1 DTO (`models[]`). */
+export type ModelExecutionStatus = 'ready' | 'unsupported' | 'unverified';
+export type ModelCatalogSource = 'gateway' | 'custom';
+
 export interface CatalogModelDto {
   id: string;
   label: string;
+  /** Where this row came from: gateway publication or a user-configured provider. */
+  source?: ModelCatalogSource;
+  /** Whether the local plugin can execute this model; never used as visibility filter. */
+  executionStatus?: ModelExecutionStatus;
+  /** Provider identity for custom rows; absent for gateway rows. */
+  providerId?: string;
+  /** Display-only provenance label (OmniMux Gateway / provider name). */
+  sourceLabel?: string;
   family?: string;
   badge?: string;
   subtitle?: string;
@@ -361,6 +372,10 @@ export interface CatalogModelDto {
 export interface CapabilityModelItem {
   id: string;
   label: string;
+  source?: ModelCatalogSource;
+  executionStatus?: ModelExecutionStatus;
+  providerId?: string;
+  sourceLabel?: string;
   badge?: string;
   subtitle?: string;
   family?: string;
@@ -390,17 +405,6 @@ export interface CapabilityCatalog {
   };
   /** Canvas product curation, separate from model input capabilities. */
   generationPolicy?: Readonly<Record<import('./canvasTypes.ts').MaterialType, import('./generationPolicy.ts').GenerationPolicy>>;
-  /**
-   * Per-kind model ids the user hides from the canvas pickers (hub settings
-   * projection). Subtract-only: the catalog rows remain the membership
-   * authority; absent/empty means nothing hidden.
-   */
-  canvasHiddenModels?: {
-    text?: string[];
-    image?: string[];
-    video?: string[];
-    audio?: string[];
-  };
   source: 'static-stub' | 'omnimux';
   /** Contract schema version ('1.1' when the hub projects contract v1.1). */
   schemaVersion?: string;

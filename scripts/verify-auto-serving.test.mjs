@@ -35,17 +35,14 @@ test('manifest registers all whitelist IDs without claiming online supply', () =
   assert.equal(report.onlineVerified, false)
 })
 
-test('every whitelist model must be registered even when not listed', () => {
-  // 2026-10-21 #3516 后音频白名单只剩已上架的 suno，真实目录不再有「白名单内但无
-  // listed 操作」的型号；用显式策略矩阵还原该形态，门禁仍必须要求它登记。
+test('policy whitelist entries no longer create a manifest registration requirement', () => {
   const policy = structuredClone(CANVAS_GENERATION_POLICY)
   policy.audio.allowedModelIds.push('seed-audio-1.0')
   const manifest = fixture()
   manifest.models = manifest.models.filter((row) => row.productId !== 'seed-audio-1.0')
   const report = verifyAutoServing({ manifest, policy })
-  assert.equal(report.exitCode, 1)
-  assert.equal(report.ok, false)
-  assert.ok(report.issues.some((issue) => issue.code === 'auto_serving_missing' && issue.modelId === 'seed-audio-1.0'), JSON.stringify(report))
+  assert.equal(report.exitCode, 0)
+  assert.equal(report.ok, true, JSON.stringify(report.issues))
 })
 
 test('alias IDs cannot replace canonical product registrations', () => {
@@ -83,8 +80,8 @@ test('the retired requiredInAuto flag is no longer judged', () => {
   assert.equal(verifyAutoServing({ manifest: withoutFlag }).ok, true)
 })
 
-test('wrong modality, duplicate products and wire-model drift fail closed', () => {
-  checkMutation((m) => { m.models.find((row) => row.productId === 'gpt-image-2.5').kind = 'video' }, 'not_allowed')
+test('invalid modality, duplicate products and wire-model drift fail closed', () => {
+  checkMutation((m) => { m.models.find((row) => row.productId === 'gpt-image-2.5').kind = 'bogus' }, 'manifest_invalid')
   checkMutation((m) => { m.models.push(m.models[0]) }, 'duplicate')
   checkMutation((m) => { m.models.find((row) => row.productId === 'minimax-h3').upstreamWireId = 'minimax-h3' }, 'wire_mismatch')
 })
@@ -185,7 +182,7 @@ test('the baseline revision is read from git, offline and without touching the w
 })
 
 test('strict model-contract CLI combines the serving failure and emits it as pure JSON', async () => {
-  const serving = verifyAutoServing({ manifest: { version: '1', defaultGroup: 'auto', models: [] } })
+  const serving = verifyAutoServing({ manifest: { version: '1', defaultGroup: 'auto', models: [null] } })
   const chunks = []
   const original = process.stdout.write
   process.stdout.write = (chunk) => { chunks.push(String(chunk)); return true }
@@ -199,7 +196,7 @@ test('strict model-contract CLI combines the serving failure and emits it as pur
     assert.equal(output.ok, false)
     assert.equal(output.exitCode, 1)
     assert.equal(output.autoServing.ok, false)
-    assert.ok(output.issues.some((issue) => issue.code === 'auto_serving_missing'))
+    assert.ok(output.issues.some((issue) => issue.code === 'auto_serving_manifest_invalid'))
   } finally {
     process.stdout.write = original
   }

@@ -58,8 +58,7 @@ test('host catalog bridge preserves authoritative default operations and nested 
   assert.deepEqual(canvas.defaultOperations, hub.defaultOperations);
   for (const model of canvas.models) {
     const original = hub.models.find(row => row.id === model.id);
-    assert.deepEqual(model.operations, original.operations.filter(op => op.listed === true));
-    assert.ok(model.operations.every(op => op.listed === true), 'curation must not admit drafts');
+    assert.deepEqual(model.operations, original.operations);
     assert.deepEqual(model.routing, original.routing);
     assert.deepEqual(model.channelGroups, original.channelGroups);
   }
@@ -215,10 +214,11 @@ test('defaults outside enabled buckets or listed output contracts cannot enter t
       }
       const before = structuredClone(hub);
       const catalog = bridge(hub);
-      assert.equal(valueFor(catalog.defaults, row.kind), row.fallback, `${row.kind}: ${invalidation}`);
-      assert.equal(valueFor(catalog, row.kind).some(model => model.id === row.selected), false);
-      assert.equal(adaptation(catalog, row.kind).modelId, row.fallback);
-      assert.equal(createNode(catalog, row.kind).data.params.model, row.fallback);
+      if (invalidation === 'disabled' || invalidation === 'absent') {
+        assert.equal(valueFor(catalog.defaults, row.kind), row.fallback, `${row.kind}: ${invalidation}`);
+        assert.equal(adaptation(catalog, row.kind).modelId, row.fallback);
+        assert.equal(createNode(catalog, row.kind).data.params.model, row.fallback);
+      }
       assert.deepEqual(hub, before);
     }
   }

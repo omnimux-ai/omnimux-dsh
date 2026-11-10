@@ -11,6 +11,7 @@ import type {
   CapabilityModelItem,
   CatalogChannelGroupDto,
   CatalogModelDto,
+  ModelExecutionStatus,
   OperationContractDto,
 } from '../api.ts';
 import {
@@ -96,6 +97,10 @@ export interface FilteredModelOption {
   channelGroups?: CatalogChannelGroupDto[];
   /** Catalog row (bucket or models[] projection) when available. */
   item?: CapabilityModelItem | CatalogModelDto;
+  /** Gateway/custom row execution capability; never used as a visibility filter. */
+  executionStatus?: ModelExecutionStatus;
+  executable?: boolean;
+  disabledReason?: 'adapter_unsupported' | 'provider_unverified';
   /** Kernel verdict for this model under the current fingerprint. */
   verdict: ModelCompatVerdict;
 }
@@ -633,6 +638,13 @@ export function buildFilteredModelOptions(args: {
         ? { channelGroups: (auth?.channelGroups ?? bucket?.channelGroups) as CatalogChannelGroupDto[] }
         : {}),
       ...(auth || bucket ? { item: (auth ?? bucket) as CapabilityModelItem | CatalogModelDto } : {}),
+      executionStatus: (auth?.executionStatus ?? bucket?.executionStatus ?? 'ready') as ModelExecutionStatus,
+      executable: (auth?.executionStatus ?? bucket?.executionStatus ?? 'ready') === 'ready',
+      ...((auth?.executionStatus ?? bucket?.executionStatus) === 'unsupported'
+        ? { disabledReason: 'adapter_unsupported' as const }
+        : (auth?.executionStatus ?? bucket?.executionStatus) === 'unverified'
+          ? { disabledReason: 'provider_unverified' as const }
+          : {}),
       verdict,
     });
   }

@@ -325,7 +325,7 @@ test('R5 current-operation verdict disables known JPEG and excluded model, but a
   assert.equal(items.find(item => item.nodeId === 'unknown').selectable, true);
   const excluded = structuredClone(context);
   excluded.catalog.generationPolicy = { image: { allowedModelIds: [], preferredModelId: null } };
-  assert.equal(listCanvasResources(nodes, [], 'target', excluded).some(item => item.selectable), false);
+  assert.equal(listCanvasResources(nodes, [], 'target', excluded).some(item => item.selectable), true, 'legacy generationPolicy must not filter resource selection');
   assert.deepEqual(listCanvasResources([target], [], 'target', context), []);
 });
 

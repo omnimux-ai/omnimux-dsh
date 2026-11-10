@@ -150,7 +150,14 @@ export function mergeInputCapability(ops) {
  */
 export function projectRow(model, ops, snapshot) {
   /** @type {Record<string, unknown>} */
-  const row = { id: model.id, label: model.label };
+  const row = {
+    id: model.id,
+    label: model.label,
+    source: model.source === 'custom' ? 'custom' : 'gateway',
+    executionStatus: model.executionStatus ?? (model.listed === true ? 'ready' : 'unsupported'),
+    ...(model.providerId ? { providerId: model.providerId } : {}),
+    ...(model.sourceLabel ? { sourceLabel: model.sourceLabel } : {}),
+  };
   if (typeof model.badge === 'string') row.badge = model.badge;
   if (typeof model.subtitle === 'string') row.subtitle = model.subtitle;
   if (typeof model.family === 'string') row.family = model.family;
@@ -299,6 +306,10 @@ export function projectModelDto(model, dispositionsDoc, snapshot) {
   return {
     id: model.id,
     label: model.label,
+    source: model.source === 'custom' ? 'custom' : 'gateway',
+    executionStatus: model.executionStatus ?? (model.listed === true ? 'ready' : 'unsupported'),
+    ...(model.providerId ? { providerId: model.providerId } : {}),
+    ...(model.sourceLabel ? { sourceLabel: model.sourceLabel } : {}),
     ...(typeof model.family === 'string' ? { family: model.family } : {}),
     ...(typeof model.badge === 'string' ? { badge: model.badge } : {}),
     ...(typeof model.subtitle === 'string' ? { subtitle: model.subtitle } : {}),

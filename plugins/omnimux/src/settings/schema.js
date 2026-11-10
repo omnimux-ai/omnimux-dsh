@@ -93,7 +93,7 @@ const FIELD_META = Object.freeze({
   allowAgentSwitchTab: '允许 Agent 控制右侧工作台切换选项卡',
   allowAutoSurfaceFollow: '自动跟随 Agent 处理的工作面切换右侧工作台',
   composerHiddenModels: '输入框模型列表中隐藏的模型',
-  canvasHiddenModels: '画布生成中隐藏的模型',
+  canvasHiddenModels: '已废弃：画布不再使用隐藏模型过滤（仅保留旧配置兼容）',
   runtimeMode: '运行方式（官方、本机助手、媒体生成提供商）',
   runtimeAgentId: '本机助手',
   runtimeAgentModel: '本机助手模型',
@@ -192,6 +192,22 @@ function sanitizeByokProvider(item) {
         sanitized.models[k] = v.trim()
       }
     }
+  }
+  // Optional per-model profiles power the canvas model catalog without
+  // changing the legacy scenario->model map. Never accept secrets here.
+  if (Array.isArray(item.modelProfiles)) {
+    sanitized.modelProfiles = item.modelProfiles.flatMap((profile) => {
+      if (!profile || typeof profile !== 'object' || Array.isArray(profile)) return []
+      const model = typeof profile.model === 'string' ? profile.model.trim() : ''
+      const capability = typeof profile.capability === 'string' ? profile.capability.trim().toLowerCase() : ''
+      if (!model || !['text', 'image', 'video', 'audio'].includes(capability)) return []
+      const row = { model, capability }
+      if (typeof profile.displayName === 'string' && profile.displayName.trim()) row.displayName = profile.displayName.trim()
+      if (typeof profile.protocol === 'string' && profile.protocol.trim()) row.protocol = profile.protocol.trim()
+      if (profile.parameters && typeof profile.parameters === 'object' && !Array.isArray(profile.parameters)) row.parameters = structuredClone(profile.parameters)
+      if (profile.constraints && typeof profile.constraints === 'object' && !Array.isArray(profile.constraints)) row.constraints = structuredClone(profile.constraints)
+      return [row]
+    })
   }
   for (const m of ['imageModel', 'videoModel', 'audioModel', 'model']) {
     if (typeof item[m] === 'string' && item[m].trim()) {

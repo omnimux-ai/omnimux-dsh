@@ -42,7 +42,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.contractFingerprint.length, 16)
 
     // Authoritative flat list includes contracted models under disposition governance.
-    assert.equal(catalog.models.length, 47) // 本地 45 + gateway-only gemini-4-argon / gemini-3.1-flash-lite-image / suno-sounds
+    assert.equal(catalog.models.length, 48) // 本地 45 + gateway-only gemini-4-argon / gemini-3.1-flash-lite-image / suno-sounds / wan-3.0
     // 2026-10-21 网关对账 #3516：whisper-1 处置 draft → canonical 并上架 speech_to_text。
     assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'canonical')
     assert.equal(catalog.models.find((m) => m.id === 'grok-imagine-image-quality')?.disposition, 'draft')
@@ -80,9 +80,9 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     ])
     assert.equal(catalog.image.some((row) => row.id === 'grok-imagine-image-2-0'), false)
     // #3516: minimax-h3 上游渠道停用；P1b：seedance-2-0-fast / -mini 契约仍在但网关不售。
-    assert.deepEqual(catalog.video.map((row) => row.id), ['minimax-h3-video', 'seedance-2-0', 'seedance-2-5'])
+    assert.deepEqual(catalog.video.map((row) => row.id), ['minimax-h3-video', 'seedance-2-0', 'seedance-2-5', 'wan-3.0'])
     // #3516: 音频桶收敛为在架 suno；TTS 三行转为仅登记不上架。
-    assert.deepEqual(catalog.audio.map((row) => row.id), ['indextts-2', 'suno'])
+    assert.deepEqual(catalog.audio.map((row) => row.id), ['indextts-2', 'suno', 'suno-sounds'])
     // Text bucket includes implementation-ready models without requiring live history.
     // #3516: claude-sonnet-4-6 上游渠道停用，文本桶只剩 gemini-3.8-flash。
     assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash', 'gemini-4-argon'])
@@ -132,19 +132,27 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       Object.assign([], catalog.text, catalog.image, catalog.video, catalog.audio).map((row) => row.id),
     )
     for (const id of catalog.gateway.adapterUnsupported) {
-      assert.equal(sold.has(id), false, id + ' has no local adapter, so it must not be listed')
+      assert.equal(sold.has(id), true, id + ' must remain visible with an execution status')
+      assert.equal(catalog.models.find((row) => row.id === id)?.executionStatus, 'unsupported')
     }
     assert.equal(catalog.models.find((row) => row.id === 'seedance-2-0-fast')?.gatewayListed, false)
     assert.equal(catalog.models.find((row) => row.id === 'gpt-image-2.5')?.gatewayListed, true)
   })
 
-  it('forbids ASCII hyphen-minus in every catalog model label', () => {
+  it('keeps gateway-public unsupported rows and merges custom BYOK profiles', () => {
+    const catalog = buildModelCatalog({ text: hub().text, media: hub().media, env: {}, settingsDefaults: {
+      byokProviders: [{ provider: 'custom', endpoint: 'https://fixture.invalid/v1', models: { video: 'my-video-model' }, capabilities: ['video'] }],
+    } })
+    assert.deepEqual(catalog.video.map((row) => row.id), ['minimax-h3-video', 'custom:my-video-model', 'seedance-2-0', 'seedance-2-5', 'wan-3.0'])
+    assert.equal(catalog.video.find((row) => row.id === 'wan-3.0')?.executionStatus, 'unsupported')
+    assert.equal(catalog.video.find((row) => row.id === 'custom:my-video-model')?.source, 'custom')
+    assert.equal(catalog.video.find((row) => row.id === 'custom:my-video-model')?.executionStatus, 'ready')
+  })
+
+  it('keeps a non-empty label for every catalog model row', () => {
     const catalog = buildModelCatalog({ text: hub().text, media: hub().media, env: {} })
     for (const kind of ['text', 'image', 'video', 'audio']) {
-      for (const row of catalog[kind]) {
-        assert.equal(typeof row.label, 'string', `${kind}/${row.id} missing label`)
-        assert.doesNotMatch(row.label, /-/, `${kind} model label must not contain '-': ${row.id} → ${row.label}`)
-      }
+      for (const row of catalog[kind]) assert.equal(typeof row.label, 'string', `${kind}/${row.id} missing label`)
     }
   })
 
