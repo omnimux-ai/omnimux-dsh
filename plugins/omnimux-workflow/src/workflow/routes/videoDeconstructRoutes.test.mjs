@@ -81,6 +81,22 @@ function harness(t, opts = {}) {
     },
   };
 
+  // The analysis model is resolved from the hub catalog, so every harness needs
+  // a catalog double; the id differs from any literal to prove it is read.
+  const visionCatalog = {
+    list: () => ({
+      text: [
+        {
+          id: 'catalog-vision-pro',
+          label: 'Catalog Vision Pro',
+          executionStatus: 'ready',
+          inputCapability: { modalities: ['text', 'image', 'video'] },
+        },
+      ],
+      defaults: { analysis: 'catalog-vision-pro' },
+    }),
+  };
+
   const dispatcher = createWorkflowDispatcher({
     store,
     mediaDir: join(root, 'media'),
@@ -95,6 +111,7 @@ function harness(t, opts = {}) {
     getSeam: (name) => {
       if (opts.disableTool) return undefined;
       if (opts.videoProcessTool && (name === 'videoProcess' || name === 'video_process')) return opts.videoProcessTool;
+      if (name === 'modelCatalog') return opts.modelCatalog ?? visionCatalog;
       return name === 'videoAnalyze' ? videoAnalyzeTool : undefined;
     },
   });
@@ -119,7 +136,7 @@ function harness(t, opts = {}) {
       origin: 'http://127.0.0.1:45120',
     });
 
-  return { call, invoke, toolCalls, store, workspace, url, dummyVideo, root, mediaDir: join(root, 'media') };
+  return { call, request: call, invoke, toolCalls, store, workspace, url, dummyVideo, root, mediaDir: join(root, 'media') };
 }
 
 test('videoDeconstruct: 成功拆解视频并持久化五维内容拆解表格（分析维度 + 分析内容）', async (t) => {
@@ -683,4 +700,46 @@ test('videoDeconstruct: targetNodeId 为空串/纯空白时视为未提供（不
   const snapshot = h.store.get(h.workspace.id);
   assert.equal(snapshot.nodes.filter((n) => n.type === 'table').length, 1, '单一下游约束仍然成立');
   assertSourceVideoUntouched(h);
+});
+
+test('videoDeconstruct: 分析模型取自中枢目录而不是写死的 ID', async (t) => {
+  const h = harness(t);
+  const res = await h.request({ nodeId: 'node_video_1', videoPath: h.dummyVideo });
+
+  assert.equal(res.status, 200);
+  assert.equal(h.toolCalls.length, 1);
+  assert.equal(h.toolCalls[0].model, 'catalog-vision-pro');
+});
+
+test('videoDeconstruct: 目录里没有支持视频的模型时报 analyze-model-unavailable', async (t) => {
+  const h = harness(t, {
+    modelCatalog: {
+      list: () => ({
+        text: [{ id: 'text-only-model', executionStatus: 'ready', inputCapability: { modalities: ['text'] } }],
+        defaults: {},
+      }),
+    },
+  });
+  const res = await h.request({ nodeId: 'node_video_1', videoPath: h.dummyVideo });
+
+  assert.equal(res.status, 502);
+  assert.equal(res.body.error, 'analyze-model-unavailable');
+  assert.match(res.body.message, /模型目录/);
+  assert.equal(h.toolCalls.length, 0);
+});
+
+test('videoDeconstruct: 模型目录读取失败时报 analyze-model-unavailable 而不是硬编码兜底', async (t) => {
+  const h = harness(t, {
+    modelCatalog: {
+      list: () => {
+        throw new Error('catalog seam unavailable');
+      },
+    },
+  });
+  const res = await h.request({ nodeId: 'node_video_1', videoPath: h.dummyVideo });
+
+  assert.equal(res.status, 502);
+  assert.equal(res.body.error, 'analyze-model-unavailable');
+  assert.match(res.body.message, /模型目录/);
+  assert.equal(h.toolCalls.length, 0);
 });

@@ -6,6 +6,7 @@ import type { WorkspaceStore } from '../workspace/WorkspaceStore.ts';
 import type { ParsedStoryboardVideoRequest, StoryboardVideoResult } from './schema.ts';
 import { VideoStoryboardError } from './errors.ts';
 import { describeVideoAnalyzeFailure } from '../videoAnalyzeFailure.ts';
+import { describeVideoAnalyzeModelFailure, resolveVideoAnalyzeModel } from '../analyzeModel.ts';
 import {
   type HTableColumn,
   type HTableDocument,
@@ -292,9 +293,20 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
       );
     }
 
+    // The analysis model comes from the hub catalog, never a pinned id: the
+    // gateway decides which model exists and which one it recommends.
+    const analyzeModel = resolveVideoAnalyzeModel(deps.getSeam);
+    if (!analyzeModel.ok || !analyzeModel.modelId) {
+      throw new VideoStoryboardError(
+        'analyze-model-unavailable',
+        describeVideoAnalyzeModelFailure(analyzeModel),
+        502,
+      );
+    }
+
     let analyzeMarkdown = '';
     try {
-      const res = await analyzeTool.execute({ video: analyzeVideoPath, model: 'gemini-3.8-flash' });
+      const res = await analyzeTool.execute({ video: analyzeVideoPath, model: analyzeModel.modelId });
       const text =
         res?.report ||
         res?.text ||

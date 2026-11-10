@@ -22,6 +22,7 @@ const FAILURES: Record<string, [number, string]> = {
   'table-save-failed': [500, '表格文件保存失败'],
   'deconstruct-failed': [502, '视频内容拆解失败'],
   'analyze-unavailable': [502, '视频理解能力不可用，请确认已启用视频理解能力后重试'],
+  'analyze-model-unavailable': [502, '模型目录中没有可执行且支持视频输入的文本模型，请先在「模型设置」中启用支持视频的模型后重试'],
   'analyze-failed': [502, '视频理解调用失败，请检查模型渠道配置后重试'],
   'analyze-empty': [502, '视频理解未返回可用的分析内容，请重试'],
   'analyze-unsupported': [502, '当前模型渠道不支持视频输入，请更换支持视频的渠道后重试'],
