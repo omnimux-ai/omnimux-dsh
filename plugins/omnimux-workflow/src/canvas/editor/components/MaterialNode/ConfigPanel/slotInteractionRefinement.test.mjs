@@ -47,3 +47,16 @@ test('replacement and reference grouping labels cover both locales',()=>{
  assert.equal(zh['node.replaceMaterial'],'替换素材'); assert.equal(en['node.replaceMaterial'],'Replace asset');
  for(const key of ['mention.current','mention.canvas','mention.waiting','mention.unavailable','mention.noMatches']) { assert.ok(zh[key]);assert.ok(en[key]); }
 });
+test('input_unavailable 记录不再渲染常驻裸「不可用」，但保留裂图占位（Issue #4032）',()=>{
+ const promptSpec = {slot:'prompt',type:'text',role:'prompt',min:1,max:1,labelKey:'panel.slot.prompt'};
+ const html = render({
+  layout:{preset:'strip',slots:[promptSpec],addButton:false},
+  bindings:{prompt:[{edgeId:'e-dead',sourceNodeId:'gone'}]},
+  upstreams:[],
+  records:[{slot:promptSpec,occupant:{edgeId:'e-dead',sourceNodeId:'gone'},state:'invalid',reasonCode:'input_unavailable'}],
+  onPickSlot(){},onClearOccupant(){},onInsertToken(){},
+ });
+ assert.match(html,/wf-slot-well__placeholder--broken/);
+ assert.doesNotMatch(html,/wf-slot-well__state/);
+ assert.doesNotMatch(html,/不可用/);
+});

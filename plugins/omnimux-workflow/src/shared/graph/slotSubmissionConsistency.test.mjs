@@ -125,4 +125,60 @@ describe('Issue #3128 · 显示已装填 ⇒ 提交必含该 reference', () => {
     const result = recomputeCanvasSlots(node, graph, { catalog });
     assert.deepEqual(result.data.slotBindings, {}, '显式空字典代表用户清空，重算不得改写');
   });
+
+  it('上游节点/边被删除后，V1 残留绑定在重算时被清理（Issue #4032）', () => {
+    const catalog = imageCatalog();
+    const node = targetNode({
+      slotBindings: {
+        reference_image: [{ sourceNodeId: 'gone', edgeId: 'e-dead', outputId: 'asset-x', pinned: false }],
+      },
+    });
+    // 上游节点与边都不在画布上了，只剩目标节点。
+    const graph = { nodes: [node], edges: [] };
+
+    const result = recomputeCanvasSlots(node, graph, { catalog });
+    const persisted = result.data.slotBindings ?? {};
+    assert.deepEqual((persisted.reference_image ?? []).map((occupant) => occupant.edgeId), [],
+      '指向已删除节点/边的僵尸绑定必须被清理');
+    assert.ok(!result.data.compat.reasonCodes.includes('input_unavailable'),
+      '清理后不得再因残留绑定报 input_unavailable');
+
+    const layout = deriveSlotLayout(catalog, 'gpt-image-2.5', 'multi_reference');
+    const { display, selected } = submissionSelection(result, layout);
+    assert.equal(display.records.find((record) => record.slot.slot === 'reference_image'), undefined,
+      '展示侧不得再出现该参考图的填充态记录');
+    assert.deepEqual(selected, []);
+  });
+
+  it('用户拍板（pinned）的上游失效时保留为可停用的无效意图，不被静默清理（Issue #4032）', () => {
+    const catalog = imageCatalog();
+    const node = targetNode({
+      slotBindings: {
+        reference_image: [{ sourceNodeId: 'gone', edgeId: 'e-dead', outputId: 'asset-x', pinned: true }],
+      },
+    });
+    const result = recomputeCanvasSlots(node, { nodes: [node], edges: [] }, { catalog });
+    const persisted = result.data.slotBindings ?? {};
+    assert.equal((persisted.reference_image ?? []).length, 1, 'pinned 用户选择不得被静默清理');
+    assert.equal(persisted.reference_image[0].edgeId, 'e-dead');
+  });
+
+  it('仅边缺失（源节点仍在）同样清理；边 source 与占位源不一致也不算存活（Issue #4032 评审）', () => {
+    const catalog = imageCatalog();
+    const upstreamHere = {
+      id: 'upstream', type: 'material', position: { x: 0, y: 0 },
+      data: { materialType: 'image', nodeKind: 'import', mediaAssets: [{ type: 'image', url: 'https://fixture.test/r.png', mimeType: 'image/png', sizeBytes: 2048 }] },
+    };
+    const edgeGoneNode = targetNode({ slotBindings: { reference_image: [{ sourceNodeId: 'upstream', edgeId: 'e-dead', outputId: 'x', pinned: false }] } });
+    const edgeGone = recomputeCanvasSlots(edgeGoneNode, { nodes: [edgeGoneNode, upstreamHere], edges: [] }, { catalog });
+    assert.equal((edgeGone.data.slotBindings?.reference_image ?? []).length, 0, '边被删除即视为失效，必须清理');
+
+    const srcA = {
+      id: 'srcA', type: 'material', position: { x: 0, y: 0 },
+      data: { materialType: 'image', nodeKind: 'import', mediaAssets: [{ type: 'image', url: 'https://fixture.test/a.png', mimeType: 'image/png', sizeBytes: 2048 }] },
+    };
+    const mismatchNode = targetNode({ slotBindings: { reference_image: [{ sourceNodeId: 'srcA', edgeId: 'e', outputId: 'x', pinned: false }] } });
+    const mismatch = recomputeCanvasSlots(mismatchNode, { nodes: [mismatchNode, srcA], edges: [{ id: 'e', source: 'srcB', target: 'target' }] }, { catalog });
+    assert.equal((mismatch.data.slotBindings?.reference_image ?? []).length, 0, '边源与占位源不一致不得视为存活');
+  });
 });
