@@ -148,15 +148,32 @@ export async function executeBatchRetry(records, selectedIds, showToast, onSucce
 }
 
 export async function executeBatchDeleteDrafts(records, selectedIds, showToast, onSuccess) {
+  const targets = records.filter((r) => selectedIds.has(String(r.id)) && r.status === 'draft')
+  if (targets.length === 0) {
+    showToast('所选记录中没有可删除的草稿，请重新选择')
+    return
+  }
   let deletedCount = 0
-  for (const id of selectedIds) {
-    const rec = records.find((r) => String(r.id) === id)
-    if (rec && rec.status === 'draft') {
-      const res = await deleteDraft(id)
+  let failedCount = 0
+  let firstError = ''
+  for (const rec of targets) {
+    try {
+      const res = await deleteDraft(String(rec.id))
       if (res.ok) deletedCount++
+      else {
+        failedCount++
+        if (!firstError) firstError = errorText(res.body, res.status)
+      }
+    } catch (error) {
+      failedCount++
+      if (!firstError) firstError = error instanceof Error ? error.message : String(error)
     }
   }
-  showToast(`已删除 ${deletedCount} 条草稿`)
+  if (failedCount > 0) {
+    showToast(`已删除 ${deletedCount} 条草稿，${failedCount} 条失败${firstError ? `：${firstError}` : ''}`)
+  } else {
+    showToast(`已删除 ${deletedCount} 条草稿`)
+  }
   onSuccess?.()
 }
 

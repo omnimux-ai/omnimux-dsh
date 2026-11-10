@@ -1,0 +1,40 @@
+{
+  "task": "Issue #4056",
+  "total": 5,
+  "failed": 0,
+  "assertions": [
+    {
+      "name": "失效选中被跳过",
+      "pass": true,
+      "detail": "[{\"draft_id\":\"draft_1\",\"confirm\":true}]"
+    },
+    {
+      "name": "提示实际删除数量",
+      "pass": true,
+      "detail": "已删除 1 条草稿"
+    },
+    {
+      "name": "无可删草稿时不发请求",
+      "pass": true,
+      "detail": "calls=0"
+    },
+    {
+      "name": "无可删草稿时给出明确提示",
+      "pass": true,
+      "detail": "所选记录中没有可删除的草稿，请重新选择"
+    },
+    {
+      "name": "失败时提示原因",
+      "pass": true,
+      "detail": "已删除 0 条草稿，1 条失败：record-not-draft"
+    }
+  ],
+  "pass": true,
+  "screenshot": "docs/evidence/publish-batch-delete-fix.png",
+  "screenshotBytes": 7613,
+  "url": "http://127.0.0.1:59736/",
+  "chrome": "Google Chrome 157.0.8103.39",
+  "bundleSha256": "1f05b85dd06f93747d41d10812ed724aefb382b65485e30722d7cd08ecccbd1b",
+  "headSha": "37f951954164ed41e4e4a17b1f97d0ac647f5f52",
+  "ranAt": "2026-11-10T12:40:05.406Z"
+}

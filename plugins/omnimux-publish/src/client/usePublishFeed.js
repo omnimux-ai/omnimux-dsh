@@ -177,6 +177,20 @@ export function useBatchOperations(opts) {
   const [selectedIds, setSelectedIds] = useState(new Set())
   const deleteDialog = useDraftDeleteDialog(t, showToast, loadList)
 
+  // Lists reload on tab switch / polling. Drop selections whose records left the
+  // list so batch actions never run against stale ids (Issue #4056).
+  const recordIds = useMemo(() => new Set(filteredRecords.map((r) => String(r.id))), [filteredRecords])
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev
+      const next = new Set()
+      for (const id of prev) {
+        if (recordIds.has(id)) next.add(id)
+      }
+      return next.size === prev.size ? prev : next
+    })
+  }, [recordIds])
+
   const handleToggleSelect = useCallback((id) => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
