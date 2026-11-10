@@ -1,19 +1,11 @@
 {
   "runId": "7124e9c1-21d5-49f7-a3ae-c9cc4e9c6aa7",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-duplicate-model-settings",
-  "origin": "http://127.0.0.1:50682",
-  "appPort": 50682,
-  "cdpPort": 50687,
-  "startedAt": "2026-11-10T08:23:32.213Z",
-  "completedAt": "2026-11-10T08:24:12.539Z",
   "pass": true,
   "scope": "smoke",
-  "producer": "controlled-runner",
   "contract": "none",
-  "taskBinding": "unknown",
-  "userFresh": "unknown",
-  "inputClosure": "unknown",
+  "startedAt": "2026-11-10T08:23:32.213Z",
+  "completedAt": "2026-11-10T08:24:12.539Z",
   "summary": {
     "mode": "ui",
     "evidenceLevel": "full",
@@ -116,122 +108,13 @@
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-duplicate-model-settings/.workbuddy/evidence/app-qa/7124e9c1-21d5-49f7-a3ae-c9cc4e9c6aa7/app-home.png",
+    "path": "after-bundle-single-card.png",
     "width": 1280,
     "height": 800,
     "bytes": 81326
   },
   "errors": [],
   "cleanup": {
-    "cleaned": true,
-    "resources": [
-      {
-        "name": "app-child",
-        "owner": "app-environment",
-        "status": "completed",
-        "reason": null
-      },
-      {
-        "name": "mock-server",
-        "owner": "app-environment",
-        "status": "completed",
-        "reason": null
-      },
-      {
-        "name": "app-private-directory",
-        "owner": "app-environment",
-        "status": "completed",
-        "reason": null
-      },
-      {
-        "name": "browser-child",
-        "owner": "app-browser",
-        "status": "completed",
-        "reason": null
-      },
-      {
-        "name": "cdp-transport",
-        "owner": "app-browser",
-        "status": "completed",
-        "reason": null
-      },
-      {
-        "name": "browser-private-directory",
-        "owner": "app-browser",
-        "status": "completed",
-        "reason": null
-      }
-    ]
-  },
-  "observations": {
-    "rawOutputRetained": false,
-    "appEvents": [
-      {
-        "event": "spawn",
-        "code": null,
-        "signal": null,
-        "pid": 1136,
-        "parentPid": 320
-      },
-      {
-        "event": "exit",
-        "code": null,
-        "signal": "SIGKILL",
-        "pid": null,
-        "parentPid": null
-      },
-      {
-        "event": "close",
-        "code": null,
-        "signal": "SIGKILL",
-        "pid": null,
-        "parentPid": null
-      }
-    ],
-    "browserEvents": [
-      {
-        "event": "spawn",
-        "code": null,
-        "signal": null,
-        "pid": 1173,
-        "parentPid": 320
-      },
-      {
-        "event": "exit",
-        "code": 143,
-        "signal": null,
-        "pid": null,
-        "parentPid": null
-      },
-      {
-        "event": "close",
-        "code": 143,
-        "signal": null,
-        "pid": null,
-        "parentPid": null
-      }
-    ],
-    "cdpSocketClosed": {
-      "code": 1000,
-      "reason": ""
-    },
-    "cdpLastCompleted": "Page.captureScreenshot",
-    "targetEvents": [
-      {
-        "method": "Target.attachedToTarget",
-        "sessionId": "3E924C69F406073B",
-        "targetId": "4C367D4BFC3EDE31",
-        "type": "page",
-        "url": "about:blank"
-      }
-    ]
-  },
-  "beforeCaptureMs": 0,
-  "hubPath": {
-    "clickedNewSession": false,
-    "exploreVisible": true,
-    "assetHubOpened": true,
-    "librarySelected": true,
-    "workbenchRequestAccepted": true
+    "cleaned": true
   }
 }
