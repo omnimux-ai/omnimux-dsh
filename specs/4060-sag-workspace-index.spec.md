@@ -24,6 +24,8 @@
 
 托管块里的扩展名必须排序且覆盖本仓代码类型（`md/ts/tsx/js/jsx/mjs/yml/yaml`），文件以换行结尾，这样重复索引同一目录时该块字节稳定，已跟踪文件不会被改脏——`ship` / `remove` 对脏工作树是 `die`，这里必须做到零 diff。实测：本工作树跑真实 `sag-worktree init` 后 `diff` 无差异。
 
+行为用例均显式隔离 `OMNIMUX_SAG_INDEX` / `OMNIMUX_SAG_GC` / `SAG_WORKTREE_BIN`，开发机导出这些开关不会让正确实现变红。
+
 **残留风险（已知、未消除）**：`sag-worktree gc` 仍按「记录路径的目录不存在」判定孤儿，卷未挂载或仓目录改名时可能误删活索引，因此默认关闭、只由 `OMNIMUX_SAG_GC=1` 显式触发。
 
 **残留风险（已知、未消除）**：零 diff 依赖仓外工具 `sag-worktree` 写入的托管块。仓库测试锁住了扩展名顺序与 `file_types` / `convert_other_formats` 三个字段，把「工具升级后悄悄改写块」的概率压到最低，但无法在 CI 里证明外部工具的未来输出；一旦漂移，`.sagignore` 会变脏，而 `ship` / `remove` 对脏工作树是 `die`。届时按测试报错同步字段即可，不需要改代码。
@@ -65,7 +67,7 @@
 | 2 | `worktree.sh remove --abandon` | 同上 |
 | 3 | `worktree.sh clean` 批量删除 | 每个被删工作树都清理；`OMNIMUX_SAG_GC=1` 时在批量清理之后回收孤儿索引 |
 | 4 | `worktree.sh prune` / `clean` 且 `OMNIMUX_SAG_GC=1` | 在删完记录/批量清理**之后**调用 `sag-worktree gc` |
-| 5 | 本机没有 `sag-worktree` | 建树与交付照常，退出码不变，无输出 |
+| 5 | 本机没有 `sag-worktree` | 建树与交付照常，退出码不变，无任何 SAG 输出（`worktree-delivery.test.mjs` 已有行为用例） |
 | 6 | `OMNIMUX_SAG_INDEX=0`，或未设 `OMNIMUX_SAG_GC=1` | 前者完全不调用该工具；后者不触发全局 `gc` |
 | 7 | `sag-worktree remove` 失败 | 交付照常完成，`stderr` 出现一行 `SAG 索引清理失败` 警告 |
 | 8 | 建树 | 不触发任何索引动作 |

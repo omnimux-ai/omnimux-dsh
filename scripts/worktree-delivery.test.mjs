@@ -942,7 +942,14 @@ test('ship 删除工作树后清理该工作树的 SAG 隔离索引（Issue #406
     const result = spawnSync('bash', ['scripts/worktree.sh', 'ship', 'sag-feature', '--pr', '866'], {
       cwd: repo,
       encoding: 'utf8',
-      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+      // 与 sagFixture 一样隔离 SAG 开关：开发机导出它们不该让正确实现变红。
+      env: {
+        ...process.env,
+        OMNIMUX_SAG_INDEX: '1',
+        OMNIMUX_SAG_GC: '0',
+        SAG_WORKTREE_BIN: 'sag-worktree',
+        PATH: `${bin}:${process.env.PATH}`,
+      },
     })
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.equal(existsSync(worktree), false, 'ship 必须删掉已合入的任务工作树')
@@ -999,10 +1006,19 @@ function sagFixture(prefix) {
     git('-C', dir, 'commit', '-m', name)
     return dir
   }
+  // 隔离 SAG 三个开关：开发机导出 OMNIMUX_SAG_GC / OMNIMUX_SAG_INDEX / SAG_WORKTREE_BIN
+  // 会让这些用例在正确实现上变红（与同文件对 OMNIMUX_DEV_SNAPSHOT 的隔离同思路）。
   const run = (args, env = {}) => spawnSync('bash', ['scripts/worktree.sh', ...args], {
     cwd: repo,
     encoding: 'utf8',
-    env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, ...env },
+    env: {
+      ...process.env,
+      OMNIMUX_SAG_INDEX: '1',
+      OMNIMUX_SAG_GC: '0',
+      SAG_WORKTREE_BIN: 'sag-worktree',
+      PATH: `${bin}:${process.env.PATH}`,
+      ...env,
+    },
   })
   const calls = () => (existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n').filter(Boolean) : [])
   const cleanup = () => rmSync(fixture, { recursive: true, force: true })
@@ -1051,6 +1067,19 @@ test('prune 只在 OMNIMUX_SAG_GC=1 时回收孤儿索引（Issue #4060）', () 
     assert.deepEqual(f.calls(), [], '未开开关时不得触碰任何全局索引操作')
     assert.equal(f.run(['prune'], { OMNIMUX_SAG_GC: '1' }).status, 0)
     assert.deepEqual(f.calls(), ['gc'], '开了开关才回收孤儿索引')
+  } finally { f.cleanup() }
+})
+
+test('本机没有 sag-worktree 时删除工作树照常完成且不输出 SAG 内容（Issue #4060）', () => {
+  const f = sagFixture('omnimux-sag-absent')
+  try {
+    const dir = f.worktree('no-tool')
+    // 只把桩目录从 PATH 移除，保留 git/bash 等系统命令。
+    const result = f.run(['remove', 'no-tool', '--force'], { PATH: '/usr/bin:/bin:/usr/sbin:/sbin' })
+    assert.equal(result.status, 0, `缺工具不得阻断交付：${result.stdout}\n${result.stderr}`)
+    assert.equal(existsSync(dir), false, '工作树仍要被删掉')
+    assert.doesNotMatch(`${result.stdout}${result.stderr}`, /SAG/, '缺工具时不得输出任何 SAG 相关行')
+    assert.deepEqual(f.calls(), [], '缺工具时不得记录任何调用')
   } finally { f.cleanup() }
 })
 
