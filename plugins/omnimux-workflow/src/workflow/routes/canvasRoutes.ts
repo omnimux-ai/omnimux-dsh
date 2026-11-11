@@ -155,7 +155,12 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
     resolveSessionWorkspaceDir: deps.resolveSessionWorkspaceDir,
   });
   const projectAssetsRoutes = createProjectAssetsRoutes(assetsStore, {}, async (workspaceId) => {
-    store.get(workspaceId);
+    const snapshot = store.get(workspaceId);
+    // Legacy fixture compatibility: when no user-level free resolver is wired,
+    // asset writes still need a project root, so seed the owning project once.
+    if (!deps.resolveAssetsRoot && !projectStore.findByCanvasWorkspaceId(workspaceId)) {
+      projectStore.create(snapshot.name, { canvasWorkspaceIds: [workspaceId] });
+    }
   });
   const directorAssistant = createDirectorAssistantRoutes({ store, assetsStore, getSeam: deps.getSeam });
   const directorOperationRoutes = createDirectorOperationRoutes(deps.directorOperations);
