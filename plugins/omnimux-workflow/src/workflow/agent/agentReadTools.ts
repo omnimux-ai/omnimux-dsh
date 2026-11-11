@@ -62,10 +62,9 @@ export function createWorkflowListTool(deps: WorkflowAgentDeps): AgentToolSpec {
       if (projectStore && workspaceDir) {
         const project = projectStore.findByRoot(workspaceDir);
         if (project) {
-          const projectCanvasIds = new Set([
-            ...(project.canvasWorkspaceIds || []),
-            ...(project.pages || []).map((p) => p.canvasWorkspaceId).filter(Boolean),
-          ]);
+          const projectCanvasIds = new Set(
+            (project.pages || []).map((p) => p.canvasWorkspaceId).filter(Boolean),
+          );
           const allWorkspaces = store.list();
           workspaces = allWorkspaces.filter((w) => projectCanvasIds.has(w.id));
           const foundIds = new Set(workspaces.map((w) => w.id));
@@ -189,16 +188,12 @@ export function createWorkflowRunTool(deps: WorkflowAgentDeps): AgentToolSpec {
       if (
         subgraphContainsMediaGenerate(subgraph.nodes as Array<{ type?: string; data?: Record<string, unknown> }>)
         && !store.resolveProjectRoot(workspace.id)
+        && !deps.resolveAssetsRoot?.(workspace.id)
       ) {
-        if (deps.ensureProjectBound) {
-          await deps.ensureProjectBound(workspace.id, workspace.name);
-        }
-        if (!store.resolveProjectRoot(workspace.id)) {
-          return errorBody(
-            'project-required',
-            `workspace ${workspace.id} is not bound to a local project`,
-          );
-        }
+        return errorBody(
+          'project-required',
+          `workspace ${workspace.id} is not bound to a local project`,
+        );
       }
 
       if (store.get(workspace.id).version !== workspace.version) {

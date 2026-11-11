@@ -53,7 +53,7 @@ describe('create-project dialog source contracts', () => {
   it('canvas unprojected dialog still prefills the session workspace', () => {
     assert.match(
       canvasSrc,
-      /<NewLocalProjectDialog[\s\S]*?initialPath=\{\s*sessionBinding\?\.workspaceDir\s*\|\|\s*''\s*\}/,
+      /<NewLocalProjectDialog[\s\S]*?initialPath=\{\s*contextForThisSession\?\.workspacePath\s*\|\|\s*''\s*\}/,
     )
   })
 

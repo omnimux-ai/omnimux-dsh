@@ -348,7 +348,7 @@ test('execution API blocks missing contract URL fields before every create mode 
   }
 });
 
-test('unbound media generate → 惰性种子项目 200；text generate 仍可通过', async () => {
+test('unbound media generate → 用户级 free root 200；text generate 仍可通过', async () => {
   const h = makeHarness();
   try {
     const textId = await h.createLinearWorkspace(1);
@@ -393,18 +393,12 @@ test('unbound media generate → 惰性种子项目 200；text generate 仍可�
     });
     assert.ok(completed, '惰性绑定后 media generate 必须能 persist 到项目根');
 
-    const seeded = listSeededProjects(h.libraryRoot);
-    assert.equal(seeded.length, 1);
-    assert.ok(existsSync(join(seeded[0].dir, '.omnimux', 'project.json')));
-    assert.ok(
-      (seeded[0].project.canvasWorkspaceIds ?? []).includes(wsId),
-      '种子项目必须绑定该 workspace',
-    );
-    assert.equal(seeded[0].project.title, '未绑定生图');
+    assert.equal(listSeededProjects(h.libraryRoot).length, 0, '未绑定画布不得创建项目');
+    assert.ok(existsSync(join(h.dir, 'workspaces', wsId, 'artifacts')), '生成产物必须落在用户级 free root');
 
     const again = await h.startExecution(wsId, { mode: 'full' });
     assert.equal(again.status, 200);
-    assert.equal(listSeededProjects(h.libraryRoot).length, 1, '同 workspace 再执行必须幂等');
+    assert.equal(listSeededProjects(h.libraryRoot).length, 0, '同 workspace 再执行仍不得创建项目');
     const againDone = await waitUntil(async () => {
       const status = await h.executionStatus(wsId, again.body.execution.id);
       return status.body?.execution?.status === 'completed';

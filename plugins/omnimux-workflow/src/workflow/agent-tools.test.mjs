@@ -458,7 +458,7 @@ test('workflow_run error paths: args / workspace / mode / subgraph', async () =>
   }
 });
 
-test('workflow_run unbound media generate 惰性种子项目且幂等', async () => {
+test('workflow_run unbound media generate 落用户级 free root 且幂等', async () => {
   const h = makeHarness();
   try {
     const created = await h.call({
@@ -500,12 +500,8 @@ test('workflow_run unbound media generate 惰性种子项目且幂等', async ()
 
     const dirs = readdirSync(h.libraryRoot, { withFileTypes: true }).filter((e) => e.isDirectory());
     const seeded = dirs.filter((e) => existsSync(join(h.libraryRoot, e.name, '.omnimux', 'project.json')));
-    assert.equal(seeded.length, 1);
-    const project = JSON.parse(
-      readFileSync(join(h.libraryRoot, seeded[0].name, '.omnimux', 'project.json'), 'utf8'),
-    );
-    assert.ok((project.canvasWorkspaceIds ?? []).includes(wsId));
-    assert.equal(project.title, '未绑定生视频');
+    assert.equal(seeded.length, 0, '未绑定画布不得创建项目');
+    assert.ok(existsSync(join(h.dir, 'workspaces', wsId, 'artifacts')), '生成产物必须落在用户级 free root');
 
     const second = await h.tool('workflow_run').execute({
       workspace_id: wsId,
@@ -517,7 +513,7 @@ test('workflow_run unbound media generate 惰性种子项目且幂等', async ()
     const after = readdirSync(h.libraryRoot, { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .filter((e) => existsSync(join(h.libraryRoot, e.name, '.omnimux', 'project.json')));
-    assert.equal(after.length, 1);
+    assert.equal(after.length, 0);
   } finally {
     h.dispose();
     rmSync(h.dir, { recursive: true, force: true });

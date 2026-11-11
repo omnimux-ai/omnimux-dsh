@@ -287,8 +287,8 @@ test('project assets.json GET/PUT/mkdir via dispatcher (canonical + legacy)', as
       url: `/omnimux-workflow/api/workspaces/${ws.id}/assets`,
       headers: h.localHeaders,
     });
-    assert.equal(unbound.status, 400);
-    assert.equal(unbound.body.error, 'project-required');
+    assert.equal(unbound.status, 200);
+    assert.equal(unbound.body.assets?.items?.length ?? 0, 0);
 
     const seeded = await h.call({
       method: 'POST',

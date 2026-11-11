@@ -28,7 +28,8 @@ export function resolveWorkflowPaths(
   const root = join(home, 'omnimux', 'workflow');
   return {
     root,
-    workspacesDir: join(root, 'workspaces'),
+    // 未绑定项目的工作区画布放在用户级公共目录（与 DSH 的 `_no-cwd` 会话同思路）
+    workspacesDir: join(root, 'free'),
     executionsDir: join(root, 'executions'),
     mediaDir: join(root, 'media'),
     templatesDir: join(root, 'templates'),

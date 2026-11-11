@@ -1,7 +1,8 @@
 /**
  * WorkspaceStore: canvas.json CRUD + optimistic lock + atomic writes.
  *
- * Unbound canvases live under `$DSH_HOME/omnimux/workflow/workspaces/<id>/canvas.json`.
+ * Unbound canvases live under `$DSH_HOME/omnimux/workflow/free/<id>/canvas.json`
+ * (the user-level public area, mirroring DSH's `_no-cwd` session folder).
  * Bound canvases migrate (copy, metadata only) to
  * `<ProjectRoot>/.omnimux/canvases/<id>.json` and that file becomes SSOT.
  */

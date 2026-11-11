@@ -72,7 +72,6 @@ import { createLibraryServiceClient } from '../library/libraryService';
 import { createProjectAssetsStore } from '../workspace/ProjectAssetsStore';
 import { createProjectStore } from '../../projects/ProjectStore';
 import { ensureLibraryRoot } from '../../projects/library';
-import { bindEnsureProjectBound } from '../../projects/ensureProjectBound';
 import { createTemplateRoutes } from './templateRoutes';
 import { createTableRoutes } from './tableRoutes';
 import { createSpeechToTextRoutes } from './speechToTextRoutes';
@@ -142,12 +141,12 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
   const staticRoutes = createStaticRoutes({ pluginRoot: PLUGIN_ROOT, gateway });
   const workspaceRoutes = createWorkspaceRoutes(store, projectStore);
   const preferenceRoutes = deps.generationPreferences ? createGenerationPreferencesRoutes(deps.generationPreferences, gateway) : null;
-  const ensureProjectBound = deps.ensureProjectBound ?? bindEnsureProjectBound(projectStore);
-  const directorRoutes = createDirectorRoutes(store, ensureProjectBound);
+  const directorRoutes = createDirectorRoutes(store);
   const libraryHttp = createLibraryServiceClient(() => deps.getSeam?.('assetLibrary'));
+  const resolveAssetsRoot = deps.resolveAssetsRoot ?? ((workspaceId: string) => projectStore.findByCanvasWorkspaceId(workspaceId));
   const assetsStore = deps.assetsStore ?? createProjectAssetsStore({
     workspacesDir: store.workspacesDir,
-    resolveProjectRoot: (workspaceId) => projectStore.findByCanvasWorkspaceId(workspaceId),
+    resolveProjectRoot: resolveAssetsRoot,
     fetchLibraryDetail: libraryHttp.fetchLibraryDetail,
     promoteToLibrary: libraryHttp.promoteToLibrary,
   });
@@ -156,8 +155,6 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
     resolveSessionWorkspaceDir: deps.resolveSessionWorkspaceDir,
   });
   const projectAssetsRoutes = createProjectAssetsRoutes(assetsStore, {}, async (workspaceId) => {
-    const snapshot = store.get(workspaceId);
-    await ensureProjectBound(workspaceId, snapshot.name);
     store.get(workspaceId);
   });
   const directorAssistant = createDirectorAssistantRoutes({ store, assetsStore, getSeam: deps.getSeam });
@@ -167,7 +164,7 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
     mediaDir,
     resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
     executionManager,
-    ensureProjectBound,
+    resolveAssetsRoot,
     getCatalog: async () => (await gateway.capabilities()) as import('../../shared/api').CapabilityCatalog,
   });
   const mediaRoutes = createMediaRoutes(mediaDir);

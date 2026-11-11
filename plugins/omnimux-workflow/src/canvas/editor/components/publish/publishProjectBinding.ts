@@ -3,7 +3,7 @@
  *
  * 画布岛只持有 `workspaceId`；项目归属由 ProjectStore 扫盘维护
  * （`ProjectStore.findByCanvasWorkspaceId`）。这里复用客户端同一条只读接口
- * 拉项目列表，按 `canvasWorkspaceIds` / `pages[].canvasWorkspaceId` 反查，
+ * 拉项目列表，按 `pages[].canvasWorkspaceId` 反查，
  * 把结果落进 manifest 的 `workflowBinding.projectId`，供「项目」页
  * 「AI应用」卡片的「编辑」直接定位。
  *
@@ -19,7 +19,6 @@ export const PROJECTS_LIST_PATH = '/omnimux-workflow/api/projects';
 
 export interface ProjectLookupRow {
   id?: unknown;
-  canvasWorkspaceIds?: unknown;
   pages?: unknown;
 }
 
@@ -44,8 +43,6 @@ export function pickProjectIdForWorkspace(
     if (!row || typeof row !== 'object') continue;
     const id = textOf(row.id);
     if (!id) continue;
-    const ids: unknown[] = Array.isArray(row.canvasWorkspaceIds) ? row.canvasWorkspaceIds : [];
-    if (ids.some((value: unknown) => textOf(value) === ws)) return id;
     const pages: unknown[] = Array.isArray(row.pages) ? row.pages : [];
     const hit = pages.some((page: unknown) => {
       if (!page || typeof page !== 'object') return false;

@@ -3,8 +3,7 @@
  *
  * 工作区里出现的创作页必须能被项目页看到：只要会话所在文件夹里建了画布，
  * 就在**该既有文件夹**内补一份 `.omnimux/project.json`，并把画布登记为该项目
- * 的一个创作页。既有 `ensureProjectBound` 只在媒体生成时分配新文件夹，管不到
- * 「画布先建、生成后到」的路径，这里补的是同一件事的前半段。
+ * 的一个创作页。这是显式建项动作；媒体生成不再替用户偷偷建默认库项目。
  *
  * 红线：只在库根内的既有目录写元数据，绝不新建重复目录，绝不 rm 用户文件夹；
  * 登记失败不得影响画布创建（调用方 best-effort）。
@@ -55,7 +54,6 @@ function normalizeCanvasId(canvasWorkspaceId: string | null | undefined): string
 
 /** 该项目是否已经把这个画布登记为任一创作页。 */
 function canvasAlreadyBound(record: ProjectRecord, canvasId: string): boolean {
-  if (record.canvasWorkspaceIds?.includes(canvasId)) return true;
   return (record.pages ?? []).some((page) => page.canvasWorkspaceId === canvasId);
 }
 
@@ -109,7 +107,6 @@ export function ensureWorkspaceProjectBound(
   try {
     return projectStore.create(title, {
       projectRoot: root,
-      sessionId: input.sessionId ?? null,
       ...(canvasId !== null ? { canvasWorkspaceIds: [canvasId] } : {}),
     });
   } catch (error) {

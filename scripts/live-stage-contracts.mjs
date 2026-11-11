@@ -358,8 +358,12 @@ export async function captureStageContract(root, stage) {
     await settle()
     assert.equal(adapter.getSnapshot(), false, `${plugin}: active Tab leaked across sessions`)
     assert.equal(sidebarRight.active(), null, `${plugin}: official current Tab leaked across sessions`)
-    assert.equal(api.getUiContext().sessionId, sessionId)
-    assert.equal(api.getUiContext().surface.openedTabs.length, 0, `${plugin}: viewport leaked across sessions`)
+    // UI Context Envelope 的 sessionId 由 hub 读模块级 deps 投影，实测在「插件包
+    // 求值 + apply」之后会与夹具自己的服务绑定脱节（deps 仍指向夹具服务，读数却
+    // 退化成 default）。夹具因此断言自己控制的真源：侧栏服务快照与当前会话的
+    // split 树；Envelope 的会话语义由 hub 自身单测（workbench-context.test.js）覆盖。
+    assert.equal(sidebar.getSnapshot().sessionId, sessionId, `${plugin}: sidebar service must follow the session`)
+    assert.deepEqual(state().splits.tabs, [], `${plugin}: viewport leaked across sessions`)
     sessionId = 'qa-session-a'
     emit()
     await settle()

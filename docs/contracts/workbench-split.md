@@ -71,7 +71,7 @@ All client code that reads right-panel state MUST go through `workbench/current-
 | `omnimux-publish:library` | `omnimux-publish` | `gui` | `[data-omnimux-publish-entry]` |
 | `omnimux-analytics:library` | `omnimux-analytics` | `gui` | `[data-omnimux-analytics-entry]` |
 | `omnimux-workflow:library` | `omnimux-workflow` | `gui` | `[data-dsh-omnimux-workflow-entry]` |
-| `omnimux-workflow:canvas` | `omnimux-workflow` | `gui` | not a left-row; opened after a project session |
+| `omnimux-workflow:canvas` | `omnimux-workflow` | `gui` | not a left-row; opened after a project session. Workspace-level presence: target is derived from the active workspace's project `activePageId`; `CanvasPresenceController` projects the tab into the active session. Per-session tab memory must not own the canvas target. |
 | `omnimux-market:plaza` | `omnimux-market` | `gui` | `sidebar.footer.action` `[data-omnimux-market-entry]`（设置上方，不是新会话 extra row） |
 | `omnimux-clip:studio` | `omnimux-clip` | `gui` | left-row hidden（marker `[data-omnimux-clip-entry]` 保留未挂载）；由 Vids 左侧入口先行打开，或由画布/Agent 打开。Vids 入口 MUST await Clip Workbench open with `title: '视频剪辑'` and `focus: 'split'`, and may claim `omnimux-vids` only when the result is strictly `true` |
 | `omnimux-vids` (overlay stage, not a Workbench Tab) | `omnimux-video` | `split` on entry | Google Vids left-row launcher; awaits opening Clip (`tabId: 'omnimux-clip:studio'`, `title: '视频剪辑'`, `focus: 'split'`) and claims the overlay stage only when that result is exactly `true` |

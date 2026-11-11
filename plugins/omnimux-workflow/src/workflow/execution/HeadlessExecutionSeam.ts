@@ -195,7 +195,7 @@ export interface HeadlessWorkspaceProvider {
 export interface HeadlessExecutionSeamDeps {
   executionManager: ExecutionManager;
   workspaceStore?: HeadlessWorkspaceProvider;
-  ensureProjectBound?: (workspaceId: string, name?: string) => Promise<void>;
+  resolveAssetsRoot?: (workspaceId: string) => { path: string } | null;
   getCatalog?: () => Promise<CapabilityCatalog | null>;
   mediaDir?: string;
   resolveProjectFile?: ResolveExecutionProjectFile;
@@ -323,15 +323,10 @@ export function createHeadlessExecutionSeam(deps: HeadlessExecutionSeamDeps): He
         typeof deps.workspaceStore.resolveProjectRoot === 'function' &&
         !deps.workspaceStore.resolveProjectRoot(workspaceId)
       ) {
-        if (deps.ensureProjectBound) {
-          await deps.ensureProjectBound(workspaceId, workspaceId);
-        }
-        if (!deps.workspaceStore.resolveProjectRoot(workspaceId)) {
-          throw new HeadlessExecutionError(
-            'project_required',
-            `Workspace "${workspaceId}" contains media generation nodes but is not bound to a local project.`,
-          );
-        }
+        throw new HeadlessExecutionError(
+          'project_required',
+          `Workspace "${workspaceId}" contains media generation nodes but is not bound to a local project.`,
+        );
       }
 
       // 7. Calculate initial outputs for single/subgraph mode if applicable

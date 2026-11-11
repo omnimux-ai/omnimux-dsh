@@ -9,6 +9,8 @@ import { CanvasTab } from './projects/CanvasTab.jsx'
 import { AppTab } from './projects/AppTab.jsx'
 import { bindBetterSidebar, CANVAS_TAB_ID, APP_TAB_ID } from './projects/projectCanvas.js'
 import { installWorkflowGlobal } from './projects/workflow-global.js'
+import { createWorkspaceContextStore } from './projects/workspace-context.js'
+import { createCanvasPresence } from './projects/canvas-presence.js'
 
 export const name = 'omnimux-workflow'
 export const inject = ['slots', 'locale', 'sessions', 'workspaces', 'layout']
@@ -52,6 +54,14 @@ export function apply(ctx) {
     }
     return undefined
   }
+
+  const workspaceContext = createWorkspaceContextStore({
+    sessions: ctx.sessions,
+    workspaces: ctx.workspaces,
+    getSidebarRight,
+  })
+  ctx.effect(() => () => workspaceContext.dispose(), 'omnimux-workflow: workspace context')
+  let canvasPresence = null
 
   // Cross-plugin seam: inspiration (and future callers) create a project
   // without importing this package. Disposer deletes window.__omnimuxWorkflow.
@@ -101,6 +111,7 @@ export function apply(ctx) {
         betterSidebar: sidebar,
         getSessionNavigation,
         getSidebarRight,
+        presence: canvasPresence,
       }),
     })
   }
@@ -123,6 +134,8 @@ export function apply(ctx) {
         betterSidebar: sidebar,
         getSessionNavigation,
         getSidebarRight,
+        workspaceContext,
+        presence: canvasPresence,
       }),
     })
   }
@@ -158,6 +171,16 @@ export function apply(ctx) {
   if (typeof ctx.inject === 'function') {
     ctx.inject(['betterSidebar'], (inner) => {
       const sidebar = inner.betterSidebar ?? inner.get?.('betterSidebar')
+      canvasPresence = createCanvasPresence({
+        sessions: ctx.sessions,
+        workspaces: ctx.workspaces,
+        getSidebarRight,
+        getSessionNavigation,
+        betterSidebar: sidebar,
+        layout: ctx.layout,
+        t,
+      })
+      inner.effect(() => () => canvasPresence?.dispose(), 'omnimux-workflow: canvas presence')
       bindWorkbench({ betterSidebar: sidebar, layout: ctx.layout, sessions: ctx.sessions })
       inner.effect(() => bindBetterSidebar(sidebar), 'omnimux-workflow: sidebar binding')
       inner.effect(() => registerWorkflowLibraryTab(sidebar), 'omnimux-workflow: library tab')

@@ -34,7 +34,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const CSS_STUB = 'export default new Proxy({}, { get: (_t, k) => (typeof k === "string" ? k : undefined) })'
 
 const API_STUB = `
-exports.listProjects = async () => ({ ok: true, body: { projects: globalThis.__testProjects || [] } })
+exports.listProjects = async () => ({ ok: true, body: { projects: (globalThis.__testProjects || []).map((p) => ({ ...p, path: p.path || ('/tmp/' + p.id) })) } })
 exports.getProject = async () => ({ ok: false })
 exports.renameProject = async () => ({ ok: true })
 exports.deleteProject = async () => ({ ok: true })
@@ -165,7 +165,7 @@ function createDomEnv(sidebar, fetchImpl = null) {
   defineGlobal('requestAnimationFrame', dom.window.requestAnimationFrame.bind(dom.window))
   defineGlobal('cancelAnimationFrame', dom.window.cancelAnimationFrame.bind(dom.window))
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
-  globalThis.__testProjects = [{ id: 'proj_alpha', title: '项目甲', canvasWorkspaceIds: ['ws_alpha'], pages: [] }]
+  globalThis.__testProjects = [{ id: 'proj_alpha', title: '项目甲', path: '/tmp/proj_alpha', canvasWorkspaceIds: ['ws_alpha'], pages: [] }]
   // 内置应用清单接口（GET /omnimux-apps/api/apps）：jsdom 里没有真实 Host，
   // 不装桩就必然失败并把「官方内置应用读取失败」横幅渲染进页面。默认给一份空清单的
   // 成功响应，让内置侧保持中性；内置清单本身的契约由 builtinApps.test.mjs 与
@@ -203,8 +203,32 @@ async function mountPage({ sidebar, fetchImpl = null, t = (key) => zh[key] || ke
       stage: { set() {} },
       store: null,
       visible: true,
-      sessions: { create: async () => ({ id: 'sess-1' }), open() {} },
-      workspaces: {},
+      sessions: {
+        create: async () => 'sess-1',
+        open() {},
+        list: {
+          getSnapshot: () => ({
+            current: 'sess-1',
+            byId: { 'sess-1': { id: 'sess-1', cwd: '/tmp/proj_alpha', updatedAt: 1, blank: false } },
+            archivedSessionIds: [],
+          }),
+          subscribe: () => () => {},
+        },
+      },
+      workspaces: {
+        create: async ({ path }) => ({ workspaceId: `ws_${path.split('/').pop() || 'created'}` }),
+        list: {
+          getSnapshot: () => ({
+            items: (globalThis.__testProjects || []).map((p) => ({
+              workspaceId: `ws_${p.id}`,
+              path: p.path || ('/tmp/' + p.id),
+              title: p.title,
+              sessionIds: [],
+            })),
+          }),
+          subscribe: () => () => {},
+        },
+      },
       layout: { closeDetails() {} },
       betterSidebar: sidebar,
     }))

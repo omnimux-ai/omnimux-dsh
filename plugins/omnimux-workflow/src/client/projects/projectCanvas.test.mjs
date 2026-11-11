@@ -144,7 +144,7 @@ describe('projectCanvas isolation', () => {
     assert.equal(opened[0].scope.sessionId, 'sess-1')
   })
 
-  it('activateProjectCanvas 传递 canvasWorkspaceId 到 scope、meta、updateTab 并广播 active-canvas-changed', async () => {
+  it('activateProjectCanvas 传递 canvasWorkspaceId 到 scope、meta、updateTab', async () => {
     const opened = []
     const updated = []
     const dispatchedEvents = []
@@ -208,11 +208,8 @@ describe('projectCanvas isolation', () => {
       assert.equal(updated[0].data?.meta?.canvasWorkspaceId, 'ws_canvas_page_2')
       assert.equal(updated[0].data?.meta?.canvasSessionId, 'sess-page-1')
 
-      // 广播 active-canvas-changed
-      assert.equal(dispatchedEvents.length, 1)
-      assert.equal(dispatchedEvents[0].name || dispatchedEvents[0].type, 'omnimux:active-canvas-changed')
-      assert.equal(dispatchedEvents[0].detail?.workspaceId, 'ws_canvas_page_2')
-      assert.equal(dispatchedEvents[0].detail?.sessionId, 'sess-page-1')
+      // 不再派发全局画布事件。
+      assert.equal(dispatchedEvents.length, 0)
     } finally {
       globalThis.window = previousWin
       globalThis.CustomEvent = previousCustomEvent
@@ -931,7 +928,7 @@ describe('projectCanvas isolation', () => {
     }
   })
 
-  it('activateProjectCanvas 在 openTab 之后异步对齐会话，对齐成功才补 meta 与广播', async () => {
+  it('activateProjectCanvas 在 openTab 之后异步对齐会话，对齐成功才补 meta', async () => {
     const previous = globalThis.window
     const previousCustomEvent = globalThis.CustomEvent
     const order = []
@@ -981,9 +978,7 @@ describe('projectCanvas isolation', () => {
       assert.equal(updated.length, 1)
       assert.equal(updated[0].data.meta.canvasWorkspaceId, 'ws_target')
       assert.equal(updated[0].data.meta.canvasSessionId, 'sess-target')
-      assert.equal(events.length, 1)
-      assert.equal(events[0].detail.workspaceId, 'ws_target')
-      assert.equal(events[0].detail.sessionId, 'sess-target')
+      assert.equal(events.length, 0, '不再派发全局画布事件')
     } finally {
       clearTimeout(flip)
       globalThis.CustomEvent = previousCustomEvent

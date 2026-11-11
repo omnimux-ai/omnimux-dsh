@@ -52,7 +52,7 @@ describe('创作画布与工作区同频流转契约 (#2224)', () => {
     assert.ok(bound, 'Agent 必须能在任意工作区自动建立项目绑定');
     assert.equal(bound.title, 'Agent广告工作流');
     assert.ok(existsSync(join(workspaceDir, '.omnimux', 'project.json')));
-    assert.ok(bound.canvasWorkspaceIds.includes('ws_agent_canvas_1'));
+    assert.ok(bound.pages.some((page) => page.canvasWorkspaceId === 'ws_agent_canvas_1'));
 
     rmSync(libraryRoot, { recursive: true, force: true });
     rmSync(workspaceDir, { recursive: true, force: true });

@@ -21,6 +21,7 @@ export const FOLDER_STYLES = `
 .omnimux-folder-caption { position: absolute; bottom: 8%; left: 8%; right: 16%; display: flex; flex-direction: column; gap: 4px; }
 .omnimux-folder-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; font-size: clamp(15px, 5.8cqw, 30px); line-height: 1.3; font-weight: 600; }
 .omnimux-folder-date { font-size: clamp(12px, 4.65cqw, 24px); line-height: 1.4; color: var(--dsw-alias-label-secondary); }
+.omnimux-folder-workspace { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(10px, 3.9cqw, 20px); line-height: 1.35; color: var(--dsw-alias-label-tertiary, var(--dsw-alias-label-secondary)); }
 .omnimux-folder .omnimux-folder-more { position: absolute; right: 5%; bottom: 6%; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-secondary); opacity: 0; transition: opacity 120ms ease; }
 .omnimux-folder:hover .omnimux-folder-more, .omnimux-folder:focus-within .omnimux-folder-more { opacity: 1; }
 @media (hover: none) { .omnimux-folder .omnimux-folder-more { opacity: 1; } }

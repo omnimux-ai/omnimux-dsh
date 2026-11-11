@@ -5,7 +5,6 @@
 
 import { join } from 'node:path';
 import type { WorkspaceStore } from '../workspace/WorkspaceStore';
-import type { EnsureProjectBoundFn } from '../../projects/ensureProjectBound';
 import type { BindWorkspaceProjectFn } from '../../projects/workspaceProjectBinding';
 import type {
   ExecutionManager,
@@ -72,8 +71,8 @@ export interface WorkflowAgentDeps {
   /** Plugin media root (absolute) — resolves media URLs to local paths. */
   mediaDir: string;
   resolveProjectFile?: import('../execution/executionMediaSource.ts').ResolveExecutionProjectFile;
-  /** Same lazy-bind helper as POST /executions (media generate needs a project root). */
-  ensureProjectBound?: EnsureProjectBoundFn;
+  /** Project root or user-level free-canvas root for unbound canvases. */
+  resolveAssetsRoot?: (workspaceId: string) => { path: string } | null;
   /**
    * 工作区里诞生的画布必须能被项目页看到（Issue #2104）：把会话所属的既有
    * 工作区文件夹登记为项目，并把画布登记为它的一个创作页。best-effort。
@@ -409,10 +408,9 @@ export function resolveWorkspace(
   if (workspaceId) {
     // Boundary Guard: 校验传入的 workspaceId 是否属于当前会话项目
     if (project) {
-      const allowed = new Set([
-        ...(project.canvasWorkspaceIds || []),
-        ...(project.pages || []).map((p) => p.canvasWorkspaceId).filter(Boolean),
-      ]);
+      const allowed = new Set(
+        (project.pages || []).map((p) => p.canvasWorkspaceId).filter(Boolean),
+      );
       if (!allowed.has(workspaceId)) {
         return errorBody(
           'outside-project-boundary',
@@ -431,10 +429,9 @@ export function resolveWorkspace(
   const fromUi = readUiContextWorkspaceId(options?.getActiveView);
   if (fromUi) {
     if (project) {
-      const allowed = new Set([
-        ...(project.canvasWorkspaceIds || []),
-        ...(project.pages || []).map((p) => p.canvasWorkspaceId).filter(Boolean),
-      ]);
+      const allowed = new Set(
+        (project.pages || []).map((p) => p.canvasWorkspaceId).filter(Boolean),
+      );
       if (allowed.has(fromUi)) {
         const hit = withWorkspace(store, fromUi, (snapshot) => ({
           snapshot,
@@ -455,8 +452,7 @@ export function resolveWorkspace(
   if (project) {
     const activeCanvasId =
       project.pages?.find((p) => p.id === project.activePageId)?.canvasWorkspaceId ||
-      project.pages?.[0]?.canvasWorkspaceId ||
-      project.canvasWorkspaceIds?.[0];
+      project.pages?.[0]?.canvasWorkspaceId;
     if (activeCanvasId) {
       const hit = withWorkspace(store, activeCanvasId, (snapshot) => ({
         snapshot,

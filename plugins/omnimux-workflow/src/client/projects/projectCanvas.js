@@ -867,15 +867,19 @@ export async function activateProjectCanvas(ctx, opts = {}) {
   releaseAlignment(sessionId)
   const cwd = opts.cwd
   const canvasWorkspaceId = typeof opts.canvasWorkspaceId === 'string' ? opts.canvasWorkspaceId.trim() : ''
+  const pageId = typeof opts.pageId === 'string' ? opts.pageId.trim() : ''
   const scopedCanvasWorkspaceId = sessionId ? canvasWorkspaceId : ''
   const scope = sessionId
     ? { sessionId, ...(cwd ? { cwd } : {}), ...(scopedCanvasWorkspaceId ? { canvasWorkspaceId: scopedCanvasWorkspaceId } : {}) }
     : (canvasWorkspaceId ? { canvasWorkspaceId, ...(cwd ? { cwd } : {}) } : undefined)
 
   const title = opts.title || (typeof ctx?.t === 'function' ? ctx.t('details.canvasTab') : '创作画布')
+  const focusGroupId = typeof opts.focusGroupId === 'string' ? opts.focusGroupId.trim() : ''
   const canvasSessionId = scope?.sessionId ?? sessionId ?? null
   const meta = {
     ...(scopedCanvasWorkspaceId ? { canvasWorkspaceId: scopedCanvasWorkspaceId, canvasSessionId } : {}),
+    ...(pageId ? { pageId } : {}),
+    ...(focusGroupId ? { focusGroupId } : {}),
   }
   const tabSeed = {
     type: CANVAS_TAB_ID,
@@ -907,7 +911,6 @@ export async function activateProjectCanvas(ctx, opts = {}) {
     console.warn('[omnimux-workflow] canvas tab open refused', firstOpen.error)
     return false
   }
-  const focusGroupId = typeof opts.focusGroupId === 'string' ? opts.focusGroupId.trim() : ''
   // ② 会话已在目标会话前台时的收尾（会话未对齐时由下面的异步步骤补上）。
   const commit = () => {
     // 穿透单例：画布 tab 是 single:true，已打开时重复 openTab 只聚焦、
@@ -916,15 +919,9 @@ export async function activateProjectCanvas(ctx, opts = {}) {
     if (focusGroupId) nextMeta.focusGroupId = focusGroupId
     if (scopedCanvasWorkspaceId) nextMeta.canvasWorkspaceId = scopedCanvasWorkspaceId
     if (scopedCanvasWorkspaceId && canvasSessionId) nextMeta.canvasSessionId = canvasSessionId
+    if (pageId) nextMeta.pageId = pageId
     if (Object.keys(nextMeta).length > 0 && typeof service.updateTab === 'function') {
       service.updateTab(CANVAS_TAB_ID, { meta: nextMeta })
-    }
-
-    // 广播活跃画布变更事件（保证 CanvasTab 即使在单例不重开状态下也能即时收到新工作区 ID）
-    if (scopedCanvasWorkspaceId && typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
-        detail: { workspaceId: scopedCanvasWorkspaceId, sessionId },
-      }))
     }
 
     // Enter-Conversation Intent：从一级库（gui + conversationCollapsed）新建/打开项目时，

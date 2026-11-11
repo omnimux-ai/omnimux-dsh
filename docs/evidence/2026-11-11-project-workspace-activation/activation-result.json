@@ -1,0 +1,31 @@
+{
+  "title": "QA 初始化项目 1794319717777",
+  "ready": false,
+  "diag": {
+    "projectPath": "<worktree>/.test-env-GxZl0g/<home>/Movies/OmniMux/Projects/QA 初始化项目 1794319717777",
+    "pages": 1,
+    "projectKeys": [
+      "activePageId",
+      "cover",
+      "id",
+      "pages",
+      "path",
+      "sessionId",
+      "title",
+      "updatedAt"
+    ],
+    "workspacePaths": [
+      "<worktree>/.test-env-GxZl0g/<home>/Movies/OmniMux/Projects/QA 初始化项目 1794319717777",
+      "<worktree>/.test-env-GxZl0g/dsh/workspaces/ws_qa_media"
+    ],
+    "workspaceMatched": true,
+    "sessionId": null,
+    "sessionCwd": "<worktree>/.test-env-GxZl0g/<home>/Movies/OmniMux/Projects/QA 初始化项目 1794319717777",
+    "sessionCount": 2,
+    "cwdMatches": true,
+    "tabVisible": "true",
+    "hostPresent": true,
+    "loading": true,
+    "errorBanner": ""
+  }
+}

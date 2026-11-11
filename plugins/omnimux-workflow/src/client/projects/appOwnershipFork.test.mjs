@@ -43,7 +43,7 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
           workspaceId: 'ws_foreign',
         },
       }
-      const projects = [{ id: 'proj_local_100', canvasWorkspaceIds: ['ws_local_100'] }]
+      const projects = [{ id: 'proj_local_100', pages: [{ id: 'p1', canvasWorkspaceId: 'ws_local_100' }] }]
       assert.equal(isAppOwnedByUser(manifest, projects), false)
     })
 
@@ -63,7 +63,7 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
       const projects = [
         {
           id: 'proj_my_own',
-          canvasWorkspaceIds: ['ws_my_canvas'],
+          pages: [{ id: 'page-1', canvasWorkspaceId: 'ws_my_canvas' }],
           title: '我的视频工程',
         },
       ]
@@ -552,7 +552,7 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
               project: {
                 id: 'proj_fork_999',
                 title,
-                canvasWorkspaceIds: ['ws_fork_999'],
+                pages: [{ id: 'page-1', canvasWorkspaceId: 'ws_fork_999' }],
                 sessionId: 'sess_fork_999',
               },
             },
@@ -600,7 +600,7 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
                 id: 'proj_custom_root',
                 title,
                 path: root,
-                canvasWorkspaceIds: ['ws_custom'],
+                pages: [{ id: 'page-1', canvasWorkspaceId: 'ws_custom' }],
               },
             },
           }
@@ -641,7 +641,7 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
           id: 'proj_current',
           activePageId: 'page-1',
           pages: [{ id: 'page-1', canvasWorkspaceId: 'ws_host' }],
-          canvasWorkspaceIds: ['ws_host'],
+          pages: [{ id: 'page-1', canvasWorkspaceId: 'ws_host' }],
         },
         pageTitle: '自定义专属创作页',
         createProjectFn: async () => {
@@ -708,7 +708,7 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
           ok: true,
           status: 200,
           body: {
-            project: { id: 'proj_legacy', title, canvasWorkspaceIds: ['ws_legacy'] },
+            project: { id: 'proj_legacy', title, pages: [{ id: 'page-1', canvasWorkspaceId: 'ws_legacy' }] },
           },
         }),
         requestFn: async (url, opts) => {

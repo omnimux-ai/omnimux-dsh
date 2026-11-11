@@ -15,7 +15,6 @@ import {
   getProject,
   renameProject,
   deleteProject,
-  bindProjectSession,
   createProjectPage,
   updateProjectPage,
   deleteProjectPage,
@@ -31,8 +30,9 @@ import {
 } from '../../canvas/bridge/apiClient.ts'
 import { injectWorkflowStyles } from '../styles.js'
 import { NewLocalProjectDialog } from './NewLocalProjectDialog.jsx'
-import { createProjectSession, dismissProductStage, runNewProject } from './newProject.js'
-import { activateProjectCanvas, closeAppTab, openAppTab } from './projectCanvas.js'
+import { dismissProductStage, runNewProject } from './newProject.js'
+import { closeAppTab, openAppTab } from './projectCanvas.js'
+import { createProjectNavigation } from './project-navigation.js'
 import { ProjectFolderCard } from './ProjectFolderCard.jsx'
 import { ProjectPagesTab } from './ProjectPagesTab.jsx'
 import { ProjectAssetsTab } from './ProjectAssetsTab.jsx'
@@ -116,8 +116,12 @@ function errText(result, t) {
 }
 
 export function ProjectLibraryPage(props) {
-  const { t, stage, store, visible = true, sessions, workspaces, layout, betterSidebar, getSessionNavigation, getSidebarRight } = props
+  const { t, stage, store, visible = true, sessions, workspaces, layout, betterSidebar, getSessionNavigation, getSidebarRight, presence } = props
   useEffect(() => { injectWorkflowStyles() }, [])
+  const navigation = React.useMemo(
+    () => createProjectNavigation({ sessions, workspaces, layout, betterSidebar, getSessionNavigation, getSidebarRight, t, presence }),
+    [sessions, workspaces, layout, betterSidebar, getSessionNavigation, getSidebarRight, t, presence],
+  )
 
   useEffect(() => {
     const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
@@ -159,7 +163,11 @@ export function ProjectLibraryPage(props) {
     try {
       const res = await listProjects()
       if (res.ok && Array.isArray(res.body?.projects)) {
-        setProjects(res.body.projects)
+        const workspaceItems = workspaces?.list?.getSnapshot?.()?.items ?? []
+        setProjects(res.body.projects.map((project) => ({
+          ...project,
+          workspace: workspaceItems.find((workspace) => workspace?.path === project.path) ?? null,
+        })))
         setError('')
       } else if (!res.ok) {
         setError(errText(res, t))
@@ -171,7 +179,7 @@ export function ProjectLibraryPage(props) {
 
   useEffect(() => {
     if (visible) void reload()
-  }, [visible, reload])
+  }, [visible, reload, workspaces])
 
   // 1b. 「AI应用」分类的独立列表：用户已发布 manifest 映射 + 官方内置清单。
   // 存储根本不可用（隐私模式 / 被策略禁用）与清单损坏是两种不同的失败，
@@ -235,7 +243,7 @@ export function ProjectLibraryPage(props) {
         })
       } else {
         // 加载项目资产 (回退)
-        const assetsWorkspaceId = project.canvasWorkspaceIds?.[0] || project.id
+        const assetsWorkspaceId = project.pages?.[0]?.canvasWorkspaceId || project.id
         const assetsRes = await getWorkspaceAssets(assetsWorkspaceId)
         if (assetsRes.ok && assetsRes.body?.assets) {
           setAssetsDoc(assetsRes.body.assets)
@@ -258,70 +266,32 @@ export function ProjectLibraryPage(props) {
     }
   }, [selectedProject, loadProjectDetail, visible])
 
-  // 3. 点击进入某个项目文件夹
+  // 3. 点击进入某个项目文件夹：先展开详情；真正的工作区切换在打开创作页时完成
   const handleSelectFolder = (project) => {
     setSelectedProject(project)
     setDetailTab('pages')
   }
 
-  // 4. 打开某个具体的创作页并呼出画布
+  // 4. 打开某个具体的创作页：统一走项目导航（path → workspace → live session）
   const handleOpenPage = async (page) => {
     if (!selectedProject) return
-    // 打开期间（含会话创建、画布 tab 打开）重复点击直接忽略，避免并发打开。
     if (openingRef.current) return
     openingRef.current = true
     setOpeningPageId(page?.id ?? null)
     try {
       dismissProductStage()
-
-      const canvasWorkspaceId = page?.canvasWorkspaceId
-      let sessionId = selectedProject.sessionId
-      // 将选中的创作页设置为当前活跃页
-      if (canvasWorkspaceId && typeof localStorage !== 'undefined') {
-        try {
-          localStorage.setItem('omnimux:latest-active-canvas', canvasWorkspaceId)
-        } catch {}
+      const result = await navigation.openPage(selectedProject, page)
+      if (!result.ok) {
+        setError(result.error === 'session-navigation-unavailable'
+          ? (t('projects.noWorkspace') || '工作区不可用')
+          : (t('projects.openCanvasFailed') || '无法打开创作画布，请重试。'))
+        return
       }
-      void updateProjectPage(selectedProject.id, page.id, { active: true }).catch(() => {})
-
-      if (!sessionId && sessions && typeof sessions.create === 'function') {
-        try {
-          const created = await createProjectSession(sessions, workspaces, selectedProject.path || selectedProject.title)
-          // createProjectSession 返回的是 sessionId 字段；缺会话时打开必须绑定新会话，
-          // 否则画布会落在当前会话、项目永远没有 sessionId（#3928 顺带修）。
-          sessionId = created?.sessionId || created?.id
-          if (created?.ok === false || !sessionId) {
-            setError(t('projects.noWorkspace') || '工作区不可用')
-            return
-          }
-          void bindProjectSession(selectedProject.id, sessionId)
-        } catch (e) {
-          // 建会话失败就停：没有目标会话时 openTab 只会落在当前会话，用户看不出项目没绑定。
-          console.error('[omnimux-workflow] failed to create project session', e)
-          setError(t('projects.noWorkspace') || '工作区不可用')
-          return
-        }
-      }
-
-      const opened = await activateProjectCanvas(
-        { layout, betterSidebar, t, sessions, getSessionNavigation, getSidebarRight },
-        {
-          sessionId,
-          projectId: selectedProject.id,
-          cwd: selectedProject.path,
-          title: page.title || selectedProject.title,
-          pageId: page.id,
-          canvasWorkspaceId,
-        }
-      )
-      // 画布没打开（缺会话导航能力 / 画布 tab 未注册）时必须说清楚，不能停在「什么都没发生」。
-      setError(opened ? '' : (t('projects.openCanvasFailed') || '无法打开创作画布，请重试。'))
+      setError('')
     } catch (e) {
-      // 宿主异常（布局/侧栏服务）同样要落到可见错误，不允许冒成未处理的 rejection。
       console.error('[omnimux-workflow] open page failed', e)
       setError(t('projects.openCanvasFailed') || '无法打开创作画布，请重试。')
     } finally {
-      // 打开结束或失败都要复位，避免卡片停在「打开中」。
       openingRef.current = false
       setOpeningPageId(null)
     }
@@ -342,56 +312,26 @@ export function ProjectLibraryPage(props) {
   const handleEditApp = async (app) => {
     const target = resolveAppEditTarget(app)
     const project = resolveOwningProject(projects, app)
-    const canvasWorkspaceId = target.workspaceId
-      || project?.canvasWorkspaceIds?.[0]
-      || ''
     dismissProductStage()
-
-    let sessionId = project?.sessionId
-    // 画布 tab 是 single:true：光 openTab 只会聚焦已挂载的旧实例，
-    // 目标工作区与会话绑定，统一在会话就绪后由 activateProjectCanvas 安全联动，
-    // 避免在会话未就绪时提前向全局广播未带 sessionId 的事件造成污染。
-    if (canvasWorkspaceId && typeof localStorage !== 'undefined') {
-      try { localStorage.setItem('omnimux:latest-active-canvas', canvasWorkspaceId) } catch {}
-    }
-    if (!sessionId && project && sessions && typeof sessions.create === 'function') {
-      try {
-        const created = await createProjectSession(sessions, workspaces, project.path || project.title)
-        sessionId = created?.sessionId || created?.id
-        if (created?.ok === false || !sessionId) {
-          setAppsError(t('projects.noWorkspace') || '工作区不可用')
-          return
-        }
-        void bindProjectSession(project.id, sessionId)
-      } catch (e) {
-        console.error('[omnimux-workflow] failed to create project session', e)
-        setAppsError(t('projects.noWorkspace') || '工作区不可用')
-        return
-      }
-    }
-    // 会话切换与画布打开统一交给 activateProjectCanvas（现行壳走 uiWorkspace.openSession），
-    // 这里只负责事件广播；切换失败会在下方转成可见错误。
-    // 移除非安全无 sessionId 的提前广播后，统一在会话就绪且合法时安全派发
-    if (sessionId && canvasWorkspaceId && typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
-        detail: { workspaceId: canvasWorkspaceId, sessionId },
-      }))
-    }
-
     if (!project) {
       setAppsError(t('projects.appEditNoProject') || '找不到该应用所属项目，已为你打开创作画布。')
-    } else if (!target.groupId) {
+      return
+    }
+    const targetPage = (project.pages ?? []).find((page) => page?.canvasWorkspaceId === target.workspaceId)
+      || (project.pages ?? []).find((page) => page?.id === project.activePageId)
+      || (project.pages ?? [])[0]
+    const opened = await navigation.openProject(project, {
+      pageId: targetPage?.id,
+      focusGroupId: target.groupId,
+    })
+    if (!opened.ok) {
+      setAppsError(t('projects.appEditFailed') || '打开项目画布失败，请重试。')
+      return
+    }
+    if (!target.groupId) {
       setAppsError(t('projects.appEditOpened') || '已打开所属项目画布，未能定位到工作流组。')
     } else {
       setAppsError('')
-    }
-
-    const opened = await activateProjectCanvas(
-      { layout, betterSidebar, t, sessions, getSessionNavigation, getSidebarRight },
-      { sessionId, focusGroupId: target.groupId },
-    )
-    if (!opened) {
-      setAppsError(t('projects.appEditFailed') || '打开项目画布失败，请重试。')
     }
   }
 
@@ -492,7 +432,7 @@ export function ProjectLibraryPage(props) {
           if (res.ok) {
             void loadProjectDetail(selectedProject)
           } else {
-            const wsId = selectedProject.canvasWorkspaceIds?.[0] || selectedProject.id
+            const wsId = selectedProject.pages?.find((page) => page.id === selectedProject.activePageId)?.canvasWorkspaceId || selectedProject.pages?.[0]?.canvasWorkspaceId || selectedProject.id
             await mkdirWorkspaceAsset(wsId, { name: name.trim() })
             void loadProjectDetail(selectedProject)
           }
@@ -514,7 +454,7 @@ export function ProjectLibraryPage(props) {
         if (uploadRes.ok) {
           void loadProjectDetail(selectedProject)
         } else {
-          const wsId = selectedProject.canvasWorkspaceIds?.[0] || selectedProject.id
+          const wsId = selectedProject.pages?.find((page) => page.id === selectedProject.activePageId)?.canvasWorkspaceId || selectedProject.pages?.[0]?.canvasWorkspaceId || selectedProject.id
           await ingestWorkspaceAssets(wsId, {
             files: pickRes.body.paths.map((p) => ({ source_path: p })),
           })
@@ -546,6 +486,7 @@ export function ProjectLibraryPage(props) {
         return created
       }
       setDialogOpen(false)
+      presence?.markVisible?.(created.project?.path || created.cwd)
       // reload 成功会清空 error：等列表刷新完再写「画布没开」的可见提示。
       await reload()
       if (created.canvasOpened === false) {
@@ -619,7 +560,7 @@ export function ProjectLibraryPage(props) {
     : [{
         id: 'page-default',
         title: selectedProject?.title || '创作页 1',
-        canvasWorkspaceId: selectedProject?.canvasWorkspaceIds?.[0] || selectedProject?.id,
+        canvasWorkspaceId: selectedProject?.pages?.find((page) => page.id === selectedProject?.activePageId)?.canvasWorkspaceId || selectedProject?.pages?.[0]?.canvasWorkspaceId || selectedProject?.id,
         createdAt: selectedProject?.createdAt || new Date().toISOString(),
       }]
   const currentAssetsCount = (assetsDoc?.folders?.length ?? 0) + (assetsDoc?.items?.length ?? 0)

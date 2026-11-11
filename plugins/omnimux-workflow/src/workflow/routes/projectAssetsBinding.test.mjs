@@ -10,28 +10,48 @@ const bundle = await build({ stdin: { contents: [
   "export { createWorkspaceStore } from './src/workflow/workspace/WorkspaceStore.ts';",
   "export { createProjectAssetsStore } from './src/workflow/workspace/ProjectAssetsStore.ts';",
   "export { createProjectStore } from './src/projects/ProjectStore.ts';",
-  "export { bindEnsureProjectBound } from './src/projects/ensureProjectBound.ts';",
 ].join('\n'), resolveDir: new URL('../../..', import.meta.url).pathname }, bundle: true, platform: 'node', format: 'esm', define: { 'import.meta.url': JSON.stringify(new URL('./pluginRoot.ts', import.meta.url).href) }, write: false });
 const host = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].text).toString('base64'));
 
-function fixture() {
+function fixture(options = {}) {
   const root = mkdtempSync(join(tmpdir(), 'wf-asset-bind-'));
   const projectStore = host.createProjectStore({ libraryRoot: join(root, 'library') });
   const resolveProjectRoot = id => projectStore.findByCanvasWorkspaceId(id);
+  const resolveAssetsRoot = options.freeRoot
+    ? (id) => projectStore.findByCanvasWorkspaceId(id) ?? { path: join(root, 'workspaces', id) }
+    : resolveProjectRoot;
   const store = host.createWorkspaceStore({ workspacesDir: join(root, 'workspaces'), resolveProjectRoot });
   const source = join(root, 'hero.png');
   writeFileSync(source, 'test-image');
-  const assetsStore = host.createProjectAssetsStore({ workspacesDir: store.workspacesDir, resolveProjectRoot,
+  const assetsStore = host.createProjectAssetsStore({ workspacesDir: store.workspacesDir, resolveProjectRoot: resolveAssetsRoot,
     fetchLibraryDetail: async () => ({ files: [{ real_path: source, visible: true }] }) });
   const dispatcher = host.createWorkflowDispatcher({ store, projectStore, assetsStore,
-    ensureProjectBound: host.bindEnsureProjectBound(projectStore), libraryRoot: join(root, 'library'),
+    libraryRoot: join(root, 'library'),
+    resolveAssetsRoot: options.freeRoot ? resolveAssetsRoot : undefined,
     mediaDir: join(root, 'media'), gateway: {}, executionManager: {} });
   return { root, source, store, projectStore, assetsStore, dispatcher };
 }
 
+test('unbound canvas stores assets in the user-level free root without creating a project', async () => {
+  const f = fixture({ freeRoot: true });
+  try {
+    const ws = f.store.create('自由画布');
+    const result = await f.dispatcher.dispatch({
+      method: 'POST',
+      url: `/omnimux-workflow/api/workspaces/${ws.id}/assets/ingest`,
+      origin: 'http://localhost:3000',
+      body: { paths: [f.source], expectedRev: 0 },
+    });
+    assert.equal(result.status, 200, JSON.stringify(result.body));
+    assert.equal(f.projectStore.list().length, 0, '未绑定画布不得创建项目');
+    assert.equal(f.assetsStore.get(ws.id).items.length, 1);
+    assert.match(f.assetsStore.resolveProjectFile(ws.id, result.body.assets.items[0].relative_path), /workspaces/);
+  } finally { rmSync(f.root, { recursive: true, force: true }); }
+});
+
 for (const action of ['instantiate', 'ingest']) {
-  test(action + ': unbound canvas binds one reusable project and preserves graph', async () => {
-    const f = fixture();
+  test(action + ': unbound canvas uses the user-level free root and preserves graph', async () => {
+    const f = fixture({ freeRoot: true });
     try {
       const ws = f.store.create('角色复刻');
       f.store.save(ws.id, { expectedVersion: 0, nodes: [
@@ -45,15 +65,12 @@ for (const action of ['instantiate', 'ingest']) {
       const result = await f.dispatcher.dispatch(request);
       assert.equal(result.status, 200, JSON.stringify(result.body));
       assert.equal(result.body.assets.items.length, 1);
-      const project = f.projectStore.findByCanvasWorkspaceId(ws.id);
-      assert.ok(project);
-      assert.equal(project.title, '角色复刻');
+      assert.equal(f.projectStore.list().length, 0, '未绑定画布不得创建项目');
       assert.deepEqual(f.store.get(ws.id), before);
       assert.equal(readFileSync(f.assetsStore.resolveProjectFile(ws.id, result.body.assets.items[0].relative_path), 'utf8'), 'test-image');
       const second = await f.dispatcher.dispatch({ ...request, body: { ...request.body, expectedRev: 1 } });
       assert.equal(second.status, 200);
-      assert.equal(f.projectStore.list().length, 1);
-      assert.equal(f.projectStore.findByCanvasWorkspaceId(ws.id).id, project.id);
+      assert.equal(f.projectStore.list().length, 0, '再次写入仍不得创建项目');
     } finally { rmSync(f.root, { recursive: true, force: true }); }
   });
 }

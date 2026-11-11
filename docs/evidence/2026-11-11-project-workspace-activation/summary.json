@@ -1,0 +1,26 @@
+{
+  "pass": true,
+  "journeyAssertions": [
+    {
+      "name": "journey:library-empty-in-initial-state",
+      "pass": true
+    },
+    {
+      "name": "journey:project-created-through-ui",
+      "pass": true
+    },
+    {
+      "name": "journey:project-registered-as-workspace",
+      "pass": true
+    },
+    {
+      "name": "journey:session-cwd-equals-project-path",
+      "pass": true
+    },
+    {
+      "name": "journey:canvas-tab-visible-after-create",
+      "pass": true
+    }
+  ],
+  "environment": "fresh DSH_HOME, ui mode, zero projects, one empty workspace"
+}
