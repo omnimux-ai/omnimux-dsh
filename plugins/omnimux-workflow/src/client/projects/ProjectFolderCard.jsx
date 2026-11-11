@@ -48,6 +48,9 @@ export function ProjectFolderCard({ project, onOpen, onRename, onDelete, t }) {
       <span className="omnimux-folder-caption">
         <span className="omnimux-folder-name" title={project.title}>{project.title}</span>
         <span className="omnimux-folder-date">{dateStr}</span>
+        <span className="omnimux-folder-workspace" title={project.workspace?.path || project.path || ''}>
+          {project.workspace?.title || project.workspaceTitle || '未登记工作区'}
+        </span>
       </span>
     </Button>
     <IconButton variant="ghost" className="omnimux-folder-more" aria-label={t('projects.more')} aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)}>

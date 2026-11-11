@@ -62,3 +62,23 @@ export function resolveEffectiveWorkspaceId(sessionId: unknown): string | undefi
   if (override) return override;
   return sessionToWorkspaceId(sessionId);
 }
+
+/**
+ * Map a DSH workspace directory to a stable scratch canvas workspace id.
+ *
+ * Non-project workspaces get one canvas per workspace path, not per session.
+ * Same FNV-1a shape as sessionToWorkspaceId so ids remain `ws_[a-z0-9]{12}`.
+ */
+export function workspacePathToCanvasId(workspacePath: unknown): string | undefined {
+  if (typeof workspacePath !== 'string' || workspacePath.length === 0) return undefined;
+  let h1 = 0x811c9dc5;
+  let h2 = 0x40164e6b;
+  for (let i = 0; i < workspacePath.length; i++) {
+    const code = workspacePath.charCodeAt(i);
+    h1 = Math.imul(h1 ^ code, 0x01000193);
+    h2 = Math.imul(h2 ^ code, 0x050c79cd);
+  }
+  const hex1 = (h1 >>> 0).toString(16).padStart(8, '0');
+  const hex2 = (h2 >>> 0).toString(16).padStart(8, '0');
+  return `ws_${(hex1 + hex2).slice(0, 12)}`;
+}

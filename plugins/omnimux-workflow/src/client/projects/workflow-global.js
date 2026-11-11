@@ -57,7 +57,7 @@ export function startReplicationProject(deps, input, io = {}) {
         return {
           ok: true,
           project,
-          sessionId: result.sessionId || project.sessionId,
+          sessionId: result.sessionId || null,
           cwd: result.cwd || project.path,
           // 调用方（如灵感复刻）据此判断画布是否真的打开，避免「项目建成但画布没开」静默。
           canvasOpened: result.canvasOpened !== false,

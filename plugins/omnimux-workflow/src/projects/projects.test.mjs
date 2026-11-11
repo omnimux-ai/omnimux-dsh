@@ -104,22 +104,22 @@ test('library：平台兜底 + OMNIMUX_VIDEOS_DIR', () => {
 });
 
 test('T0 schema：冻结版本 + title 边界 + 高版本拒绝', () => {
-  assert.equal(host.PROJECT_SCHEMA_VERSION, 1);
+  assert.equal(host.PROJECT_SCHEMA_VERSION, 2);
   assert.equal(host.MAX_PROJECT_TITLE_LENGTH, 200);
 
   const good = host.parseProject({
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: 'p1',
     title: '我的项目',
     createdAt: '2026-08-22T00:00:00.000Z',
     updatedAt: '2026-08-22T00:00:00.000Z',
-    sessionId: null,
-    canvasWorkspaceIds: [],
+    activePageId: 'page-default',
+    pages: [{ id: 'page-default', title: '创作页 1', createdAt: '2026-08-22T00:00:00.000Z', updatedAt: '2026-08-22T00:00:00.000Z', canvasWorkspaceId: 'ws_abc123' }],
   });
   assert.ok(good, '合法 project.json 解析成功');
-  assert.equal(host.parseProject({ ...good, schemaVersion: 2 }), null);
+  assert.equal(host.parseProject({ ...good, schemaVersion: 3 }), null);
   assert.equal(host.parseProject({ ...good, title: 'x'.repeat(201) }), null);
-  assert.equal(host.parseProjectIndex({ schemaVersion: 1, projects: 'nope' }), null);
+  assert.equal(host.parseProjectIndex({ schemaVersion: 2, projects: 'nope' }), null);
 });
 
 test('T0 paths：libraryRoot / projectRoot 必须绝对路径 + 越界断言', () => {
@@ -177,7 +177,7 @@ test('T1 ProjectStore：扫描 list / Host mkdir+seed / remove 不 rm 项目根'
     const created = store.create('  项目甲  ');
     const projectRoot = created.path;
     assert.equal(created.title, '项目甲');
-    assert.equal(created.sessionId, null);
+    assert.equal(created.pages.length, 1);
     assert.equal(projectRoot, join(libraryRoot, '项目甲'));
     assert.ok(existsSync(projectRoot));
     assert.ok(readFileSync(join(projectRoot, '.omnimux', 'project.json'), 'utf8').includes(created.id));
@@ -187,12 +187,8 @@ test('T1 ProjectStore：扫描 list / Host mkdir+seed / remove 不 rm 项目根'
     const renamedFolder = store.create('项目甲');
     assert.equal(renamedFolder.path, join(libraryRoot, '项目甲 (2)'));
 
-    const bound = store.bindSession(created.id, 'sess-1');
-    assert.equal(bound.sessionId, 'sess-1');
-    const hashed = host.sessionToWorkspaceId('sess-1');
-    const found = store.findByCanvasWorkspaceId(hashed);
+    const found = store.findByCanvasWorkspaceId(created.pages[0].canvasWorkspaceId);
     assert.equal(found.id, created.id);
-    assert.equal(found.canvasWorkspaceIds.includes(hashed), true);
     assert.equal(store.findByCanvasWorkspaceId('ws_missing0000'), null);
     const renamed = store.rename(created.id, '项目乙');
     assert.equal(renamed.title, '项目乙');
@@ -344,7 +340,7 @@ test('T01: ProjectStore 数据一致性与读时自愈机制 (repairProjectRecor
   try {
     const store = host.createProjectStore({ libraryRoot });
 
-    // 1. 测试 a: 若 pages 为空，自动补全首个创作页，生成合法 ws_*，去重同步 canvasWorkspaceIds
+    // 1. 测试 a: 若 pages 为空，自动补全首个创作页并生成合法 ws_*
     const projectA = store.create('项目自愈测试A');
     const projectDirA = projectA.path;
     const projectFileA = join(projectDirA, '.omnimux', 'project.json');
@@ -352,19 +348,17 @@ test('T01: ProjectStore 数据一致性与读时自愈机制 (repairProjectRecor
     const rawDirtyA = JSON.parse(readFileSync(projectFileA, 'utf8'));
     rawDirtyA.pages = [];
     rawDirtyA.activePageId = '';
-    rawDirtyA.canvasWorkspaceIds = ['ws_original_canvas'];
     writeFileSync(projectFileA, JSON.stringify(rawDirtyA, null, 2), 'utf8');
 
     // 读时触发自愈 (get)
     const healedA = store.get(projectA.id);
     assert.ok(healedA.pages && healedA.pages.length === 1, 'pages 为空时自动补全首个创作页');
     assert.equal(healedA.pages[0].id, 'page-default');
-    assert.equal(healedA.pages[0].canvasWorkspaceId, 'ws_original_canvas', '优先保留已有合法 canvasWorkspaceIds[0]');
+    assert.match(healedA.pages[0].canvasWorkspaceId, /^ws_[a-zA-Z0-9_-]{1,128}$/);
     assert.equal(healedA.activePageId, 'page-default', 'activePageId 回落至 pages[0].id');
-    assert.deepEqual(healedA.canvasWorkspaceIds, ['ws_original_canvas'], '去重同步 canvasWorkspaceIds');
     // 验证立即原子写盘持久化且绝无绝对路径 path 字段泄露污染
     const persistedA = JSON.parse(readFileSync(projectFileA, 'utf8'));
-    assert.equal(persistedA.pages[0].canvasWorkspaceId, 'ws_original_canvas');
+    assert.match(persistedA.pages[0].canvasWorkspaceId, /^ws_[a-zA-Z0-9_-]{1,128}$/);
     assert.equal(persistedA.activePageId, 'page-default');
     assert.equal(persistedA.path, undefined, '写入磁盘的 project.json 严禁包含运行时派生的 path 绝对路径');
     assert.equal('path' in persistedA, false, 'project.json 纯净元数据中不得有 path 键');
@@ -381,7 +375,6 @@ test('T01: ProjectStore 数据一致性与读时自愈机制 (repairProjectRecor
       { id: 'page-3', title: '页3', createdAt: '2026-09-26T00:00:00.000Z', updatedAt: '2026-09-26T00:00:00.000Z', canvasWorkspaceId: 'ws_existing_3' },
     ];
     rawDirtyB.activePageId = 'page-ghost';
-    rawDirtyB.canvasWorkspaceIds = ['ws_stale'];
     writeFileSync(projectFileB, JSON.stringify(rawDirtyB, null, 2), 'utf8');
 
     // 读时触发自愈 (list)
@@ -398,11 +391,6 @@ test('T01: ProjectStore 数据一致性与读时自愈机制 (repairProjectRecor
     // 验证盘上已同步
     const diskB = store.get(projectB.id);
     assert.equal(diskB.pages[0].canvasWorkspaceId, itemB.pages[0].canvasWorkspaceId);
-    assert.deepEqual(
-      new Set(diskB.canvasWorkspaceIds),
-      new Set([diskB.pages[0].canvasWorkspaceId, diskB.pages[1].canvasWorkspaceId, 'ws_existing_3', 'ws_stale']),
-      '所有创作页的 canvasWorkspaceId 去重同步至 canvasWorkspaceIds',
-    );
     const persistedB = JSON.parse(readFileSync(projectFileB, 'utf8'));
     assert.equal(persistedB.path, undefined, '自愈写盘后的 project.json 严禁泄露绝对路径 path');
     assert.equal('path' in persistedB, false);
@@ -422,7 +410,7 @@ test('T01: ProjectStore 数据一致性与读时自愈机制 (repairProjectRecor
     const newAddedPage = afterAdd.pages[afterAdd.pages.length - 1];
     assert.match(newAddedPage.canvasWorkspaceId, /^ws_[a-zA-Z0-9_-]{1,128}$/);
     assert.equal(afterAdd.activePageId, newAddedPage.id, 'activePageId 设置为新页面');
-    assert.ok(afterAdd.canvasWorkspaceIds.includes(newAddedPage.canvasWorkspaceId), '新页面的 wsId 自动进入 canvasWorkspaceIds');
+    assert.equal(afterAdd.pages.at(-1).canvasWorkspaceId, newAddedPage.canvasWorkspaceId);
   } finally {
     rmSync(libraryRoot, { recursive: true, force: true });
   }
@@ -472,7 +460,7 @@ test('T02: POST /pages 物理工作区自动创建与 session-binding 修正', a
   assert.equal(createdWorkspaces.length, 1, '调用了 workspaceStore.create');
   assert.equal(addPageRes.body.page.canvasWorkspaceId, createdWorkspaces[0].id, '创作页使用了物理创建的 workspace ID');
   assert.equal(addPageRes.body.project.activePageId, addPageRes.body.page.id);
-  assert.ok(addPageRes.body.project.canvasWorkspaceIds.includes(createdWorkspaces[0].id));
+  assert.ok(addPageRes.body.project.pages.some((page) => page.canvasWorkspaceId === createdWorkspaces[0].id));
 
   // 3. GET /projects/session-binding 优先使用 activePage.canvasWorkspaceId
   const sessDir = join(libraryRoot, 'test-sess');

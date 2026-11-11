@@ -5,16 +5,11 @@
  *   「项目」 = 默认库里的一个作品文件夹；该文件夹 **就是** dsh 工作区
  *   （会话 cwd）。不是画布 `WorkspaceStore`，也不是「父 cwd 下藏一堆 json」。
  *
- * 落盘布局（2026-08-23 改冻）：
- *   <videos>/OmniMux/Projects/<可读名>/
- *     .omnimux/project.json
- *
- * schemaVersion 仍从 1 起；字段增量向后兼容。读到更高版本拒绝（坏文件跳过不崩库）。
- * index.json 不再是主路径；扫描目录为真相。
+ * schemaVersion 2 是唯一模型：项目只持 pages/activePageId，不再持会话或画布 id 数组。
  */
 import { z } from 'zod';
 
-export const PROJECT_SCHEMA_VERSION = 1 as const;
+export const PROJECT_SCHEMA_VERSION = 2 as const;
 
 /** 项目标题长度上限（与画布 workspace 的 name 上限一致，M2 QA 惯例）。 */
 export const MAX_PROJECT_TITLE_LENGTH = 200;
@@ -38,14 +33,10 @@ export const projectSchema = z.object({
   title: z.string().min(1).max(MAX_PROJECT_TITLE_LENGTH),
   createdAt: z.string(),
   updatedAt: z.string(),
-  /** 绑定会话；新建项目时写入，可为 null（尚未建会话的中间态）。 */
-  sessionId: z.string().nullable(),
-  /** 关联画布工作区 id 列表。 */
-  canvasWorkspaceIds: z.array(z.string()),
   /** 当前激活的创作页 ID */
-  activePageId: z.string().optional(),
+  activePageId: z.string().min(1),
   /** 项目包含的创作页列表 */
-  pages: z.array(projectPageSchema).optional(),
+  pages: z.array(projectPageSchema).min(1),
 });
 
 export type Project = z.infer<typeof projectSchema>;
@@ -55,17 +46,14 @@ export const projectSummarySchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1).max(MAX_PROJECT_TITLE_LENGTH),
   updatedAt: z.string(),
-  sessionId: z.string().nullable(),
   path: z.string().min(1).optional(),
-  pages: z.array(projectPageSchema).optional(),
-  activePageId: z.string().optional(),
+  pages: z.array(projectPageSchema).min(1),
+  activePageId: z.string().min(1),
 });
 
 export type ProjectSummary = z.infer<typeof projectSummarySchema>;
 
-/**
- * 历史 index.json（停用主路径）。解析保留以便跳过坏文件，不再作为 list 真源。
- */
+/** 历史 index.json（停用主路径）。 */
 export const projectIndexSchema = z.object({
   schemaVersion: z.literal(PROJECT_SCHEMA_VERSION),
   projects: z.array(projectSummarySchema),
@@ -88,16 +76,13 @@ const tolerantProjectSchema = z.object({
   title: z.string().min(1).max(MAX_PROJECT_TITLE_LENGTH),
   createdAt: z.string(),
   updatedAt: z.string(),
-  sessionId: z.string().nullable(),
-  canvasWorkspaceIds: z.array(z.string()),
   activePageId: z.string().optional(),
   pages: z.array(tolerantPageSchema).optional(),
 });
 
 /**
- * 读取侧容错解析：schemaVersion 更高 / 结构不合法一律返回 null（跳过坏文件）。
- * 若为老旧版本缺失 canvasWorkspaceId 的页面，放行给 ProjectStore 读时自愈彻底修复。
- * 写入侧严格校验（见 ProjectStore，写前 re-validate）。
+ * 读取侧容错解析：只有 v2 是合法项目；更高/更低版本或坏结构返回 null（跳过坏文件）。
+ * 旧的 v1（含 sessionId/canvasWorkspaceIds）不迁移、不读取。
  */
 export function parseProject(raw: unknown): Project | null {
   const result = projectSchema.safeParse(raw);

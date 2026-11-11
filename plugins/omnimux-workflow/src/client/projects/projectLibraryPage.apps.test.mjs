@@ -23,7 +23,7 @@ const MANIFESTS_KEY = 'omnimux_apps_manifests'
 const CSS_STUB = 'export default new Proxy({}, { get: (_t, k) => (typeof k === "string" ? k : undefined) })'
 
 const API_STUB = `
-exports.listProjects = async () => ({ ok: true, body: { projects: globalThis.__testProjects || [] } })
+exports.listProjects = async () => ({ ok: true, body: { projects: (globalThis.__testProjects || []).map((p) => ({ ...p, path: p.path || ('/tmp/' + p.id) })) } })
 exports.getProject = async () => ({ ok: false })
 exports.renameProject = async () => ({ ok: true })
 exports.deleteProject = async () => ({ ok: true })
@@ -114,6 +114,9 @@ async function mountPage({ sidebar = null, t = (key) => zh[key] || key, projects
   defineGlobal('KeyboardEvent', dom.window.KeyboardEvent)
   defineGlobal('PointerEvent', dom.window.PointerEvent || dom.window.MouseEvent)
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  if (typeof globalThis.IntersectionObserver === 'undefined') {
+    globalThis.IntersectionObserver = class { observe() {} unobserve() {} disconnect() {} }
+  }
   globalThis.__testProjects = projects
   if (sidebar) dom.window.__omnimuxBetterSidebar = sidebar
 
@@ -129,8 +132,35 @@ async function mountPage({ sidebar = null, t = (key) => zh[key] || key, projects
       stage: { set() {} },
       store: null,
       visible: true,
-      sessions: { create: async () => ({ id: 's' }), open() {} },
-      workspaces: {},
+      sessions: {
+        create: async (opts) => (globalThis.__testCreateSession ? globalThis.__testCreateSession(opts) : 'sess-1'),
+        open() {},
+        list: {
+          getSnapshot: () => {
+            const path = globalThis.__testSessionCwd || globalThis.__testProjects?.[0]?.path || '/tmp/proj_1'
+            return {
+              current: 'sess-1',
+              byId: { 'sess-1': { id: 'sess-1', cwd: path, updatedAt: 1, blank: false } },
+              archivedSessionIds: [],
+            }
+          },
+          subscribe: () => () => {},
+        },
+      },
+      workspaces: {
+        create: async ({ path }) => ({ workspaceId: `ws_${path.split('/').pop() || 'created'}` }),
+        list: {
+          getSnapshot: () => ({
+            items: (globalThis.__testProjects || []).map((p) => ({
+              workspaceId: `ws_${p.id}`,
+              path: p.path || ('/tmp/' + p.id),
+              title: p.title,
+              sessionIds: [],
+            })),
+          }),
+          subscribe: () => () => {},
+        },
+      },
       layout: { closeDetails() {} },
       betterSidebar: sidebar,
     }))
@@ -233,7 +263,7 @@ test('清单损坏 → 真实空态（不抛异常、不伪造数据）；存储
 test('点卡片打开应用标签页，tab.id 走 app_<appId> 约定', async () => {
   const opened = []
   const sidebar = { openTab: (seed, scope) => opened.push({ seed, scope }), closeTab() {} }
-  const page = await mountPage({ sidebar })
+  const page = await mountPage({ sidebar, projects: [{ id: 'proj_1', title: '项目一', path: '/tmp/proj_1', pages: [{ id: 'page_1', title: '创作页 1', canvasWorkspaceId: 'ws_page_1' }] }] })
   try {
     seedManifests([appRow('app_marketing', '营销短片', '2026-09-10T00:00:00.000Z')])
     await openAppsTab(page.act, page.container)
@@ -249,7 +279,7 @@ test('点卡片打开应用标签页，tab.id 走 app_<appId> 约定', async () 
 test('卡片「更多」→ 删除先弹二次确认，取消后记录与卡片都保留', async () => {
   const closed = []
   const sidebar = { openTab() {}, closeTab: (id) => closed.push(id) }
-  const page = await mountPage({ sidebar })
+  const page = await mountPage({ sidebar, projects: [{ id: 'proj_1', title: '项目一', path: '/tmp/proj_1', pages: [{ id: 'page_1', title: '创作页 1', canvasWorkspaceId: 'ws_page_1' }] }] })
   try {
     seedManifests([appRow('app_marketing', '营销短片', '2026-09-10T00:00:00.000Z')])
     await openAppsTab(page.act, page.container)
@@ -278,7 +308,7 @@ test('卡片「更多」→ 删除先弹二次确认，取消后记录与卡片�
 test('确认删除：移除记录、关掉对应应用标签页、列表刷新', async () => {
   const closed = []
   const sidebar = { openTab() {}, closeTab: (id) => closed.push(id) }
-  const page = await mountPage({ sidebar })
+  const page = await mountPage({ sidebar, projects: [{ id: 'proj_1', title: '项目一', path: '/tmp/proj_1', pages: [{ id: 'page_1', title: '创作页 1', canvasWorkspaceId: 'ws_page_1' }] }] })
   try {
     seedManifests([
       appRow('app_marketing', '营销短片', '2026-09-10T00:00:00.000Z'),
@@ -303,7 +333,7 @@ test('确认删除：移除记录、关掉对应应用标签页、列表刷新',
 test('删除写盘失败：卡片保留并报错，不伪造成功', async () => {
   const closed = []
   const sidebar = { openTab() {}, closeTab: (id) => closed.push(id) }
-  const page = await mountPage({ sidebar })
+  const page = await mountPage({ sidebar, projects: [{ id: 'proj_1', title: '项目一', path: '/tmp/proj_1', pages: [{ id: 'page_1', title: '创作页 1', canvasWorkspaceId: 'ws_page_1' }] }] })
   try {
     seedManifests([appRow('app_marketing', '营销短片', '2026-09-10T00:00:00.000Z')])
     await openAppsTab(page.act, page.container)
@@ -343,7 +373,7 @@ test('卡片「编辑」打开所属项目画布并把工作流组写进 tab met
     updateTab: (id, patch) => updated.push({ id, patch }),
     closeTab() {},
   }
-  const page = await mountPage({ sidebar })
+  const page = await mountPage({ sidebar, projects: [{ id: 'proj_1', title: '项目一', path: '/tmp/proj_1', pages: [{ id: 'page_1', title: '创作页 1', canvasWorkspaceId: 'ws_page_1' }] }] })
   try {
     seedManifests([
       appRow('app_marketing', '营销短片', '2026-09-10T00:00:00.000Z', {
@@ -358,7 +388,7 @@ test('卡片「编辑」打开所属项目画布并把工作流组写进 tab met
 
     const canvasOpen = opened.find((entry) => entry.seed.id === 'omnimux-workflow:canvas')
     assert.ok(canvasOpen, '「编辑」必须打开画布标签页')
-    assert.deepEqual(updated, [{ id: 'omnimux-workflow:canvas', patch: { meta: { focusGroupId: 'group_7' } } }])
+    assert.equal(canvasOpen.seed.meta?.focusGroupId, 'group_7', '画布 tab seed 必须携带工作流组 id')
     assert.equal(dialogEl(), null, '「编辑」不得弹出删除确认')
     assert.equal(cardEls(page.container).length, 1, '「编辑」不得改动列表')
 
@@ -393,6 +423,14 @@ test('旧记录没有 projectId 时按 workspaceId 反查所属项目并落到�
     sidebar,
     // 会话打开链路要能观察到
     t: (key) => zh[key] || key,
+    projects: [{
+      id: 'proj_legacy',
+      title: '旧项目',
+      path: '/tmp/proj_legacy',
+      sessionId: 'sess-legacy',
+      canvasWorkspaceIds: ['ws_app_legacy'],
+      pages: [{ id: 'page_legacy', title: '创作页 1', canvasWorkspaceId: 'ws_app_legacy' }],
+    }],
   })
   try {
     page.sessionsOpened = sessionsOpened
@@ -581,7 +619,8 @@ test('点创作页卡片：打开期间显示「打开中」并忽略重复点�
     pages: [{ id: 'page_open', title: '创作页 1', canvasWorkspaceId: 'ws_page_open', createdAt: '2026-09-10T00:00:00.000Z' }],
   }]
   const pendingSessions = []
-  globalThis.__testCreateProjectSession = () => new Promise((resolve) => { pendingSessions.push(resolve) })
+  globalThis.__testCreateSession = () => new Promise((resolve) => { pendingSessions.push(resolve) })
+  globalThis.__testSessionCwd = '/tmp/other-workspace'
   const previousIntersectionObserver = globalThis.IntersectionObserver
   globalThis.IntersectionObserver = class {
     observe() {}
@@ -621,7 +660,7 @@ test('点创作页卡片：打开期间显示「打开中」并忽略重复点�
 
     // 会话就绪 → 画布 tab 打开且遮罩复位
     await page.act(async () => {
-      pendingSessions[0]({ ok: true, sessionId: 'sess_open' })
+      pendingSessions[0]('sess_open')
       await new Promise((resolve) => { setTimeout(resolve, 0) })
     })
     assert.equal(page.container.querySelector('.omnimux-page-card-opening'), null, '打开结束必须复位「打开中」')
@@ -633,12 +672,13 @@ test('点创作页卡片：打开期间显示「打开中」并忽略重复点�
     await page.act(async () => { page.container.querySelector('.omnimux-page-card').click() })
     assert.equal(pendingSessions.length, 2, '复位后必须能再次打开')
     await page.act(async () => {
-      pendingSessions[1]({ ok: true, sessionId: 'sess_open' })
+      pendingSessions[1]('sess_open')
       await new Promise((resolve) => { setTimeout(resolve, 0) })
     })
     assert.equal(opened.length, 2)
   } finally {
-    delete globalThis.__testCreateProjectSession
+    delete globalThis.__testCreateSession
+    delete globalThis.__testSessionCwd
     if (previousIntersectionObserver === undefined) delete globalThis.IntersectionObserver
     else globalThis.IntersectionObserver = previousIntersectionObserver
     await page.teardown()

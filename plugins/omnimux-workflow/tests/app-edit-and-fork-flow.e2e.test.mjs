@@ -101,7 +101,7 @@ test('E2E: 场景 3 & 4 - 应用归属自适应分诊、副本创建与工作流
     },
   }
   const userProjects = [
-    { id: 'proj_user_1', title: '用户自己的项目', canvasWorkspaceIds: ['ws_user_1'] },
+    { id: 'proj_user_1', title: '用户自己的项目', pages: [{ id: 'page-1', canvasWorkspaceId: 'ws_user_1' }] },
   ]
   assert.equal(isAppOwnedByUser(officialManifest, userProjects), false, '官方应用必须判定为非当前用户')
 
@@ -121,7 +121,7 @@ test('E2E: 场景 3 & 4 - 应用归属自适应分诊、副本创建与工作流
           project: {
             id: 'proj_fork_demo',
             title,
-            canvasWorkspaceIds: ['ws_fork_demo'],
+            pages: [{ id: 'page-1', canvasWorkspaceId: 'ws_fork_demo' }],
           },
         },
       }
@@ -330,7 +330,7 @@ test('E2E: 场景 7 - 官方预设工程与历史遗留拓扑在副本创建时�
     createProjectFn: async (title) => ({
       ok: true,
       status: 200,
-      body: { project: { id: 'proj_clean', title, canvasWorkspaceIds: ['ws_clean'] } },
+      body: { project: { id: 'proj_clean', title, pages: [{ id: 'page-1', canvasWorkspaceId: 'ws_clean' }] } },
     }),
     requestFn: async (url, opts) => {
       if (url.includes('/api/workspaces/') && opts?.method === 'PUT') {

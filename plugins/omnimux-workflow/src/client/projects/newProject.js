@@ -110,7 +110,6 @@ function activeCanvasId(project) {
   const pages = Array.isArray(project?.pages) ? project.pages : []
   const active = pages.find((page) => page?.id === project?.activePageId) || pages[0]
   return active?.canvasWorkspaceId
-    || (Array.isArray(project?.canvasWorkspaceIds) ? project.canvasWorkspaceIds[0] : '')
     || ''
 }
 
@@ -137,14 +136,6 @@ async function openOnSession(ctx, sessionId, cwd, extra = {}) {
     focusGroupId: extra.focusGroupId,
     timeoutMs: extra.timeoutMs,
   })
-  if (extra.workspaceId && typeof localStorage !== 'undefined') {
-    try { localStorage.setItem('omnimux:latest-active-canvas', extra.workspaceId) } catch { /* ignore */ }
-  }
-  if (extra.workspaceId && typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
-      detail: { workspaceId: extra.workspaceId },
-    }))
-  }
   return opened
 }
 
@@ -204,8 +195,9 @@ export async function runNewProject(ctx, opts = {}) {
             project: existing,
           }
         }
+        const existingWorkspaceId = resolveWorkspaceForCwd(givenRoot, ctx.workspaces)
         let sessionId = liveSid
-        if (!stillStaying || !sessionId) {
+        if (!stillStaying || !sessionId || !existingWorkspaceId) {
           const jumped = await createProjectSession(ctx.sessions, ctx.workspaces, givenRoot)
           if (!jumped.ok) return { ok: false, error: friendlyCreateError(jumped.error, ctx.t) }
           sessionId = jumped.sessionId
@@ -223,7 +215,7 @@ export async function runNewProject(ctx, opts = {}) {
       }
     }
 
-    const seeded = await createProject(validated.title, staying ? currentSid || null : null, givenRoot !== '' ? givenRoot : undefined)
+    const seeded = await createProject(validated.title, givenRoot !== '' ? givenRoot : undefined)
     if (!seeded.ok || !seeded.body?.project) {
       return { ok: false, error: friendlyCreateError(seeded.body?.error || seeded.body?.message || seeded.status, ctx.t) }
     }

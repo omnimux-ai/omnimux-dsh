@@ -42,8 +42,8 @@ export async function fetchCanvasHash() {
 // ============================================================================
 
 /**
- * @typedef {{ id: string, title: string, updatedAt: string, sessionId: string | null, path?: string }} ProjectSummary
- * @typedef {{ id: string, title: string, createdAt: string, updatedAt: string, sessionId: string | null, canvasWorkspaceIds: string[], path?: string }} Project
+ * @typedef {{ id: string, title: string, updatedAt: string, path?: string, pages: Array<{ id: string, canvasWorkspaceId: string }>, activePageId: string }} ProjectSummary
+ * @typedef {{ id: string, title: string, createdAt: string, updatedAt: string, path?: string, pages: Array<{ id: string, canvasWorkspaceId: string }>, activePageId: string }} Project
  */
 
 /** Host 解析 videos + ensure OmniMux/Projects。 */
@@ -95,15 +95,13 @@ export function fetchSessionProjectBinding(sessionId) {
  * Host 在默认库 mkdir + 写 project.json。
  * 可选 projectRoot：已存在的作品包路径（打开已有文件夹时种子）。
  * @param {string} title
- * @param {string | null} [sessionId]
  * @param {string} [projectRoot]
  */
-export function createProject(title, sessionId = null, projectRoot) {
+export function createProject(title, projectRoot) {
   return workflowRequest('/omnimux-workflow/api/projects', {
     method: 'POST',
     body: {
       title,
-      sessionId,
       ...(typeof projectRoot === 'string' && projectRoot !== '' ? { projectRoot } : {}),
     },
   })

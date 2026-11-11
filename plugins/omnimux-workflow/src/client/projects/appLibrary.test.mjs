@@ -169,9 +169,9 @@ describe('appLibrary: 删除记录', () => {
 
 describe('appLibrary: 反查所属项目与编辑目标', () => {
   const projects = [
-    { id: 'proj_direct', title: '直接命中', canvasWorkspaceIds: ['ws_other'] },
-    { id: 'proj_by_ws', title: '按工作区命中', canvasWorkspaceIds: ['ws_app_legacy'] },
-    { id: 'proj_by_page', title: '按创作页命中', canvasWorkspaceIds: [], pages: [{ canvasWorkspaceId: 'ws_app_paged' }] },
+    { id: 'proj_direct', title: '直接命中', pages: [{ id: 'p1', canvasWorkspaceId: 'ws_other' }] },
+    { id: 'proj_by_ws', title: '按工作区命中', pages: [{ id: 'p1', canvasWorkspaceId: 'ws_app_legacy' }] },
+    { id: 'proj_by_page', title: '按创作页命中', pages: [{ id: 'p1', canvasWorkspaceId: 'ws_app_paged' }] },
   ]
 
   it('优先按 manifest 记下的 projectId 命中', () => {
@@ -179,7 +179,7 @@ describe('appLibrary: 反查所属项目与编辑目标', () => {
     assert.equal(hit.id, 'proj_direct')
   })
 
-  it('projectId 命中不到时，回落到 canvasWorkspaceIds / pages 反查（兼容旧记录）', () => {
+  it('projectId 命中不到时，回落到 pages 反查', () => {
     assert.equal(resolveOwningProject(projects, { projectId: 'proj_gone', workspaceId: 'ws_app_legacy' }).id, 'proj_by_ws')
     assert.equal(resolveOwningProject(projects, { workspaceId: 'ws_app_paged' }).id, 'proj_by_page')
   })
@@ -192,7 +192,7 @@ describe('appLibrary: 反查所属项目与编辑目标', () => {
     assert.equal(resolveOwningProject([], { workspaceId: 'ws_app_legacy' }), null)
   })
 
-  it('projectOwnsWorkspace 认 canvasWorkspaceIds 与任一创作页', () => {
+  it('projectOwnsWorkspace 认任一创作页', () => {
     assert.equal(projectOwnsWorkspace(projects[0], 'ws_other'), true)
     assert.equal(projectOwnsWorkspace(projects[2], 'ws_app_paged'), true)
     assert.equal(projectOwnsWorkspace(projects[2], 'ws_none'), false)
@@ -330,7 +330,7 @@ describe('appLibrary: 标签页 id 与卡片文案', () => {
         metadata: { author: 'OmniMux Official', name: '手机与网页交互实机演示' },
         workflowBinding: { projectId: 'p1', workspaceId: 'ws_demo' },
       }
-      assert.equal(isAppOwnedByUser(official, [{ id: 'p1', canvasWorkspaceIds: ['ws_demo'] }]), false)
+      assert.equal(isAppOwnedByUser(official, [{ id: 'p1', pages: [{ id: 'p1', canvasWorkspaceId: 'ws_demo' }] }]), false)
     })
 
     it('已标记 isUserOverridden 且本地项目存在的应用判定为当前用户 (isAppOwnedByUser === true)', () => {
@@ -340,7 +340,7 @@ describe('appLibrary: 标签页 id 与卡片文案', () => {
         metadata: { author: 'OmniMux Official', name: '手机与网页交互实机演示' },
         workflowBinding: { projectId: 'p1', workspaceId: 'ws_demo' },
       }
-      assert.equal(isAppOwnedByUser(overridden, [{ id: 'p1', canvasWorkspaceIds: ['ws_demo'] }]), true)
+      assert.equal(isAppOwnedByUser(overridden, [{ id: 'p1', pages: [{ id: 'p1', canvasWorkspaceId: 'ws_demo' }] }]), true)
     })
 
     it('已标记 isUserOverridden 但本地源工程已被删除时优雅降级为 false', () => {

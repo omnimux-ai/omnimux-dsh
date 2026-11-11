@@ -17,7 +17,6 @@ import {
   type ExecutionMode,
 } from '../execution/subgraph';
 import { notFound, type RouteTry, type WorkflowDispatchRequest } from './dispatch';
-import type { EnsureProjectBoundFn } from '../../projects/ensureProjectBound';
 import type { CapabilityCatalog } from '../../shared/api';
 import { findExecutionReadinessFailure } from '../../shared/validation/executionReadiness.ts';
 import { executionInputSignatures, executionSourceIdentities } from '../execution/executionTypes.ts';
@@ -43,10 +42,10 @@ export function createExecutionRoutes(opts: {
   mediaDir?: string;
   resolveProjectFile?: ResolveExecutionProjectFile;
   executionManager: ExecutionManager;
-  ensureProjectBound?: EnsureProjectBoundFn;
+  resolveAssetsRoot?: (workspaceId: string) => { path: string } | null;
   getCatalog?: () => Promise<CapabilityCatalog | null>;
 }): { tryHandle: RouteTry } {
-  const { store, executionManager, ensureProjectBound, getCatalog } = opts;
+  const { store, executionManager, resolveAssetsRoot, getCatalog } = opts;
   const findRecoverableTasks: ExecutionManager['findRecoverableTasks'] | undefined = executionManager?.findRecoverableTasks;
   const executionsRouteRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/executions$`);
   const executionItemRouteRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/executions/([^/]+)$`);
@@ -172,16 +171,12 @@ export function createExecutionRoutes(opts: {
           if (
             subgraphContainsMediaGenerate(subgraph.nodes as Array<{ type?: string; data?: Record<string, unknown> }>)
             && !store.resolveProjectRoot(workspaceId)
+            && !resolveAssetsRoot?.(workspaceId)
           ) {
-            if (ensureProjectBound) {
-              await ensureProjectBound(workspaceId, snapshot.name);
-            }
-            if (!store.resolveProjectRoot(workspaceId)) {
-              throw new WorkflowStoreError(
-                'project-required',
-                `workspace ${workspaceId} is not bound to a local project`,
-              );
-            }
+            throw new WorkflowStoreError(
+              'project-required',
+              `workspace ${workspaceId} is not bound to a local project`,
+            );
           }
 
           // Async catalog/project preparation must not hide a concurrent graph edit.

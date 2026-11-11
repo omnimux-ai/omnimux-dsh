@@ -221,9 +221,10 @@ export function CanvasLoadingState({ t }) {
  *   locale?: string,
  *   workspaceId?: string,
  *   focusGroupId?: string,
+ *   onActivePageChange?: (workspaceId: string) => void,
  * }} props
  */
-export function CanvasBridge({ onClose, t, locale, workspaceId, focusGroupId }) {
+export function CanvasBridge({ onClose, t, locale, workspaceId, focusGroupId, onActivePageChange }) {
   useEffect(() => { injectWorkflowStyles() }, [])
   const containerRef = useRef(null)
   const lifetimeRef = useRef(null)
@@ -231,8 +232,8 @@ export function CanvasBridge({ onClose, t, locale, workspaceId, focusGroupId }) 
   // 最新 props 快照：load 完成挂载与 locale/onClose/workspaceId/focusGroupId live
   // 切换共用（island 边界纯数据 + 回调，一律走 mountCanvas/updateCanvas，
   // 禁止因回调换引用卸岛）。
-  const propsRef = useRef({ onClose, locale, workspaceId, focusGroupId })
-  propsRef.current = { onClose, locale, workspaceId, focusGroupId }
+  const propsRef = useRef({ onClose, locale, workspaceId, focusGroupId, onActivePageChange })
+  propsRef.current = { onClose, locale, workspaceId, focusGroupId, onActivePageChange }
 
   // mount 只跑一次。onClose / locale 身份变化不得重跑 load，否则宿主每次
   // 重渲（点选节点、侧栏同步）都会 unmount→mount，岛闪白、选中丢、拖不动。
@@ -292,7 +293,7 @@ export function CanvasBridge({ onClose, t, locale, workspaceId, focusGroupId }) 
         if (lifetimeRef.current === lifetime && !confirmed) setStatus('error')
       }).catch(error => lifetime.reportError(error))
     }
-  }, [locale, onClose, workspaceId, focusGroupId])
+  }, [locale, onClose, workspaceId, focusGroupId, onActivePageChange])
 
   return (
     <div className="omnimux-workflow-canvas-host">

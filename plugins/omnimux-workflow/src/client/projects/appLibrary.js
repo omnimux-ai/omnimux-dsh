@@ -183,12 +183,10 @@ export function removePublishedApp(appId, storage = defaultAppStorage()) {
   return { ok: true }
 }
 
-/** 项目是否拥有该画布工作区（`canvasWorkspaceIds` 或任一创作页）。 */
+/** 项目是否拥有该画布工作区（任一创作页）。 */
 export function projectOwnsWorkspace(project, workspaceId) {
   const ws = textOf(workspaceId)
   if (!project || !ws) return false
-  const ids = Array.isArray(project.canvasWorkspaceIds) ? project.canvasWorkspaceIds : []
-  if (ids.includes(ws)) return true
   const pages = Array.isArray(project.pages) ? project.pages : []
   return pages.some((page) => page && page.canvasWorkspaceId === ws)
 }
@@ -197,7 +195,7 @@ export function projectOwnsWorkspace(project, workspaceId) {
  * 反查应用所属项目：优先 manifest 里记下的 `projectId`，
  * 否则按 `workspaceId` 在项目列表里匹配（兼容本次改动前发布的旧记录）。
  *
- * @param {Array<{ id?: string, canvasWorkspaceIds?: string[], pages?: Array<{ canvasWorkspaceId?: string }> }>} projects
+ * @param {Array<{ id?: string, pages?: Array<{ canvasWorkspaceId?: string }> }>} projects
  * @param {{ projectId?: string, workspaceId?: string } | null} entry
  * @returns {object | null}
  */
@@ -686,7 +684,6 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
     const active = pages.find((page) => page?.id === hostProject.activePageId) || pages[0]
     const hostCanvasId = active?.canvasWorkspaceId
       || hostProject.canvasWorkspaceId
-      || (Array.isArray(hostProject.canvasWorkspaceIds) ? hostProject.canvasWorkspaceIds[0] : '')
       || ''
     if (!hostCanvasId) {
       throw new Error('未能为副本分配画布工作区')
@@ -730,7 +727,7 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
   }
 
   const newProject = createRes.body.project
-  const workspaceId = Array.isArray(newProject.canvasWorkspaceIds) ? newProject.canvasWorkspaceIds[0] : ''
+  const workspaceId = Array.isArray(newProject.pages) ? (newProject.pages[0]?.canvasWorkspaceId || '') : ''
   if (!workspaceId) {
     throw new Error('未能为副本分配画布工作区')
   }

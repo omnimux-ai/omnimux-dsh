@@ -41,7 +41,7 @@ describe('Canvas Tab Routing and Workspace Activation Contract', () => {
     assert.equal(res2, 'ws_tab_meta_1')
   })
 
-  it('AC-03: activateProjectCanvas 穿透单例更新 meta 并广播 omnimux:active-canvas-changed', async () => {
+  it('AC-03: activateProjectCanvas 穿透单例更新 meta', async () => {
     const opened = []
     const updated = []
     const events = []
@@ -105,11 +105,8 @@ describe('Canvas Tab Routing and Workspace Activation Contract', () => {
       assert.equal(updated[0].data?.meta?.canvasWorkspaceId, 'ws_canvas_page_3')
       assert.equal(updated[0].data?.meta?.canvasSessionId, 'sess-p1')
 
-      // 必须广播 active-canvas-changed 事件并携带 sessionId (缺陷 3)
-      assert.equal(events.length, 1)
-      assert.equal(events[0].name || events[0].type, 'omnimux:active-canvas-changed')
-      assert.equal(events[0].detail?.workspaceId, 'ws_canvas_page_3')
-      assert.equal(events[0].detail?.sessionId, 'sess-p1')
+      // 不再派发全局画布事件。
+      assert.equal(events.length, 0)
     } finally {
       globalThis.window = previousWin
       globalThis.CustomEvent = previousCustomEvent
@@ -155,18 +152,13 @@ describe('Canvas Tab Routing and Workspace Activation Contract', () => {
     assert.equal(resMatchedMeta, 'ws_current_session_canvas', '本会话匹配的 tab.meta 应作为 P0 正常采纳')
   })
 
-  it('AC-06: 【缺陷 1 & 2 整改】CanvasTab 源码契约闭环校验（会话比对与事件守卫）', () => {
+  it('AC-06: CanvasTab 只读 WorkspaceContextStore，不再保留会话级画布缓存', () => {
     const src = readFileSync(join(here, 'CanvasTab.jsx'), 'utf8')
-
-    // 1. 验证存在 isTabMetaValidForSession 严密校验函数（缺陷 1）
-    assert.match(src, /isTabMetaValidForSession/, 'CanvasTab 必须包含 tab.meta 与会话有效性判定函数')
-    assert.match(src, /meta\.canvasSessionId && currentSessionId && meta\.canvasSessionId !== currentSessionId/, '必须比对 meta.canvasSessionId 与当前会话')
-
-    // 2. 验证 useEffect 监听包含 tab.meta.canvasSessionId 且在不匹配时清理为 null（缺陷 1）
-    assert.match(src, /setActiveCanvasWsId\(null\)/, '会话切换或不匹配时必须清理 activeCanvasWsId')
-
-    // 3. 验证 omnimux:active-canvas-changed 监听器中严格校验 e?.detail?.sessionId（缺陷 2）
-    assert.match(src, /sessionId && eventSessionId !== sessionId/, '必须校验事件中的 sessionId，不匹配时直接忽略')
+    assert.match(src, /useWorkspaceContext\(workspaceContext\)/)
+    assert.match(src, /resolveWorkspaceContextPage\(project, pageId\)/)
+    assert.doesNotMatch(src, /isTabMetaValidForSession/)
+    assert.doesNotMatch(src, /pickedBySession/)
+    assert.doesNotMatch(src, /omnimux:active-canvas-changed/)
   })
 
   it('AC-07: 【缺陷 3 整改】activateProjectCanvas 完整携带 sessionId 与 projectId 等上下文', async () => {
@@ -206,10 +198,8 @@ describe('Canvas Tab Routing and Workspace Activation Contract', () => {
         timeoutMs: 0,
       })
 
-      // 验证事件载荷携带了 sessionId
-      assert.equal(events.length, 1)
-      assert.equal(events[0].detail?.workspaceId, 'ws_full_ctx')
-      assert.equal(events[0].detail?.sessionId, 'sess-ctx')
+      // 不再派发全局画布事件。
+      assert.equal(events.length, 0)
 
       // 验证 updateTab 的 meta 携带了 canvasWorkspaceId 与 canvasSessionId
       assert.equal(updated.length, 1)
@@ -220,55 +210,18 @@ describe('Canvas Tab Routing and Workspace Activation Contract', () => {
     }
   })
 
-  it('AC-08: 【二轮复审 缺陷 1】CanvasTab 优先级调整：显式 scope 优先于 activeCanvasWsId 缓存与 validTabWsId', () => {
+  it('AC-08: CanvasTab 目标由上下文项目 activePage/pageId 解析', () => {
     const src = readFileSync(join(here, 'CanvasTab.jsx'), 'utf8')
-
-    // 1. 验证 explicitWorkspaceId 严格先采纳 scope，再采纳 activeCanvasWsId 与 validTabWsId
-    assert.match(
-      src,
-      /const\s+explicitWorkspaceId\s*=\s*scope\?\.canvasWorkspaceId\s*\|\|\s*scope\?\.workspaceId\s*\|\|\s*activeCanvasWsId\s*\|\|\s*validTabWsId/,
-      'explicitWorkspaceId 必须优先采纳当前显式传入的 scope，再回退到 activeCanvasWsId 与 validTabWsId'
-    )
-
-    // 2. 验证 hasExplicitCanvas 也以相同优先级声明
-    assert.match(
-      src,
-      /scope\?\.canvasWorkspaceId\s*\|\|\s*scope\?\.workspaceId\s*\|\|\s*activeCanvasWsId\s*\|\|\s*validTabWsId/,
-      'hasExplicitCanvas 必须同步调整优先级，确保 scope 优先判定'
-    )
-
-    // 3. 逻辑验证：即使存在上一页的 activeCanvasWsId，新传入的 scope 也必须胜出
-    const scopeWs = 'ws_new_page_scope'
-    const activeWs = 'ws_previous_page_cached'
-    const computed = scopeWs || activeWs
-    assert.equal(computed, 'ws_new_page_scope', '同会话内换创作页时，显式传入的 scope 必须压过缓存的 activeCanvasWsId')
+    assert.match(src, /const activePage = project \? resolveWorkspaceContextPage\(project, pageId\) : null/)
+    assert.match(src, /const targetWorkspaceId = activePage\?\.canvasWorkspaceId \|\| scratchWorkspaceId/)
+    assert.doesNotMatch(src, /explicitWorkspaceId/)
+    assert.doesNotMatch(src, /validTabWsId/)
   })
 
-  it('AC-09: 【二轮复审 缺陷 2】ProjectLibraryPage handleOpenPage 移除异步提前派发，委托 activateProjectCanvas', () => {
+  it('AC-09: ProjectLibraryPage handleOpenPage 委托 ProjectNavigationService', () => {
     const pageSrc = readFileSync(join(here, 'ProjectLibraryPage.jsx'), 'utf8')
-
-    // 1. 提取 handleOpenPage 函数体
-    const handleOpenPageMatch = pageSrc.match(/const\s+handleOpenPage\s*=\s*async\s*\([\s\S]*?\n  \}/)
-    assert.ok(handleOpenPageMatch, '必须找到 handleOpenPage 函数定义')
-    const handleOpenPageBody = handleOpenPageMatch[0]
-
-    // 2. 验证 handleOpenPage 内部不再直接调用 window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed'
-    assert.doesNotMatch(
-      handleOpenPageBody,
-      /window\.dispatchEvent\s*\(\s*new\s+CustomEvent\s*\(\s*['"]omnimux:active-canvas-changed['"]/,
-      'handleOpenPage 严禁在 sessionId 异步创建前提前派发 active-canvas-changed 全局事件'
-    )
-
-    // 3. 验证 handleOpenPage 调用 activateProjectCanvas 时传递了 projectId 与 canvasWorkspaceId
-    assert.match(
-      handleOpenPageBody,
-      /projectId:\s*selectedProject\.id/,
-      'handleOpenPage 必须向 activateProjectCanvas 传递 projectId 以便后续安全广播完整上下文'
-    )
-    assert.match(
-      handleOpenPageBody,
-      /canvasWorkspaceId/,
-      'handleOpenPage 必须向 activateProjectCanvas 传递 canvasWorkspaceId'
-    )
+    assert.match(pageSrc, /const result = await navigation\.openPage\(selectedProject, page\)/)
+    assert.doesNotMatch(pageSrc, /selectedProject\.sessionId/)
+    assert.doesNotMatch(pageSrc, /omnimux:active-canvas-changed/)
   })
 })

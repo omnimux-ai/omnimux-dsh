@@ -19,7 +19,7 @@
  * new seam consumers; see agent/agentTools.ts.
  */
 
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ServerResponse, IncomingMessage } from 'node:http';
 import type { WorkflowPaths } from './paths';
@@ -29,7 +29,6 @@ import { createWorkspaceStore } from './workspace/WorkspaceStore';
 import { createGenerationPreferencesStore } from './workspace/GenerationPreferencesStore';
 import { createProjectAssetsStore } from './workspace/ProjectAssetsStore';
 import { createProjectStore } from '../projects/ProjectStore';
-import { bindEnsureProjectBound } from '../projects/ensureProjectBound';
 import { createWorkspaceProjectBinder } from '../projects/workspaceProjectBinding';
 import { ensureLibraryRoot } from '../projects/library';
 import { TemplateStore } from './templates/TemplateStore.ts';
@@ -106,8 +105,15 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
       return undefined;
     }
   };
-  const ensureProjectBound = bindEnsureProjectBound(projectStore);
   const resolveProjectRoot = (workspaceId: string) => projectStore.findByCanvasWorkspaceId(workspaceId);
+  // 未绑定项目的工作区画布属于用户级公共区：媒体/资产写入回落到
+  // `$DSH_HOME/omnimux/workflow/free/<canvasId>/`，绝不偷偷建默认库项目。
+  const resolveAssetsRoot = (workspaceId: string) => {
+    const project = projectStore.findByCanvasWorkspaceId(workspaceId);
+    if (project) return project;
+    const freeRoot = join(paths.workspacesDir, workspaceId);
+    return existsSync(join(freeRoot, 'canvas.json')) ? { path: freeRoot } : null;
+  };
   const store = createWorkspaceStore({
     workspacesDir: paths.workspacesDir,
     resolveProjectRoot,
@@ -125,7 +131,7 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
   const libraryHttp = createLibraryServiceClient(() => ctx.get?.('assetLibrary'));
   const assetsStore = createProjectAssetsStore({
     workspacesDir: paths.workspacesDir,
-    resolveProjectRoot,
+    resolveProjectRoot: resolveAssetsRoot,
     fetchLibraryDetail: libraryHttp.fetchLibraryDetail,
     promoteToLibrary: libraryHttp.promoteToLibrary,
   });
@@ -139,7 +145,7 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
     mediaDir: paths.mediaDir,
     persistGenerated: (input) => persistGeneratedArtifact({
       ...input,
-      resolveProjectRoot,
+      resolveProjectRoot: resolveAssetsRoot,
       registerGenerated: (workspaceId, payload) => assetsStore.registerGenerated(workspaceId, payload),
     }),
   });
@@ -159,7 +165,7 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
     libraryRoot,
     assetsStore,
     projectStore,
-    ensureProjectBound,
+    resolveAssetsRoot,
     // Issue #2104：客户端打开创作画布前按会话问「这个工作区属于哪个项目」，
     // 缺失即登记，保证工作区始终有项目。
     resolveSessionWorkspaceDir: readSessionWorkspaceDir,
@@ -185,7 +191,6 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
   const headlessSeam = createHeadlessExecutionSeam({
     executionManager,
     workspaceStore: store as any,
-    ensureProjectBound: ensureProjectBound as any,
     getCatalog: () => Promise.resolve(gateway.capabilities()),
     mediaDir: paths.mediaDir,
     resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
@@ -254,7 +259,7 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
           resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
           executionManager,
           mediaDir: paths.mediaDir,
-          ensureProjectBound,
+          resolveAssetsRoot,
           // Issue #2104：会话所属工作区目录里的画布必须能被项目页看到。
           // 目录从宿主 `agents` 服务反查（会话 header.cwd）；服务不可用时降级为 null。
           bindWorkspaceProject: createWorkspaceProjectBinder({

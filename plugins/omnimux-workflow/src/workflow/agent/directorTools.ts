@@ -9,7 +9,7 @@ import {
 } from './agentToolShared.ts';
 
 export interface DirectorToolsDeps extends Pick<WorkflowAgentDeps,
-  'store' | 'getActiveView' | 'projectStore' | 'resolveSessionWorkspaceDir' | 'bindWorkspaceProject' | 'ensureProjectBound'> {
+  'store' | 'getActiveView' | 'projectStore' | 'resolveSessionWorkspaceDir' | 'bindWorkspaceProject' | 'resolveAssetsRoot'> {
   host: DirectorHost;
   /** Trusted Host/browser boundary. The adapter owns capture, persistence and durable receipts. */
   operations?: {
@@ -248,7 +248,7 @@ export function createDirectorTools(deps: DirectorToolsDeps): AgentToolSpec[] {
         }
         const scene = args.scene ?? emptyScene(args.title ?? '3D 导演台');
         await bindCanvasWorkspaceProject(deps, workspaceId, scene.title, sessionContext);
-        if (!deps.store.resolveProjectRoot(workspaceId) && deps.ensureProjectBound) await deps.ensureProjectBound(workspaceId, scene.title);
+
         if (!deps.store.resolveProjectRoot(workspaceId)) return errorBody('project-required', '请先将当前画布绑定到项目');
         const nodeId = `director_${randomUUID()}`;
         const snapshot = deps.store.get(workspaceId);

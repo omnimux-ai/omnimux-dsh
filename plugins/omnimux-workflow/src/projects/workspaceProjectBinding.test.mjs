@@ -41,11 +41,10 @@ describe('workspace project binding (#2104)', { concurrency: 1 }, () => {
     assert.ok(record, '应在既有工作区文件夹登记项目');
     assert.equal(record.path, workspaceDir, '项目根必须是既有文件夹，不新建重复目录');
     assert.equal(record.title, '约会穿搭', '标题取文件夹名');
-    assert.deepEqual(record.canvasWorkspaceIds, ['ws_443c648c4dfb']);
+    assert.deepEqual(record.pages.map((page) => page.canvasWorkspaceId), ['ws_443c648c4dfb']);
     assert.equal(record.pages.length, 1);
     assert.equal(record.pages[0].canvasWorkspaceId, 'ws_443c648c4dfb');
     assert.equal(record.activePageId, record.pages[0].id);
-    assert.equal(record.sessionId, 'session-afc2a612');
     assert.ok(existsSync(projectFileOf(workspaceDir)), 'project.json 必须落在工作区文件夹内');
 
     // 项目页真相：扫描库根下一层即可看到该项目。
@@ -166,7 +165,7 @@ describe('workspace project binding (#2104)', { concurrency: 1 }, () => {
     const record = await working({ canvasWorkspaceId: 'ws_bound', sessionId: 's1', title: '降级' });
     assert.ok(record);
     assert.equal(record.path, workspaceDir);
-    assert.deepEqual(record.canvasWorkspaceIds, ['ws_bound']);
+    assert.deepEqual(record.pages.map((page) => page.canvasWorkspaceId), ['ws_bound']);
     rmSync(libraryRoot, { recursive: true, force: true });
   });
 

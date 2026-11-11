@@ -9,7 +9,6 @@ import type { WorkspaceStore } from '../workspace/WorkspaceStore';
 import type { ProjectAssetsStore } from '../workspace/ProjectAssetsStore';
 import type { TemplateStore } from '../templates/TemplateStore.ts';
 import type { ProjectStore } from '../../projects/ProjectStore';
-import type { EnsureProjectBoundFn } from '../../projects/ensureProjectBound';
 
 import type { GenerationPreferencesStore } from '../workspace/GenerationPreferencesStore.ts';
 
@@ -36,8 +35,8 @@ export interface WorkflowDispatcherDeps {
   assetsStore?: ProjectAssetsStore;
   /** Same ProjectStore as mountWorkflowHost — avoid a second libraryRoot. */
   projectStore?: ProjectStore;
-  /** Lazy-bind a local project before media generate executions. */
-  ensureProjectBound?: EnsureProjectBoundFn;
+  /** Project root or user-level free-canvas root for asset/media writes. */
+  resolveAssetsRoot?: (workspaceId: string) => { path: string } | null;
   /**
    * 会话 id → 工作区目录（宿主 `agents` 服务的会话 `header.cwd`）。
    * 用于按会话解析/登记所属项目（Issue #2104）；不可用时路由降级为 unknown-session。

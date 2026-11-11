@@ -25,8 +25,9 @@ import {
   toPublishedAppEntry,
 } from './appLibrary.js'
 import { fetchAppManifest } from './builtinApps.js'
-import { fetchSessionProjectBinding, listProjects } from '../api.js'
-import { activateProjectCanvas, focusSessionForCanvas, getBetterSidebar } from './projectCanvas.js'
+import { findProjectByRoot, listProjects } from '../api.js'
+import { getBetterSidebar } from './projectCanvas.js'
+import { createProjectNavigation } from './project-navigation.js'
 import { ForkAppProjectDialog } from './ForkAppProjectDialog.jsx'
 import {
   resolveOptions,
@@ -505,6 +506,15 @@ export function AppTab(props) {
   }, [])
 
   const seed = props?.seed || props?.tab || props
+  const navigation = useMemo(() => createProjectNavigation({
+    sessions: props?.sessions,
+    workspaces: props?.workspaces,
+    layout: props?.layout,
+    betterSidebar: props?.betterSidebar,
+    getSessionNavigation: props?.getSessionNavigation,
+    getSidebarRight: props?.getSidebarRight,
+    t: props?.t,
+  }), [props?.sessions, props?.workspaces, props?.layout, props?.betterSidebar, props?.getSessionNavigation, props?.getSidebarRight, props?.t])
   const tabId = typeof seed?.id === 'string' ? seed.id : ''
   const explicitManifest = seed?.extra?.manifest || props?.extra?.manifest || props?.manifest
   // 标签页 id 里绑定的应用：只有插件自有面板布局才是 `app_<appId>`。
@@ -1299,18 +1309,6 @@ export function AppTab(props) {
     }
   }, [manifest, isRestoring, showTemporaryNotice])
 
-  // 「编辑」「创建副本」的落点是应用所属会话的画布。不先切会话，better-sidebar
-  // 会把 openTab 排队到非前台会话：当前会话毫无变化，调用方却弹成功提示（P1-2）。
-  // 返回 false = 缺会话切换能力或切换抛错，由调用方走失败降级，绝不静默成功。
-  // 目标没有 sessionId 时无需切换，直接放行（画布落在当前会话）。
-  // 现行 DSH 壳没有 sessions.open（0.1.7 起移除），统一走 focusSessionForCanvas：
-  // 优先 uiWorkspace.openSession，旧宿主才回退 sessions.open。
-  const focusAppSession = useCallback((sessionId) => focusSessionForCanvas({
-    sessions: props?.sessions,
-    cordis: props?.ctx,
-    getSessionNavigation: props?.getSessionNavigation,
-  }, sessionId), [props?.sessions, props?.ctx, props?.getSessionNavigation])
-
   // 点击「编辑应用」：根据应用归属自适应分诊
   // 同一个用户的应用直接打开所属项目画布定位工作流组；不同用户/官方预设应用则弹出「创建副本」确认窗
   const handleEditApp = useCallback(async () => {
@@ -1327,40 +1325,25 @@ export function AppTab(props) {
       const isOwner = isAppOwnedByUser(manifest, projects)
 
       if (isOwner) {
-        // 1. 同一个用户的应用：直接跳转定位到原工程画布
+        // 1. 同一个用户的应用：走项目导航到项目所属工作区与创作页画布
         const target = resolveAppEditTarget(toPublishedAppEntry(manifest) || {
           projectId: manifest.workflowBinding?.projectId,
           workspaceId: manifest.workflowBinding?.workspaceId,
           groupId: manifest.workflowBinding?.sourceGroupId,
         })
         const project = resolveOwningProject(projects, target)
-        const canvasWorkspaceId = target.workspaceId || project?.canvasWorkspaceIds?.[0]
-
-        // 先把会话切到前台，再激活画布；切换失败直接降级，不弹「已进入画布」。
-        if (!focusAppSession(project?.sessionId)) {
-          showTemporaryNotice({ type: 'error', text: '无法切换到应用所属会话，请重试。' })
+        const targetPage = (project?.pages ?? []).find((page) => page?.canvasWorkspaceId === target.workspaceId)
+          || (project?.pages ?? []).find((page) => page?.id === project?.activePageId)
+          || (project?.pages ?? [])[0]
+        if (!project) {
+          showTemporaryNotice({ type: 'error', text: '找不到应用所属项目，请到项目库打开。' })
           return
         }
-
-        if (canvasWorkspaceId && typeof localStorage !== 'undefined') {
-          localStorage.setItem('omnimux:latest-active-canvas', canvasWorkspaceId)
-        }
-        if (canvasWorkspaceId && typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
-            detail: { workspaceId: canvasWorkspaceId },
-          }))
-        }
-
-        const opened = await activateProjectCanvas(
-          {
-            betterSidebar: getBetterSidebar(props?.ctx),
-            cordis: props?.ctx,
-            sessions: props?.sessions,
-            getSessionNavigation: props?.getSessionNavigation,
-          },
-          { sessionId: project?.sessionId, focusGroupId: target.groupId },
-        )
-        if (opened) {
+        const opened = await navigation.openProject(project, {
+          pageId: targetPage?.id,
+          focusGroupId: target.groupId,
+        })
+        if (opened.ok) {
           showTemporaryNotice({ type: 'success', text: '已进入应用源画布，可直接编辑与调试。' })
         } else {
           showTemporaryNotice({ type: 'error', text: '打开画布失败，请重试。' })
@@ -1371,12 +1354,15 @@ export function AppTab(props) {
         let hostProject = null
         let initialPath = ''
         try {
-          const currentId = sessions?.list?.getSnapshot?.()?.current
-          if (currentId) {
-            const bound = await fetchSessionProjectBinding(String(currentId)).catch(() => null)
+          const snap = sessions?.list?.getSnapshot?.()
+          const currentId = snap?.current
+          const row = currentId ? snap?.byId?.[currentId] : null
+          const workspaceDir = typeof row?.cwd === 'string' ? row.cwd : ''
+          if (workspaceDir) {
+            const bound = await findProjectByRoot(workspaceDir).catch(() => null)
             if (bound?.ok) {
               hostProject = bound.body?.project || null
-              initialPath = bound.body?.workspaceDir || ''
+              initialPath = workspaceDir
             }
           }
         } catch {
@@ -1393,7 +1379,7 @@ export function AppTab(props) {
     } finally {
       setIsEditing(false)
     }
-  }, [manifest, isEditing, props?.ctx, showTemporaryNotice, focusAppSession])
+  }, [manifest, isEditing, props?.ctx, showTemporaryNotice, navigation])
 
   // 处理弹窗提交创建副本
   const handleForkSubmit = useCallback(async ({ mode, title, projectRoot }) => {
@@ -1408,48 +1394,31 @@ export function AppTab(props) {
         projectRoot,
       })
 
-      // 副本已落库，但画布只在所属会话可见：先切会话，失败就明确降级，不弹成功提示。
-      const sessionReady = focusAppSession(project?.sessionId)
-
-      if (sessionReady && workspaceId && typeof localStorage !== 'undefined') {
-        localStorage.setItem('omnimux:latest-active-canvas', workspaceId)
-      }
-      if (sessionReady && workspaceId && typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
-          detail: { workspaceId },
-        }))
-      }
-
-      const opened = sessionReady
-        ? await activateProjectCanvas(
-          {
-            betterSidebar: getBetterSidebar(props?.ctx),
-            cordis: props?.ctx,
-            sessions: props?.sessions,
-            getSessionNavigation: props?.getSessionNavigation,
-          },
-          { sessionId: project?.sessionId, focusGroupId: groupId },
-        )
-        : false
+      // 副本已落库：走项目导航切到所属工作区与创作页画布
+      const targetPage = (project?.pages ?? []).find((page) => page?.canvasWorkspaceId === workspaceId)
+        || (project?.pages ?? []).find((page) => page?.id === project?.activePageId)
+        || (project?.pages ?? [])[0]
+      const opened = await navigation.openProject(project, {
+        pageId: targetPage?.id,
+        focusGroupId: groupId,
+      })
       setForkDialogOpen(false)
-      if (opened) {
+      if (opened.ok) {
         showTemporaryNotice({
           type: 'success',
           text: hostProject?.id
             ? `已在当前项目新建创作页「${title}」。`
             : `已为你创建「${title}」工程副本，编辑后可随时重新打包发布。`,
         })
-      } else if (sessionReady) {
-        showTemporaryNotice({ type: 'error', text: '副本已创建，打开画布失败，请在项目库查看。' })
       } else {
-        showTemporaryNotice({ type: 'error', text: '副本已创建，但无法切换到所属会话，请到项目库查看。' })
+        showTemporaryNotice({ type: 'error', text: '副本已创建，打开画布失败，请在项目库查看。' })
       }
     } catch (err) {
       setForkError(friendlyForkError(err?.message, '创建副本失败，请重试。'))
     } finally {
       setForkBusy(false)
     }
-  }, [manifest, forkContext, props?.ctx, showTemporaryNotice, focusAppSession])
+  }, [manifest, forkContext, props?.ctx, showTemporaryNotice, navigation])
 
   if (!manifest) {
     return (

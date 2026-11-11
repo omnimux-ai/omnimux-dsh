@@ -220,7 +220,6 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
           const body = req.body as {
             title?: unknown;
             projectRoot?: unknown;
-            sessionId?: unknown;
             cwd?: unknown;
             canvasWorkspaceIds?: unknown;
           };
@@ -229,7 +228,6 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
           }
           const { store } = scopedStore(opts.libraryRoot);
           const title = typeof body.title === 'string' ? body.title : undefined;
-          const sessionId = typeof body.sessionId === 'string' ? body.sessionId : null;
           const projectRoot = typeof body.projectRoot === 'string' && body.projectRoot.trim() !== ''
             ? body.projectRoot
             : undefined;
@@ -238,7 +236,7 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
             : undefined;
           return {
             status: 200,
-            body: { project: store.create(title ?? '', { projectRoot, sessionId, canvasWorkspaceIds }) },
+            body: { project: store.create(title ?? '', { projectRoot, canvasWorkspaceIds }) },
           };
         }
         return { status: 404, body: { error: 'not-found', message: 'unknown route' } };
@@ -430,14 +428,11 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
         if (method === 'PATCH') {
           const problem = jsonBodyProblem(req.body);
           if (problem) return problem;
-          const body = req.body as { title?: unknown; sessionId?: unknown };
+          const body = req.body as { title?: unknown };
           if (typeof body.title === 'string') {
             return { status: 200, body: { project: store.rename(id, body.title) } };
           }
-          if (typeof body.sessionId === 'string') {
-            return { status: 200, body: { project: store.bindSession(id, body.sessionId) } };
-          }
-          return { status: 400, body: { error: 'invalid-json', message: 'title or sessionId is required' } };
+          return { status: 400, body: { error: 'invalid-json', message: 'title is required' } };
         }
         if (method === 'DELETE') {
           store.remove(id);

@@ -32,9 +32,11 @@ export interface CanvasAppProps {
   workspaceId?: string;
   /** 「项目」页「AI应用」卡片「编辑」的目标工作流组 id（纯数据 prop）。 */
   focusGroupId?: string;
+  /** 画布内切页/新建页后的通知，由宿主刷新工作区上下文。 */
+  onActivePageChange?: (workspaceId: string) => void;
 }
 
-const App: React.FC<CanvasAppProps> = ({ locale, workspaceId: propWorkspaceId, focusGroupId }) => {
+const App: React.FC<CanvasAppProps> = ({ locale, workspaceId: propWorkspaceId, focusGroupId, onActivePageChange }) => {
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState(propWorkspaceId);
 
   useEffect(() => {
@@ -57,12 +59,8 @@ const App: React.FC<CanvasAppProps> = ({ locale, workspaceId: propWorkspaceId, f
     if (!await prepareDirectorClose()) return;
     flushRef.current();
     setCurrentWorkspaceId(newWorkspaceId);
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
-        detail: { workspaceId: newWorkspaceId },
-      }));
-    }
-  }, []);
+    onActivePageChange?.(newWorkspaceId);
+  }, [onActivePageChange]);
 
   // 宿主 → island 语言通道：locale prop 变化时下发（live 切换走
   // updateCanvas 重 render，W4 接入宿主 subscribe）。

@@ -300,7 +300,7 @@ describe('apply(ctx) 未 inject betterSidebar', () => {
       assert.ok(registered.some((t) => t.id === 'omnimux-workflow:canvas'))
       assert.ok(registered.some((t) => t.id === 'omnimux-workflow:library'))
       assert.ok(registered.some((t) => t.id === 'omnimux-workflow:app'))
-      assert.equal(injectionEffects.length, 4, 'binding and all three registrations belong to inner lifetime')
+      assert.equal(injectionEffects.length, 5, 'binding, three registrations and canvas presence belong to inner lifetime')
       assert.equal(window.__omnimuxBetterSidebar, sidebar)
       const openApp = window.__omnimuxOpenAppTab
       assert.equal(typeof openApp, 'function')

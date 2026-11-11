@@ -73,7 +73,7 @@ function createSidebar(initialSessionId) {
 }
 
 describe('P1-1 画布会话对齐超时后的最终一致', () => {
-  it('超时窗口内零写入，目标会话成为前台后才补 openTab + meta + 广播，随即解绑', async () => {
+  it('超时窗口内零写入，目标会话成为前台后才补 openTab + meta，随即解绑', async () => {
     const windowHarness = installWindow()
     const sidebar = createSidebar('sess-current')
     try {
@@ -109,8 +109,7 @@ describe('P1-1 画布会话对齐超时后的最终一致', () => {
       assert.equal(sidebar.updated.length, 1)
       assert.equal(sidebar.updated[0].data.meta.canvasWorkspaceId, 'ws_target')
       assert.equal(sidebar.updated[0].data.meta.canvasSessionId, 'sess-target')
-      assert.equal(windowHarness.events.length, 1)
-      assert.equal(windowHarness.events[0].detail.sessionId, 'sess-target')
+      assert.equal(windowHarness.events.length, 0, '不再派发全局画布事件')
       assert.equal(sidebar.listenerCount, 0, '补位成功必须解绑监听')
       assert.equal(sidebar.unsubscribeCalls, 1)
     } finally {
