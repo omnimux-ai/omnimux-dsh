@@ -13,27 +13,38 @@ const bundle = await build({ stdin: { contents: [
 ].join('\n'), resolveDir: new URL('../../..', import.meta.url).pathname }, bundle: true, platform: 'node', format: 'esm', define: { 'import.meta.url': JSON.stringify(new URL('./pluginRoot.ts', import.meta.url).href) }, write: false });
 const host = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].text).toString('base64'));
 
-function fixture(options = {}) {
+function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'wf-asset-bind-'));
   const projectStore = host.createProjectStore({ libraryRoot: join(root, 'library') });
   const resolveProjectRoot = id => projectStore.findByCanvasWorkspaceId(id);
-  const resolveAssetsRoot = options.freeRoot
-    ? (id) => projectStore.findByCanvasWorkspaceId(id) ?? { path: join(root, 'workspaces', id) }
-    : resolveProjectRoot;
   const store = host.createWorkspaceStore({ workspacesDir: join(root, 'workspaces'), resolveProjectRoot });
   const source = join(root, 'hero.png');
   writeFileSync(source, 'test-image');
-  const assetsStore = host.createProjectAssetsStore({ workspacesDir: store.workspacesDir, resolveProjectRoot: resolveAssetsRoot,
+  const assetsStore = host.createProjectAssetsStore({ workspacesDir: store.workspacesDir, resolveProjectRoot,
     fetchLibraryDetail: async () => ({ files: [{ real_path: source, visible: true }] }) });
   const dispatcher = host.createWorkflowDispatcher({ store, projectStore, assetsStore,
     libraryRoot: join(root, 'library'),
-    resolveAssetsRoot: options.freeRoot ? resolveAssetsRoot : undefined,
+    mediaDir: join(root, 'media'), gateway: {}, executionManager: {} });
+  return { root, source, store, projectStore, assetsStore, dispatcher };
+}
+
+function freeFixture() {
+  const root = mkdtempSync(join(tmpdir(), 'wf-asset-free-'));
+  const projectStore = host.createProjectStore({ libraryRoot: join(root, 'library') });
+  const resolveProjectRoot = id => projectStore.findByCanvasWorkspaceId(id) ?? { path: join(root, 'workspaces', id) };
+  const store = host.createWorkspaceStore({ workspacesDir: join(root, 'workspaces'), resolveProjectRoot: id => projectStore.findByCanvasWorkspaceId(id) });
+  const source = join(root, 'hero.png');
+  writeFileSync(source, 'test-image');
+  const assetsStore = host.createProjectAssetsStore({ workspacesDir: store.workspacesDir, resolveProjectRoot,
+    fetchLibraryDetail: async () => ({ files: [{ real_path: source, visible: true }] }) });
+  const dispatcher = host.createWorkflowDispatcher({ store, projectStore, assetsStore,
+    libraryRoot: join(root, 'library'), resolveAssetsRoot: resolveProjectRoot,
     mediaDir: join(root, 'media'), gateway: {}, executionManager: {} });
   return { root, source, store, projectStore, assetsStore, dispatcher };
 }
 
 test('unbound canvas stores assets in the user-level free root without creating a project', async () => {
-  const f = fixture({ freeRoot: true });
+  const f = freeFixture();
   try {
     const ws = f.store.create('自由画布');
     const result = await f.dispatcher.dispatch({
@@ -51,7 +62,7 @@ test('unbound canvas stores assets in the user-level free root without creating 
 
 for (const action of ['instantiate', 'ingest']) {
   test(action + ': unbound canvas uses the user-level free root and preserves graph', async () => {
-    const f = fixture({ freeRoot: true });
+    const f = freeFixture();
     try {
       const ws = f.store.create('角色复刻');
       f.store.save(ws.id, { expectedVersion: 0, nodes: [

@@ -98,3 +98,28 @@
   - 原断言：项目夹具使用 `canvasWorkspaceIds`。
   - 必须改的理由：同上。
   - 新期望证据：pages 夹具下仍生成合法拓扑。
+
+- `plugins/omnimux-workflow/src/client/projects/appLibrary.test.mjs` :: `官方未覆盖应用在本地项目存在时依然判定为非当前用户 (isAppOwnedByUser === false)`
+  - 原断言：夹具用 `canvasWorkspaceIds`。
+  - 必须改的理由：v2 项目只认 pages。
+  - 新期望证据：夹具改 `pages` 后仍为 false。
+- `plugins/omnimux-workflow/src/client/projects/appLibrary.test.mjs` :: `已标记 isUserOverridden 且本地项目存在的应用判定为当前用户 (isAppOwnedByUser === true)`
+  - 原断言：夹具用 `canvasWorkspaceIds`。
+  - 必须改的理由：v2 项目只认 pages。
+  - 新期望证据：夹具改 `pages` 后仍为 true。
+- `plugins/omnimux-workflow/src/client/projects/appTabSessionSwitch.regression.test.mjs` :: `统一的会话切换辅助调用 focusSessionForCanvas，而不是已移除的 sessions.open`
+  - 原断言：要求 AppTab 保留 `focusAppSession`/`focusSessionForCanvas`。
+  - 必须改的理由：编辑/副本入口统一改走 ProjectNavigationService，旧会话切换辅助已删除。
+  - 新期望证据：断言引入 `createProjectNavigation`。
+- `plugins/omnimux-workflow/src/client/projects/appTabSessionSwitch.regression.test.mjs` :: `「编辑」入口：先切会话，切换失败明确降级且不弹成功提示`
+  - 原断言：要求 `focusAppSession(project?.sessionId)`。
+  - 必须改的理由：v2 删除了 project.sessionId，入口委托项目导航。
+  - 新期望证据：断言 `navigation.openProject(project, ...)`。
+- `plugins/omnimux-workflow/src/client/projects/appTabSessionSwitch.regression.test.mjs` :: `「创建副本」入口：先切会话，切换失败不弹成功提示`
+  - 原断言：要求 `sessionReady = focusAppSession(project?.sessionId)`。
+  - 必须改的理由：副本入口同样委托项目导航。
+  - 新期望证据：断言 `navigation.openProject(project, ...)` 与失败文案。
+- `plugins/omnimux-workflow/src/client/projects/pickDirectory.test.mjs` :: `canvas unprojected dialog still prefills the session workspace`
+  - 原断言：依赖旧 session workspace 预填路径。
+  - 必须改的理由：未绑定画布改走用户级 free root，不再要求 session workspace 预填。
+  - 新期望证据：该断言改为 `initialPath` 可空并从 context 预填。
