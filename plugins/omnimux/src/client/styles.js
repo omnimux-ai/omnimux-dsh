@@ -236,11 +236,16 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
   left: var(--stage-left);
   width: var(--stage-width);
   height: var(--stage-height);
+  /* The measured conversation box can be taller than the remaining viewport;
+     clamping to (viewport bottom - stage top) keeps the whole stage on screen so
+     the inner body becomes the single scroll container instead of spilling the
+     last cards below the window with no reachable scrollbar. */
+  max-height: calc(100vh - var(--stage-top) - var(--omnimux-apps-stage-bottom-gap, 0px));
   display: flex;
   flex-direction: column;
   background: var(--dsw-alias-bg-primary, var(--dsw-bg, #111));
   color: var(--dsw-alias-label-primary, inherit);
-  overflow: auto;
+  overflow: hidden;
   pointer-events: auto;
 }
 .omnimux-apps-stage[data-visible="false"] {
@@ -252,7 +257,8 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* ── OmniMux universal login gate (1:1 with docs/prototypes/omnimux-login-gate-modal.html) ── */
