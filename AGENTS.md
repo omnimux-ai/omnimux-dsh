@@ -1,6 +1,6 @@
 # omnimux-dsh
 
-Out-of-tree OmniMux plugins for official DeepSeek Harness. This directory (or its task worktree) is the Git root; never run repository commands from the parent `dsh-plugin` or guess parent script paths. Start from [CONTEXT.md](CONTEXT.md) and [docs/README.md](docs/README.md); contracts in [docs/contracts/](docs/contracts/README.md) own the details this file points to.
+Out-of-tree OmniMux plugins for official DeepSeek Harness. This directory (or its task worktree) is the Git root; never run repository commands from the parent `dsh-plugin` or guess parent script paths. Start from [CONTEXT.md](CONTEXT.md) and [docs/README.md](docs/README.md); contracts in [docs/contracts/](docs/contracts/README.md) own the details this file points to. @LESSONS.md
 
 ## Working agreements
 
