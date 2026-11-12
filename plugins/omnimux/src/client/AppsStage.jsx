@@ -60,6 +60,16 @@ export function AppsStage({ t, apps, useSessions }) {
 
   if (!apps || !everOpened) return null
 
+  // Fill exactly the visible remainder of the conversation column. The measured
+  // box height can exceed the viewport (so the fixed stage spills past the
+  // bottom edge and the inner body never overflows -> no scrollbar and the last
+  // cards are unreachable); capping to (viewport - top) keeps every card in a
+  // scrollable body inside the window.
+  const viewportHeight = typeof window !== 'undefined' && typeof window.innerHeight === 'number'
+    ? window.innerHeight
+    : 0
+  const stageHeight = viewportHeight > box.top ? viewportHeight - box.top : box.height
+
   return (
     <div
       role="region"
@@ -72,7 +82,7 @@ export function AppsStage({ t, apps, useSessions }) {
         '--stage-top': `${box.top}px`,
         '--stage-left': `${box.left}px`,
         '--stage-width': `${box.width}px`,
-        '--stage-height': `${box.height}px`,
+        '--stage-height': `${stageHeight}px`,
       }}
     >
       <PageHeader

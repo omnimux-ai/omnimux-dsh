@@ -69,6 +69,25 @@ describe('hub client UI kit contract (B5 drawer)', () => {
     assert.match(styles, /top:\s*var\(--stage-top\)/)
   })
 
+  it('keeps the Apps page stage inside the viewport and scrollable', () => {
+    const styles = read('styles.js')
+    const stageRule = (styles.match(/\.omnimux-apps-stage \{[\s\S]*?\}/) || [''])[0]
+    const bodyRule = (styles.match(/\.omnimux-apps-stage-body \{[\s\S]*?\}/) || [''])[0]
+    // The measured conversation box can be taller than the remaining viewport.
+    // The fixed stage must be clamped to the visible remainder so it never spills
+    // past the bottom edge (which left the inner body with nothing to scroll and
+    // pushed the last cards off-screen).
+    assert.match(stageRule, /max-height:\s*calc\(100vh - var\(--stage-top\)/, 'stage must clamp to the remaining viewport height')
+    assert.match(stageRule, /overflow:\s*hidden/, 'stage must not scroll; the body is the single scroll container')
+    // The body is the one scroll container for the card list.
+    assert.match(bodyRule, /overflow-y:\s*auto/, 'stage body must scroll vertically')
+    assert.match(bodyRule, /min-height:\s*0/, 'stage body must be allowed to shrink so it can overflow')
+    // AppsStage also caps --stage-height to the visible remainder at the source.
+    const stage = read('AppsStage.jsx')
+    assert.match(stage, /innerHeight/, 'AppsStage must read the viewport height')
+    assert.match(stage, /'--stage-height':\s*`\$\{stageHeight\}px`/, 'AppsStage must pass the clamped stage height')
+  })
+
   it('keeps SidebarUpdateAction as a null footer occupant (no ghost status UI)', () => {
     const source = read('SidebarUpdateAction.jsx')
     const index = read('index.js')
