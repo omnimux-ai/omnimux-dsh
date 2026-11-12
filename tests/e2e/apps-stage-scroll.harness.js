@@ -129,5 +129,12 @@ function run() {
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   setTimeout(run, 30)
 } else {
-  window.addEventListener('load', () => setTimeout(run, 30))
+  // One-shot load listener: remove itself before running so the add/remove
+  // counts stay balanced (the diff-aware L0 lifecycle scanner treats a
+  // *.harness.js as product code and requires a visible removal).
+  const onLoad = () => {
+    window.removeEventListener('load', onLoad)
+    setTimeout(run, 30)
+  }
+  window.addEventListener('load', onLoad)
 }
