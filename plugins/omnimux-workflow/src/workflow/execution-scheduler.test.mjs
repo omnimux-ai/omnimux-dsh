@@ -547,3 +547,43 @@ test('mockFail node fails the execution with node_error', async () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// Deterministic regression for the completion-poll race: a node failure that
+// resolves AFTER COMPLETION_POLL_MS (100ms) used to let waitForAnyCompletion()
+// win the race, swallow the NodeExecutionError and degrade the top-level error
+// to the generic "执行不完整，1 个节点执行失败". With a >100ms gateway latency the
+// poll always wins first, so this pins the fix without relying on load jitter.
+// Without the fix this test fails on the /mockFail/ text (generic message).
+test('abort-strategy node error survives a losing race against the completion poll', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'omnimux-exec-poll-race-'));
+  const mediaDir = join(dir, 'media');
+  mkdirSync(mediaDir, { recursive: true });
+  const gateway = createMockGateway({ minLatencyMs: 150, maxLatencyMs: 150 });
+  const manager = createExecutionManager({ executionsDir: join(dir, 'executions'), mediaDir, gateway });
+  const unhandled = [];
+  const onUnhandled = (reason) => unhandled.push(reason);
+  process.on('unhandledRejection', onUnhandled);
+  try {
+    const entry = manager.createExecution({
+      workspaceId: 'ws_poll_race',
+      nodes: [{ id: 'bad', type: 'material', data: { materialType: 'image', selectedTool: 'text-to-image', prompt: 'x', mockFail: true } }],
+      edges: [],
+    });
+    const settled = await waitUntil(() => {
+      const status = manager.getSnapshot(entry.context.id)?.status;
+      return status === 'error' || status === 'completed';
+    }, { timeoutMs: 5000 });
+    assert.ok(settled, 'execution should settle');
+    // Let any late rejection surface before checking for escapes.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const snapshot = manager.getSnapshot(entry.context.id);
+    assert.equal(snapshot.status, 'error');
+    assert.match(snapshot.error, /mockFail/, `node error text must survive the poll race, got: ${snapshot.error}`);
+    assert.equal(snapshot.nodeStates.bad.status, 'error');
+    assert.equal(unhandled.length, 0, 'no unhandledRejection should escape the scheduler');
+  } finally {
+    process.off('unhandledRejection', onUnhandled);
+    manager.disposeAll();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

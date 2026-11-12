@@ -353,6 +353,9 @@ export class ExecutionScheduler {
     while (this.pendingNodes.size > 0 || this.runningNodes.size > 0) {
       iteration += 1;
 
+      // abortError wins over isCancelled: a node that failed under 'abort' has
+      // already been recorded as the terminal cause; surface that node error
+      // rather than a later generic cancellation.
       if (this.abortError) break;
 
       if (this.isCancelled) {
