@@ -188,6 +188,22 @@ async function withDom(run) {
 
 const tick = (ms = 60) => new Promise((r) => setTimeout(r, ms))
 
+/**
+ * Poll a predicate until true or the deadline passes. React's async render + the
+ * jsdom layout cost vary with CI load, so a fixed `tick(60/200)` is not a safe
+ * bound — wait for the actual condition instead of guessing a delay. Returns
+ * false on timeout so the call-site assertion still fails loudly on a real
+ * regression (never silently passes).
+ */
+async function waitFor(predicate, timeoutMs = 3000, intervalMs = 20) {
+  const deadline = Date.now() + timeoutMs
+  for (;;) {
+    if (predicate()) return true
+    if (Date.now() >= deadline) return false
+    await new Promise((r) => setTimeout(r, intervalMs))
+  }
+}
+
 test('产品库 Tab 真实渲染：列表挂载且不崩（P0-1 回归）', async () => {
   const code = await bundleProductTab()
   await withDom(async ({ dom }) => {
@@ -202,8 +218,8 @@ test('产品库 Tab 真实渲染：列表挂载且不崩（P0-1 回归）', asyn
       const root = globalThis.__mountProductTab(container, {
         t: (k) => k, visible: true, query: '', kindTab: 'all',
       })
-      await tick()
-      assert.match(container.innerHTML, /omnimux-products-list-view/, '列表视图必须真实挂载')
+      const mounted = await waitFor(() => /omnimux-products-list-view/.test(container.innerHTML))
+      assert.ok(mounted, '列表视图必须真实挂载（等待超时）')
       assert.equal(errors.filter((e) => /ReferenceError|is not defined/.test(e)).length, 0, '不得出现作用域 ReferenceError')
       root.unmount()
     } finally {
@@ -232,9 +248,12 @@ test('产品库 Tab 真实渲染：切到二级页不触发无限重渲染（P0-
         kindTab: 'all',
         intent: { mode: 'create', kind: 'physical', nonce: 1 },
       })
-      await tick(200)
+      const formReported = await waitFor(() => globalThis.__reported?.name === 'form')
+      // Give a runaway re-render loop a bounded window to show up, then read totals.
+      await tick(100)
       reported = globalThis.__reported
       renderCount = globalThis.__reportCount
+      assert.ok(formReported, '进入创建后必须上报二级页视图（等待超时）')
       assert.equal(
         errors.filter((e) => /Maximum update depth exceeded/.test(e)).length,
         0,
