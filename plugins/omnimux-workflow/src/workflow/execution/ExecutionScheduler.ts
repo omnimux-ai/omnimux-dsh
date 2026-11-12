@@ -100,6 +100,9 @@ export class ExecutionScheduler {
   private runningNodes = new Set<string>();
   private pendingNodes = new Set<string>();
   private completedNodes = new Set<string>();
+  // Node failure captured under the 'abort' strategy, surfaced deterministically
+  // after the loop instead of depending on which Promise.race branch wins.
+  private abortError: NodeExecutionError | null = null;
 
   private isPaused = false;
   private isCancelled = false;
@@ -275,6 +278,7 @@ export class ExecutionScheduler {
 
   async execute(opts: { isRecovery?: boolean } = {}): Promise<void> {
     const isRecovery = opts.isRecovery === true;
+    this.abortError = null;
     const totalNodes = this.nodes.length;
     const topologicalGroups = this.getTopologicalGroups();
 
@@ -349,6 +353,8 @@ export class ExecutionScheduler {
     while (this.pendingNodes.size > 0 || this.runningNodes.size > 0) {
       iteration += 1;
 
+      if (this.abortError) break;
+
       if (this.isCancelled) {
         logger.info('execution loop cancelled', {
           executionId: this.context.id,
@@ -378,7 +384,19 @@ export class ExecutionScheduler {
         break;
       }
 
-      const execPromises = executableNodes.map((nodeId) => this.executeNode(nodeId));
+      const execPromises = executableNodes.map((nodeId) =>
+        this.executeNode(nodeId).catch((error) => {
+          // 'abort' node failures throw NodeExecutionError; capture it so the loop
+          // throws it deterministically. Without this, `waitForAnyCompletion`'s poll
+          // timer can win `Promise.race` under load, silently degrading the error to
+          // the generic "执行不完整" message and leaving the rejection unhandled.
+          if (error instanceof NodeExecutionError) {
+            this.abortError ??= error;
+            return;
+          }
+          throw error;
+        }),
+      );
 
       if (execPromises.length > 0 || this.runningNodes.size > 0) {
         await Promise.race([
@@ -386,6 +404,12 @@ export class ExecutionScheduler {
           this.waitForAnyCompletion(),
         ]);
       }
+    }
+
+    if (this.abortError) {
+      const error = this.abortError;
+      this.abortError = null;
+      throw error;
     }
 
     logger.debug('execution loop finished', {
