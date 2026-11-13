@@ -105,6 +105,8 @@ jobs:
           node scripts/verify-bilingual-docs.mjs
           node scripts/verify-silent-catch.mjs
           node --test scripts/verify-silent-catch.test.mjs
+          node scripts/verify-message-source-kinds.mjs
+          node --test scripts/verify-message-source-kinds.test.mjs
           node --test scripts/lib/silent-catch-delta.test.mjs scripts/report-blocker.test.mjs
           node --test scripts/verify-agents-md.test.mjs
           node --test scripts/verify-governance-registry.test.mjs scripts/lib/governance-registry.test.mjs
