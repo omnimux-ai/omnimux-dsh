@@ -2,7 +2,7 @@
 
 - 类型: 功能（API + 客户端 UI）
 - 范围: `plugins/omnimux-workflow/src/projects/routes.ts`、`src/client/projects/{api.js,newProject.js,NewLocalProjectDialog.jsx,ProjectFolderCard.jsx,ProjectLibraryPage.jsx}`、`src/client/{api.js,locales.js,styles.js}`、对应测试
-- 基线: main `93f31745`（B1/#4098 已合入；B2 只在其上接 API/UI）
+- 基线: main `f7a638b6`（B1/#4098 已合入；B2 只在其上接 API/UI）
 - 风险: R2（涉及创建/删除的写路径与项目列表语义；删除为数据安全关键点）
 
 ## 1. 范围
