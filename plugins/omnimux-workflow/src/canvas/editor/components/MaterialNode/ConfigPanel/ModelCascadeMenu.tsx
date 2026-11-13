@@ -24,6 +24,7 @@ import { useT } from '../../../../i18n/index.ts';
 import {
   groupPickerCandidates,
   isPickerCandidate,
+  resolveModelMenuItemCopy,
   type PickerCandidate,
   type PickerCandidateGroup,
 } from './modelPickerCandidates';
@@ -249,14 +250,8 @@ const CascadeModelItem: React.FC<{
 }> = ({ item, isSelected, isHovered = false, interactive = true, onHover, onSelect }) => {
   // Issue #4113（F2）：菜单徽标/title 走 i18n，不再硬编码中文。
   const t = useT();
-  const title = item.executionStatus === 'unsupported'
-    ? t('modelMenu.unsupportedTitle')
-    : item.executionStatus === 'unverified'
-      ? t('modelMenu.unverifiedTitle')
-      : undefined;
-  const badge = item.executionStatus === 'unverified'
-    ? t('modelMenu.unverifiedBadge')
-    : t('modelMenu.unsupportedBadge');
+  // 文案解析是纯函数（resolveModelMenuItemCopy），行为由单测覆盖，不靠源码 grep。
+  const { title, badge } = resolveModelMenuItemCopy(item, t);
   return (
   <button
     type="button"

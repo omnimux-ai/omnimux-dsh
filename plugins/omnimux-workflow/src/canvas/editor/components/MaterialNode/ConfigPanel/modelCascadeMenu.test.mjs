@@ -310,24 +310,3 @@ test('missingRequiredSlots validates against displayedSlotLayout.slots and trims
     '已持久化单图渠道节点在初始化挂载时必须防御性修剪多余或溢出槽位'
   );
 });
-
-/**
- * Issue #4113（F2）— 模型菜单的不可执行/未验证文案必须走 i18n，不硬编码中文。
- */
-test('#4113 F2 菜单徽标/title 走 useT 与 modelMenu.* 字典（无硬编码中文）', () => {
-  assert.match(cascadeSrc, /useT\(\)/, '菜单需要 useT 才能本地化');
-  assert.match(cascadeSrc, /t\('modelMenu\.unsupportedTitle'\)/);
-  assert.match(cascadeSrc, /t\('modelMenu\.unverifiedTitle'\)/);
-  assert.match(cascadeSrc, /t\('modelMenu\.unsupportedBadge'\)/);
-  assert.match(cascadeSrc, /t\('modelMenu\.unverifiedBadge'\)/);
-  // 回归：不得再出现写死的中文徽标 / title
-  assert.doesNotMatch(cascadeSrc, /'暂不支持'\s*:\s*'未验证'|'未验证'\s*:\s*'暂不支持'/);
-  assert.doesNotMatch(cascadeSrc, /localStorage|本地暂无该模型的可执行适配，暂不支持新建/);
-
-  const zhDict = readFileSync(new URL('../../../../i18n/dict.zh.ts', import.meta.url), 'utf8');
-  const enDict = readFileSync(new URL('../../../../i18n/dict.en.ts', import.meta.url), 'utf8');
-  for (const key of ['unsupportedTitle', 'unverifiedTitle', 'unsupportedBadge', 'unverifiedBadge']) {
-    assert.match(zhDict, new RegExp(`'modelMenu\\.${key}'`), `zh 缺 modelMenu.${key}`);
-    assert.match(enDict, new RegExp(`'modelMenu\\.${key}'`), `en 缺 modelMenu.${key}`);
-  }
-});

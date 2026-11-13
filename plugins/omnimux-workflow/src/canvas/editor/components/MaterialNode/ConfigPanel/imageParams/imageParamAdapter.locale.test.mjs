@@ -7,7 +7,7 @@
 
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { formatImageSummary } from './imageParamAdapter.ts'
+import { buildImageModeOptions, formatImageSummary } from './imageParamAdapter.ts'
 
 /** gateway-only 图片操作：没有本地 label，必须由已审校目录解析。 */
 const params = (operation) => ({
@@ -36,5 +36,27 @@ describe('formatImageSummary locale (#4113 F1)', () => {
       formatImageSummary({ ...params('text_to_image'), operationLabel: '一键出图' }, 'en').modeText,
       '一键出图',
     )
+  })
+})
+
+/** #4113 M1：浮层 modeOptions 的行为断言（en/zh），与摘要条同一解析器。 */
+describe('buildImageModeOptions locale (#4113 M1)', () => {
+  const ops = [
+    { id: 'text_to_image', label: '' },
+    { id: 'image_to_image', label: '' },
+    { id: 'multi_reference', label: '' },
+  ]
+  it('en：浮层生成方式选项为英文', () => {
+    assert.deepEqual(buildImageModeOptions(ops, 'en').map((x) => x.label), [
+      'Text to image', 'Image to image', 'Multi-image reference',
+    ])
+  })
+  it('zh：浮层生成方式选项为中文', () => {
+    assert.deepEqual(buildImageModeOptions(ops, 'zh').map((x) => x.label), [
+      '文生图', '图生图', '多图主体参考',
+    ])
+  })
+  it('自定义 label 优先，不被 locale 改写', () => {
+    assert.equal(buildImageModeOptions([{ id: 'text_to_image', label: '一键出图' }], 'en')[0].label, '一键出图')
   })
 })

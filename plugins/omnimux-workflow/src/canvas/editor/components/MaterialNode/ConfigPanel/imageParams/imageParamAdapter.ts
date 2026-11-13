@@ -149,6 +149,17 @@ export function resolveEffectiveImageParams(
  * 将生效的 EffectiveImageParams 转换为摘要触发条展示用的结构化摘要。
  * fullText 为空格拼接（禁止中点 `·`）。
  */
+/** 浮层生成方式选项（#4113 M1）：纯函数，行为可直接单测。 */
+export function buildImageModeOptions(
+  effectiveOperations: ReadonlyArray<{ id: string; label?: string }> | null | undefined,
+  locale: OperationLabelLocale = 'zh',
+): Array<{ value: string; label: string }> {
+  return (effectiveOperations ?? []).map((op) => ({
+    value: op.id,
+    label: resolveOperationLabel({ id: op.id, label: op.label }, locale),
+  }));
+}
+
 export function formatImageSummary(
   params: EffectiveImageParams,
   locale: OperationLabelLocale = getLocale(),

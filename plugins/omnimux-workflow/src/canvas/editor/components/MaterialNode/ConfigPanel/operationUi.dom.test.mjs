@@ -242,8 +242,7 @@ test('#4103 AC7 目录行置灰使用「暂不支持」而不是「不可执行�
   assert.match(menuSrc, /item\.executable === false/);
   // #4113 起菜单文案走 i18n（t('modelMenu.unsupportedBadge' / 'modelMenu.unsupportedTitle')），
   // 中文字面量搬到 dict，这里校验接线与字典条目。
-  assert.match(menuSrc, /t\('modelMenu\.unsupportedBadge'\)/);
-  assert.match(menuSrc, /t\('modelMenu\.unsupportedTitle'\)/);
+  assert.match(menuSrc, /resolveModelMenuItemCopy\(item, t\)/);
   const zhDict = readFileSync(new URL('../../../../i18n/dict.zh.ts', import.meta.url), 'utf8');
   assert.match(zhDict, /'modelMenu\.unsupportedBadge': '暂不支持'/);
   assert.match(zhDict, /'modelMenu\.unsupportedTitle': '本地暂无该模型的可执行适配，暂不支持新建'/);
