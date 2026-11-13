@@ -26,6 +26,24 @@ describe('Workflow Projects Locales & i18n Dictionaries', () => {
     assert.equal(en['projects.refresh'], 'Refresh')
   })
 
+  it('covers B2 independent/linked projects and two-level delete copy', () => {
+    assert.equal(zh['projects.independent'], '独立项目')
+    assert.equal(en['projects.independent'], 'Independent project')
+    assert.equal(zh['projects.bound'], '关联工作区')
+    assert.equal(en['projects.bound'], 'Linked workspace')
+    assert.equal(zh['projects.removeFromLibrary'], '移出项目库')
+    assert.equal(en['projects.removeFromLibrary'], 'Remove from library')
+    assert.equal(zh['projects.purge'], '删除项目')
+    assert.equal(en['projects.purge'], 'Delete project')
+    assert.notEqual(zh['projects.purge'], zh['projects.removeFromLibrary'], '两级删除文案必须区分')
+    assert.match(zh['projects.purgeConfirm'], /画布与资产/)
+    assert.match(en['projects.purgeConfirm'], /canvases and assets/)
+    assert.match(zh['projects.removeFromLibraryConfirm'], /保留在磁盘/)
+    assert.equal(zh['projects.preflight.initialize'], '将在该工作区初始化项目与首个创作页。')
+    assert.match(zh['projects.preflight.open'], /\{title\}/)
+    assert.equal(en['projects.preflight.rebuild'], 'Existing creative pages were found; the project will be rebuilt and included.')
+  })
+
   it('ensures all projects.* keys exist in both zh and en dictionaries', () => {
     const zhKeys = Object.keys(zh).filter((k) => k.startsWith('projects.'))
     const enKeys = Object.keys(en).filter((k) => k.startsWith('projects.'))

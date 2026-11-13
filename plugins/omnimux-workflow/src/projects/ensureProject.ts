@@ -70,6 +70,27 @@ export interface EnsureProjectResult {
   root: string;
 }
 
+export type PreflightState = 'S0' | 'S1' | 'S2' | 'S3' | 'S4' | 'independent';
+export type PreflightAction = 'initialize' | 'open' | 'rebuild' | 'repair' | 'converge' | 'create-independent';
+
+export interface PreflightProjectInput {
+  mode?: EnsureProjectMode;
+  workspaceDir?: string;
+  /** 兼容旧调用：等价于 workspaceDir。 */
+  projectRoot?: string;
+  title?: string;
+}
+
+export interface PreflightProjectResult {
+  mode: EnsureProjectMode;
+  state: PreflightState;
+  action: PreflightAction;
+  root: string;
+  workspaceDir: string | null;
+  /** 预检只读视图（未写盘）；无档案时为 null。 */
+  project: { id: string; title: string; pages: ProjectPage[]; activePageId: string; path: string } | null;
+}
+
 /** ProjectStore 注入给状态机的写入/索引能力（不在此复制迁移或落盘逻辑）。 */
 export interface EnsureProjectDeps {
   libraryRoot: string;
@@ -466,6 +487,87 @@ function isRegisteredOutsideLibrary(deps: EnsureProjectDeps, root: string): bool
   if (deps.isInsideLibrary(root)) return false;
   const target = resolve(root);
   return deps.loadExternalProjectDirs().some((entry) => resolve(entry) === target);
+}
+
+/* ────────────────────────── 只读对齐预检（B2） ──────────────────────────── */
+
+/** 只读检查 registry 异常：同一 root 重复 / 同 id 的另一个 root。绝不写索引。 */
+function registryHasAnomaly(deps: EnsureProjectDeps, root: string, projectId: string | null): boolean {
+  const target = resolve(root);
+  const seen = new Set<string>();
+  for (const entry of deps.loadExternalProjectDirs()) {
+    const dir = resolve(entry);
+    if (seen.has(dir)) return true;
+    seen.add(dir);
+    if (dir === target || !projectId) continue;
+    const otherRaw = readJsonFile(join(dir, '.omnimux', 'project.json'));
+    const other = otherRaw === undefined ? null : parseProject(otherRaw);
+    if (other && other.id === projectId) return true;
+  }
+  return false;
+}
+
+/**
+ * 对齐预检（B2）：返回 S0–S4 状态与建议动作，**零写盘**。
+ * 只 stat/read/parse；不 mkdir、不写 project.json、不碰 registry、不建画布。
+ */
+export async function runPreflightProject(
+  deps: EnsureProjectDeps,
+  input: PreflightProjectInput,
+): Promise<PreflightProjectResult> {
+  const candidate = typeof input.workspaceDir === 'string' && input.workspaceDir.trim() !== ''
+    ? input.workspaceDir
+    : input.projectRoot;
+  const wantsWorkspace = input.mode === 'workspace' || (typeof candidate === 'string' && candidate.trim() !== '');
+  if (!wantsWorkspace) {
+    const root = independentRoot(deps.libraryRoot, input.title);
+    return { mode: 'independent', state: 'independent', action: 'create-independent', root, workspaceDir: null, project: null };
+  }
+  const root = resolveWorkspaceRoot(candidate);
+  const paths = resolveProjectPaths(root);
+  const fileExists = existsSync(paths.projectFile);
+  const raw = fileExists ? readJsonFile(paths.projectFile) : undefined;
+  const parsed = raw === undefined ? null : parseProject(raw);
+  const normalized = parsed ? normalizePages(parsed) : null;
+  const strictOnDisk = raw !== undefined && projectSchema.safeParse(raw).success;
+  const canvases = canvasIdsOnDisk(root);
+  const preview = normalized
+    ? {
+        id: normalized.project.id,
+        title: normalized.project.title,
+        pages: normalized.project.pages,
+        activePageId: normalized.project.activePageId,
+        path: root,
+      }
+    : null;
+
+  const anomaly = registryHasAnomaly(deps, root, preview?.id ?? null);
+
+  let state: PreflightState;
+  let action: PreflightAction;
+  if (parsed) {
+    if (strictOnDisk && !normalized?.changed && !anomaly) {
+      state = 'S1';
+      action = 'open';
+    } else if (strictOnDisk && !normalized?.changed && anomaly) {
+      state = 'S4';
+      action = 'converge';
+    } else {
+      // v1 / 容错结构 / 缺页引用 / 坏档案 → 修复后打开。
+      state = 'S2';
+      action = 'repair';
+    }
+  } else if (fileExists) {
+    state = 'S2';
+    action = 'repair';
+  } else if (canvases.length > 0) {
+    state = 'S3';
+    action = 'rebuild';
+  } else {
+    state = 'S0';
+    action = 'initialize';
+  }
+  return { mode: 'workspace', state, action, root, workspaceDir: root, project: preview };
 }
 
 /* ─────────────────────────────── 公开入口 ────────────────────────────────── */

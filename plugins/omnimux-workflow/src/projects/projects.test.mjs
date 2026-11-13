@@ -1355,4 +1355,251 @@ test('B1 I4：重复 canvasWorkspaceId 归一（保留首个，其余换新 id�
 });
 
 
+// ── B2：API（mode / 只读预检 / 两级删除 / I3 画布）──────────────────────────
+test('B2 预检：S0/S1/S2/S3/S4 状态 + 零写盘', async () => {
+  const libraryRoot = tmpDir('omnimux-b2-lib-');
+  const s0 = tmpDir('omnimux-b2-s0-');
+  const s1 = tmpDir('omnimux-b2-s1-');
+  const s2 = tmpDir('omnimux-b2-s2-');
+  const s3 = tmpDir('omnimux-b2-s3-');
+  const s4 = tmpDir('omnimux-b2-s4-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+    const p0 = await store.preflightProject({ workspaceDir: s0 });
+    assert.equal(p0.state, 'S0');
+    assert.equal(p0.action, 'initialize');
+    assert.equal(existsSync(join(s0, '.omnimux')), false, '预检不得创建 .omnimux');
+    assert.equal(existsSync(join(libraryRoot, '.external-projects.json')), false, '预检不得写 registry');
+
+    writeValidV2(s1, { id: 'b2-s1' });
+    const beforeS1 = readFileSync(join(s1, '.omnimux', 'project.json'), 'utf8');
+    const p1 = await store.preflightProject({ workspaceDir: s1 });
+    assert.equal(p1.state, 'S1');
+    assert.equal(p1.action, 'open');
+    assert.equal(p1.project.id, 'b2-s1');
+    assert.equal(readFileSync(join(s1, '.omnimux', 'project.json'), 'utf8'), beforeS1, '预检不得改写合法档案');
+
+    writeV1Project(s2, { id: 'b2-s2', title: '旧项目', canvasWorkspaceIds: ['ws_a'] });
+    const p2 = await store.preflightProject({ workspaceDir: s2 });
+    assert.equal(p2.state, 'S2');
+    assert.equal(p2.action, 'repair');
+
+    writeCanvasFile(s3, 'ws_canvas_pre', '预检画布');
+    const p3 = await store.preflightProject({ workspaceDir: s3 });
+    assert.equal(p3.state, 'S3');
+    assert.equal(p3.action, 'rebuild');
+
+    writeValidV2(s4, { id: 'b2-s4' });
+    const realS4 = realpathSync(s4);
+    writeFileSync(join(libraryRoot, '.external-projects.json'), JSON.stringify([realS4, realS4], null, 2));
+    const p4 = await store.preflightProject({ workspaceDir: s4 });
+    assert.equal(p4.state, 'S4');
+    assert.equal(p4.action, 'converge');
+    assert.deepEqual(readRegistry(libraryRoot), [realS4, realS4], '预检不得收敛 registry（只读）');
+  } finally {
+    for (const dir of [libraryRoot, s0, s1, s2, s3, s4]) rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('B2 POST /projects mode：independent 幂等 + workspace 初始化/采纳非 409', async () => {
+  const libraryRoot = tmpDir('omnimux-b2-lib-');
+  const workspace = tmpDir('omnimux-b2-ws-');
+  try {
+    const dispatcher = host.createProjectDispatcher({ libraryRoot });
+    const headers = { origin: 'http://localhost:3000' };
+    const post = (body) => dispatcher.dispatch({
+      method: 'POST', url: '/omnimux-workflow/api/projects', headers, body,
+    });
+
+    const ind1 = await post({ mode: 'independent', title: '独立甲' });
+    assert.equal(ind1.status, 200);
+    assert.equal(ind1.body.action, 'initialized');
+    assert.equal(ind1.body.project.path, join(libraryRoot, '独立甲'));
+    const ind2 = await post({ mode: 'independent', title: '独立甲' });
+    assert.equal(ind2.status, 200);
+    assert.equal(ind2.body.action, 'existing');
+    assert.equal(ind2.body.project.id, ind1.body.project.id);
+    assert.equal(ind2.body.project.pages.length, 1, '幂等不得加页');
+
+    const ws1 = await post({ mode: 'workspace', title: '工作区项目', workspaceDir: workspace });
+    assert.equal(ws1.status, 200);
+    assert.equal(ws1.body.action, 'initialized');
+    const ws2 = await post({ mode: 'workspace', title: '工作区项目', workspaceDir: workspace });
+    assert.equal(ws2.status, 200, '已存在的合法项目必须 200，不得 409');
+    assert.equal(ws2.body.action, 'existing');
+    assert.equal(ws2.body.project.id, ws1.body.project.id);
+
+    writeV1Project(workspace, { id: 'b2-v1', title: '旧项目', canvasWorkspaceIds: ['ws_v1'] });
+    const repaired = await post({ mode: 'workspace', title: '旧项目', workspaceDir: workspace });
+    assert.equal(repaired.status, 200, 'v1 项目必须 200 修复，不得 409');
+    assert.equal(repaired.body.action, 'repaired');
+    assert.equal(repaired.body.project.id, 'b2-v1');
+
+    const missingDir = await post({ mode: 'workspace', title: '缺目录' });
+    assert.equal(missingDir.status, 400);
+    assert.equal(missingDir.body.error, 'invalid-workspace-dir');
+
+    const badMode = await post({ mode: 'bogus', title: '坏模式' });
+    assert.equal(badMode.status, 400);
+    assert.equal(badMode.body.error, 'invalid-mode');
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test('B2 POST /projects/preflight 路由：只读 + 状态/动作语义', async () => {
+  const libraryRoot = tmpDir('omnimux-b2-lib-');
+  const workspace = tmpDir('omnimux-b2-ws-');
+  try {
+    const dispatcher = host.createProjectDispatcher({ libraryRoot });
+    const headers = { origin: 'http://localhost:3000' };
+    const pre = (body) => dispatcher.dispatch({
+      method: 'POST', url: '/omnimux-workflow/api/projects/preflight', headers, body,
+    });
+    const empty = await pre({ mode: 'workspace', workspaceDir: workspace });
+    assert.equal(empty.status, 200);
+    assert.equal(empty.body.state, 'S0');
+    assert.equal(empty.body.action, 'initialize');
+    assert.equal(existsSync(join(workspace, '.omnimux')), false, '路由预检也必须零写盘');
+
+    writeValidV2(workspace, { id: 'b2-pre', title: '已有' });
+    const existing = await pre({ mode: 'workspace', workspaceDir: workspace });
+    assert.equal(existing.body.state, 'S1');
+    assert.equal(existing.body.action, 'open');
+    assert.equal(existing.body.project.title, '已有');
+
+    const independent = await pre({ mode: 'independent', title: '独立预检' });
+    assert.equal(independent.body.state, 'independent');
+    assert.equal(independent.body.action, 'create-independent');
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test('B2 I3：POST ensure 为缺画布的创作页补空画布（不撞 workspace-not-found）', async () => {
+  const libraryRoot = tmpDir('omnimux-b2-lib-');
+  const workspace = tmpDir('omnimux-b2-ws-');
+  const canvasHome = tmpDir('omnimux-b2-canvases-');
+  const created = new Map();
+  try {
+    const fakeWorkspaceStore = {
+      canvasFileOf(id) { return join(canvasHome, `${id}.json`); },
+      create(name, id) {
+        created.set(id, { id, name });
+        writeFileSync(join(canvasHome, `${id}.json`), JSON.stringify({ id, name }));
+        return { id, name };
+      },
+    };
+    const dispatcher = host.createProjectDispatcher({ libraryRoot, workspaceStore: fakeWorkspaceStore });
+    const res = await dispatcher.dispatch({
+      method: 'POST',
+      url: '/omnimux-workflow/api/projects',
+      headers: { origin: 'http://localhost:3000' },
+      body: { mode: 'workspace', title: '缺画布项目', workspaceDir: workspace },
+    });
+    assert.equal(res.status, 200);
+    const page = res.body.project.pages[0];
+    assert.ok(page.canvasWorkspaceId);
+    assert.equal(created.has(page.canvasWorkspaceId), true, '缺画布的创作页必须补一张空画布');
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(canvasHome, { recursive: true, force: true });
+  }
+});
+
+test('B2 两级删除：移出保留画布；purge 删画布/资产；删了不复活', async () => {
+  const libraryRoot = tmpDir('omnimux-b2-lib-');
+  const workspace = tmpDir('omnimux-b2-ws-');
+  try {
+    const dispatcher = host.createProjectDispatcher({ libraryRoot });
+    const headers = { origin: 'http://localhost:3000' };
+    writeCanvasFile(workspace, 'ws_keep', '保留画布');
+    writeFileSync(join(workspace, 'user-file.txt'), 'keep me');
+    const created = await dispatcher.dispatch({
+      method: 'POST', url: '/omnimux-workflow/api/projects', headers,
+      body: { mode: 'workspace', title: '删除语义', workspaceDir: workspace },
+    });
+    assert.equal(created.status, 200);
+    const id = created.body.project.id;
+
+    // 1) 移出项目库：只摘 project.json + 索引，画布保留。
+    const removed = await dispatcher.dispatch({
+      method: 'DELETE', url: `/omnimux-workflow/api/projects/${id}`, headers,
+    });
+    assert.equal(removed.status, 200);
+    assert.equal(existsSync(join(workspace, '.omnimux', 'project.json')), false);
+    assert.equal(existsSync(join(workspace, '.omnimux', 'canvases', 'ws_keep.json')), true, '移出不得删画布');
+    assert.equal(existsSync(join(workspace, 'user-file.txt')), true);
+
+    // 同 root 再次 ensure：S3 采纳既有画布（复活是“移出”的既定语义）。
+    const readopted = await dispatcher.dispatch({
+      method: 'POST', url: '/omnimux-workflow/api/projects', headers,
+      body: { mode: 'workspace', title: '删除语义', workspaceDir: workspace },
+    });
+    assert.equal(readopted.body.action, 'adopted-files');
+
+    // 2) 删除项目（purge）：再删画布与 assets，用户自有文件保留。
+    writeFileSync(join(workspace, '.omnimux', 'assets.json'), JSON.stringify({ items: [] }));
+    const purged = await dispatcher.dispatch({
+      method: 'DELETE', url: `/omnimux-workflow/api/projects/${readopted.body.project.id}?mode=purge`, headers,
+    });
+    assert.equal(purged.status, 200);
+    assert.equal(existsSync(join(workspace, '.omnimux', 'canvases')), false, 'purge 必须删画布目录');
+    assert.equal(existsSync(join(workspace, '.omnimux', 'assets.json')), false, 'purge 必须删 assets.json');
+    assert.equal(existsSync(join(workspace, 'user-file.txt')), true, 'purge 不得删用户自有文件');
+
+    // 3) 删了不复活：同 root ensure 不得把已删画布复活（全新 initialized）。
+    const revived = await dispatcher.dispatch({
+      method: 'POST', url: '/omnimux-workflow/api/projects', headers,
+      body: { mode: 'workspace', title: '删除语义', workspaceDir: workspace },
+    });
+    assert.equal(revived.body.action, 'initialized', 'purge 后同 root 必须重新初始化，不得复活旧画布');
+    assert.equal(revived.body.project.id === readopted.body.project.id, false);
+    assert.equal(
+      revived.body.project.pages.some((page) => page.canvasWorkspaceId === 'ws_keep'),
+      false,
+      '已删除的画布不得出现在新项目',
+    );
+
+    const badMode = await dispatcher.dispatch({
+      method: 'DELETE', url: `/omnimux-workflow/api/projects/${revived.body.project.id}?mode=bogus`, headers,
+    });
+    assert.equal(badMode.status, 400);
+    assert.equal(badMode.body.error, 'invalid-mode');
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test('B2 列表区分独立/关联工作区', async () => {
+  const libraryRoot = tmpDir('omnimux-b2-lib-');
+  const workspace = tmpDir('omnimux-b2-ws-');
+  try {
+    const dispatcher = host.createProjectDispatcher({ libraryRoot });
+    const headers = { origin: 'http://localhost:3000' };
+    await dispatcher.dispatch({
+      method: 'POST', url: '/omnimux-workflow/api/projects', headers,
+      body: { mode: 'independent', title: '库内独立' },
+    });
+    await dispatcher.dispatch({
+      method: 'POST', url: '/omnimux-workflow/api/projects', headers,
+      body: { mode: 'workspace', title: '外置绑定', workspaceDir: workspace },
+    });
+    const list = await dispatcher.dispatch({ method: 'GET', url: '/omnimux-workflow/api/projects', headers });
+    const byTitle = Object.fromEntries(list.body.projects.map((p) => [p.title, p]));
+    assert.equal(byTitle['库内独立'].bound, false, '默认库项目必须是独立项目');
+    assert.equal(byTitle['库内独立'].workspaceDir, null);
+    assert.equal(byTitle['外置绑定'].bound, true, '库外工作区项目必须标记为关联工作区');
+    assert.equal(byTitle['外置绑定'].workspaceDir, realpathSync(workspace));
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+
 }); // describe

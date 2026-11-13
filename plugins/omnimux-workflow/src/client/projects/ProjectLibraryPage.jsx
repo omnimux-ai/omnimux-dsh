@@ -143,7 +143,8 @@ export function ProjectLibraryPage(props) {
   const [openingPageId, setOpeningPageId] = useState(null)
   const openingRef = useRef(false)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [pendingDelete, setPendingDelete] = useState(null)
+  const [pendingRemove, setPendingRemove] = useState(null)
+  const [pendingPurge, setPendingPurge] = useState(null)
   const [pendingDeletePage, setPendingDeletePage] = useState(null)
   const [pendingAppDelete, setPendingAppDelete] = useState(null)
   const [promptModal, setPromptModal] = useState(null)
@@ -518,13 +519,10 @@ export function ProjectLibraryPage(props) {
     })
   }
 
-  const confirmDeleteProject = async () => {
-    if (!pendingDelete) return
-    const id = pendingDelete.id
-    setPendingDelete(null)
+  const finishDelete = async (id, purge) => {
     setBusy(true)
     try {
-      const res = await deleteProject(id)
+      const res = await deleteProject(id, purge ? { purge: true } : undefined)
       if (res.ok) {
         if (selectedProject?.id === id) setSelectedProject(null)
         void reload()
@@ -534,6 +532,20 @@ export function ProjectLibraryPage(props) {
     } finally {
       setBusy(false)
     }
+  }
+
+  const confirmRemoveProject = async () => {
+    if (!pendingRemove) return
+    const id = pendingRemove.id
+    setPendingRemove(null)
+    await finishDelete(id, false)
+  }
+
+  const confirmPurgeProject = async () => {
+    if (!pendingPurge) return
+    const id = pendingPurge.id
+    setPendingPurge(null)
+    await finishDelete(id, true)
   }
 
   const handleClose = () => {
@@ -754,7 +766,8 @@ export function ProjectLibraryPage(props) {
                     project={project}
                     onOpen={handleSelectFolder}
                     onRename={handleRenameProject}
-                    onDelete={setPendingDelete}
+                    onRemove={setPendingRemove}
+                    onPurge={setPendingPurge}
                     t={t}
                   />
                 ))}
@@ -776,16 +789,28 @@ export function ProjectLibraryPage(props) {
         />
       ) : null}
 
-      {pendingDelete ? (
+      {pendingRemove ? (
         <ConfirmModal
           open
-          onClose={() => { setPendingDelete(null) }}
-          title={t('projects.delete') || '删除项目'}
-          message={(t('projects.deleteConfirm') || '确定要删除项目「{title}」吗？').replace('{title}', pendingDelete.title)}
-          confirmLabel={t('projects.delete') || '删除'}
+          onClose={() => { setPendingRemove(null) }}
+          title={t('projects.removeFromLibrary') || '移出项目库'}
+          message={(t('projects.removeFromLibraryConfirm') || '将把「{title}」移出项目库，画布与资产保留在磁盘，可再次打开。').replace('{title}', pendingRemove.title)}
+          confirmLabel={t('projects.removeFromLibrary') || '移出项目库'}
+          cancelLabel={t('projects.dialog.cancel') || '取消'}
+          onConfirm={() => { void confirmRemoveProject() }}
+        />
+      ) : null}
+
+      {pendingPurge ? (
+        <ConfirmModal
+          open
+          onClose={() => { setPendingPurge(null) }}
+          title={t('projects.purge') || '删除项目'}
+          message={(t('projects.purgeConfirm') || '将删除「{title}」的画布与资产（.omnimux/canvases 与 assets.json）。项目文件夹中的其他文件会保留，此操作不可撤销。').replace('{title}', pendingPurge.title)}
+          confirmLabel={t('projects.purge') || '删除项目'}
           cancelLabel={t('projects.dialog.cancel') || '取消'}
           confirmVariant="danger"
-          onConfirm={() => { void confirmDeleteProject() }}
+          onConfirm={() => { void confirmPurgeProject() }}
         />
       ) : null}
 

@@ -26,6 +26,7 @@ import {
 import { displayHomePath, ensureLibraryRoot, resolveVideosDir } from './library';
 import { ProjectPathError } from './paths';
 import { createProjectStore, ProjectStoreError, validateTitle } from './ProjectStore';
+import { isEnsureProjectError, type EnsureProjectMode } from './ensureProject';
 import { ensureWorkspaceProjectBound } from './workspaceProjectBinding';
 import { sessionToWorkspaceId } from '../shared/sessionWorkspaceId';
 import type { WorkspaceStore } from '../workflow/workspace/WorkspaceStore.ts';
@@ -59,6 +60,10 @@ const STATUS_BY_CODE: Record<string, number> = {
   'page-not-found': 404,
   'project-exists': 409,
   'project-record-invalid': 422,
+  'invalid-workspace-dir': 400,
+  'invalid-mode': 400,
+  'project-lock-timeout': 409,
+  'project-lock-failed': 409,
   'not-found': 404,
   'not-local': 403,
   'path-denied': 403,
@@ -101,6 +106,7 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
   const collectionRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}$`);
   const libraryRe = new RegExp(`^${PROJECT_LIBRARY_PATH}$`);
   const sessionBindingRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/session-binding$`);
+  const preflightRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/preflight$`);
   const itemRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/([^/]+)$`);
   const pagesRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/([^/]+)/pages$`);
   const pageItemRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/([^/]+)/pages/([^/]+)$`);
@@ -110,6 +116,41 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
 
   function owns(path: string): boolean {
     return path === PROJECT_ROUTE_PREFIX || path.startsWith(`${PROJECT_ROUTE_PREFIX}/`);
+  }
+
+  function parseMode(value: unknown): EnsureProjectMode | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (value === 'independent' || value === 'workspace') return value;
+    throw new ProjectStoreError('invalid-mode', 'mode must be independent or workspace');
+  }
+
+  function readWorkspaceDir(value: unknown): string | undefined {
+    return typeof value === 'string' && value.trim() !== '' ? value : undefined;
+  }
+
+  /**
+   * B2/I3：ensure/adopt 得到项目后，为缺少画布的创作页补一张空画布（写 home canvas，
+   * 绑定首次打开时由 WorkspaceStore 懒拷贝到项目），避免首开撞 `workspace-not-found`。
+   */
+  function ensurePageCanvases(record: { pages?: Array<{ title?: unknown; canvasWorkspaceId?: unknown }> }): void {
+    if (!opts.workspaceStore) return;
+    for (const page of record.pages ?? []) {
+      const id = typeof page.canvasWorkspaceId === 'string' ? page.canvasWorkspaceId.trim() : '';
+      if (id === '') continue;
+      try {
+        const file = opts.workspaceStore.canvasFileOf(id);
+        if (existsSync(file)) continue;
+        opts.workspaceStore.create(typeof page.title === 'string' ? page.title : undefined, id);
+      } catch {
+        // 非法 id / 画布存储不可用：不阻断项目本身写入（打开时仍会给出明确错误）。
+      }
+    }
+  }
+
+  function bindingOf(store: { isInsideLibrary(dir: string): boolean }, project: { path?: string }): { bound: boolean; workspaceDir: string | null } {
+    const dir = typeof project.path === 'string' ? project.path : '';
+    const bound = dir !== '' && !store.isInsideLibrary(dir);
+    return { bound, workspaceDir: bound ? dir : null };
   }
 
   async function dispatch(req: ProjectDispatchRequest): Promise<ProjectDispatchResult> {
@@ -211,9 +252,17 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
               return { status: 400, body: { error: 'invalid-project-root', message: 'path must be absolute' } };
             }
             const found = store.findByRoot(lookupPath);
-            return { status: 200, body: { project: found ? enrich(found) : null } };
+            return { status: 200, body: { project: found ? { ...enrich(found), ...bindingOf(store, found) } : null } };
           }
-          return { status: 200, body: { projects: store.list().map((project) => enrich(project)) } };
+          return {
+            status: 200,
+            body: {
+              projects: store.list().map((project) => ({
+                ...enrich(project),
+                ...bindingOf(store, project),
+              })),
+            },
+          };
         }
         if (method === 'POST') {
           const problem = jsonBodyProblem(req.body);
@@ -223,6 +272,8 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
             projectRoot?: unknown;
             cwd?: unknown;
             canvasWorkspaceIds?: unknown;
+            mode?: unknown;
+            workspaceDir?: unknown;
           };
           if (body.cwd !== undefined) {
             return { status: 400, body: { error: 'invalid-json', message: 'cwd is no longer a project library scope' } };
@@ -235,6 +286,19 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
           const canvasWorkspaceIds = Array.isArray(body.canvasWorkspaceIds)
             ? body.canvasWorkspaceIds.filter((id): id is string => typeof id === 'string' && id.trim() !== '')
             : undefined;
+          const mode = parseMode(body.mode);
+          if (mode) {
+            const workspaceDir = readWorkspaceDir(body.workspaceDir) ?? (mode === 'workspace' ? readWorkspaceDir(body.projectRoot) : undefined);
+            if (mode === 'workspace' && !workspaceDir) {
+              return { status: 400, body: { error: 'invalid-workspace-dir', message: 'workspace mode requires workspaceDir' } };
+            }
+            const result = await store.ensureProject({ mode, workspaceDir, title: title ?? undefined });
+            ensurePageCanvases(result.project);
+            return {
+              status: 200,
+              body: { project: result.project, action: result.action },
+            };
+          }
           return {
             status: 200,
             body: { project: store.create(title ?? '', { projectRoot, canvasWorkspaceIds }) },
@@ -416,6 +480,25 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
         return { status: 200, body: { ok: true } };
       }
 
+      if (preflightRe.exec(path)) {
+        if (method !== 'POST') {
+          return { status: 404, body: { error: 'not-found', message: 'unknown route' } };
+        }
+        const problem = jsonBodyProblem(req.body);
+        if (problem) return problem;
+        const body = req.body as { mode?: unknown; workspaceDir?: unknown; projectRoot?: unknown; title?: unknown };
+        const { store } = scopedStore(opts.libraryRoot);
+        const mode = parseMode(body.mode);
+        const result = await store.preflightProject({
+          ...(mode ? { mode } : {}),
+          workspaceDir: readWorkspaceDir(body.workspaceDir),
+          projectRoot: readWorkspaceDir(body.projectRoot),
+          title: typeof body.title === 'string' ? body.title : undefined,
+        });
+        // 只读：不建画布、不写 registry、不动 project.json。
+        return { status: 200, body: result };
+      }
+
       const itemMatch = itemRe.exec(path);
       if (itemMatch) {
         const id = itemMatch[1] ?? '';
@@ -436,7 +519,11 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
           return { status: 400, body: { error: 'invalid-json', message: 'title is required' } };
         }
         if (method === 'DELETE') {
-          store.remove(id);
+          const mode = (url.searchParams.get('mode') ?? '').trim();
+          if (mode !== '' && mode !== 'purge') {
+            return { status: 400, body: { error: 'invalid-mode', message: 'DELETE mode must be purge when provided' } };
+          }
+          store.remove(id, { purge: mode === 'purge' });
           return { status: 200, body: { ok: true } };
         }
         return { status: 404, body: { error: 'not-found', message: 'unknown route' } };
@@ -448,6 +535,9 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
         return { status: STATUS_BY_CODE[error.code] ?? 400, body: { error: error.code, message: error.message } };
       }
       if (error instanceof ProjectStoreError) {
+        return { status: STATUS_BY_CODE[error.code] ?? 400, body: { error: error.code, message: error.message } };
+      }
+      if (isEnsureProjectError(error)) {
         return { status: STATUS_BY_CODE[error.code] ?? 400, body: { error: error.code, message: error.message } };
       }
       return { status: 500, body: { error: 'internal', message: messageOf(error) } };

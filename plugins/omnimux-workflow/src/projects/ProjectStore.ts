@@ -41,8 +41,11 @@ import {
   DEFAULT_ENSURE_LOCK_STALE_MS,
   DEFAULT_ENSURE_LOCK_TIMEOUT_MS,
   runEnsureProject,
+  runPreflightProject,
   type EnsureProjectInput,
   type EnsureProjectResult,
+  type PreflightProjectInput,
+  type PreflightProjectResult,
 } from './ensureProject.ts';
 
 export class ProjectStoreError extends Error {
@@ -77,13 +80,20 @@ export interface ProjectStore {
   removePage(projectId: string, pageId: string): ProjectRecord;
   renamePage(projectId: string, pageId: string, title: string): ProjectRecord;
   setActivePage(projectId: string, pageId: string): ProjectRecord;
-  /** 摘除元数据，保留用户文件夹。 */
-  remove(id: string): void;
+  /**
+   * 摘除元数据，保留用户文件夹与画布/资产（默认）；
+   * `purge: true`（删除项目）再删 `.omnimux/canvases/` 与 `assets.json`，用户自有文件仍保留。
+   */
+  remove(id: string, opts?: { purge?: boolean }): void;
   /**
    * 项目↔工作区对齐唯一入口（B1）：S0–S4 + 幂等 existing。
    * 单一真源 = `<root>/.omnimux/project.json` + 画布文件；registry 只是索引。
    */
   ensureProject(input: EnsureProjectInput): Promise<EnsureProjectResult>;
+  /** 只读对齐预检（S0–S4 + 建议动作），零写盘。 */
+  preflightProject(input: PreflightProjectInput): Promise<PreflightProjectResult>;
+  /** 库内判定（lexical + realpath），供路由区分独立/关联工作区。 */
+  isInsideLibrary(dir: string): boolean;
 }
 
 function isProjectId(id: string): boolean {
@@ -587,14 +597,43 @@ export function createProjectStore(opts: {
       return repairProjectRecord(persisted);
     },
 
-    remove(id: string): void {
+    remove(id: string, opts: { purge?: boolean } = {}): void {
       const current = requireProject(id);
       const paths = resolveProjectPaths(current.dir);
       assertProjectWriteSafe(paths.projectFile, paths.projectRoot);
       // 只摘「项目档案」：画布（.omnimux/canvases）、assets.json、生成物与用户
-      // 文件夹全部保留（单一真源里画布文件属于用户数据，不做删除）。
+      // 文件夹全部保留（单一真源里画布文件属于用户数据，默认不做删除）。
       if (existsSync(paths.projectFile)) rmSync(paths.projectFile, { force: true });
+      if (opts.purge) {
+        // 「删除项目」：在移出项目库的基础上，再删画布与资产元数据；用户根目录
+        // 自有文件与文件夹一律保留（不 rm 用户文件红线）。
+        if (existsSync(paths.canvasesDir)) {
+          assertProjectWriteSafe(paths.canvasesDir, paths.projectRoot);
+          rmSync(paths.canvasesDir, { recursive: true, force: true });
+        }
+        if (existsSync(paths.assetsFile)) {
+          assertProjectWriteSafe(paths.assetsFile, paths.projectRoot);
+          rmSync(paths.assetsFile, { force: true });
+        }
+      }
       unregisterExternalProjectDir(paths.projectRoot);
+    },
+
+    preflightProject(input: PreflightProjectInput): Promise<PreflightProjectResult> {
+      return runPreflightProject({
+        libraryRoot,
+        isInsideLibrary,
+        loadExternalProjectDirs,
+        saveExternalProjectDirs,
+        registerExternalProjectDir,
+        persistProject,
+        lockTimeoutMs,
+        lockStaleMs,
+      }, input);
+    },
+
+    isInsideLibrary(dir: string): boolean {
+      return isInsideLibrary(dir);
     },
 
     ensureProject(input: EnsureProjectInput): Promise<EnsureProjectResult> {

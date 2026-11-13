@@ -10,9 +10,7 @@
  */
 import {
   bindProjectSession,
-  createCanvasProjectPage,
   createProject,
-  findProjectByRoot,
 } from '../api.js'
 import { normalizeWorkspacePath, resolveCurrentCwd, resolveWorkspaceForCwd } from './cwd.js'
 import { validateProjectTitle } from './folderName.js'
@@ -103,29 +101,11 @@ function sameFolder(a, b) {
   return normalizeWorkspacePath(a) === normalizeWorkspacePath(b)
 }
 
-function nextPageTitle(project, fallbackTitle) {
-  const pages = Array.isArray(project?.pages) ? project.pages : []
-  if (pages.length === 0 && fallbackTitle) return fallbackTitle
-  return `创作页 ${pages.length + 1}`
-}
-
 function activeCanvasId(project) {
   const pages = Array.isArray(project?.pages) ? project.pages : []
   const active = pages.find((page) => page?.id === project?.activePageId) || pages[0]
   return active?.canvasWorkspaceId
     || ''
-}
-
-async function addBlankPage(project, title) {
-  const canvasId = activeCanvasId(project)
-  if (!canvasId) return { ok: false, error: 'invalid-id' }
-  const res = await createCanvasProjectPage(canvasId, title)
-  if (!res?.ok) return { ok: false, error: errorText(res?.body?.error || res?.status) }
-  const page = res.body?.page
-  const nextProject = res.body?.project || project
-  const workspaceId = page?.canvasWorkspaceId || res.body?.workspace?.id || ''
-  if (!workspaceId) return { ok: false, error: 'invalid-id' }
-  return { ok: true, project: nextProject, page, workspaceId }
 }
 
 async function openOnSession(ctx, sessionId, cwd, extra = {}) {
@@ -158,6 +138,12 @@ function revealConversationAfterOpen(sessionId) {
 }
 
 /**
+ * 新建/对齐项目（B2：项目可独立、绑定可选）。
+ *
+ * 弹窗只负责收集 title + 存放位置（可选）。这里按 `mode` 调 Host 的
+ * `ensureProject`：independent = 默认库独立项目；workspace = 对所选目录做
+ * S0–S4 对齐（初始化/采纳/修复/重建），不再用「先查再 409」的旧流程。
+ *
  * @param {{
  *   sessions: { create: (opts: { workspaceId: string }) => Promise<string> },
  *   workspaces: { create: Function },
@@ -167,79 +153,50 @@ function revealConversationAfterOpen(sessionId) {
  *   t: (key: string) => string,
  *   stage?: { set?: (open: boolean) => void },
  * }} ctx
- * @param {{ title: string, projectRoot?: string, timeoutMs?: number }} [opts] 标题必填（弹窗在入口层收，取消则不调用本函数）；projectRoot 可选，留空则 Host 写入默认库；timeoutMs 透传画布会话对齐超时（测试用）
- * @returns {Promise<{ ok: boolean, project?: object, error?: string }>}
+ * @param {{ title: string, mode?: 'independent'|'workspace', workspaceDir?: string, projectRoot?: string, timeoutMs?: number }} [opts]
+ * @returns {Promise<{ ok: boolean, action?: string, project?: object, error?: string, canvasOpened?: boolean }>}
  */
 export async function runNewProject(ctx, opts = {}) {
   const title = typeof opts.title === 'string' ? opts.title : ''
-  const givenRoot = typeof opts.projectRoot === 'string' ? opts.projectRoot.trim() : ''
-  const confirmedExisting = Boolean(opts.confirmedExisting)
+  const givenDir = typeof opts.workspaceDir === 'string' && opts.workspaceDir.trim() !== ''
+    ? opts.workspaceDir.trim()
+    : (typeof opts.projectRoot === 'string' && opts.projectRoot.trim() !== '' ? opts.projectRoot.trim() : '')
+  const mode = opts.mode === 'workspace' || givenDir !== '' ? 'workspace' : 'independent'
   const validated = validateProjectTitle(title)
   if (!validated.ok) return { ok: false, error: validated.error }
 
   try {
     const currentCwd = resolveCurrentCwd(ctx.sessions, ctx.workspaces) || ''
     const currentSid = currentSessionId(ctx.sessions)
-    const staying = givenRoot !== '' && sameFolder(givenRoot, currentCwd)
 
-    if (givenRoot !== '') {
-      const found = await findProjectByRoot(givenRoot)
-      const liveCwd = resolveCurrentCwd(ctx.sessions, ctx.workspaces) || currentCwd
-      const liveSid = currentSessionId(ctx.sessions) || currentSid
-      const stillStaying = givenRoot !== '' && sameFolder(givenRoot, liveCwd)
-      const existing = found?.ok ? found.body?.project : null
-      if (existing?.id) {
-        const needsConfirm = !stillStaying && !confirmedExisting
-        if (needsConfirm) {
-          return {
-            ok: false,
-            error: friendlyCreateError('project-exists', ctx.t),
-            existing: true,
-            project: existing,
-          }
-        }
-        const existingWorkspaceId = resolveWorkspaceForCwd(givenRoot, ctx.workspaces)
-        let sessionId = liveSid
-        if (!stillStaying || !sessionId || !existingWorkspaceId) {
-          const jumped = await createProjectSession(ctx.sessions, ctx.workspaces, givenRoot)
-          if (!jumped.ok) return { ok: false, error: friendlyCreateError(jumped.error, ctx.t) }
-          sessionId = jumped.sessionId
-          await bindProjectSession(existing.id, sessionId)
-        }
-        const added = await addBlankPage(existing, nextPageTitle(existing, validated.title))
-        if (!added.ok) return { ok: false, error: friendlyCreateError(added.error, ctx.t) }
-        await openOnSession(ctx, sessionId, givenRoot, { workspaceId: added.workspaceId })
-        return {
-          ok: true,
-          action: 'page-added',
-          project: { ...added.project, sessionId, path: givenRoot },
-          page: added.page,
-        }
-      }
-    }
-
-    const seeded = await createProject(validated.title, givenRoot !== '' ? givenRoot : undefined)
+    const seeded = await createProject(
+      validated.title,
+      mode === 'workspace' ? { mode, workspaceDir: givenDir } : { mode },
+    )
     if (!seeded.ok || !seeded.body?.project) {
       return { ok: false, error: friendlyCreateError(seeded.body?.error || seeded.body?.message || seeded.status, ctx.t) }
     }
     const projectRoot = typeof seeded.body.project.path === 'string' ? seeded.body.project.path : ''
-    if (projectRoot === '') {
-      return { ok: false, error: 'invalid-project-root' }
-    }
+    if (projectRoot === '') return { ok: false, error: 'invalid-project-root' }
     const project = { ...seeded.body.project, path: projectRoot }
-    const stayAfterSeed = staying || sameFolder(projectRoot, currentCwd)
+    const action = typeof seeded.body.action === 'string' ? seeded.body.action : 'created'
+
+    const staying = sameFolder(projectRoot, currentCwd)
     let sessionId = currentSid
-    if (!stayAfterSeed || !sessionId) {
+    if (!staying || !sessionId) {
       const session = await createProjectSession(ctx.sessions, ctx.workspaces, projectRoot)
       if (!session.ok) return { ok: false, error: friendlyCreateError(session.error, ctx.t) }
       sessionId = session.sessionId
     }
     await bindProjectSession(project.id, sessionId)
     const canvasId = activeCanvasId(project)
-    const canvasOpened = await openOnSession(ctx, sessionId, projectRoot, { workspaceId: canvasId, timeoutMs: opts.timeoutMs })
+    const canvasOpened = await openOnSession(ctx, sessionId, projectRoot, {
+      workspaceId: canvasId,
+      timeoutMs: opts.timeoutMs,
+    })
     return {
       ok: true,
-      action: stayAfterSeed && givenRoot !== '' ? 'registered' : 'created',
+      action,
       project: { ...project, sessionId, path: projectRoot },
       canvasOpened,
     }
