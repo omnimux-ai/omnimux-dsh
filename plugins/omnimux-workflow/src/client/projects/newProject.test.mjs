@@ -189,7 +189,7 @@ describe('runNewProject', () => {
       const result = await runNewProject({
         sessions: sessionsWith('sess-1'),
         workspaces: workspacesWith([]),
-        t: (key) => zh[key] || '',
+        t: (key) => (key === 'projects.recordInvalid' ? zh['projects.recordInvalid'] : ''),
       }, { title: '损坏档案项目' })
       assert.equal(result.ok, false)
       assert.equal(result.error, zh['projects.recordInvalid'])
