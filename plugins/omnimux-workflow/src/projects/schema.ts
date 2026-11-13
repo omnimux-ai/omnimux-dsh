@@ -80,9 +80,82 @@ const tolerantProjectSchema = z.object({
   pages: z.array(tolerantPageSchema).optional(),
 });
 
+function nonEmpty(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() !== '' ? value : null;
+}
+
+/** Deterministic canvas id for a page that predates the pages model (no random →
+ *  migration is pure and re-running it yields the same record). */
+function migratedCanvasId(projectId: string, index: number): string {
+  const seed = projectId.replace(/[^A-Za-z0-9]/g, '').slice(0, 10) || 'project';
+  return index === 0 ? `ws_${seed}` : `ws_${seed}_${index + 1}`;
+}
+
 /**
- * 读取侧容错解析：只有 v2 是合法项目；更高/更低版本或坏结构返回 null（跳过坏文件）。
- * 旧的 v1（含 sessionId/canvasWorkspaceIds）不迁移、不读取。
+ * v1→v2 读取迁移。v1 只持 sessionId / canvasWorkspaceIds，没有 pages；这里把它翻成
+ * 合法的 v2：
+ *   - 丢弃 sessionId / canvasWorkspaceIds（v2 不再持会话或画布 id 数组）；
+ *   - 保留 id / title / createdAt / updatedAt；
+ *   - pages 优先取 v1 的 pages[]（若已带 pages），否则用 canvasWorkspaceIds[0]（或确定性生成）
+ *     造出 ≥1 个 page，且每个 page 都有非空 canvasWorkspaceId；
+ *   - activePageId 落在现有 page 上，否则取第一页。
+ * 纯函数、确定性、幂等：对同一 v1 输入重复迁移结果一致，对已是 v2 的输入不生效。
+ */
+function migrateV1Project(raw: unknown): Project | null {
+  if (!raw || typeof raw !== 'object' || (raw as { schemaVersion?: unknown }).schemaVersion !== 1) return null;
+  const record = raw as Record<string, unknown>;
+  const id = nonEmpty(record.id);
+  const title = nonEmpty(record.title);
+  if (!id || !title || title.length > MAX_PROJECT_TITLE_LENGTH) return null;
+  const createdAt = typeof record.createdAt === 'string' ? record.createdAt : '';
+  const updatedAt = typeof record.updatedAt === 'string' ? record.updatedAt : '';
+
+  let pages: ProjectPage[];
+  const rawPages = record.pages;
+  if (Array.isArray(rawPages) && rawPages.length > 0) {
+    pages = rawPages.map((entry, index) => {
+      const page = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
+      return {
+        id: nonEmpty(page.id) ?? (index === 0 ? 'page-default' : `page-${index + 1}`),
+        title: nonEmpty(page.title) ? String(page.title).slice(0, MAX_PROJECT_TITLE_LENGTH) : (index === 0 ? title : `${title} · 创作页 ${index + 1}`),
+        createdAt: typeof page.createdAt === 'string' ? page.createdAt : createdAt,
+        updatedAt: typeof page.updatedAt === 'string' ? page.updatedAt : updatedAt,
+        canvasWorkspaceId: nonEmpty(page.canvasWorkspaceId) ?? migratedCanvasId(id, index),
+      };
+    });
+  } else {
+    const ids = Array.isArray(record.canvasWorkspaceIds)
+      ? record.canvasWorkspaceIds.map((value) => nonEmpty(value)).filter((value): value is string => value !== null)
+      : [];
+    const canvasIds = ids.length > 0 ? ids : [migratedCanvasId(id, 0)];
+    pages = canvasIds.map((canvasWorkspaceId, index) => ({
+      id: index === 0 ? 'page-default' : `page-${index + 1}`,
+      title: index === 0 ? title : `${title} · 创作页 ${index + 1}`,
+      createdAt,
+      updatedAt,
+      canvasWorkspaceId,
+    }));
+  }
+
+  const requestedActive = nonEmpty(record.activePageId);
+  const activePageId = requestedActive && pages.some((page) => page.id === requestedActive)
+    ? requestedActive
+    : pages[0]!.id;
+
+  return {
+    schemaVersion: PROJECT_SCHEMA_VERSION,
+    id,
+    title: title.slice(0, MAX_PROJECT_TITLE_LENGTH),
+    createdAt,
+    updatedAt,
+    activePageId,
+    pages,
+  };
+}
+
+/**
+ * 读取侧容错解析：接受 v2（严格/宽松）与 v1（读迁移为 v2）；更高版本或坏结构返回 null。
+ * v1 不再被“跳过”——迁移后正常收录，避免列表看不到、按根查不到、create 反复 409。
  */
 export function parseProject(raw: unknown): Project | null {
   const result = projectSchema.safeParse(raw);
@@ -91,7 +164,7 @@ export function parseProject(raw: unknown): Project | null {
   if (tolerantResult.success) {
     return tolerantResult.data as unknown as Project;
   }
-  return null;
+  return migrateV1Project(raw);
 }
 
 export function parseProjectIndex(raw: unknown): ProjectIndex | null {

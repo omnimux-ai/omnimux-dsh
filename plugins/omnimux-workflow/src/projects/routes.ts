@@ -58,6 +58,7 @@ const STATUS_BY_CODE: Record<string, number> = {
   'project-not-found': 404,
   'page-not-found': 404,
   'project-exists': 409,
+  'project-record-invalid': 422,
   'not-found': 404,
   'not-local': 403,
   'path-denied': 403,

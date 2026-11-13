@@ -208,7 +208,11 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
       const raw = readJsonFile(file);
       const project = parseProject(raw);
       if (!project) {
-        externalChanged = true;
+        // Registered external dir exists but its project.json is unreadable (corrupt
+        // or unsupported schema). Keep it registered and leave a diagnostic instead of
+        // silently dropping a real user project from the registry.
+        console.warn(`[project-store] external project at ${dir} has an unreadable .omnimux/project.json; kept in registry for repair`);
+        validExternalDirs.push(dir);
         continue;
       }
       rows.push({ dir, project });
@@ -351,9 +355,18 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
         registerExternalProjectDir(paths.projectRoot);
       }
       if (existsSync(paths.projectFile)) {
+        // A v1 (or otherwise repairable) record now parses via migrateV1Project, so
+        // lookupByRoot returns a project instead of null → this seed is idempotent
+        // (returns the existing/migrated record), never a 409.
         const existing = lookupByRoot(paths.projectRoot);
         if (existing) return existing;
-        throw new ProjectStoreError('project-exists', `project already seeded at ${paths.projectRoot}`);
+        // File exists but is genuinely unreadable (bad JSON / unsupported schema).
+        // Surface an actionable error instead of a bare `project-exists` — the bare
+        // 409 is what the UI looped on ("已有项目/新建创作页" that never created).
+        throw new ProjectStoreError(
+          'project-record-invalid',
+          `existing .omnimux/project.json at ${paths.projectRoot} is not a readable project record; fix or remove it to create a project here`,
+        );
       }
       const now = new Date().toISOString();
       const requestedCanvasIds = Array.from(new Set(

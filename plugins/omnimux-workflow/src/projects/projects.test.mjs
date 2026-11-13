@@ -668,4 +668,168 @@ test('T04: POST /pages 事务补偿与回滚：store.addPage 失败时自动调�
   }
 });
 
+// ── v1→v2 读取迁移（建不出项目红字死循环的真因修复）────────────────────────
+function writeV1Project(root, overrides = {}) {
+  mkdirSync(join(root, '.omnimux'), { recursive: true });
+  const record = {
+    schemaVersion: 1,
+    id: 'v1-project',
+    title: '旧项目',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-02T00:00:00.000Z',
+    sessionId: 'sess-legacy',
+    canvasWorkspaceIds: ['ws_legacy_a', 'ws_legacy_b'],
+    ...overrides,
+  };
+  writeFileSync(join(root, '.omnimux', 'project.json'), JSON.stringify(record));
+  return record;
+}
+
+test('T0 v1→v2 读取迁移：合法 v2、丢弃 sessionId/canvasWorkspaceIds、幂等确定', () => {
+  const v1 = {
+    schemaVersion: 1, id: 'p-v1', title: '旧项目',
+    createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-02T00:00:00.000Z',
+    sessionId: 'sess-1', canvasWorkspaceIds: ['ws_old_a', 'ws_old_b'],
+  };
+  const migrated = host.parseProject(v1);
+  assert.ok(migrated, 'v1 必须迁移为合法 v2');
+  assert.equal(migrated.schemaVersion, 2);
+  assert.equal(migrated.id, 'p-v1');
+  assert.equal(migrated.title, '旧项目');
+  assert.equal(migrated.createdAt, v1.createdAt);
+  assert.equal(migrated.updatedAt, v1.updatedAt);
+  assert.equal(migrated.pages.length, 2);
+  assert.deepEqual(migrated.pages.map((p) => p.canvasWorkspaceId), ['ws_old_a', 'ws_old_b']);
+  assert.equal(migrated.activePageId, migrated.pages[0].id);
+  assert.equal('sessionId' in migrated, false, 'v1 sessionId 必须丢弃');
+  assert.equal('canvasWorkspaceIds' in migrated, false, 'v1 canvasWorkspaceIds 必须丢弃');
+  assert.deepEqual(host.parseProject(migrated), migrated, '对迁移结果再解析必须幂等');
+  assert.deepEqual(host.parseProject(v1), migrated, '同一 v1 输入迁移必须确定');
+});
+
+test('T0 v1 无 canvasWorkspaceIds：仍生成 ≥1 个带有效 canvasWorkspaceId 的 page', () => {
+  const migrated = host.parseProject({ schemaVersion: 1, id: 'p2', title: '空画布旧项目', createdAt: 'c', updatedAt: 'u' });
+  assert.ok(migrated);
+  assert.ok(migrated.pages.length >= 1);
+  assert.ok(migrated.pages.every((p) => typeof p.canvasWorkspaceId === 'string' && p.canvasWorkspaceId.trim() !== ''));
+  assert.equal(migrated.activePageId, migrated.pages[0].id);
+});
+
+test('T0 v2 行为不变；坏 JSON / 坏版本 = null', () => {
+  const v2 = {
+    schemaVersion: 2, id: 'p-v2', title: '新项目', createdAt: 'c', updatedAt: 'u', activePageId: 'page-default',
+    pages: [{ id: 'page-default', title: '创作页 1', createdAt: 'c', updatedAt: 'u', canvasWorkspaceId: 'ws_ok' }],
+  };
+  assert.deepEqual(host.parseProject(v2), v2, 'v2 解析必须原样不变');
+  assert.equal(host.parseProject(null), null);
+  assert.equal(host.parseProject('not-json'), null);
+  assert.equal(host.parseProject({ schemaVersion: 1 }), null, '缺 id/title 的 v1 是坏记录');
+  assert.equal(host.parseProject({ schemaVersion: 99, id: 'x', title: 'y' }), null, '高版本拒绝');
+});
+
+test('T1 create() 遇 v1 project.json：返回迁移记录（非 409），二次幂等', () => {
+  const libraryRoot = tmpDir('omnimux-v1-create-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+    const projectRoot = join(libraryRoot, '旧项目甲');
+    writeV1Project(projectRoot, { id: 'v1-甲', title: '旧项目甲', canvasWorkspaceIds: ['ws_a'] });
+
+    const first = store.create('旧项目甲', { projectRoot });
+    assert.equal(first.id, 'v1-甲');
+    assert.equal(first.path, projectRoot);
+    assert.equal(first.schemaVersion, 2, 'create 应返回迁移后的 v2 记录');
+    assert.equal(first.pages[0].canvasWorkspaceId, 'ws_a');
+
+    const second = store.create('旧项目甲', { projectRoot });
+    assert.equal(second.id, 'v1-甲', '二次 create 幂等，同一个项目');
+    assert.deepEqual(second.pages, first.pages);
+
+    const listed = store.list();
+    assert.equal(listed.length, 1, 'v1 迁移后必须出现在列表');
+    assert.equal(listed[0].id, 'v1-甲');
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+  }
+});
+
+test('T1 create() 遇真损坏 project.json：返回 project-record-invalid（非 project-exists/409）', () => {
+  const libraryRoot = tmpDir('omnimux-bad-create-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+    const projectRoot = join(libraryRoot, '坏项目');
+    mkdirSync(join(projectRoot, '.omnimux'), { recursive: true });
+    writeFileSync(join(projectRoot, '.omnimux', 'project.json'), '{ not-valid-json');
+    assert.throws(
+      () => store.create('坏项目', { projectRoot }),
+      (e) => e.code === 'project-record-invalid',
+      '损坏记录必须是可操作的 project-record-invalid，而不是 project-exists',
+    );
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+  }
+});
+
+test('T1 scanEntries 收录 v1 外部目录并保留 registry；坏文件留登记+diagnostic', () => {
+  const libraryRoot = tmpDir('omnimux-ext-lib-');
+  const extGood = tmpDir('omnimux-ext-good-');
+  const extBad = tmpDir('omnimux-ext-bad-');
+  try {
+    writeV1Project(extGood, { id: 'ext-v1', title: '外部旧项目', canvasWorkspaceIds: ['ws_ext'] });
+    mkdirSync(join(extBad, '.omnimux'), { recursive: true });
+    writeFileSync(join(extBad, '.omnimux', 'project.json'), '{ broken');
+    writeFileSync(join(libraryRoot, '.external-projects.json'), JSON.stringify([extGood, extBad]));
+
+    const store = host.createProjectStore({ libraryRoot });
+    const listed = store.list();
+    assert.ok(listed.some((row) => row.id === 'ext-v1' && row.path === extGood), 'v1 外部目录必须被收录');
+
+    const registry = JSON.parse(readFileSync(join(libraryRoot, '.external-projects.json'), 'utf8'));
+    assert.ok(registry.includes(extGood), '合法外部目录保留在 registry');
+    assert.ok(registry.includes(extBad), '损坏外部目录也必须保留登记，不得静默剔除');
+
+    const found = store.findByRoot(extGood);
+    assert.equal(found.id, 'ext-v1', 'findByRoot 对 v1 目录命中');
+    assert.equal(store.findByCanvasWorkspaceId('ws_ext').id, 'ext-v1', 'findByCanvasWorkspaceId 对迁移后 page 命中');
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(extGood, { recursive: true, force: true });
+    rmSync(extBad, { recursive: true, force: true });
+  }
+});
+
+test('T2 routes：POST/GET v1 目录 200 非 409，随后可追加创作页', async () => {
+  const libraryRoot = tmpDir('omnimux-v1-route-');
+  const externalRoot = tmpDir('omnimux-v1-ext-');
+  try {
+    writeV1Project(externalRoot, { id: 'v1-route', title: '路由旧项目', canvasWorkspaceIds: ['ws_route_a'] });
+    const dispatcher = host.createProjectDispatcher({ libraryRoot });
+    const localHeaders = { origin: 'http://localhost:3000' };
+
+    const created = await dispatcher.dispatch({
+      method: 'POST', url: '/omnimux-workflow/api/projects', headers: localHeaders,
+      body: { title: '路由旧项目', projectRoot: externalRoot },
+    });
+    assert.equal(created.status, 200, 'POST v1 目录必须 200，不能 409');
+    assert.equal(created.body.project.id, 'v1-route');
+    assert.equal(created.body.project.schemaVersion, 2);
+
+    const got = await dispatcher.dispatch({
+      method: 'GET', url: `/omnimux-workflow/api/projects?path=${encodeURIComponent(externalRoot)}`, headers: localHeaders,
+    });
+    assert.equal(got.status, 200);
+    assert.ok(got.body.project, 'GET ?path 对 v1 目录必须返回 project');
+    assert.equal(got.body.project.id, 'v1-route');
+
+    const added = await dispatcher.dispatch({
+      method: 'POST', url: `/omnimux-workflow/api/projects/${created.body.project.id}/pages`, headers: localHeaders,
+      body: { title: '追加创作页' },
+    });
+    assert.equal(added.status, 200, '迁移后必须能追加创作页');
+    assert.ok(added.body.project.pages.some((p) => p.title === '追加创作页'));
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(externalRoot, { recursive: true, force: true });
+  }
+});
+
 }); // describe
