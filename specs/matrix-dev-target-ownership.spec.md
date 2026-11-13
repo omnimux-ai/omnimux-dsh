@@ -14,7 +14,7 @@
 2. `scripts/impact-matrix.mjs`：`dev.reason` / `summary` 恢复桌面端 Bot 口径（此前已由 #4094 的分支落地，本单随静态化一起带入）。
 3. `scripts/ci-verdict.mjs`：`dev.target !== 'human'` 校验放开为 `'desktop-bot'`，报错文案保持「桌面端 Bot 开发版验收」自洽。
 4. 断言级联：`impact-matrix.test.mjs` 全部 `dev.target` 断言、`ci-verdict.test.mjs` 4 处、`auto-pipeline.test.mjs` 1 处，以及 `ci-verdict.test.mjs` 的过期注释。
-5. `scripts/impact-matrix.test.mjs` 用 `/tmp/4099-matrix-attribution.patch` 的静态化版本（14 个 UI 文件用例 + 5 个非 UI 组合展开为具名 `it()`，用例名与断言内容与模板渲染结果逐字一致）。
+5. `scripts/impact-matrix.test.mjs` 采用静态化版本（14 个 UI 文件用例 + 5 个非 UI 组合展开为具名 `it()`，用例名与断言内容与模板渲染结果逐字一致）；该静态化在 #4100 修好测试门禁后的一次性迁移中产生。
 
 ## 旧标准变更
 
@@ -35,7 +35,7 @@
 - `dev.target` 断言全部改为 `'desktop-bot'`；
 - `ci-verdict.mjs` 校验与文案同步后，CLI 与 API 产出的 `dimensions.dev.target` 为 `'desktop-bot'`；
 - 实跑 `node --test scripts/impact-matrix.test.mjs scripts/ci-verdict.test.mjs scripts/auto-pipeline.test.mjs` → 56/56 pass；
-- `node scripts/verify-test-standard-declarations.mjs . 500dbdb42` → exit 0。
+- `node scripts/verify-test-standard-declarations.mjs . cbb140a9` → exit 0。
 
 ## 不变量
 
@@ -46,5 +46,5 @@
 ## 验收
 
 - 三套测试全绿、`test:ci` 全绿、门禁 exit 0、`node --check` OK；
-- `git diff 500dbdb42 -- scripts/impact-matrix.mjs` 中不再有 `'human'` 或 follow-up 注释；
+- `git diff cbb140a9 -- scripts/impact-matrix.mjs` 中不再有 `'human'` 或 follow-up 注释；
 - `specs/dev-acceptance-ownership.spec.md` 的「留待 #4099、被 #4100 阻塞」过期叙事已清理。
