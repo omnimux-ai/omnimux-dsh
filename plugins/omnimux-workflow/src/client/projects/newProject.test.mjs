@@ -18,6 +18,7 @@ import {
   validateProjectTitle,
 } from './folderName.js'
 import { createProjectSession, dismissProductStage, runNewProject, runResetSession } from './newProject.js'
+import { zh } from '../locales.js'
 
 function workspacesWith(items, recentWorkspaceId) {
   return {
@@ -177,6 +178,28 @@ describe('createProjectSession', () => {
 })
 
 describe('runNewProject', () => {
+  it('project-record-invalid（422）转成明确文案，不落泛化「操作失败」', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = async () => ({
+      ok: false,
+      status: 422,
+      json: async () => ({ error: 'project-record-invalid' }),
+    })
+    try {
+      const result = await runNewProject({
+        sessions: sessionsWith('sess-1'),
+        workspaces: workspacesWith([]),
+        t: (key) => (key === 'projects.recordInvalid' ? zh['projects.recordInvalid'] : ''),
+      }, { title: '损坏档案项目' })
+      assert.equal(result.ok, false)
+      assert.equal(result.error, zh['projects.recordInvalid'])
+      assert.notEqual(result.error, zh['projects.genericError'], '不能退化成泛化「操作失败，请重试。」')
+      assert.match(result.error, /project\.json/, '文案必须点名 project.json 便于用户自行修复')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
   it('POST title only then workspaces.create({ path }) then sessions.create({ workspaceId })', async () => {
     const originalFetch = globalThis.fetch
     const fetchBodies = []

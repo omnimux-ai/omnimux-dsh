@@ -748,6 +748,7 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
       assert.equal(friendlyForkError('version-required'), '画布版本号缺失，请重试')
       assert.equal(friendlyForkError('version_conflict'), '画布版本冲突，请重试')
       assert.equal(friendlyForkError('project-exists'), '该工作区已存在同名工程，请微调名称')
+      assert.equal(friendlyForkError('project-record-invalid'), '该目录的项目档案（project.json）无法读取，请修复或删除后重试。')
       assert.equal(friendlyForkError('project-required'), '需要关联项目工程，请重试')
       assert.equal(friendlyForkError('invalid-project-root'), '工作区目录路径无效，请重新选择')
       assert.equal(friendlyForkError('not-local'), '禁止跨域写入本地工作区')
