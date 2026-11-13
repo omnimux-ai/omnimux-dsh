@@ -306,50 +306,42 @@ describe('runNewProject', () => {
     }
   })
 
-  it('adds a page on the current folder instead of creating another project', async () => {
+  it('adopts a project on the current folder without adding a page', async () => {
     const originalFetch = globalThis.fetch
     const posts = []
+    let pagePosts = 0
     globalThis.fetch = async (url, opts = {}) => {
       const href = String(url)
-      if (href.includes('/api/projects?path=') && (!opts.method || opts.method === 'GET')) {
+      if (href.endsWith('/api/projects') && (opts.method || 'GET') === 'POST') {
+        const body = JSON.parse(String(opts.body))
+        posts.push(body)
         return {
           ok: true,
           json: async () => ({
+            action: 'existing',
             project: {
-              id: 'p-exist',
-              title: '视频代做',
-              path: '/Users/x/Desktop/Project/视频代做',
+              id: 'p-cur',
+              title: body.title,
+              path: '/tmp/current',
+              pages: [{ id: 'page-1', canvasWorkspaceId: 'ws_cur' }],
               activePageId: 'page-1',
-              pages: [{ id: 'page-1', title: '视频代做', canvasWorkspaceId: 'ws_old' }],
-              canvasWorkspaceIds: ['ws_old'],
             },
           }),
         }
       }
-      if (href.includes('/project-pages') && opts.method === 'POST') {
-        posts.push(JSON.parse(String(opts.body)))
-        return {
-          ok: true,
-          json: async () => ({
-            page: { id: 'page-2', title: '创作页 2', canvasWorkspaceId: 'ws_new' },
-            project: { id: 'p-exist' },
-          }),
-        }
-      }
-      if (opts.method === 'POST' && href.endsWith('/api/projects')) {
-        throw new Error('must not create a second project')
-      }
+      if (href.includes('/project-pages')) { pagePosts += 1; return { ok: true, json: async () => ({}) } }
+      if (href.includes('/api/projects/p-cur') && opts.method === 'PATCH') return { ok: true, json: async () => ({}) }
       return { ok: true, json: async () => ({}) }
     }
     try {
       const result = await runNewProject({
         sessions: {
-          ...sessionsWith('s-now', { 's-now': { cwd: '/Users/x/Desktop/Project/视频代做' } }),
-          async create() { throw new Error('must not create session') },
+          ...sessionsWith('s-now', { 's-now': { cwd: '/tmp/current' } }),
+          async create() { return 's-new' },
           open() {},
         },
         workspaces: {
-          ...workspacesWith([{ workspaceId: 'ws-ledger', path: '/Users/x/Desktop/Project/视频代做' }]),
+          ...workspacesWith([{ workspaceId: 'ws-cur', path: '/tmp/current' }]),
           async create() { throw new Error('must not create workspace') },
         },
         layout: { closeDetails() {} },
@@ -360,58 +352,45 @@ describe('runNewProject', () => {
           getSnapshot() { return { sessionId: 's-now', state: { splits: {}, width: 700 } } },
         },
         t: (key) => key,
-      }, { title: '视频代做', projectRoot: '/Users/x/Desktop/Project/视频代做' })
+      }, { title: '视频代做', workspaceDir: '/tmp/current' })
       assert.equal(result.ok, true)
-      assert.equal(result.action, 'page-added')
+      assert.equal(result.action, 'existing')
       assert.equal(posts.length, 1)
-      assert.equal(posts[0].title, '创作页 2')
+      assert.equal(posts[0].mode, 'workspace', '选中目录必须走 workspace 对齐')
+      assert.equal(posts[0].workspaceDir, '/tmp/current')
+      assert.equal(pagePosts, 0, '采纳既有项目不得自动加页')
     } finally {
       globalThis.fetch = originalFetch
     }
   })
 
-  it('asks before adding a page when switching to another existing project folder', async () => {
+  it('opens an existing project in another folder without a red-text confirm', async () => {
     const originalFetch = globalThis.fetch
     let pagePosts = 0
     globalThis.fetch = async (url, opts = {}) => {
       const href = String(url)
-      if (href.includes('/api/projects?path=')) {
+      if (href.endsWith('/api/projects') && (opts.method || 'GET') === 'POST') {
+        const body = JSON.parse(String(opts.body))
         return {
           ok: true,
           json: async () => ({
+            action: 'open',
             project: {
               id: 'p-other',
-              title: '别的项目',
+              title: body.title,
               path: '/tmp/other',
               pages: [{ id: 'page-1', canvasWorkspaceId: 'ws_other' }],
-              canvasWorkspaceIds: ['ws_other'],
+              activePageId: 'page-1',
             },
           }),
         }
       }
-      if (href.includes('/project-pages') && opts.method === 'POST') {
-        pagePosts += 1
-        return { ok: true, json: async () => ({ page: { canvasWorkspaceId: 'ws_new' } }) }
-      }
+      if (href.includes('/project-pages')) { pagePosts += 1; return { ok: true, json: async () => ({}) } }
+      if (href.includes('/api/projects/p-other') && opts.method === 'PATCH') return { ok: true, json: async () => ({}) }
       return { ok: true, json: async () => ({}) }
     }
     try {
-      const first = await runNewProject({
-        sessions: {
-          ...sessionsWith('s-now', { 's-now': { cwd: '/tmp/current' } }),
-          async create() { return 's-new' },
-          open() {},
-        },
-        workspaces: {
-          ...workspacesWith([{ workspaceId: 'ws-cur', path: '/tmp/current' }]),
-          async create() { return { workspaceId: 'ws-other' } },
-        },
-        t: (key) => key,
-      }, { title: '别的项目', projectRoot: '/tmp/other' })
-      assert.equal(first.ok, false)
-      assert.equal(first.existing, true)
-      assert.equal(pagePosts, 0)
-      const second = await runNewProject({
+      const result = await runNewProject({
         sessions: {
           ...sessionsWith('s-now', { 's-now': { cwd: '/tmp/current' } }),
           async create() { return 's-new' },
@@ -429,10 +408,11 @@ describe('runNewProject', () => {
           getSnapshot() { return { sessionId: 's-new', state: { splits: {}, width: 700 } } },
         },
         t: (key) => key,
-      }, { title: '别的项目', projectRoot: '/tmp/other', confirmedExisting: true })
-      assert.equal(second.ok, true)
-      assert.equal(second.action, 'page-added')
-      assert.equal(pagePosts, 1)
+      }, { title: '别的项目', workspaceDir: '/tmp/other' })
+      assert.equal(result.ok, true, '既有项目应直接打开，不再返回红字确认错误')
+      assert.equal(result.action, 'open')
+      assert.equal(result.existing, undefined, '不得再走 existing 确认分支')
+      assert.equal(pagePosts, 0, '打开既有项目不得自动加页')
     } finally {
       globalThis.fetch = originalFetch
     }

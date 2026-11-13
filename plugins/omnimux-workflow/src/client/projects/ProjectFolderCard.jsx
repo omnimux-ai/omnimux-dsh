@@ -3,11 +3,17 @@ import { Button, IconButton, IconEditOutline16, IconTrashOutline16 } from 'dsh-u
 import { ProjectCover } from './ProjectCover.jsx'
 import { injectFolderStyles } from './folderStyles.js'
 
+function extractWorkspaceName(dir) {
+  if (typeof dir !== 'string' || dir.trim() === '') return ''
+  const parts = dir.replace(/[\\/]+$/, '').split(/[\\/]/).filter(Boolean)
+  return parts[parts.length - 1] || ''
+}
+
 const POCKET_PATH = 'M1 199C1 171 20 150 48 150H142C171 150 185 163 191 187H467C494 187 515 208 515 237V330C515 356 495 377 467 377H49C22 377 1 356 1 330Z'
 
 const POCKET_MASK = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 516 378" preserveAspectRatio="none"><path fill="white" d="${POCKET_PATH}"/></svg>`)}")`
 
-export function ProjectFolderCard({ project, onOpen, onRename, onDelete, t }) {
+export function ProjectFolderCard({ project, onOpen, onRename, onRemove, onPurge, t }) {
   const glassId = `folder-glass-${useId().replace(/:/g, '')}`
   const [menu, setMenu] = useState(false)
   const root = useRef(null)
@@ -48,8 +54,10 @@ export function ProjectFolderCard({ project, onOpen, onRename, onDelete, t }) {
       <span className="omnimux-folder-caption">
         <span className="omnimux-folder-name" title={project.title}>{project.title}</span>
         <span className="omnimux-folder-date">{dateStr}</span>
-        <span className="omnimux-folder-workspace" title={project.workspace?.path || project.path || ''}>
-          {project.workspace?.title || project.workspaceTitle || '未登记工作区'}
+        <span className="omnimux-folder-workspace" title={project.workspaceDir || project.path || ''}>
+          {project.bound
+            ? (extractWorkspaceName(project.workspaceDir) || t('projects.bound'))
+            : t('projects.independent')}
         </span>
       </span>
     </Button>
@@ -67,7 +75,8 @@ export function ProjectFolderCard({ project, onOpen, onRename, onDelete, t }) {
       }
     }}>
       <Button variant="ghost" role="menuitem" leadingIcon={<IconEditOutline16 size={16}/>} onClick={() => { closeMenu(); onRename(project) }}>{t('projects.rename')}</Button>
-      <Button variant="ghost" role="menuitem" className="omnimux-folder-menu-item--danger" data-danger="true" leadingIcon={<IconTrashOutline16 size={16}/>} onClick={() => { closeMenu(); onDelete(project) }}>{t('projects.delete')}</Button>
+      <Button variant="ghost" role="menuitem" data-omnimux-folder-remove="" leadingIcon={<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><path d="M4 8h8"/></svg>} onClick={() => { closeMenu(); onRemove(project) }}>{t('projects.removeFromLibrary')}</Button>
+      <Button variant="ghost" role="menuitem" className="omnimux-folder-menu-item--danger" data-danger="true" data-omnimux-folder-purge="" leadingIcon={<IconTrashOutline16 size={16}/>} onClick={() => { closeMenu(); onPurge(project) }}>{t('projects.purge')}</Button>
     </div>}
   </article>
 }

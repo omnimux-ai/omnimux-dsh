@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, IconButton, IconCloseOutline16, InputField, ModalDialog } from 'dsh-ui-kit'
-import { pickProjectDirectory } from '../api.js'
+import { pickProjectDirectory, preflightProject } from '../api.js'
 import { MAX_PROJECT_TITLE_LENGTH } from './limits.js'
 import { extractFolderName, firstPickedDirectory } from './pickDirectory.js'
 
@@ -52,11 +52,21 @@ function FolderPlusGlyph({ size = 14 }) {
  *   initialPath?: string,
  *   initialTitle?: string,
  *   onCancel: () => void,
- *   onSubmit: (payload: { title: string, projectRoot?: string, confirmedExisting?: boolean }) => void | Promise<unknown>,
+ *   onSubmit: (payload: { title: string, mode: 'independent'|'workspace', workspaceDir?: string }) => void | Promise<unknown>,
  *   onPickDirectory?: () => Promise<unknown>,
  *   onBrowseDirectory?: () => Promise<unknown>,
+ *   onPreflight?: (payload: { mode: 'workspace', workspaceDir: string }) => Promise<unknown>,
  * }} props
  */
+const PREFLIGHT_ACTIONS = {
+  initialize: { status: 'projects.preflight.initialize', submit: 'projects.dialog.submit' },
+  open: { status: 'projects.preflight.open', submit: 'projects.openProject' },
+  converge: { status: 'projects.preflight.open', submit: 'projects.openProject' },
+  rebuild: { status: 'projects.preflight.rebuild', submit: 'projects.rebuildAndOpen' },
+  repair: { status: 'projects.preflight.repair', submit: 'projects.repairAndOpen' },
+  'create-independent': { status: 'projects.preflight.independent', submit: 'projects.dialog.submit' },
+}
+
 export function NewLocalProjectDialog({
   t,
   busy = false,
@@ -67,6 +77,7 @@ export function NewLocalProjectDialog({
   onSubmit,
   onPickDirectory,
   onBrowseDirectory,
+  onPreflight,
 }) {
   const nameRef = useRef(null)
   const defaultTitle = initialTitle || extractFolderName(initialPath)
@@ -75,42 +86,80 @@ export function NewLocalProjectDialog({
   const [nameTouched, setNameTouched] = useState(Boolean(defaultTitle))
   const [picking, setPicking] = useState(false)
   const [pickError, setPickError] = useState('')
-  const [confirmedExisting, setConfirmedExisting] = useState(false)
+  const [preflight, setPreflight] = useState(null)
+  const [preflightError, setPreflightError] = useState(false)
+  const [preflighting, setPreflighting] = useState(false)
+  const preflightSeq = useRef(0)
 
   useEffect(() => {
     nameRef.current?.focus()
   }, [])
 
+  // 选中目录后先做只读预检：S0–S4 → 中性状态 + 明确动作（不再用红字「已有项目」）。
   useEffect(() => {
-    const confirmMessage = t('projects.existingConfirm')
-    if (error && (error === confirmMessage || (typeof confirmMessage === 'string' && confirmMessage !== '' && error.includes(confirmMessage)))) {
-      setConfirmedExisting(true)
+    const dir = path.trim()
+    if (dir === '') {
+      setPreflight(null)
+      setPreflightError(false)
+      setPreflighting(false)
+      preflightSeq.current += 1
+      return
     }
-  }, [error, t])
+    const seq = preflightSeq.current + 1
+    preflightSeq.current = seq
+    setPreflighting(true)
+    setPreflightError(false)
+    setPickError('')
+    const run = typeof onPreflight === 'function' ? onPreflight : preflightProject
+    Promise.resolve(run({ mode: 'workspace', workspaceDir: dir }))
+      .then((result) => {
+        if (preflightSeq.current !== seq) return
+        if (result?.ok && result.body) {
+          setPreflight(result.body)
+          setPreflightError(false)
+        } else {
+          setPreflight(null)
+          setPreflightError(true)
+        }
+      })
+      .catch(() => {
+        if (preflightSeq.current !== seq) return
+        setPreflight(null)
+        setPreflightError(true)
+      })
+      .finally(() => {
+        if (preflightSeq.current === seq) setPreflighting(false)
+      })
+  }, [path, onPreflight])
 
   const trimmed = name.trim()
   const trimmedPath = path.trim()
-  const canSubmit = trimmed !== '' && trimmed.length <= MAX_PROJECT_TITLE_LENGTH && !busy && !picking
+  const dirNeedsPreflight = trimmedPath !== ''
+  const dirReady = !dirNeedsPreflight || (Boolean(preflight?.action) && !preflightError && !preflighting)
+  const canSubmit = trimmed !== '' && trimmed.length <= MAX_PROJECT_TITLE_LENGTH && !busy && !picking && !preflighting && dirReady
   const folderName = extractFolderName(trimmedPath)
+  const mode = trimmedPath !== '' ? 'workspace' : 'independent'
+  const preflightMeta = trimmedPath !== '' ? PREFLIGHT_ACTIONS[preflight?.action] : PREFLIGHT_ACTIONS['create-independent']
+  const statusKey = trimmedPath === ''
+    ? 'projects.preflight.independent'
+    : (preflightMeta?.status || 'projects.preflight.failed')
+  const submitKey = preflightMeta?.submit || 'projects.dialog.submit'
+  const statusText = String(t(statusKey) || '')
+    .replace('{title}', preflight?.project?.title || '')
 
   const submit = () => {
     if (!canSubmit) return
     void Promise.resolve(onSubmit({
       title: trimmed,
-      ...(trimmedPath !== '' ? { projectRoot: trimmedPath } : {}),
-      ...(confirmedExisting ? { confirmedExisting: true } : {}),
-    })).then((result) => {
-      if (result && typeof result === 'object' && result.existing) {
-        setConfirmedExisting(true)
-      }
-    }).catch(() => {})
+      mode,
+      ...(mode === 'workspace' ? { workspaceDir: trimmedPath } : {}),
+    })).catch(() => {})
   }
 
   const applyPickedPath = (nextPath) => {
     const next = typeof nextPath === 'string' ? nextPath.trim() : ''
     if (next === '') return
     setPath(next)
-    setConfirmedExisting(false)
     if (!nameTouched) {
       const fromFolder = extractFolderName(next)
       if (fromFolder) setName(fromFolder)
@@ -163,7 +212,7 @@ export function NewLocalProjectDialog({
           disabled={busy || picking}
           aria-label={t('projects.dialog.removeFolder')}
           data-omnimux-new-project-remove=""
-          onClick={() => { setPath(''); setConfirmedExisting(false) }}
+          onClick={() => { setPath('') }}
         >
           <IconCloseOutline16 size={14} />
         </IconButton>
@@ -196,9 +245,7 @@ export function NewLocalProjectDialog({
             {t('projects.dialog.cancel')}
           </Button>
           <Button variant="primary" disabled={!canSubmit} loading={busy} onClick={submit}>
-            {confirmedExisting
-              ? (t('projects.existingConfirmSubmit') || '新建创作页')
-              : (t('projects.dialog.submit') || '创建项目')}
+            {t(submitKey) || t('projects.dialog.submit') || '创建项目'}
           </Button>
         </div>
       )}
@@ -235,6 +282,22 @@ export function NewLocalProjectDialog({
         </div>
 
         {sourcePane}
+
+        {trimmedPath !== '' ? (
+          <p
+            className="omnimux-new-project-preflight"
+            data-omnimux-new-project-preflight={preflight?.state || (preflighting ? 'checking' : 'failed')}
+            data-preflight-state={preflight?.state || (preflighting ? 'checking' : 'failed')}
+            data-preflight-action={preflight?.action || ''}
+            aria-live="polite"
+          >
+            {preflighting ? (t('projects.preflight.checking') || '正在检查该目录…') : statusText}
+          </p>
+        ) : (
+          <p className="omnimux-new-project-preflight" data-omnimux-new-project-preflight="independent">
+            {t('projects.preflight.independent') || '将作为独立项目创建在默认库，不绑定工作区。'}
+          </p>
+        )}
 
         {pickError ? <p className="omnimux-workflow-form-error">{pickError}</p> : null}
         {error ? <p className="omnimux-workflow-form-error">{error}</p> : null}

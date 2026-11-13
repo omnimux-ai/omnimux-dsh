@@ -91,6 +91,7 @@ export {
 export type { ProjectStore, ProjectRecord } from './projects/ProjectStore';
 export {
   runEnsureProject,
+  runPreflightProject,
   EnsureProjectError,
   isEnsureProjectError,
   DEFAULT_ENSURE_LOCK_TIMEOUT_MS,
@@ -101,6 +102,10 @@ export type {
   EnsureProjectResult,
   EnsureProjectAction,
   EnsureProjectMode,
+  PreflightProjectInput,
+  PreflightProjectResult,
+  PreflightState,
+  PreflightAction,
 } from './projects/ensureProject';
 export {
   ensureWorkspaceProjectBound,
