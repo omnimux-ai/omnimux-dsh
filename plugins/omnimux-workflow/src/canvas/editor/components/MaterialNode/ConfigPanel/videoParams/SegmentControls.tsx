@@ -13,6 +13,8 @@
 
 import { Check, Volume2, VolumeX, X } from 'lucide-react';
 import { type ReactElement } from 'react';
+import { getLocale } from '../../../../../i18n/index.ts';
+import { resolveOperationLabel } from '../../../../../../shared/validation/operationLabels.ts';
 import type { OperationUiOption } from '../../../../../../shared/validation/operationUi.ts';
 import { CfgChoiceTile } from '../cfg/CfgChoiceTile.tsx';
 import { CfgCompactToggle } from '../cfg/CfgCompactToggle.tsx';
@@ -75,9 +77,11 @@ export function OperationSegment({
     return null;
   }
 
+  const locale = getLocale();
   const options: Array<CfgSegmentOption<string>> = effective.map((op) => ({
     value: op.id,
-    label: op.label || op.id,
+    // Issue #4103：与底栏摘要共用 resolveOperationLabel，禁止各自兜底成 id。
+    label: resolveOperationLabel({ id: op.id, label: op.label }, locale),
   }));
 
   const kind = resolveControlKind({

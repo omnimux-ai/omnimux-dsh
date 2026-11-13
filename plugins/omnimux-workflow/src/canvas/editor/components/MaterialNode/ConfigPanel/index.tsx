@@ -107,6 +107,7 @@ import {
   buildContractView,
   resolveModelView,
 } from '../../../../../shared/validation/compatKernel.ts';
+import { resolveUnsupportedModelUi } from '../../../../../shared/validation/modelExecutionUi.ts';
 import {
   buildEffectiveOpsUiState,
   buildFilteredModelOptions,
@@ -401,6 +402,16 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     }),
     [activeCatalog, consumedFingerprint, outputTypeForCompat, selectedTool],
   );
+
+  // ---- 不可执行型号（Issue #4103 / AC7）----
+  // gateway-only 行（本地无 adapter，如 wan-3.0）仍进目录但置灰；已有节点若保存了这类
+  // 型号，生成必须禁用并给出「一键切换」到同族可执行型号，而不是让用户配完再失败。
+  const executorUi = useMemo(
+    () => resolveUnsupportedModelUi(modelValue, filteredModels.options),
+    [filteredModels.options, modelValue],
+  );
+  const selectedModelUnsupported = executorUi.unsupported;
+  const unsupportedSwitchTarget = executorUi.switchTarget;
 
   const modelOptions = useMemo(() => {
     // Only compatible rows enter the DOM. No disabled greys for incompatible /
@@ -1053,7 +1064,8 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     || missingRequiredSlots.length > 0
     || cloneMissingAudio
     || execBusy
-    || Boolean(fallbackState?.isFallback);
+    || Boolean(fallbackState?.isFallback)
+    || selectedModelUnsupported;
   const reasonCode = opsState.reasonCode || filteredModels.reasonCode
     || (nodeCompat?.status === 'configuration_error' ? nodeCompat.reasonCodes?.[0] || 'no_compatible_model' : undefined);
   const blockReason =
@@ -1062,6 +1074,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     || (cloneMissingAudio ? '参考音频模式需先连接上游音频输入' : undefined)
     || (audioPromptGate?.exceeded ? `朗读正文不能超过 ${AUDIO_PROMPT_MAX_CHARS} 字符` : undefined)
     || generationReasonText(t, reasonCode, opsState.reason || filteredModels.reason)
+    || (selectedModelUnsupported ? t('panel.modelUnsupported') : undefined)
     || videoValidationErrors[0]
     || slotShortageReason;
   const adaptation = nodeCompat?.adaptation;
@@ -1179,6 +1192,38 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       {adaptationMessage ? (
         <div className="wf-config-panel__input-hint" role="status" data-testid="wf-model-adaptation">
           {adaptationMessage}
+        </div>
+      ) : null}
+
+      {selectedModelUnsupported ? (
+        <div
+          className="wf-config-panel__input-hint wf-config-panel__input-hint--unsupported"
+          role="status"
+          data-testid="wf-model-unsupported"
+        >
+          <span>{t('panel.modelUnsupported')}</span>
+          {unsupportedSwitchTarget ? (
+            <button
+              type="button"
+              data-testid="wf-model-unsupported-switch"
+              onClick={() => handleModelChange(unsupportedSwitchTarget.id)}
+              style={{
+                marginLeft: 8,
+                padding: '2px 8px',
+                borderRadius: 6,
+                border: '1px solid var(--dsw-alias-border-l1)',
+                background: 'var(--dsw-alias-bg-layer-2)',
+                color: 'var(--dsw-alias-brand-primary)',
+                fontSize: 12,
+                cursor: 'pointer',
+              }}
+            >
+              {t('panel.modelUnsupportedSwitch').replace(
+                '{model}',
+                unsupportedSwitchTarget.label || unsupportedSwitchTarget.id,
+              )}
+            </button>
+          ) : null}
         </div>
       ) : null}
 

@@ -14,6 +14,7 @@ import type {
   ModelExecutionStatus,
   OperationContractDto,
 } from '../api.ts';
+import { resolveOperationLabel } from './operationLabels.ts';
 import {
   buildContractView,
   buildUpstreamFingerprint,
@@ -37,7 +38,7 @@ import {
 export interface OperationUiOption {
   /** Canonical operation id (open string; future ids must not crash). */
   id: string;
-  /** User-facing label from Catalog DTO (fallback = id). */
+  /** Resolved display name: catalog label, else approved directory, else id. */
   label: string;
   /** Slot metadata from the contract (may be empty). */
   slots: OperationContractDto['inputs'];
@@ -225,27 +226,6 @@ export function buildUiUpstreamFingerprint(input: {
 // Operation label / option projection
 // ============================================================================
 
-/** Resolve a human label for an operation id from the Catalog DTO. */
-export function resolveOperationLabel(
-  catalog: CapabilityCatalog | null | undefined,
-  modelId: string | undefined,
-  operationId: string,
-): string {
-  const canonical = operationId.trim();
-  if (!canonical) return '';
-  if (!catalog || !modelId) return canonical;
-  const view = buildContractView(catalog);
-  const model = resolveModelView(view, modelId);
-  const op = model?.operations.find((entry) => entry.id === canonical);
-  if (op?.label && op.label.trim()) return op.label.trim();
-  // Fall back to any model that declares this operation (label reuse).
-  for (const candidate of view.models) {
-    const hit = candidate.operations.find((entry) => entry.id === canonical);
-    if (hit?.label && hit.label.trim()) return hit.label.trim();
-  }
-  return canonical;
-}
-
 function matchToOption(
   match: OperationMatch,
   model: ReturnType<typeof resolveModelView>,
@@ -253,7 +233,8 @@ function matchToOption(
   const opView = model?.operations.find((entry) => entry.id === match.operationId);
   return {
     id: match.operationId,
-    label: (opView?.label && opView.label.trim()) || match.operationId,
+    // Issue #4103：label 非空且 ≠ id 才用，否则走已审校目录，再否则回落 id。
+    label: resolveOperationLabel({ id: match.operationId, label: opView?.label }),
     slots: opView?.inputs ?? [],
     ...(opView?.output?.type ? { outputType: opView.output.type } : {}),
     ...(opView?.parameters ? { parameters: opView.parameters } : {}),
@@ -715,5 +696,5 @@ export function resolveTriggerModeText(
   const id = selectedOperationId || state.selectedOperationId;
   if (!id) return '';
   const hit = state.effectiveOps.find((op) => op.id === id);
-  return hit?.label || id;
+  return resolveOperationLabel({ id, label: hit?.label });
 }

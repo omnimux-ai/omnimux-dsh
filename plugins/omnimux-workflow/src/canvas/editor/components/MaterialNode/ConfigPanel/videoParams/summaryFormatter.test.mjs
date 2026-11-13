@@ -124,3 +124,57 @@ describe('summaryFormatter - 自动时长', () => {
     assert.equal(result.fullText, '16:9 自动');
   });
 });
+
+/**
+ * Issue #4103 — 底栏胶囊与生成方式分段共用 resolveOperationLabel。
+ *
+ * 修复前：`operationLabel` 被 gateway 用 operation id 冒充 → 胶囊直出英文 id，
+ * 且 `:86` 那份只覆盖 4 个 id 的内联字典永远走不到（document/webpage 必挂）。
+ */
+describe('summaryFormatter - Issue #4103 生成模式文案不再直出英文 id', () => {
+  const gatewayOnly = (operation, extra = {}) => base({
+    showModeUi: true,
+    operation,
+    operationLabel: operation, // gateway-only 行伪造 label 的原始形态
+    effectiveOperations: [],
+    ...extra,
+  });
+
+  it('wan-3.0 六个模式都显示中文（AC1）', () => {
+    const cases = {
+      text_to_video: '文生视频',
+      first_frame: '首帧驱动',
+      first_last_frame: '首尾帧过渡',
+      video_multi_ref: '全能参考',
+      document_to_video: '文档参考',
+      webpage_to_video: '网页参考',
+    };
+    for (const [operation, expected] of Object.entries(cases)) {
+      const result = formatVideoSummary(gatewayOnly(operation));
+      assert.equal(result.modeText, expected, `${operation} 必须显示中文`);
+      assert.ok(!result.fullText.includes(operation), `${operation} 不得出现在胶囊文字里`);
+    }
+  });
+
+  it('document/webpage 不再因内联字典缺条目而回落 id（AC5）', () => {
+    assert.equal(formatVideoSummary(gatewayOnly('document_to_video')).modeText, '文档参考');
+    assert.equal(formatVideoSummary(gatewayOnly('webpage_to_video')).modeText, '网页参考');
+  });
+
+  it('有 adapter 的型号保持目录给定文案（AC2 回归）', () => {
+    const result = formatVideoSummary(base({ showModeUi: true, operationLabel: '首帧生视频' }));
+    assert.equal(result.modeText, '首帧生视频');
+  });
+
+  it('英文 locale 走目录英文名；目录缺失才回落 id（AC6）', () => {
+    assert.equal(formatVideoSummary(gatewayOnly('text_to_video'), 'en').modeText, 'Text to video');
+    assert.equal(formatVideoSummary(gatewayOnly('brand_new_operation')).modeText, 'brand_new_operation');
+    assert.equal(formatVideoSummary(gatewayOnly('brand_new_operation'), 'en').modeText, 'brand_new_operation');
+  });
+
+  it('showModeUi=false 时 mode 段仍为空（不因解析器改变而多出文案）', () => {
+    const result = formatVideoSummary(base({ showModeUi: false, operationLabel: 'text_to_video' }));
+    assert.equal(result.modeText, '');
+    assert.ok(!result.fullText.includes('文生视频'));
+  });
+});

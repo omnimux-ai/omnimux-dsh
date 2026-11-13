@@ -44,7 +44,12 @@ const MOCK_CATALOG: CapabilityCatalog = {
     { id: 'mock-img-fast', label: 'Mock Image Fast' },
     { id: 'mock-img-hd', label: 'Mock Image HD' },
   ],
-  video: [{ id: 'mock-video-720p', label: 'Mock Video 720p' }],
+  // Issue #4103 验收样本：gateway-only 型号（本地无 adapter，六种生成方式、operation 无 label）。
+  // 目录行置灰「暂不支持」，已存在节点禁用生成并给一键切换。
+  video: [
+    { id: 'mock-video-720p', label: 'Mock Video 720p' },
+    { id: 'wan-3.0', label: 'Wan 3.0', executionStatus: 'unsupported' },
+  ],
   audio: [{ id: 'mock-tts-standard', label: 'Mock TTS Standard' }],
   // 契约真源（buildContractView 只读 models[]）：驱动素材卡槽派生与借用。
   // mock-video-720p 当前生成方式 text_to_video 无素材输入，借用兄弟操作
@@ -72,6 +77,64 @@ const MOCK_CATALOG: CapabilityCatalog = {
             { slot: 'first_frame', type: 'image', role: 'reference', min: 0, max: 1 },
             { slot: 'last_frame', type: 'image', role: 'reference', min: 0, max: 1 },
           ],
+        },
+      ],
+    },
+    {
+      // Issue #4103：gateway-only 行——operation 只带 id，没有任何本地 label。
+      id: 'wan-3.0',
+      label: 'Wan 3.0',
+      family: 'alibaba',
+      executionStatus: 'unsupported',
+      operations: [
+        {
+          id: 'text_to_video',
+          listed: true,
+          output: { type: 'video' },
+          inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 }],
+        },
+        {
+          id: 'first_frame',
+          listed: true,
+          output: { type: 'video' },
+          inputs: [
+            { slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 },
+            { slot: 'first_frame', type: 'image', role: 'reference', min: 0, max: 1 },
+          ],
+        },
+        {
+          id: 'first_last_frame',
+          listed: true,
+          output: { type: 'video' },
+          inputs: [
+            { slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 },
+            { slot: 'first_frame', type: 'image', role: 'reference', min: 0, max: 1 },
+            { slot: 'last_frame', type: 'image', role: 'reference', min: 0, max: 1 },
+          ],
+        },
+        {
+          id: 'video_multi_ref',
+          listed: true,
+          output: { type: 'video' },
+          inputs: [
+            { slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 },
+            { slot: 'reference_image', type: 'image', role: 'reference', min: 0, max: null },
+          ],
+        },
+        {
+          id: 'document_to_video',
+          listed: true,
+          output: { type: 'video' },
+          inputs: [
+            { slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 },
+            { slot: 'document', type: 'document', role: 'reference', min: 0, max: 1 },
+          ],
+        },
+        {
+          id: 'webpage_to_video',
+          listed: true,
+          output: { type: 'video' },
+          inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 }],
         },
       ],
     },

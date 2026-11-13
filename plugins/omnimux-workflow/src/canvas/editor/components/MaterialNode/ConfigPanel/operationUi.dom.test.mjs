@@ -191,3 +191,55 @@ test('manual selection remembers the model and reports failed persistence', () =
   assert.match(configSrc, /nodeCompat\?\.adaptation/);
   assert.match(configSrc, /role="status" data-testid="wf-model-adaptation"/);
 });
+
+/**
+ * Issue #4103 — 生成模式文案的唯一解析入口 + 不可执行型号门禁。
+ *
+ * 源码契约（本文件既有风格）：SegmentControls 与 summaryFormatter 必须共用
+ * `resolveOperationLabel`，两份各自兜底的字典/回退都算回归。
+ */
+const labelsSrc = readFileSync(
+  join(here, '../../../../../shared/validation/operationLabels.ts'),
+  'utf8',
+);
+const menuSrc = readFileSync(join(here, 'ModelCascadeMenu.tsx'), 'utf8');
+
+test('#4103 SegmentControls 与 summaryFormatter 共用 resolveOperationLabel（AC4）', () => {
+  assert.match(segmentSrc, /resolveOperationLabel/);
+  assert.match(summarySrc, /resolveOperationLabel/);
+  assert.match(opUiSrc, /resolveOperationLabel/);
+  // 旧写法（label 为空直接用 id）不得回来
+  assert.doesNotMatch(segmentSrc, /label:\s*op\.label\s*\|\|\s*op\.id/);
+  assert.doesNotMatch(opUiSrc, /\(opView\?\.label && opView\.label\.trim\(\)\) \|\| match\.operationId/);
+});
+
+test('#4103 summaryFormatter 的内联复制字典已删除（漂移源头）', () => {
+  // 修复前 :86-89 有一份只覆盖 4 个 id 的字典，导致 document/webpage 回落 id
+  assert.doesNotMatch(summarySrc, /return '文生视频'/);
+  assert.doesNotMatch(summarySrc, /return '首尾帧'/);
+  assert.doesNotMatch(summarySrc, /== 'video_multi_ref' \|\| raw == 'multi_reference'/);
+  // 文案只允许存在于共享字典里
+  assert.match(labelsSrc, /document_to_video: \{ zh: '文档参考'/);
+  assert.match(labelsSrc, /webpage_to_video: \{ zh: '网页参考'/);
+});
+
+test('#4103 参数适配器不再用 operation id 顶替 label', () => {
+  assert.match(adapterSrc, /resolveOperationLabel\(\{ id: operation, label: operationOption\?\.label \}\)/);
+  assert.doesNotMatch(adapterSrc, /operationLabel: operationOption\?\.label \?\? operation/);
+});
+
+test('#4103 AC7 不可执行型号：生成禁用 + 中性提示 + 一键切换', () => {
+  assert.match(configSrc, /resolveUnsupportedModelUi/);
+  assert.match(configSrc, /selectedModelUnsupported/);
+  // 门禁必须进 blockGenerate（否则用户能点生成、运行时才失败）
+  assert.match(configSrc, /\|\| selectedModelUnsupported;/);
+  assert.match(configSrc, /data-testid="wf-model-unsupported"/);
+  assert.match(configSrc, /data-testid="wf-model-unsupported-switch"/);
+  assert.match(configSrc, /panel\.modelUnsupportedSwitch/);
+});
+
+test('#4103 AC7 目录行置灰使用「暂不支持」而不是「不可执行」', () => {
+  assert.match(menuSrc, /item\.executable === false/);
+  assert.match(menuSrc, /暂不支持/);
+  assert.match(menuSrc, /本地暂无该模型的可执行适配/);
+});

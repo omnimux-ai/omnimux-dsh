@@ -253,7 +253,7 @@ const CascadeModelItem: React.FC<{
     data-testid={interactive ? `wf-cascade-model-${item.id}` : undefined}
     tabIndex={interactive ? undefined : -1}
     disabled={interactive && item.executable === false}
-    title={item.executionStatus === 'unsupported' ? '本地执行适配不可用' : item.executionStatus === 'unverified' ? '模型服务尚未验证' : undefined}
+    title={item.executionStatus === 'unsupported' ? '本地暂无该模型的可执行适配，暂不支持新建' : item.executionStatus === 'unverified' ? '模型服务尚未验证' : undefined}
     onMouseEnter={interactive ? onHover : undefined}
     onClick={interactive && item.executable !== false ? onSelect : undefined}
     className={`wf-cascade-model-item ${isSelected ? 'is-selected' : ''} ${isHovered ? 'is-hovered' : ''} ${item.executable === false ? 'is-disabled' : ''}`}
@@ -264,7 +264,7 @@ const CascadeModelItem: React.FC<{
       </span>
       {item.executable === false ? (
         <span style={{ fontSize: 10, color: 'var(--dsw-alias-label-tertiary)', marginLeft: 6 }}>
-          {item.executionStatus === 'unverified' ? '未验证' : '不可执行'}
+          {item.executionStatus === 'unverified' ? '未验证' : '暂不支持'}
         </span>
       ) : null}
       {isSelected ? <Check size={15} color="rgb(0, 230, 118)" strokeWidth={2.5} /> : null}
