@@ -15,6 +15,7 @@ import { CfgSummaryBar } from '../cfg/CfgSummaryBar.tsx';
 import { IMAGE_COLLAPSE_ORDER, estimateSummaryTextPx } from '../cfg/summaryCollapse.ts';
 import type { CfgSummaryItem } from '../cfg/types.ts';
 import { formatImageSummary } from './imageParamAdapter.ts';
+import { getLocale } from '../../../../../i18n/index.ts';
 import type { ImageTriggerBarProps } from './types.ts';
 
 /** 图标槽位附加宽（14px 图标 + 4px gap），槽位自身 gap 6px */
@@ -31,7 +32,7 @@ export function ImageTriggerBar({
   disabled = false,
   onToggle,
 }: ImageTriggerBarProps): ReactElement {
-  const summary = formatImageSummary(params);
+  const summary = formatImageSummary(params, getLocale());
   const showMode = Boolean(summary.modeText && params.showModeUi);
 
   const items = useMemo((): CfgSummaryItem[] => {

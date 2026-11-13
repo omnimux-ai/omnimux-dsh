@@ -16,6 +16,8 @@ import { CfgPopoverShell } from '../cfg/CfgPopoverShell.tsx';
 import { CfgSegment } from '../cfg/CfgSegment.tsx';
 import { resolveControlKind } from '../cfg/controlKind.ts';
 import { assertImageParamWriteKey } from './imageParamAdapter.ts';
+import { resolveOperationLabel } from '../../../../../../shared/validation/operationLabels.ts';
+import { getLocale } from '../../../../../i18n/index.ts';
 import type { ImageParamPopoverProps } from './types.ts';
 
 /** 图像参数浮层：schema 驱动显隐，无幽灵控件。 */
@@ -37,9 +39,12 @@ export function ImageParamPopover({
     onParamChange(key, value);
   };
 
+  // Issue #4113（F1）：图像浮层的生成方式选项同样按当前 locale 解析，
+  // 否则英文界面这里仍显示中文（与摘要条/视频浮层不一致）。
+  const locale = getLocale();
   const modeOptions = params.effectiveOperations.map((op) => ({
     value: op.id,
-    label: op.label || op.id,
+    label: resolveOperationLabel({ id: op.id, label: op.label }, locale),
   }));
   const modeKind = resolveControlKind({
     cardinality: modeOptions.length,

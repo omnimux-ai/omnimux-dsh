@@ -9,14 +9,20 @@
  *   - 第一次：#3742 之前的 browser/viewer 等包；
  *   - 第二次：#3742 的迁移漏掉 `plugins/omnimux`，导致**每一轮对话都失败**
  *     （`format v4 message requires a producer-owned source kind`）。
- * 第一次修完只修了代码、没有守卫；这次守卫按宿主真实规则拦「结构」，避免下次换个
- * 写法（双引号、模板串、拼变量、干脆不写 kind）又漏过去。
+ * 第一次修完只修了代码、没有守卫；这次守卫按宿主真实规则拦三类：
+ *   ① `kind` 缺失、② `kind` 为空、③ `kind: 'plugin'` 字面量（含双引号/模板串）。
+ * 它**不做静态数据流分析**：`const K = 'plugin'; source: { kind: K }` 这类变量间接值
+ * 不拦（已知不覆盖），由运行期 e2e 兜底
+ * （`plugins/omnimux/src/session/message-source-v4.test.js` 走宿主真实准入）。
+ * 宁可漏当前不存在的写法，也不要假阳性。
  *
  * 检查项（作用于 `plugins/<pkg>/src` 与 `packages/<pkg>/src`，跳过 build 产物）：
  *   1. `retired-kind`：出现 `kind: 'plugin'` / `"plugin"` / `` `plugin` ``（任何大小写变体不算，
  *      kind 就是小写字符串），或 `kind: ''` / `kind: ""`（空 kind 同样被宿主拒绝）。
- *   2. `missing-kind`：一个形如消息来源的字面量 `source: { … }`，体内出现 `form:` 或
- *      `sections:`，却没有 `kind:` —— 等价于「忘记声明 kind」，正是 rc.3 的第二种失败形态。
+ *   2. `missing-kind`：字面量 `source: { … }` 体内**同时出现 `plugin:` 与（`form:` 或
+ *      `sections:`）**，却没有 `kind:` —— 这才是「消息来源忘记声明 kind」。
+ *      要求 `plugin:` 是为了避免把别的域里恰好用 form/sections 的对象误判；
+ *      宁可漏当前不存在的形状，不要假阳性。
  *
  * 豁免（说明性质，不承载运行时行为）：
  *   - 测试文件（`*.test.*` / `*.spec.*`）与 `tests/`、`__fixtures__/`、`fixtures/` 下的夹具；
@@ -106,26 +112,31 @@ function lineAt(text, offset) {
 
 /**
  * Scan one file's text for the two structural rules.
+ *
+ * 去重按「块」：一个 `source: { … }` 块若已因 kind==='plugin' 被 Rule1 语义覆盖，
+ * 就丢弃落在该块行区间内的 Rule1 命中（同一处根因只报 1 条）；不同块各自报 1 条，
+ * 不会掩盖真实的多处违规。
+ *
  * @param {string} text
  * @returns {Array<{ rule: 'retired-kind'|'missing-kind', line: number, text: string }>}
  */
 export function scanSourceText(text) {
-  const findings = []
   const lines = text.split('\n')
+  const codeOnly = stripBlockComments(text)
+  const findings = []
 
   // Rule 1 — the explicit catch-all literal, on code lines only.
+  const rule1 = []
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index]
     if (isCommentLine(line)) continue
     if (line.includes(ALLOW_MARK)) continue
     const code = line.replace(/\/\/.*$/, '')
-    if (RETIRED_KIND.test(code)) {
-      findings.push({ rule: 'retired-kind', line: index + 1, text: line.trim() })
-    }
+    if (RETIRED_KIND.test(code)) rule1.push({ rule: 'retired-kind', line: index + 1, text: line.trim() })
   }
 
-  // Rule 2 — a message-source literal that forgot `kind`.
-  const codeOnly = stripBlockComments(text)
+  // Rule 2 — message-source literals that forgot `kind` / wrote a retired kind.
+  const blocks = []
   const pattern = /(?:^|[^\w$])source\s*:\s*\{/gm
   let match
   while ((match = pattern.exec(codeOnly)) !== null) {
@@ -133,22 +144,43 @@ export function scanSourceText(text) {
     const closeIndex = findMatchingBrace(codeOnly, openIndex)
     if (closeIndex === -1) continue
     const body = codeOnly.slice(openIndex + 1, closeIndex)
-    const looksLikeMessageSource = /(?:^|[\s,{])form\s*:/.test(body) || /(?:^|[\s,{])sections\s*:/.test(body)
-    if (!looksLikeMessageSource) continue
-    const line = lineAt(codeOnly, match.index)
-    if (lines[line - 1]?.includes(ALLOW_MARK)) continue
-    const kindMatch = /(?:^|[\s,{])kind\s*:\s*(?:\n\s*)?(['"`])([^'"`]*)\1/.exec(body)
+    const hasPlugin = /(?:^|[\s,{])plugin\s*:/.test(body)
+    const hasFormOrSections = /(?:^|[\s,{])form\s*:/.test(body) || /(?:^|[\s,{])sections\s*:/.test(body)
+    const spreads = /(?:^|[\s,{])\.\.\./.test(body)
+    if (!hasPlugin || !hasFormOrSections || spreads) continue // 非消息来源 / kind 可能来自 spread
+    const startLine = lineAt(codeOnly, match.index)
+    const endLine = lineAt(codeOnly, closeIndex)
+    const allowLine = lines[startLine - 1] ?? ''
+    if (allowLine.includes(ALLOW_MARK)) continue
     const declaresKind = /(?:^|[\s,{])kind\s*:/.test(body)
+    const kindMatch = /(?:^|[\s,{])kind\s*:\s*(?:\n\s*)?(['"`])([^'"`]*)\1/.exec(body)
+    blocks.push({ startLine, endLine, flagged: true })
     if (!declaresKind) {
-      // 忘记声明 kind —— rc.3 的第二种失败形态。
-      findings.push({ rule: 'missing-kind', line, text: lines[line - 1]?.trim() ?? 'source: { … }' })
+      findings.push({ rule: 'missing-kind', line: startLine, text: allowLine.trim() })
     } else if (kindMatch && (kindMatch[2] === '' || kindMatch[2] === 'plugin')) {
-      // 显式写成空串 / 'plugin' 也是结构性错误（全局规则只认无歧义的 plugin，这里补空串）。
-      findings.push({ rule: 'retired-kind', line, text: lines[line - 1]?.trim() ?? 'source: { … }' })
+      findings.push({ rule: 'retired-kind', line: startLine, text: allowLine.trim() })
+    } else {
+      blocks[blocks.length - 1].flagged = false
     }
   }
 
+  // Rule1 hits inside a flagged block are the same root cause (source block's kind) → drop.
+  for (const hit of rule1) {
+    const insideFlaggedBlock = blocks.some(
+      (block) => block.flagged && hit.line >= block.startLine && hit.line <= block.endLine,
+    )
+    if (!insideFlaggedBlock) findings.push(hit)
+  }
+
+  // 再按行去重兜底（同块/同行的重复）。
+  const seen = new Set()
   return findings
+    .sort((left, right) => left.line - right.line)
+    .filter((finding) => {
+      if (seen.has(finding.line)) return false
+      seen.add(finding.line)
+      return true
+    })
 }
 
 function* walk(dir) {
