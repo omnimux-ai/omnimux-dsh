@@ -50,6 +50,8 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-session-format-v3-to-v4": "0.2.1-rc.3",
     "@shikijs/langs": "4.4.3",
     "anser": "2.3.5",
     "esbuild": "0.25.12",

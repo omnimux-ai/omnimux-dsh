@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { WORKBENCH_SOURCE_KIND } from '../message-source.js'
 import { formatCompactContextBlock } from './contract.js'
 import { withReferenceNavigation } from './reference-navigation.js'
 
@@ -14,7 +15,8 @@ export function createWorkbenchContextMessage(text) {
     role: 'user',
     content: [{ type: 'text', text }],
     source: {
-      kind: 'plugin',
+      // Producer-owned kind（rc.3 起 catch-all 'plugin' 会被 session-format v4 拒绝，#4110）。
+      kind: WORKBENCH_SOURCE_KIND,
       plugin: 'omnimux-workbench',
       form: 'snapshot',
       sections: [{
