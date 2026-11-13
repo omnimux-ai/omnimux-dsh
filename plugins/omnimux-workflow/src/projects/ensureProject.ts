@@ -84,7 +84,8 @@ export interface EnsureProjectDeps {
 }
 
 export const DEFAULT_ENSURE_LOCK_TIMEOUT_MS = 10_000;
-export const DEFAULT_ENSURE_LOCK_STALE_MS = 5_000;
+/** 默认必须大于 lockTimeoutMs：只按年龄回收活锁会抢占合法持有者（评审 F1）。 */
+export const DEFAULT_ENSURE_LOCK_STALE_MS = 30_000;
 const LOCK_POLL_MS = 25;
 const CANVAS_ID_RE = /^ws_[a-zA-Z0-9_-]{1,128}$/;
 const FALLBACK_TITLE = '未命名项目';
@@ -178,6 +179,32 @@ function lockAgeMs(lockPath: string): number {
   }
 }
 
+/**
+ * 锁持有者是否仍存活（评审 F1）：只按 mtime 年龄回收会抢占合法慢持有者，
+ * 导致两个 writer 各建一个 project id。这里以锁里的 pid 为准：
+ *   - pid 已不存在（ESRCH）→ 死锁，可立即回收；
+ *   - pid 存活（或 EPERM/无法判定）→ 不抢，等超时或持有者自己释放。
+ */
+function lockHolderAlive(lockPath: string): boolean | null {
+  let pid: number;
+  try {
+    const parsed = JSON.parse(readFileSync(lockPath, 'utf8')) as { pid?: unknown };
+    pid = typeof parsed.pid === 'number' ? parsed.pid : Number(parsed.pid);
+  } catch {
+    return null;
+  }
+  if (!Number.isInteger(pid) || pid <= 0) return null;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error ? String((error as { code?: unknown }).code) : '';
+    if (code === 'ESRCH') return false;
+    if (code === 'EPERM') return true;
+    return null;
+  }
+}
+
 async function withFileLock<T>(deps: EnsureProjectDeps, root: string, fn: () => T | Promise<T>): Promise<T> {
   const paths = resolveProjectPaths(root);
   mkdirSync(paths.metaDir, { recursive: true });
@@ -198,7 +225,10 @@ async function withFileLock<T>(deps: EnsureProjectDeps, root: string, fn: () => 
         throw new EnsureProjectError('project-lock-failed', `could not create .omnimux/.lock at ${root}: ${(error as Error)?.message ?? String(error)}`);
       }
       const age = lockAgeMs(lockPath);
-      if (age >= 0 && age > deps.lockStaleMs) {
+      const alive = lockHolderAlive(lockPath);
+      const holderDead = alive === false;
+      const unreadableAndStale = alive === null && age >= 0 && age > deps.lockStaleMs;
+      if (holderDead || unreadableAndStale) {
         rmSync(lockPath, { force: true });
         continue;
       }
@@ -301,14 +331,19 @@ function normalizePages(project: Project): { project: Project; changed: boolean 
     pages = [defaultPage(project.title, now)];
     changed = true;
   }
+  // I4：一个 canvasWorkspaceId 最多映射一个 page —— 重复引用归一（保留首个，其余换新 id）。
+  const seenCanvasIds = new Set<string>();
   pages = pages.map((page) => {
-    const wsId = typeof page.canvasWorkspaceId === 'string' ? page.canvasWorkspaceId.trim() : '';
+    let wsId = typeof page.canvasWorkspaceId === 'string' ? page.canvasWorkspaceId.trim() : '';
     if (wsId === '') {
       changed = true;
-      return { ...page, canvasWorkspaceId: `ws_${randomUUID().replace(/-/g, '').slice(0, 12)}` };
-    }
-    if (wsId !== page.canvasWorkspaceId) {
+      wsId = `ws_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+    } else if (seenCanvasIds.has(wsId)) {
       changed = true;
+      wsId = `ws_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+    }
+    seenCanvasIds.add(wsId);
+    if (wsId !== page.canvasWorkspaceId) {
       return { ...page, canvasWorkspaceId: wsId };
     }
     return page;
@@ -407,16 +442,16 @@ function ensureAtRoot(
     }
   }
 
+  const needsWrite = action !== 'existing' && action !== 'adopted';
+  const record = needsWrite
+    ? deps.persistProject(root, project)
+    : { ...project, path: root };
   if (opts.mode === 'workspace' && !isInsideDir(root, deps.libraryRoot)) {
-    // S4：registry 重复 / 同 id 双记录 → 先收敛索引，再登记本 root。
+    // F5：先落盘再改索引 —— 写盘失败时 registry 不会指向「无档案的 root」。
     if (convergeRegistry(deps, root, project.id)) action = 'converged';
     deps.registerExternalProjectDir(root);
   }
-
-  if (action === 'existing' || action === 'adopted') {
-    return { action, project: { ...project, path: root }, root };
-  }
-  return { action, project: deps.persistProject(root, project), root };
+  return { action, project: record, root };
 }
 
 function isRegisteredOutsideLibrary(deps: EnsureProjectDeps, root: string): boolean {

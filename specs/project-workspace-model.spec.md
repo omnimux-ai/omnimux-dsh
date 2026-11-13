@@ -39,7 +39,10 @@ PRD `project-workspace-model` v2（用户已拍板）：**项目可独立、绑�
 
 ## 5. 并发
 - 进程内：`resolve(root)` 粒度 mutex 串行化（同一 root 的 ensure 排队）。
-- 跨进程：`<root>/.omnimux/.lock`（`wx` 创建、25ms 轮询、超时抛 `project-lock-timeout`、超过 `lockStaleMs` 的锁视为死锁可回收），`finally` 必释放。
+- 跨进程：`<root>/.omnimux/.lock`（`wx` 创建、25ms 轮询、超时抛 `project-lock-timeout`、`finally` 必释放）。
+  - **回收判定以持有者 pid 为准（评审 F1）**：pid 已不存在（ESRCH）→ 死锁立即回收；pid 存活（或 EPERM/不可判定）→ **不按 mtime 年龄抢占**，等超时或持有者释放；仅「pid 不可解析且超过 `lockStaleMs`」才按年龄回收。
+  - 默认 `lockStaleMs(30s) > lockTimeoutMs(10s)`；避免「合法慢持有者 >stale 被回收 → 两个 project id」的抢占。
+  - 回归覆盖：仓规测试门禁禁止测试内 spawn 外部进程（`runtime-code-execution-import-needs-review`，不可声明），故以「活 pid（本进程）持锁 + mtime 很旧 → 必须超时且不写盘」「死 pid 锁 → 立即回收」两条确定性用例覆盖同一规则。
 - 两并发 ensure 同一工作区 → 同一 project id、1 个 project.json、1 个创作页（后到者重读并复用）。
 
 ## 6. `remove()` 语义（本次收窄）
@@ -58,6 +61,14 @@ PRD `project-workspace-model` v2（用户已拍板）：**项目可独立、绑�
   - 原断言：`assert.equal(existsSync(join(projectRoot, '.omnimux')), false)` —— 要求 `remove()` 删掉整个 `.omnimux` 目录。
   - 必须改的理由：该目录同时存放 `.omnimux/canvases/<canvasWorkspaceId>.json`（用户创作页画布）与 `assets.json`；整目录删除会把用户画布一并删掉，与本模型「单一真源里画布文件属于用户数据」「remove() 不 rm 用户文件」的红线冲突。本次把 `remove()` 收窄为只摘 `project.json` + 索引，故旧断言不再成立；这不是放宽标准，而是断言点随产品红线前移。
   - 新期望证据：改为两条更具体的断言 —— `project.json` 必须不存在（`existsSync(.../.omnimux/project.json) === false`）、`.omnimux` 目录必须仍在（画布等用户数据保留）；同用例继续校验用户文件夹与 `user-notes.txt` 保留、`store.get(id)` 抛 `project-not-found`、`list()` 数量下降。另有新增用例 `B1 remove()：只摘项目档案，不删画布/用户文件夹` 直接断言画布文件在 remove 后仍存在。实跑：`projects.test.mjs` 30/30 通过。
+
+## 8. I3/I4 归属与 B2 遗留
+
+- **I4（一个 canvasWorkspaceId 最多映射一个 page）：B1 落实**。`ensureProject` 归一重复引用（保留首个 page 的原 id，其余生成新 `ws_` id 并写回 v2），新增用例 `B1 I4：重复 canvasWorkspaceId 归一`。
+- **I3（画布缺失时补空画布、不失败）：B1 只保证 `page.canvasWorkspaceId` 非空**；空画布文件由画布层（`WorkspaceStore` / B2 路由）在该 page 首次打开时创建。B1 数据层不依赖画布存储，避免把 snapshot schema 耦合进 ProjectStore。
+- **F2（remove 收窄后，同 root 重建会被 S3 采纳旧画布）**：B1 只保证不删用户文件；删除文案与「彻底删除」选项由 B2 承接。
+- **F4（independent 同标题折叠为一个项目）**：幂等优先的产品语义（spec §2 已写明）；B2 UI 需提示同名或提供改名/另选目录。
+- **F5/F6 已在 B1 修复**：F5 改为先落盘再改 registry 索引；F6 scan 同时按 lexical 与 realpath 判定目录是否在库内。
 
 ## 8. 非目标
 - 不改 routes/client（B2）、不做双根逻辑指针、不做云端同步、不改画布 ReactFlow 内核。

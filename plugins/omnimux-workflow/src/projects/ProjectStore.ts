@@ -247,6 +247,12 @@ export function createProjectStore(opts: {
     }
     // 有文件补索引：已注册工作区目录若已有合法 project.json 而 registry 漏记，
     // 以文件为准补索引（文件优先自愈；只登记，不动用户文件）。
+    let realLibraryRoot: string | null = null;
+    try {
+      realLibraryRoot = realpathSync(resolve(libraryRoot));
+    } catch {
+      realLibraryRoot = null;
+    }
     if (typeof opts.workspaceDirs === 'function') {
       let candidates: string[] = [];
       try {
@@ -272,7 +278,9 @@ export function createProjectStore(opts: {
         rows.push({ dir, project });
         seenDirs.add(dir);
         seenDirs.add(lexical);
-        if (!isInsideDir(dir, libraryRoot) && !validExternalDirs.includes(dir)) {
+        // F6：libraryRoot 可能是符号链接（/var → /private/var），两种形态都要判库内。
+        const insideLibrary = isInsideDir(dir, libraryRoot) || (realLibraryRoot !== null && isInsideDir(dir, realLibraryRoot));
+        if (!insideLibrary && !validExternalDirs.includes(dir)) {
           validExternalDirs.push(dir);
           externalChanged = true;
         }
@@ -301,14 +309,15 @@ export function createProjectStore(opts: {
 
   function persistProject(dir: string, project: Project): ProjectRecord {
     const paths = resolveProjectPaths(dir);
-    if (isInsideDir(paths.projectRoot, libraryRoot)) {
+    const insideLibrary = isInsideDir(paths.projectRoot, libraryRoot);
+    if (insideLibrary) {
       assertProjectInsideLibrary(paths.projectRoot, libraryRoot);
-    } else {
-      registerExternalProjectDir(paths.projectRoot);
     }
     assertProjectWriteSafe(paths.projectFile, paths.projectRoot);
     const { path: _path, ...cleanProject } = project as Project & { path?: string };
+    // 先写档案、后登记索引：写盘失败时 registry 不会指向「无档案的 root」（评审 F5）。
     atomicWriteJson(paths.projectFile, cleanProject);
+    if (!insideLibrary) registerExternalProjectDir(paths.projectRoot);
     return { ...cleanProject, path: paths.projectRoot };
   }
 
