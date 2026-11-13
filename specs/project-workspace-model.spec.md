@@ -40,7 +40,7 @@ PRD `project-workspace-model` v2（用户已拍板）：**项目可独立、绑�
 ## 5. 并发
 - 进程内：`resolve(root)` 粒度 mutex 串行化（同一 root 的 ensure 排队）。
 - 跨进程：`<root>/.omnimux/.lock`（`wx` 创建、25ms 轮询、超时抛 `project-lock-timeout`、`finally` 必释放）。
-  - **回收判定以持有者 pid 为准（评审 F1）**：pid 已不存在（ESRCH）→ 死锁立即回收；pid 存活（或 EPERM/不可判定）→ **不按 mtime 年龄抢占**，等超时或持有者释放；仅「pid 不可解析且超过 `lockStaleMs`」才按年龄回收。
+  - **回收判定以持有者 pid 为准（评审 F1）**：pid 已不存在（ESRCH）→ 死锁立即回收；pid 存活（或 EPERM/不可判定）→ **不按 mtime 年龄抢占**，等超时或持有者释放；仅「pid 不可解析且超过 `min(lockStaleMs, 1s 宽限)`」才按年龄回收。
   - 默认 `lockStaleMs(30s) > lockTimeoutMs(10s)`；避免「合法慢持有者 >stale 被回收 → 两个 project id」的抢占。
   - 不可解析锁（崩溃残留）按 **1s 宽限**回收（评审 F1b）：有效锁是 `wx` 原子创建的完整 JSON，坏文件只可能是崩溃残留；不能等 30s（首次打开必超时），也不能 0（写入瞬间可能读到半文件）。
   - 回归覆盖：仓规测试门禁禁止测试内 spawn 外部进程（`runtime-code-execution-import-needs-review`，不可声明），故以「活 pid（本进程）持锁 + mtime 很旧 → 必须超时且不写盘」「死 pid 锁 → 立即回收」两条确定性用例覆盖同一规则。
