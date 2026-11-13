@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { describeModelBilling } from '../catalog/pricing-calculator.js'
+import { SESSION_MODEL_SOURCE_KIND } from '../message-source.js'
 
 /**
  * Native DSH context UserMessage carrying the session's model pin.
@@ -14,7 +15,8 @@ export function createSessionModelMessage(text) {
     role: 'user',
     content: [{ type: 'text', text }],
     source: {
-      kind: 'plugin',
+      // Producer-owned kind（rc.3 起 catch-all 'plugin' 会被 session-format v4 拒绝，#4110）。
+      kind: SESSION_MODEL_SOURCE_KIND,
       plugin: 'omnimux',
       form: 'snapshot',
       sections: [{

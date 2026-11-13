@@ -95,7 +95,7 @@ describe('Agent-Workbench Synergy End-to-End Closed Loop', () => {
     )
     assert.equal(agentDecision.messages.length, 2)
     const injected = agentDecision.messages[1]
-    assert.equal(injected.source.kind, 'plugin')
+    assert.equal(injected.source.kind, 'omnimux-workbench')
     assert.equal(injected.source.plugin, 'omnimux-workbench')
     assert.ok(injected.content[0].text.includes('<ui_context schema="1">'))
     assert.ok(injected.content[0].text.includes('tab: omnimux-assets:library'))

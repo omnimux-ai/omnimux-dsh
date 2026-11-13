@@ -42,7 +42,10 @@ describe('session model context injector', () => {
     // P1b：计费文案改由网关快照生成：0.8 USD/秒 × 1 → 40 积分/5 秒。
     assert.match(text, /网关单价 0\.8 USD\/秒/)
     assert.match(text, /40 积分\/5秒/)
+    assert.equal(decision.messages[0].source.kind, 'omnimux-session-model')
     assert.equal(decision.messages[0].source.plugin, 'omnimux')
+    assert.equal(decision.messages[0].source.form, 'snapshot')
+    assert.deepEqual(decision.messages[0].source.sections.map((section) => section.name), ['session-model'])
   })
 
   it('injects nothing when the session is on automatic', async () => {

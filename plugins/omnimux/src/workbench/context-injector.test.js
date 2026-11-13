@@ -10,7 +10,7 @@ describe('Workbench Context Injector', () => {
     assert.equal(msg.role, 'user')
     assert.equal(typeof msg.id, 'string')
     assert.deepEqual(msg.content, [{ type: 'text', text }])
-    assert.equal(msg.source.kind, 'plugin')
+    assert.equal(msg.source.kind, 'omnimux-workbench')
     assert.equal(msg.source.plugin, 'omnimux-workbench')
     assert.equal(msg.source.form, 'snapshot')
     assert.deepEqual(msg.source.sections, [{
@@ -111,7 +111,7 @@ describe('Workbench Context Injector', () => {
     assert.equal(decision.messages.length, 2)
     assert.equal(decision.messages[0], userMsg) // Original user message untouched!
     const contextMsg = decision.messages[1]
-    assert.equal(contextMsg.source.kind, 'plugin')
+    assert.equal(contextMsg.source.kind, 'omnimux-workbench')
     assert.equal(contextMsg.source.plugin, 'omnimux-workbench')
     assert.equal(contextMsg.source.form, 'snapshot')
     assert.ok(contextMsg.content[0].text.includes('tab: omnimux-inspiration:library (灵感社区)'))
@@ -150,7 +150,7 @@ describe('Workbench Context Injector', () => {
     assert.equal(decision.messages.length, 2)
     assert.equal(decision.messages[0].content[0].text, '说说你分别收到的')
     assert.match(decision.messages[1].content[0].text, /### 会话关联上下文/)
-    assert.equal(decision.messages[1].source.kind, 'plugin')
+    assert.equal(decision.messages[1].source.kind, 'omnimux-workbench')
     assert.equal(decision.messages[1].source.form, 'snapshot')
   })
 
