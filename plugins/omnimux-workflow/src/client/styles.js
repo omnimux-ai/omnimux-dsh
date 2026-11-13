@@ -241,6 +241,17 @@ export const WORKFLOW_CSS = `
   font-size: 12px;
   color: var(--dsw-alias-state-error-primary, var(--dsw-alias-label-error));
 }
+/* 对齐预检的中性状态：不是错误，不用红字（B2）。 */
+.omnimux-new-project-preflight {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
 .omnimux-workflow-dialog-footer {
   display: flex;
   justify-content: flex-end;

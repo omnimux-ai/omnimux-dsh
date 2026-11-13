@@ -73,7 +73,7 @@ async function mountCard() {
   await act(async () => {
     root.render(React.createElement(ProjectFolderCard, {
       project: { id: 'p1', title: '演示项目', updatedAt: 1735689600000, cover: { kind: 'empty' } },
-      onOpen() {}, onRename() {}, onDelete() {}, t,
+      onOpen() {}, onRename() {}, onRemove() {}, onPurge() {}, t,
     }))
   })
   return { dom, act, container, root }
@@ -91,7 +91,7 @@ test('more-menu items use the leadingIcon slot contract, never children/.label',
     const menu = container.querySelector('[role="menu"]')
     assert.ok(menu, '菜单未展开')
     const items = [...menu.querySelectorAll('[role="menuitem"]')]
-    assert.equal(items.length, 2)
+    assert.equal(items.length, 3)
 
     for (const item of items) {
       const slot = item.querySelector('.slot')
@@ -102,9 +102,16 @@ test('more-menu items use the leadingIcon slot contract, never children/.label',
       assert.equal(label.querySelectorAll('svg').length, 0, '图标不得落在 .label 内（会被宿主 svg{display:block} 断行）')
       assert.equal(slot.getAttribute('aria-hidden'), 'true')
     }
-    assert.deepEqual(items.map(i => i.querySelector('.label').textContent), ['projects.rename', 'projects.delete'])
-    assert.equal(items[1].getAttribute('data-danger'), 'true', '解散项目必须标记 data-danger="true"')
-    assert.ok(items[1].classList.contains('omnimux-folder-menu-item--danger'), '解散项目必须包含危险类名')
+    assert.deepEqual(
+      items.map(i => i.querySelector('.label').textContent),
+      ['projects.rename', 'projects.removeFromLibrary', 'projects.purge'],
+      '菜单必须区分「移出项目库」与「删除项目」，不复用同一个删除字样',
+    )
+    assert.equal(items[1].getAttribute('data-danger'), null, '移出项目库是非破坏动作，不得标红')
+    assert.equal(items[2].getAttribute('data-danger'), 'true', '删除项目必须标记 data-danger="true"')
+    assert.ok(items[2].classList.contains('omnimux-folder-menu-item--danger'), '删除项目必须包含危险类名')
+    assert.ok(items[1].hasAttribute('data-omnimux-folder-remove'))
+    assert.ok(items[2].hasAttribute('data-omnimux-folder-purge'))
   } finally { await act(async () => root.unmount()); dom.window.close() }
 })
 
@@ -122,13 +129,15 @@ test('more-menu keyboard path: initial focus, arrows, Home/End, Escape refocus, 
     await key(act, active(), 'ArrowDown')
     assert.equal(active(), items()[1])
     await key(act, active(), 'ArrowDown')
+    assert.equal(active(), items()[2])
+    await key(act, active(), 'ArrowDown')
     assert.equal(active(), items()[0], 'ArrowDown 应循环回到首项')
     await key(act, active(), 'ArrowUp')
-    assert.equal(active(), items()[1], 'ArrowUp 应循环到末项')
+    assert.equal(active(), items()[2], 'ArrowUp 应循环到末项')
     await key(act, active(), 'Home')
     assert.equal(active(), items()[0])
     await key(act, active(), 'End')
-    assert.equal(active(), items()[1])
+    assert.equal(active(), items()[2])
 
     await key(act, active(), 'Escape')
     assert.equal(container.querySelector('[role="menu"]'), null, 'Escape 应关闭菜单')

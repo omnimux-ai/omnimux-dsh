@@ -92,17 +92,36 @@ export function fetchSessionProjectBinding(sessionId) {
 }
 
 /**
- * Host 在默认库 mkdir + 写 project.json。
- * 可选 projectRoot：已存在的作品包路径（打开已有文件夹时种子）。
+ * 创建/对齐项目（B2）。
+ * - 传对象：`{ mode: 'independent'|'workspace', workspaceDir?, projectRoot? }`；
+ * - 兼容旧签名：第二个参数是字符串时视为 projectRoot（= 绑定/对齐该目录）。
  * @param {string} title
- * @param {string} [projectRoot]
+ * @param {string | { mode?: 'independent'|'workspace', workspaceDir?: string, projectRoot?: string }} [options]
  */
-export function createProject(title, projectRoot) {
-  return workflowRequest('/omnimux-workflow/api/projects', {
+export function createProject(title, options) {
+  const body = { title }
+  if (typeof options === 'string') {
+    if (options !== '') body.projectRoot = options
+  } else if (options && typeof options === 'object') {
+    if (typeof options.mode === 'string' && options.mode !== '') body.mode = options.mode
+    if (typeof options.workspaceDir === 'string' && options.workspaceDir !== '') body.workspaceDir = options.workspaceDir
+    if (typeof options.projectRoot === 'string' && options.projectRoot !== '') body.projectRoot = options.projectRoot
+  }
+  return workflowRequest('/omnimux-workflow/api/projects', { method: 'POST', body })
+}
+
+/**
+ * 只读对齐预检（S0–S4 + 建议动作，零写盘）。
+ * @param {{ mode?: 'independent'|'workspace', workspaceDir?: string, projectRoot?: string, title?: string }} payload
+ */
+export function preflightProject(payload = {}) {
+  return workflowRequest('/omnimux-workflow/api/projects/preflight', {
     method: 'POST',
     body: {
-      title,
-      ...(typeof projectRoot === 'string' && projectRoot !== '' ? { projectRoot } : {}),
+      ...(payload.mode ? { mode: payload.mode } : {}),
+      ...(payload.workspaceDir ? { workspaceDir: payload.workspaceDir } : {}),
+      ...(payload.projectRoot ? { projectRoot: payload.projectRoot } : {}),
+      ...(payload.title ? { title: payload.title } : {}),
     },
   })
 }
@@ -128,9 +147,14 @@ export function bindProjectSession(id, sessionId) {
   })
 }
 
-/** 删除：只摘元数据。 */
-export function deleteProject(id) {
-  return workflowRequest(`/omnimux-workflow/api/projects/${id}`, {
+/**
+ * 两级删除：
+ * - 默认「移出项目库」：摘 project.json + 索引，保留画布/资产/用户文件；
+ * - `{ purge: true }`「删除项目」：再删 .omnimux/canvases 与 assets.json（用户自有文件仍保留）。
+ */
+export function deleteProject(id, opts = {}) {
+  const query = opts && opts.purge ? '?mode=purge' : ''
+  return workflowRequest(`/omnimux-workflow/api/projects/${id}${query}`, {
     method: 'DELETE',
   })
 }
