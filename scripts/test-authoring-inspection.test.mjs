@@ -637,3 +637,38 @@ test('container skip and chained describe selectors inherit skip reach into inne
     "test.skip('g', () => { test('a', () => { if (x) { eval(code) } }) })",
   ).allowed, true)
 })
+
+// #4100：动态用例名（模板字面量）静态化后，断言从「无主桶」迁入具名用例。
+// A（跨桶多重集）：断言与循环变量无关、指纹不变 → 直接放行，无需声明。
+test('cross-bucket comparison lets a pure case-name staticization through', () => {
+  const before = "for (const name of ['a', 'b']) it(`covers ${name}`, () => { assert.equal(shared(), 1) })"
+  const after = "it('covers a', () => { assert.equal(shared(), 1) }); it('covers b', () => { assert.equal(shared(), 1) })"
+  const result = inspectTestStandardChange(before, after)
+  assert.equal(result.allowed, true, JSON.stringify(result))
+  assert.equal(result.attributionMigration, false)
+})
+
+// B（归因迁移）：断言随循环变量改写、指纹变化 → 不直接放行，但标记可经文件级声明审查；
+// 真实减少或夹带放宽必须仍然硬拒。
+test('attribution migration is flagged only when no assertion was lost or loosened', () => {
+  const before = "for (const name of ['a', 'b']) it(`covers ${name}`, () => { assert.equal(needs([name]), true); assert.match(summary, /旧口径/) })"
+  const after = "it('covers a', () => { assert.equal(needs(['a']), true); assert.match(summary, /新口径/) }); it('covers b', () => { assert.equal(needs(['b']), true); assert.match(summary, /新口径/) })"
+  const migrated = inspectTestStandardChange(before, after)
+  assert.equal(migrated.allowed, false)
+  assert.equal(migrated.reason, 'test-assertion-removed-or-rewritten')
+  assert.deepEqual(migrated.changedCases, [])
+  assert.equal(migrated.attributionMigration, true, JSON.stringify(migrated))
+
+  // 真实减少：少一条断言（before 4 条 → after 3 条）→ 不是归因迁移。
+  const dropped = "it('covers a', () => { assert.equal(needs(['a']), true) }); it('covers b', () => { assert.equal(needs(['b']), true); assert.match(summary, /新口径/) })"
+  const droppedResult = inspectTestStandardChange(before, dropped)
+  assert.equal(droppedResult.allowed, false)
+  assert.equal(droppedResult.reason, 'test-assertion-removed-or-rewritten')
+  assert.equal(droppedResult.attributionMigration, false, JSON.stringify(droppedResult))
+
+  // 夹带放宽：assert.equal → assert.ok → 形状不同，不是归因迁移。
+  const loosened = "it('covers a', () => { assert.ok(needs(['a'])); assert.match(summary, /新口径/) }); it('covers b', () => { assert.equal(needs(['b']), true); assert.match(summary, /新口径/) })"
+  const loosenedResult = inspectTestStandardChange(before, loosened)
+  assert.equal(loosenedResult.allowed, false)
+  assert.equal(loosenedResult.attributionMigration, false, JSON.stringify(loosenedResult))
+})

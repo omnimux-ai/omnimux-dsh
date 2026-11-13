@@ -487,3 +487,36 @@ describe('7. 仓库身份不接受伪造的嵌套 .git', () => {
     assert.equal(repoRootOf(resolve(ROOT_DIR, 'scripts/guard-anti-cheat.mjs')), ROOT_DIR);
   });
 });
+
+// #4100：动态用例名静态化后，无主断言迁入具名用例。hook 侧必须与 CI 侧同口径：
+// 只有 attributionMigration 标记才开放文件级 `:: *` 声明，其它空 changedCases 仍硬拒。
+describe('4b. 归因迁移的文件级声明通道（#4100）', () => {
+  const FILE = 'plugins/demo/tests/a.test.mjs';
+  const BEFORE = "for (const n of ['a','b']) test(`covers ${n}`, () => { assert.equal(needs([n]), true) })";
+  const AFTER = "test('covers a', () => { assert.equal(needs(['a']), true) }); test('covers b', () => { assert.equal(needs(['b']), true) })";
+
+  it('无文件级声明时仍 deny，并点名 `*`', () => {
+    const inspection = inspectTestStandardChange(BEFORE, AFTER);
+    assert.equal(inspection.allowed, false);
+    assert.equal(inspection.attributionMigration, true);
+    assert.deepEqual(inspection.changedCases, []);
+    const decision = decideOldStandardDeclaration({ filePath: FILE, inspection, declarations: [] });
+    assert.equal(decision.permissionDecision, 'deny');
+    assert.ok(decision.reason.includes('*'), '拒绝信息必须点名文件级声明');
+  });
+
+  it('文件级 `:: *` 声明放行', () => {
+    const inspection = inspectTestStandardChange(BEFORE, AFTER);
+    const decision = decideOldStandardDeclaration({
+      filePath: FILE,
+      inspection,
+      declarations: [{ path: FILE, caseName: '*' }],
+    });
+    assert.deepEqual(decision, { permissionDecision: 'allow' });
+  });
+
+  it('没有归因迁移标记时，changedCases 为空仍不开通道', () => {
+    const inspection = { allowed: false, reason: 'test-assertion-removed-or-rewritten', changedCases: [], attributionMigration: false };
+    assert.equal(decideOldStandardDeclaration({ filePath: FILE, inspection, declarations: [{ path: FILE, caseName: '*' }] }), null);
+  });
+});
