@@ -91,6 +91,15 @@ function migratedCanvasId(projectId: string, index: number): string {
   return index === 0 ? `ws_${seed}` : `ws_${seed}_${index + 1}`;
 }
 
+/** Generated page titles (e.g. `${title} · 创作页 N`) can exceed the project title
+ *  cap even when the v1 project title itself is legal. Every generated title must be
+ *  clamped, otherwise a long-titled v1 migrates to a v2 record that later fails
+ *  projectSchema and the project silently disappears (the very loop we're fixing). */
+function migratePageTitle(base: string, index: number): string {
+  const generated = index === 0 ? base : `${base} · 创作页 ${index + 1}`;
+  return generated.slice(0, MAX_PROJECT_TITLE_LENGTH);
+}
+
 /**
  * v1→v2 读取迁移。v1 只持 sessionId / canvasWorkspaceIds，没有 pages；这里把它翻成
  * 合法的 v2：
@@ -105,8 +114,12 @@ function migrateV1Project(raw: unknown): Project | null {
   if (!raw || typeof raw !== 'object' || (raw as { schemaVersion?: unknown }).schemaVersion !== 1) return null;
   const record = raw as Record<string, unknown>;
   const id = nonEmpty(record.id);
-  const title = nonEmpty(record.title);
-  if (!id || !title || title.length > MAX_PROJECT_TITLE_LENGTH) return null;
+  const rawTitle = nonEmpty(record.title);
+  // A v1 title over the cap is clamped rather than rejected: dropping the record
+  // would make the project invisible again (the original bug), and every consumer
+  // treats the title as display-only.
+  if (!id || !rawTitle) return null;
+  const title = rawTitle.slice(0, MAX_PROJECT_TITLE_LENGTH);
   const createdAt = typeof record.createdAt === 'string' ? record.createdAt : '';
   const updatedAt = typeof record.updatedAt === 'string' ? record.updatedAt : '';
 
@@ -117,7 +130,9 @@ function migrateV1Project(raw: unknown): Project | null {
       const page = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
       return {
         id: nonEmpty(page.id) ?? (index === 0 ? 'page-default' : `page-${index + 1}`),
-        title: nonEmpty(page.title) ? String(page.title).slice(0, MAX_PROJECT_TITLE_LENGTH) : (index === 0 ? title : `${title} · 创作页 ${index + 1}`),
+        title: nonEmpty(page.title)
+          ? String(page.title).slice(0, MAX_PROJECT_TITLE_LENGTH)
+          : migratePageTitle(title, index),
         createdAt: typeof page.createdAt === 'string' ? page.createdAt : createdAt,
         updatedAt: typeof page.updatedAt === 'string' ? page.updatedAt : updatedAt,
         canvasWorkspaceId: nonEmpty(page.canvasWorkspaceId) ?? migratedCanvasId(id, index),
@@ -130,7 +145,7 @@ function migrateV1Project(raw: unknown): Project | null {
     const canvasIds = ids.length > 0 ? ids : [migratedCanvasId(id, 0)];
     pages = canvasIds.map((canvasWorkspaceId, index) => ({
       id: index === 0 ? 'page-default' : `page-${index + 1}`,
-      title: index === 0 ? title : `${title} · 创作页 ${index + 1}`,
+      title: migratePageTitle(title, index),
       createdAt,
       updatedAt,
       canvasWorkspaceId,
@@ -142,15 +157,21 @@ function migrateV1Project(raw: unknown): Project | null {
     ? requestedActive
     : pages[0]!.id;
 
-  return {
+  // Validate the migration output before handing it out: a migrated record that does
+  // not satisfy projectSchema would be written back to disk only to fail parseProject
+  // later. With every generated title clamped (and the project title clamped above),
+  // this must succeed; the safeParse is a guard, not a fallback path.
+  const migrated: Project = {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     id,
-    title: title.slice(0, MAX_PROJECT_TITLE_LENGTH),
+    title,
     createdAt,
     updatedAt,
     activePageId,
     pages,
   };
+  const validated = projectSchema.safeParse(migrated);
+  return validated.success ? validated.data : null;
 }
 
 /**

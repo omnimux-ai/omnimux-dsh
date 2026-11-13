@@ -78,6 +78,9 @@ function friendlyCreateError(code, t) {
   if (raw === 'project-exists') {
     return text('projects.existingConfirm') || '当前工作区已有项目，要在该项目新建创作页吗？'
   }
+  if (raw === 'project-record-invalid') {
+    return text('projects.recordInvalid') || '该目录的项目档案（project.json）无法读取，请修复或删除后重试。'
+  }
   const mapped = text('projects.createFailed')
   if (typeof mapped === 'string' && mapped.includes('{error}')) {
     return mapped.replace('{error}', '操作失败，请重试。')

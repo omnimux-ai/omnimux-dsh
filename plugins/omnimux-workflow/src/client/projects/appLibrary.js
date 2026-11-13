@@ -629,6 +629,7 @@ export function friendlyForkError(code, fallback = '操作失败，请重试') {
     'version-required': '画布版本号缺失，请重试',
     'version_conflict': '画布版本冲突，请重试',
     'project-exists': '该工作区已存在同名工程，请微调名称',
+    'project-record-invalid': '该目录的项目档案（project.json）无法读取，请修复或删除后重试。',
     'project-required': '需要关联项目工程，请重试',
     'invalid-project-root': '工作区目录路径无效，请重新选择',
     'not-local': '禁止跨域写入本地工作区',

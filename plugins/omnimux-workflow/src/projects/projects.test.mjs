@@ -752,6 +752,52 @@ test('T1 create() 遇 v1 project.json：返回迁移记录（非 409），二次
   }
 });
 
+test('T1 长标题 v1 迁移：生成页标题必须 ≤200，落盘后仍可解析且列表可见（F1 回归）', () => {
+  const MAX = host.MAX_PROJECT_TITLE_LENGTH;
+  const libraryRoot = tmpDir('omnimux-v1-long-title-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+    const projectRoot = join(libraryRoot, '长标题项目');
+    const longTitle = '长'.repeat(MAX); // 项目标题恰在上限，页标题再由其派生必然越界
+
+    // 1) 纯迁移：多 canvasWorkspaceIds 生成 `${title} · 创作页 N` 时必须截断
+    const migrated = host.parseProject({
+      schemaVersion: 1, id: 'v1-long', title: longTitle,
+      createdAt: 'c', updatedAt: 'u', canvasWorkspaceIds: ['ws_1', 'ws_2', 'ws_3'],
+    });
+    assert.ok(migrated, '长标题 v1 必须迁移为合法 v2，不能被丢弃');
+    assert.equal(migrated.pages.length, 3);
+    for (const page of migrated.pages) {
+      assert.ok(
+        page.title.length <= MAX,
+        `页标题必须 ≤ ${MAX}，实际 ${page.title.length}`,
+      );
+      assert.equal(page.title.trim().length > 0, true, '页标题不能为空');
+    }
+
+    // 2) 落盘闭环：create() 返回迁移记录 → addPage 写 v2 → 磁盘记录仍可解析
+    writeV1Project(projectRoot, { id: 'v1-long', title: longTitle, canvasWorkspaceIds: ['ws_1', 'ws_2'] });
+    const created = store.create(longTitle, { projectRoot });
+    assert.equal(created.id, 'v1-long', 'create() 应返回迁移后的既有项目，而非 409');
+    store.addPage(created.id, '追加页');
+
+    const onDisk = JSON.parse(readFileSync(join(projectRoot, '.omnimux', 'project.json'), 'utf8'));
+    const reparsed = host.parseProject(onDisk);
+    assert.ok(reparsed, '落盘后的 v2 记录必须能被 parseProject 读取（否则项目会从列表消失）');
+    assert.ok(
+      reparsed.pages.every((page) => page.title.length <= MAX),
+      '落盘记录中所有页标题必须仍 ≤ 上限',
+    );
+    const listed = store.list();
+    assert.ok(
+      listed.some((row) => row.id === 'v1-long'),
+      '长标题 v1 迁移落盘后必须仍出现在列表（原 bug 是列表消失→再建只回红字）',
+    );
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+  }
+});
+
 test('T1 create() 遇真损坏 project.json：返回 project-record-invalid（非 project-exists/409）', () => {
   const libraryRoot = tmpDir('omnimux-bad-create-');
   try {
