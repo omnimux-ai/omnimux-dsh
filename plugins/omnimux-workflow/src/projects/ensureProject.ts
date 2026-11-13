@@ -35,7 +35,7 @@ import {
 } from 'node:fs';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 import { sanitizeFolderName } from './folderName.ts';
-import { assertProjectInsideLibrary, isInsideDir, resolveProjectPaths } from './paths.ts';
+import { assertProjectInsideLibrary, resolveProjectPaths } from './paths.ts';
 import {
   MAX_PROJECT_TITLE_LENGTH,
   PROJECT_SCHEMA_VERSION,
@@ -73,6 +73,8 @@ export interface EnsureProjectResult {
 /** ProjectStore 注入给状态机的写入/索引能力（不在此复制迁移或落盘逻辑）。 */
 export interface EnsureProjectDeps {
   libraryRoot: string;
+  /** 库内判定（lexical + realpath，符号链接库根两种形态都算库内）。 */
+  isInsideLibrary(dir: string): boolean;
   loadExternalProjectDirs(): string[];
   saveExternalProjectDirs(dirs: string[]): void;
   registerExternalProjectDir(dir: string): void;
@@ -84,8 +86,13 @@ export interface EnsureProjectDeps {
 }
 
 export const DEFAULT_ENSURE_LOCK_TIMEOUT_MS = 10_000;
-export const DEFAULT_ENSURE_LOCK_STALE_MS = 5_000;
+/** 默认必须大于 lockTimeoutMs：只按年龄回收活锁会抢占合法持有者（评审 F1）。 */
+export const DEFAULT_ENSURE_LOCK_STALE_MS = 30_000;
 const LOCK_POLL_MS = 25;
+/** 不可解析锁的最短回收宽限：有效锁是 `wx` 原子创建的完整 JSON，坏文件只可能是崩溃残留。
+ *  不能等到 30s（默认 lockStaleMs）——那会让首次打开必超时（评审 F1b），也不能 0——写入瞬间
+ *  可能读到半文件。1s 宽限兼顾两者。 */
+const UNREADABLE_LOCK_GRACE_MS = 1_000;
 const CANVAS_ID_RE = /^ws_[a-zA-Z0-9_-]{1,128}$/;
 const FALLBACK_TITLE = '未命名项目';
 
@@ -178,6 +185,32 @@ function lockAgeMs(lockPath: string): number {
   }
 }
 
+/**
+ * 锁持有者是否仍存活（评审 F1）：只按 mtime 年龄回收会抢占合法慢持有者，
+ * 导致两个 writer 各建一个 project id。这里以锁里的 pid 为准：
+ *   - pid 已不存在（ESRCH）→ 死锁，可立即回收；
+ *   - pid 存活（或 EPERM/无法判定）→ 不抢，等超时或持有者自己释放。
+ */
+function lockHolderAlive(lockPath: string): boolean | null {
+  let pid: number;
+  try {
+    const parsed = JSON.parse(readFileSync(lockPath, 'utf8')) as { pid?: unknown };
+    pid = typeof parsed.pid === 'number' ? parsed.pid : Number(parsed.pid);
+  } catch {
+    return null;
+  }
+  if (!Number.isInteger(pid) || pid <= 0) return null;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error ? String((error as { code?: unknown }).code) : '';
+    if (code === 'ESRCH') return false;
+    if (code === 'EPERM') return true;
+    return null;
+  }
+}
+
 async function withFileLock<T>(deps: EnsureProjectDeps, root: string, fn: () => T | Promise<T>): Promise<T> {
   const paths = resolveProjectPaths(root);
   mkdirSync(paths.metaDir, { recursive: true });
@@ -198,7 +231,12 @@ async function withFileLock<T>(deps: EnsureProjectDeps, root: string, fn: () => 
         throw new EnsureProjectError('project-lock-failed', `could not create .omnimux/.lock at ${root}: ${(error as Error)?.message ?? String(error)}`);
       }
       const age = lockAgeMs(lockPath);
-      if (age >= 0 && age > deps.lockStaleMs) {
+      const alive = lockHolderAlive(lockPath);
+      const holderDead = alive === false;
+      const unreadableAndStale = alive === null
+        && age >= 0
+        && age > Math.min(deps.lockStaleMs, UNREADABLE_LOCK_GRACE_MS);
+      if (holderDead || unreadableAndStale) {
         rmSync(lockPath, { force: true });
         continue;
       }
@@ -301,14 +339,19 @@ function normalizePages(project: Project): { project: Project; changed: boolean 
     pages = [defaultPage(project.title, now)];
     changed = true;
   }
+  // I4：一个 canvasWorkspaceId 最多映射一个 page —— 重复引用归一（保留首个，其余换新 id）。
+  const seenCanvasIds = new Set<string>();
   pages = pages.map((page) => {
-    const wsId = typeof page.canvasWorkspaceId === 'string' ? page.canvasWorkspaceId.trim() : '';
+    let wsId = typeof page.canvasWorkspaceId === 'string' ? page.canvasWorkspaceId.trim() : '';
     if (wsId === '') {
       changed = true;
-      return { ...page, canvasWorkspaceId: `ws_${randomUUID().replace(/-/g, '').slice(0, 12)}` };
-    }
-    if (wsId !== page.canvasWorkspaceId) {
+      wsId = `ws_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+    } else if (seenCanvasIds.has(wsId)) {
       changed = true;
+      wsId = `ws_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+    }
+    seenCanvasIds.add(wsId);
+    if (wsId !== page.canvasWorkspaceId) {
       return { ...page, canvasWorkspaceId: wsId };
     }
     return page;
@@ -385,7 +428,7 @@ function ensureAtRoot(
       action = 'repaired';
     } else {
       project = parsed;
-      action = opts.mode === 'workspace' && !isRegisteredOutsideLibrary(deps, root) && !isInsideDir(root, deps.libraryRoot)
+      action = opts.mode === 'workspace' && !isRegisteredOutsideLibrary(deps, root) && !deps.isInsideLibrary(root)
         ? 'adopted'
         : 'existing';
     }
@@ -407,20 +450,20 @@ function ensureAtRoot(
     }
   }
 
-  if (opts.mode === 'workspace' && !isInsideDir(root, deps.libraryRoot)) {
-    // S4：registry 重复 / 同 id 双记录 → 先收敛索引，再登记本 root。
+  const needsWrite = action !== 'existing' && action !== 'adopted';
+  const record = needsWrite
+    ? deps.persistProject(root, project)
+    : { ...project, path: root };
+  if (opts.mode === 'workspace' && !deps.isInsideLibrary(root)) {
+    // F5：先落盘再改索引 —— 写盘失败时 registry 不会指向「无档案的 root」。
     if (convergeRegistry(deps, root, project.id)) action = 'converged';
     deps.registerExternalProjectDir(root);
   }
-
-  if (action === 'existing' || action === 'adopted') {
-    return { action, project: { ...project, path: root }, root };
-  }
-  return { action, project: deps.persistProject(root, project), root };
+  return { action, project: record, root };
 }
 
 function isRegisteredOutsideLibrary(deps: EnsureProjectDeps, root: string): boolean {
-  if (isInsideDir(root, deps.libraryRoot)) return false;
+  if (deps.isInsideLibrary(root)) return false;
   const target = resolve(root);
   return deps.loadExternalProjectDirs().some((entry) => resolve(entry) === target);
 }
