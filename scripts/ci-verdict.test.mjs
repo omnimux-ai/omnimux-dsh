@@ -118,7 +118,8 @@ test('environment cannot turn pending worktree browser verification into a pass,
     assert.equal(verdict.dimensions.browser.target, 'worktree')
     assert.equal(verdict.dimensions.browser.status, 'pending')
     assert.equal(verdict.dimensions.browser.pass, null)
-    // Dev is human-owned: it cannot supply the browser pass, and it cannot rescue a failed L0.
+    // Dev acceptance is Bot-owned (machine-readable target still 'human' pending the follow-up):
+    // it cannot supply the browser pass, and it cannot rescue a failed L0.
     assert.equal(verdict.dimensions.dev.required, false)
     assert.equal(verdict.dimensions.dev.status, 'not-applicable')
     assert.equal(verdict.dimensions.dev.pass, null)
