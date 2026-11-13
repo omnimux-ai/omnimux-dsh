@@ -91,3 +91,21 @@ test('.wf-canvas-toolbar 有 pointer-events: auto 且 z-index ≥ 10', () => {
   assert.ok(z, 'missing z-index');
   assert.equal(Number(z[1]) >= 10, true);
 });
+
+test('#4112 Dock 不再渲染导出/导入入口与 transfer 面板', () => {
+  assert.equal(toolbarSrc.includes('toolbar.exportWorkflow'), false);
+  assert.equal(toolbarSrc.includes('toolbar.importWorkflow'), false);
+  assert.equal(toolbarSrc.includes('wf-transfer-panel'), false);
+  assert.equal(toolbarSrc.includes('useWorkflowTransferStore'), false);
+  assert.equal(toolbarSrc.includes('TransferPanel'), false);
+  assert.equal(toolbarSrc.includes('fileInputRef'), false);
+  assert.equal(toolbarSrc.includes('importNonce'), false);
+  assert.equal(toolbarSrc.includes('Download'), false);
+  assert.equal(toolbarSrc.includes('Upload'), false);
+});
+
+test('#4112 Dock 其余入口仍保留', () => {
+  for (const key of ['toolbar.addNode', 'toolbar.insertTemplate', 'toolbar.selectMode', 'toolbar.assets', 'toolbar.help']) {
+    assert.equal(toolbarSrc.includes(key), true, `missing Dock entry: ${key}`);
+  }
+});

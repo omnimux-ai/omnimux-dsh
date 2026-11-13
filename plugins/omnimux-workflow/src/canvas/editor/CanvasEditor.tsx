@@ -70,7 +70,6 @@ import { BatchCreateAssetModal, type MediaAssetItem } from './components/BatchCr
 import { CreateWorkflowModal } from './components/CreateWorkflowModal';
 import { calculateGroupBounds, childIdsOfGroup, planAlignLayout } from './utils/nodeVisualMath';
 import { resolveWorkflowTemplateScope, toFlatTemplateSnapshot } from './utils/workflowTemplateScope';
-import { useWorkflowTransferStore } from '../store/workflowTransferStore';
 import { createTemplate, getTemplate, listTemplates } from '../bridge/templateApi';
 import { sanitizeEdges, sanitizeNodes } from '../bridge/persistSanitize';
 import { planInstantiateTemplate } from './utils/planInstantiateTemplate';
