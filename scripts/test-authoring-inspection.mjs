@@ -434,6 +434,7 @@ export function inspectTestStandardChange(before, after, trustedFacts = {}) {
       reason: removedCases.length ? 'test-case-removed-or-renamed' : 'test-assertion-removed-or-rewritten',
       scope,
       changedCases: [...removedCases, ...weakenedCases].sort(),
+      attributionMigration: false,
     }
   }
   return { allowed: true, reason: null, scope, changedCases: [], attributionMigration: false }

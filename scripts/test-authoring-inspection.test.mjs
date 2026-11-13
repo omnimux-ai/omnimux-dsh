@@ -762,14 +762,30 @@ test('单模板下新判定与原判定等价（域：新用例形状 ⊆ 无主
     // 真实减少（两个用例变一个）→ 两版都 false
     ["for (const a of ['x', 'y']) it(`u ${a}`, () => { assert.equal(t(), 'human') })",
       "it('u x', () => { assert.equal(t(), 'desktop-bot') })"],
+    // 多个新用例各自 ⊂S、并集 = S → 两版都 false（每个用例都不完整）
+    ["for (const a of ['x']) it(`u ${a}`, () => { assert.equal(t(), 'human'); assert.ok(f) })",
+      "it('u1', () => { assert.equal(t(), 'desktop-bot') }); it('u2', () => { assert.ok(f) })"],
+    // own 形状集合 = S 但某形状计数不同（两条同形状）→ 两版都 true
+    ["for (const a of ['x']) it(`u ${a}`, () => { assert.equal(t(), 'human'); assert.ok(f) })",
+      "it('u x', () => { assert.equal(t(), 'desktop-bot'); assert.equal(u(), 'desktop-bot'); assert.ok(f) })"],
+    // 没有新出现的具名用例（用例名不变）→ 两版都 false
+    ["it('u x', () => { assert.equal(t(), 'human') })",
+      "it('u x', () => { assert.equal(t(), 'desktop-bot') })"],
   ]
   const verdicts = cases.map(([before, after]) => {
     const legacy = legacyMigration(before, after)
-    const current = inspectTestStandardChange(before, after).attributionMigration
+    const current = inspectTestStandardChange(before, after).attributionMigration === true
     assert.equal(current, legacy, JSON.stringify({ before, after, legacy, current }))
     return current
   })
   // 测试必须有区分力：至少一条 true、至少一条 false。
   assert.ok(verdicts.includes(true), '等价性样本必须包含 true')
   assert.ok(verdicts.includes(false), '等价性样本必须包含 false')
+
+  // 域外（own 引入 S 外形状，属真正的超集）：新规则更严——这是有意收紧，
+  // 由「夹带 assert.equal→assert.ok」的第 4 条证伪覆盖，不属等价性域。
+  const supersetBefore = "for (const a of ['x']) it(`u ${a}`, () => { assert.equal(t(), 'human') })"
+  const supersetAfter = "it('u x', () => { assert.equal(t(), 'desktop-bot'); assert.ok(extra()) })"
+  assert.equal(legacyMigration(supersetBefore, supersetAfter), true, '旧规则对超集放行')
+  assert.equal(inspectTestStandardChange(supersetBefore, supersetAfter).attributionMigration === true, false, '新规则对超集收紧')
 })
