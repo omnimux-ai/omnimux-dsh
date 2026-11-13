@@ -10,9 +10,9 @@
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync, realpathSync, readdirSync, utimesSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { Writable } from 'node:stream';
 
 const host = await import('../../dist/index.js');
@@ -209,7 +209,8 @@ test('T1 ProjectStore：扫描 list / Host mkdir+seed / remove 不 rm 项目根'
     assert.throws(() => store.get(created.id), (e) => e.code === 'project-not-found');
     assert.equal(existsSync(projectRoot), true, '删除不得 rm 用户文件夹');
     assert.equal(existsSync(join(projectRoot, 'user-notes.txt')), true);
-    assert.equal(existsSync(join(projectRoot, '.omnimux')), false);
+    assert.equal(existsSync(join(projectRoot, '.omnimux', 'project.json')), false, 'remove() 必须摘除项目档案');
+    assert.equal(existsSync(join(projectRoot, '.omnimux')), true, '画布/资产等用户数据所在的 .omnimux 目录不得整目录删除');
     assert.equal(store.list().length, 2);
     assert.throws(() => store.get('../etc'), (e) => e.code === 'invalid-id');
   } finally {
@@ -877,5 +878,338 @@ test('T2 routes：POST/GET v1 目录 200 非 409，随后可追加创作页', as
     rmSync(externalRoot, { recursive: true, force: true });
   }
 });
+
+// ── B1：项目↔工作区关系模型（ensureProject S0–S4 / 单一真源 / 事务 / 并发）─────
+function writeValidV2(root, overrides = {}) {
+  const record = {
+    schemaVersion: 2,
+    id: 'b1-v2',
+    title: '已有项目',
+    createdAt: '2026-11-01T00:00:00.000Z',
+    updatedAt: '2026-11-02T00:00:00.000Z',
+    activePageId: 'page-default',
+    pages: [{
+      id: 'page-default',
+      title: '创作页 1',
+      createdAt: '2026-11-01T00:00:00.000Z',
+      updatedAt: '2026-11-02T00:00:00.000Z',
+      canvasWorkspaceId: 'ws_keep_1',
+    }],
+    ...overrides,
+  };
+  mkdirSync(join(root, '.omnimux'), { recursive: true });
+  writeFileSync(join(root, '.omnimux', 'project.json'), JSON.stringify(record, null, 2));
+  return record;
+}
+
+function writeCanvasFile(root, id, name) {
+  const dir = join(root, '.omnimux', 'canvases');
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, `${id}.json`), JSON.stringify({
+    schemaVersion: 2,
+    id,
+    name,
+    version: 0,
+    nodes: [],
+    edges: [],
+    settings: {},
+    metadata: { createdAt: '2026-11-01T00:00:00.000Z', updatedAt: '2026-11-02T00:00:00.000Z', nodeCount: 0 },
+  }, null, 2));
+}
+
+function readProjectFile(root) {
+  return JSON.parse(readFileSync(join(root, '.omnimux', 'project.json'), 'utf8'));
+}
+
+function readRegistry(libraryRoot) {
+  const file = join(libraryRoot, '.external-projects.json');
+  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : [];
+}
+
+test('B1 S0：空工作区 ensureProject → initialized（合法 v2 + 首创作页 + 登记索引）', async () => {
+  const libraryRoot = tmpDir('omnimux-b1-lib-');
+  const workspace = tmpDir('omnimux-b1-ws-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+    const result = await store.ensureProject({ mode: 'workspace', workspaceDir: workspace });
+    assert.equal(result.action, 'initialized');
+    assert.equal(result.root, realpathSync(workspace));
+    assert.equal(result.project.path, realpathSync(workspace));
+    const onDisk = readProjectFile(result.root);
+    assert.equal(onDisk.schemaVersion, 2);
+    assert.equal(onDisk.pages.length, 1);
+    assert.match(onDisk.pages[0].canvasWorkspaceId, /^ws_/);
+    assert.equal(onDisk.activePageId, onDisk.pages[0].id);
+    assert.ok(host.parseProject(onDisk), '落盘档案必须可被 parseProject 读取');
+    assert.ok(readRegistry(libraryRoot).includes(realpathSync(workspace)), '外置工作区必须登记进索引');
+    assert.equal(store.list().some((row) => row.id === result.project.id), true, '初始化后必须出现在列表');
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test('B1 S1：合法 v2 → adopted；重复调用 → existing 且页数不增长', async () => {
+  const libraryRoot = tmpDir('omnimux-b1-lib-');
+  const workspace = tmpDir('omnimux-b1-ws-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+    const seeded = writeValidV2(workspace, { id: 'b1-s1' });
+    const first = await store.ensureProject({ mode: 'workspace', workspaceDir: workspace });
+    assert.equal(first.action, 'adopted');
+    assert.equal(first.project.id, 'b1-s1');
+    assert.equal(first.project.pages.length, 1);
+    assert.equal(first.project.pages[0].canvasWorkspaceId, 'ws_keep_1');
+    assert.equal(readProjectFile(workspace).id, seeded.id, '采纳不得新建第二个项目');
+
+    const second = await store.ensureProject({ mode: 'workspace', workspaceDir: workspace });
+    assert.equal(second.action, 'existing');
+    assert.equal(second.project.id, 'b1-s1');
+    assert.equal(second.project.pages.length, 1, '幂等不得重复加页');
+    assert.deepEqual(readProjectFile(workspace).pages, seeded.pages);
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test('B1 S2：v1 档案 → repaired（复用 parseProject 迁移，绝不抛 project-exists）', async () => {
+  const libraryRoot = tmpDir('omnimux-b1-lib-');
+  const workspace = tmpDir('omnimux-b1-ws-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+    writeV1Project(workspace, { id: 'b1-s2', title: '旧项目', canvasWorkspaceIds: ['ws_v1_a', 'ws_v1_b'] });
+    const first = await store.ensureProject({ mode: 'workspace', workspaceDir: workspace });
+    assert.equal(first.action, 'repaired');
+    assert.equal(first.project.id, 'b1-s2');
+    assert.deepEqual(first.project.pages.map((p) => p.canvasWorkspaceId), ['ws_v1_a', 'ws_v1_b']);
+    const onDisk = readProjectFile(workspace);
+    assert.equal(onDisk.schemaVersion, 2, 'v1 必须迁移并写回 v2');
+    assert.equal('sessionId' in onDisk, false);
+    assert.equal('canvasWorkspaceIds' in onDisk, false);
+
+    const second = await store.ensureProject({ mode: 'workspace', workspaceDir: workspace });
+    assert.equal(second.action, 'existing', '迁移后重复调用幂等');
+    assert.equal(second.project.id, 'b1-s2');
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test('B1 S2：坏 JSON 档案 → repaired（重建合法 v2），不 409', async () => {
+  const libraryRoot = tmpDir('omnimux-b1-lib-');
+  const workspace = tmpDir('omnimux-b1-ws-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+    mkdirSync(join(workspace, '.omnimux'), { recursive: true });
+    writeFileSync(join(workspace, '.omnimux', 'project.json'), '{ not json');
+    const result = await store.ensureProject({ mode: 'workspace', workspaceDir: workspace });
+    assert.equal(result.action, 'repaired');
+    const onDisk = readProjectFile(workspace);
+    assert.equal(onDisk.schemaVersion, 2);
+    assert.ok(host.parseProject(onDisk));
+    assert.equal(onDisk.pages.length >= 1, true);
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test('B1 S3：无档案但有画布文件 → adopted-files，保留原 canvasWorkspaceId 且不覆盖文件', async () => {
+  const libraryRoot = tmpDir('omnimux-b1-lib-');
+  const workspace = tmpDir('omnimux-b1-ws-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+    writeCanvasFile(workspace, 'ws_canvas_a', '镜头A');
+    writeCanvasFile(workspace, 'ws_canvas_b', '镜头B');
+    const canvasA = join(workspace, '.omnimux', 'canvases', 'ws_canvas_a.json');
+    const beforeA = readFileSync(canvasA, 'utf8');
+
+    const result = await store.ensureProject({ mode: 'workspace', workspaceDir: workspace });
+    assert.equal(result.action, 'adopted-files');
+    assert.deepEqual(
+      result.project.pages.map((p) => p.canvasWorkspaceId),
+      ['ws_canvas_a', 'ws_canvas_b'],
+      '必须保留既有画布 id',
+    );
+    assert.deepEqual(result.project.pages.map((p) => p.title), ['镜头A', '镜头B']);
+    assert.equal(readFileSync(canvasA, 'utf8'), beforeA, '不得覆盖既有画布文件');
+    assert.equal(readProjectFile(workspace).schemaVersion, 2);
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test('B1 S4：registry 重复/同 id 双记录 → converged（只收敛索引，不动用户文件）', async () => {
+  const libraryRoot = tmpDir('omnimux-b1-lib-');
+  const workspace = tmpDir('omnimux-b1-ws-');
+  const duplicate = tmpDir('omnimux-b1-dup-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+    writeValidV2(workspace, { id: 'b1-shared', title: '主项目' });
+    writeValidV2(duplicate, { id: 'b1-shared', title: '重复副本' });
+    const realWorkspace = realpathSync(workspace);
+    const realDuplicate = realpathSync(duplicate);
+    writeFileSync(
+      join(libraryRoot, '.external-projects.json'),
+      JSON.stringify([realWorkspace, realWorkspace, realDuplicate], null, 2),
+    );
+
+    const result = await store.ensureProject({ mode: 'workspace', workspaceDir: workspace });
+    assert.equal(result.action, 'converged');
+    assert.equal(result.project.id, 'b1-shared');
+    const registry = readRegistry(libraryRoot);
+    assert.deepEqual(registry, [realWorkspace], '同一 root 去重 + 同 id 的重复索引被丢弃');
+    assert.ok(existsSync(join(duplicate, '.omnimux', 'project.json')), '重复副本的用户文件必须保留');
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(duplicate, { recursive: true, force: true });
+  }
+});
+
+test('B1 independent：默认库按标题派生 root，重复调用幂等', async () => {
+  const libraryRoot = tmpDir('omnimux-b1-lib-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+    const first = await store.ensureProject({ mode: 'independent', title: '独立项目' });
+    assert.equal(first.action, 'initialized');
+    assert.equal(first.root, join(resolve(libraryRoot), '独立项目'));
+    assert.equal(first.project.path, first.root);
+    const folders = readdirSync(libraryRoot, { withFileTypes: true }).filter((e) => e.isDirectory());
+    assert.equal(folders.length, 1, '只能产生一个项目文件夹');
+
+    const second = await store.ensureProject({ mode: 'independent', title: '独立项目' });
+    assert.equal(second.action, 'existing');
+    assert.equal(second.project.id, first.project.id, '同一 (mode,title) 必须返回同一项目');
+    assert.equal(second.project.pages.length, 1, '幂等不得加页');
+    assert.equal(readRegistry(libraryRoot).includes(first.root), false, '独立项目不登记外置索引');
+    await assert.rejects(
+      store.ensureProject({ mode: 'independent', title: 'x'.repeat(host.MAX_PROJECT_TITLE_LENGTH + 1) }),
+      (error) => error?.code === 'title-too-long',
+    );
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+  }
+});
+
+test('B1 并发：同一工作区两次并发 ensure → 1 个项目 / 1 个 project.json', async () => {
+  const libraryRoot = tmpDir('omnimux-b1-lib-');
+  const workspace = tmpDir('omnimux-b1-ws-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+    const [a, b] = await Promise.all([
+      store.ensureProject({ mode: 'workspace', workspaceDir: workspace }),
+      store.ensureProject({ mode: 'workspace', workspaceDir: workspace }),
+    ]);
+    assert.equal(a.project.id, b.project.id, '并发必须收敛到同一 project id');
+    assert.deepEqual(new Set([a.action, b.action]), new Set(['initialized', 'existing']));
+    assert.equal(readProjectFile(workspace).pages.length, 1, '不得产生重复创作页');
+    const files = readdirSync(join(workspace, '.omnimux')).filter((f) => f === 'project.json');
+    assert.equal(files.length, 1);
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test('B1 锁：过期 .lock 可回收；活锁超时 → project-lock-timeout 且无半成品', async () => {
+  const libraryRoot = tmpDir('omnimux-b1-lib-');
+  const staleWorkspace = tmpDir('omnimux-b1-stale-');
+  const heldWorkspace = tmpDir('omnimux-b1-held-');
+  try {
+    const staleStore = host.createProjectStore({ libraryRoot, lockStaleMs: 50, lockTimeoutMs: 2_000 });
+    mkdirSync(join(staleWorkspace, '.omnimux'), { recursive: true });
+    const staleLock = join(staleWorkspace, '.omnimux', '.lock');
+    writeFileSync(staleLock, '{"pid":999999}');
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(staleLock, old, old);
+    const recovered = await staleStore.ensureProject({ mode: 'workspace', workspaceDir: staleWorkspace });
+    assert.equal(recovered.action, 'initialized', '过期锁必须被回收后正常初始化');
+    assert.equal(existsSync(staleLock), false, '完成后必须释放锁');
+
+    const heldStore = host.createProjectStore({ libraryRoot, lockStaleMs: 60_000, lockTimeoutMs: 120 });
+    mkdirSync(join(heldWorkspace, '.omnimux'), { recursive: true });
+    writeFileSync(join(heldWorkspace, '.omnimux', '.lock'), '{"pid":999999}');
+    await assert.rejects(
+      heldStore.ensureProject({ mode: 'workspace', workspaceDir: heldWorkspace }),
+      (error) => error?.code === 'project-lock-timeout',
+    );
+    assert.equal(existsSync(join(heldWorkspace, '.omnimux', 'project.json')), false, '拿不到锁不得写半成品');
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(staleWorkspace, { recursive: true, force: true });
+    rmSync(heldWorkspace, { recursive: true, force: true });
+  }
+});
+
+test('B1 事务：写盘失败注入 → 无 project.json；恢复后重试得到合法档案', async () => {
+  const libraryRoot = tmpDir('omnimux-b1-lib-');
+  const workspace = tmpDir('omnimux-b1-ws-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+    const metaDir = join(workspace, '.omnimux');
+    mkdirSync(metaDir, { recursive: true });
+    chmodSync(metaDir, 0o555);
+    try {
+      await assert.rejects(store.ensureProject({ mode: 'workspace', workspaceDir: workspace }));
+      assert.equal(existsSync(join(metaDir, 'project.json')), false, '失败后不得留下 project.json');
+    } finally {
+      chmodSync(metaDir, 0o755);
+    }
+    const retry = await store.ensureProject({ mode: 'workspace', workspaceDir: workspace });
+    assert.equal(retry.action, 'initialized');
+    assert.ok(host.parseProject(readProjectFile(workspace)), '恢复后必须是合法档案');
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test('B1 自愈：registry 有记录无文件 → 删索引；有文件无记录 → 补索引（不动用户文件）', async () => {
+  const libraryRoot = tmpDir('omnimux-b1-lib-');
+  const ghost = tmpDir('omnimux-b1-ghost-');
+  const unregistered = tmpDir('omnimux-b1-unreg-');
+  try {
+    writeValidV2(unregistered, { id: 'b1-unreg' });
+    const realGhost = realpathSync(ghost);
+    const realUnregistered = realpathSync(unregistered);
+    writeFileSync(join(libraryRoot, '.external-projects.json'), JSON.stringify([realGhost], null, 2));
+
+    const store = host.createProjectStore({ libraryRoot, workspaceDirs: () => [unregistered] });
+    const listed = store.list();
+    assert.equal(listed.some((row) => row.id === 'b1-unreg'), true, '有文件无记录必须补索引并出现在列表');
+    const registry = readRegistry(libraryRoot);
+    assert.equal(registry.includes(realGhost), false, '无文件的记录必须从索引删除');
+    assert.equal(registry.includes(realUnregistered), true, '补索引后必须登记');
+    assert.ok(existsSync(join(unregistered, '.omnimux', 'project.json')));
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(ghost, { recursive: true, force: true });
+    rmSync(unregistered, { recursive: true, force: true });
+  }
+});
+
+test('B1 remove()：只摘项目档案，不删画布/用户文件夹', async () => {
+  const libraryRoot = tmpDir('omnimux-b1-lib-');
+  const workspace = tmpDir('omnimux-b1-ws-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+    const created = await store.ensureProject({ mode: 'workspace', workspaceDir: workspace });
+    writeCanvasFile(workspace, 'ws_canvas_keep', '保留画布');
+    const canvasFile = join(workspace, '.omnimux', 'canvases', 'ws_canvas_keep.json');
+    store.remove(created.project.id);
+    assert.equal(existsSync(join(workspace, '.omnimux', 'project.json')), false, '项目档案必须摘除');
+    assert.equal(existsSync(canvasFile), true, '画布文件属于用户数据，不得删除');
+    assert.equal(existsSync(workspace), true, '用户文件夹不得删除');
+    assert.equal(store.list().some((row) => row.id === created.project.id), false, '摘除后不再出现在列表');
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
 
 }); // describe

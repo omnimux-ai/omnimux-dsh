@@ -16,6 +16,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -36,6 +37,13 @@ import {
   type ProjectPage,
   type ProjectSummary,
 } from './schema.ts';
+import {
+  DEFAULT_ENSURE_LOCK_STALE_MS,
+  DEFAULT_ENSURE_LOCK_TIMEOUT_MS,
+  runEnsureProject,
+  type EnsureProjectInput,
+  type EnsureProjectResult,
+} from './ensureProject.ts';
 
 export class ProjectStoreError extends Error {
   readonly code: string;
@@ -71,6 +79,11 @@ export interface ProjectStore {
   setActivePage(projectId: string, pageId: string): ProjectRecord;
   /** 摘除元数据，保留用户文件夹。 */
   remove(id: string): void;
+  /**
+   * 项目↔工作区对齐唯一入口（B1）：S0–S4 + 幂等 existing。
+   * 单一真源 = `<root>/.omnimux/project.json` + 画布文件；registry 只是索引。
+   */
+  ensureProject(input: EnsureProjectInput): Promise<EnsureProjectResult>;
 }
 
 function isProjectId(id: string): boolean {
@@ -139,8 +152,21 @@ function toSummary(project: Project, path: string): ProjectSummary {
   };
 }
 
-export function createProjectStore(opts: { libraryRoot: string }): ProjectStore {
+export function createProjectStore(opts: {
+  libraryRoot: string;
+  /**
+   * 可重建索引的补全来源：已注册的工作区目录（B2 路由接 workspaceRegistry）。
+   * 扫描到「目录有合法 project.json 但 registry 无记录」时补索引（文件优先自愈）。
+   */
+  workspaceDirs?: () => string[];
+  /** 跨进程 `.omnimux/.lock` 等待上限（测试可调小）。 */
+  lockTimeoutMs?: number;
+  /** 锁文件过期回收阈值（测试可调小）。 */
+  lockStaleMs?: number;
+}): ProjectStore {
   const { libraryRoot } = opts;
+  const lockTimeoutMs = opts.lockTimeoutMs ?? DEFAULT_ENSURE_LOCK_TIMEOUT_MS;
+  const lockStaleMs = opts.lockStaleMs ?? DEFAULT_ENSURE_LOCK_STALE_MS;
   mkdirSync(libraryRoot, { recursive: true });
   const externalProjectsFile = join(libraryRoot, '.external-projects.json');
 
@@ -219,6 +245,40 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
       seenDirs.add(dir);
       validExternalDirs.push(dir);
     }
+    // 有文件补索引：已注册工作区目录若已有合法 project.json 而 registry 漏记，
+    // 以文件为准补索引（文件优先自愈；只登记，不动用户文件）。
+    if (typeof opts.workspaceDirs === 'function') {
+      let candidates: string[] = [];
+      try {
+        candidates = opts.workspaceDirs() ?? [];
+      } catch {
+        candidates = [];
+      }
+      for (const candidate of candidates) {
+        if (typeof candidate !== 'string' || candidate.trim() === '') continue;
+        const lexical = resolve(candidate);
+        let dir: string;
+        try {
+          dir = realpathSync(lexical);
+        } catch {
+          continue;
+        }
+        // 兼容「库路径是 /var/…、realpath 是 /private/var/…」的同一目录去重。
+        if (seenDirs.has(dir) || seenDirs.has(lexical)) continue;
+        const file = join(dir, '.omnimux', 'project.json');
+        if (!existsSync(file)) continue;
+        const project = parseProject(readJsonFile(file));
+        if (!project) continue;
+        rows.push({ dir, project });
+        seenDirs.add(dir);
+        seenDirs.add(lexical);
+        if (!isInsideDir(dir, libraryRoot) && !validExternalDirs.includes(dir)) {
+          validExternalDirs.push(dir);
+          externalChanged = true;
+        }
+      }
+    }
+
     if (externalChanged) {
       saveExternalProjectDirs(validExternalDirs);
     }
@@ -510,11 +570,22 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
       const current = requireProject(id);
       const paths = resolveProjectPaths(current.dir);
       assertProjectWriteSafe(paths.projectFile, paths.projectRoot);
-      const metaDir = paths.metaDir;
-      if (existsSync(metaDir)) {
-        rmSync(metaDir, { recursive: true, force: true });
-      }
-      // 用户文件夹与生成物一律保留。
+      // 只摘「项目档案」：画布（.omnimux/canvases）、assets.json、生成物与用户
+      // 文件夹全部保留（单一真源里画布文件属于用户数据，不做删除）。
+      if (existsSync(paths.projectFile)) rmSync(paths.projectFile, { force: true });
+      unregisterExternalProjectDir(paths.projectRoot);
+    },
+
+    ensureProject(input: EnsureProjectInput): Promise<EnsureProjectResult> {
+      return runEnsureProject({
+        libraryRoot,
+        loadExternalProjectDirs,
+        saveExternalProjectDirs,
+        registerExternalProjectDir,
+        persistProject,
+        lockTimeoutMs,
+        lockStaleMs,
+      }, input);
     },
   };
 }

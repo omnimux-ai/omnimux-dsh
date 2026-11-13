@@ -90,6 +90,19 @@ export {
 } from './projects/ProjectStore';
 export type { ProjectStore, ProjectRecord } from './projects/ProjectStore';
 export {
+  runEnsureProject,
+  EnsureProjectError,
+  isEnsureProjectError,
+  DEFAULT_ENSURE_LOCK_TIMEOUT_MS,
+  DEFAULT_ENSURE_LOCK_STALE_MS,
+} from './projects/ensureProject';
+export type {
+  EnsureProjectInput,
+  EnsureProjectResult,
+  EnsureProjectAction,
+  EnsureProjectMode,
+} from './projects/ensureProject';
+export {
   ensureWorkspaceProjectBound,
   normalizeWorkspaceProjectTitle,
   createWorkspaceProjectBinder,
