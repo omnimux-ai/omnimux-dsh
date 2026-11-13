@@ -37,6 +37,8 @@
 3. 无主断言真实减少（3 条删成 2 条）→ 仍拒，且 `:: *` 声明也不能覆盖（`declarable: false`）。
 4. 归因迁移同时顺便放宽一条断言（`assert.equal` → `assert.ok`）→ 仍拒（`attributionMigration: false`）。
 
+**判定规则（不得被简化掉）**：只比较断言总数会被「a 用例放宽一条、b 用例补上一条」蒙过。因此 B 的成立条件必须包含：**每个新出现的具名用例都要覆盖原无主断言形状的完整集合**（`isAttributionMigration` 中的 `inheritedShapes` × `newCaseNames` 双重检查）。改动这段判定时，第 4 条证伪必须先红、改完再绿，否则视为放宽原意。
+
 守卫修改反例（§3.4.1）：临时移除 `attributionMigration` 分支后，第 1、2 条必须变红；还原后全绿。
 
 ## 6. 不变量
