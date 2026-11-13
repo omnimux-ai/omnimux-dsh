@@ -22,20 +22,11 @@ OmniMux 团队分工调整：Dev 构建物化 + CDP 实机 e2e 验收由**桌面
 - handoff 用例断言改为 `/Dev 45120 real-device acceptance is owned by the desktop Bot/` 与 `/humans do final confirmation/`；
 - 实跑 `node --test scripts/auto-pipeline.test.mjs` → 24/24 pass。
 
-### `impact-matrix` 的 Dev 文案与 `dev.target` 本 PR 不动（门禁冲突阻塞）
+### `impact-matrix` 的 Dev 文案与 `dev.target`（后续已由 #4099 落地）
 
-`scripts/impact-matrix.mjs` 与 `scripts/impact-matrix.test.mjs` 在本 PR 内**保持 base 原样**（`dev.reason`/`summary` 仍为「人工职责」口径，`dev.target` 仍为 `'human'`）。其 Bot-owned 文案与机器字段迁移由 follow-up #4099 处理，该 follow-up 当前被门禁冲突 issue #4100 阻塞；本 PR 不做静默回退。
+本 PR 内这两个文件保持 base 原样；其 Bot-owned 文案与机器字段迁移已在 follow-up **#4099** 落地（`dev.reason`/`summary` 为桌面端 Bot 口径、`dev.target: 'desktop-bot'`、`ci-verdict.mjs` 校验与 8 处断言级联、`impact-matrix.test.mjs` 用例名静态化）。
 
-原因（结构性门禁冲突：两条不可声明放行的门禁互相打架，任何「动态用例名 + 断言」的测试文件在结构上无法修改）：
-
-- `dynamic-test-options-needs-review`（`scripts/test-authoring-inspection.mjs:172`）：`it()`/`test()` 第一实参不是字符串字面量（模板字面量用例名）即判风险，且**不可声明放行**，只接受消除；
-- 消除后立刻触发 `test-assertion-removed-or-rewritten`（`scripts/test-authoring-inspection.mjs:305-311`）：它按「无主断言桶」逐条比较数量。base 的断言因模板用例名全部落在无主桶，静态化后变成有主 → 无主桶归零 → 判「无主断言被删除」硬拒，且 `changedCases: []` 使任何声明都匹配不到（`scripts/verify-test-standard-declarations.mjs:122-124` 直接判 `declarable: false`）。文件级声明 `- \`<path>\` :: \`*\`` 只在整文件删除（`after === ''`）时开放，不覆盖改写。
-
-复现（本地实跑，base `93f317453`）：
-- 仅静态化两处用例名、断言文本全部保持旧口径 → `node scripts/verify-test-standard-declarations.mjs . 93f31745` 仍报 `- [M] scripts/impact-matrix.test.mjs（test-assertion-removed-or-rewritten）该原因不可经声明放行，必须撤回改动`；
-- 断言改回旧文本 + 保留静态化，报同一条。
-
-因此本 PR 不触碰这两个文件：治理口径以 `AGENTS.md` 与 `docs/contracts/*` 为单一权威，`impact-matrix` 的旧输出暂不可作为 Dev 归属判定依据；门禁冲突已单独开 issue #4100（两条测试门禁互斥），修好后由 #4099 一次性改文案与 `dev.target`。
+当时无法一并处理的原因是两条测试门禁互斥（`dynamic-test-options-needs-review` 与 `test-assertion-removed-or-rewritten` 不可声明放行），该缺陷已由 #4100 定位、#4102 修复（归因迁移走文件级 `:: *` 声明通道），细节见 `specs/gate-attribution-migration.spec.md`。
 
 ## 3. 不变量
 

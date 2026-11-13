@@ -42,7 +42,7 @@ function resolveImpact(qaReport, options) {
   if (l0?.required !== true || l0.phase !== 'pre-merge'
       || typeof browser?.required !== 'boolean' || typeof dev?.required !== 'boolean'
       || browser.phase !== 'post-merge' || dev.phase !== 'post-merge'
-      || browser.target !== 'worktree' || dev.target !== 'human'
+      || browser.target !== 'worktree' || dev.target !== 'desktop-bot'
       || typeof matrix.isUiChange !== 'boolean' || matrix.isUiChange !== browser.required
       || !l0.reason?.trim() || !browser.reason?.trim() || !dev.reason?.trim()) {
     throw new Error('影响面矩阵无效：必须声明合并前 L0 与合并后工作树 Web 验证/桌面端 Bot 开发版验收的适用性及理由')

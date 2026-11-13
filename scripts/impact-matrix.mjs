@@ -39,13 +39,13 @@ export function deriveImpactMatrix(changedFiles = []) {
   return {
     dimensions: {
       l0: { required: true, phase: 'pre-merge', reason: '所有代码变更均需通过 L0 离线单测与语法检查' },
-      dev: { required: false, phase: 'post-merge', target: 'human', reason: devRequired
-        ? '开发版真机验收为人工职责：多工作树并发时共享开发版为单实例、无法并行验收，不作为 Agent 交付卡点；物化保留为可选（供人工实机查看）'
+      dev: { required: false, phase: 'post-merge', target: 'desktop-bot', reason: devRequired
+        ? '开发版真机验收由桌面端 Bot 负责：多工作树并发时共享开发版为单实例，需串行/协调占用；物化后由桌面端 Bot 出 CDP 证据'
         : '无产品运行时或依赖变更，物化与真机验收均不适用' },
       browser: { required: isUiChange, phase: 'post-merge', target: 'worktree', reason },
     },
     isUiChange,
-    summary: `L0: pre-merge required；工作树 Web 验证: ${isUiChange ? 'required' : 'not-applicable'}；开发版真机验收: 人工职责、非 Agent 卡点（${reason}）`,
+    summary: `L0: pre-merge required；工作树 Web 验证: ${isUiChange ? 'required' : 'not-applicable'}；开发版真机验收: 桌面端 Bot 负责（Agent 交付证据）（${reason}）`,
   }
 }
 
