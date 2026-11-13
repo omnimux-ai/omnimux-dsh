@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { inspectTestAuthoring, inspectTestAuthoringDelta, inspectTestStandardChange, parseOldStandardDeclarations, matchOldStandardDeclarations } from './test-authoring-inspection.mjs'
+import { inspectTestAuthoring, inspectTestAuthoringDelta, inspectTestStandardChange, parseOldStandardDeclarations, matchOldStandardDeclarations, collectAssertionFacts } from './test-authoring-inspection.mjs'
 import './public-plugin-apply.test.mjs'
 
 test('normal complete assertion and literal runner candidates are writable', () => {
@@ -702,4 +702,90 @@ test('合法的整批归因迁移仍然放行', () => {
   const after = "test('owns all', () => { assert.equal(a(), 1); assert.equal(b(), 2); assert.equal(c(), 3) })"
   const result = inspectTestStandardChange(before, after)
   assert.equal(result.allowed, true, JSON.stringify(result))
+})
+
+// #4099：同一文件里存在多个模板循环（UI 与非 UI 两套断言形状）时，静态化后每个
+// 新用例应各自等于某个模板的完整形状集合。这是「每个新用例覆盖全部形状」判定的
+// 必要放宽，#4102 的第 3、4 条证伪必须同时保持红。
+test('同一文件里的多个模板循环可以各自完整迁移（#4099 场景）', () => {
+  // 两个模板的形状集合不同（模板1 多一条 assert.ok），且断言值也变（模拟 #4099 的
+  // 'human' → 'desktop-bot'），因此走 B 通道。每个新用例只需等于某一个模板。
+  const before = "for (const a of ['x']) it(`ui ${a}`, () => { assert.equal(target(), 'human'); assert.ok(flag) }); for (const b of ['y']) it(`non ${b}`, () => { assert.equal(other(), 'human') })"
+  const after = "it('ui x', () => { assert.equal(target(), 'desktop-bot'); assert.ok(flag) }); it('non y', () => { assert.equal(other(), 'desktop-bot') })"
+  const result = inspectTestStandardChange(before, after)
+  assert.equal(result.allowed, false, JSON.stringify(result))
+  assert.equal(result.attributionMigration, true, JSON.stringify(result))
+
+  // 只迁移一半（ui 用例被裁掉一条断言）→ 对不上任何模板 → 拒。
+  const partial = "it('ui x', () => { assert.equal(target(), 'desktop-bot') }); it('non y', () => { assert.equal(other(), 'desktop-bot') })"
+  const partialResult = inspectTestStandardChange(before, partial)
+  assert.equal(partialResult.attributionMigration, false, JSON.stringify(partialResult))
+})
+
+// #4107：单模板等价性证明（不是口头等价）。新判定「每个新用例形状集合 == 某个模板
+// 的完整形状集合」与原判定「每个新用例覆盖无主形状并集全部」在域「新用例形状 ⊆
+// before 无主形状集合」内必须完全一致。这里用同一输入分别跑两版实现并逐条比对。
+// 域外（新用例引入 S 外形状，如 assert.equal→assert.ok）新判定更严，属有意收紧，
+// 由第 4 条证伪覆盖。
+test('单模板下新判定与原判定等价（域：新用例形状 ⊆ 无主形状集合）', () => {
+  const total = map => [...map.values()].reduce((sum, n) => sum + n, 0)
+  const legacyMigration = (before, after) => {
+    const b = collectAssertionFacts(before)
+    const a = collectAssertionFacts(after)
+    if (!b || !a) return false
+    if (!b.unattributedStructural.size) return false
+    if (total(a.structuralAssertions) < total(b.structuralAssertions)) return false
+    if (total(a.unattributedAssertions) > 0) return false
+    const attributed = new Map()
+    for (const own of a.caseStructural.values()) for (const [fp, n] of own) attributed.set(fp, (attributed.get(fp) || 0) + n)
+    if (total(attributed) < total(b.unattributedStructural)) return false
+    for (const [fp, n] of b.unattributedStructural) if ((a.structuralAssertions.get(fp) || 0) < n) return false
+    const inherited = [...b.unattributedStructural.keys()]
+    const names = [...a.caseStructural.keys()].filter(name => !b.cases.has(name))
+    if (!names.length) return false
+    for (const name of names) {
+      const own = a.caseStructural.get(name)
+      for (const fp of inherited) if ((own.get(fp) || 0) < 1) return false
+    }
+    return true
+  }
+  const cases = [
+    // 合法单模板迁移（值变化）→ 两版都 true
+    ["for (const a of ['x']) it(`u ${a}`, () => { assert.equal(t(), 'human'); assert.ok(f) })",
+      "it('u x', () => { assert.equal(t(), 'desktop-bot'); assert.ok(f) })"],
+    // 缺一条断言 → 两版都 false
+    ["for (const a of ['x']) it(`u ${a}`, () => { assert.equal(t(), 'human'); assert.ok(f) })",
+      "it('u x', () => { assert.equal(t(), 'desktop-bot') })"],
+    // 残留无主断言 → 两版都 false
+    ["for (const a of ['x']) it(`u ${a}`, () => { assert.equal(t(), 'human') })",
+      "it('u x', () => { assert.equal(t(), 'desktop-bot') }); assert.equal(z(), 1)"],
+    // 真实减少（两个用例变一个）→ 两版都 false
+    ["for (const a of ['x', 'y']) it(`u ${a}`, () => { assert.equal(t(), 'human') })",
+      "it('u x', () => { assert.equal(t(), 'desktop-bot') })"],
+    // 多个新用例各自 ⊂S、并集 = S → 两版都 false（每个用例都不完整）
+    ["for (const a of ['x']) it(`u ${a}`, () => { assert.equal(t(), 'human'); assert.ok(f) })",
+      "it('u1', () => { assert.equal(t(), 'desktop-bot') }); it('u2', () => { assert.ok(f) })"],
+    // own 形状集合 = S 但某形状计数不同（两条同形状）→ 两版都 true
+    ["for (const a of ['x']) it(`u ${a}`, () => { assert.equal(t(), 'human'); assert.ok(f) })",
+      "it('u x', () => { assert.equal(t(), 'desktop-bot'); assert.equal(u(), 'desktop-bot'); assert.ok(f) })"],
+    // 没有新出现的具名用例（用例名不变）→ 两版都 false
+    ["it('u x', () => { assert.equal(t(), 'human') })",
+      "it('u x', () => { assert.equal(t(), 'desktop-bot') })"],
+  ]
+  const verdicts = cases.map(([before, after]) => {
+    const legacy = legacyMigration(before, after)
+    const current = inspectTestStandardChange(before, after).attributionMigration === true
+    assert.equal(current, legacy, JSON.stringify({ before, after, legacy, current }))
+    return current
+  })
+  // 测试必须有区分力：至少一条 true、至少一条 false。
+  assert.ok(verdicts.includes(true), '等价性样本必须包含 true')
+  assert.ok(verdicts.includes(false), '等价性样本必须包含 false')
+
+  // 域外（own 引入 S 外形状，属真正的超集）：新规则更严——这是有意收紧，
+  // 由「夹带 assert.equal→assert.ok」的第 4 条证伪覆盖，不属等价性域。
+  const supersetBefore = "for (const a of ['x']) it(`u ${a}`, () => { assert.equal(t(), 'human') })"
+  const supersetAfter = "it('u x', () => { assert.equal(t(), 'desktop-bot'); assert.ok(extra()) })"
+  assert.equal(legacyMigration(supersetBefore, supersetAfter), true, '旧规则对超集放行')
+  assert.equal(inspectTestStandardChange(supersetBefore, supersetAfter).attributionMigration === true, false, '新规则对超集收紧')
 })
