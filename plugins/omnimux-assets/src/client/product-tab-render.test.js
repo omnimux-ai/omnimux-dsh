@@ -130,14 +130,19 @@ const PRODUCTS = [
   { id: 'p2', name: '台灯', kind: 'physical', selling_points: '无频闪' },
 ]
 
-/** 建一个干净的 jsdom 环境并挂上 fetch 桩。 */
-async function withDom(run) {
-  const { JSDOM } = await import('jsdom')
-  const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
-    url: 'http://localhost/',
-    pretendToBeVisual: true,
-  })
-  const prev = { window: globalThis.window, document: globalThis.document }
+/**
+ * Shared jsdom for this whole file. We install its globals once and never
+ * restore `globalThis.window` to undefined: React's deferred scheduler/cleanup
+ * callbacks read the global `window` (react-dom.development reads
+ * `var currentEvent = window.event`), so tearing the window down between tests
+ * let a late callback throw `Cannot read properties of undefined (reading
+ * 'event')` as an unhandledRejection *after the test ended*, which node:test
+ * reports as a file failure (CI rest-shard flake). One stable environment
+ * removes that crash class; every assertion stays exactly as before.
+ */
+let sharedDom = null
+
+function installDomGlobals(dom) {
   globalThis.window = dom.window
   globalThis.document = dom.window.document
   // Node 25 的 globalThis.navigator 是只读 getter，必须用 defineProperty 覆盖。
@@ -153,6 +158,25 @@ async function withDom(run) {
   globalThis.IntersectionObserver = class { observe() {} unobserve() {} disconnect() {} }
   globalThis.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} })
   globalThis.IS_REACT_ACT_ENVIRONMENT = false
+}
+
+async function ensureDom() {
+  if (sharedDom) return sharedDom
+  const { JSDOM } = await import('jsdom')
+  const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
+    url: 'http://localhost/',
+    pretendToBeVisual: true,
+  })
+  installDomGlobals(dom)
+  sharedDom = dom
+  return dom
+}
+
+/** 用共享 jsdom 跑一个用例；每个用例重置容器与 workbench/fetch 桩。 */
+async function withDom(run) {
+  const dom = await ensureDom()
+  const container = dom.window.document.getElementById('root')
+  if (container) container.innerHTML = ''
 
   const calls = { open: [], closeTab: [], setFocus: [] }
   dom.window.__omnimuxWorkbench = {
@@ -180,9 +204,11 @@ async function withDom(run) {
   try {
     await run({ dom, calls })
   } finally {
-    globalThis.window = prev.window
-    globalThis.document = prev.document
-    dom.window.close()
+    // Drain React's deferred work while the shared window is still installed so
+    // nothing is left to fire after the test; never unset globalThis.window.
+    for (let i = 0; i < 10; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    }
   }
 }
 
