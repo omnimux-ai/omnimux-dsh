@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { createHash, randomBytes } from 'node:crypto';
 import { deflateRawSync } from 'node:zlib';
 import { createHook } from 'node:async_hooks';
-import { setImmediate as immediate } from 'node:timers/promises';
 import { validateInstallPackage } from '../install-validation.js';
 import { VALIDATION_LIMITS as L, checkLimit, type ValidationLimits, type ValidationResult } from '../install-validation-contract.js';
 import { normalizePath, pathKey } from '../install-validation-path.js';
@@ -23,6 +22,21 @@ async function rejected(bytes: Buffer, code?: string): Promise<void> {
 }
 function packageWith(entry: ZipFixtureEntry): Buffer {
   return zipFixture([{ name: 'SKILL.md', bytes: SKILL }, entry]);
+}
+/**
+ * `worker.once('exit')` resolves the validation promise, but async_hooks fires the
+ * WORKER `destroy` callback asynchronously afterwards — a single macrotask yield is
+ * not a guaranteed upper bound, so asserting right after one tick flakes under load.
+ * Poll until every spawned worker is actually destroyed (bounded), so a real "never
+ * destroyed" regression still fails while timing jitter no longer does.
+ */
+async function waitForWorkersDestroyed(workers: Set<number>, destroyed: Set<number>, timeoutMs = 5000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    if (workers.size > 0 && [...workers].every((id) => destroyed.has(id))) return true;
+    if (Date.now() >= deadline) return false;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
 }
 
 test('standalone Markdown returns only validated metadata and exact original byte hash', async () => {
@@ -230,7 +244,8 @@ for(const mode of ['cancel','timeout'] as const) test(`worker ${mode} actually e
   try {
     const c=new AbortController();const p=validateInstallPackage({format:'zip',fileName:'test.zip',bytes:packageWith({name:'large',bytes:randomBytes(1024*1024),method:8})},{signal:c.signal,limits:{timeoutMs:mode==='timeout'?1:30000}});
     if(mode==='cancel')c.abort();const r=await p;assert(!r.ok);assert.equal(r.code,mode==='cancel'?'VALIDATION_ABORTED':'VALIDATION_TIMEOUT');
-    await immediate();assert.equal(workers.size,1);for(const id of workers)assert(destroyed.has(id),'WORKER resource must be destroyed');
+    const allDestroyed=await waitForWorkersDestroyed(workers,destroyed);
+    assert.equal(workers.size,1);for(const id of workers)assert(destroyed.has(id),'WORKER resource must be destroyed');assert.ok(allDestroyed,'WORKER 退出后必须在限时内销毁（async_hooks destroy）');
   } finally {hook.disable();}
 });
 
