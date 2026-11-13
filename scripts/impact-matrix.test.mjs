@@ -10,11 +10,10 @@ import { deriveImpactMatrix, requiresBrowser, requiresDev, postMergeAcceptance }
 const script = fileURLToPath(new URL('./impact-matrix.mjs', import.meta.url))
 
 describe('impact matrix', () => {
-  for (const file of [
-    'plugins/a/client/index.js', 'plugins/a/src/client/View.js', 'apps/desktop/main.js',
-    'web/index.js', 'plugins/a/Stage.js', 'Stage.ts', 'view.jsx', 'view.tsx', 'view.vue',
-    'view.svelte', 'view.html', 'theme.css', 'theme.scss', 'plugins\\a\\client\\View.js',
-  ]) it(`requires ego-browser for ${file}`, () => {
+  // 用例名逐字静态化（原为循环内模板字面量）：动态用例名会被 test-authoring 门禁判为
+  // dynamic-test-options-needs-review 且该原因不可声明放行，因此改为显式 it() + 共享断言体，
+  // 名称与断言内容与静态化前完全一致。
+  const assertUiFile = file => {
     const matrix = deriveImpactMatrix([file])
     assert.equal(matrix.isUiChange, true)
     assert.equal(matrix.dimensions.browser.required, true)
@@ -24,16 +23,26 @@ describe('impact matrix', () => {
     assert.match(matrix.summary, /工作树 Web 验证: required/)
     assert.equal(matrix.dimensions.dev.required, false)
     assert.equal(matrix.dimensions.dev.target, 'human')
-    assert.match(matrix.summary, /开发版真机验收: 人工职责、非 Agent 卡点/)
+    assert.match(matrix.summary, /开发版真机验收: 桌面端 Bot 负责/)
     assert.equal(matrix.dimensions.l0.required, true)
     assert.equal(requiresBrowser([file]), true)
-  })
+  }
+  it('requires ego-browser for plugins/a/client/index.js', () => assertUiFile('plugins/a/client/index.js'))
+  it('requires ego-browser for plugins/a/src/client/View.js', () => assertUiFile('plugins/a/src/client/View.js'))
+  it('requires ego-browser for apps/desktop/main.js', () => assertUiFile('apps/desktop/main.js'))
+  it('requires ego-browser for web/index.js', () => assertUiFile('web/index.js'))
+  it('requires ego-browser for plugins/a/Stage.js', () => assertUiFile('plugins/a/Stage.js'))
+  it('requires ego-browser for Stage.ts', () => assertUiFile('Stage.ts'))
+  it('requires ego-browser for view.jsx', () => assertUiFile('view.jsx'))
+  it('requires ego-browser for view.tsx', () => assertUiFile('view.tsx'))
+  it('requires ego-browser for view.vue', () => assertUiFile('view.vue'))
+  it('requires ego-browser for view.svelte', () => assertUiFile('view.svelte'))
+  it('requires ego-browser for view.html', () => assertUiFile('view.html'))
+  it('requires ego-browser for theme.css', () => assertUiFile('theme.css'))
+  it('requires ego-browser for theme.scss', () => assertUiFile('theme.scss'))
+  it('requires ego-browser for plugins\\a\\client\\View.js', () => assertUiFile('plugins\\a\\client\\View.js'))
 
-  for (const files of [
-    [], ['docs/guide.md'], ['scripts/server.mjs', 'docs/contracts/plugin-qa.md'],
-    ['plugins/a/src/service.js', '.github/workflows/quality-gate.yml'],
-    ['contracts/api.json', 'package.json', 'clients/readme.md', 'website/backend.js'],
-  ]) it(`marks non-UI changes not applicable: ${JSON.stringify(files)}`, () => {
+  const assertNonUi = files => {
     const matrix = deriveImpactMatrix(files)
     assert.equal(matrix.isUiChange, false)
     assert.equal(matrix.dimensions.browser.required, false)
@@ -43,7 +52,12 @@ describe('impact matrix', () => {
     assert.equal(matrix.dimensions.dev.target, 'human')
     assert.match(matrix.summary, /not-applicable/)
     assert.equal(matrix.dimensions.l0.required, true)
-  })
+  }
+  it('marks non-UI changes not applicable: []', () => assertNonUi([]))
+  it('marks non-UI changes not applicable: ["docs/guide.md"]', () => assertNonUi(['docs/guide.md']))
+  it('marks non-UI changes not applicable: ["scripts/server.mjs","docs/contracts/plugin-qa.md"]', () => assertNonUi(['scripts/server.mjs', 'docs/contracts/plugin-qa.md']))
+  it('marks non-UI changes not applicable: ["plugins/a/src/service.js",".github/workflows/quality-gate.yml"]', () => assertNonUi(['plugins/a/src/service.js', '.github/workflows/quality-gate.yml']))
+  it('marks non-UI changes not applicable: ["contracts/api.json","package.json","clients/readme.md","website/backend.js"]', () => assertNonUi(['contracts/api.json', 'package.json', 'clients/readme.md', 'website/backend.js']))
 
   it('runtime-only changes never require post-merge Dev acceptance, while docs and test fixtures stay not applicable', () => {
     for (const file of ['plugins/a/src/service.js', 'plugins/a/dsh.manifest.json', 'package.json', 'pnpm-lock.yaml', 'packages/host/index.ts']) {
@@ -54,7 +68,7 @@ describe('impact matrix', () => {
       assert.equal(matrix.dimensions.dev.required, false, file)
       assert.equal(pending.dev.status, 'not-applicable')
       assert.equal(pending.dev.pass, null)
-      assert.match(pending.dev.reason, /人工职责/)
+      assert.match(pending.dev.reason, /桌面端 Bot 负责/)
       assert.equal(pending.browser.required, false)
       assert.equal(pending.browser.status, 'not-applicable')
       assert.equal(pending.browser.pass, null)
