@@ -329,7 +329,8 @@ function isAttributionMigration(beforeFacts, afterFacts) {
   if (!beforeFacts.unattributedStructural.size) return false
   if (sumCounts(afterFacts.structuralAssertions) < sumCounts(beforeFacts.structuralAssertions)) return false
   const beforeUnattributed = sumCounts(beforeFacts.unattributedStructural)
-  if (sumCounts(afterFacts.unattributedStructural) >= beforeUnattributed) return false
+  // 迁移必须把无主断言**全部**交出去：after 残留任何无主断言都不算完成（review F3）。
+  if (sumCounts(afterFacts.unattributedAssertions) > 0) return false
   const afterAttributed = mergeCounts([...afterFacts.caseStructural.values()])
   if (sumCounts(afterAttributed) < beforeUnattributed) return false
   for (const [fingerprint, count] of beforeFacts.unattributedStructural) {
@@ -372,16 +373,30 @@ export function inspectTestStandardChange(before, after, trustedFacts = {}) {
   const beforeFacts = collectAssertionFacts(before)
   const afterFacts = collectAssertionFacts(after)
   if (!beforeFacts || !afterFacts) return { allowed: false, reason: 'unsupported-or-incomplete-test-syntax', scope, changedCases: [] }
-  // A: cross-bucket multiset — an assertion that moves from the unattributed
-  // bucket into a named case is not a removal, so compare the union of both
-  // buckets after the change.
-  const afterAttributed = mergeCounts([...afterFacts.caseAssertions.values()])
-  let unattributedDeficit = false
-  for (const [fingerprint, count] of beforeFacts.unattributedAssertions) {
-    const afterCount = (afterFacts.unattributedAssertions.get(fingerprint) || 0) + (afterAttributed.get(fingerprint) || 0)
-    if (afterCount < count) { unattributedDeficit = true; break }
+  // A: per-fingerprint compensation — an assertion may move from the
+  // unattributed bucket into a named case, but only if the named side really
+  // gained the same fingerprint. Comparing totals (or only the before
+  // unattributed side) would let a real removal slip through whenever the same
+  // fingerprint still exists inside some named case (review F1).
+  const beforeNamed = mergeCounts([...beforeFacts.caseAssertions.values()])
+  const afterNamed = mergeCounts([...afterFacts.caseAssertions.values()])
+  // 归因迁移必须一次交清：一旦检测到无主断言真的减少（迁移发生），after 不得
+  // 残留任何无主断言（否则「迁一半、留一半」会绕过完整迁移审查，review F3）。
+  // 只有「减少后仍有残留」才是削弱信号；无主断言原样不动（例如追加用例）不算。
+  const beforeUnattributedTotal = sumCounts(beforeFacts.unattributedAssertions)
+  const afterUnattributedTotal = sumCounts(afterFacts.unattributedAssertions)
+  let assertionDeficit = afterUnattributedTotal < beforeUnattributedTotal && afterUnattributedTotal > 0
+  const fingerprints = new Set([...beforeFacts.unattributedAssertions.keys(), ...beforeNamed.keys()])
+  if (!assertionDeficit) {
+    for (const fingerprint of fingerprints) {
+      const drop = (beforeFacts.unattributedAssertions.get(fingerprint) || 0) - (afterFacts.unattributedAssertions.get(fingerprint) || 0)
+      if (drop <= 0) continue
+      // 负增量按 0 处理：具名侧本来就有同指纹断言不等于本次新增。
+      const increase = Math.max(0, (afterNamed.get(fingerprint) || 0) - (beforeNamed.get(fingerprint) || 0))
+      if (drop > increase) { assertionDeficit = true; break }
+    }
   }
-  if (unattributedDeficit) {
+  if (assertionDeficit) {
     // B: the remaining way to a named-case contract is a reviewed attribution
     // migration. It must never mask a real removal or a loosened assertion.
     return {

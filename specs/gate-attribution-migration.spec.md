@@ -26,8 +26,10 @@
 ## 4. 实现要点
 
 - `collectAssertionFacts` 新增结构化指纹（`structuralAssertions` / `caseStructural` / `unattributedStructural`）：标量（字面量、正则、模板、标识符）统一归一为 `Scalar`，成员调用的属性名保留（`assert.equal` ≠ `assert.ok`）。
-- A 在 `inspectTestStandardChange` 中按跨桶合并计数判定。
-- B 由 `isAttributionMigration` 判定，条件全部满足才算：总数不减、无主桶确实减少、迁移后的断言全部落在具名用例、每条原无主形状在 `after` 全局仍存在、且**每个新出现的具名用例都覆盖原无主形状的完整集合**（防止「a 用例放宽一条、b 用例补上一条」）。
+- A 按**指纹补偿式**判定：对每个断言指纹 `fp`，要求 `unattributedDrop(fp) <= namedIncrease(fp)`，其中 `namedIncrease(fp) = max(0, afterAttributed(fp) - beforeAttributed(fp))`。负增量按 0 处理——具名侧本来就有的同指纹断言不算本次新增，否则「具名本来 3 条、本次新增 0 条」会被错算成 +3，把删无主断言的旁路放回来（review F1）。
+- 归因迁移必须**一次交清**：`before` 存在无主断言时，`after` 不得残留任何无主断言（`sumCounts(afterFacts.unattributedAssertions) === 0`）。选归零而不是「减少且原形状仍在」，是因为 F1 修完后「残留无主 + 补偿成立」已无合法用途，归零语义最简单、最难点后被绕（review F3）。
+- B 由 `isAttributionMigration` 判定，条件全部满足才算：总数不减、无主断言归零、迁移后的断言全部落在具名用例、每条原无主形状在 `after` 全局仍存在、且**每个新出现的具名用例都覆盖原无主形状的完整集合**（防止「a 用例放宽一条、b 用例补上一条」）。
+- 补偿式只回答「无主减少是否由具名新增补上」，**不替代**原有的 per-case 检查（`removedCases` / `weakenedCases`）：具名用例内部的断言放宽仍走原路径，两条判定并行。
 - `inspectTestStandardChange` 结果新增 `attributionMigration` 布尔字段；`attributionMigration: true` 只表示「可进入文件级声明通道」，不表示放行。
 
 ## 5. 证伪方式（验收，缺一条不合并）
@@ -37,9 +39,17 @@
 3. 无主断言真实减少（3 条删成 2 条）→ 仍拒，且 `:: *` 声明也不能覆盖（`declarable: false`）。
 4. 归因迁移同时顺便放宽一条断言（`assert.equal` → `assert.ok`）→ 仍拒（`attributionMigration: false`）。
 
+5. **F1 旁路**：同一指纹既存在于无主断言、又存在于某个具名用例；迁移后删掉无主那条、具名那条原样保留 → **必须拒绝**（`allowed: false`、reason `test-assertion-removed-or-rewritten`、`attributionMigration: false`、`changedCases: []`），且文件级 `:: *` 声明也盖不住（`declarable: false`）。回退补偿逻辑（改回并集总量比较）时这条必须红。
+6. **F3 残留**：`before` 有无主断言、`after` 迁移后又留下无主断言 → **必须拒绝**（同上四项断言）。回退「after 无主归零」判定时这条必须红。
+
 **判定规则（不得被简化掉）**：只比较断言总数会被「a 用例放宽一条、b 用例补上一条」蒙过。因此 B 的成立条件必须包含：**每个新出现的具名用例都要覆盖原无主断言形状的完整集合**（`isAttributionMigration` 中的 `inheritedShapes` × `newCaseNames` 双重检查）。改动这段判定时，第 4 条证伪必须先红、改完再绿，否则视为放宽原意。
 
-守卫修改反例（§3.4.1）：临时移除 `attributionMigration` 分支后，第 1、2 条必须变红；还原后全绿。
+守卫修改反例（§3.4.1）：
+- 临时移除 `attributionMigration` 分支 → 第 1、2 条必须变红；还原后全绿；
+- 临时把补偿式改回并集总量比较 → 第 5 条必须变红；还原后全绿；
+- 临时移除「after 无主归零」判定 → 第 6 条必须变红；还原后全绿。
+
+已知边界（**F2，不在本 PR 范围**，已登记 follow-up）：结构化指纹把标量值归一，因此带 `:: *` 声明时「值级变化」（如 `assert.equal(..., 1)` → `assert.equal(..., 2)`）仍可通过，靠声明与评审兜底；follow-up 要求声明模板强制逐条列出值变化。
 
 ## 6. 不变量
 

@@ -672,3 +672,34 @@ test('attribution migration is flagged only when no assertion was lost or loosen
   assert.equal(loosenedResult.allowed, false)
   assert.equal(loosenedResult.attributionMigration, false, JSON.stringify(loosenedResult))
 })
+
+// 评审 F1：同一指纹既在无主断言、又在具名用例里时，删掉无主那条、具名那条原样保留
+// 不能被「无主减少由具名新增补上」的补偿式放行（具名侧本次新增为 0）。
+test('删掉无主断言、保留同指纹的具名断言仍然拒绝（F1 旁路）', () => {
+  const before = "assert.equal(shared(), 1); test('x', () => { assert.equal(shared(), 1) })"
+  const after = "test('x', () => { assert.equal(shared(), 1) })"
+  const result = inspectTestStandardChange(before, after)
+  assert.equal(result.allowed, false, JSON.stringify(result))
+  assert.equal(result.reason, 'test-assertion-removed-or-rewritten')
+  assert.deepEqual(result.changedCases, [])
+  assert.equal(result.attributionMigration, false)
+})
+
+// 评审 F3：归因迁移要求 after 无主断言归零；「迁一半、留一条无主」不算迁移完成。
+test('迁移后残留无主断言仍然拒绝（F3 归零）', () => {
+  // 归因迁移成立（具名侧补齐了原无主形状）但同时残留一条无主断言：必须拒。
+  const before = "for (const n of ['a']) it(`x ${n}`, () => { assert.equal(covered(), 1); assert.equal(extra(), 2) })"
+  const after = "it('x a', () => { assert.equal(covered(), 1); assert.equal(extra(), 2) }); assert.equal(residual(), 3)"
+  const result = inspectTestStandardChange(before, after)
+  assert.equal(result.allowed, false, JSON.stringify(result))
+  assert.equal(result.reason, 'test-assertion-removed-or-rewritten')
+  assert.equal(result.attributionMigration, false)
+})
+
+// 补偿式没有把合法迁移一起拦死：无主 3 → 0、具名 0 → 3 仍放行。
+test('合法的整批归因迁移仍然放行', () => {
+  const before = "assert.equal(a(), 1); assert.equal(b(), 2); assert.equal(c(), 3)"
+  const after = "test('owns all', () => { assert.equal(a(), 1); assert.equal(b(), 2); assert.equal(c(), 3) })"
+  const result = inspectTestStandardChange(before, after)
+  assert.equal(result.allowed, true, JSON.stringify(result))
+})

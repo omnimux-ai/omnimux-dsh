@@ -328,3 +328,37 @@ test('文件级声明不能覆盖无主断言的真实减少', () => {
     assert.equal(result.violations[0].declarable, false)
   })
 })
+
+// 评审 F1：删掉无主断言、保留同指纹的具名断言——补偿式不成立，文件级声明也盖不住。
+test('F1 旁路不能用文件级声明放行', () => {
+  withFixtureRepo(repo => {
+    const before = "import test from 'node:test'\nimport assert from 'node:assert/strict'\nassert.equal(shared(), 1)\ntest('x', () => { assert.equal(shared(), 1) })\n"
+    const after = "import test from 'node:test'\nimport assert from 'node:assert/strict'\ntest('x', () => { assert.equal(shared(), 1) })\n"
+    repo.write(TEST_FILE, before)
+    const base = repo.commit('base with duplicate fingerprint')
+    repo.write(TEST_FILE, after)
+    repo.write(SPEC_FILE, `${SPEC_HEADER}\n## 旧标准变更\n\n- \`${TEST_FILE}\` :: \`*\`\n  - 理由：试图用文件级声明盖住无主断言的删除。\n`)
+    repo.commit('drop unattributed behind a file-level declaration')
+    const result = verifyTestStandardDeclarations({ root: repo.root, base })
+    assert.equal(result.violations.length, 1)
+    assert.equal(result.violations[0].reason, 'test-assertion-removed-or-rewritten')
+    assert.equal(result.violations[0].declarable, false)
+  })
+})
+
+// 评审 F3：迁移后残留无主断言——不是完整迁移，文件级声明同样盖不住。
+test('F3 残留无主断言不能用文件级声明放行', () => {
+  withFixtureRepo(repo => {
+    const before = "import test from 'node:test'\nimport assert from 'node:assert/strict'\nfor (const n of ['a']) it(`x ${n}`, () => { assert.equal(covered(), 1); assert.equal(extra(), 2) })\n"
+    const after = "import test from 'node:test'\nimport assert from 'node:assert/strict'\nit('x a', () => { assert.equal(covered(), 1); assert.equal(extra(), 2) })\nassert.equal(residual(), 3)\n"
+    repo.write(TEST_FILE, before)
+    const base = repo.commit('base template case')
+    repo.write(TEST_FILE, after)
+    repo.write(SPEC_FILE, `${SPEC_HEADER}\n## 旧标准变更\n\n- \`${TEST_FILE}\` :: \`*\`\n  - 理由：试图用文件级声明盖住残留的无主断言。\n`)
+    repo.commit('partial migration behind a file-level declaration')
+    const result = verifyTestStandardDeclarations({ root: repo.root, base })
+    assert.equal(result.violations.length, 1)
+    assert.equal(result.violations[0].reason, 'test-assertion-removed-or-rewritten')
+    assert.equal(result.violations[0].declarable, false)
+  })
+})
