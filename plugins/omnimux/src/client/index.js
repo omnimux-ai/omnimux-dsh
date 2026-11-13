@@ -18,6 +18,7 @@ import { getStatusCached } from './api.js'
 import { installHubChrome } from './chrome.js'
 import { installWorkbenchGlobal } from './workbench.js'
 import { STYLES_ID, injectHubStyles } from './styles.js'
+import { ensureSidebarGuideScrollChrome, removeSidebarGuideScrollChrome } from './sidebar-guide-scroll.js'
 import { HeroBrandMark } from './HeroBrandMark.jsx'
 import { installHeroBrandSlot } from './hero-brand.js'
 import { installStatsLineShadow } from './stats-line-shadow.js'
@@ -91,6 +92,12 @@ export function apply(ctx) {
     injectHubStyles()
     return () => { document.getElementById(STYLES_ID)?.remove() }
   }, 'omnimux: hub client styles')
+  // Keep the official right-sidebar 「开始/guide」 entry list scrollable inside its
+  // clipped tab body (see sidebar-guide-scroll.js for the root cause).
+  ctx.effect?.(() => {
+    ensureSidebarGuideScrollChrome()
+    return () => { removeSidebarGuideScrollChrome() }
+  }, 'omnimux: sidebar guide scroll')
 
   // Apps shelf temporarily taken down (core-first): the 应用 row, app tabs,
   // and AppsStage overlay stay in the source tree (apps-store.js / app-tabs.js
