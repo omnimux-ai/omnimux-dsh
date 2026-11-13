@@ -101,9 +101,13 @@ export function decideOldStandardDeclaration({ filePath, inspection, declaration
   if (!inspection || inspection.allowed) return null;
   if (!DECLARABLE_TEST_STANDARD_REASONS.has(inspection.reason)) return null;
   const changedCases = Array.isArray(inspection.changedCases) ? inspection.changedCases : [];
-  if (changedCases.length === 0) return null;
+  // 归因迁移（无主断言 → 具名用例）没有可点名的用例，与整文件退役同走文件级
+  // `:: *` 声明；真实减少/放宽不会置 attributionMigration，通道不会因此放宽。
+  const fileLevel = changedCases.length === 0 && inspection.attributionMigration === true;
+  if (changedCases.length === 0 && !fileLevel) return null;
+  const targets = fileLevel ? ['*'] : changedCases;
   const declared = Array.isArray(declarations) ? declarations : collectOldStandardDeclarations(root);
-  const { ok, missing } = matchOldStandardDeclarations({ declarations: declared, filePath, changedCases });
+  const { ok, missing } = matchOldStandardDeclarations({ declarations: declared, filePath, changedCases: targets });
   if (ok) return { permissionDecision: 'allow' };
   return {
     permissionDecision: 'deny',

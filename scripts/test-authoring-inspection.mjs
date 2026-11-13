@@ -13,6 +13,25 @@ function canonical(value) {
 }
 
 
+// Structural fingerprint: same assertion shape and callee, but literal payloads
+// (strings/regexes/templates) are collapsed to their node type. This lets an
+// attribution migration be reviewed through a file-level declaration while a
+// genuinely loosened assertion (`assert.equal` → `assert.ok`) still differs.
+function structural(value) {
+  if (Array.isArray(value)) return value.map(structural)
+  if (!value || typeof value !== 'object') return value
+  // 标量（字面量/正则/模板/变量名）统一归一：静态化会把循环变量换成字面量，
+  // 这正是归因迁移的典型形态，两者不应因「值 vs 引用」而形状不同。
+  if (['Literal', 'RegExpLiteral', 'TemplateLiteral', 'BigIntLiteral', 'Identifier'].includes(value.type)) return { type: 'Scalar' }
+  // 成员调用的属性名必须保留：它才是 `assert.equal` 与 `assert.ok` 的区别。
+  if (value.type === 'MemberExpression' && !value.computed) {
+    return { type: value.type, computed: false, property: value.property.name ?? value.property.value, object: structural(value.object) }
+  }
+  return Object.fromEntries(Object.entries(value)
+    .filter(([key]) => !['start', 'end', 'loc'].includes(key))
+    .map(([key, child]) => [key, structural(child)]))
+}
+
 function contextOf(node) {
   if (functions.has(node.type)) return { type: node.type, id: node.id, params: node.params, async: node.async, generator: node.generator }
   if (node.type === 'VariableDeclarator') return { type: node.type, id: node.id }
@@ -240,6 +259,9 @@ function collectAssertionFacts(code) {
   const cases = new Set()
   const caseAssertions = new Map()
   const unattributedAssertions = new Map()
+  const structuralAssertions = new Map()
+  const caseStructural = new Map()
+  const unattributedStructural = new Map()
   const runners = new Set(['test', 'it', 'describe'])
   const caseRunners = new Set(['test', 'it'])
   const bump = (map, key) => map.set(key, (map.get(key) || 0) + 1)
@@ -259,11 +281,18 @@ function collectAssertionFacts(code) {
       if (root === 'assert' || root === 'expect') {
         const fingerprint = JSON.stringify(canonical({ callee: node.callee, arguments: node.arguments }))
         bump(assertions, fingerprint)
-        if (caseName === null) bump(unattributedAssertions, fingerprint)
-        else {
+        const structuralFingerprint = JSON.stringify(structural({ callee: node.callee, arguments: node.arguments }))
+        bump(structuralAssertions, structuralFingerprint)
+        if (caseName === null) {
+          bump(unattributedAssertions, fingerprint)
+          bump(unattributedStructural, structuralFingerprint)
+        } else {
           let own = caseAssertions.get(caseName)
           if (!own) caseAssertions.set(caseName, own = new Map())
           bump(own, fingerprint)
+          let ownStructural = caseStructural.get(caseName)
+          if (!ownStructural) caseStructural.set(caseName, ownStructural = new Map())
+          bump(ownStructural, structuralFingerprint)
         }
       }
       const directRunner = node.callee.type === 'Identifier' && runners.has(node.callee.name)
@@ -279,7 +308,46 @@ function collectAssertionFacts(code) {
     }
   }
   visit(ast, null)
-  return { assertions, cases, caseAssertions, unattributedAssertions }
+  return { assertions, cases, caseAssertions, unattributedAssertions, structuralAssertions, caseStructural, unattributedStructural }
+}
+
+const sumCounts = map => { let total = 0; for (const count of map.values()) total += count; return total }
+const mergeCounts = maps => {
+  const out = new Map()
+  for (const map of maps) for (const [key, count] of map) out.set(key, (out.get(key) || 0) + count)
+  return out
+}
+
+/**
+ * Bounded channel B: `before` assertions that no named case owned moved into
+ * named cases. Allowed to reach the declaration channel only when nothing was
+ * lost or loosened — total assertion count must not drop, every pre-existing
+ * unattributed assertion *shape* must still exist afterwards, and those shapes
+ * must now be owned by named cases.
+ */
+function isAttributionMigration(beforeFacts, afterFacts) {
+  if (!beforeFacts.unattributedStructural.size) return false
+  if (sumCounts(afterFacts.structuralAssertions) < sumCounts(beforeFacts.structuralAssertions)) return false
+  const beforeUnattributed = sumCounts(beforeFacts.unattributedStructural)
+  if (sumCounts(afterFacts.unattributedStructural) >= beforeUnattributed) return false
+  const afterAttributed = mergeCounts([...afterFacts.caseStructural.values()])
+  if (sumCounts(afterAttributed) < beforeUnattributed) return false
+  for (const [fingerprint, count] of beforeFacts.unattributedStructural) {
+    const hit = afterFacts.structuralAssertions.get(fingerprint) || 0
+    if (hit < count) return false
+  }
+  // 迁移必须是「整组复制」：每个新出现的具名用例都要覆盖原无主断言的完整形状集合。
+  // 否则「a 用例放宽一条、b 用例补上一条」这类夹带削弱会因总数不变而被放过。
+  const inheritedShapes = [...beforeFacts.unattributedStructural.keys()]
+  const newCaseNames = [...afterFacts.caseStructural.keys()].filter(name => !beforeFacts.cases.has(name))
+  if (!newCaseNames.length) return false
+  for (const name of newCaseNames) {
+    const own = afterFacts.caseStructural.get(name)
+    for (const fingerprint of inheritedShapes) {
+      if ((own.get(fingerprint) || 0) < 1) return false
+    }
+  }
+  return true
 }
 
 /**
@@ -304,10 +372,24 @@ export function inspectTestStandardChange(before, after, trustedFacts = {}) {
   const beforeFacts = collectAssertionFacts(before)
   const afterFacts = collectAssertionFacts(after)
   if (!beforeFacts || !afterFacts) return { allowed: false, reason: 'unsupported-or-incomplete-test-syntax', scope, changedCases: [] }
-  // Assertions no named case owns: reject without naming anything declarable.
+  // A: cross-bucket multiset — an assertion that moves from the unattributed
+  // bucket into a named case is not a removal, so compare the union of both
+  // buckets after the change.
+  const afterAttributed = mergeCounts([...afterFacts.caseAssertions.values()])
+  let unattributedDeficit = false
   for (const [fingerprint, count] of beforeFacts.unattributedAssertions) {
-    if ((afterFacts.unattributedAssertions.get(fingerprint) || 0) < count) {
-      return { allowed: false, reason: 'test-assertion-removed-or-rewritten', scope, changedCases: [] }
+    const afterCount = (afterFacts.unattributedAssertions.get(fingerprint) || 0) + (afterAttributed.get(fingerprint) || 0)
+    if (afterCount < count) { unattributedDeficit = true; break }
+  }
+  if (unattributedDeficit) {
+    // B: the remaining way to a named-case contract is a reviewed attribution
+    // migration. It must never mask a real removal or a loosened assertion.
+    return {
+      allowed: false,
+      reason: 'test-assertion-removed-or-rewritten',
+      scope,
+      changedCases: [],
+      attributionMigration: isAttributionMigration(beforeFacts, afterFacts),
     }
   }
   const removedCases = []
@@ -330,7 +412,7 @@ export function inspectTestStandardChange(before, after, trustedFacts = {}) {
       changedCases: [...removedCases, ...weakenedCases].sort(),
     }
   }
-  return { allowed: true, reason: null, scope, changedCases: [] }
+  return { allowed: true, reason: null, scope, changedCases: [], attributionMigration: false }
 }
 
 /** Pure comparison; the guard, never tool-supplied metadata, owns the actual before source. */
