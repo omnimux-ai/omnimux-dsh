@@ -89,7 +89,7 @@ Select the minimal sufficient checks for the changed surfaces using [plugin QA Â
 
 - Load the [repository workflow skill](.agents/skills/omnimux-repo-workflow/SKILL.md). [Git/PR policy](docs/contracts/plugin-git-pr.md) owns risk, merge authority, Merge Queue, auto-closeout, and the report format; [Issue lifecycle](docs/contracts/agent-issue-lifecycle.md) owns task metadata. Never push to `main` or bypass required checks.
 - After merge, `bash scripts/worktree.sh ship <task> --pr <n>` syncs `main`, materializes plugin changes into Dev `~/.omnimux-dev` (skipped when identical or docs-only), and cleans the task worktree â€” no extra approval. Never link unmerged worktrees into Dev/Prod; Prod `~/.omnimux`, `--prod`, and `--all` need explicit release authorization ([dev pipeline](docs/contracts/dev-pipeline.md)).
-- Report actual check results and skip reasons. Keep code, merge, worktree verification, Dev materialization, and human Dev acceptance as distinct states; materialization alone is not delivery.
+- Report actual check results and skip reasons. Keep code, merge, worktree verification, Dev materialization, and Dev acceptance as distinct states; materialization alone is not delivery.
 - Remove only task-owned temporary files and confirmed-merged worktrees, after saving evidence.
 
 ## Editing these instructions
