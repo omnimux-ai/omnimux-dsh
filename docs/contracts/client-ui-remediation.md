@@ -236,7 +236,7 @@ kit 新增（P0 先合 kit，再改页面，避免 6 个插件同时改接口）
 
 ## 6. 分阶段路线图（零回归）
 
-原则：**先门禁后改码**；PR 范围遵循 [plugin-git-pr](plugin-git-pr.md)；合入前隔离 worktree 自动化/静态检查与独立评审；Agent 侧验收在自身隔离 worktree 内用 ego-browser 或 worktree 隔离 Web QA 运行器完成真实浏览器 Web 验证（动态端口、自清理，保留截图/结构化报告）。Dev 真机验收归人工，不作为 Agent 交付卡点；插件改动合入后由收尾自动装进 Dev。不建合入前独立运行环境、不默认强杀 App。本文件的 L1–L4 页面层级仍为 UI 结构分类，不是测试环境。
+原则：**先门禁后改码**；PR 范围遵循 [plugin-git-pr](plugin-git-pr.md)；合入前隔离 worktree 自动化/静态检查与独立评审；Agent 侧验收在自身隔离 worktree 内用 ego-browser 或 worktree 隔离 Web QA 运行器完成真实浏览器 Web 验证（动态端口、自清理，保留截图/结构化报告）。Dev 真机验收由桌面端 Bot 负责并作为 Agent 交付证据；人工只做最终确认；插件改动合入后由收尾自动装进 Dev。不建合入前独立运行环境、不默认强杀 App。本文件的 L1–L4 页面层级仍为 UI 结构分类，不是测试环境。
 
 ### P0 —— 挡住回归 + 四个标准库页对齐金标（约 5 个工作日）
 
@@ -244,7 +244,7 @@ kit 新增（P0 先合 kit，再改页面，避免 6 个插件同时改接口）
 |---|---|---|---|---|
 | P0.0 | 工程师 + 架构 | 0.5d | 落地 `scripts/ui-morphology.json` + doctor §14 静态门禁（先 **WARN** 一天对照，再升 FAIL） | `yarn omnimux:doctor` 退出码稳定；清单外文件零误杀 |
 | P0.1 | 工程师 | 0.5d | kit 导出 `StageRoot/Header/ActionRow` + FilterBar Standard 单测；改 layout 合同去掉裸 tab button | `pnpm typecheck && pnpm build` in `personal/dsh-ui-kit` |
-| P0.2 | 工程师 | 1d | **Products** 拆 L2 Action Row、Refresh→IconButton、补 sort/view 或显式「无类型则 chips=全部」 | 合入前相关自动化/静态与独立评审；隔离 worktree Web 验证 + 四层截图（Dev 真机验收归人工） |
+| P0.2 | 工程师 | 1d | **Products** 拆 L2 Action Row、Refresh→IconButton、补 sort/view 或显式「无类型则 chips=全部」 | 合入前相关自动化/静态与独立评审；隔离 worktree Web 验证 + 四层截图（Dev 真机验收由桌面端 Bot 负责） |
 | P0.3 | 工程师 | 1d | **Accounts** Stage 补副标题+Refresh；CTA 移出 FilterBar 进 Action Row；OverviewBar 降为 L2.5 | 同上，账号连接主路径不回归 |
 | P0.4 | 工程师 | 1d | **Inspiration** 过滤上提为 Stage L3；`+添加灵感` 进 L2；checkbox 改 kit 或可访问 Button `aria-pressed` | 导入/分析主路径不回归 |
 | P0.5 | 工程师 | 1d | **ProjectLibraryPage** CTA 出 Header 进 L2；FilterBar 改 Standard `filters`+`tools` | 新建项目 / 打开画布不回归 |

@@ -82,14 +82,14 @@ Select the minimal sufficient checks for the changed surfaces using [plugin QA �
 - **Specs** live in the task's own worktree (`specs/<feature>.spec.md`, uncommitted or ahead of `origin/main`); never mirror drafts into the primary checkout, which stays a read-only mirror.
 - **Browser acceptance** is real-browser verification inside the task's own worktree (ego-browser or the worktree web QA runner, self-cleaning) with retained screenshots or reports. Unit tests, HTTP 200, CI `qa:pass`, or private harnesses do not count. Missing ego capability is BLOCKED; never fall back to IAB. Unpacked-extension e2e is the exception: use `scripts/lib/extension-e2e.mjs` (one browser per run, self-cleaning); never ad-hoc spawn Chrome from `/tmp`.
 - **Test environments** use the [worktree bootstrap](docs/contracts/plugin-qa.md#工作树测试配置准备): synthetic `ui` mode by default; `live` needs task-specific credential authorization; never copy shared profiles or type real keys into test pages.
-- **Shared Dev app acceptance is human-owned.** It is one shared instance (address in [dev pipeline](docs/contracts/dev-pipeline.md)); agents never wait on, gate on, or claim it.
+- **Dev app acceptance is the desktop Bot's** (CDP evidence; humans confirm last). One shared instance ([dev pipeline](docs/contracts/dev-pipeline.md)); others never wait or claim it.
 - After three consecutive same-class failures, stop blind retries: record the error, what was ruled out, and the new hypothesis before switching approach or asking the user.
 
 ## Delivery
 
 - Load the [repository workflow skill](.agents/skills/omnimux-repo-workflow/SKILL.md). [Git/PR policy](docs/contracts/plugin-git-pr.md) owns risk, merge authority, Merge Queue, auto-closeout, and the report format; [Issue lifecycle](docs/contracts/agent-issue-lifecycle.md) owns task metadata. Never push to `main` or bypass required checks.
 - After merge, `bash scripts/worktree.sh ship <task> --pr <n>` syncs `main`, materializes plugin changes into Dev `~/.omnimux-dev` (skipped when identical or docs-only), and cleans the task worktree — no extra approval. Never link unmerged worktrees into Dev/Prod; Prod `~/.omnimux`, `--prod`, and `--all` need explicit release authorization ([dev pipeline](docs/contracts/dev-pipeline.md)).
-- Report actual check results and skip reasons. Keep code, merge, worktree verification, Dev materialization, and human Dev acceptance as distinct states; materialization alone is not delivery.
+- Report actual check results and skip reasons. Keep code, merge, worktree verification, Dev materialization, and Dev acceptance as distinct states; materialization alone is not delivery.
 - Remove only task-owned temporary files and confirmed-merged worktrees, after saving evidence.
 
 ## Editing these instructions

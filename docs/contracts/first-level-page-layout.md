@@ -260,5 +260,5 @@ export function StandardStage({ t, stage, ...props }) {
 - 严禁在 CSS 中硬编码 `rgba(0,0,0,0.x)` 或 `#hex`。
 
 ### 5. 分阶段验证与 Dev 物化
-- UI 布局调整先在隔离 worktree 完成相关自动化/静态检查和独立评审，并在自身隔离工作树内完成真实浏览器 Web 验收；没有合入前独立 App/Host 环境。经 required CI/MQ 合入后，收尾必须从已合并 `main` 通过[正式同步入口](ops-entry.md)把本次改动装进 Dev；Dev 真机验收为人工职责，不作为 Agent 交付卡点。
-- Client 物化后刷新指定 Dev 页面，人工在 45120 使用 ego-browser 与共享 `verify:live` 验收；Host 变更须按[开发环境合同](dev-pipeline.md)重新加载目标进程。不得默认强杀桌面进程或写 Prod。
+- UI 布局调整先在隔离 worktree 完成相关自动化/静态检查和独立评审，并在自身隔离工作树内完成真实浏览器 Web 验收；没有合入前独立 App/Host 环境。经 required CI/MQ 合入后，收尾必须从已合并 `main` 通过[正式同步入口](ops-entry.md)把本次改动装进 Dev；Dev 真机验收由桌面端 Bot 负责并作为 Agent 交付证据；人工只做最终确认。
+- Client 物化后刷新指定 Dev 页面，由桌面端 Bot 在 45120 使用 ego-browser 与共享 `verify:live` 验收并作为 Agent 交付证据（人工只做最终确认）；Host 变更须按[开发环境合同](dev-pipeline.md)重新加载目标进程。不得默认强杀桌面进程或写 Prod。

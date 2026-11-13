@@ -31,7 +31,8 @@ const REQUIRED_MARKERS = [
   'real-money transactions are human-only',
   'MUST NOT modify official DSH source',
   'Agents MUST NOT edit this section',
-  'human-owned',
+  // 2026-11-13: Dev acceptance moved from human-owned to the desktop Bot (governance change approved by X).
+  "Dev app acceptance is the desktop Bot's",
   'Never push to `main`',
 ]
 

@@ -345,7 +345,7 @@ allow-skips: false
       }
     } finally { rmSync(root, { recursive: true, force: true }) }
   })
-  it('post-merge delivery treats Dev as human-owned and never opens an agent Dev gate', () => {
+  it('post-merge delivery assigns Dev acceptance to the desktop Bot and never opens an agent Dev gate', () => {
     const root = mkdtempSync(join(tmpdir(), 'pipeline-dev-handoff-'))
     try {
       for (const files of [['plugins/a/client/View.js'], ['plugins/a/src/server.js']]) {
@@ -410,10 +410,10 @@ allow-skips: false
         assert.equal(result.handoff.materializeProhibited, !materialize)
         assert.equal(result.worktree, '/task')
         // The agent-side delivery gate is this task's own worktree browser evidence; Dev acceptance is
-        // human-owned and must never be blocked on, waited for, or claimed as the agent's own result.
+        // owned by the desktop Bot as agent delivery evidence, with humans doing final confirmation.
         assert.match(result.handoff.nextAction, /isolated-worktree real-browser web verification/)
-        assert.match(result.handoff.nextAction, /Dev 45120 real-device acceptance is HUMAN-owned/)
-        assert.match(result.handoff.nextAction, /must not block, be waited on, or be claimed/)
+        assert.match(result.handoff.nextAction, /Dev 45120 real-device acceptance is owned by the desktop Bot/)
+        assert.match(result.handoff.nextAction, /humans do final confirmation/)
         assert.match(result.handoff.nextAction, /Preserve evidence and worktree/)
         assert.doesNotMatch(result.handoff.nextAction, /awaiting Dev|pending Dev|materialize the merged main revision/)
         if (materialize) assert.match(result.handoff.nextAction, /Automatically materialize merged changes/)
@@ -461,7 +461,7 @@ allow-skips: false
       assert.equal(result.completionGaps.includes('required runtime evidence needs a trusted current receipt, not a pass field'), true)
     } finally { rmSync(root, { recursive: true, force: true }) }
   })
-  it('human development acceptance remains independent of complete document evidence', () => {
+  it('Dev acceptance remains non-blocking and final human confirmation is independent of complete document evidence', () => {
     const root = mkdtempSync(join(tmpdir(), 'pipeline-human-dev-independent-'))
     try {
       const reports = passingDeliveryReports()
