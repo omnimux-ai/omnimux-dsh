@@ -25,6 +25,7 @@
   - 必须改的理由：本任务把这两处文案搬进 i18n 字典（`t('modelMenu.unsupportedBadge')` /
     `t('modelMenu.unsupportedTitle')`），源码里不再有中文字面量；继续匹配字面量等于禁止本地化，
     断言必须改为「接线到 i18n + 字典条目存在」。
-  - 新期望证据：断言菜单源码出现 `t('modelMenu.unsupportedBadge')`、`t('modelMenu.unsupportedTitle')`，
+  - 新期望证据：断言菜单源码接线到纯函数 `resolveModelMenuItemCopy(item, t)`（不再直接断言 `t('modelMenu.*')`，
+    该取值已抽成纯函数并由 `modelMenuCopy.test.mjs` 做 zh/en 真实取值断言），
     且 `dict.zh.ts` 存在 `'modelMenu.unsupportedBadge': '暂不支持'` 与对应 title 文案；
-    英文界面由 `modelCascadeMenu.test.mjs` 的 en 字典校验与浏览器证据覆盖。实跑该文件 21/21。
+    英文界面由 `modelMenuCopy.test.mjs` 的 en 用例与浏览器 J2 覆盖。实跑 `operationUi.dom.test.mjs` 21/21。

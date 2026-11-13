@@ -69,6 +69,8 @@ export type ModelMenuCopyKey =
   | 'modelMenu.unverifiedBadge';
 
 export function resolveModelMenuItemCopy(
+  // ModelExecutionStatus 恰好三值，且 executable===false ⟺ status∈{unsupported,unverified}；
+  // 因此 ready 无 badge 与原逻辑等价。若未来新增第 4 种非 ready 状态，需要同步这里的分支。
   item: { executionStatus?: 'ready' | 'unsupported' | 'unverified' },
   t: (key: ModelMenuCopyKey) => string,
 ): { title?: string; badge?: string } {
