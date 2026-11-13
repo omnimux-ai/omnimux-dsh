@@ -16,14 +16,14 @@ subsystem: "omnimux"
 
 ## 适用矩阵
 
-合并前只在隔离 worktree 完成相关自动化测试、静态检查和独立评审，再通过 PR required CI 与 Merge Queue 合入 `main`。没有合并前独立 App/Host 测试环境，不得换名保留；Agent 侧运行与浏览器验收在**自身隔离 worktree 内**用动态端口执行（ego-browser 或 worktree 隔离 Web QA 运行器，随测随清、保留截图与结构化报告），不再要求 Dev App 真机验收。Dev 真机验收为人工职责，不作为 Agent 交付卡点，也不得由 Agent 声称已取得。
+合并前只在隔离 worktree 完成相关自动化测试、静态检查和独立评审，再通过 PR required CI 与 Merge Queue 合入 `main`。没有合并前独立 App/Host 测试环境，不得换名保留；Agent 侧运行与浏览器验收在**自身隔离 worktree 内**用动态端口执行（ego-browser 或 worktree 隔离 Web QA 运行器，随测随清、保留截图与结构化报告），不再要求 Dev App 真机验收。Dev 真机验收由桌面端 Bot 负责并作为 Agent 交付证据；人工只做最终确认。
 
 | 变更面 | 合并前 | Agent 侧验收（隔离 worktree Web） | 不要求 |
 |---|---|---|---|
 | 纯文档 / Issue 模板 / 流程 | metadata、链接、命令与适用文档检查；独立评审 | 无 App 验收 | 45120、App 物化、Electron |
 | 纯脚本 / 测试 | 相关脚本测试、静态检查、边界/错误路径；独立评审 | 无 App 验收 | App 物化、无关浏览器截图 |
 | Host / 插件运行行为 | 相关单元/集成测试与静态检查；独立评审 | 在隔离 worktree 启动本地服务，验证目标 HTTP/RPC/运行行为 | 无 UI 时不要求 DOM |
-| Client / Stage / 侧栏 | 相关组件/行为测试与静态 Stage 检查；独立评审 | 隔离 worktree 的真实浏览器 Web 验证（ego-browser 或 worktree 隔离 Web QA 运行器，动态端口、自清理）+ 截图/结构化报告 | 默认不要求 Electron；Dev 45120 真机验收归人工 |
+| Client / Stage / 侧栏 | 相关组件/行为测试与静态 Stage 检查；独立评审 | 隔离 worktree 的真实浏览器 Web 验证（ego-browser 或 worktree 隔离 Web QA 运行器，动态端口、自清理）+ 截图/结构化报告 | 默认不要求 Electron；Dev 45120 真机验收由桌面端 Bot 负责 |
 | 壳层 / 平台门控 | 相关自动化测试与静态检查；独立评审 | 隔离 worktree 的适用浏览器证据 + 真实 Electron renderer/CDP | 不能只用 web 页面替代 Electron |
 | 生产发布 | 另见发布授权与发布计划 | 授权目标上的发布/回滚证据 | 不属于普通开发验收 |
 
@@ -37,7 +37,7 @@ subsystem: "omnimux"
 |---|---|
 | 合并前 worktree | base/head SHA、dirty 状态、实际 diff 与测试命令；无 App 物化 |
 | 隔离 worktree Web 验收 | 任务自身 worktree 内启动的本地服务，动态端口、自清理；Agent 可自证的验收基线，保留截图与结构化报告 |
-| Dev 真机 | `~/.omnimux-dev`，端口 `45120`；**人工职责**，Agent 不据其出证据、不等待、不阻塞交付；插件改动合入后由收尾自动装入，已一致则跳过；Dev/Prod 不得 link 或接收未合并 worktree |
+| Dev 真机 | `~/.omnimux-dev`，端口 `45120`；**桌面端 Bot 负责**（Agent 交付证据），需核实单实例占用；插件改动合入后由收尾自动装入，已一致则跳过；Dev/Prod 不得 link 或接收未合并 worktree |
 | Prod | `~/.omnimux`；没有独立发布授权不得写入或用于普通交付 |
 
 隔离 worktree Web 验收证据须绑定实际运行的服务进程、端口、URL 与源码身份。源码提交或目标进程变化后，不得拿旧请求、截图或运行身份冒充当前版本；在报告中区分源码检查与已加载版本。
@@ -89,7 +89,7 @@ rc.3 起 agent preset 由壳启动时向 profile 注入 `@deepseek-ai/dsh-agent-
 ## 浏览器与共享探针
 
 - API、脚本和配置优先；需要 Web/Stage 浏览器验收时统一使用 ego-browser 的任务隔离空间，先加载 ego-browser skill。不得回退 IAB，也不得用桌面截图替代浏览器检查。ego 缺少 CDP 事件、脚本源、稳定 task/tab 身份或真实 PNG 能力时为 BLOCKED，不降低校验。
-- Agent 侧验收在自身隔离 worktree 内完成真实浏览器 Web 验证，动态端口、自清理，可用 `pnpm test:worktree-web`（worktree 隔离 Web QA 运行器）或 ego-browser。Dev 真机 45120 的验收归人工，可使用 `pnpm verify:live <stage>`（目标仅为 `dev`、URL 为 `http://127.0.0.1:45120/`，`all` 只覆盖已登记的公开 Stage）；它不是 Agent 必做项，也不作为 Agent 交付卡点。
+- Agent 侧验收在自身隔离 worktree 内完成真实浏览器 Web 验证，动态端口、自清理，可用 `pnpm test:worktree-web`（worktree 隔离 Web QA 运行器）或 ego-browser。Dev 真机 45120 的验收由桌面端 Bot 负责，可使用 `pnpm verify:live <stage>`（目标仅为 `dev`、URL 为 `http://127.0.0.1:45120/`，`all` 只覆盖已登记的公开 Stage）；它是桌面端 Bot 的 Agent 交付证据；人工只做最终确认。
 - CLI 返回 pending/request path（exit 2）只表示请求已准备，不是通过。在 `ego-browser nodejs` heredoc 中通过唯一正式模块 `scripts/ego-live-qa.mjs` 创建适配页并调用 `runPreparedQa(requestPath, { tab })`；它不会自动登录。历史弱执行器或 IAB 报告不作为当前验收。
 - 请求在页面准备成功后原子消费一次；准备前后均检查有效期、代码 SHA 与请求身份。认证或浏览器预检失败不消费请求；真正探针开始后即使失败也保留实际 consumedAt，不得复用或声称未消费。并发执行只能有一个消费者，未取得执行权的调用不得覆盖消费者报告。
 - run ID、代码 SHA、目标、URL、ego task space/Tab、profile、Host 或运行版本不匹配时失败。前后身份必须相同，runtimeProof 必须读取同源真实加载脚本并核对唯一注册和 bundle 指纹；截图必须真实可解码。不得复用旧 run、旧截图或旧空白会话。
@@ -162,7 +162,7 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 
 只有改动依赖 Electron 壳层、`data-dsh-desktop-*`、macOS/Windows 平台门控、原生拖拽/窗口布局等 web 页面无法呈现的行为时，才额外执行 `pnpm verify:cdp` 并保存 `docs/evidence/live-cdp-qa-report.json`。普通插件 Client/Stage 不要求重复做 Electron 验收。
 
-45120 是 Dev Host 的 web 页面；它能证明 Dev 物化后的 Web/Stage 行为，但不能证明 Electron-only DOM 或 computed style，且按 2026-09-14 政策变更属人工验收范围，不作为 Agent 交付卡点。Electron-required 任务若 CDP 不可用应报告 BLOCKED，不得回退到截图猜测。
+45120 是 Dev Host 的 web 页面；它能证明 Dev 物化后的 Web/Stage 行为，但不能证明 Electron-only DOM 或 computed style，且按 2026-09-14 政策变更由桌面端 Bot 作为 Agent 交付证据执行，人工只做最终确认。Electron-required 任务若 CDP 不可用应报告 BLOCKED，不得回退到截图猜测。
 
 ## 本地最小命令选型（Agent 默认）
 
@@ -187,7 +187,7 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 | Agent Tools / Schema | `pnpm test:agent-tools` | `pnpm verify:tools` | — |
 | DSH 合同 / inject（运行时加载校验） | `pnpm verify:plugin-load` + `pnpm test:plugin-load` | 触及的插件包测 | — |
 | 模型契约 / 路由 / 白名单 / 模型面定价 | `pnpm verify:model-contracts`（**含**跨插件对齐、模态对账、随包快照丢型号门禁与 listed ↔ 在售对账；`verify:cross-plugin-models` 已在其中，不必单跑） | 快照新鲜度：`pnpm catalog:snapshot:check`；`pnpm verify:models`（离线 patch × `CHAT_MODELS` × 随包快照，#3763 起不联网不取密钥）；相关 submission/whitelist 检查；需要面板时 `pnpm hub:interfaces` | 禁止用真实付费探测发现能力；`verify:models` 已离线化，不是联网存在性探测 |
-| Client / Stage / 侧栏 / 文案 / CSS | 先读 design 与文案规范；`pnpm verify:stages`（及触及的 `verify:stage-scroll` / `verify:slots` / `test:ui`） | **必做**隔离工作树功能路径浏览器证据（`pnpm test:worktree-web` 或 ego-browser + 截图/结构化报告） | 禁止首页打卡冒充；禁止单测绿替代浏览器证据；Dev `verify:live@45120` 归人工，非 Agent 必做 |
+| Client / Stage / 侧栏 / 文案 / CSS | 先读 design 与文案规范；`pnpm verify:stages`（及触及的 `verify:stage-scroll` / `verify:slots` / `test:ui`） | **必做**隔离工作树功能路径浏览器证据（`pnpm test:worktree-web` 或 ego-browser + 截图/结构化报告） | 禁止首页打卡冒充；禁止单测绿替代浏览器证据；Dev `verify:live@45120` 由桌面端 Bot 执行（Agent 交付证据） |
 | 纯展示文案/样式（无数据/逻辑/接口变化） | 按「Client / Stage / 侧栏 / 文案 / CSS」行执行；另加相关包定向测试 | 同「Client / Stage / 侧栏 / 文案 / CSS」行的 stage 附加门禁 | 不额外跑全量 hub/workflow |
 | 表单合同 | `pnpm verify:forms` | 相关包测 | — |
 | 壳层 / Electron 门控 | 相关静态/包测；若有页面则加隔离 Web | 仅 Electron-only 行为时 `pnpm verify:cdp` | 不能只用网页替代 Electron |
@@ -245,6 +245,6 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 
 ## 评审与验收结论
 
-实施者完成自检后，由独立评审者核对实际 diff、测试证据、授权和未解决风险，满足合入前适用项后进入 required CI/MQ。适用界面任务拿不到**自身隔离 worktree 的功能路径真实浏览器证据**不得宣布交付完成；局部 Stage 证据不能冒充完整应用或任务装配。应用入口的无请求 legacy 只签无契约 smoke；自定义任务旅程须固定显式 request，只有受支持的任务插件、安装/实际加载观测与全部预期检查通过后才能提供相应 fresh/task 结果，不能拿有效失败封套签成功。`live` 真实图片/音频证据仅按实际授权与能力补充，视频生成真实验证需任务级特批。Dev 45120 是单例共享实例：Agent 不重启、不占用、不等待，仅在物化后冒烟或排障时只读使用。证据不完整为 FAIL，工具或环境不可用且无法安全修复为 BLOCKED，仅阻断受影响阶段。
+实施者完成自检后，由独立评审者核对实际 diff、测试证据、授权和未解决风险，满足合入前适用项后进入 required CI/MQ。适用界面任务拿不到**自身隔离 worktree 的功能路径真实浏览器证据**不得宣布交付完成；局部 Stage 证据不能冒充完整应用或任务装配。应用入口的无请求 legacy 只签无契约 smoke；自定义任务旅程须固定显式 request，只有受支持的任务插件、安装/实际加载观测与全部预期检查通过后才能提供相应 fresh/task 结果，不能拿有效失败封套签成功。`live` 真实图片/音频证据仅按实际授权与能力补充，视频生成真实验证需任务级特批。Dev 45120 是单例共享实例：桌面端 Bot 负责真机验收（核实单实例占用后可重启/使用）；其他 Agent 不重启、不占用、不等待。证据不完整为 FAIL，工具或环境不可用且无法安全修复为 BLOCKED，仅阻断受影响阶段。
 
 `qa:pass`、合入方式与 R0–R3 权限统一遵循 [plugin-git-pr](plugin-git-pr.md)。

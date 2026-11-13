@@ -82,7 +82,7 @@ Select the minimal sufficient checks for the changed surfaces using [plugin QA �
 - **Specs** live in the task's own worktree (`specs/<feature>.spec.md`, uncommitted or ahead of `origin/main`); never mirror drafts into the primary checkout, which stays a read-only mirror.
 - **Browser acceptance** is real-browser verification inside the task's own worktree (ego-browser or the worktree web QA runner, self-cleaning) with retained screenshots or reports. Unit tests, HTTP 200, CI `qa:pass`, or private harnesses do not count. Missing ego capability is BLOCKED; never fall back to IAB. Unpacked-extension e2e is the exception: use `scripts/lib/extension-e2e.mjs` (one browser per run, self-cleaning); never ad-hoc spawn Chrome from `/tmp`.
 - **Test environments** use the [worktree bootstrap](docs/contracts/plugin-qa.md#工作树测试配置准备): synthetic `ui` mode by default; `live` needs task-specific credential authorization; never copy shared profiles or type real keys into test pages.
-- **Shared Dev app acceptance is human-owned.** It is one shared instance (address in [dev pipeline](docs/contracts/dev-pipeline.md)); agents never wait on, gate on, or claim it.
+- **Dev app acceptance is the desktop Bot's** (CDP evidence; humans confirm last). One shared instance ([dev pipeline](docs/contracts/dev-pipeline.md)); others never wait on or claim it.
 - After three consecutive same-class failures, stop blind retries: record the error, what was ruled out, and the new hypothesis before switching approach or asking the user.
 
 ## Delivery
