@@ -1171,7 +1171,13 @@ export function createAppQaRunner(deps = {}) {
       // Create each ancestor without following links; a run directory is never reused.
       for (const leaf of ['.workbuddy', '.workbuddy/evidence', '.workbuddy/evidence/contract', `.workbuddy/evidence/contract/${request.taskId}`]) {
         const path = join(root, leaf);
-        if (!io.existsSync(path)) io.mkdirSync(path);
+        // existsSync+makedir is a TOCTOU race when parallel test files share this
+        // root: the directory can appear between the check and the create, and the
+        // resulting EEXIST used to fail the gate. Tolerate EEXIST from a concurrent
+        // creator; the lstat checks below still reject a symlink or non-directory.
+        if (!io.existsSync(path)) {
+          try { io.mkdirSync(path); } catch (error) { if (error?.code !== 'EEXIST') throw error; }
+        }
         const stat = io.lstatSync(path);
         if (!stat.isDirectory() || stat.isSymbolicLink() || io.realpathSync(path) !== path) throw qaFailure('TEST_APP_QA_OUTPUT_PATH');
       }
