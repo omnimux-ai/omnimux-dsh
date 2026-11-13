@@ -55,7 +55,7 @@ test('non-UI changes mark browser and Dev acceptance not applicable rather than 
     assert.equal(verdict.dimensions.dev.required, false)
     assert.equal(verdict.dimensions.dev.pass, null)
     assert.equal(verdict.dimensions.dev.status, 'not-applicable')
-    assert.equal(verdict.dimensions.dev.target, 'human')
+    assert.equal(verdict.dimensions.dev.target, 'desktop-bot')
     assert.match(verdict.summary, /无客户端\/UI文件变更/)
   }
 })
@@ -74,7 +74,7 @@ test('UI static CI passes while isolated-worktree browser verification stays pos
     assert.equal(verdict.dimensions.dev.pass, null)
     assert.equal(verdict.dimensions.dev.status, 'not-applicable')
     assert.equal(verdict.dimensions.dev.phase, 'post-merge')
-    assert.equal(verdict.dimensions.dev.target, 'human')
+    assert.equal(verdict.dimensions.dev.target, 'desktop-bot')
     assert.doesNotMatch(verdict.summary, /ego-browser 通过/)
   }
 })
@@ -85,7 +85,7 @@ test('Host runtime changes no longer require Dev acceptance and never invent bro
   assert.equal(verdict.dimensions.dev.required, false)
   assert.equal(verdict.dimensions.dev.status, 'not-applicable')
   assert.equal(verdict.dimensions.dev.pass, null)
-  assert.equal(verdict.dimensions.dev.target, 'human')
+  assert.equal(verdict.dimensions.dev.target, 'desktop-bot')
   assert.equal(verdict.dimensions.browser.status, 'not-applicable')
 })
 
@@ -118,8 +118,8 @@ test('environment cannot turn pending worktree browser verification into a pass,
     assert.equal(verdict.dimensions.browser.target, 'worktree')
     assert.equal(verdict.dimensions.browser.status, 'pending')
     assert.equal(verdict.dimensions.browser.pass, null)
-    // Dev acceptance is Bot-owned (machine-readable target still 'human' pending the follow-up):
-    // it cannot supply the browser pass, and it cannot rescue a failed L0.
+    // Dev acceptance is Bot-owned (`dev.target: 'desktop-bot'`): it cannot supply the
+    // browser pass, and it cannot rescue a failed L0.
     assert.equal(verdict.dimensions.dev.required, false)
     assert.equal(verdict.dimensions.dev.status, 'not-applicable')
     assert.equal(verdict.dimensions.dev.pass, null)
@@ -180,7 +180,7 @@ test('CLI derives impact from explicit files or strict git diff and clears failu
   assert.equal(uiVerdict.impactMatrix.isUiChange, true)
   assert.equal(uiVerdict.impactMatrix.dimensions.browser.target, 'worktree')
   assert.equal(uiVerdict.impactMatrix.dimensions.dev.required, false)
-  assert.equal(uiVerdict.impactMatrix.dimensions.dev.target, 'human')
+  assert.equal(uiVerdict.impactMatrix.dimensions.dev.target, 'desktop-bot')
   assert.equal(uiVerdict.dimensions.browser.required, true)
   assert.equal(uiVerdict.dimensions.browser.status, 'pending')
   assert.equal(uiVerdict.dimensions.dev.status, 'not-applicable')

@@ -260,7 +260,7 @@ allow-skips: false
     assert.equal(ui.dimensions.dev.required, false)
     assert.equal(ui.dimensions.dev.status, 'not-applicable')
     assert.equal(ui.dimensions.dev.pass, null)
-    assert.equal(ui.dimensions.dev.target, 'human')
+    assert.equal(ui.dimensions.dev.target, 'desktop-bot')
     assert.equal(evaluateVerdict({ pass: true }).pass, false)
   })
   it('准入后真实状态迁移剥除 ready，运行时复验通过且撤销/升级熔断', () => {
