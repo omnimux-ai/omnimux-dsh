@@ -251,7 +251,7 @@ export function inspectTestAuthoring(code, trustedFacts = {}) {
  * assertions that no named case owns — those stay outside the declaration
  * channel because there is no stable name to point at.
  */
-function collectAssertionFacts(code) {
+export function collectAssertionFacts(code) {
   let ast
   try { ast = parse(code, { ecmaVersion: 'latest', sourceType: 'module', allowHashBang: true }) }
   catch { return null }
@@ -262,6 +262,7 @@ function collectAssertionFacts(code) {
   const structuralAssertions = new Map()
   const caseStructural = new Map()
   const unattributedStructural = new Map()
+  const unattributedTemplates = new Map()
   const runners = new Set(['test', 'it', 'describe'])
   const caseRunners = new Set(['test', 'it'])
   const bump = (map, key) => map.set(key, (map.get(key) || 0) + 1)
@@ -271,11 +272,15 @@ function collectAssertionFacts(code) {
     if (current?.type === 'CallExpression') return calleeRoot(current.callee)
     return current?.type === 'Identifier' ? current.name : null
   }
-  function visit(node, caseName) {
+  function visit(node, caseName, template) {
     if (!node || typeof node !== 'object') return
-    if (Array.isArray(node)) { node.forEach(child => visit(child, caseName)); return }
+    if (Array.isArray(node)) { node.forEach(child => visit(child, caseName, template)); return }
     if (!node.type) return
     let childCase = caseName
+    // 无主断言的「模板分组」：顶层 for 循环内的断言各成一组。多种模板循环共存时，
+    // 静态化后每个新用例的形状集合应等于其中某个模板的完整形状集合（issue #4099）。
+    let childTemplate = template
+    if (caseName === null && ['ForStatement', 'ForOfStatement', 'ForInStatement'].includes(node.type)) childTemplate = node.start
     if (node.type === 'CallExpression') {
       const root = calleeRoot(node.callee)
       if (root === 'assert' || root === 'expect') {
@@ -286,6 +291,9 @@ function collectAssertionFacts(code) {
         if (caseName === null) {
           bump(unattributedAssertions, fingerprint)
           bump(unattributedStructural, structuralFingerprint)
+          let ownTemplate = unattributedTemplates.get(template ?? 'top')
+          if (!ownTemplate) unattributedTemplates.set(template ?? 'top', ownTemplate = new Map())
+          bump(ownTemplate, structuralFingerprint)
         } else {
           let own = caseAssertions.get(caseName)
           if (!own) caseAssertions.set(caseName, own = new Map())
@@ -303,12 +311,12 @@ function collectAssertionFacts(code) {
       }
     }
     for (const value of Object.values(node)) {
-      if (Array.isArray(value)) value.forEach(child => visit(child, childCase))
-      else if (value && typeof value === 'object') visit(value, childCase)
+      if (Array.isArray(value)) value.forEach(child => visit(child, childCase, childTemplate))
+      else if (value && typeof value === 'object') visit(value, childCase, childTemplate)
     }
   }
   visit(ast, null)
-  return { assertions, cases, caseAssertions, unattributedAssertions, structuralAssertions, caseStructural, unattributedStructural }
+  return { assertions, cases, caseAssertions, unattributedAssertions, structuralAssertions, caseStructural, unattributedStructural, unattributedTemplates }
 }
 
 const sumCounts = map => { let total = 0; for (const count of map.values()) total += count; return total }
@@ -337,16 +345,17 @@ function isAttributionMigration(beforeFacts, afterFacts) {
     const hit = afterFacts.structuralAssertions.get(fingerprint) || 0
     if (hit < count) return false
   }
-  // 迁移必须是「整组复制」：每个新出现的具名用例都要覆盖原无主断言的完整形状集合。
-  // 否则「a 用例放宽一条、b 用例补上一条」这类夹带削弱会因总数不变而被放过。
-  const inheritedShapes = [...beforeFacts.unattributedStructural.keys()]
+  // 迁移必须是「整组复制」：每个新出现的具名用例，其断言形状集合必须等于 before
+  // 某个无主「模板」的完整形状集合。单模板时等价于原判定；同一文件里本来就有多个
+  // 模板循环时（issue #4099：UI 与非 UI 两套用例），各模板可以各自完整迁移。
+  // 「a 用例放宽一条、b 用例补上一条」会让 a 的形状集合对不上任何模板 → 仍被拒。
+  const templateShapeSets = [...beforeFacts.unattributedTemplates.values()]
+    .map(map => [...map.keys()].sort().join('\u0000'))
   const newCaseNames = [...afterFacts.caseStructural.keys()].filter(name => !beforeFacts.cases.has(name))
   if (!newCaseNames.length) return false
   for (const name of newCaseNames) {
     const own = afterFacts.caseStructural.get(name)
-    for (const fingerprint of inheritedShapes) {
-      if ((own.get(fingerprint) || 0) < 1) return false
-    }
+    if (!templateShapeSets.includes([...own.keys()].sort().join('\u0000'))) return false
   }
   return true
 }
@@ -425,6 +434,7 @@ export function inspectTestStandardChange(before, after, trustedFacts = {}) {
       reason: removedCases.length ? 'test-case-removed-or-renamed' : 'test-assertion-removed-or-rewritten',
       scope,
       changedCases: [...removedCases, ...weakenedCases].sort(),
+      attributionMigration: false,
     }
   }
   return { allowed: true, reason: null, scope, changedCases: [], attributionMigration: false }
