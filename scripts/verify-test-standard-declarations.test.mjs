@@ -280,3 +280,85 @@ test('含无归属断言的测试文件被整体删除时：要求文件级声�
     assert.deepEqual(verifyTestStandardDeclarations({ root: repo.root, base }).violations, [])
   })
 })
+
+// #4100：动态用例名静态化后断言从「无主桶」迁入具名用例，指纹必然变化。
+// 这类归因迁移走文件级 `:: *` 声明；无声明仍拒，真实减少则声明也不能盖。
+const MIGRATION_BEFORE = "import test from 'node:test'\nimport assert from 'node:assert/strict'\nfor (const name of ['a', 'b']) test(`covers ${name}`, () => { assert.equal(needs([name]), true); assert.match(summary, /旧口径/) })\n"
+const MIGRATION_AFTER = "import test from 'node:test'\nimport assert from 'node:assert/strict'\ntest('covers a', () => { assert.equal(needs(['a']), true); assert.match(summary, /新口径/) })\ntest('covers b', () => { assert.equal(needs(['b']), true); assert.match(summary, /新口径/) })\n"
+
+test('归因迁移无文件级声明时仍判违规，并点名 `*`', () => {
+  withFixtureRepo(repo => {
+    repo.write(TEST_FILE, MIGRATION_BEFORE)
+    const base = repo.commit('base template case names')
+    repo.write(TEST_FILE, MIGRATION_AFTER)
+    repo.commit('staticize without declaration')
+    const result = verifyTestStandardDeclarations({ root: repo.root, base })
+    assert.equal(result.violations.length, 1)
+    assert.equal(result.violations[0].reason, 'test-assertion-removed-or-rewritten')
+    assert.equal(result.violations[0].declarable, true)
+    assert.deepEqual(result.violations[0].missing, ['*'])
+  })
+})
+
+test('归因迁移 + 文件级 `:: *` 声明 → 放行', () => {
+  withFixtureRepo(repo => {
+    repo.write(TEST_FILE, MIGRATION_BEFORE)
+    const base = repo.commit('base template case names')
+    repo.write(TEST_FILE, MIGRATION_AFTER)
+    repo.write(SPEC_FILE, `${SPEC_HEADER}\n## 旧标准变更\n\n- \`${TEST_FILE}\` :: \`*\`\n  - 原断言：模板用例名下的旧口径正则。\n  - 必须改的理由：用例名静态化，断言随口径改写。\n  - 新期望与证据：新口径正则，实跑通过。\n`)
+    repo.commit('staticize with file-level declaration')
+    const result = verifyTestStandardDeclarations({ root: repo.root, base })
+    assert.deepEqual(result.violations, [])
+    assert.equal(result.declarationCount, 1)
+  })
+})
+
+test('文件级声明不能覆盖无主断言的真实减少', () => {
+  withFixtureRepo(repo => {
+    const threeLoose = "import assert from 'node:assert/strict'\nassert.equal(a(), 1)\nassert.equal(b(), 2)\nassert.equal(c(), 3)\n"
+    const twoOwned = "import test from 'node:test'\nimport assert from 'node:assert/strict'\ntest('owns two', () => { assert.equal(a(), 1); assert.equal(b(), 2) })\n"
+    repo.write(TEST_FILE, threeLoose)
+    const base = repo.commit('base three unattributed assertions')
+    repo.write(TEST_FILE, twoOwned)
+    repo.write(SPEC_FILE, `${SPEC_HEADER}\n## 旧标准变更\n\n- \`${TEST_FILE}\` :: \`*\`\n  - 理由：试图用文件级声明盖住被删掉的一条断言。\n`)
+    repo.commit('drop one assertion behind a file-level declaration')
+    const result = verifyTestStandardDeclarations({ root: repo.root, base })
+    assert.equal(result.violations.length, 1)
+    assert.equal(result.violations[0].reason, 'test-assertion-removed-or-rewritten')
+    assert.equal(result.violations[0].declarable, false)
+  })
+})
+
+// 评审 F1：删掉无主断言、保留同指纹的具名断言——补偿式不成立，文件级声明也盖不住。
+test('F1 旁路不能用文件级声明放行', () => {
+  withFixtureRepo(repo => {
+    const before = "import test from 'node:test'\nimport assert from 'node:assert/strict'\nassert.equal(shared(), 1)\ntest('x', () => { assert.equal(shared(), 1) })\n"
+    const after = "import test from 'node:test'\nimport assert from 'node:assert/strict'\ntest('x', () => { assert.equal(shared(), 1) })\n"
+    repo.write(TEST_FILE, before)
+    const base = repo.commit('base with duplicate fingerprint')
+    repo.write(TEST_FILE, after)
+    repo.write(SPEC_FILE, `${SPEC_HEADER}\n## 旧标准变更\n\n- \`${TEST_FILE}\` :: \`*\`\n  - 理由：试图用文件级声明盖住无主断言的删除。\n`)
+    repo.commit('drop unattributed behind a file-level declaration')
+    const result = verifyTestStandardDeclarations({ root: repo.root, base })
+    assert.equal(result.violations.length, 1)
+    assert.equal(result.violations[0].reason, 'test-assertion-removed-or-rewritten')
+    assert.equal(result.violations[0].declarable, false)
+  })
+})
+
+// 评审 F3：迁移后残留无主断言——不是完整迁移，文件级声明同样盖不住。
+test('F3 残留无主断言不能用文件级声明放行', () => {
+  withFixtureRepo(repo => {
+    const before = "import test from 'node:test'\nimport assert from 'node:assert/strict'\nfor (const n of ['a']) it(`x ${n}`, () => { assert.equal(covered(), 1); assert.equal(extra(), 2) })\n"
+    const after = "import test from 'node:test'\nimport assert from 'node:assert/strict'\nit('x a', () => { assert.equal(covered(), 1); assert.equal(extra(), 2) })\nassert.equal(residual(), 3)\n"
+    repo.write(TEST_FILE, before)
+    const base = repo.commit('base template case')
+    repo.write(TEST_FILE, after)
+    repo.write(SPEC_FILE, `${SPEC_HEADER}\n## 旧标准变更\n\n- \`${TEST_FILE}\` :: \`*\`\n  - 理由：试图用文件级声明盖住残留的无主断言。\n`)
+    repo.commit('partial migration behind a file-level declaration')
+    const result = verifyTestStandardDeclarations({ root: repo.root, base })
+    assert.equal(result.violations.length, 1)
+    assert.equal(result.violations[0].reason, 'test-assertion-removed-or-rewritten')
+    assert.equal(result.violations[0].declarable, false)
+  })
+})

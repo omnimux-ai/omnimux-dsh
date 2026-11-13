@@ -115,7 +115,10 @@ export function verifyTestStandardDeclarations({ root, base = 'origin/main' } = 
       // `inspectTestStandardChange` 会因 unattributed 断言优先返回 `changedCases: []`。
       // 对在原文件内改写断言，这保持保守拒绝；但对「整文件随模块/插件退役删除」
       // （`after === ''`），没有剩余文件内容可改写，要求文件级声明 `- \`<path>\` :: \`*\`` 即可闭环审查。
-      if (after === '' && DECLARABLE_TEST_STANDARD_REASONS.has(inspection.reason) && cases.length === 0) {
+      // 归因迁移（无主断言 → 具名用例）与整文件删除同属「无具名用例可点名」的
+      // 情形，走文件级 `:: *` 声明；真实减少/放宽不会带 attributionMigration 标记，
+      // 因此这里不会放松原意。
+      if ((after === '' || inspection.attributionMigration === true) && DECLARABLE_TEST_STANDARD_REASONS.has(inspection.reason) && cases.length === 0) {
         const missing = missingFor({ declarations, path: subject, cases: [FILE_LEVEL_CASE] })
         if (missing.length) violations.push({ path: subject, status: change.status, reason: inspection.reason, missing, declarable: true })
         continue

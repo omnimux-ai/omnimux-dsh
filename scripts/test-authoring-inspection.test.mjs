@@ -637,3 +637,69 @@ test('container skip and chained describe selectors inherit skip reach into inne
     "test.skip('g', () => { test('a', () => { if (x) { eval(code) } }) })",
   ).allowed, true)
 })
+
+// #4100：动态用例名（模板字面量）静态化后，断言从「无主桶」迁入具名用例。
+// A（跨桶多重集）：断言与循环变量无关、指纹不变 → 直接放行，无需声明。
+test('cross-bucket comparison lets a pure case-name staticization through', () => {
+  const before = "for (const name of ['a', 'b']) it(`covers ${name}`, () => { assert.equal(shared(), 1) })"
+  const after = "it('covers a', () => { assert.equal(shared(), 1) }); it('covers b', () => { assert.equal(shared(), 1) })"
+  const result = inspectTestStandardChange(before, after)
+  assert.equal(result.allowed, true, JSON.stringify(result))
+  assert.equal(result.attributionMigration, false)
+})
+
+// B（归因迁移）：断言随循环变量改写、指纹变化 → 不直接放行，但标记可经文件级声明审查；
+// 真实减少或夹带放宽必须仍然硬拒。
+test('attribution migration is flagged only when no assertion was lost or loosened', () => {
+  const before = "for (const name of ['a', 'b']) it(`covers ${name}`, () => { assert.equal(needs([name]), true); assert.match(summary, /旧口径/) })"
+  const after = "it('covers a', () => { assert.equal(needs(['a']), true); assert.match(summary, /新口径/) }); it('covers b', () => { assert.equal(needs(['b']), true); assert.match(summary, /新口径/) })"
+  const migrated = inspectTestStandardChange(before, after)
+  assert.equal(migrated.allowed, false)
+  assert.equal(migrated.reason, 'test-assertion-removed-or-rewritten')
+  assert.deepEqual(migrated.changedCases, [])
+  assert.equal(migrated.attributionMigration, true, JSON.stringify(migrated))
+
+  // 真实减少：少一条断言（before 4 条 → after 3 条）→ 不是归因迁移。
+  const dropped = "it('covers a', () => { assert.equal(needs(['a']), true) }); it('covers b', () => { assert.equal(needs(['b']), true); assert.match(summary, /新口径/) })"
+  const droppedResult = inspectTestStandardChange(before, dropped)
+  assert.equal(droppedResult.allowed, false)
+  assert.equal(droppedResult.reason, 'test-assertion-removed-or-rewritten')
+  assert.equal(droppedResult.attributionMigration, false, JSON.stringify(droppedResult))
+
+  // 夹带放宽：assert.equal → assert.ok → 形状不同，不是归因迁移。
+  const loosened = "it('covers a', () => { assert.ok(needs(['a'])); assert.match(summary, /新口径/) }); it('covers b', () => { assert.equal(needs(['b']), true); assert.match(summary, /新口径/) })"
+  const loosenedResult = inspectTestStandardChange(before, loosened)
+  assert.equal(loosenedResult.allowed, false)
+  assert.equal(loosenedResult.attributionMigration, false, JSON.stringify(loosenedResult))
+})
+
+// 评审 F1：同一指纹既在无主断言、又在具名用例里时，删掉无主那条、具名那条原样保留
+// 不能被「无主减少由具名新增补上」的补偿式放行（具名侧本次新增为 0）。
+test('删掉无主断言、保留同指纹的具名断言仍然拒绝（F1 旁路）', () => {
+  const before = "assert.equal(shared(), 1); test('x', () => { assert.equal(shared(), 1) })"
+  const after = "test('x', () => { assert.equal(shared(), 1) })"
+  const result = inspectTestStandardChange(before, after)
+  assert.equal(result.allowed, false, JSON.stringify(result))
+  assert.equal(result.reason, 'test-assertion-removed-or-rewritten')
+  assert.deepEqual(result.changedCases, [])
+  assert.equal(result.attributionMigration, false)
+})
+
+// 评审 F3：归因迁移要求 after 无主断言归零；「迁一半、留一条无主」不算迁移完成。
+test('迁移后残留无主断言仍然拒绝（F3 归零）', () => {
+  // 归因迁移成立（具名侧补齐了原无主形状）但同时残留一条无主断言：必须拒。
+  const before = "for (const n of ['a']) it(`x ${n}`, () => { assert.equal(covered(), 1); assert.equal(extra(), 2) })"
+  const after = "it('x a', () => { assert.equal(covered(), 1); assert.equal(extra(), 2) }); assert.equal(residual(), 3)"
+  const result = inspectTestStandardChange(before, after)
+  assert.equal(result.allowed, false, JSON.stringify(result))
+  assert.equal(result.reason, 'test-assertion-removed-or-rewritten')
+  assert.equal(result.attributionMigration, false)
+})
+
+// 补偿式没有把合法迁移一起拦死：无主 3 → 0、具名 0 → 3 仍放行。
+test('合法的整批归因迁移仍然放行', () => {
+  const before = "assert.equal(a(), 1); assert.equal(b(), 2); assert.equal(c(), 3)"
+  const after = "test('owns all', () => { assert.equal(a(), 1); assert.equal(b(), 2); assert.equal(c(), 3) })"
+  const result = inspectTestStandardChange(before, after)
+  assert.equal(result.allowed, true, JSON.stringify(result))
+})
