@@ -60,3 +60,25 @@ export function groupPickerCandidates(options: readonly PickerCandidate[]): Pick
   }
   return [...groups.values()];
 }
+
+/** 菜单行的可本地化文案（#4113 M2）：纯函数，行为可直接单测，不靠源码字符串断言。 */
+export type ModelMenuCopyKey =
+  | 'modelMenu.unsupportedTitle'
+  | 'modelMenu.unverifiedTitle'
+  | 'modelMenu.unsupportedBadge'
+  | 'modelMenu.unverifiedBadge';
+
+export function resolveModelMenuItemCopy(
+  // ModelExecutionStatus 恰好三值，且 executable===false ⟺ status∈{unsupported,unverified}；
+  // 因此 ready 无 badge 与原逻辑等价。若未来新增第 4 种非 ready 状态，需要同步这里的分支。
+  item: { executionStatus?: 'ready' | 'unsupported' | 'unverified' },
+  t: (key: ModelMenuCopyKey) => string,
+): { title?: string; badge?: string } {
+  if (item.executionStatus === 'unsupported') {
+    return { title: t('modelMenu.unsupportedTitle'), badge: t('modelMenu.unsupportedBadge') };
+  }
+  if (item.executionStatus === 'unverified') {
+    return { title: t('modelMenu.unverifiedTitle'), badge: t('modelMenu.unverifiedBadge') };
+  }
+  return {};
+}

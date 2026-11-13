@@ -13,7 +13,8 @@ import type {
   CapabilityModelItem,
   ModelParameterSchema,
 } from '../../../../../../shared/api.ts';
-import { resolveOperationLabel } from '../../../../../../shared/validation/operationLabels.ts';
+import { resolveOperationLabel, type OperationLabelLocale } from '../../../../../../shared/validation/operationLabels.ts';
+import { getLocale } from '../../../../../i18n/index.ts';
 import {
   buildEffectiveOpsUiState,
   buildUiUpstreamFingerprint,
@@ -148,9 +149,25 @@ export function resolveEffectiveImageParams(
  * 将生效的 EffectiveImageParams 转换为摘要触发条展示用的结构化摘要。
  * fullText 为空格拼接（禁止中点 `·`）。
  */
-export function formatImageSummary(params: EffectiveImageParams): ImageSummaryFormatResult {
+/** 浮层生成方式选项（#4113 M1）：纯函数，行为可直接单测。 */
+export function buildImageModeOptions(
+  effectiveOperations: ReadonlyArray<{ id: string; label?: string }> | null | undefined,
+  locale: OperationLabelLocale = 'zh',
+): Array<{ value: string; label: string }> {
+  return (effectiveOperations ?? []).map((op) => ({
+    value: op.id,
+    label: resolveOperationLabel({ id: op.id, label: op.label }, locale),
+  }));
+}
+
+export function formatImageSummary(
+  params: EffectiveImageParams,
+  locale: OperationLabelLocale = getLocale(),
+): ImageSummaryFormatResult {
+  // Issue #4113（F1）：与视频摘要 / SegmentControls 一致按当前 locale 解析模式名，
+  // 否则英文界面图片节点的模式名会停在中文。
   const modeText = params.showModeUi
-    ? resolveOperationLabel({ id: params.operation, label: params.operationLabel })
+    ? resolveOperationLabel({ id: params.operation, label: params.operationLabel }, locale)
     : '';
   const ratioText = params.aspectRatio === 'auto'
     ? '自适应'

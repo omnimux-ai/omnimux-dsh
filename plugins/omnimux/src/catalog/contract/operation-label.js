@@ -20,19 +20,23 @@ let cachedLabels
  * 也不伪造一个（fixture checkout 里没有 contract 目录是合法场景）。
  * @returns {Map<string, string>}
  */
-function labelMap() {
+function labelMapFor(loader) {
   if (cachedLabels) return cachedLabels
-  cachedLabels = new Map()
+  // Issue #4113（F3）：读取失败时**不缓存空表**——否则同进程内即使 registry 之后恢复，
+  // 也永远解析不出 label。失败即返回空表，下一次调用重试。
+  const labels = new Map()
   try {
-    const registry = loadOperationRegistry()
+    const registry = loader()
     for (const op of Array.isArray(registry?.operations) ? registry.operations : []) {
       if (typeof op?.id === 'string' && typeof op?.label === 'string' && op.label.trim()) {
-        cachedLabels.set(op.id, op.label.trim())
+        labels.set(op.id, op.label.trim())
       }
     }
   } catch {
-    // No readable registry → every operation stays unnamed rather than faked.
+    // No readable registry → every operation stays unnamed rather than faked; retry next call.
+    return labels
   }
+  cachedLabels = labels
   return cachedLabels
 }
 
@@ -40,13 +44,14 @@ function labelMap() {
  * 已审校的 operation 中文名。
  * @param {string} id operation id
  * @param {object} [registry] 已加载的 registry 文档（调用方已有就传，省一次读盘）
+ * @param {() => object} [loader] 读盘函数（测试注入用；默认 loadOperationRegistry）
  * @returns {string|undefined}
  */
-export function approvedOperationLabel(id, registry) {
+export function approvedOperationLabel(id, registry, loader = loadOperationRegistry) {
   if (typeof id !== 'string' || !id) return undefined
   if (registry && Array.isArray(registry.operations)) {
     const entry = registry.operations.find((candidate) => candidate && candidate.id === id)
     return typeof entry?.label === 'string' && entry.label.trim() ? entry.label.trim() : undefined
   }
-  return labelMap().get(id)
+  return labelMapFor(loader).get(id)
 }

@@ -20,9 +20,11 @@ import React, { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffe
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown } from 'lucide-react';
 import { ModelBrandIcon } from '../../../../ui/ModelBrandIcon';
+import { useT } from '../../../../i18n/index.ts';
 import {
   groupPickerCandidates,
   isPickerCandidate,
+  resolveModelMenuItemCopy,
   type PickerCandidate,
   type PickerCandidateGroup,
 } from './modelPickerCandidates';
@@ -245,7 +247,12 @@ const CascadeModelItem: React.FC<{
   interactive?: boolean;
   onHover?: () => void;
   onSelect?: () => void;
-}> = ({ item, isSelected, isHovered = false, interactive = true, onHover, onSelect }) => (
+}> = ({ item, isSelected, isHovered = false, interactive = true, onHover, onSelect }) => {
+  // Issue #4113（F2）：菜单徽标/title 走 i18n，不再硬编码中文。
+  const t = useT();
+  // 文案解析是纯函数（resolveModelMenuItemCopy），行为由单测覆盖，不靠源码 grep。
+  const { title, badge } = resolveModelMenuItemCopy(item, t);
+  return (
   <button
     type="button"
     role={interactive ? 'menuitem' : undefined}
@@ -253,7 +260,7 @@ const CascadeModelItem: React.FC<{
     data-testid={interactive ? `wf-cascade-model-${item.id}` : undefined}
     tabIndex={interactive ? undefined : -1}
     disabled={interactive && item.executable === false}
-    title={item.executionStatus === 'unsupported' ? '本地暂无该模型的可执行适配，暂不支持新建' : item.executionStatus === 'unverified' ? '模型服务尚未验证' : undefined}
+    title={title}
     onMouseEnter={interactive ? onHover : undefined}
     onClick={interactive && item.executable !== false ? onSelect : undefined}
     className={`wf-cascade-model-item ${isSelected ? 'is-selected' : ''} ${isHovered ? 'is-hovered' : ''} ${item.executable === false ? 'is-disabled' : ''}`}
@@ -264,13 +271,14 @@ const CascadeModelItem: React.FC<{
       </span>
       {item.executable === false ? (
         <span style={{ fontSize: 10, color: 'var(--dsw-alias-label-tertiary)', marginLeft: 6 }}>
-          {item.executionStatus === 'unverified' ? '未验证' : '暂不支持'}
+          {badge}
         </span>
       ) : null}
       {isSelected ? <Check size={15} color="rgb(0, 230, 118)" strokeWidth={2.5} /> : null}
     </div>
   </button>
-);
+  );
+};
 
 const CascadeChannelColumn: React.FC<{
   channelGroups: readonly ChannelGroupItem[];

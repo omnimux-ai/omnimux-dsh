@@ -40,9 +40,12 @@ const MOCK_CATALOG: CapabilityCatalog = {
     { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
     { id: 'gpt-5.5', label: 'GPT 5.5' },
   ],
+  // Issue #4113 验收样本：gateway-only 图片型号（operation 无 label），用于验证
+  // 图片摘要按 locale 解析（en 界面不得停在中文）。
   image: [
     { id: 'mock-img-fast', label: 'Mock Image Fast' },
     { id: 'mock-img-hd', label: 'Mock Image HD' },
+    { id: 'wan-image-3.0', label: 'Wan Image 3.0' },
   ],
   // Issue #4103 验收样本：gateway-only 型号（本地无 adapter，六种生成方式、operation 无 label）。
   // 目录行置灰「暂不支持」，已存在节点禁用生成并给一键切换。
@@ -152,6 +155,38 @@ const MOCK_CATALOG: CapabilityCatalog = {
         {
           id: 'image_to_image',
           label: '参考图',
+          listed: true,
+          output: { type: 'image' },
+          inputs: [
+            { slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 },
+            { slot: 'reference_image', type: 'image', role: 'reference', min: 0, max: null },
+          ],
+        },
+      ],
+    },
+    {
+      // Issue #4113：gateway-only 图片行——operation 只带 id，没有任何本地 label。
+      id: 'wan-image-3.0',
+      label: 'Wan Image 3.0',
+      family: 'alibaba',
+      operations: [
+        {
+          id: 'text_to_image',
+          listed: true,
+          output: { type: 'image' },
+          inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 }],
+        },
+        {
+          id: 'image_to_image',
+          listed: true,
+          output: { type: 'image' },
+          inputs: [
+            { slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 },
+            { slot: 'reference_image', type: 'image', role: 'reference', min: 0, max: 1 },
+          ],
+        },
+        {
+          id: 'multi_reference',
           listed: true,
           output: { type: 'image' },
           inputs: [
