@@ -1,0 +1,446 @@
+/**
+ * ensureProject —— 项目↔工作区关系模型（B1：数据/契约层）。
+ *
+ * 唯一入口，两种模式（PRD project-workspace-model v2 §2）：
+ *   - independent：不选工作区，root = 默认库下按标题派生的唯一文件夹；
+ *   - workspace  ：选了工作区，对 realpath(workspaceDir) 执行对齐状态机。
+ *
+ * 状态机（动作名即返回值 action）：
+ *   S0 无 project.json 且无画布文件       → initialized   初始化档案 + 首创作页
+ *   S1 有合法 project.json               → adopted       采纳/登记（pages 缺失引用补齐）
+ *   S2 有 project.json 但旧版/坏 JSON     → repaired      v1→v2 读迁移后写回 / 容错重建
+ *   S3 无（或坏）档案但有画布文件          → adopted-files 以画布文件重建 pages（保留原 canvasWorkspaceId）
+ *   S4 registry 指向同一 root 的重复记录   → converged     以文件为准收敛索引（不动用户文件）
+ *   —  同一调用重复执行                    → existing      幂等返回同一 project.id / 同一 root
+ *
+ * 单一真源：`<root>/.omnimux/project.json` + 画布文件；`.external-projects.json`
+ * 只是可重建索引，文件优先（scanEntries 侧做「有文件补索引 / 无文件删索引」自愈）。
+ *
+ * 事务：写盘统一走 ProjectStore.persistProject → 临时文件 + rename 原子替换；
+ * 失败时目录要么没有 project.json，要么是合法档案（不会半写）。
+ *
+ * 并发：按 resolve(root) 的进程内 mutex 串行 + 跨进程 `.omnimux/.lock`
+ * （`wx` 创建、超时轮询、过期回收）；两并发只产生 1 个项目 / 1 个 project.json。
+ */
+import { randomUUID } from 'node:crypto';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { basename, isAbsolute, join, resolve } from 'node:path';
+import { sanitizeFolderName } from './folderName.ts';
+import { assertProjectInsideLibrary, isInsideDir, resolveProjectPaths } from './paths.ts';
+import {
+  MAX_PROJECT_TITLE_LENGTH,
+  PROJECT_SCHEMA_VERSION,
+  parseProject,
+  projectSchema,
+  type Project,
+  type ProjectPage,
+} from './schema.ts';
+import type { ProjectRecord } from './ProjectStore.ts';
+
+export type EnsureProjectMode = 'independent' | 'workspace';
+
+export interface EnsureProjectInput {
+  mode: EnsureProjectMode;
+  /** workspace 模式必填：要绑定的工作区目录（绝对路径）。 */
+  workspaceDir?: string;
+  /** 可选标题；缺省时 independent 用「未命名项目」，workspace 用目录名。 */
+  title?: string;
+}
+
+export type EnsureProjectAction =
+  | 'initialized'
+  | 'adopted'
+  | 'repaired'
+  | 'adopted-files'
+  | 'converged'
+  | 'existing';
+
+export interface EnsureProjectResult {
+  action: EnsureProjectAction;
+  project: ProjectRecord;
+  root: string;
+}
+
+/** ProjectStore 注入给状态机的写入/索引能力（不在此复制迁移或落盘逻辑）。 */
+export interface EnsureProjectDeps {
+  libraryRoot: string;
+  loadExternalProjectDirs(): string[];
+  saveExternalProjectDirs(dirs: string[]): void;
+  registerExternalProjectDir(dir: string): void;
+  persistProject(dir: string, project: Project): ProjectRecord;
+  /** 跨进程锁等待上限（毫秒）。 */
+  lockTimeoutMs: number;
+  /** 超过该年龄的锁文件视为进程已死，可回收（毫秒）。 */
+  lockStaleMs: number;
+}
+
+export const DEFAULT_ENSURE_LOCK_TIMEOUT_MS = 10_000;
+export const DEFAULT_ENSURE_LOCK_STALE_MS = 5_000;
+const LOCK_POLL_MS = 25;
+const CANVAS_ID_RE = /^ws_[a-zA-Z0-9_-]{1,128}$/;
+const FALLBACK_TITLE = '未命名项目';
+
+class EnsureProjectError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.code = code;
+    this.name = 'EnsureProjectError';
+  }
+}
+
+export function isEnsureProjectError(error: unknown): error is EnsureProjectError {
+  return error instanceof EnsureProjectError;
+}
+
+/* ────────────────────────────── 输入 / 路径解析 ────────────────────────────── */
+
+function resolveTitle(value: string | undefined, fallback: string): string {
+  const trimmed = typeof value === 'string' && value.trim() !== '' ? value.trim() : fallback.trim();
+  const safe = trimmed !== '' ? trimmed : FALLBACK_TITLE;
+  if (typeof value === 'string' && value.trim() !== '' && value.trim().length > MAX_PROJECT_TITLE_LENGTH) {
+    throw new EnsureProjectError('title-too-long', `project title exceeds ${MAX_PROJECT_TITLE_LENGTH} characters`);
+  }
+  return safe.slice(0, MAX_PROJECT_TITLE_LENGTH);
+}
+
+/**
+ * independent 模式 root：默认库下一层，按标题派生（确定性 → 重复调用同一 root）。
+ * 不用 allocateUniqueProjectFolder：后者每次分配新文件夹，会破坏 ensure 幂等。
+ */
+function independentRoot(libraryRoot: string, title?: string): string {
+  const folder = sanitizeFolderName(resolveTitle(title, FALLBACK_TITLE));
+  if (folder === '') {
+    throw new EnsureProjectError('title-invalid', 'folder name is empty after sanitizing');
+  }
+  const root = join(resolve(libraryRoot), folder);
+  assertProjectInsideLibrary(root, resolve(libraryRoot));
+  return root;
+}
+
+function resolveWorkspaceRoot(workspaceDir: string | undefined): string {
+  const raw = typeof workspaceDir === 'string' ? workspaceDir.trim() : '';
+  if (raw === '') {
+    throw new EnsureProjectError('invalid-workspace-dir', 'workspace mode requires workspaceDir');
+  }
+  if (!isAbsolute(raw)) {
+    throw new EnsureProjectError('invalid-workspace-dir', 'workspaceDir must be an absolute path');
+  }
+  let real: string;
+  try {
+    if (!statSync(raw).isDirectory()) {
+      throw new Error('not a directory');
+    }
+    real = realpathSync(raw);
+  } catch {
+    throw new EnsureProjectError('invalid-workspace-dir', `workspaceDir does not exist or is not a directory: ${raw}`);
+  }
+  return real;
+}
+
+/* ─────────────────────────────── 锁（并发） ──────────────────────────────── */
+
+/** 进程内 mutex：key = resolve(root)。同一 root 的 ensure 串行执行。 */
+const inProcessTails = new Map<string, Promise<void>>();
+
+const sleep = (ms: number): Promise<void> => new Promise((done) => setTimeout(done, ms));
+
+async function withRootLock<T>(deps: EnsureProjectDeps, root: string, fn: () => T | Promise<T>): Promise<T> {
+  const key = resolve(root);
+  const previous = inProcessTails.get(key) ?? Promise.resolve();
+  let release!: () => void;
+  const gate = new Promise<void>((done) => { release = done; });
+  const tail = previous.then(() => gate);
+  inProcessTails.set(key, tail);
+  await previous.catch(() => undefined);
+  try {
+    return await withFileLock(deps, root, fn);
+  } finally {
+    release();
+    if (inProcessTails.get(key) === tail) inProcessTails.delete(key);
+  }
+}
+
+function lockAgeMs(lockPath: string): number {
+  try {
+    return Date.now() - statSync(lockPath).mtimeMs;
+  } catch {
+    return -1;
+  }
+}
+
+async function withFileLock<T>(deps: EnsureProjectDeps, root: string, fn: () => T | Promise<T>): Promise<T> {
+  const paths = resolveProjectPaths(root);
+  mkdirSync(paths.metaDir, { recursive: true });
+  const lockPath = join(paths.metaDir, '.lock');
+  const started = Date.now();
+  for (;;) {
+    try {
+      writeFileSync(lockPath, `${JSON.stringify({ pid: process.pid, at: new Date().toISOString() })}\n`, {
+        encoding: 'utf8',
+        flag: 'wx',
+      });
+      break;
+    } catch (error) {
+      const code = error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: unknown }).code)
+        : '';
+      if (code !== 'EEXIST') {
+        throw new EnsureProjectError('project-lock-failed', `could not create .omnimux/.lock at ${root}: ${(error as Error)?.message ?? String(error)}`);
+      }
+      const age = lockAgeMs(lockPath);
+      if (age >= 0 && age > deps.lockStaleMs) {
+        rmSync(lockPath, { force: true });
+        continue;
+      }
+      if (Date.now() - started > deps.lockTimeoutMs) {
+        throw new EnsureProjectError('project-lock-timeout', `timed out waiting for .omnimux/.lock at ${root}`);
+      }
+      await sleep(LOCK_POLL_MS);
+    }
+  }
+  try {
+    return await fn();
+  } finally {
+    rmSync(lockPath, { force: true });
+  }
+}
+
+/* ────────────────────────────── 单一真源：画布 ───────────────────────────── */
+
+function readJsonFile(filePath: string): unknown {
+  if (!existsSync(filePath)) return undefined;
+  try {
+    return JSON.parse(readFileSync(filePath, 'utf8'));
+  } catch {
+    return undefined;
+  }
+}
+
+function canvasIdsOnDisk(root: string): string[] {
+  const dir = join(root, '.omnimux', 'canvases');
+  if (!existsSync(dir)) return [];
+  let names: string[];
+  try {
+    names = readdirSync(dir);
+  } catch {
+    return [];
+  }
+  return names
+    .filter((name) => name.endsWith('.json'))
+    .map((name) => name.slice(0, -'.json'.length))
+    .filter((id) => CANVAS_ID_RE.test(id))
+    .sort();
+}
+
+/** 从既有画布文件重建创作页：保留原 canvasWorkspaceId（S3 硬要求），不读坏文件即失败。 */
+function pagesFromCanvasFiles(root: string): ProjectPage[] {
+  const now = new Date().toISOString();
+  return canvasIdsOnDisk(root).map((canvasWorkspaceId, index) => {
+    const snapshot = readJsonFile(join(root, '.omnimux', 'canvases', `${canvasWorkspaceId}.json`));
+    const record = snapshot && typeof snapshot === 'object' ? snapshot as Record<string, unknown> : null;
+    const rawName = record && typeof record.name === 'string' ? record.name.trim() : '';
+    const meta = record && typeof record.metadata === 'object' ? record.metadata as Record<string, unknown> : null;
+    const createdAt = meta && typeof meta.createdAt === 'string' && meta.createdAt !== ''
+      ? meta.createdAt
+      : now;
+    const updatedAt = meta && typeof meta.updatedAt === 'string' && meta.updatedAt !== ''
+      ? meta.updatedAt
+      : createdAt;
+    return {
+      id: index === 0 ? 'page-default' : `page-${index + 1}`,
+      title: (rawName !== '' ? rawName : `创作页 ${index + 1}`).slice(0, MAX_PROJECT_TITLE_LENGTH),
+      createdAt,
+      updatedAt,
+      canvasWorkspaceId,
+      loadMemory: false,
+    };
+  });
+}
+
+/* ────────────────────────────── 档案归一化 ──────────────────────────────── */
+
+function defaultPage(title: string, now: string): ProjectPage {
+  return {
+    id: 'page-default',
+    title: title.slice(0, MAX_PROJECT_TITLE_LENGTH),
+    createdAt: now,
+    updatedAt: now,
+    canvasWorkspaceId: `ws_${randomUUID().replace(/-/g, '').slice(0, 12)}`,
+    loadMemory: false,
+  };
+}
+
+function newProject(title: string, pages: ProjectPage[]): Project {
+  const now = new Date().toISOString();
+  return {
+    schemaVersion: PROJECT_SCHEMA_VERSION,
+    id: randomUUID(),
+    title,
+    createdAt: now,
+    updatedAt: now,
+    activePageId: pages[0]!.id,
+    pages,
+  };
+}
+
+function normalizePages(project: Project): { project: Project; changed: boolean } {
+  const now = new Date().toISOString();
+  let pages: ProjectPage[] = Array.isArray(project.pages) ? project.pages.map((page) => ({ ...page })) : [];
+  let changed = false;
+  if (pages.length === 0) {
+    pages = [defaultPage(project.title, now)];
+    changed = true;
+  }
+  pages = pages.map((page) => {
+    const wsId = typeof page.canvasWorkspaceId === 'string' ? page.canvasWorkspaceId.trim() : '';
+    if (wsId === '') {
+      changed = true;
+      return { ...page, canvasWorkspaceId: `ws_${randomUUID().replace(/-/g, '').slice(0, 12)}` };
+    }
+    if (wsId !== page.canvasWorkspaceId) {
+      changed = true;
+      return { ...page, canvasWorkspaceId: wsId };
+    }
+    return page;
+  });
+  let activePageId = project.activePageId;
+  if (typeof activePageId !== 'string' || !pages.some((page) => page.id === activePageId)) {
+    activePageId = pages[0]!.id;
+    changed = true;
+  }
+  return { project: { ...project, pages, activePageId }, changed };
+}
+
+/* ───────────────────────────── S4：索引收敛 ──────────────────────────────── */
+
+/**
+ * 收敛 `.external-projects.json` 中指向同一 root 的重复记录 / 与当前项目同 id 的
+ * 其它 root 记录。只改索引，**不动任何用户文件**。
+ * @returns 是否有索引被收敛（true → action=converged）
+ */
+function convergeRegistry(deps: EnsureProjectDeps, root: string, projectId: string): boolean {
+  const current = deps.loadExternalProjectDirs();
+  const target = resolve(root);
+  const seen = new Set<string>();
+  const kept: string[] = [];
+  let changed = false;
+  for (const entry of current) {
+    const dir = resolve(entry);
+    if (seen.has(dir)) {
+      changed = true;
+      continue;
+    }
+    seen.add(dir);
+    if (dir === target) {
+      kept.push(dir);
+      continue;
+    }
+    // 同一 project id 出现在另一个 root：以当前文件为准，丢弃该重复索引（文件保留）。
+    const otherRaw = readJsonFile(join(dir, '.omnimux', 'project.json'));
+    const other = otherRaw === undefined ? null : parseProject(otherRaw);
+    if (other && other.id === projectId) {
+      changed = true;
+      continue;
+    }
+    kept.push(dir);
+  }
+  if (changed) deps.saveExternalProjectDirs(kept);
+  return changed;
+}
+
+/* ─────────────────────────────── 状态机本体 ─────────────────────────────── */
+
+function ensureAtRoot(
+  deps: EnsureProjectDeps,
+  root: string,
+  opts: { mode: EnsureProjectMode; title?: string },
+): EnsureProjectResult {
+  const paths = resolveProjectPaths(root);
+  const fileExists = existsSync(paths.projectFile);
+  const raw = fileExists ? readJsonFile(paths.projectFile) : undefined;
+  const parsed = raw === undefined ? null : parseProject(raw);
+  const fallbackTitle = opts.title ?? basename(root) ?? FALLBACK_TITLE;
+  const title = resolveTitle(opts.title, fallbackTitle);
+
+  let action: EnsureProjectAction;
+  let project: Project;
+
+  if (parsed) {
+    const normalized = normalizePages(parsed);
+    const strictOnDisk = raw !== undefined && projectSchema.safeParse(raw).success;
+    if (!strictOnDisk || normalized.changed) {
+      // S1（补齐 pages 引用）或 S2（v1 / 容错结构 → 写回合法 v2）。
+      // parseProject 已负责 v1→v2 迁移，这里绝不复制第二份迁移逻辑。
+      project = normalized.project;
+      action = 'repaired';
+    } else {
+      project = parsed;
+      action = opts.mode === 'workspace' && !isRegisteredOutsideLibrary(deps, root) && !isInsideDir(root, deps.libraryRoot)
+        ? 'adopted'
+        : 'existing';
+    }
+  } else if (fileExists) {
+    // S2：project.json 存在但坏 JSON / 不支持的版本 —— 按画布文件容错重建（没有就新建）。
+    const fromFiles = pagesFromCanvasFiles(root);
+    project = newProject(title, fromFiles.length > 0 ? fromFiles : [defaultPage(title, new Date().toISOString())]);
+    action = 'repaired';
+  } else {
+    const fromFiles = pagesFromCanvasFiles(root);
+    if (fromFiles.length > 0) {
+      // S3：无档案但有创作页/画布文件 → 采纳既有文件，保留原 canvasWorkspaceId。
+      project = newProject(title, fromFiles);
+      action = 'adopted-files';
+    } else {
+      // S0：无档案无文件 → 初始化。
+      project = newProject(title, [defaultPage(title, new Date().toISOString())]);
+      action = 'initialized';
+    }
+  }
+
+  if (opts.mode === 'workspace' && !isInsideDir(root, deps.libraryRoot)) {
+    // S4：registry 重复 / 同 id 双记录 → 先收敛索引，再登记本 root。
+    if (convergeRegistry(deps, root, project.id)) action = 'converged';
+    deps.registerExternalProjectDir(root);
+  }
+
+  if (action === 'existing' || action === 'adopted') {
+    return { action, project: { ...project, path: root }, root };
+  }
+  return { action, project: deps.persistProject(root, project), root };
+}
+
+function isRegisteredOutsideLibrary(deps: EnsureProjectDeps, root: string): boolean {
+  if (isInsideDir(root, deps.libraryRoot)) return false;
+  const target = resolve(root);
+  return deps.loadExternalProjectDirs().some((entry) => resolve(entry) === target);
+}
+
+/* ─────────────────────────────── 公开入口 ────────────────────────────────── */
+
+export async function runEnsureProject(
+  deps: EnsureProjectDeps,
+  input: EnsureProjectInput,
+): Promise<EnsureProjectResult> {
+  if (input.mode === 'independent') {
+    const root = independentRoot(deps.libraryRoot, input.title);
+    mkdirSync(root, { recursive: true });
+    return withRootLock(deps, root, () => ensureAtRoot(deps, root, { mode: 'independent', title: input.title }));
+  }
+  if (input.mode === 'workspace') {
+    const root = resolveWorkspaceRoot(input.workspaceDir);
+    return withRootLock(deps, root, () => ensureAtRoot(deps, root, { mode: 'workspace', title: input.title }));
+  }
+  throw new EnsureProjectError('invalid-mode', `unknown ensureProject mode: ${String((input as { mode?: unknown }).mode)}`);
+}
+
+export { EnsureProjectError };
