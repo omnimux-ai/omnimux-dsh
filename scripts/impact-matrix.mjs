@@ -39,6 +39,8 @@ export function deriveImpactMatrix(changedFiles = []) {
   return {
     dimensions: {
       l0: { required: true, phase: 'pre-merge', reason: '所有代码变更均需通过 L0 离线单测与语法检查' },
+      // machine-readable target still 'human' pending the follow-up cascade with ci-verdict + tests
+      // (declared in PR #4094); the human-readable reason/summary below are already Bot-owned.
       dev: { required: false, phase: 'post-merge', target: 'human', reason: devRequired
         ? '开发版真机验收由桌面端 Bot 负责：多工作树并发时共享开发版为单实例，需串行/协调占用；物化后由桌面端 Bot 出 CDP 证据'
         : '无产品运行时或依赖变更，物化与真机验收均不适用' },

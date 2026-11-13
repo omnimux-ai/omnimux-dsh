@@ -45,7 +45,7 @@ function resolveImpact(qaReport, options) {
       || browser.target !== 'worktree' || dev.target !== 'human'
       || typeof matrix.isUiChange !== 'boolean' || matrix.isUiChange !== browser.required
       || !l0.reason?.trim() || !browser.reason?.trim() || !dev.reason?.trim()) {
-    throw new Error('影响面矩阵无效：必须声明合并前 L0 与合并后工作树 Web 验证/人工开发版验收的适用性及理由')
+    throw new Error('影响面矩阵无效：必须声明合并前 L0 与合并后工作树 Web 验证/桌面端 Bot 开发版验收的适用性及理由')
   }
   if (derived && ['browser', 'dev'].some(name => derived.dimensions[name].required !== matrix.dimensions[name].required)) {
     throw new Error('影响面矩阵与 changedFiles 不匹配')
