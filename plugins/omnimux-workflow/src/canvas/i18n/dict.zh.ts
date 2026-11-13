@@ -143,6 +143,8 @@ const zh = {
   'panel.preferenceSaveFailed': '模型已切换，但未能保存为默认偏好，请重试',
   'panel.adaptedModel': '已切换至 {model}，以处理{inputs}输入',
   'panel.adaptedModelGeneric': '已切换至 {model}，以处理当前输入',
+  'panel.modelUnsupported': '本地暂无该型号的可执行适配，暂不支持生成',
+  'panel.modelUnsupportedSwitch': '切换到 {model}',
   'panel.noCompatibleModel': '暂无兼容模型',
   'panel.noTranscriptionModel': '暂无可用转写模型',
   'panel.reason.input_waiting': '等待“{source}”的内容或素材；也可移除引用后继续',

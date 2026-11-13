@@ -8,6 +8,11 @@
  *   - 任何一段缺席都不留悬空分隔符。
  */
 
+import { getLocale } from '../../../../../i18n/index.ts';
+import {
+  resolveOperationLabel,
+  type OperationLabelLocale,
+} from '../../../../../../shared/validation/operationLabels.ts';
 import type { EffectiveVideoParams } from './types.ts';
 
 /**
@@ -74,30 +79,29 @@ function normalizeDuration(duration: number | string | undefined): string {
 
 /**
  * Resolve mode text from EffectiveVideoParams.
- * 支持模式外显必显需求：优先取 operationLabel，退回 operation；为空时兜底常规识别
+ *
+ * Issue #4103：只经 `resolveOperationLabel`（与 SegmentControls 共用同一函数）——
+ * operationLabel 为空或等于 id 时查已审校目录，registry 也没有才回落 id。
+ * 这里曾有一份只覆盖 4 个 id 的内联字典，正是它让 document/webpage 变成英文 id，
+ * 已随本次修复删除，禁止再把字典复制回来。
  */
-function resolveModeText(params: EffectiveVideoParams): string {
+function resolveModeText(params: EffectiveVideoParams, locale: OperationLabelLocale): string {
   if (!params.showModeUi) return '';
-  if (params.operationLabel && params.operationLabel.trim()) {
-    return params.operationLabel.trim();
-  }
-  if (params.operation && params.operation.trim()) {
-    const raw = params.operation.trim();
-    if (raw === 'text_to_video') return '文生视频';
-    if (raw === 'first_frame') return '首帧';
-    if (raw === 'first_last_frame') return '首尾帧';
-    if (raw === 'video_multi_ref' || raw === 'multi_reference') return '全能参考';
-    return raw;
-  }
-  return '';
+  return resolveOperationLabel(
+    { id: params.operation, label: params.operationLabel },
+    locale,
+  );
 }
 
 /**
  * 将生效的 EffectiveVideoParams 转换为胶囊展示用的四段式结构化摘要及拼接文本。
  * 声音（sound / hasSoundSupport）被刻意忽略：它只属于 Popover 内部。
  */
-export function formatVideoSummary(params: EffectiveVideoParams): VideoSummaryFormatResult {
-  const modeText = resolveModeText(params);
+export function formatVideoSummary(
+  params: EffectiveVideoParams,
+  locale: OperationLabelLocale = getLocale(),
+): VideoSummaryFormatResult {
+  const modeText = resolveModeText(params, locale);
   const ratioText = normalizeRatio(params.aspectRatio);
   const resolutionText = normalizeResolution(params.resolution);
   const durationText = normalizeDuration(params.duration);

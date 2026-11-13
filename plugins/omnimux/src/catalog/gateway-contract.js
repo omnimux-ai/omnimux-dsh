@@ -9,6 +9,7 @@
  */
 
 import { mapLegacyOperation } from './contract/legacy-operation-map.js'
+import { approvedOperationLabel } from './contract/operation-label.js'
 import { executionProfileFromContract, isExecutionProfileComplete, mergeExecutionProfiles } from './execution-profile.js'
 
 export const GATEWAY_CONTRACT_SCHEMA_VERSION = '2.0'
@@ -467,9 +468,11 @@ function toLocalOperation(gatewayOperation, localModel, profiles, family) {
   }
 
   /** @type {Record<string, unknown>} */
+  // label 只来自已审校目录；都不认就省略该字段（Issue #4103）。
+  const approvedLabel = text(localOp?.label) || approvedOperationLabel(operationId) || ''
   const operation = {
     id: operationId,
-    label: text(localOp?.label) || gatewayId.replace(/_/g, ' '),
+    ...(approvedLabel ? { label: approvedLabel } : {}),
     output: {
       type: outputType,
       ...(output.formats ? { allowedMimes: stringList(output.formats).map(toMime) } : {}),

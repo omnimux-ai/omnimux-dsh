@@ -24,6 +24,7 @@ import { resolveCurrentSnapshot } from './cloud/current.js'
 import { snapshotContentDigest } from './cloud/snapshot.js'
 import { usableSnapshotModels } from './cloud/view.js'
 import { getModelChannelGroups } from './serving/channel-groups.js'
+import { approvedOperationLabel } from './contract/operation-label.js'
 
 export const CATALOG_KINDS = Object.freeze(['text', 'image', 'video', 'audio'])
 
@@ -380,9 +381,11 @@ function gatewayOperationDto(operation, executionStatus) {
   for (const parameter of Array.isArray(operation?.parameters) ? operation.parameters : []) {
     if (parameter && typeof parameter.name === 'string' && parameter.name) parameters[parameter.name] = structuredClone(parameter)
   }
+  const label = approvedOperationLabel(operation.id)
   return {
     id: operation.id,
-    label: operation.id,
+    // label 只来自已审校目录（operation-registry）；gateway-only 型号不再用 id 冒充。
+    ...(label ? { label } : {}),
     output: structuredClone(operation.output ?? {}),
     inputs: (Array.isArray(operation.inputs) ? operation.inputs : []).map((slot) => ({
       ...structuredClone(slot),

@@ -13,6 +13,7 @@ import type {
   CapabilityModelItem,
   ModelParameterSchema,
 } from '../../../../../../shared/api.ts';
+import { resolveOperationLabel } from '../../../../../../shared/validation/operationLabels.ts';
 import {
   buildEffectiveOpsUiState,
   buildUiUpstreamFingerprint,
@@ -131,7 +132,7 @@ export function resolveEffectiveImageParams(
   const result: EffectiveImageParams = {
     model,
     operation,
-    operationLabel: operationOption?.label ?? operation,
+    operationLabel: resolveOperationLabel({ id: operation, label: operationOption?.label }),
     effectiveOperations: opsState.effectiveOps,
     showModeUi: shouldRenderModeUi(opsState),
     schema,
@@ -149,7 +150,7 @@ export function resolveEffectiveImageParams(
  */
 export function formatImageSummary(params: EffectiveImageParams): ImageSummaryFormatResult {
   const modeText = params.showModeUi
-    ? (params.operationLabel.trim() || params.operation.trim())
+    ? resolveOperationLabel({ id: params.operation, label: params.operationLabel })
     : '';
   const ratioText = params.aspectRatio === 'auto'
     ? '自适应'

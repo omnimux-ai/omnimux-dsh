@@ -136,6 +136,8 @@ const en: Record<DictKey, string> = {
   'panel.preferenceSaveFailed': 'Model changed, but the default preference could not be saved. Try again.',
   'panel.adaptedModel': 'Switched to {model} to handle {inputs} inputs',
   'panel.adaptedModelGeneric': 'Switched to {model} to handle these inputs',
+  'panel.modelUnsupported': 'This model has no local execution adapter yet, so generation is unavailable',
+  'panel.modelUnsupportedSwitch': 'Switch to {model}',
   'panel.noCompatibleModel': 'No compatible models',
   'panel.noTranscriptionModel': 'No transcription models available',
   'panel.reason.input_waiting': 'Waiting for content or media from “{source}”; remove the reference to continue without it',

@@ -18,6 +18,7 @@ import type {
   CapabilityModelItem,
   ModelParameterSchema,
 } from '../../../../../../shared/api.ts';
+import { resolveOperationLabel } from '../../../../../../shared/validation/operationLabels.ts';
 import {
   buildEffectiveOpsUiState,
   buildUiUpstreamFingerprint,
@@ -156,7 +157,7 @@ export function resolveEffectiveAudioParams(
   const result: EffectiveAudioParams = {
     model,
     operation,
-    operationLabel: operationOption?.label ?? operation,
+    operationLabel: resolveOperationLabel({ id: operation, label: operationOption?.label }),
     effectiveOperations: opsState.effectiveOps,
     showModeUi: shouldRenderModeUi(opsState),
     schema,

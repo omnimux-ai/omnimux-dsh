@@ -4,6 +4,7 @@
  * H1 shadow only — do not call from buildModelCatalog hot path.
  */
 
+import { approvedOperationLabel } from './operation-label.js'
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, basename } from 'node:path';
@@ -418,10 +419,14 @@ function normalizeOperation(op, modelDefaults, registry, profiles, modelId, ctx 
     });
   }
 
+  // label 只来自型号 YAML（已审校的具体文案）或 operation-registry；都没有就不写 label，
+  // 展示层再回落 id —— 契约本身绝不伪造英文 id 当 label（Issue #4103）。
+  const declaredLabel = typeof op.label === 'string' && op.label.trim() ? op.label.trim() : undefined
+  const label = declaredLabel ?? approvedOperationLabel(id, registry)
   /** @type {Record<string, unknown>} */
   const out = {
     id,
-    label: typeof op.label === 'string' ? op.label : id,
+    ...(label ? { label } : {}),
     output:
       op.output && typeof op.output === 'object'
         ? { .../** @type {object} */ (op.output) }
