@@ -169,6 +169,26 @@ export function createProjectStore(opts: {
   const lockStaleMs = opts.lockStaleMs ?? DEFAULT_ENSURE_LOCK_STALE_MS;
   mkdirSync(libraryRoot, { recursive: true });
   const externalProjectsFile = join(libraryRoot, '.external-projects.json');
+  // 库根可能是符号链接（macOS /var → /private/var）：lexical 与 realpath 两种形态都算库内。
+  // 写路径（persistProject/register）与扫描必须共用同一判定（评审 F6）。
+  let realLibraryRoot: string | null = null;
+  try {
+    realLibraryRoot = realpathSync(resolve(libraryRoot));
+  } catch {
+    realLibraryRoot = null;
+  }
+
+  function isInsideLibrary(dir: string): boolean {
+    const root = resolve(dir);
+    if (isInsideDir(root, resolve(libraryRoot))) return true;
+    if (realLibraryRoot === null) return false;
+    if (isInsideDir(root, realLibraryRoot)) return true;
+    try {
+      return isInsideDir(realpathSync(root), realLibraryRoot);
+    } catch {
+      return false;
+    }
+  }
 
   function loadExternalProjectDirs(): string[] {
     const raw = readJsonFile(externalProjectsFile);
@@ -185,7 +205,7 @@ export function createProjectStore(opts: {
 
   function registerExternalProjectDir(dir: string): void {
     const root = resolve(dir);
-    if (isInsideDir(root, libraryRoot)) return;
+    if (isInsideLibrary(root)) return;
     const current = loadExternalProjectDirs();
     if (!current.includes(root)) {
       current.push(root);
@@ -247,12 +267,6 @@ export function createProjectStore(opts: {
     }
     // 有文件补索引：已注册工作区目录若已有合法 project.json 而 registry 漏记，
     // 以文件为准补索引（文件优先自愈；只登记，不动用户文件）。
-    let realLibraryRoot: string | null = null;
-    try {
-      realLibraryRoot = realpathSync(resolve(libraryRoot));
-    } catch {
-      realLibraryRoot = null;
-    }
     if (typeof opts.workspaceDirs === 'function') {
       let candidates: string[] = [];
       try {
@@ -278,9 +292,7 @@ export function createProjectStore(opts: {
         rows.push({ dir, project });
         seenDirs.add(dir);
         seenDirs.add(lexical);
-        // F6：libraryRoot 可能是符号链接（/var → /private/var），两种形态都要判库内。
-        const insideLibrary = isInsideDir(dir, libraryRoot) || (realLibraryRoot !== null && isInsideDir(dir, realLibraryRoot));
-        if (!insideLibrary && !validExternalDirs.includes(dir)) {
+        if (!isInsideLibrary(dir) && !validExternalDirs.includes(dir)) {
           validExternalDirs.push(dir);
           externalChanged = true;
         }
@@ -309,8 +321,8 @@ export function createProjectStore(opts: {
 
   function persistProject(dir: string, project: Project): ProjectRecord {
     const paths = resolveProjectPaths(dir);
-    const insideLibrary = isInsideDir(paths.projectRoot, libraryRoot);
-    if (insideLibrary) {
+    const insideLibrary = isInsideLibrary(paths.projectRoot);
+    if (insideLibrary && isInsideDir(paths.projectRoot, resolve(libraryRoot))) {
       assertProjectInsideLibrary(paths.projectRoot, libraryRoot);
     }
     assertProjectWriteSafe(paths.projectFile, paths.projectRoot);
@@ -588,6 +600,7 @@ export function createProjectStore(opts: {
     ensureProject(input: EnsureProjectInput): Promise<EnsureProjectResult> {
       return runEnsureProject({
         libraryRoot,
+        isInsideLibrary,
         loadExternalProjectDirs,
         saveExternalProjectDirs,
         registerExternalProjectDir,

@@ -35,7 +35,7 @@ import {
 } from 'node:fs';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 import { sanitizeFolderName } from './folderName.ts';
-import { assertProjectInsideLibrary, isInsideDir, resolveProjectPaths } from './paths.ts';
+import { assertProjectInsideLibrary, resolveProjectPaths } from './paths.ts';
 import {
   MAX_PROJECT_TITLE_LENGTH,
   PROJECT_SCHEMA_VERSION,
@@ -73,6 +73,8 @@ export interface EnsureProjectResult {
 /** ProjectStore 注入给状态机的写入/索引能力（不在此复制迁移或落盘逻辑）。 */
 export interface EnsureProjectDeps {
   libraryRoot: string;
+  /** 库内判定（lexical + realpath，符号链接库根两种形态都算库内）。 */
+  isInsideLibrary(dir: string): boolean;
   loadExternalProjectDirs(): string[];
   saveExternalProjectDirs(dirs: string[]): void;
   registerExternalProjectDir(dir: string): void;
@@ -87,6 +89,10 @@ export const DEFAULT_ENSURE_LOCK_TIMEOUT_MS = 10_000;
 /** 默认必须大于 lockTimeoutMs：只按年龄回收活锁会抢占合法持有者（评审 F1）。 */
 export const DEFAULT_ENSURE_LOCK_STALE_MS = 30_000;
 const LOCK_POLL_MS = 25;
+/** 不可解析锁的最短回收宽限：有效锁是 `wx` 原子创建的完整 JSON，坏文件只可能是崩溃残留。
+ *  不能等到 30s（默认 lockStaleMs）——那会让首次打开必超时（评审 F1b），也不能 0——写入瞬间
+ *  可能读到半文件。1s 宽限兼顾两者。 */
+const UNREADABLE_LOCK_GRACE_MS = 1_000;
 const CANVAS_ID_RE = /^ws_[a-zA-Z0-9_-]{1,128}$/;
 const FALLBACK_TITLE = '未命名项目';
 
@@ -227,7 +233,9 @@ async function withFileLock<T>(deps: EnsureProjectDeps, root: string, fn: () => 
       const age = lockAgeMs(lockPath);
       const alive = lockHolderAlive(lockPath);
       const holderDead = alive === false;
-      const unreadableAndStale = alive === null && age >= 0 && age > deps.lockStaleMs;
+      const unreadableAndStale = alive === null
+        && age >= 0
+        && age > Math.min(deps.lockStaleMs, UNREADABLE_LOCK_GRACE_MS);
       if (holderDead || unreadableAndStale) {
         rmSync(lockPath, { force: true });
         continue;
@@ -420,7 +428,7 @@ function ensureAtRoot(
       action = 'repaired';
     } else {
       project = parsed;
-      action = opts.mode === 'workspace' && !isRegisteredOutsideLibrary(deps, root) && !isInsideDir(root, deps.libraryRoot)
+      action = opts.mode === 'workspace' && !isRegisteredOutsideLibrary(deps, root) && !deps.isInsideLibrary(root)
         ? 'adopted'
         : 'existing';
     }
@@ -446,7 +454,7 @@ function ensureAtRoot(
   const record = needsWrite
     ? deps.persistProject(root, project)
     : { ...project, path: root };
-  if (opts.mode === 'workspace' && !isInsideDir(root, deps.libraryRoot)) {
+  if (opts.mode === 'workspace' && !deps.isInsideLibrary(root)) {
     // F5：先落盘再改索引 —— 写盘失败时 registry 不会指向「无档案的 root」。
     if (convergeRegistry(deps, root, project.id)) action = 'converged';
     deps.registerExternalProjectDir(root);
@@ -455,7 +463,7 @@ function ensureAtRoot(
 }
 
 function isRegisteredOutsideLibrary(deps: EnsureProjectDeps, root: string): boolean {
-  if (isInsideDir(root, deps.libraryRoot)) return false;
+  if (deps.isInsideLibrary(root)) return false;
   const target = resolve(root);
   return deps.loadExternalProjectDirs().some((entry) => resolve(entry) === target);
 }
