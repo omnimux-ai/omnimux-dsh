@@ -74,6 +74,41 @@ describe('verify-message-source-kinds guard (#4110)', () => {
     assert.match(result.stderr, /injector\.js:2/)
   })
 
+  it('结构性问题：source 有 form/sections 却没有 kind（忘记声明）也要红', () => {
+    const root = fixtureRepo({
+      'plugins/fake/src/injector.js': [
+        'export const message = { role: \'user\', source: {',
+        "  plugin: 'fake',",
+        "  form: 'snapshot',",
+        "  sections: [{ name: 'x', text: 'y' }],",
+        '} }',
+      ].join('\n'),
+    })
+    const result = runGuard(root)
+    assert.equal(result.status, 1, 'missing kind must fail the guard')
+    assert.match(result.stderr, /\[missing-kind\]/)
+    assert.match(result.stderr, /injector\.js:1/)
+  })
+
+  it('空 kind 与双引号 plugin 同样算结构性问题', () => {
+    const root = fixtureRepo({
+      'plugins/fake/src/empty.js': "export const m = { source: { kind: '', plugin: 'x', form: 'snapshot' } }\n",
+      'plugins/fake/src/double.js': 'export const m = { source: { kind: "plugin", plugin: "x" } }\n',
+    })
+    const result = runGuard(root)
+    assert.equal(result.status, 1)
+    assert.match(result.stderr, /\[retired-kind\].*empty\.js:1/)
+    assert.match(result.stderr, /\[retired-kind\].*double\.js:1/)
+  })
+
+  it('非消息来源的 source 字面量（无 form/sections）不误报', () => {
+    const root = fixtureRepo({
+      'plugins/fake/src/artifact.js': "export const rec = { source: { agent: 'image_generate', channel: 'image' } }\n",
+    })
+    const result = runGuard(root)
+    assert.equal(result.status, 0, result.stderr)
+  })
+
   it('不误报 producer-owned 常量写法', () => {
     const root = fixtureRepo({
       'plugins/fake/src/injector.js': [
@@ -84,7 +119,7 @@ describe('verify-message-source-kinds guard (#4110)', () => {
     })
     const result = runGuard(root)
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /no retired catch-all source kind/)
+    assert.match(result.stdout, /no retired or missing message-source kind/)
   })
 
   it('不误报注释与带 allow 标记的文档行', () => {

@@ -20,7 +20,7 @@ producer-owned kind，并新增 `scripts/verify-message-source-kinds.mjs` 防回
 - 其余 source 字段（`plugin` / `form` / `sections`）原样保留
 - 注入消息通过宿主发布的 session-format v4 准入（`assertV4RowAdmission` /
   `releasedV4SessionFormatCodec.encodeEvent`，与 `assertV4MessageSources` 共用 source() 准入）
-- 全仓守卫禁止新的 `kind: 'plugin'`，自测能红能绿，挂进 `test:gates`
+- 全仓守卫按结构化规则拦「kind 缺失 / 为空 / 等于 plugin」三类问题（不是只匹配单个字面量），自测能红能绿，挂进 `test:gates` 与 CI 的 Repo gate scripts 步骤
 
 ## 旧标准变更
 
