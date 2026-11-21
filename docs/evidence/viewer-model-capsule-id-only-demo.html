@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>图像生成 · 模型按钮只显示模型名称 · 修改前后对比</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0b0c;
+      --surface: #141416;
+      --surface-raised: #1c1c1f;
+      --surface-hover: #242428;
+      --line: #2e2e33;
+      --line-strong: #3f3f46;
+      --text: #f4f4f5;
+      --text-secondary: #a1a1aa;
+      --text-tertiary: #71717a;
+      --accent: #8b5cf6;
+      --accent-soft: rgba(139, 92, 246, 0.16);
+      --danger: #f87171;
+      --success: #34d399;
+      --shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+    }
+    html[data-theme="light"] {
+      color-scheme: light;
+      --bg: #f4f4f5;
+      --surface: #ffffff;
+      --surface-raised: #ffffff;
+      --surface-hover: #f4f4f5;
+      --line: #e4e4e7;
+      --line-strong: #d4d4d8;
+      --text: #18181b;
+      --text-secondary: #52525b;
+      --text-tertiary: #71717a;
+      --accent: #7c3aed;
+      --accent-soft: rgba(124, 58, 237, 0.1);
+      --danger: #dc2626;
+      --success: #059669;
+      --shadow: 0 18px 50px rgba(24, 24, 27, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 40px 32px 64px;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+      transition: background 160ms ease, color 160ms ease;
+    }
+    .page { max-width: 1180px; margin: 0 auto; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 26px; }
+    h1 { margin: 0 0 8px; font-size: 24px; line-height: 1.25; letter-spacing: -0.01em; }
+    .lede { margin: 0; color: var(--text-secondary); max-width: 720px; }
+    .controls { display: flex; gap: 8px; flex-shrink: 0; }
+    .control-btn {
+      height: 34px; padding: 0 14px; border-radius: 999px;
+      border: 1px solid var(--line-strong); background: var(--surface); color: var(--text);
+      font: inherit; font-size: 13px; cursor: pointer;
+    }
+    .control-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .card {
+      border: 1px solid var(--line); border-radius: 18px; background: var(--surface);
+      box-shadow: var(--shadow); overflow: hidden;
+    }
+    .card-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
+    .card-title { display: flex; align-items: center; gap: 8px; font-weight: 650; font-size: 15px; }
+    .tag { font-size: 11px; font-weight: 600; border-radius: 999px; padding: 3px 8px; }
+    .tag.before { background: rgba(248, 113, 113, 0.12); color: var(--danger); }
+    .tag.after { background: rgba(52, 211, 153, 0.12); color: var(--success); }
+    .card-note { color: var(--text-secondary); font-size: 12px; padding: 12px 18px 16px; }
+    .composer { padding: 20px 18px 18px; }
+    .stage {
+      height: 180px; border-radius: 12px; border: 1px dashed var(--line-strong);
+      background:
+        radial-gradient(120% 90% at 50% 0%, var(--accent-soft), transparent 62%),
+        var(--surface-raised);
+      display: grid; place-items: center; color: var(--text-tertiary); font-size: 12px; margin-bottom: 16px;
+    }
+    .prompt {
+      width: 100%; min-height: 44px; resize: none; border: 0; outline: 0;
+      background: transparent; color: var(--text); font: inherit; line-height: 1.6; padding: 2px 2px 10px;
+    }
+    .prompt::placeholder { color: var(--text-tertiary); }
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      border-top: 1px solid var(--line); padding-top: 12px;
+    }
+    .toolbar-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .capsule {
+      display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px;
+      border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface-raised);
+      font-size: 12px; font-weight: 500; white-space: nowrap; max-width: 100%;
+    }
+    .capsule svg { flex: none; color: var(--text-secondary); }
+    .capsule .model-name { overflow: hidden; text-overflow: ellipsis; }
+    .capsule .channel-name { color: var(--text-secondary); font-weight: 400; overflow: hidden; text-overflow: ellipsis; }
+    .capsule .chevron { color: var(--text-tertiary); }
+    .capsule-btn { cursor: default; }
+    .params {
+      display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px;
+      border-radius: 8px; color: var(--text-secondary); font-size: 12px; white-space: nowrap;
+    }
+    .cost { color: var(--text-tertiary); font-size: 12px; white-space: nowrap; }
+    .meta { display: flex; gap: 18px; margin-top: 18px; color: var(--text-secondary); font-size: 12px; flex-wrap: wrap; }
+    .meta b { color: var(--text); font-weight: 600; }
+    .measure {
+      display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: 4px;
+      background: var(--surface-hover); color: var(--text-tertiary); font-size: 11px;
+    }
+    .narrow .compare { grid-template-columns: 1fr; max-width: 430px; margin: 0 auto; }
+    .legend { margin-top: 24px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); color: var(--text-secondary); background: var(--surface); }
+    .legend code { color: var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    @media (max-width: 900px) {
+      body { padding: 24px 16px 40px; }
+      .page-head { flex-direction: column; align-items: flex-start; }
+      .compare { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page" id="page">
+    <header class="page-head">
+      <div>
+        <h1>图像生成 · 模型按钮只显示模型名称</h1>
+        <p class="lede">同一段底部工具条：左边是修改前，模型名后面跟着渠道分组名「畅享版（自建账号池 / 随心用）」；右边是修改后，只保留「Muse Image」。渠道选择仍可在点开后的「选择版本」列查看。</p>
+      </div>
+      <div class="controls">
+        <button class="control-btn" id="themeBtn" type="button" aria-pressed="false">切换亮色</button>
+        <button class="control-btn" id="narrowBtn" type="button" aria-pressed="false">窄屏预览</button>
+      </div>
+    </header>
+
+    <section class="compare" aria-label="修改前后对比">
+      <article class="card">
+        <div class="card-head">
+          <div class="card-title">修改前 <span class="tag before">分组名占据按钮</span></div>
+          <span class="measure">按钮宽 318px</span>
+        </div>
+        <div class="composer">
+          <div class="stage">图像预览区</div>
+          <textarea class="prompt" rows="1" placeholder="描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"></textarea>
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <button class="capsule capsule-btn" type="button" title="Muse Image · 畅享版（自建账号池 / 随心用）" aria-label="模型：Muse Image · 畅享版（自建账号池 / 随心用）">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="6" y1="20" x2="6" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="14"/></svg>
+                <span class="model-name">Muse Image</span>
+                <span class="channel-name">畅享版（自建账号池 / 随心用）</span>
+                <svg class="chevron" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75"><path d="m4 6 4 4 4-4"/></svg>
+              </button>
+              <span class="params">16:9 · 1K · 1</span>
+            </div>
+            <span class="cost">预估消耗 ≈0.01 积分</span>
+          </div>
+        </div>
+        <div class="card-note">模型名和渠道分组名混在同一层级，长括号说明让按钮变宽，也让用户误以为两者是同一个选择。</div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <div class="card-title">修改后 <span class="tag after">只显示模型名</span></div>
+          <span class="measure">按钮宽 118px</span>
+        </div>
+        <div class="composer">
+          <div class="stage">图像预览区</div>
+          <textarea class="prompt" rows="1" placeholder="描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"></textarea>
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <button class="capsule capsule-btn" type="button" title="Muse Image" aria-label="模型：Muse Image">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="6" y1="20" x2="6" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="14"/></svg>
+                <span class="model-name">Muse Image</span>
+                <svg class="chevron" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75"><path d="m4 6 4 4 4-4"/></svg>
+              </button>
+              <span class="params">16:9 · 1K · 1</span>
+            </div>
+            <span class="cost">预估消耗 ≈0.01 积分</span>
+          </div>
+        </div>
+        <div class="card-note">按钮只回答「我现在用哪个模型」。渠道分组在展开的三级菜单「选择版本」里照常显示和切换，选择行为不变。</div>
+      </article>
+    </section>
+
+    <div class="legend">
+      交互说明：点模型按钮打开级联菜单 → 第三列「选择版本」仍列出 <code>畅享版（自建账号池 / 随心用）</code>、标准版等全部渠道；选中后按钮回显只更新模型名。当前演示为静态样本，不连接真实模型目录。
+    </div>
+  </main>
+  <script>
+    const themeBtn = document.getElementById('themeBtn');
+    const narrowBtn = document.getElementById('narrowBtn');
+    const page = document.getElementById('page');
+    themeBtn.addEventListener('click', () => {
+      const light = document.documentElement.dataset.theme === 'light';
+      document.documentElement.dataset.theme = light ? 'dark' : 'light';
+      themeBtn.setAttribute('aria-pressed', String(!light));
+      themeBtn.textContent = light ? '切换亮色' : '切换暗色';
+    });
+    narrowBtn.addEventListener('click', () => {
+      const narrow = page.classList.toggle('narrow');
+      narrowBtn.setAttribute('aria-pressed', String(narrow));
+      narrowBtn.textContent = narrow ? '退出窄屏' : '窄屏预览';
+    });
+  </script>
+</body>
+</html>

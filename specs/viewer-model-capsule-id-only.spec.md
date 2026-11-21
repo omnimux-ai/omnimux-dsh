@@ -36,7 +36,7 @@
 
 ## 实施边界
 
-只改 `plugins/omnimux-viewer/src/media-viewer/MediaConfigControls.jsx`、对应的 `media-config-controls.e2e.test.js` 和演示页；不触碰模型目录、Hub、网关注入或渠道路由。
+只改 `plugins/omnimux-viewer/src/media-viewer/MediaConfigControls.jsx`、对应的 `media-config-controls.e2e.test.js` / `gpt-image-gateway-3071.e2e.test.js`、演示页 `docs/evidence/viewer-model-capsule-id-only-demo.html` 和对应的本地截图；不触碰模型目录、Hub、网关注入或渠道路由。
 
 ## 验证
 
