@@ -880,6 +880,10 @@ export function MediaViewerComposer({
   const handleSend = useCallback(() => {
     const trimmed = prompt.trim();
     if (!trimmed || disabled || submittingRef.current) return;
+    if (config.catalogStatus && (config.catalogStatus[mode] !== 'ready' || !model)) {
+      setNotice(config.catalogError || '模型目录不可用，请重试');
+      return;
+    }
     closePopovers();
     setPickerOpen(false);
 
@@ -1077,6 +1081,8 @@ export function MediaViewerComposer({
     model,
     videoModeId,
     config.channel?.id,
+    config.catalogStatus,
+    config.catalogError,
     currentOperationId,
   ]);
 

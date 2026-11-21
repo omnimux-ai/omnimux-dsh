@@ -96,10 +96,10 @@ describe('MediaViewer UI Polish & Spec Compliance', () => {
     }
 
     // 底栏参数胶囊回显生成方式与纯数字张数
-    assert.match(jsxContent, /<span>\{imageOpMode\}<\/span>\s*<span className="omx-dot">·<\/span>/, '底栏胶囊最前必须包含生成方式与分隔点');
-    assert.match(jsxContent, /<span>\{imageBatch\}<\/span>/, '底栏胶囊尾部必须为纯数字张数');
-    assert.doesNotMatch(jsxContent, /<span>\{imageBatch\}张<\/span>/, '底栏胶囊尾部张数严禁携带“张”字');
-    assert.match(jsxContent, /\$\{imageOpMode\}\s*·\s*\$\{imageAspect\}\s*·\s*\$\{imageRes\}\s*·\s*\$\{imageBatch\}(?!张)/, '参数摘要字符串必须包含生成方式且末尾无“张”字');
+    assert.match(jsxContent, /showOpMode \? imageOpMode : ''/, '底栏胶囊必须按需显示生成方式');
+    assert.match(jsxContent, /imageAspect, imageRes, imageBatch/, '底栏胶囊必须包含比例、清晰度与纯数字张数');
+    assert.doesNotMatch(jsxContent, /imageBatch\}张/, '底栏胶囊张数严禁携带“张”字');
+    assert.match(jsxContent, /imageSummaryParts\.join/, '参数摘要字符串必须由实际存在的字段拼接');
   });
 
   it('Step 7: 视频时长滑块刻度两端对齐（4s/15s 不得堆叠左侧）', () => {

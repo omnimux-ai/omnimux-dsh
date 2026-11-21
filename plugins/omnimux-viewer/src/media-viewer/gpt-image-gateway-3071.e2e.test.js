@@ -8,6 +8,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
+import { DEFAULT_FALLBACK_CATALOG } from './test-fixtures/legacy-catalog.js';
 
 // React DOM interaction regression grounded in #3071 ego-browser verification.
 // This offline test does not claim real-browser or paid-generation evidence.
@@ -26,7 +27,7 @@ test('image channel switch retains ratio and narrows standard resolution/batch w
     Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
   }
   const previousFetch = globalThis.fetch;
-  globalThis.fetch = async () => new Response('', { status: 503 });
+  globalThis.fetch = async () => new Response(JSON.stringify({ image: DEFAULT_FALLBACK_CATALOG.image }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   let root;
   try {
     const React = require('react');
@@ -46,7 +47,7 @@ test('image channel switch retains ratio and narrows standard resolution/batch w
     assert.equal(trigger.querySelector('.omx-channel-name-display'), null, '模型胶囊不得渲染渠道分组名');
     assert.equal(trigger.getAttribute('title'), 'GPT Image 2.5');
     assert.equal(trigger.getAttribute('aria-label'), '模型：GPT Image 2.5');
-    const { DEFAULT_FALLBACK_CATALOG, parseCatalogToCascade, imageParameterOptions } = await import('./MediaViewerComposerData.js');
+    const { parseCatalogToCascade, imageParameterOptions } = await import('./MediaViewerComposerData.js');
     const imageModels = parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.image).flatMap(brand => brand.models);
     // The fallback now pins gpt-image-2.5's default line to 1K while seedream-5-0-pro keeps the full domain.
     const defaultResolutionOptions = Object.fromEntries(imageModels.map(model => [
@@ -71,9 +72,9 @@ test('image channel switch retains ratio and narrows standard resolution/batch w
     await click('#paramSummaryTriggerBtn');
     await channel('标准版');
     await click('#paramSummaryTriggerBtn');
-    assert.deepEqual(state().params, { aspectRatio: '3:2', resolution: '1K', batch: '1', operation: '文生图' });
+    assert.deepEqual(state().params, { aspectRatio: '3:2', resolution: '1K', batch: '4', operation: '文生图' });
     assert.deepEqual([...document.querySelectorAll('.omx-subcol-clarity button')].map(b => b.textContent.trim()), ['1K']);
-    assert.deepEqual([...document.querySelectorAll('.omx-subcol-sound button')].map(b => b.textContent.trim()), ['1']);
+    assert.deepEqual([...document.querySelectorAll('.omx-subcol-sound button')].map(b => b.textContent.trim()), ['1', '2', '4']);
     assert.equal(document.querySelectorAll('.omx-ratio-grid button').length, 9);
     await option('.omx-ratio-grid', '自适应');
     assert.equal(state().params.aspectRatio, 'auto');

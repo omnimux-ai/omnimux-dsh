@@ -2,9 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   DEFAULT_FALLBACK_CATALOG,
-  defaultMediaChannel,
-  parseCatalogToCascade,
-} from './MediaViewerComposerData.js';
+} from './test-fixtures/legacy-catalog.js';
+import { defaultMediaChannel, parseCatalogToCascade } from './MediaViewerComposerData.js';
 
 function seedance25() {
   const entry = DEFAULT_FALLBACK_CATALOG.video.find((item) => item.id === 'seedance-2-5');
