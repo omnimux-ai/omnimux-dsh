@@ -1,8 +1,8 @@
 {
   "pass": true,
   "issue": 3533,
-  "capturedAt": "2026-10-24T10:07:56.591Z",
-  "sourceCommit": "3426e80a316460ca12372bdc21b41c9603f84ae2",
+  "capturedAt": "2026-11-21T06:48:16.234Z",
+  "sourceCommit": "cba6fca4079075abd783155716553583d8c30e54",
   "sourceDirty": false,
   "browser": "ego-lite",
   "harness": "/tmp/flow-alignment-3533/harness.html",
@@ -14,7 +14,7 @@
     "cost": "777cbc858b14eeecfb07c19cfec02878a131eae3114d0722ab70e6b18681a67c",
     "composer": "094c0e1595196036ecf28fcf208a0959392a2ad07a013245dfc1dfe300a875a5",
     "composerData": "c3cf224555317080f9b4b703ac06ee41643064b0d3bf7250e319c8e56917ee5b",
-    "configControls": "e81740176373127273a76cbca4f863bdb335eccaf493af12d28c15c8cc77c3bd",
+    "configControls": "91e40f2bb28a9683f2a81cb4fe97a155423187722c6936468e47a154fb497c3c",
     "mount": "62c069a75a28d4d2a6495517feeab9c4cde1d72b8239e2fef6ef2b217ceb4761",
     "locales": "4da9a9ad55b54984eb24412c88877322d26c5e4e4ed1242ce3e8b0f24309a254",
     "copy": "3bfaf8d0eba7c9cfcd2b0e87209247f6c002b6528c100817584b303da02ef4b1",
@@ -132,7 +132,7 @@
   "wide": {
     "viewport": {
       "width": 1728,
-      "height": 883
+      "height": 884
     },
     "frameWidth": 1280,
     "hasHistoryOpen": "false",
@@ -165,7 +165,7 @@
   "narrowClosed": {
     "viewport": {
       "width": 1728,
-      "height": 883
+      "height": 884
     },
     "frameWidth": 640,
     "hasHistoryOpen": "false",
@@ -198,7 +198,7 @@
   "narrowOpen": {
     "viewport": {
       "width": 1728,
-      "height": 883
+      "height": 884
     },
     "frameWidth": 640,
     "hasHistoryOpen": "true",

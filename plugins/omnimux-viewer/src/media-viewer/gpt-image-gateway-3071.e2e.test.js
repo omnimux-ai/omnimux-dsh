@@ -41,6 +41,11 @@ test('image channel switch retains ratio and narrows standard resolution/batch w
     const state = () => JSON.parse(document.getElementById('state').textContent);
     const channel = async (id) => { await click('#modelCascadeTriggerBtn'); const buttons = [...document.querySelectorAll('.omx-version-row')]; const node = buttons.find(button => button.querySelector('.omx-version-name')?.textContent === id); assert.ok(node, id); await act(async () => node.click()); };
     assert.equal(state().channel, 'standard');
+    const trigger = document.querySelector('#modelCascadeTriggerBtn');
+    assert.equal(trigger.textContent.trim(), 'GPT Image 2.5', '模型胶囊只显示模型名称');
+    assert.equal(trigger.querySelector('.omx-channel-name-display'), null, '模型胶囊不得渲染渠道分组名');
+    assert.equal(trigger.getAttribute('title'), 'GPT Image 2.5');
+    assert.equal(trigger.getAttribute('aria-label'), '模型：GPT Image 2.5');
     const { DEFAULT_FALLBACK_CATALOG, parseCatalogToCascade, imageParameterOptions } = await import('./MediaViewerComposerData.js');
     const imageModels = parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.image).flatMap(brand => brand.models);
     // The fallback now pins gpt-image-2.5's default line to 1K while seedream-5-0-pro keeps the full domain.

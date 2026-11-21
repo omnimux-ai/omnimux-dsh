@@ -126,4 +126,18 @@ describe('MediaViewer UI Polish & Spec Compliance', () => {
     assert.match(MEDIA_VIEWER_CSS, /\.omx-mode-pill\s*\{[^}]*word-break:\s*keep-all;/);
     assert.match(MEDIA_VIEWER_CSS, /\.omx-mode-pill\s*\{[^}]*min-width:\s*0;/);
   });
+
+  it('Step 8: 模型胶囊只显示模型名，不显示渠道分组名', () => {
+    const jsxPath = path.join(__dirname, './MediaConfigControls.jsx');
+    const jsxContent = fs.readFileSync(jsxPath, 'utf8');
+    const triggerStart = jsxContent.indexOf('id="modelCascadeTriggerBtn"');
+    assert.notEqual(triggerStart, -1, '必须存在模型级联触发器');
+    const triggerEnd = jsxContent.indexOf('</button>', triggerStart);
+    assert.notEqual(triggerEnd, -1, '模型级联触发器必须是完整 button');
+    const trigger = jsxContent.slice(triggerStart, triggerEnd);
+
+    assert.match(trigger, /className="omx-model-name-display"/, '触发器必须渲染模型名');
+    assert.doesNotMatch(trigger, /omx-channel-name-display/, '触发器不得渲染渠道分组名');
+    assert.doesNotMatch(trigger, /channel\?\.name/, '触发器的 title / aria-label 不得拼接渠道分组名');
+  });
 });
