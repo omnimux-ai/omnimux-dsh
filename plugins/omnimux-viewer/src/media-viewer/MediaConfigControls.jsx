@@ -196,8 +196,8 @@ export function MediaModelCascade({ config, open, onToggle, onPicked }) {
         type="button"
         className={`omx-capsule-trigger ${open ? 'is-active' : ''}`}
         onClick={onToggle}
-        title={`${model?.name || '选择模型'}${channel?.name ? ` · ${channel.name}` : ''}`}
-        aria-label={`模型：${model?.name || '选择模型'}${channel?.name ? ` · ${channel.name}` : ''}`}
+        title={model?.name || '选择模型'}
+        aria-label={`模型：${model?.name || '选择模型'}`}
         aria-haspopup="dialog"
         aria-expanded={open}
       >
@@ -207,7 +207,6 @@ export function MediaModelCascade({ config, open, onToggle, onPicked }) {
           <line x1="18" y1="20" x2="18" y2="14" />
         </svg>
         <span className="omx-model-name-display">{model?.name || '选择模型'}</span>
-        {channel?.name ? <span className="omx-channel-name-display">{channel.name}</span> : null}
         <ChevronIcon />
       </button>
 
