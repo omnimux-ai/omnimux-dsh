@@ -15,13 +15,23 @@ describe('E2E: 媒体查看器局部评论标注与图片编辑生成契约验�
     id: 'gpt-image-2.5',
     label: 'GPT Image 2.5',
     family: 'openai',
+    operations: [
+      { id: 'text_to_image', output: { type: 'image' }, inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', min: 1, max: 1 }] },
+      { id: 'image_edit', output: { type: 'image' }, inputs: [
+        { slot: 'prompt', type: 'text', role: 'prompt', min: 1, max: 1 },
+        { slot: 'reference_image', type: 'image', role: 'reference', min: 1, max: 1 },
+      ] },
+      { id: 'multi_reference', output: { type: 'image' }, inputs: [
+        { slot: 'prompt', type: 'text', role: 'prompt', min: 1, max: 1 },
+        { slot: 'reference_images', type: 'image', role: 'reference', min: 0, max: 4 },
+      ] },
+    ],
   };
 
-  it('1. 契约自适应：通用图像模型缺省 operations 时提供图片编辑操作兜底', () => {
+  it('1. 契约自适应：图像模型只消费真实 operations，不再伪造缺省操作', () => {
     const ops = operationsOf(mockImageModel, 'image');
-    assert.ok(ops.length >= 2, '必须提供至少包含文生图与图片编辑的标准操作契约');
-    assert.ok(ops.some((op) => op.id === 'text_to_image'), '必须包含 text_to_image');
-    assert.ok(ops.some((op) => op.id === 'image_edit' || op.id === 'multi_reference'), '必须包含图片编辑或垫图参考操作');
+    assert.deepEqual(ops.map((op) => op.id), ['text_to_image', 'image_edit', 'multi_reference']);
+    assert.deepEqual(operationsOf({ id: 'gateway-only' }, 'image'), []);
   });
 
   it('2. 槽位 Key 稳定：初始状态与编辑状态均返回一致的 image:reference:reference 槽位 Key', () => {

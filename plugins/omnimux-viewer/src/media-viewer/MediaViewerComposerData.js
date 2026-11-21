@@ -7,264 +7,19 @@ export const BRAND_NAME_MAP = {
   openai: 'OpenAI',
   bytedance: 'Seedance',
   seedance: 'Seedance',
+  seedream: 'Seedream',
   minimax: 'MiniMax',
   kling: 'Kling',
   google: 'Google',
   midjourney: 'Midjourney',
   bfl: 'Black Forest Labs',
   anthropic: 'Claude',
+  muse: 'Muse',
+  wan: 'Wan',
 };
 
-/**
- * 真实中枢已知后备目录（与中枢 catalog-defaults 100% 保持一致，拒绝捏造）
- */
-export const DEFAULT_FALLBACK_CATALOG = {
-  "image": [
-    {
-      "id": "gpt-image-2.5",
-      "label": "GPT Image 2.5",
-      "badge": "新品",
-      "subtitle": "标准版 1K · 高分档依渠道",
-      "family": "openai",
-      "parameters": {
-        "aspectRatio": {
-          "defaultValue": "16:9",
-          "options": [
-            "auto",
-            "1:1",
-            "16:9",
-            "9:16",
-            "4:3",
-            "3:4",
-            "3:2",
-            "2:3",
-            "21:9"
-          ]
-        },
-        "resolution": {
-          "defaultValue": "1K",
-          "options": [
-            "1K",
-            "2K",
-            "4K"
-          ]
-        },
-        "quality": {
-          "defaultValue": "standard",
-          "options": [
-            "standard",
-            "hd"
-          ]
-        },
-        "n": {
-          "defaultValue": 1,
-          "options": [
-            1,
-            2,
-            4
-          ]
-        }
-      },
-      "channelGroups": [
-        {
-          "id": "standard",
-          "label": "标准版",
-          "default": true,
-          "badge": "基础清晰度 · 异步出图",
-          "wireGroup": "default",
-          "constraints": {
-            "parameters": {
-              "resolution": {
-                "fixed": "1K"
-              },
-              "quality": {
-                "supported": false
-              },
-              "n": {
-                "fixed": 1
-              }
-            }
-          },
-          "pricing": {
-            "pointsEstimate": 0.13,
-            "discountRate": 1,
-            "billingMode": "per_task"
-          }
-        },
-        {
-          "id": "economy",
-          "label": "经济版",
-          "badge": "经济走量 · 独立线路",
-          "wireGroup": "gpt-image-2.5-economy",
-          "pricing": {
-            "pointsEstimate": 0.01,
-            "discountRate": 0.112455,
-            "billingMode": "per_task"
-          }
-        }
-      ]
-    },
-    {
-      "id": "seedream-5-0-pro",
-      "label": "Seedream 5.0 Pro",
-      "subtitle": "1K-2K",
-      "family": "seedream",
-      "parameters": {
-        "aspectRatio": {
-          "defaultValue": "16:9",
-          "options": [
-            "auto",
-            "1:1",
-            "16:9",
-            "9:16",
-            "4:3",
-            "3:4",
-            "3:2",
-            "2:3",
-            "21:9"
-          ]
-        },
-        "resolution": {
-          "defaultValue": "1K",
-          "options": [
-            "1K",
-            "2K",
-            "4K"
-          ]
-        }
-      },
-      "channelGroups": [
-        {
-          "id": "standard",
-          "label": "标准版",
-          "default": true,
-          "badge": "Seedream 官方专线",
-          "wireGroup": "default",
-          "pricing": {
-            "pointsEstimate": 0.64,
-            "discountRate": 1,
-            "billingMode": "per_task"
-          }
-        }
-      ]
-    }
-  ],
-  "video": [
-    {
-      "id": "seedance-2-0",
-      "label": "Seedance 2.0",
-      "subtitle": "480p/720p/1080p/4k · 4–15s · 有声",
-      "family": "bytedance",
-      "parameters": {
-        "aspectRatio": {
-          "default": "16:9",
-          "options": [
-            "16:9",
-            "9:16",
-            "1:1",
-            "4:3",
-            "3:4",
-            "21:9",
-            "自适应"
-          ]
-        },
-        "duration": {
-          "default": 5,
-          "min": 4,
-          "max": 15
-        },
-        "resolution": {
-          "default": "720p",
-          "options": [
-            "480p",
-            "720p",
-            "1080p",
-            "4k"
-          ]
-        },
-        "sound": {
-          "default": true
-        }
-      },
-      "channelGroups": [
-        {
-          "id": "standard",
-          "label": "标准版",
-          "default": true,
-          "badge": "官方原生专线 · 按秒计费",
-          "wireGroup": "default",
-          "pricing": {
-            "pointsEstimate": 4.9,
-            "discountRate": 1,
-            "billingMode": "per_second"
-          }
-        }
-      ]
-    },
-    {
-      "id": "seedance-2-5",
-      "label": "Seedance 2.5",
-      "badge": "旗舰",
-      "subtitle": "480p–1080p · 4–30s/自动 · 有声",
-      "family": "bytedance",
-      "parameters": {
-        "aspectRatio": {
-          "default": "16:9",
-          "options": [
-            "16:9",
-            "9:16",
-            "1:1",
-            "4:3",
-            "3:4",
-            "21:9",
-            "自适应"
-          ]
-        },
-        "duration": {
-          "default": 5,
-          "min": 4,
-          "max": 30
-        },
-        "resolution": {
-          "default": "1080p",
-          "options": [
-            "480p",
-            "720p",
-            "1080p"
-          ]
-        },
-        "sound": {
-          "default": true
-        }
-      },
-      "channelGroups": [
-        {
-          "id": "480p",
-          "label": "经济版",
-          "badge": "480p 档 · 经济走量",
-          "wireGroup": "desktop-480p",
-          "pricing": {
-            "pointsEstimate": 6.8,
-            "discountRate": 0.17,
-            "billingMode": "per_second"
-          }
-        },
-        {
-          "id": "720p",
-          "label": "标准版",
-          "default": true,
-          "badge": "720p 档 · 稳定满血",
-          "wireGroup": "desktop-720p",
-          "pricing": {
-            "pointsEstimate": 9.6,
-            "discountRate": 0.24,
-            "billingMode": "per_second"
-          }
-        }
-      ]
-    }
-  ]
-};
+/** Client-side image task counts. This is not a gateway `n` parameter. */
+export const IMAGE_BATCH_COUNTS = Object.freeze([1, 2, 4]);
 
 /**
  * 将中枢原生列表转换为级联数据结构 (Brand -> Model -> Channel)
@@ -279,7 +34,7 @@ export function parseCatalogToCascade(rawList = []) {
     if (!item || !item.id) continue;
     let fam = (item.family || 'common').toLowerCase();
     if (fam === 'bytedance') fam = 'seedance';
-    const brandName = BRAND_NAME_MAP[fam] || item.family || '通用';
+    const brandName = item.familyLabel || BRAND_NAME_MAP[fam] || item.family || '通用';
 
     if (!brandMap.has(fam)) {
       brandMap.set(fam, {
@@ -294,6 +49,7 @@ export function parseCatalogToCascade(rawList = []) {
       id: ch.id,
       wireGroup: ch.wireGroup,
       constraints: ch.constraints,
+      enabled: ch.enabled !== false,
       default: ch.default === true,
       name: ch.label || ch.id,
       price: ch.pricing?.pointsEstimate ? `≈${ch.pricing.pointsEstimate} 积分` : '按量计费',
@@ -320,7 +76,7 @@ export function parseCatalogToCascade(rawList = []) {
       });
     }
 
-    const resolvedId = item.id === 'seedance-2-0' ? 'seedance-2.0' : item.id;
+    const resolvedId = item.id;
     brandEntry.models.push({
       id: resolvedId,
       name: item.label || item.id,
@@ -342,19 +98,15 @@ export function parseCatalogToCascade(rawList = []) {
 export function imageParameterOptions(model, channel) {
   const parameters = model?.raw?.parameters || {};
   const constraints = channel?.constraints?.parameters || {};
-  const fallback = DEFAULT_FALLBACK_CATALOG.image[0].parameters;
   const domains = {};
-  for (const field of ['aspectRatio', 'resolution', 'n']) {
-    const definition = parameters[field] || fallback[field];
-    let source = definition.options;
-    if (!Array.isArray(source) && field === 'n') {
-      const range = definition.range || definition;
-      if (Number.isInteger(range.min) && Number.isInteger(range.max) && range.min <= range.max) {
-        source = Array.from({ length: range.max - range.min + 1 }, (_, index) => range.min + index);
-      }
+  for (const field of ['aspectRatio', 'resolution']) {
+    const definition = parameters[field];
+    if (!definition || !Array.isArray(definition.options) || definition.options.length === 0) {
+      domains[field] = { options: [], defaultValue: undefined };
+      continue;
     }
     const constraint = constraints[field] || {};
-    const options = (Array.isArray(source) ? source : fallback[field].options)
+    const options = definition.options
       .map((option) => {
         const value = String(option && typeof option === 'object' ? option.value : option);
         const label = option && typeof option === 'object' ? option.label : undefined;
@@ -370,16 +122,17 @@ export function imageParameterOptions(model, channel) {
       defaultValue: options.find(({ value }) => value === preferred)?.value ?? options[0]?.value,
     };
   }
+  // Batch is a client task-count policy, never a gateway parameter.
+  domains.n = {
+    options: IMAGE_BATCH_COUNTS.map((value) => ({ value: String(value), label: String(value) })),
+    defaultValue: '1',
+  };
   return domains;
 }
 
 /** Prefer the catalog's declared default without changing channel identity or order. */
 export function defaultMediaChannel(model) {
-  return model?.channels?.find((channel) => channel.default) || model?.channels?.[0];
+  const channels = (model?.channels || []).filter((channel) => channel.enabled !== false);
+  return channels.find((channel) => channel.default) || channels[0];
 }
-
-export const DEFAULT_CASCADE_MODELS = [
-  ...parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.video),
-  ...parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.image),
-];
 

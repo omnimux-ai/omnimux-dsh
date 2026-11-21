@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  DEFAULT_FALLBACK_CATALOG,
   defaultMediaChannel,
   imageParameterOptions,
   parseCatalogToCascade,
@@ -14,7 +13,7 @@ import {
  * 由两处共同消费：媒体面板（保持原有行为与 DOM 不变）与输入框快捷方式。
  *
  * 抽共享时**不新建第二套参数 UI、也不新建第二套模型选择逻辑**：
- * 级联数据仍取自 `/omnimux/model-catalog`，回落仍是 `DEFAULT_FALLBACK_CATALOG`，
+ * 级联数据只取自 `/omnimux/model-catalog`；目录不可用时不显示旧模型、不静默提交。
  * 类名仍是 `.omx-capsule-trigger` / `.omx-popover-shell` / `.omx-cascade-panel` /
  * `.omx-params-panel`，样式仍来自 `media-viewer/styles.js`。
  */
@@ -35,81 +34,126 @@ export function useMediaGenerationConfig({ initialMode = 'image' } = {}) {
   const [popoverEpoch, setPopoverEpoch] = useState(0);
   const closePopovers = useCallback(() => setPopoverEpoch((n) => n + 1), []);
 
-  const [catalogMap, setCatalogMap] = useState(() => ({
-    image: parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.image),
-    video: parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.video),
-  }));
-  // Only a live image slice may feed the cost estimate. A video-only catalog
-  // still leaves the image fallback in place, so status is tracked per slice.
-  const [catalogLive, setCatalogLive] = useState({ image: false, video: false });
+  const [catalogMap, setCatalogMap] = useState({ image: [], video: [] });
+  const [catalogStatus, setCatalogStatus] = useState({ image: 'loading', video: 'loading' });
+  const [catalogDefaults, setCatalogDefaults] = useState({ image: '', video: '' });
+  const [catalogError, setCatalogError] = useState('');
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const retryCatalog = useCallback(() => setReloadNonce((value) => value + 1), []);
 
   useEffect(() => {
     let alive = true;
+    setCatalogStatus({ image: 'loading', video: 'loading' });
     async function loadCatalog() {
       try {
         const resp = await fetch('/omnimux/model-catalog');
         if (!resp.ok) {
-          console.warn('[MediaConfigControls] model catalog unavailable:', resp.status);
-          if (alive) setCatalogLive({ image: false, video: false });
+          if (alive) {
+            setCatalogStatus({ image: 'unavailable', video: 'unavailable' });
+            setCatalogError(`模型目录加载失败（${resp.status}）`);
+          }
           return;
         }
         const data = await resp.json();
         if (!alive || !data || typeof data !== 'object') return;
-        const liveImage = Array.isArray(data.image) && data.image.length > 0;
-        const liveVideo = Array.isArray(data.video) && data.video.length > 0;
-
-        const nextImage = Array.isArray(data.image) && data.image.length > 0
-          ? parseCatalogToCascade(data.image)
-          : parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.image);
-
-        const nextVideo = Array.isArray(data.video) && data.video.length > 0
-          ? parseCatalogToCascade(data.video)
-          : parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.video);
-
-        setCatalogMap({ image: nextImage, video: nextVideo });
-        setCatalogLive({ image: liveImage, video: liveVideo });
+        const imageRows = Array.isArray(data.image) ? data.image : [];
+        const videoRows = Array.isArray(data.video) ? data.video : [];
+        setCatalogMap({
+          image: imageRows.length ? parseCatalogToCascade(imageRows) : [],
+          video: videoRows.length ? parseCatalogToCascade(videoRows) : [],
+        });
+        setCatalogStatus({
+          image: imageRows.length ? 'ready' : 'unavailable',
+          video: videoRows.length ? 'ready' : 'unavailable',
+        });
+        setCatalogDefaults({
+          image: typeof data.defaults?.image === 'string' ? data.defaults.image : '',
+          video: typeof data.defaults?.video === 'string' ? data.defaults.video : '',
+        });
+        setCatalogError(imageRows.length || videoRows.length ? '' : '模型目录为空');
       } catch (error) {
         console.warn('[MediaConfigControls] model catalog unavailable:', error?.message || error);
-        if (alive) setCatalogLive({ image: false, video: false });
+        if (alive) {
+          setCatalogStatus({ image: 'unavailable', video: 'unavailable' });
+          setCatalogError('模型目录加载失败');
+        }
       }
     }
     loadCatalog();
-    return () => { alive = false; };
-  }, []);
+    const onCatalogUpdated = () => setReloadNonce((value) => value + 1);
+    window.addEventListener('omnimux:model-catalog-updated', onCatalogUpdated);
+    return () => {
+      alive = false;
+      window.removeEventListener('omnimux:model-catalog-updated', onCatalogUpdated);
+    };
+  }, [reloadNonce]);
 
-  const currentCascadeList = useMemo(() => catalogMap[mode] || catalogMap.image, [catalogMap, mode]);
+  const catalogLive = useMemo(() => ({
+    image: catalogStatus.image === 'ready',
+    video: catalogStatus.video === 'ready',
+  }), [catalogStatus]);
 
-  const [brand, setBrand] = useState(() => currentCascadeList[0]);
-  const [model, setModel] = useState(() => currentCascadeList[0]?.models?.[0]);
-  const [channel, setChannel] = useState(() => defaultMediaChannel(currentCascadeList[0]?.models?.[0]));
-  const [hoveredBrand, setHoveredBrand] = useState(() => currentCascadeList[0]);
-  const [hoveredModel, setHoveredModel] = useState(() => currentCascadeList[0]?.models?.[0]);
+  const currentCascadeList = useMemo(() => catalogMap[mode] || [], [catalogMap, mode]);
+  const [brand, setBrand] = useState(undefined);
+  const [model, setModel] = useState(undefined);
+  const [channel, setChannel] = useState(undefined);
+  const [hoveredBrand, setHoveredBrand] = useState(undefined);
+  const [hoveredModel, setHoveredModel] = useState(undefined);
+  const selectionRef = useRef({ modelId: '', channelId: '' });
 
   useEffect(() => {
-    const defaultBrand = currentCascadeList[0];
-    const defaultModel = defaultBrand?.models?.[0];
-    const defaultChannel = defaultMediaChannel(defaultModel);
-    setBrand(defaultBrand);
-    setModel(defaultModel);
-    setChannel(defaultChannel);
-    setHoveredBrand(defaultBrand);
-    setHoveredModel(defaultModel);
-  }, [currentCascadeList]);
+    selectionRef.current = { modelId: model?.id || '', channelId: channel?.id || '' };
+  }, [model, channel]);
 
-  // 图像参数
+  useEffect(() => {
+    if (!currentCascadeList.length) {
+      setBrand(undefined);
+      setModel(undefined);
+      setChannel(undefined);
+      setHoveredBrand(undefined);
+      setHoveredModel(undefined);
+      return;
+    }
+    const previous = selectionRef.current;
+    const preferredId = catalogDefaults[mode];
+    let targetBrand = previous.modelId
+      ? currentCascadeList.find((entry) => entry.models?.some((item) => item.id === previous.modelId))
+      : undefined;
+    let targetModel = targetBrand?.models?.find((item) => item.id === previous.modelId);
+    if (!targetModel && preferredId) {
+      targetBrand = currentCascadeList.find((entry) => entry.models?.some((item) => item.id === preferredId));
+      targetModel = targetBrand?.models?.find((item) => item.id === preferredId);
+    }
+    if (!targetModel) {
+      targetBrand = currentCascadeList[0];
+      targetModel = targetBrand?.models?.[0];
+    }
+    const targetChannel = targetModel?.channels?.find((item) => item.id === previous.channelId && item.enabled !== false)
+      || defaultMediaChannel(targetModel);
+    setBrand(targetBrand);
+    setModel(targetModel);
+    setChannel(targetChannel);
+    setHoveredBrand(targetBrand);
+    setHoveredModel(targetModel);
+  }, [currentCascadeList, mode, catalogDefaults]);
+
+  // 图像参数：只消费模型契约实际存在的字段；n 是本地任务张数。
   const [imageOpMode, setImageOpMode] = useState('文生图');
-  const [imageAspect, setImageAspect] = useState(() => imageParameterOptions(model, channel).aspectRatio.defaultValue);
-  const [imageRes, setImageRes] = useState(() => imageParameterOptions(model, channel).resolution.defaultValue);
-  const [imageBatch, setImageBatch] = useState(() => imageParameterOptions(model, channel).n.defaultValue);
+  const [imageAspect, setImageAspect] = useState(undefined);
+  const [imageRes, setImageRes] = useState(undefined);
+  const [imageBatch, setImageBatch] = useState('1');
   const imageOptions = useMemo(() => imageParameterOptions(model, channel), [model, channel]);
 
-  // 只在模式、模型或线路目录切换后复核；参数输入本身不触发校准。
   useEffect(() => {
     if (mode !== 'image') return;
     for (const [field, setter] of [
       ['aspectRatio', setImageAspect], ['resolution', setImageRes], ['n', setImageBatch],
     ]) {
       const domain = imageOptions[field];
+      if (!domain || !domain.options.length) {
+        setter(undefined);
+        continue;
+      }
       setter((value) => domain.options.some((option) => option.value === value) ? value : domain.defaultValue);
     }
   }, [mode, imageOptions]);
@@ -123,8 +167,8 @@ export function useMediaGenerationConfig({ initialMode = 'image' } = {}) {
 
   const params = mode === 'image'
     ? {
-        aspectRatio: imageAspect,
-        resolution: imageRes,
+        ...(imageOptions.aspectRatio?.options.length ? { aspectRatio: imageAspect } : {}),
+        ...(imageOptions.resolution?.options.length ? { resolution: imageRes } : {}),
         batch: imageBatch,
         operation: imageOpMode,
       }
@@ -141,6 +185,10 @@ export function useMediaGenerationConfig({ initialMode = 'image' } = {}) {
     popoverEpoch, closePopovers,
     catalogMap,
     catalogLive,
+    catalogStatus,
+    catalogError,
+    catalogDefaults,
+    retryCatalog,
     currentCascadeList,
     brand, setBrand,
     model, setModel,
@@ -213,6 +261,14 @@ export function MediaModelCascade({ config, open, onToggle, onPicked }) {
       {open && (
         <div className="omx-popover-shell omx-cascade-panel" role="dialog" aria-label="模型级联选择">
           <div className="omx-cascade-col omx-col-brand">
+            {!currentCascadeList.length ? (
+              <div role="status" style={{ padding: '12px 8px', color: 'var(--dsw-alias-label-secondary)' }}>
+                <div>{config.catalogStatus?.[config.mode] === 'loading' ? '正在加载模型…' : (config.catalogError || '模型目录不可用')}</div>
+                {config.catalogStatus?.[config.mode] !== 'loading' ? (
+                  <button type="button" onClick={config.retryCatalog} style={{ marginTop: 8 }}>重试</button>
+                ) : null}
+              </div>
+            ) : null}
             {currentCascadeList.map((b) => (
               <button // exempt-ui01: 品牌磁贴按钮
                 key={b.brandId}
@@ -289,8 +345,11 @@ export function MediaParamsPanel({ config, open, onToggle, showOpMode = true }) 
     hasSound, setHasSound, duration, setDuration,
   } = config;
 
+  const imageSummaryParts = mode === 'image'
+    ? [showOpMode ? imageOpMode : '', imageAspect, imageRes, imageBatch].filter((part) => part !== undefined && part !== null && part !== '')
+    : [];
   const parameterSummary = mode === 'image'
-    ? (showOpMode ? `${imageOpMode} · ${imageAspect} · ${imageRes} · ${imageBatch}` : `${imageAspect} · ${imageRes} · ${imageBatch}`)
+    ? imageSummaryParts.join(' · ')
     : (showOpMode ? `${videoGenMode} · ${videoAspect} · ${videoRes} · ${hasSound ? '有声' : '无声'} · ${duration}s` : `${videoRes.toUpperCase()} · ${videoAspect} · ${duration}s · ${hasSound ? '有声' : '无声'}`);
   const parameterLabel = `配置模型参数：${parameterSummary}`;
 
@@ -327,17 +386,18 @@ export function MediaParamsPanel({ config, open, onToggle, showOpMode = true }) 
         <span className="omx-param-compact-label" aria-hidden="true">参数</span>
         {mode === 'image' ? (
           <>
-            {showOpMode && (
+            {showOpMode && imageOpMode ? (
               <>
                 <span>{imageOpMode}</span>
                 <span className="omx-dot">·</span>
               </>
-            )}
-            <span>{imageAspect}</span>
-            <span className="omx-dot">·</span>
-            <span>{imageRes}</span>
-            <span className="omx-dot">·</span>
-            <span>{imageBatch}</span>
+            ) : null}
+            {imageSummaryParts.slice(showOpMode ? 1 : 0).map((part, index) => (
+              <React.Fragment key={`${part}-${index}`}>
+                {index > 0 ? <span className="omx-dot">·</span> : null}
+                <span>{part}</span>
+              </React.Fragment>
+            ))}
           </>
         ) : (
           <>
@@ -369,42 +429,46 @@ export function MediaParamsPanel({ config, open, onToggle, showOpMode = true }) 
         <div className="omx-popover-shell omx-params-panel" role="dialog" aria-label="模型参数配置">
           {mode === 'image' ? (
             <>
-              <div className="omx-param-group">
-                <div className="omx-param-title">比例</div>
-                <div className="omx-ratio-grid">
-                  {IMAGE_RATIOS.map((item) => (
-                    <button // exempt-ui01: 图像比例选择按钮
-                      type="button"
-                      aria-pressed={imageAspect === item.r}
-                      key={item.r}
-                      className={`omx-ratio-card ${imageAspect === item.r ? 'is-active' : ''}`}
-                      onClick={() => setImageAspect(item.r)}
-                    >
-                      <span className="omx-ratio-wire-box">
-                        <span className={`omx-ratio-wire ${item.cls}`} style={item.style} />
-                      </span>
-                      <span className="omx-ratio-label">{item.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="omx-clarity-sound-row">
-                <div className="omx-param-subcol omx-subcol-clarity">
-                  <div className="omx-param-title">清晰度</div>
-                  <div className="omx-mode-track">
-                    {imageOptions.resolution.options.map(({ value: res, label }) => (
-                      <button // exempt-ui01: 图像清晰度按钮
-                        key={res}
+              {IMAGE_RATIOS.length ? (
+                <div className="omx-param-group">
+                  <div className="omx-param-title">比例</div>
+                  <div className="omx-ratio-grid">
+                    {IMAGE_RATIOS.map((item) => (
+                      <button // exempt-ui01: 图像比例选择按钮
                         type="button"
-                        className={`omx-mode-pill ${imageRes === res ? 'is-active' : ''}`}
-                        onClick={() => setImageRes(res)}
+                        aria-pressed={imageAspect === item.r}
+                        key={item.r}
+                        className={`omx-ratio-card ${imageAspect === item.r ? 'is-active' : ''}`}
+                        onClick={() => setImageAspect(item.r)}
                       >
-                        {label}
+                        <span className="omx-ratio-wire-box">
+                          <span className={`omx-ratio-wire ${item.cls}`} style={item.style} />
+                        </span>
+                        <span className="omx-ratio-label">{item.label}</span>
                       </button>
                     ))}
                   </div>
                 </div>
+              ) : null}
+
+              <div className="omx-clarity-sound-row">
+                {imageOptions.resolution.options.length ? (
+                  <div className="omx-param-subcol omx-subcol-clarity">
+                    <div className="omx-param-title">清晰度</div>
+                    <div className="omx-mode-track">
+                      {imageOptions.resolution.options.map(({ value: res, label }) => (
+                        <button // exempt-ui01: 图像清晰度按钮
+                          key={res}
+                          type="button"
+                          className={`omx-mode-pill ${imageRes === res ? 'is-active' : ''}`}
+                          onClick={() => setImageRes(res)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="omx-param-subcol omx-subcol-sound">
                   <div className="omx-param-title">张数</div>

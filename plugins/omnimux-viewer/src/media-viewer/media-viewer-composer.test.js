@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { describe, it } from 'node:test';
-import { DEFAULT_CASCADE_MODELS, defaultMediaChannel, parseCatalogToCascade } from './MediaViewerComposerData.js';
+import { DEFAULT_CASCADE_MODELS } from './test-fixtures/legacy-catalog.js';
+import { defaultMediaChannel, parseCatalogToCascade } from './MediaViewerComposerData.js';
 import { projectChannelGroups } from '../../../omnimux/src/catalog/project.js';
 import { cleanAnnotationPrefix, inferMimeType, isAllowedReferenceUrl, makeBucketKey, rejectionOf, serializeReferenceAssets } from './media-slot.js';
 import { PRESET_REFERENCE_ASSETS } from './reference-constants.js';
@@ -16,8 +17,8 @@ describe('MediaViewerComposer Component Contract', () => {
     assert.ok(seedanceBrand, 'Must include seedance brand');
     assert.ok(seedanceBrand.models.length >= 1, 'Seedance must have models');
 
-    const seedance20 = seedanceBrand.models.find((m) => m.id === 'seedance-2.0');
-    assert.ok(seedance20, 'Must include seedance-2.0 model');
+    const seedance20 = seedanceBrand.models.find((m) => m.id === 'seedance-2-0');
+    assert.ok(seedance20, 'Must include seedance-2-0 model');
     assert.equal(seedance20.channels.length, 1, 'Seedance 2.0 exposes only the standard line');
     assert.equal(defaultMediaChannel(seedance20).id, 'standard');
     assert.equal(defaultMediaChannel(seedance20).name, '标准版');
