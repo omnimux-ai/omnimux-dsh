@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+> **This repository has been archived and consolidated into [`omnimux-ai/omnimux-client`](https://github.com/omnimux-ai/omnimux-client).**
+>
+> All active development, macOS/Windows installers, 6,380+ built-in cloud assets, and 120+ agent skills now live in **[`omnimux-ai/omnimux-client`](https://github.com/omnimux-ai/omnimux-client)**.
+>
+> **本仓库已归档并合并至主仓库 [`omnimux-ai/omnimux-client`](https://github.com/omnimux-ai/omnimux-client)** — 最新桌面安装包、插件源码、云端资产库与技能市场请前往主仓库获取。
+
 # OmniMux
 
 <p align="center">
